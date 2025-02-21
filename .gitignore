@@ -1,2 +1,4 @@
 datasets
-.vscode
+testwdir
+__pycache__
+*.pyc

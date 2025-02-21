@@ -1,0 +1,13 @@
+
+defaults:
+  - model: tabpfn.yaml
+  - datamodule: railway_traction.yaml
+  - experiment: default.yaml
+  - _self_
+
+
+glob:
+  seed: 42
+
+info:
+  exp_name: test
