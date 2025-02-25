@@ -2,6 +2,21 @@
 
 
 
+
+## Usage 
+
+1. Install Pytorch and necessary dependencies.
+
+```
+conda create -n cetst_env
+conda activate cetst_env
+conda install python=3.10 
+conda install pytorch==2.2.0 pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install -r requirements.txt
+```
+
+
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
