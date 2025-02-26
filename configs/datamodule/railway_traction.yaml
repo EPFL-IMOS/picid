@@ -1,1 +1,2 @@
 _target_: lmetk.case_studies.railway_traction.SpatialDataModule
+ts_in: 24

@@ -4,6 +4,7 @@ import sys
 from sklearn.preprocessing import MinMaxScaler
 
 from lmetk.case_studies.common import ContextBatchDataset, check_boolean_vector, time_features
+from lmetk.case_studies.converters import dl_to_sklearn__with_context_for_tabpfn
 os.path.dirname(sys.executable)
 
 from pathlib import Path
@@ -530,6 +531,8 @@ class SpatialDataModule(pl.LightningDataModule):
         ) 
         return DataLoader(ds,  **loader_args)
 
+    def to_sklearn(self, dl, lag):
+        return dl_to_sklearn__with_context_for_tabpfn(dl=dl, lag=lag)
 
     def train_dataloader(self):
         return self._create_dataloader(self.datasets['train'], batch_size=self.batch_size)

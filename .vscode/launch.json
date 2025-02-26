@@ -6,10 +6,10 @@
     "configurations": [
 
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debugger: main",
             "type": "debugpy",
             "request": "launch",
-            "program": "evaluation.py",
+            "program": "main.py",
             "console": "integratedTerminal",
             "args": ["--dataset_dir", "datasets",
                     "--working_dir", "testwdir"]

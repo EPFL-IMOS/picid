@@ -1,0 +1,3 @@
+_target_: lmetk.training_strategy.generic_training_strategy.MultiModelUnivariateForecastingStrategy
+feature_mode: exogen
+N_samples: 100

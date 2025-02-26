@@ -2,6 +2,7 @@
 defaults:
   - model: tabpfn.yaml
   - datamodule: railway_traction.yaml
+  - training_strategy: railway_traction.yaml
   - experiment: default.yaml
   - _self_
 
@@ -11,3 +12,11 @@ glob:
 
 info:
   exp_name: test
+  project_name: lmetk
+  entity_name: ratheile
+
+logging:
+  wandb_enabled: False
+
+reload:
+  wandb_id: null
