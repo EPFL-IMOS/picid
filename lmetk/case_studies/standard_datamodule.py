@@ -2,8 +2,10 @@
 from typing import Optional
 import lightning as pl
 from omegaconf import OmegaConf
+import torch
+from einops import rearrange
 
-from data.standard_datafactory import data_provider
+from .data_factory import data_provider
   
    
 class StandardDataModule(pl.LightningDataModule):
@@ -53,8 +55,11 @@ class StandardDataModule(pl.LightningDataModule):
         args = OmegaConf.create(dict(
             freq='h',
             batch_size=self.batch_size,
+            task_name='forecasting',    
+            seasonal_patterns='Monthly',
             data=data,
-            embed=True,
+            embed='timeF',
+            augmentation_ratio=0.0,
             root_path=self.data_dir,
             data_path=data_path,
             seq_len=self.ts_in, # context sequence
@@ -70,7 +75,7 @@ class StandardDataModule(pl.LightningDataModule):
         assert self.start_token_len == 0, "Start token length must be zero for now"
         
         self.ds_train, self.dl_train = data_provider(args, flag="train")
-        self.ds_test, self.dl_test = data_provider(args, flag="batchtest")
+        self.ds_test, self.dl_test = data_provider(args, flag="test")
         self.ds_val, self.dl_val = data_provider(args, flag="val")
         
         self.datasets = {
@@ -79,6 +84,20 @@ class StandardDataModule(pl.LightningDataModule):
             "val": self.ds_val
         }
 
+
+    def to_sklearn(self, dl, lag=0, feature=0):
+        X, y = [], []
+        
+        for batch in iter(dl): 
+            # original naming convention seq_x, seq_y, seq_x_mark, seq_y_mark = batch
+            # our convention
+            y_c, y_t, x_c, x_t = batch
+            y_c = rearrange(y_c, 'b t f -> b (t f)')
+            
+            X.append(torch.concat([x_t[:, lag, :], y_c], dim=1))
+            y.append(y_t[:,lag,feature])
+        
+        return torch.concat(X).numpy(), torch.concat(y).numpy()
 
     def train_dataloader(self):
         return self.dl_train

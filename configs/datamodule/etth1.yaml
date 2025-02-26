@@ -1,0 +1,3 @@
+_target_: lmetk.case_studies.standard_datamodule.StandardDataModule
+data_dir: C:\Users\Raffael\Documents\Datasets\standard_timeseries_ds
+dataset_name: ETTh1

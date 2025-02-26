@@ -13,6 +13,15 @@
             "console": "integratedTerminal",
             "args": ["--dataset_dir", "datasets",
                     "--working_dir", "testwdir"]
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "evaluation.py",
+            "console": "integratedTerminal",
+            "args": ["--dataset_dir", "C:/Users/Raffael/Documents/Datasets/wind_farm_dataset/Data_Per_Wind_Farm",
+                    "--working_dir", "testwdir"]
         }
     ]
 }
