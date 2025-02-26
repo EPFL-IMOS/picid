@@ -15,14 +15,12 @@ def create_parser():
 if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
-    print(args)
+    print("argparse:", args)
     
     cfg = configure(
         args.exp_name, 
         data_dir=args.dataset_dir, 
         working_dir=args.working_dir)
-    
-    print(cfg)
     
     exp = initialize(cfg)
     exp.setup()

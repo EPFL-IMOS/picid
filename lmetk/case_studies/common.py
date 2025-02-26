@@ -41,25 +41,25 @@ def time_features(
 
     if "month" in use_features:
         main_df["month"] = dates.apply(
-           lambda row: norm_f((row.month - 1) / 11.0), 1
+           lambda row: norm_f((row.month - 1) / 11.0)
         )
     if "day" in use_features:
         main_df["day"] = dates.apply(
-          lambda row: norm_f((row.day - 1) / 30.0), 1
+          lambda row: norm_f((row.day - 1) / 30.0)
         )
         
     if "weekday" in use_features:
         main_df["weekday"] = dates.apply(
-            lambda row: norm_f(row.weekday() / 6.0), 1
+            lambda row: norm_f(row.weekday() / 6.0)
         )
     if "hour" in use_features:
         main_df["hour"] = dates.apply(
-          lambda row: norm_f((row.hour) / 23.0), 1
+          lambda row: norm_f((row.hour) / 23.0)
         )
         
     if "minute" in use_features:
         main_df["minute"] = dates.apply(
-            lambda row: ((row.minute) / 59.0), 1
+            lambda row: ((row.minute) / 59.0)
         )
 
     main_df[time_col_name] = dates

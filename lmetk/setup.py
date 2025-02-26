@@ -73,7 +73,7 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
     OmegaConf.set_struct(cfg, True) # enable attribute access
     print(cfg)
     
-    print(f"RUN: {rnd_dir}\n")   
+    print(f"config: {rnd_dir}\n")   
     return cfg
     
     
