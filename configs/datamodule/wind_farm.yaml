@@ -7,8 +7,8 @@ test_ratio: 0.1
 step_train: 1
 step_val: 1
 step_test: 1
-ts_in: 6
-ts_out: 1
+ts_in: 24
+ts_out: 24
 target_col: "Power"
 drop_cols:
   - "Power_of_SG 8.0-167 DD"

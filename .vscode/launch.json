@@ -16,6 +16,16 @@
                     "--exp_name=etth1"]
         },
         {
+            "name": "Python Debugger: main [wind_farm]",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": ["--dataset_dir", "datasets",
+                    "--working_dir", "testwdir",
+                    "--exp_name=wind_farm"]
+        },
+        {
             "name": "Python Debugger: main [default]",
             "type": "debugpy",
             "request": "launch",
@@ -28,7 +38,7 @@
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "evaluation.py",
+            "program": "main.py",
             "console": "integratedTerminal",
             "args": ["--dataset_dir", "C:/Users/Raffael/Documents/Datasets/wind_farm_dataset/Data_Per_Wind_Farm",
                     "--working_dir", "testwdir"]
