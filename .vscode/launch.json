@@ -6,7 +6,17 @@
     "configurations": [
 
         {
-            "name": "Python Debugger: main",
+            "name": "Python Debugger: main [etth1]",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": ["--dataset_dir", "datasets",
+                    "--working_dir", "testwdir",
+                    "--exp_name=etth1"]
+        },
+        {
+            "name": "Python Debugger: main [default]",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",

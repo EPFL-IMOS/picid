@@ -58,40 +58,44 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         seed = self.seed
         dm = self.dm
         N_samples = self.N_samples
-        
-        
+        n_lags = self.cfg.datamodule.ts_in
         print_freq = 1
         
-        for variable in range(1):
-            
-            header = 'Variable: [{}]'.format(variable)
+        for id_lag, lag in enumerate(range(n_lags)) :
+            header = 'Lag: [{}]'.format(lag)
             metric_logger = MetricLogger(delimiter="  ")
             metric_logger.add_meter('nmse', SmoothedValue(window_size=1, fmt='{value:.6f}'))
             metric_logger.add_meter('nr2', SmoothedValue(window_size=1, fmt='{value:.6f}'))
-            
-            for id_lag, lag in enumerate(metric_logger.log_every(range(24), print_freq, header)):
-                X_train, y_train =  dm.to_sklearn(dl=dm.train_dataloader(), lag=lag)    
-                X_test, y_test =  dm.to_sklearn(dl=dm.test_dataloader(), lag=lag)
-            
-                if N_samples is not None:
-                    X_train, y_train = X_train[-N_samples:], y_train[-N_samples:]
-                    X_test, y_test = X_test[:N_samples], y_test[:N_samples]
+        
+            X_train, y_train =  dm.to_sklearn(dl=dm.train_dataloader(), lag=lag)    
+            X_test, y_test =  dm.to_sklearn(dl=dm.test_dataloader(), lag=lag)
+        
+            if N_samples is not None:
+                # Shape: (N_samples, n_features)
+                X_train, y_train = X_train[-N_samples:], y_train[-N_samples:] 
+                X_test, y_test = X_test[:N_samples], y_test[:N_samples] 
+                
+                for id_var, variable in enumerate(metric_logger.log_every(
+                    range(y_train.shape[1]),print_freq, header)):
                     
-                assert len(X_train) == len(y_train) and y_train.shape[1] == 1    
-                
-                self.fit(X_train, rearrange(y_train, "N 1 -> N"))
-                preds = rearrange(self.predict(X_test), "N -> N 1")
-                r = self.evaluate(y_test, preds)
-                
-                metric_logger.update(nmse=r['nmse'], nr2=r['nr2']) 
+                    assert len(X_train) == len(y_train) 
+                    y_train_var = rearrange(y_train[:, variable], "B -> B 1")
+                    y_test_var = rearrange(y_test[:, variable], "B -> B 1")
                 
                 
-                results.append({
-                    "seed": seed,
-                    "lag" : lag,
-                    "variable": variable,
-                    **r,
-                })
+                    self.fit(X_train, rearrange(y_train_var, "N 1 -> N"))
+                    preds = rearrange(self.predict(X_test), "N -> N 1")
+                    r = self.evaluate(y_test_var, preds)
+                    
+                    metric_logger.update(nmse=r['nmse'], nr2=r['nr2']) 
+                    
+                    
+                    results.append({
+                        "seed": seed,
+                        "lag" : lag,
+                        "variable": variable,
+                        **r,
+                    })
                 
         df = pd.DataFrame(results)
                 
@@ -116,5 +120,5 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         return results
 
     
-    def _custom_metrics(y, preds):
+    def _custom_metrics(self, y, preds):
         return {}

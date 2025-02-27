@@ -85,7 +85,7 @@ class StandardDataModule(pl.LightningDataModule):
         }
 
 
-    def to_sklearn(self, dl, lag=0, feature=0):
+    def to_sklearn(self, dl, lag=0):
         X, y = [], []
         
         for batch in iter(dl): 
@@ -95,7 +95,7 @@ class StandardDataModule(pl.LightningDataModule):
             y_c = rearrange(y_c, 'b t f -> b (t f)')
             
             X.append(torch.concat([x_t[:, lag, :], y_c], dim=1))
-            y.append(y_t[:,lag,feature])
+            y.append(y_t[:,lag,:])
         
         return torch.concat(X).numpy(), torch.concat(y).numpy()
 
