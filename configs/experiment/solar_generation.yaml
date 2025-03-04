@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - override /datamodule: solar_generation.yaml
+  - override /training_strategy: solar_generation.yaml
