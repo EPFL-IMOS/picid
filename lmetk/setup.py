@@ -7,6 +7,25 @@ from omegaconf import DictConfig, OmegaConf
 
 from lmetk.utils.logging import MultiLogger
 
+import importlib
+import inspect
+
+
+
+def get_class_defaults(class_str: str):
+    
+    splits = class_str.split('.')
+    print(splits)
+    module_str = ".".join(splits[:-1])
+    module = importlib.import_module(module_str)
+    clazz = getattr(module, splits[-1])
+    h = clazz.__init__
+    
+    spec = inspect.getfullargspec(h)
+    keys = reversed(spec.args)
+    values = reversed(spec.defaults)
+    return OmegaConf.create({k: v for k, v in zip(keys, values)})
+
 
 def hydra_load(overrides):
     with hydra_initialize(version_base="1.2", config_path="../configs"):
@@ -50,6 +69,16 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
     os.makedirs(log_dir)
     os.makedirs(best_ckp_dir)
     
+    OmegaConf.set_struct(cfg, False) # enable attribute access
+       # we mix in the default args for logging visibility
+    if "_target_" in cfg.model:
+        model_defaults = get_class_defaults(cfg.model._target_)
+        cfg.model = OmegaConf.merge(model_defaults, cfg.model)  
+        
+    if "_target_" in cfg.datamodule:
+        dm_defaults = get_class_defaults(cfg.datamodule._target_)
+        cfg.datamodule = OmegaConf.merge(dm_defaults, cfg.datamodule)
+    
     dcfg = OmegaConf.create({
         "dirs": {
             "rnd_dir": rnd_dir,
@@ -68,7 +97,6 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
         }
     })
     
-    OmegaConf.set_struct(cfg, False) # enable attribute access
     cfg = OmegaConf.merge(cfg, dcfg)
     OmegaConf.set_struct(cfg, True) # enable attribute access
     print(cfg)
