@@ -232,7 +232,7 @@ class MultiLogger(object):
             self.tensorboard_writer.add_scalar(head + "/" + k, v, self.step if step is None else step)
             
             if self.wandb_enabled:
-                self.log({head + "/" + k : v, "trainer/global_step": self.step if step is None else step})
+                self.log({head + "/" + k: v}, step=self.step if step is None else step)
 
     def flush(self):
         self.tensorboard_writer.flush()
