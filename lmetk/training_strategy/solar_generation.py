@@ -26,6 +26,6 @@ class SolarGenerationStrategy(MultiModelUnivariateForecastingStrategy):
         y_test_rs = dm.inverse_scale_bahnlast(rearrange(y, "B 1 -> B 1"))
 
         return {
-            "normalized/test/mae": np.abs((y_test_hat_rs - y_test_rs)).mean() * 100 / factor_full,
-            "normalized/test/mse": np.abs((y_test_hat_rs - y_test_rs) ** 2).mean() * 100 / factor_full
+            "normalized/test/mae": (np.abs((y_test_hat_rs - y_test_rs)).mean() * 100 / factor_full).astype(float),
+            "normalized/test/mse": (np.abs((y_test_hat_rs - y_test_rs) ** 2).mean() * 100 / factor_full).astype(float)
         }
