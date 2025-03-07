@@ -4,6 +4,30 @@
 # How to run on RunAI
 
 
+Configure Guild
+
+```
+wandb login <key>
+export GUILD_HOME=/workspace/experiments/...
+export MAX_DEFAULT_SOURCE_CODE_COUNT=999
+```
+
+Check source code or run an experiment
+```
+guild run experiment_runner:train exp_name=etth1 --test-sourcecode
+guild run experiment_runner:train exp_name=etth1
+
+```
+
+Use Queue 
+
+```
+guild run --background --yes queue gpus=0
+guild run --force-flags --stage-trials experiment_runner:sweep exp_name=etth1
+```
+
+
+
 
 
 
