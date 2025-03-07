@@ -1,14 +1,31 @@
 import datetime
 import hashlib
 import os
+import random
 import hydra
 from hydra import initialize as hydra_initialize, compose
+import numpy as np
 from omegaconf import DictConfig, OmegaConf
+import torch
 
 from lmetk.utils.logging import MultiLogger
 
 import importlib
 import inspect
+
+
+def set_reproducibility(seed=42, deterministic=True):
+    # reproducibility stuff
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # Note that this Deterministic mode can have a performance impact
+    torch.backends.cudnn.deterministic = deterministic  
+    print("warn: fix deterministic mode")
+    # torch.use_deterministic_algorithms(deterministic)
+    torch.backends.cudnn.benchmark = False
 
 
 
@@ -111,6 +128,8 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
     
     
 def initialize(cfg):
+    
+    set_reproducibility(cfg.glob.seed)
     
     dm = hydra.utils.instantiate(cfg.datamodule)
     dm.setup()
