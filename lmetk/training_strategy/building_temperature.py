@@ -16,7 +16,7 @@ class BuildingTemperatureStrategy(MultiModelUnivariateForecastingStrategy):
                  feature_mode="exogen",
                  N_samples=None):
         super().__init__(cfg, objs, lags=lags, feature_mode=feature_mode, N_samples=N_samples)
-        self.factor_full = pd.read_csv("datasets/building_temperature.csv")['R272_Air_Temperature'].abs().mean()
+        self.factor_full = pd.read_csv("datasets/building_temperature.csv")['R272_Air_Temperature [C]'].abs().mean()
 
     def _custom_metrics(self, y, preds):
         dm = self.dm
