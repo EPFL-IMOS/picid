@@ -3,3 +3,5 @@ testwdir
 __pycache__
 *.pyc
 TabPFN
+tabpfn-extensions
+catboost_info

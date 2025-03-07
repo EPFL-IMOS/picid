@@ -7,6 +7,7 @@ from hydra import initialize as hydra_initialize, compose
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import torch
+import yaml
 
 from lmetk.utils.logging import MultiLogger
 
@@ -54,9 +55,16 @@ def hydra_load(overrides):
         return cfg
 
 
-def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
+def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = False) -> DictConfig:
     cfg: DictConfig = hydra_load([f"experiment={exp_name}"])
+    OmegaConf.set_struct(cfg, False) # enable attribute access
+    
     working_dir = "testwdir" if working_dir is None else working_dir
+    
+    if guild_mode:
+        flags = OmegaConf.load("flags.yaml")
+        print(f"[GUILD MODE], merging in flags {flags}")
+        cfg = OmegaConf.merge(cfg, flags)
     
     now = datetime.datetime.now()
     rcode = f"{now.year}_{now.month}_{now.day}_{now.hour}-{now.minute}-{now.second}"
@@ -90,7 +98,7 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
     os.makedirs(log_dir)
     os.makedirs(best_ckp_dir)
     
-    OmegaConf.set_struct(cfg, False) # enable attribute access
+    
        # we mix in the default args for logging visibility
     if "_target_" in cfg.model:
         model_defaults = get_class_defaults(cfg.model._target_)
@@ -120,9 +128,14 @@ def configure(exp_name, data_dir=None, working_dir=None) -> DictConfig:
     
     cfg = OmegaConf.merge(cfg, dcfg)
     OmegaConf.set_struct(cfg, True) # enable attribute access
-    print(cfg)
     
-    print(f"config: {rnd_dir}\n")   
+    print("*" * 80)
+    print("[CONFIGURATION]")
+    print(OmegaConf.to_yaml(cfg))
+    print("*" * 80)
+    print(f"Output Directory: {rnd_dir}")   
+    print(f"Root Directory: {os.getcwd()}")   
+    print("*" * 80)
     return cfg
     
     

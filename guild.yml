@@ -1,0 +1,70 @@
+
+
+- config: sourcecode_config
+  sourcecode: &sourcecode_config
+    - exclude: 
+      - '*.md'
+      - '*.nc'
+      - '*.txt'
+      - '*.out'
+      - '*.csv'
+      - '*.png'
+      - '__pycache__'
+      - '.vscode'
+      - 'datasets'
+      - 'testwdir'
+      - 'tabpfn-extensions'
+      - '*.ipynb'
+    - include: 
+      - "*.py"
+      - "*.yaml"
+
+
+- config: main_config
+  root: &default_main_config
+    flags-dest: config:flags.yaml
+    flags-import: all
+    label: ${exp_name}_${glob.seed}
+    main:  main --exp_name=${exp_name} --dataset_dir=${dataset_dir} --working_dir=${working_dir} --guild_mode
+
+
+
+- config: base
+  description: The standard configuration
+  operations:
+    sweep:
+      description: Like train, but with multiple seeds
+      sourcecode: *sourcecode_config
+      <<: *default_main_config
+      flags:
+        glob.seed: [72, 88, 666, 101, 226688]
+        working_dir: C:\Users\Raffael\Documents\Workspaces\work\load_management_evaluation\testwdir
+        dataset_dir: C:\Users\Raffael\Documents\Workspaces\work\load_management_evaluation\datasets
+
+    train:
+      description: Train and evaluate the model
+      sourcecode: *sourcecode_config
+      <<: *default_main_config
+      flags:
+        glob.seed: 226688
+        working_dir: C:\Users\Raffael\Documents\Workspaces\work\load_management_evaluation\testwdir
+        dataset_dir: C:\Users\Raffael\Documents\Workspaces\work\load_management_evaluation\datasets
+  
+
+- config: base-server
+  description: The heterognn model
+  extends: base
+  operations:
+    sweep:
+      flags:
+        working_dir: /wdir/workingdir # TODO
+        dataset_dir: /ddir/datasets # TODO
+    train:
+      flags:
+        working_dir: /wdir/workingdir # TODO
+        dataset_dir: /ddir/datasets # TODO
+
+
+- model: experiment_runner
+  extends: base
+      

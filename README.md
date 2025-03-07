@@ -1,6 +1,10 @@
 # Load Management Evaluation
 
 
+# How to run on RunAI
+
+
+
 
 
 ## Usage 
