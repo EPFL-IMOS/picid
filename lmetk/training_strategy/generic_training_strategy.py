@@ -99,7 +99,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                     results.append({
                         "seed": seed,
                         "lag": lag,
-                        "variable": variable,
+                        "variable": var_name,
                         **r,
                     })
 
@@ -112,7 +112,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         mean_per_var = df.groupby(by=["variable"]).mean()
         log_writer.update(head="Mean Vars",
                           step=n_lags,
-                          **{f'Var [{i}]: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in ['mape', 'mae', 'mse', 'r2']})
+                          **{f'Var {i}: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in ['mape', 'mae', 'mse', 'r2']})
 
         mean_overall = mean_per_var.mean()
         log_writer.update(head="Mean Overall",
