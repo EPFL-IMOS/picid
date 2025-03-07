@@ -57,7 +57,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
         seed = self.seed
         dm = self.dm
-        N_samples = 10 #self.N_samples
+        N_samples = self.N_samples
         n_lags = self.cfg.datamodule.ts_in
         print_freq = 1
         var_names = [dm.target_col]
