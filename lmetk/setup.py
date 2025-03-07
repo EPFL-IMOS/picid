@@ -23,8 +23,12 @@ def get_class_defaults(class_str: str):
     
     spec = inspect.getfullargspec(h)
     keys = reversed(spec.args)
-    values = reversed(spec.defaults)
-    return OmegaConf.create({k: v for k, v in zip(keys, values)})
+    
+    if spec.defaults is None:
+        return OmegaConf.create({})
+    else:
+        values = reversed(spec.defaults)
+        return OmegaConf.create({k: v for k, v in zip(keys, values)})
 
 
 def hydra_load(overrides):
