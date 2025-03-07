@@ -86,7 +86,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
                     metric_logger.update(nmse=r['nmse'], nr2=r['nr2'])
                     log_writer.update(head=f"Var: [{variable}]",
-                                      step=lag,
+                                      step=lag + 1,
                                       nmape=r['nmape'],
                                       nmae=r['nmae'],
                                       nmse=r['nmse'],
