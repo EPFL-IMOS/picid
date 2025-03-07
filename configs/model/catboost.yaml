@@ -1,0 +1,2 @@
+_target_: catboost.CatBoostRegressor
+verbose: 0

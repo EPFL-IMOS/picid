@@ -13,7 +13,7 @@
             "console": "integratedTerminal",
             "args": ["--dataset_dir", "datasets",
                     "--working_dir", "testwdir",
-                    "--exp_name=etth1"]
+                    "--exp_name=etth1_catboost"]
         },
         {
             "name": "Python Debugger: main [wind_farm]",

@@ -99,7 +99,8 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                         **r,
                     })
 
-        # df = pd.DataFrame(results)
+        df = pd.DataFrame(results)
+        df.to_csv(self.cfg.dirs.out_dir + "/results.csv", index=False)
 
     def fit(self, X, y):
         regressor = self.model
