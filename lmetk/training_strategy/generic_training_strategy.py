@@ -60,7 +60,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         N_samples = self.N_samples
         n_lags = self.cfg.datamodule.ts_in
         print_freq = 1
-        var_names = [dm.target_col]
+        var_names = [dm.target_col] if hasattr(dm, "target_col") else None
 
         for id_lag, lag in enumerate(range(n_lags)):
             header = 'Lag: [{}]'.format(lag)
@@ -70,6 +70,9 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
             X_train, y_train = dm.to_sklearn(dl=dm.train_dataloader(), lag=lag)
             X_test, y_test = dm.to_sklearn(dl=dm.test_dataloader(), lag=lag)
+            
+            if var_names is None:
+                var_names = [f"Var_{i}" for i in range(y_train.shape[1])]
 
             if N_samples is not None:
                 # Shape: (N_samples, n_features)
@@ -89,7 +92,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                     predictions[(var_name, lag)] = pred.squeeze()
 
                     metric_logger.update(mse=r['mse'], r2=r['r2'])
-                    log_writer.update(head=f"Var: {var_name}",
+                    log_writer.update(head=f"var_{var_name}",
                                       step=lag + 1,
                                       mape=r['mape'],
                                       mae=r['mae'],
@@ -110,12 +113,12 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         df_predictions.to_pickle(self.cfg.dirs.out_dir + "/predictions.pkl")
 
         mean_per_var = df.groupby(by=["variable"]).mean()
-        log_writer.update(head="Mean Vars",
+        log_writer.update(head="mean_vars",
                           step=n_lags,
-                          **{f'Var {i}: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in ['mape', 'mae', 'mse', 'r2']})
+                          **{f'var_{i}: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in ['mape', 'mae', 'mse', 'r2']})
 
         mean_overall = mean_per_var.mean()
-        log_writer.update(head="Mean Overall",
+        log_writer.update(head="mean_overall",
                           step=n_lags,
                           mape=mean_overall['mape'],
                           mae=mean_overall['mae'],
