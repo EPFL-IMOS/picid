@@ -57,14 +57,19 @@
   operations:
     sweep:
       flags:
-        working_dir: /wdir/workingdir # TODO
-        dataset_dir: /ddir/datasets # TODO
+        working_dir: /workspace/experiments/2025-03-12_TabPFN/runs/
+        dataset_dir: /workspace/datasets/standard_timeseries_ds/
+        logging.wandb_enabled: true
     train:
       flags:
-        working_dir: /wdir/workingdir # TODO
-        dataset_dir: /ddir/datasets # TODO
+        working_dir: /workspace/experiments/2025-03-12_TabPFN/runs/
+        dataset_dir: /workspace/datasets/standard_timeseries_ds/
+        logging.wandb_enabled: true
 
 
 - model: experiment_runner
   extends: base
+
+- model: experiment_runner_server
+  extends: base-server
       

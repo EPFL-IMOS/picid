@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import os
+from pathlib import Path
 import random
 import hydra
 from hydra import initialize as hydra_initialize, compose
@@ -59,7 +60,12 @@ def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = Fals
     cfg: DictConfig = hydra_load([f"experiment={exp_name}"])
     OmegaConf.set_struct(cfg, False) # enable attribute access
     
+    data_dir = str(Path(data_dir).expanduser()) if data_dir is not None else None   
     working_dir = "testwdir" if working_dir is None else working_dir
+    
+    if data_dir is not None and "data_dir" in cfg.datamodule:
+        print(f"[WARNING] Overriding datamodule data_dir with command line argument {data_dir}")
+        cfg.datamodule.data_dir = data_dir
     
     if guild_mode:
         flags = OmegaConf.load("flags.yaml")
@@ -136,6 +142,9 @@ def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = Fals
     print(f"Output Directory: {rnd_dir}")   
     print(f"Root Directory: {os.getcwd()}")   
     print("*" * 80)
+    
+    
+    OmegaConf.save(cfg, cfg.dirs.rnd_dir +'/config_pre_initialize.yaml')
     return cfg
     
     
@@ -174,4 +183,5 @@ def initialize(cfg):
     exp_factory = hydra.utils.instantiate(cfg.training_strategy, _partial_=True)
     exp = exp_factory(cfg=cfg, objs=objs)
     
+    OmegaConf.save(cfg, cfg.dirs.rnd_dir +'/config.yaml')
     return exp
