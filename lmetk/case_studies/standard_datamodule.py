@@ -5,6 +5,7 @@ from omegaconf import OmegaConf
 import torch
 from einops import rearrange
 
+from lmetk.case_studies.tabularizer import HistoryAndContextTabularizer
 from .data_factory import data_provider
   
    
@@ -86,18 +87,17 @@ class StandardDataModule(pl.LightningDataModule):
 
 
     def to_sklearn(self, dl, lag=0):
-        X, y = [], []
+        tabularizer = HistoryAndContextTabularizer()
         
-        for batch in iter(dl): 
+        def map_batch(batch):
             # original naming convention seq_x, seq_y, seq_x_mark, seq_y_mark = batch
             # our convention
             y_c, y_t, x_c, x_t = batch
-            y_c = rearrange(y_c, 'b t f -> b (t f)')
-            
-            X.append(torch.concat([x_t[:, lag, :], y_c], dim=1))
-            y.append(y_t[:,lag,:])
+            return x_c, y_c, x_t, y_t
         
-        return torch.concat(X).numpy(), torch.concat(y).numpy()
+        tabular_data = tabularizer.tabularize(dl, lag, map_batch_f=map_batch)
+        return tabular_data["X"], tabular_data["y"]
+
 
     def train_dataloader(self):
         return self.dl_train

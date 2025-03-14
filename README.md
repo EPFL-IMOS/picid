@@ -8,7 +8,7 @@
 4. copy source code:  rclone sync . runai:/projects/load_management_evaluation  --exclude ".git/"  --verbose
     WARNING, be careful with rclone to not override local changes
 5. wandb login <key>
-6. pip install tabpfn
+6. pip install tabpfn lightning
 7. Setup output directory structure:
     root
         guild_home (e.g. guild)

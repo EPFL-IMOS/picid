@@ -1,7 +1,10 @@
 from einops import rearrange
+import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
 from tqdm import tqdm
+import time
+
 
 import warnings
 
@@ -40,16 +43,19 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                  objs,
                  lags,
                  feature_mode="exogen",
+                 batched_sample_inference=None,
                  N_samples=None):
         super().__init__(cfg, objs, lags)
 
         self.feature_mode = feature_mode
+        self.batched_sample_inference = batched_sample_inference
         self.N_samples = N_samples
         self.dm = objs["dm"]
         self.model = objs["model"]
         self.seed = cfg.glob.seed
         self.cfg = cfg
-
+        
+        
     def run(self):
         results = []
         predictions = {}
@@ -67,6 +73,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
             metric_logger = MetricLogger(delimiter="  ")
             metric_logger.add_meter('mse', SmoothedValue(window_size=1, fmt='{value:.6f}'))
             metric_logger.add_meter('r2', SmoothedValue(window_size=1, fmt='{value:.6f}'))
+            metric_logger.add_meter('fit_time', SmoothedValue(window_size=1, fmt='{value:.6f}'))
 
             X_train, y_train = dm.to_sklearn(dl=dm.train_dataloader(), lag=lag)
             X_test, y_test = dm.to_sklearn(dl=dm.test_dataloader(), lag=lag)
@@ -79,32 +86,36 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                 X_train, y_train = X_train[-N_samples:], y_train[-N_samples:]
                 X_test, y_test = X_test[:N_samples], y_test[:N_samples]
 
-                for id_var, variable in enumerate(metric_logger.log_every(
-                        range(y_train.shape[1]), print_freq, header)):
-                    assert len(X_train) == len(y_train)
-                    var_name = var_names[id_var]
-                    y_train_var = rearrange(y_train[:, variable], "B -> B 1")
-                    y_test_var = rearrange(y_test[:, variable], "B -> B 1")
+            for id_var, variable in enumerate(metric_logger.log_every(
+                    range(y_train.shape[1]), print_freq, header)):
+                assert len(X_train) == len(y_train)
+                var_name = var_names[id_var]
+                y_train_var = rearrange(y_train[:, variable], "B -> B 1")
+                y_test_var = rearrange(y_test[:, variable], "B -> B 1")
 
-                    self.fit(X_train, rearrange(y_train_var, "N 1 -> N"))
-                    pred = rearrange(self.predict(X_test), "N -> N 1")
-                    r = self.evaluate(y_test_var, pred)
-                    predictions[(var_name, lag)] = pred.squeeze()
+                fit_stats = self.fit(X_train, rearrange(y_train_var, "N 1 -> N"))
+                pred = rearrange(self.predict(X_test), "N -> N 1")
+                r = self.evaluate(y_test_var, pred)
+                predictions[(var_name, lag)] = pred.squeeze()
 
-                    metric_logger.update(mse=r['mse'], r2=r['r2'])
-                    log_writer.update(head=f"var_{var_name}",
-                                      step=lag + 1,
-                                      mape=r['mape'],
-                                      mae=r['mae'],
-                                      mse=r['mse'],
-                                      r2=r['r2'])
+                metric_logger.update(
+                    mse=r['mse'], 
+                    r2=r['r2'], 
+                    fit_time=fit_stats['fit_time'])
+                
+                log_writer.update(head=f"var_{var_name}",
+                                    step=lag + 1,
+                                    mape=r['mape'],
+                                    mae=r['mae'],
+                                    mse=r['mse'],
+                                    r2=r['r2'])
 
-                    results.append({
-                        "seed": seed,
-                        "lag": lag,
-                        "variable": var_name,
-                        **r,
-                    })
+                results.append({
+                    "seed": seed,
+                    "lag": lag,
+                    "variable": var_name,
+                    **r,
+                })
 
         df = pd.DataFrame(results)
         df.to_csv(self.cfg.dirs.out_dir + "/results.csv", index=False)
@@ -127,11 +138,30 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
 
     def fit(self, X, y):
+        start_time = time.time()
         regressor = self.model
         regressor.fit(X, y)
+        end_time = time.time()
+        runtime = end_time - start_time
+        fit_stats = {
+            'fit_time': runtime,
+        }
+        return fit_stats
+        
 
     def predict(self, X):
-        return self.model.predict(X)
+        # we test single sample inference since the model tokenizes all y values
+        if self.batched_sample_inference is not None:
+            results = []
+            num_samples = X.shape[0]
+            for i in range(0, num_samples, self.batched_sample_inference):
+                x_batch = X[i : i + self.batched_sample_inference, :]  # Handles last batch size automatically
+                y_batch = self.model.predict(x_batch)
+                results.append(y_batch)
+            return np.concatenate(results)
+            
+        else:
+            return self.model.predict(X)
 
     def evaluate(self, y, preds):
         # Evaluate the model

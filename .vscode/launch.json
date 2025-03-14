@@ -11,9 +11,9 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "datasets",
+            "args": ["--dataset_dir", "C:/Users/Raffael/Documents/Datasets/standard_timeseries_ds",
                     "--working_dir", "testwdir",
-                    "--exp_name=etth1_catboost"]
+                    "--exp_name=etth1_batched_sample_inference"]
         },
         {
             "name": "Python Debugger: main [wind_farm]",
