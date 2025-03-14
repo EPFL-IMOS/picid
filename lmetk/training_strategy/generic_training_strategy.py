@@ -1,3 +1,4 @@
+from abc import ABC
 from einops import rearrange
 import numpy as np
 import pandas as pd
@@ -13,7 +14,7 @@ warnings.filterwarnings("ignore", message="1Torch was not compiled with flash at
 from lmetk.utils.logging import MetricLogger, SmoothedValue
 
 
-class GenericTrainingStrategy():
+class GenericTrainingStrategy(ABC):
     def __init__(self, cfg, objs, lags):
         self.cfg = cfg
         self.objs = objs

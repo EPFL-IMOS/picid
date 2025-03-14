@@ -41,7 +41,7 @@ class GenericTabularizer(ABC):
             pass
         
         
-    def get_context_for(self, y: torch.Tensor, lag: int = 0):
+    def get_context_for(self, y_test: torch.Tensor, lag: int = 0):
         return self.tabular_data["X"], self.tabular_data["y"]
     
     
@@ -56,3 +56,6 @@ class HistoryAndContextTabularizer(GenericTabularizer):
         y_b = y_t[:,lag,:]
 
         return x_b, y_b
+    
+    
+    (timesteps x N_y_input x K_support_samples)

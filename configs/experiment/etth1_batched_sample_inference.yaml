@@ -6,7 +6,7 @@ defaults:
 
 
 training_strategy:
-  batched_sample_inference: 100
+  batched_sample_inference: 1
 
 
 model:
