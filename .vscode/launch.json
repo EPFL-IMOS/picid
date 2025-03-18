@@ -26,6 +26,16 @@
                     "--exp_name=wind_farm"]
         },
         {
+            "name": "Python Debugger: main [railway traction]",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": ["--dataset_dir", "datasets",
+                    "--working_dir", "testwdir",
+                    "--exp_name=railway_traction"]
+        },
+        {
             "name": "Python Debugger: main [default]",
             "type": "debugpy",
             "request": "launch",
