@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 import lightning.pytorch as pl
 import numpy as np
@@ -23,6 +24,8 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
                  ts_in: int,
                  ts_out: int,
                  target_col: str,
+                 datetime_features: bool = False,
+                 samples_per_day: Optional[int] = None,
                  drop_cols: Optional[list] = None,
                  batch_size: int = 32):
         super().__init__()
@@ -47,11 +50,18 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         self.datetime_features = False
         self.target_col = target_col
         self.drop_cols = drop_cols
+        self.samples_per_day = samples_per_day
 
     def setup(self, stage: Optional[str] = None):
-        data = pd.read_csv(self.data_dir)
-        data['time'] = pd.to_datetime(data.time)
-        data.set_index('time', inplace=True)
+        dd = Path(self.data_dir)
+        
+        if dd.suffix == ".csv":
+            data = pd.read_csv(self.data_dir)
+            data.set_index('time', inplace=True)
+            data['time'] = pd.to_datetime(data.time)
+        elif dd.suffix == ".xlsx":
+            data = pd.read_excel(self.data_dir)
+            
 
         if self.drop_cols:
             data = data.drop(self.drop_cols, axis=1)
@@ -59,8 +69,11 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         self.data = data
 
         # use this to downsample the data
-        data_samples_per_day = data.index.to_series().groupby(data.index.date).count().iloc[0]
-        samples_per_day = data_samples_per_day
+        if self.samples_per_day is None:
+            data_samples_per_day = data.index.to_series().groupby(data.index.date).count().iloc[0]
+            samples_per_day = data_samples_per_day
+        else :
+            samples_per_day = self.samples_per_day
 
         test_ratio = self.test_ratio
         val_ratio = self.val_ratio

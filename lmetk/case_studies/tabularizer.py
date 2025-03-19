@@ -25,7 +25,7 @@ class GenericTabularizer(ABC):
         
         for batch in iter(dl):
             x_c, y_c, x_t, y_t = self.map_batch(batch)  if map_batch_f is None else map_batch_f(batch)
-            x_b, y_b = self.tabularize_batch(x_c, y_c, x_t, y_t)
+            x_b, y_b = self.tabularize_batch(x_c, y_c, x_t, y_t, lag=lag)
             X.append(x_b)
             y.append(y_b)
             
@@ -57,5 +57,3 @@ class HistoryAndContextTabularizer(GenericTabularizer):
 
         return x_b, y_b
     
-    
-    # (timesteps x N_y_input x K_support_samples)
