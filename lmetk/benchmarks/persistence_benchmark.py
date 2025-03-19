@@ -3,6 +3,7 @@ import warnings
 import pandas as pd
 import torch
 from einops import rearrange
+from omegaconf import ListConfig
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
 
 from lmetk.benchmarks.forecasting_benchmark import ForecastingBenchmark
@@ -35,7 +36,7 @@ class PersistenceStrategy(ForecastingBenchmark):
         n_lags = self.cfg.datamodule.ts_in
         n_steps = self.cfg.datamodule.ts_out
         print_freq = 1
-        var_names = [dm.target_col]
+        var_names = dm.target_cols if hasattr(dm, "target_cols") else None
 
         X_context, y_context, y_test = self.slice_dataloader(dl=dm.test_dataloader())
 

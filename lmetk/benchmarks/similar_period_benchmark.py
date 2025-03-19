@@ -1,13 +1,11 @@
-import numpy as np
+import warnings
+
+import pandas as pd
 import torch
+from einops import rearrange
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
 
 from lmetk.benchmarks.forecasting_benchmark import ForecastingBenchmark
-from einops import rearrange
-import pandas as pd
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
-from tqdm import tqdm
-
-import warnings
 
 warnings.filterwarnings("ignore", message="1Torch was not compiled with flash attention.")
 
@@ -29,7 +27,7 @@ class SimilarPeriodStrategy(ForecastingBenchmark):
         results = []
         predictions = {}
         log_writer = self.objs['log_writer']
-        self.model = self.objs["models"]
+        self.model = self.objs["model"]
 
 
         dm = self.objs["dm"]
@@ -37,7 +35,7 @@ class SimilarPeriodStrategy(ForecastingBenchmark):
         n_lags = self.cfg.datamodule.ts_in
         n_steps = self.cfg.datamodule.ts_out
         print_freq = 1
-        var_names = [dm.target_col]
+        var_names = dm.target_cols if hasattr(dm, "target_cols") else None
 
         _, _, X_train, y_train = self.slice_dataloader(dl=dm.train_dataloader())
         _, _, X_test, y_test = self.slice_dataloader(dl=dm.test_dataloader())

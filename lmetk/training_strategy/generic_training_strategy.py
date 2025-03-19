@@ -2,6 +2,7 @@ from abc import ABC
 from einops import rearrange
 import numpy as np
 import pandas as pd
+from omegaconf import ListConfig
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
 from tqdm import tqdm
 import time
@@ -67,7 +68,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         N_samples = self.N_samples
         n_steps = self.cfg.datamodule.ts_out
         print_freq = 1
-        var_names = [dm.target_col] if hasattr(dm, "target_col") else None
+        var_names = dm.target_cols if hasattr(dm, "target_cols") else None
 
         for id_step, step in enumerate(range(n_steps)):
             header = 'Lag: [{}]'.format(step)

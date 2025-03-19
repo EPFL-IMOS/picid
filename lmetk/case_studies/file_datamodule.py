@@ -3,6 +3,7 @@ from typing import Optional
 import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
+from omegaconf import ListConfig
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader
 import torch
@@ -23,7 +24,7 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
                  data_dir: str,
                  ts_in: int,
                  ts_out: int,
-                 target_col: str,
+                 target_cols: list[str],
                  datetime_features: bool = False,
                  samples_per_day: Optional[int] = None,
                  drop_cols: Optional[list] = None,
@@ -47,8 +48,8 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         self.num_workers = 0
 
         self.data_split_strategy = "default"
-        self.datetime_features = False
-        self.target_col = target_col
+        self.datetime_features = datetime_features
+        self.target_cols = target_cols if isinstance(target_cols, ListConfig) else [target_cols]
         self.drop_cols = drop_cols
         self.samples_per_day = samples_per_day
 
@@ -57,8 +58,8 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         
         if dd.suffix == ".csv":
             data = pd.read_csv(self.data_dir)
-            data.set_index('time', inplace=True)
             data['time'] = pd.to_datetime(data.time)
+            data.set_index('time', inplace=True)
         elif dd.suffix == ".xlsx":
             data = pd.read_excel(self.data_dir)
             
@@ -95,8 +96,12 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         self.val = data.iloc[r_val, :]
         self.test = data.iloc[r_test, :]
 
-        self.target_col_mask = (data.columns == self.target_col)
-        self.target_col_mask_orig = (data.columns == self.target_col)
+        targets_in_columns = data.columns.isin(self.target_cols)
+        if targets_in_columns.sum() == len(self.target_cols):
+            self.target_cols_mask = targets_in_columns
+            self.target_cols_mask_orig = targets_in_columns
+        else:
+            raise ValueError("Not all specified targets are in columns")
 
         scaler = MinMaxScaler()
         scaler.fit(self.train)
@@ -115,8 +120,8 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
             self.scaler_mask = np.concatenate(
                 (np.ones(self.train_scaled.shape[1], dtype=bool), np.zeros(4, dtype=bool)))
 
-            self.target_col_mask = np.concatenate(
-                (self.target_col_mask, np.zeros(4, dtype=bool)))
+            self.target_cols_mask = np.concatenate(
+                (self.target_cols_mask, np.zeros(4, dtype=bool)))
 
             self.train_scaled = np.concatenate(
                 (self.train_scaled, self.dtf_train[['hour', 'day', 'weekday', 'month']].values), axis=1)
@@ -134,8 +139,8 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
             out_features_mask = None
 
             ds = ContextBatchDataset(
-                Features=torch.from_numpy(ds[:, self.target_col_mask]).to(torch.float32),
-                Context=torch.from_numpy(ds[:, ~self.target_col_mask]).to(torch.float32),
+                Features=torch.from_numpy(ds[:, self.target_cols_mask]).to(torch.float32),
+                Context=torch.from_numpy(ds[:, ~self.target_cols_mask]).to(torch.float32),
                 out_features_mask=out_features_mask,
                 ts_in=self.ts_in,
                 ts_out=self.ts_out,
@@ -153,14 +158,14 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
 
     def inverse_scale_bahnlast(self, X):
         x = np.zeros((X.shape[0], self.train_scaled.shape[1]))
-        x[:, self.target_col_mask] = X
+        x[:, self.target_cols_mask] = X
 
         if self.datetime_features:
             res = self.scaler.inverse_transform(x[:, self.scaler_mask])
         else:
             res = self.scaler.inverse_transform(x)
 
-        return res[:, self.target_col_mask_orig]
+        return res[:, self.target_cols_mask_orig]
 
     def to_sklearn(self, dl, lag=0):
         X, y = [], []
