@@ -1,7 +1,8 @@
 class ForecastingBenchmark():
-    def __init__(self, cfg, objs):
+    def __init__(self, cfg, objs, verbose=False):
         self.cfg = cfg
         self.objs = objs
+        self.verbose = verbose
         
     
     def setup(self):
@@ -10,7 +11,7 @@ class ForecastingBenchmark():
     def run(self):
         pass
 
-    def evaluate(self):
+    def evaluate(self, y, preds):
         pass
 
     def save(self):
