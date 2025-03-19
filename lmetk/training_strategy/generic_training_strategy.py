@@ -65,19 +65,19 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
         seed = self.seed
         dm = self.dm
         N_samples = self.N_samples
-        n_lags = self.cfg.datamodule.ts_in
+        n_steps = self.cfg.datamodule.ts_out
         print_freq = 1
         var_names = [dm.target_col] if hasattr(dm, "target_col") else None
 
-        for id_lag, lag in enumerate(range(n_lags)):
-            header = 'Lag: [{}]'.format(lag)
+        for id_step, step in enumerate(range(n_steps)):
+            header = 'Lag: [{}]'.format(step)
             metric_logger = MetricLogger(delimiter="  ")
             metric_logger.add_meter('mse', SmoothedValue(window_size=1, fmt='{value:.6f}'))
             metric_logger.add_meter('r2', SmoothedValue(window_size=1, fmt='{value:.6f}'))
             metric_logger.add_meter('fit_time', SmoothedValue(window_size=1, fmt='{value:.6f}'))
 
-            X_train, y_train = dm.to_sklearn(dl=dm.train_dataloader(), lag=lag)
-            X_test, y_test = dm.to_sklearn(dl=dm.test_dataloader(), lag=lag)
+            X_train, y_train = dm.to_sklearn(dl=dm.train_dataloader(), lag=step)
+            X_test, y_test = dm.to_sklearn(dl=dm.test_dataloader(), lag=step)
             
             if var_names is None:
                 var_names = [f"Var_{i}" for i in range(y_train.shape[1])]
@@ -97,7 +97,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                 fit_stats = self.fit(X_train, rearrange(y_train_var, "N 1 -> N"))
                 pred = rearrange(self.predict(X_test), "N -> N 1")
                 r = self.evaluate(y_test_var, pred)
-                predictions[(var_name, lag)] = pred.squeeze()
+                predictions[(var_name, step + 1)] = pred.squeeze()
 
                 metric_logger.update(
                     mse=r['mse'], 
@@ -105,7 +105,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
                     fit_time=fit_stats['fit_time'])
                 
                 log_writer.update(head=f"var_{var_name}",
-                                    step=lag + 1,
+                                    step=step + 1,
                                     mape=r['mape'],
                                     mae=r['mae'],
                                     mse=r['mse'],
@@ -113,7 +113,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
                 results.append({
                     "seed": seed,
-                    "lag": lag,
+                    "step": step + 1,
                     "variable": var_name,
                     **r,
                 })
@@ -126,12 +126,12 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
 
         mean_per_var = df.groupby(by=["variable"]).mean()
         log_writer.update(head="mean_vars",
-                          step=n_lags,
+                          step=n_steps,
                           **{f'var_{i}: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in ['mape', 'mae', 'mse', 'r2']})
 
         mean_overall = mean_per_var.mean()
         log_writer.update(head="mean_overall",
-                          step=n_lags,
+                          step=n_steps,
                           mape=mean_overall['mape'],
                           mae=mean_overall['mae'],
                           mse=mean_overall['mse'],
@@ -165,7 +165,7 @@ class MultiModelUnivariateForecastingStrategy(GenericTrainingStrategy):
             return self.model.predict(X)
 
     def evaluate(self, y, preds):
-        # Evaluate the model
+        # Evaluate the models
         mape = 100 * mean_absolute_percentage_error(y, preds)  #  factor 100 due to unusual sklearn convention
         mae = mean_absolute_error(y, preds)
         mse = mean_squared_error(y, preds)
