@@ -7,7 +7,7 @@ test_ratio: 0.1
 step_train: 1
 step_val: 1
 step_test: 1
-ts_in: 24
-ts_out: 24
+ts_in: 4
+ts_out: 4
 target_col: "pv_generation"
 drop_cols:
