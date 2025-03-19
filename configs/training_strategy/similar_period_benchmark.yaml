@@ -1,0 +1,3 @@
+_target_: lmetk.benchmarks.similar_period_benchmark.SimilarPeriodStrategy
+#N_samples: 100
+#lags: 24
