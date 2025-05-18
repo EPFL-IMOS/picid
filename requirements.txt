@@ -15,7 +15,9 @@ torchinfo==1.7.1
 h5netcdf==1.1.0
 netCDF4==1.6.5
 openpyxl==3.1.2
-tabpfn==2.0.6
 ipykernel
 gdown
 matplotlib
+tabpfn==2.0.6
+git+https://github.com/priorlabs/tabpfn-extensions.git#egg=tabpfn_extensions
+hyperopt
