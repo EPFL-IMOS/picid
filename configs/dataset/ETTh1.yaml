@@ -13,4 +13,4 @@ loader:
   scale: True
   timeenc: 0 
   freq: h 
-  seasonal_patterns: None
+
