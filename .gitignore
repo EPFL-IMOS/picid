@@ -5,5 +5,5 @@ TabPFN
 tabpfn-extensions
 catboost_info
 PRIVATE_RUNAI.md
-datasets/
+/datasets/
 results/
