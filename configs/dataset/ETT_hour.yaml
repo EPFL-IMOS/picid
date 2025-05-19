@@ -6,7 +6,7 @@ loader:
   data_dir: ${paths.data_dir}/${dataset.loader.data_folder}
   
   flag: train
-  size: None 
+  size: null 
   
   features: S
   target_name: OT
