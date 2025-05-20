@@ -9,3 +9,6 @@ PRIVATE_RUNAI.md
 results/
 
 .DS_Store
+.venv
+*.egg-info
+build
