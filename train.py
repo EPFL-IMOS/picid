@@ -16,11 +16,11 @@ from argparse import ArgumentParser
 
 from lightning.pytorch import  LightningDataModule, LightningModule
 
-from exp.utils import set_reproducibility, EarlyStopping
-from exp.train import TrainLSTM, TrainSTF
-import exp.distutil as utils
-from exp.distutil import auto_load_model
-from exp.validation import extended_validation
+from lmetk.utils import set_reproducibility, EarlyStopping
+from lmetk.training_strategy.timeseries_transformer import TrainLSTM, TrainSTF
+import lmetk.utils.distutil as utils
+from lmetk.utils.distutil import auto_load_model
+from lmetk.training_strategy.timeseries_transformer_validation import extended_validation
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
