@@ -7,3 +7,5 @@ catboost_info
 PRIVATE_RUNAI.md
 /datasets/
 results/
+
+.DS_Store
