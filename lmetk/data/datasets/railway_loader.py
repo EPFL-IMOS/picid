@@ -1,107 +1,66 @@
-import os
-import numpy as np
 import pandas as pd
-import glob
-import re
-import torch
-from torch.utils.data import Dataset
-from sklearn.preprocessing import StandardScaler
-from lmetk.utils.timefeatures import time_features
-
-# from sktime.datasets import load_from_tsfile_to_dataframe
-import warnings
-from lmetk.utils.augmentation import run_augmentation_single
 from omegaconf import DictConfig
+from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
+from lmetk.data.utils import time_features
+import warnings
 warnings.filterwarnings('ignore')
 
 
-from torch.utils.data import Dataset
-import pandas as pd
-from omegaconf import DictConfig
-
-
-class RailwayLoader:
+class RailwayLoader(AbstractTimeSeriesDataSource):
     def __init__(
         self,
         load_arguments: DictConfig,
         data_splitter,
         scaler,
     ):
-        self.load_arguments = load_arguments
-        self.data_splitter = data_splitter
-        self.scaler = scaler
-
-        # # Core attributes extracted from config
-        # self.feature_mode = load_arguments.get("features", "S")
-        # self.target_col = load_arguments.get("target_name", "OT")
-        
-
-        self._pipeline()        
+        super().__init__(load_arguments, data_splitter, scaler)       
     
-    def get_data(self):
-        return self.splitted_data, self.splitted_timestamps
-
-    def get_scaler(self):
-        return self.scaler
-    def _pipeline(self):
-        # Load data
-        self.data, self.timestamps = self._load_data()
-
-        # Generate splits
-        self.splitted_data, self.splitted_timestamps = self._generate_splits()
-
-        # Apply transformations
-        self._apply_transformations()
     
     def _load_data(self):
         
-        target_col_name = self.load_arguments.target_col_name
+        target_col_name = self.load_arguments.target_name
+        time_col_name = self.load_arguments.timestamp_name
         # Read raw CSV
-        # data_path = "datasets/railway.csv"
+        
         df = pd.read_csv(self.load_arguments.data_path, sep=",")
-        self.raw_df = df.copy()
-        
-        samples_per_day = 24
-
-        # Move target column to the front (some models require it)
-        
+        # self.raw_df = df.copy()
         
         #  Move target column ('Bahnlast') to the front (some models require it) 
         df = pd.concat([df[[target_col_name]], df.drop(columns=[target_col_name])], axis=1)
-        
-        # Comment for now
-        # # Determine columns to use
-        # if self.feature_mode in ['M', 'MS']:
-        #     data_cols = df.columns.drop('date')
-        # else:  # 'S'
-        #     data_cols = [self.target_col]
-        
-        # Extract timestamps
-        df_stamp = self.raw_df[['date']]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        
-        if self.load_arguments.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            df_stamp = df_stamp.drop(columns=['date']) #.values
-        
-        elif self.load_arguments.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-            data_stamp = data_stamp.transpose(1, 0) 
 
+        if self.load_arguments.trend_decomp:
+            """
+            Decomposes the target variable by subtracting the mean of a rolling window.
+            The tagret variable then is the decomposed one. 
+            """
+            # Get the decomposed target variable
+            S = self.load_arguments.trend_decomp_rolling_window
+            self.prev_mean = df[target_col_name].rolling(S).mean().bfill()
+            self.prev_mean_shifted = df[target_col_name].rolling(S).mean().shift(self.load_arguments.samples_per_day).bfill()
+            decomp_target = df[target_col_name] - self.prev_mean_shifted
+
+            df.drop(columns=[target_col_name], inplace=True)
+            df.insert(loc=0, column=target_col_name, value=decomp_target)
+            
+        # Extract timestamps
+        df_stamp = df[time_col_name].copy()
+        df.drop(columns=[time_col_name], inplace=True)
+
+        df_stamp, self.initial_dates = time_features(dates = df_stamp,
+                                        use_features=self.load_arguments.time_features,
+                                        normalize=self.load_arguments.normalize_time_features
+                                        ) 
 
         # Extract data
-        return df[data_cols].values, df_stamp.values
+        return df.values, df_stamp.values
         
 
     def _generate_splits(self):
         # Split the data (e.g., train/val/test sequences)
-        train_data, val_data, test_data = self.data_splitter.split_data(self.data)
+        train_data, val_data, test_data = self.data_splitter.split_data(self.data, self.initial_dates)
         data = {"train": train_data, "val": val_data, "test": test_data}
 
-        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.timestamps)
+        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.timestamps, self.initial_dates)
         timestamps = {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}
         return data, timestamps
 
@@ -115,10 +74,7 @@ class RailwayLoader:
                 if split_name in self.splitted_data:
                     self.splitted_data[split_name] = self.scaler.transform(self.splitted_data[split_name])
     
-    def __repr__(self) -> str:
-        return f"loader_arguments: {self.load_arguments}, " \
-                f"data_splitter: {self.data_splitter}, " \
-                f"scaler: {self.scaler}"
+   
 
 
 
@@ -150,6 +106,7 @@ class RailwayLoader:
         
 #         self.data = {"full": data, "gt": data['Bahnlast'].copy()}
 #         data.drop(columns=['Bahnlast'], inplace=True)
+    
 #     else:
 #         raise ValueError("Unknown trend decomposition")
         

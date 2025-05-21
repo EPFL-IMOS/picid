@@ -1,0 +1,31 @@
+loader:
+  _target_: lmetk.data.datasets.RailwayLoader
+  
+  load_arguments:
+    data_name: railway
+    data_folder: railway
+    data_path: ${paths.data_dir}/${dataset.loader.load_arguments.data_folder}/${dataset.loader.load_arguments.data_name}.csv
+    
+    samples_per_day: 24
+    target_name: Bahnlast
+    timestamp_name: datetime
+    
+    # In case true, define trend_decomp_rolling_window
+    trend_decomp: False
+    trend_decomp_rolling_window: null
+
+    time_features: ["year", "month", "day", "weekday", "hour"]
+    normalize_time_features: False
+
+  data_splitter:
+    _target_: lmetk.data.preprocessing.splits.DateBasedSplitter
+    test_start: "2023-01-24 00:00:00"
+    train_ratio: 0.9 
+    val_ratio: 0.1 
+    seq_len: 384
+    label_len: 96
+    pred_len: 96
+    apply_lookback: True # Should be true if TimeSeriesDataset is used
+
+  scaler:
+    _target_: sklearn.preprocessing.MinMaxScaler

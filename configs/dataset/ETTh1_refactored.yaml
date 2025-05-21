@@ -13,8 +13,12 @@ loader:
     features_mode: S
     target_name: OT
     scale: True
-    timeenc: 0 
+    # timeenc: 0 # Disable for now till we got a model that need it
     freq: h 
+
+    timestamp_name: date
+    time_features: ["month", "day", "weekday", "hour"]
+    normalize_time_features: False
   
   data_splitter:
     _target_: lmetk.data.preprocessing.SimpleSplitter

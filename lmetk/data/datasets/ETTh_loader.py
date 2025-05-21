@@ -1,17 +1,12 @@
 import pandas as pd
-
-from torch.utils.data import Dataset
-
-from lmetk.utils.timefeatures import time_features
-
-from torch.utils.data import Dataset
-import pandas as pd
 from omegaconf import DictConfig
+from lmetk.data.utils import time_features
+from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
 
 import warnings
-from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
-from omegaconf import DictConfig
 warnings.filterwarnings('ignore')
+
+
 
 # default_load_arguments = {
 #     "data_name": "ETTh1",
@@ -50,20 +45,28 @@ class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
         else:  # 'S'
             data_cols = [self.load_arguments.target_name]
         
+        
         # Extract timestamps
-        df_stamp = self.raw_df[['date']]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
+        df_stamp = df[self.load_arguments.timestamp_name].copy()
+        df.drop(columns=[self.load_arguments.timestamp_name], inplace=True)
+
+        df_stamp, self.initial_dates = time_features(dates = df_stamp,
+                                        use_features=self.load_arguments.time_features,
+                                        normalize=self.load_arguments.normalize_time_features
+                                        ) 
+        # df_stamp = self.raw_df[['date']]
+        # df_stamp['date'] = pd.to_datetime(df_stamp.date)
         
-        if self.load_arguments.timeenc == 0:
-            df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-            df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-            df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-            df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-            df_stamp = df_stamp.drop(columns=['date']) #.values
+        # if self.load_arguments.timeenc == 0:
+        #     df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
+        #     df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
+        #     df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
+        #     df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
+        #     df_stamp = df_stamp.drop(columns=['date']) #.values
         
-        elif self.load_arguments.timeenc == 1:
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-            data_stamp = data_stamp.transpose(1, 0) 
+        # elif self.load_arguments.timeenc == 1:
+        #     data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
+        #     data_stamp = data_stamp.transpose(1, 0) 
 
 
         # Extract data
