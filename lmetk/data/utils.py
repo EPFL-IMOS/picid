@@ -59,9 +59,6 @@ def time_features(
 
     return df[use_features], dates
 
-
-
-
 def reconstruct_datetime_from_features(
     data: Union[np.ndarray, pd.DataFrame],
     columns: list[str]
