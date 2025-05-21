@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from omegaconf import DictConfig
 from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
 from lmetk.data.utils import time_features
@@ -17,14 +18,10 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
     
     
     def _load_data(self):
+        # Read raw CSV
+        df, df_stamp = self.read_data()
         
         target_col_name = self.load_arguments.target_name
-        time_col_name = self.load_arguments.timestamp_name
-        # Read raw CSV
-        
-        df = pd.read_csv(self.load_arguments.data_path, sep=",")
-        # self.raw_df = df.copy()
-        
         #  Move target column ('Bahnlast') to the front (some models require it) 
         df = pd.concat([df[[target_col_name]], df.drop(columns=[target_col_name])], axis=1)
 
@@ -43,16 +40,29 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
             df.insert(loc=0, column=target_col_name, value=decomp_target)
             
         # Extract timestamps
-        df_stamp = df[time_col_name].copy()
-        df.drop(columns=[time_col_name], inplace=True)
-
         df_stamp, self.initial_dates = time_features(dates = df_stamp,
                                         use_features=self.load_arguments.time_features,
                                         normalize=self.load_arguments.normalize_time_features
                                         ) 
 
-        # Extract data
-        return df.values, df_stamp.values
+        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
+        mask = self.extract_mask(df)
+
+        return df.values, df_stamp.values, mask
+
+    def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
+        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
+        mask = np.array((df.columns == self.load_arguments.target_name))
+        return mask
+   
+    def read_data(self):
+        # Read raw CSV
+        df = pd.read_csv(self.load_arguments.data_path, sep=",")
+        
+        # Get timestamps
+        df_stamp = df[self.load_arguments.timestamp_name].copy()
+        df.drop(columns=[self.load_arguments.timestamp_name], inplace=True)
+        return df, df_stamp
         
 
     def _generate_splits(self):

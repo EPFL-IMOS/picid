@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from omegaconf import DictConfig
 from lmetk.data.utils import time_features
 from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
@@ -35,40 +36,35 @@ class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
     
     def _load_data(self):
         # Read raw CSV
-        df = pd.read_csv(self.load_arguments.data_path)
-        self.raw_df = df
-        
+        df, df_stamp = self.read_data()
 
         # Determine columns to use
-        if self.load_arguments.features_mode in ['M', 'MS']:
-            data_cols = df.columns.drop('date')
-        else:  # 'S'
-            data_cols = [self.load_arguments.target_name]
-        
-        
-        # Extract timestamps
-        df_stamp = df[self.load_arguments.timestamp_name].copy()
-        df.drop(columns=[self.load_arguments.timestamp_name], inplace=True)
+        if self.load_arguments.features_mode in ['S']:
+            df = df[[self.load_arguments.target_name]] 
 
+        
+        # Extract time features
         df_stamp, self.initial_dates = time_features(dates = df_stamp,
                                         use_features=self.load_arguments.time_features,
                                         normalize=self.load_arguments.normalize_time_features
                                         ) 
-        # df_stamp = self.raw_df[['date']]
-        # df_stamp['date'] = pd.to_datetime(df_stamp.date)
         
-        # if self.load_arguments.timeenc == 0:
-        #     df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-        #     df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-        #     df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-        #     df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-        #     df_stamp = df_stamp.drop(columns=['date']) #.values
+        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
+        mask = self.extract_mask(df)
+
+        return df.values, df_stamp.values, mask
+
+    def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
+        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
+        mask = np.array((df.columns == self.load_arguments.target_name))
+        return mask
+
+    def read_data(self,):
+        # Read raw CSV
+        df = pd.read_csv(self.load_arguments.data_path, sep=",")
         
-        # elif self.load_arguments.timeenc == 1:
-        #     data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-        #     data_stamp = data_stamp.transpose(1, 0) 
-
-
-        # Extract data
-        return df[data_cols].values, df_stamp.values
+        # Get timestamps
+        df_stamp = df[self.load_arguments.timestamp_name].copy()
+        df.drop(columns=[self.load_arguments.timestamp_name], inplace=True)
+        return df, df_stamp
         

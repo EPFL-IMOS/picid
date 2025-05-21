@@ -57,7 +57,7 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         return self.scaler
 
     def _pipeline(self):
-        self.data, self.timestamps = self._load_data()
+        self.data, self.timestamps, mask = self._load_data()
         self.splitted_data, self.splitted_timestamps = self._generate_splits()
         self._apply_transformations()
 
