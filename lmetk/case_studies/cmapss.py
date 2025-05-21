@@ -5,6 +5,25 @@ import torch
 from torch.utils.data import Dataset
 
 from lmetk.case_studies.ncmapss import flatten_RUL
+from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataset
+
+
+class CMAPSSDatasetReworked(AbstractTimeSeriesDataset):
+
+    def __init__(self, 
+                 path, 
+                 n_DS="FD001",
+                 mode="train", 
+                 units=None, 
+                 concepts=["HPC", "Fan+HPC"], 
+                 combined_concepts=False, 
+                 binary_concepts=True, RUL="linear", 
+                 include_healthy=True, 
+                 window_size=1, 
+                 stride=1, 
+                 **kwargs):
+        
+        pass
 
 
 class CMAPSSDataset(Dataset):

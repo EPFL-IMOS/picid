@@ -1,2 +1,7 @@
 {
+  "jupyter.notebookFileRoot": "${workspaceFolder}",
+  "jupyter.notebook.kernelLauncherEnv": {
+    "PYTHONPATH": "${workspaceFolder}"
+  },
+  "python.analysis.extraPaths": ["${workspaceFolder}"]
 }

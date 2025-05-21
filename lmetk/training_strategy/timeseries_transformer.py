@@ -17,8 +17,8 @@ import numpy as np
 from einops import rearrange
 
 
-import exp.distutil as utils
-from exp.distutil import NativeScalerWithGradNormCount as NativeScaler, auto_load_model
+import utils.distutil as utils
+from utils.distutil import NativeScalerWithGradNormCount as NativeScaler, auto_load_model
 
 class TrainingBase(object):
     
