@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from omegaconf import DictConfig
-from torch.utils.data import Dataset
+
 
 class TimeSeriesDatasetInterface(ABC):
     @abstractmethod
@@ -48,7 +48,7 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.load_arguments: DictConfig = load_arguments
         self.data_splitter = data_splitter
         self.scaler = scaler
-        self._pipeline()
+        # self._pipeline()
 
     def get_data(self):
         return self.splitted_data, self.splitted_timestamps
