@@ -3,5 +3,16 @@
   "jupyter.notebook.kernelLauncherEnv": {
     "PYTHONPATH": "${workspaceFolder}"
   },
-  "python.analysis.extraPaths": ["${workspaceFolder}"]
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}"
+  ],
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    "./tests",
+    "-p",
+    "test_*.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true
 }
