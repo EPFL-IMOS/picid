@@ -10,7 +10,7 @@ loader:
     flag: train
     size: null 
     
-    features: S
+    features_mode: S
     target_name: OT
     scale: True
     timeenc: 0 

@@ -1,16 +1,15 @@
-import os
-import numpy as np
 import pandas as pd
-import glob
-import re
-import torch
+
 from torch.utils.data import Dataset
-from sklearn.preprocessing import StandardScaler
+
 from lmetk.utils.timefeatures import time_features
 
-# from sktime.datasets import load_from_tsfile_to_dataframe
+from torch.utils.data import Dataset
+import pandas as pd
+from omegaconf import DictConfig
+
 import warnings
-from lmetk.utils.augmentation import run_augmentation_single
+from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
 from omegaconf import DictConfig
 warnings.filterwarnings('ignore')
 
@@ -28,44 +27,16 @@ warnings.filterwarnings('ignore')
 # }
 
 
-
-from torch.utils.data import Dataset
-import pandas as pd
-from omegaconf import DictConfig
-
-
-class Dataset_ETT_hour_refactored(Dataset):
+class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
     def __init__(
         self,
         load_arguments: DictConfig,
         data_splitter,
         scaler,
     ):
-        self.load_arguments = load_arguments
-        self.data_splitter = data_splitter
-        self.scaler = scaler
 
-        # Core attributes extracted from config
-        self.feature_mode = load_arguments.get("features", "S")
-        self.target_col = load_arguments.get("target_name", "OT")
+        super().__init__(load_arguments, data_splitter, scaler)
         
-
-        self._pipeline()        
-    
-    def get_data(self):
-        return self.splitted_data, self.splitted_timestamps
-
-    def get_scaler(self):
-        return self.scaler
-    def _pipeline(self):
-        # Load data
-        self.data, self.timestamps = self._load_data()
-
-        # Generate splits
-        self.splitted_data, self.splitted_timestamps = self._generate_splits()
-
-        # Apply transformations
-        self._apply_transformations()
     
     def _load_data(self):
         # Read raw CSV
@@ -74,10 +45,10 @@ class Dataset_ETT_hour_refactored(Dataset):
         
 
         # Determine columns to use
-        if self.feature_mode in ['M', 'MS']:
+        if self.load_arguments.features_mode in ['M', 'MS']:
             data_cols = df.columns.drop('date')
         else:  # 'S'
-            data_cols = [self.target_col]
+            data_cols = [self.load_arguments.target_name]
         
         # Extract timestamps
         df_stamp = self.raw_df[['date']]
@@ -98,27 +69,3 @@ class Dataset_ETT_hour_refactored(Dataset):
         # Extract data
         return df[data_cols].values, df_stamp.values
         
-
-    def _generate_splits(self):
-        # Split the data (e.g., train/val/test sequences)
-        train_data, val_data, test_data = self.data_splitter.split_data(self.data)
-        data = {"train": train_data, "val": val_data, "test": test_data}
-
-        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.timestamps)
-        timestamps = {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}
-        return data, timestamps
-
-    def _apply_transformations(self):
-        # Optionally scale the data
-        if self.load_arguments.get("scale", True):
-            
-            self.scaler.fit(self.splitted_data["train"])
-            
-            for split_name in ["train", "val", "test"]:
-                if split_name in self.splitted_data:
-                    self.splitted_data[split_name] = self.scaler.transform(self.splitted_data[split_name])
-    
-    def __repr__(self) -> str:
-        return f"loader_arguments: {self.load_arguments}, " \
-                f"data_splitter: {self.data_splitter}, " \
-                f"scaler: {self.scaler}"
