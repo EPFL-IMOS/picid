@@ -4,6 +4,7 @@ import unittest
 import hydra
 
 import lmetk
+from lmetk.data.datasets.multiunit_datasource import MultiUnitDataSource
 
 CONFIG_DIR = os.path.join(".", "assets", "configs")
 
@@ -36,3 +37,46 @@ class TestBaseline(unittest.TestCase):
             data_source._load_data()
             data_source.X
             data_source.scaler
+
+            
+    def test_multi_unit_datasource(self):
+        """
+        Combine two identical CMAPSSDataSource instances and verify combined behavior.
+        """
+        data_name = 'cmapss_refactored'
+        parameters = hydra.compose(
+            config_name='run.yaml',
+            overrides=[f'dataset={data_name}', 'paths=rt_local'],
+            return_hydra_config=True,
+        )
+        # Instantiate two base sources
+        src1 = hydra.utils.instantiate(parameters.dataset.loader)
+        src2 = hydra.utils.instantiate(parameters.dataset.loader)
+        # Prepare loader arguments, splitter, and scaler from one source
+        load_args = parameters.dataset.loader
+        splitter = src1.data_splitter
+        scaler = src1.scaler
+
+        # Create MultiUnitDataSource
+        multi_src = MultiUnitDataSource(
+            sources=[src1, src2],
+            load_arguments=load_args,
+            data_splitter=splitter,
+            scaler=scaler,
+        )
+        # Run pipeline and retrieve splits
+        data_dict, timestamps_dict = multi_src.get_data()
+
+        # Expect train/val/test keys
+        for split in ('train', 'val', 'test'):
+            self.assertIn(split, data_dict)
+            self.assertIn(split, timestamps_dict)
+            # Combined length should be roughly sum of individual sources
+            len_single = len(src1._load_data()[0])
+            self.assertEqual(
+                len(data_dict[split]),
+                len_single * 2 // 3  # approximate: train/val/test split ratios applied twice
+            )
+
+        # Scaler should be fitted
+        self.assertIsNotNone(multi_src.get_scaler())
