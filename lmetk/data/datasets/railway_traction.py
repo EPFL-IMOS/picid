@@ -90,7 +90,7 @@ class SpatialDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
 
         if self.train_scaled is None:
-            data = pd.read_csv("datasets/railway.csv", sep=",")
+            data = pd.read_csv("datasets/railway/railway.csv", sep=",")
             data.datetime = pd.to_datetime(data.datetime)
             data.set_index("datetime", inplace=True)
             self.data = {"full": data}

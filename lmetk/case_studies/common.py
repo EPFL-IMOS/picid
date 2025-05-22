@@ -148,10 +148,11 @@ class ContextBatchDataset(torch.utils.data.Dataset):
     def __init__(self, 
         Features: torch.Tensor, 
         Context: torch.Tensor,
-        ts_in: int,
-        ts_out:int,
-        out_features_mask: Optional[torch.Tensor] = None,
-        step: int = 1,
+        # sequence length
+        ts_in: int, # label length
+        ts_out:int, # prediction horizon
+        out_features_mask: Optional[torch.Tensor] = None, # not needed 
+        step: int = 1, # strite over sequences
         raw_data: Optional[pd.DataFrame] = None):
         
         self.raw_data = raw_data
