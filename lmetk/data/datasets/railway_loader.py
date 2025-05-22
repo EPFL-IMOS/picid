@@ -40,7 +40,7 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
             df.insert(loc=0, column=target_col_name, value=decomp_target)
             
         # Extract timestamps
-        df_stamp, self.initial_dates = time_features(dates = df_stamp,
+        df_stamp, initial_dates = time_features(dates = df_stamp,
                                         use_features=self.load_arguments.time_features,
                                         normalize=self.load_arguments.normalize_time_features
                                         ) 
@@ -48,7 +48,7 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
 
-        return df.values, df_stamp.values, mask
+        return  {"features": df.values, "timestamps": df_stamp.values, "mask": mask, "initial_dates": initial_dates}
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
@@ -67,25 +67,17 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
 
     def _generate_splits(self):
         # Split the data (e.g., train/val/test sequences)
-        train_data, val_data, test_data = self.data_splitter.split_data(self.data, self.initial_dates)
-        data = {"train": train_data, "val": val_data, "test": test_data}
+        train_data, val_data, test_data = self.data_splitter.split_data(self.data_dict["features"], self.data_dict["initial_dates"])
+        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.data_dict["timestamps"], self.data_dict["initial_dates"])
 
-        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.timestamps, self.initial_dates)
-        timestamps = {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}
-        return data, timestamps
+        # Check that splits are consistent
+        assert train_data.shape[0] == train_timestamps.shape[0], "Mismatch in train data and timestamps length"
+        assert val_data.shape[0] == val_timestamps.shape[0], "Mismatch in val data and timestamps length"
+        assert test_data.shape[0] == test_timestamps.shape[0], "Mismatch in test data and timestamps length"
 
-    def _apply_transformations(self):
-        # Optionally scale the data
-        if self.load_arguments.get("scale", True):
-            
-            self.scaler.fit(self.splitted_data["train"])
-            
-            for split_name in ["train", "val", "test"]:
-                if split_name in self.splitted_data:
-                    self.splitted_data[split_name] = self.scaler.transform(self.splitted_data[split_name])
-    
-   
-
+        # Update the self.data_dict
+        self.data_dict.update({"features": {"train": train_data, "val": val_data, "test": test_data}})
+        self.data_dict.update({"timestamps": {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}})
 
 
 

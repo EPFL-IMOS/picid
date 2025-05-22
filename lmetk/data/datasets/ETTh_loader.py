@@ -34,7 +34,7 @@ class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
         super().__init__(load_arguments, data_splitter, scaler)
         
     
-    def _load_data(self):
+    def _load_data(self) -> dict:
         # Read raw CSV
         df, df_stamp = self.read_data()
 
@@ -52,7 +52,7 @@ class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
 
-        return df.values, df_stamp.values, mask
+        return {"features": df.values, "timestamps": df_stamp.values, "mask": mask}
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero

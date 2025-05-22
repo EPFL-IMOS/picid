@@ -48,41 +48,55 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.load_arguments: DictConfig = load_arguments
         self.data_splitter = data_splitter
         self.scaler = scaler
-        # self._pipeline()
+        self.data_dict = {}  # centralized storage
+        self._pipeline()
 
     def get_data(self):
-        return self.splitted_data, self.splitted_timestamps
+        return self.data_dict["features"], self.data_dict["timestamps"]
 
     def get_scaler(self):
         return self.scaler
 
     def _pipeline(self):
-        self.data, self.timestamps, mask = self._load_data()
-        self.splitted_data, self.splitted_timestamps = self._generate_splits()
+        self.data_dict.update(self._load_data())
+        self._generate_splits()
         self._apply_transformations()
 
     @abstractmethod
-    def _load_data(self):
+    def _load_data(self)-> dict:
+        """
+        Expected to return a dict with at least:
+            - "features"
+            - "timestamps"
+        Optional keys like:
+            - "mask", "labels", etc.
+        """
         pass
 
     def _generate_splits(self):
         # Split the data (e.g., train/val/test sequences)
-        train_data, val_data, test_data = self.data_splitter.split_data(self.data)
-        data = {"train": train_data, "val": val_data, "test": test_data}
+        
+        train_data, val_data, test_data = self.data_splitter.split_data(self.data_dict['features'])
+        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.data_dict['timestamps'])
 
-        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.timestamps)
-        timestamps = {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}
-        return data, timestamps
+        # Check that splits are consistent
+        assert train_data.shape[0] == train_timestamps.shape[0], "Mismatch in train data and timestamps length"
+        assert val_data.shape[0] == val_timestamps.shape[0], "Mismatch in val data and timestamps length"
+        assert test_data.shape[0] == test_timestamps.shape[0], "Mismatch in test data and timestamps length"
+
+        # Update the self.data_dict
+        self.data_dict.update({"features": {"train": train_data, "val": val_data, "test": test_data}})
+        self.data_dict.update({"timestamps": {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}})
 
     def _apply_transformations(self):
         # Optionally scale the data
         if self.load_arguments.get("scale", True):
             
-            self.scaler.fit(self.splitted_data["train"])
+            self.scaler.fit(self.data_dict["features"]["train"])
             
             for split_name in ["train", "val", "test"]:
-                if split_name in self.splitted_data:
-                    self.splitted_data[split_name] = self.scaler.transform(self.splitted_data[split_name])
+                if split_name in self.data_dict["features"]:
+                    self.data_dict["features"][split_name] = self.scaler.transform(self.data_dict["features"][split_name])
     
     def __repr__(self) -> str:
         return f"loader_arguments: {self.load_arguments}, " \

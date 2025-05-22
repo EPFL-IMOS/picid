@@ -23,7 +23,7 @@ class MultiUnitDataSource(AbstractTimeSeriesDataSource, ABC):
         self.sources = sources
         super().__init__(load_arguments, data_splitter, scaler)
         # Execute load, split, transform pipeline
-        self._pipeline()
+        # self._pipeline()
 
     def _load_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[Any]]:
         """
