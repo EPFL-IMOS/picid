@@ -14,7 +14,7 @@ class IndexSequencer:
         label_len: int, # overlap size
         pred_len: int,  # prediction size
         dt_ts_out: List[int] = None,
-        stride: int = 1) -> None:
+        stride: int = 24) -> None:
         
         self.seq_len = seq_len
         self.label_len = label_len  
@@ -36,16 +36,19 @@ class IndexSequencer:
         # self.start_end_index = torch.stack ([i, i + (ts_in + upper_limit)], dim=1)
         
         # --Questinable update--
-        i = torch.arange(0, length - seq_len - pred_len + 1, stride=stride)
-        
         # s = index
         # e = index + self.seq_len
+        #length - seq_len - pred_len + 1
+        i = torch.arange(0, length - seq_len, stride)
         self.start_end_index = torch.stack([i, i + seq_len], dim=1)
         
         # r = e - self.label_len
         # p = r + self.label_len + self.pred_len
-        self.second = torch.stack([(i[1:] - label_len), (i[1:] + label_len + pred_len)], dim=1)
+        # torch.arange(seq_len - stride, length + 1, stride)
+        i = torch.arange(seq_len - label_len, length - seq_len + 1, stride)
+        self.second = torch.stack([i, i + seq_len], dim=1)
         
+        assert self.start_end_index.shape == self.second.shape, "start_end_index and second should have the same shape"
         self.N_sequences = len(self.start_end_index)
         
     def __len__(self):
@@ -68,23 +71,23 @@ class AutoregressiveSequencer(IndexSequencer):
     def __init__(
         self, 
         features: torch.Tensor,
-        timestamps: torch.Tensor,
+        time_features: torch.Tensor,
         seq_len: int,   # window size
         label_len: int, # overlap size
         pred_len: int,  # prediction size
-        stride: int=10) -> None:
+        stride: int=1) -> None:
         
         length = features.shape[0]
         super().__init__(length=length, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
         
         self.features = features
-        self.timestamps = timestamps 
+        self.time_features = time_features 
     
     # This acts as batch collate function
     def _create_sequences(self, x_window: List[Tuple[int]], x_mark_window: List[Tuple[int]]) -> Tuple[torch.Tensor]:
         
         seq_x = self.features[x_window, ...]
-        seq_y = self.timestamps[x_mark_window, ...]
+        seq_y = self.time_features[x_mark_window, ...]
 
         seq_x_time = self.features[x_window, ...]
         seq_y_time = self.features[x_mark_window, ...]
@@ -112,7 +115,7 @@ class ContextBatchDataset(torch.utils.data.Dataset):
     def __init__(self, 
         
         features: torch.Tensor,
-        timestamps: torch.Tensor,
+        time_features: torch.Tensor,
         mask: torch.Tensor, # True for target, False for the rest of covariates
         seq_len: int,   # window size
         label_len: int, # overlap size
@@ -129,8 +132,8 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         target_feature = features[..., mask]
         context_features = features[..., ~mask]
         
-        self.target = AutoregressiveSequencer(features=target_feature, timestamps=timestamps, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
-        self.context = AutoregressiveSequencer(features=context_features, timestamps=timestamps, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
+        self.target_sequencer = AutoregressiveSequencer(features=target_feature, time_features=time_features, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
+        self.context_sequencer = AutoregressiveSequencer(features=context_features, time_features=time_features, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
                     
     def __len__(self):
         return len(self.target)
@@ -139,7 +142,7 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         d = {
             "batch_idx": batch_idx,
         }
-        seq_x, seq_y, seq_x_time, seq_y_time = self.target(batch_idx)
+        seq_x, seq_y, seq_x_time, seq_y_time = self.target_sequencer.sequences_batch(batch_idx)
         d['target'] = {
             "x": seq_x,
             "y": seq_y,
@@ -148,7 +151,7 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         }
 
         
-        seq_x, seq_y, seq_x_time, seq_y_time = self.context(batch_idx)
+        seq_x, seq_y, seq_x_time, seq_y_time = self.context_sequencer.sequences_batch(batch_idx)
         d['context'] = {
             "x": seq_x,
             "y": seq_y,
