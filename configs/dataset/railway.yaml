@@ -28,4 +28,5 @@ loader:
     apply_lookback: True # Should be true if TimeSeriesDataset is used
 
   scaler:
-    _target_: sklearn.preprocessing.MinMaxScaler
+    features:
+      _target_: sklearn.preprocessing.MinMaxScaler

@@ -33,5 +33,6 @@ loader:
 
   
   scaler:
-    _target_: sklearn.preprocessing.StandardScaler
+    features:
+      _target_: sklearn.preprocessing.StandardScaler
     

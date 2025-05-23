@@ -103,9 +103,9 @@ class AutoregressiveSequencer(IndexSequencer):
         y_idx = torch.arange(x_mark_window[0], x_mark_window[1], device=self.device) # Shape: B
 
         seq_x = self.features[x_idx]
-        seq_y = self.time_features[y_idx]
+        seq_y = self.features[y_idx]
 
-        seq_x_time = self.features[x_idx]
-        seq_y_time = self.features[y_idx]
+        seq_x_time = self.time_features[x_idx]
+        seq_y_time = self.time_features[y_idx]
 
         return seq_x, seq_y, seq_x_time, seq_y_time
