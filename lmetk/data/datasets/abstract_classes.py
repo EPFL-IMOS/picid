@@ -54,13 +54,13 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.data_splitter = data_splitter
         self.scalers: Dict[str, TransformerMixin] = scalers  
         self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {} # centralized storage
-        # self._pipeline() # Why do we call pipeline here?
+        self._pipeline() # Why do we call pipeline here?
 
     def get_data(self):
         return self.data_dict["features"], self.data_dict["timestamps"]
 
     def get_scaler(self):
-        return self.scaler
+        return self.scalers
 
     def _pipeline(self):
         self.data_dict.update(self._load_data())
@@ -103,7 +103,6 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
             for split_name in ["train", "val", "test"]:
                 if split_name in self.data_dict["features"]:
                     for key, scaler in self.scalers.items():
-                        print(f"Scaling {key} for {split_name} split using {scaler.__class__.__name__}")  
                         self.data_dict[key][split_name] = \
                               scaler.transform(self.data_dict[key][split_name])
         
@@ -112,4 +111,4 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
     def __repr__(self) -> str:
         return f"loader_arguments: {self.load_arguments}, " \
                 f"data_splitter: {self.data_splitter}, " \
-                f"scaler: {self.scaler}"
+                f"scaler: {self.scalers}"
