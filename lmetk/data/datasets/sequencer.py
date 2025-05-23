@@ -81,17 +81,26 @@ class AutoregressiveSequencer(IndexSequencer):
         length = features.shape[0]
         super().__init__(length=length, seq_len=seq_len, label_len=label_len, pred_len=pred_len, stride=stride)
         
-        self.features = features.cpu()
-        self.time_features = time_features.cpu() 
+        self.features = torch.Tensor(features, device=self.device)
+        self.time_features = torch.Tensor(time_features, device=self.device)
     
-    # This acts as batch collate function
+    
     
     def _create_sequences(self, x_window, x_mark_window):
-        x_idx = [torch.arange(start, end, device=self.device) for start, end in [x_window]]
-        y_idx = [torch.arange(start, end, device=self.device) for start, end in [x_mark_window]]
+        """
+        Create sequences for the given windows.
         
-        x_idx = torch.stack(x_idx)  # Shape: [B, seq_len]
-        y_idx = torch.stack(y_idx)  # Shape: [B, label_len + pred_len]
+        Input:
+            x_window: List of tuples (start, end) for the input sequence
+            x_mark_window: List of tuples (start, end) for the output sequence
+        Output:
+            seq_x: Encoder input sequence
+            seq_y: Decoder input sequence
+            seq_x_time: Time features for the encoder input sequence
+            seq_y_time: Time features for the decoder output sequence
+        """
+        x_idx = torch.arange(x_window[0], x_window[1], device=self.device) # Shape: B
+        y_idx = torch.arange(x_mark_window[0], x_mark_window[1], device=self.device) # Shape: B
 
         seq_x = self.features[x_idx]
         seq_y = self.time_features[y_idx]
