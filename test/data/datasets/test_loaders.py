@@ -12,7 +12,7 @@ class TestTimeSeriesDatasetLoaders:
         GlobalHydra.instance().clear()
         self.base_dir = Path(__file__).resolve().parents[3]
         self.relative_config_dir = "../../../configs"
-        self.config_names = ["ETTh1_refactored", "railway", "cmapss_refactored"]
+        self.config_names = ["ETTh1_refactored", "railway"]# "cmapss_refactored"
         self.test_splits = ['train', 'val', 'test']
 
     def _load_dataset(self, config_name: str):

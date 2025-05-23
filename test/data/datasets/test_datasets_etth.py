@@ -60,7 +60,7 @@ def dataset_val():
     splitted_data, splitted_timestamps = loader.get_data()
 
     ds_val = TimeSeriesDataset(
-        data=splitted_data["val"],
+        features=splitted_data["val"],
         time_features=splitted_timestamps["val"],
         seq_len=384,
         label_len=96,
