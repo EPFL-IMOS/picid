@@ -22,9 +22,9 @@ loader:
     test_start: "2023-01-24 00:00:00"
     train_ratio: 0.9 
     val_ratio: 0.1 
-    seq_len: 384
-    label_len: 96
-    pred_len: 96
+    seq_len: 48 #384
+    label_len: 24 #96
+    pred_len: 24 #96
     apply_lookback: True # Should be true if TimeSeriesDataset is used
 
   scaler:
