@@ -1,7 +1,7 @@
 testwdir
 __pycache__
 *.pyc
-TabPFN
+# TabPFN
 tabpfn-extensions
 catboost_info
 PRIVATE_RUNAI.md

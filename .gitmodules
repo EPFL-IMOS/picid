@@ -1,0 +1,6 @@
+[submodule "rul-datasets"]
+	path = rul-datasets
+	url = git@github.com:tilman151/rul-datasets.git
+[submodule "TabPFN"]
+	path = TabPFN
+	url = https://github.com/PriorLabs/TabPFN

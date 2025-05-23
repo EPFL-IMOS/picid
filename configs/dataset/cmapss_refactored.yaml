@@ -31,6 +31,11 @@ loader:
     pred_len: 96   # prediction size
 
   
-  scaler:
-    _target_: lmetk.data.datasets.cmapss.CMAPSSScaler
-    
+  scalers:
+
+    features:
+      _target_: lmetk.data.datasets.cmapss.CMAPSSScaler
+
+    labels:
+      _target_: lmetk.data.datasets.cmapss.ConstantScaler
+      factor: 0.01
