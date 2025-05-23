@@ -60,7 +60,7 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         return self.data_dict["features"], self.data_dict["timestamps"]
 
     def get_scaler(self):
-        return self.scaler
+        return self.scalers
 
     def _pipeline(self):
         self.data_dict.update(self._load_data())
@@ -111,4 +111,4 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
     def __repr__(self) -> str:
         return f"loader_arguments: {self.load_arguments}, " \
                 f"data_splitter: {self.data_splitter}, " \
-                f"scaler: {self.scaler}"
+                f"scaler: {self.scalers}"

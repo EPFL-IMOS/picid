@@ -8,21 +8,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-
-# default_load_arguments = {
-#     "data_name": "ETTh1",
-#     "data_folder": "ETT-small",
-#     "data_dir": "${paths.data_dir}/${dataset.loader.data_folder}",  # interpolated by Hydra
-#     "flag": "train",
-#     "size": None,
-#     "features": "S",
-#     "target_name": "OT",
-#     "scale": True,
-#     "timeenc": 0,
-#     "freq": "h"
-# }
-
-
 class Dataset_ETT_hour_refactored(AbstractTimeSeriesDataSource):
     def __init__(
         self,
