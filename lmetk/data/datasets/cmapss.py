@@ -5,11 +5,22 @@ import pandas as pd
 from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
 
 from lmetk.case_studies.ncmapss import flatten_RUL
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
 
+class ConstantScaler(BaseEstimator, TransformerMixin):
+    def __init__(self, factor=1.0):
+        self.factor = factor
 
-class CMAPSSScaler:
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        return X * self.factor
+
+
+class CMAPSSScaler(BaseEstimator, TransformerMixin):
 
     def __init__(self):
         pass
@@ -60,9 +71,11 @@ class CMAPSSScaler:
         X_std = (data - X_min) / (X_max - X_min + 1e-12)
         f_min, f_max = -1, 1
         X = X_std * (f_max - f_min) + f_min
-        df_Y /= 100.  # max in FD001 is 362
 
-        return X, df_Y
+        # This is now scaled by a ConstantScaler
+        # df_Y /= 100.  # max in FD001 is 362 
+
+        return X
 
 
 class CMAPSSDataSource(AbstractTimeSeriesDataSource):
@@ -70,13 +83,13 @@ class CMAPSSDataSource(AbstractTimeSeriesDataSource):
     def __init__(self, 
                 load_arguments,
                 data_splitter,
-                scaler,
+                scalers,
                 **kwargs):
         
         super().__init__(
             load_arguments,
             data_splitter,
-            scaler,
+            scalers,
             **kwargs)
         
 
@@ -151,5 +164,20 @@ class CMAPSSDataSource(AbstractTimeSeriesDataSource):
         print("Used concepts:", self.concepts.columns)
         self.concepts = self.concepts.astype(int)
 
-        self.X = self.df_X.drop(["unit", "cycle", "hs"], axis=1)
 
+        self.data_dict = dict(
+            features=self.df_X.drop(["unit", "cycle", "hs"], axis=1).values,
+            timestamps=self.df_X["cycle"].values,
+            health_states=self.df_X["hs"].values,
+            unit=self.df_X["unit"].values,
+            labels=self.df_Y.values,
+            concepts=self.concepts.values
+        )
+        
+        
+    def _generate_splits(self):
+        super()._generate_splits()
+        # Also split health_states, labels, and concepts
+        for k in ["health_states", "labels", "concepts", "unit"]:
+            split_tuple = self.data_splitter.split_data(self.data_dict[k])
+            self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}

@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
+from typing import Dict
+from box import Box
+import numpy as np
 from omegaconf import DictConfig
+from sklearn.base import TransformerMixin
 
 
 class TimeSeriesDatasetInterface(ABC):
@@ -43,13 +47,14 @@ class TimeSeriesDatasetInterface(ABC):
 
 
 class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
-    def __init__(self, load_arguments, data_splitter, scaler):
+
+    def __init__(self, load_arguments, data_splitter, scalers, **kwargs):
 
         self.load_arguments: DictConfig = load_arguments
         self.data_splitter = data_splitter
-        self.scaler = scaler
-        self.data_dict = {}  # centralized storage
-        self._pipeline()
+        self.scalers: Dict[str, TransformerMixin] = scalers  
+        self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {} # centralized storage
+        # self._pipeline() # Why do we call pipeline here?
 
     def get_data(self):
         return self.data_dict["features"], self.data_dict["timestamps"]
@@ -91,13 +96,19 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
     def _apply_transformations(self):
         # Optionally scale the data
         if self.load_arguments.get("scale", True):
-            
-            self.scaler.fit(self.data_dict["features"]["train"])
+
+            for key, scaler in self.scalers.items():
+                scaler.fit(self.data_dict[key]["train"])
             
             for split_name in ["train", "val", "test"]:
                 if split_name in self.data_dict["features"]:
-                    self.data_dict["features"][split_name] = self.scaler.transform(self.data_dict["features"][split_name])
-    
+                    for key, scaler in self.scalers.items():
+                        print(f"Scaling {key} for {split_name} split using {scaler.__class__.__name__}")  
+                        self.data_dict[key][split_name] = \
+                              scaler.transform(self.data_dict[key][split_name])
+        
+        self.data_dict = Box(self.data_dict)  # Convert to a Box object for easier access
+
     def __repr__(self) -> str:
         return f"loader_arguments: {self.load_arguments}, " \
                 f"data_splitter: {self.data_splitter}, " \
