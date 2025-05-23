@@ -5,6 +5,7 @@ from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf
 
 from lmetk.data.datasets import TimeSeriesDataset
+from lmetk.data.datasets.batch_dataset import BatchDataset 
 import os
 from pathlib import Path
 
@@ -59,7 +60,7 @@ def dataset_val():
     splitted_data, splitted_timestamps = loader.get_data()
 
     ds_val = TimeSeriesDataset(
-        data=splitted_data["val"],
+        features=splitted_data["val"],
         time_features=splitted_timestamps["val"],
         seq_len=384,
         label_len=96,
@@ -109,3 +110,58 @@ def test_timeseriesdataset_first_sample(dataset_val):
     np.testing.assert_array_equal(seq_y_mark[-5:], expected_seq_y_mark)
 
     print("✅ TimeSeriesDataset first sample check passed.")
+
+def test_efficient_timeseriesdataset_first_sample(dataset_val):
+    base_dir = Path(__file__).resolve().parents[3]
+    data_path = os.path.abspath(f"{base_dir}/datasets/ETT-small/ETTh1.csv")
+    assert os.path.exists(data_path), f"File not found: {data_path}"
+
+    loader_config = OmegaConf.create({
+        "_target_": "lmetk.data.datasets.Dataset_ETT_hour_refactored",
+        "load_arguments": {
+            "data_name": "ETTh1",
+            "data_folder": "ETT-small",
+            "data_path": data_path,
+
+            "flag": "train",
+            "size": None,
+
+            "features_mode": "S",
+            "target_name": "OT",
+            "scale": True,
+            "freq": "h",
+
+            "timestamp_name": "date",
+            "time_features": ["month", "day", "weekday", "hour"],
+            "normalize_time_features": False
+        },
+        "data_splitter": {
+            "_target_": "lmetk.data.preprocessing.SimpleSplitter",
+            "train": 8640,
+            "val": 2880,
+            "test": None,
+
+            "seq_len": 384,
+            "label_len": 96,
+            "pred_len": 96
+        },
+        "scaler": {
+            "features": {
+                "_target_": "sklearn.preprocessing.StandardScaler"
+            }
+        }
+    })
+
+    loader = hydra.utils.instantiate(loader_config)
+    splitted_data, splitted_timestamps = loader.get_data()
+
+    batch_dataset = BatchDataset(
+        features=splitted_data['val'], 
+        time_features=splitted_timestamps['val'], 
+        seq_len=384, 
+        label_len=96, 
+        pred_len=96,
+        stride=1,
+    )
+    
+    return batch_dataset
