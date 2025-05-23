@@ -72,7 +72,11 @@ class ConceptRULDataset(Dataset):
 
 
 
-class RulDataModule(pl.LightningDataModule):
+class SimlifiedRulDataModule(pl.LightningDataModule):
+    """
+    Data module for the RUL datasets.
+    This is a similar module to the one in rul_datasets but simplified.
+    """
 
 
     _data: Dict[str, Tuple[List[np.ndarray], List[np.ndarray]]]
@@ -92,6 +96,8 @@ class RulDataModule(pl.LightningDataModule):
             batch_size=batch_size,
         )
 
+        self.datasets = datasets
+        self.batch_size = batch_size 
         self.save_hyperparameters(hparams)
 
 
@@ -109,7 +115,7 @@ class RulDataModule(pl.LightningDataModule):
             *args: Ignored. Only for adhering to parent class interface.
             **kwargs: Ignored. Only for adhering to parent class interface.
         """
-        self.data_source.pipeline()
+        pass
 
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -149,7 +155,7 @@ class RulDataModule(pl.LightningDataModule):
         Returns:
             The training data loader
         """
-        dataset = self.to_dataset("dev")
+        dataset = self.datasets.train
         drop_last = len(dataset) % self.batch_size == 1
         loader = DataLoader(
             dataset,
@@ -179,7 +185,7 @@ class RulDataModule(pl.LightningDataModule):
             The validation data loader
         """
         return DataLoader(
-            self.to_dataset("val"),
+            self.datasets.val,
             batch_size=self.batch_size,
             shuffle=False,
             pin_memory=True,
@@ -203,7 +209,7 @@ class RulDataModule(pl.LightningDataModule):
             The test data loader
         """
         return DataLoader(
-            self.to_dataset("test"),
+            self.datasets.test,
             batch_size=self.batch_size,
             shuffle=False,
             pin_memory=True,
