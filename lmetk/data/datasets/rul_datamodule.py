@@ -24,12 +24,19 @@ class ConceptRULDataset(Dataset):
     def __init__(self, 
                 data_split: Dict[str, np.ndarray],
                 window_size: int,
-                stride: int,):
+                stride: int,
+                shuffle_train: bool = True,
+                shuffle_val: bool = False,
+                shuffle_test: bool = False,):
 
         self.df_Y = data_split.labels
         self.X = data_split.features
         self.unit= data_split.unit
         self.concepts = data_split.concepts
+
+        self.shuffle_train = shuffle_train
+        self.shuffle_val = shuffle_val
+        self.shuffle_test = shuffle_test
 
         self.window_size = window_size
         self.stride = stride

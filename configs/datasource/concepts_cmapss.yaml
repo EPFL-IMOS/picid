@@ -4,7 +4,7 @@ loader:
   
   load_arguments:
     data_folder: CMAPSS
-    path: ${paths.data_dir}/${dataset.loader.load_arguments.data_folder}
+    path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}
     n_DS: "FD001"
     mode: "train"
     units: null

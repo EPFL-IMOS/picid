@@ -1,0 +1,3 @@
+_target_: lmetk.data.datasets.rul_datamodule.ConceptRULDataset
+window_size: 1
+stride: 1

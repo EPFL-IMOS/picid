@@ -1,0 +1,6 @@
+defaults:
+  - concepts_cmapss
+
+shuffle_train: false
+shuffle_val: false
+shuffle_test: false
