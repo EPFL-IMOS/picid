@@ -54,7 +54,6 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.data_splitter = data_splitter
         self.scalers: Dict[str, TransformerMixin] = scalers  
         self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {} # centralized storage
-        self._pipeline() # Why do we call pipeline here?
 
     def get_data(self):
         return self.data_dict["features"], self.data_dict["timestamps"]
