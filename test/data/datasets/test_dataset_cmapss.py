@@ -24,14 +24,13 @@ def hydra_context(request):
 
 @pytest.fixture(scope="module")
 def cmapss_datamodule():
-    data_name = 'test_concepts_cmapss'
 
     cfg = hydra.compose(
         config_name="test.yaml",
         overrides=[
-            '+datamodule=simplified_rul',
+            '+datamodule=test_simplified_rul',
             'dataset=concept_rul_dataset',
-            f'+datasource={data_name}', 
+            f'+datasource=concepts_cmapss', 
             f"paths=rt_local"], 
         return_hydra_config=True,
     )

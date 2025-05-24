@@ -24,19 +24,12 @@ class ConceptRULDataset(Dataset):
     def __init__(self, 
                 data_split: Dict[str, np.ndarray],
                 window_size: int,
-                stride: int,
-                shuffle_train: bool = True,
-                shuffle_val: bool = False,
-                shuffle_test: bool = False,):
+                stride: int):
 
         self.df_Y = data_split.labels
         self.X = data_split.features
         self.unit= data_split.unit
         self.concepts = data_split.concepts
-
-        self.shuffle_train = shuffle_train
-        self.shuffle_val = shuffle_val
-        self.shuffle_test = shuffle_test
 
         self.window_size = window_size
         self.stride = stride
@@ -92,6 +85,9 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
         self,
         datasets: Dict[str, ConceptRULDataset],
         batch_size: int,
+        shuffle_train: bool = True,
+        shuffle_val: bool = False,
+        shuffle_test: bool = False,
     ):
         
         for ds in ["train", "val", "test"]:
@@ -102,6 +98,11 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
         hparams = dict(
             batch_size=batch_size,
         )
+
+
+        self.shuffle_train = shuffle_train
+        self.shuffle_val = shuffle_val
+        self.shuffle_test = shuffle_test
 
         self.datasets = datasets
         self.batch_size = batch_size 
@@ -167,7 +168,7 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
         loader = DataLoader(
             dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=self.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
         )
@@ -194,7 +195,7 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
         return DataLoader(
             self.datasets.val,
             batch_size=self.batch_size,
-            shuffle=False,
+            shuffle=self.shuffle_val,
             pin_memory=True,
         )
 
@@ -218,6 +219,6 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
         return DataLoader(
             self.datasets.test,
             batch_size=self.batch_size,
-            shuffle=False,
+            shuffle=self.shuffle_test,
             pin_memory=True,
         )

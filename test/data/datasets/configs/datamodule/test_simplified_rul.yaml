@@ -1,5 +1,5 @@
 defaults:
-  - concepts_cmapss
+  - simplified_rul
 
 shuffle_train: false
 shuffle_val: false
