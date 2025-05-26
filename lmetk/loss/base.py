@@ -1,0 +1,69 @@
+"""
+Abstract base class for loss functions in PyTorch.
+
+This module provides an abstract base class for implementing custom loss functions
+for transformer models using standard PyTorch tensors and data structures.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Union
+
+import torch
+
+
+class AbstractLoss(ABC):
+    """
+    Abstract base class for loss functions.
+    
+    This class defines the standard interface for implementing custom loss functions
+    for transformer models. Subclasses must implement the forward method to provide
+    specific loss computation logic.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize the abstract loss function."""
+        super().__init__()
+    
+    def __call__(
+        self, 
+        model_out: Dict[str, torch.Tensor], 
+        batch: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Compute loss based on model output and batch data.
+        
+        This method serves as the main entry point for loss computation.
+        It delegates to the forward method which must be implemented by subclasses.
+        
+        Args:
+            model_out: Dictionary containing the model output tensors
+            batch: Dictionary containing the batch data tensors
+            
+        Returns:
+            Dictionary containing the model output with computed loss
+        """
+        return self.forward(model_out, batch)
+    
+    @abstractmethod
+    def forward(
+        self, 
+        model_out: Dict[str, torch.Tensor], 
+        batch: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Forward pass for loss computation.
+        
+        This method must be implemented by subclasses to define the specific
+        loss computation logic.
+        
+        Args:
+            model_out: Dictionary containing the model output tensors.
+                      Typically includes keys like 'predictions', 'logits', etc.
+            batch: Dictionary containing the batch data tensors.
+                   Typically includes keys like 'targets', 'labels', 'input_ids', etc.
+                   
+        Returns:
+            Dictionary containing the original model output with added loss information.
+            Should include at least a 'loss' key with the computed loss tensor.
+        """
+        pass
