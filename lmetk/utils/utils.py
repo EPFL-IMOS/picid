@@ -11,10 +11,10 @@ def set_reproducibility(seed=42, deterministic=True):
     random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = deterministic  
+    torch.backends.cudnn.deterministic = deterministic
     torch.backends.cudnn.benchmark = False
-    
-    
+
+
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0):
         self.patience = patience
@@ -32,7 +32,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model, path)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -42,37 +42,58 @@ class EarlyStopping:
 
     def save_checkpoint(self, val_loss, model, path):
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), path+'/'+'checkpoint.pth')
+            print(
+                f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ..."
+            )
+        torch.save(model.state_dict(), path + "/" + "checkpoint.pth")
         self.val_loss_min = val_loss
 
-class StandardScaler():
-    def __init__(self, mean=0., std=1.):
+
+class StandardScaler:
+    def __init__(self, mean=0.0, std=1.0):
         self.mean = mean
         self.std = std
-    
+
     def fit(self, data):
         self.mean = data.mean(0)
         self.std = data.std(0)
 
     def transform(self, data):
-        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) if torch.is_tensor(data) else self.mean
-        std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
+        mean = (
+            torch.from_numpy(self.mean).type_as(data).to(data.device)
+            if torch.is_tensor(data)
+            else self.mean
+        )
+        std = (
+            torch.from_numpy(self.std).type_as(data).to(data.device)
+            if torch.is_tensor(data)
+            else self.std
+        )
         return (data - mean) / std
 
     def inverse_transform(self, data):
-        mean = torch.from_numpy(self.mean).type_as(data).to(data.device) if torch.is_tensor(data) else self.mean
-        std = torch.from_numpy(self.std).type_as(data).to(data.device) if torch.is_tensor(data) else self.std
+        mean = (
+            torch.from_numpy(self.mean).type_as(data).to(data.device)
+            if torch.is_tensor(data)
+            else self.mean
+        )
+        std = (
+            torch.from_numpy(self.std).type_as(data).to(data.device)
+            if torch.is_tensor(data)
+            else self.std
+        )
         return (data * std) + mean
 
+
 def load_args(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         args = json.load(f)
     return args
 
+
 def string_split(str_for_split):
-    str_no_space = str_for_split.replace(' ', '')
-    str_split = str_no_space.split(',')
+    str_no_space = str_for_split.replace(" ", "")
+    str_split = str_no_space.split(",")
     value_list = [eval(x) for x in str_split]
 
     return value_list

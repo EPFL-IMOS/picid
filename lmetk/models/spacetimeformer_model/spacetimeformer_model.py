@@ -10,10 +10,16 @@ import models as stf
 from pathlib import Path
 import pkg_resources
 
+
 def find_ckpt(path):
     path = path / "checkpoints"
-    files = [x for x in path.iterdir() if x.is_file() and x.suffix == ".ckpt" and x.stem != "last"]
+    files = [
+        x
+        for x in path.iterdir()
+        if x.is_file() and x.suffix == ".ckpt" and x.stem != "last"
+    ]
     return files[0]
+
 
 class Spacetimeformer_Forecaster_2023(stf.Forecaster):
     def __init__(
@@ -37,10 +43,10 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
         dropout_attn_out: float = 0.0,
         dropout_attn_matrix: float = 0.0,
         pos_emb_type: str = "abs",
-        timetable_emb_type: Optional[str]  = None, 
-        time_emb_type: str   = "t2v", 
-        variable_emb_type: Optional[str] = None, 
-        inverted_encoder: bool = False, # iTransformer style encoder
+        timetable_emb_type: Optional[str] = None,
+        time_emb_type: str = "t2v",
+        variable_emb_type: Optional[str] = None,
+        inverted_encoder: bool = False,  # iTransformer style encoder
         global_self_attn: str = "performer",
         local_self_attn: str = "performer",
         global_cross_attn: str = "performer",
@@ -101,16 +107,18 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
         )
-        
-        self.torchmetrics_version = pkg_resources.get_distribution("torchmetrics").version
-        
+
+        self.torchmetrics_version = pkg_resources.get_distribution(
+            "torchmetrics"
+        ).version
+
         if start_token_len < 0:
             timetable_emb_enc_type = timetable_emb_type
             timetable_emb_dec_type = None
         else:
             timetable_emb_enc_type = timetable_emb_type
             timetable_emb_dec_type = timetable_emb_type
-        
+
         self.spacetimeformer = stf.spacetimeformer_model.nn.Spacetimeformer(
             d_yc=d_yc,
             d_yt=d_yt,
@@ -136,7 +144,7 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
             timetable_emb_dec_type=timetable_emb_dec_type,
             inverted_encoder=inverted_encoder,
             time_emb_type=time_emb_type,
-            variable_emb_type = variable_emb_type,
+            variable_emb_type=variable_emb_type,
             global_self_attn=global_self_attn,
             local_self_attn=local_self_attn,
             global_cross_attn=global_cross_attn,
@@ -171,7 +179,7 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
             recon_mask_drop_standard=recon_mask_drop_standard,
             recon_mask_drop_full=recon_mask_drop_full,
         )
-        
+
         self.target_mask = target_mask
         self.start_token_len = start_token_len
         self.init_lr = init_lr
@@ -184,9 +192,13 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
         self.recon_loss_imp = recon_loss_imp
         self.set_null_value(null_value)
         self.pad_value = pad_value
-        self.d_x_embedding_router = torch.tensor(d_x_embedding_router).to(self.device) if d_x_embedding_router is not None else None
+        self.d_x_embedding_router = (
+            torch.tensor(d_x_embedding_router).to(self.device)
+            if d_x_embedding_router is not None
+            else None
+        )
         self.save_hyperparameters()
-        
+
         self.validation_step_outputs = []
 
     @property
@@ -237,15 +249,14 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
     ) -> Tuple[torch.Tensor]:
-
         labels = labels.view(-1).to(logits.device)
         d_y = labels.max() + 1
 
         logits = logits.view(-1, d_y)
-        
+
         class_loss = F.cross_entropy(logits, labels)
-        
-        if self.torchmetrics_version == '0.9.3':
+
+        if self.torchmetrics_version == "0.9.3":
             acc = torchmetrics.functional.accuracy(
                 torch.softmax(logits, dim=1),
                 labels,
@@ -253,28 +264,28 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
         else:
             if d_y == 1:
                 acc = torchmetrics.functional.accuracy(
-                    torch.softmax(logits, dim=1).squeeze(1),
-                    labels, task="binary"
+                    torch.softmax(logits, dim=1).squeeze(1), labels, task="binary"
                 )
             else:
                 acc = torchmetrics.functional.accuracy(
                     torch.softmax(logits, dim=1),
-                    labels, task="multiclass", num_classes=d_y.item()
+                    labels,
+                    task="multiclass",
+                    num_classes=d_y.item(),
                 )
         return class_loss, acc
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
         x_c, y_c, x_t, y_t = batch
-        
+
         target_mask = forward_kwargs.get("target_mask", None)
 
         forecast_out, recon_out, (logits, labels) = self(
             x_c, y_c, x_t, y_t, **forward_kwargs
         )
-        
-        if target_mask is not None:
-            y_t = y_t[:,:,target_mask]
 
+        if target_mask is not None:
+            y_t = y_t[:, :, target_mask]
 
         forecast_loss, forecast_mask = self.forecasting_loss(
             outputs=forecast_out, y_t=y_t, time_mask=time_mask
@@ -306,7 +317,9 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
     def nan_to_num(self, *inps):
         return inps
 
-    def forward_model_pass(self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None):
+    def forward_model_pass(
+        self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
+    ):
         if len(y_c.shape) == 2:
             y_c = y_c.unsqueeze(-1)
         if len(y_t.shape) == 2:
@@ -318,48 +331,50 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
 
         if target_mask is not None:
             dec_y = y_t.clone()
-            dec_y[:,:,target_mask] = 0.0
+            dec_y[:, :, target_mask] = 0.0
         else:
             dec_y = torch.zeros_like(y_t).to(self.device)
-            
+
         if self.start_token_len > 0:
             dec_y = torch.cat((y_c[:, -self.start_token_len :, :], dec_y), dim=1).to(
                 self.device
             )
             dec_x = torch.cat((x_c[:, -self.start_token_len :, :], dec_x), dim=1)
         if self.start_token_len < 0:
-            
-            
-            enc_y = torch.cat((enc_y, dec_y[:, self.start_token_len:, :]), dim=1).to(
+            enc_y = torch.cat((enc_y, dec_y[:, self.start_token_len :, :]), dim=1).to(
                 self.device
             )
-            enc_x = torch.cat((enc_x, dec_x[:, self.start_token_len:, :]), dim=1)
-            
-            dec_x = dec_x[:, :, self.d_x_embedding_router == 1]    
+            enc_x = torch.cat((enc_x, dec_x[:, self.start_token_len :, :]), dim=1)
 
-        forecast_output, recon_output, (logits, labels), attn, (enc_latent, dec_latent) = self.spacetimeformer(
+            dec_x = dec_x[:, :, self.d_x_embedding_router == 1]
+
+        (
+            forecast_output,
+            recon_output,
+            (logits, labels),
+            attn,
+            (enc_latent, dec_latent),
+        ) = self.spacetimeformer(
             enc_x=enc_x,
             enc_y=enc_y,
             dec_x=dec_x,
             dec_y=dec_y,
             output_attention=output_attn,
         )
-        
+
         if target_mask is not None:
-            forecast_output = forecast_output[:,:,target_mask]
+            forecast_output = forecast_output[:, :, target_mask]
 
         if output_attn:
             return forecast_output, recon_output, (logits, labels), attn
         return forecast_output, recon_output, (logits, labels)
-    
-    
+
     def validation_step(self, batch, batch_idx):
         outs = super().validation_step(batch, batch_idx)
         self.validation_step_outputs.append(outs)
         return outs
 
     def on_validation_epoch_end(self):
-        
         outs = self.validation_step_outputs
         total = 0
         count = 0
@@ -369,13 +384,12 @@ class Spacetimeformer_Forecaster_2023(stf.Forecaster):
                 count += 1
         avg_val_loss = total / count
         self.scheduler.step(avg_val_loss, is_end_epoch=True)
-        self.validation_step_outputs.clear() 
+        self.validation_step_outputs.clear()
 
     def training_step(self, batch, batch_idx):
         outs = super().training_step(batch, batch_idx)
         self.scheduler.step()
         return outs
-
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.AdamW(

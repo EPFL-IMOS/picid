@@ -7,7 +7,6 @@ from hydra.plugins.search_path_plugin import SearchPathPlugin
 from hydra.core.plugins import Plugins
 
 
-
 class ProjectSearchPathPlugin(SearchPathPlugin):
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
         # Appends the search path for this plugin to the end of the search path
@@ -17,11 +16,10 @@ class ProjectSearchPathPlugin(SearchPathPlugin):
         # Remember to verify the config is packaged properly (build sdist and look inside,
         # and verify MANIFEST.in is correct).
         search_path.append(
-            provider="lmetk.defaults" , path=f"file://{Path.cwd()}/configs"
+            provider="lmetk.defaults", path=f"file://{Path.cwd()}/configs"
         )
 
     def register() -> None:
-
         """Hydra users should call this function before invoking @hydra.main"""
         print("CWD:", Path.cwd())
         os.environ["PROJECT_ROOT"] = str(Path.cwd())

@@ -44,7 +44,9 @@ def mape(actual: np.ndarray, predicted: np.ndarray, agg="mean"):
 
 def smape(actual: np.ndarray, predicted: np.ndarray, agg="mean"):
     """Symmetric Mean Absolute Percentage Error"""
-    e =  (2.0
+    e = (
+        2.0
         * np.abs(actual - predicted)
-        / ((np.abs(actual) + np.abs(predicted)) + EPSILON))
+        / ((np.abs(actual) + np.abs(predicted)) + EPSILON)
+    )
     return np.mean(e) if agg == "mean" else e

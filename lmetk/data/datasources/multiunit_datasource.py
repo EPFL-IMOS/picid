@@ -3,7 +3,7 @@ from typing import List, Optional, Any, Tuple
 
 from abc import ABC
 
-from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
+from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
 
 
 

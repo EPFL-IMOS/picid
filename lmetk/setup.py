@@ -24,25 +24,23 @@ def set_reproducibility(seed=42, deterministic=True):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     # Note that this Deterministic mode can have a performance impact
-    torch.backends.cudnn.deterministic = deterministic  
+    torch.backends.cudnn.deterministic = deterministic
     print("warn: fix deterministic mode")
     # torch.use_deterministic_algorithms(deterministic)
     torch.backends.cudnn.benchmark = False
 
 
-
 def get_class_defaults(class_str: str):
-    
-    splits = class_str.split('.')
+    splits = class_str.split(".")
     print(splits)
     module_str = ".".join(splits[:-1])
     module = importlib.import_module(module_str)
     clazz = getattr(module, splits[-1])
     h = clazz.__init__
-    
+
     spec = inspect.getfullargspec(h)
     keys = reversed(spec.args)
-    
+
     if spec.defaults is None:
         return OmegaConf.create({})
     else:
@@ -56,31 +54,35 @@ def hydra_load(overrides):
         return cfg
 
 
-def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = False) -> DictConfig:
+def configure(
+    exp_name, data_dir=None, working_dir=None, guild_mode: bool = False
+) -> DictConfig:
     cfg: DictConfig = hydra_load([f"experiment={exp_name}"])
-    OmegaConf.set_struct(cfg, False) # enable attribute access
-    
-    data_dir = str(Path(data_dir).expanduser()) if data_dir is not None else None   
+    OmegaConf.set_struct(cfg, False)  # enable attribute access
+
+    data_dir = str(Path(data_dir).expanduser()) if data_dir is not None else None
     working_dir = "testwdir" if working_dir is None else working_dir
-    
+
     if data_dir is not None and "data_dir" in cfg.datamodule:
-        print(f"[WARNING] Overriding datamodule data_dir with command line argument {data_dir}")
+        print(
+            f"[WARNING] Overriding datamodule data_dir with command line argument {data_dir}"
+        )
         cfg.datamodule.data_dir = data_dir
-    
+
     if guild_mode:
         flags = OmegaConf.load("flags.yaml")
         print(f"[GUILD MODE], merging in flags {flags}")
         cfg = OmegaConf.merge(cfg, flags)
-    
+
     now = datetime.datetime.now()
     rcode = f"{now.year}_{now.month}_{now.day}_{now.hour}-{now.minute}-{now.second}"
     # rnd_dir = f"{args.working_dir}/runs/seed{reproducible}_as{params['steps']}_R{rcode}/"
-    prm_hash = hashlib.md5(str(cfg).encode('utf-8')).hexdigest()
+    prm_hash = hashlib.md5(str(cfg).encode("utf-8")).hexdigest()
     rnd_name = f"R_{rcode}_{exp_name}_seed{cfg.glob.seed}_{prm_hash}"
-    
+
     if cfg.info.exp_name is None:
         cfg.info.exp_name = f"{exp_name}_{rcode}_seed{cfg.glob.seed}_{prm_hash}"
-    
+
     rnd_dir = f"{working_dir}/runs/{rnd_name}/"
     out_dir = rnd_dir + "outputs/"
     plt_dir = rnd_dir + "plots/"
@@ -88,11 +90,11 @@ def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = Fals
     ckp_dir = rnd_dir + "checkpoints/"
     log_dir = rnd_dir + "logs/"
     best_ckp_dir = rnd_dir + "best_checkpoints"
-    
+
     optuna_out_dir = f"{working_dir}/optuna"
     wandb_out_dir = f"{working_dir}/wandb"
     tensorboard_out_dir = f"{working_dir}/tensorboard/{rnd_name}"
-    
+
     os.makedirs(working_dir, exist_ok=True)
     os.makedirs(optuna_out_dir, exist_ok=True)
     os.makedirs(wandb_out_dir, exist_ok=True)
@@ -103,59 +105,57 @@ def configure(exp_name, data_dir=None, working_dir=None, guild_mode: bool = Fals
     os.makedirs(ckp_dir)
     os.makedirs(log_dir)
     os.makedirs(best_ckp_dir)
-    
-    
-       # we mix in the default args for logging visibility
+
+    # we mix in the default args for logging visibility
     if "_target_" in cfg.model:
         model_defaults = get_class_defaults(cfg.model._target_)
-        cfg.model = OmegaConf.merge(model_defaults, cfg.model)  
-        
+        cfg.model = OmegaConf.merge(model_defaults, cfg.model)
+
     if "_target_" in cfg.datamodule:
         dm_defaults = get_class_defaults(cfg.datamodule._target_)
         cfg.datamodule = OmegaConf.merge(dm_defaults, cfg.datamodule)
-    
-    dcfg = OmegaConf.create({
-        "dirs": {
-            "rnd_dir": rnd_dir,
-            "plt_dir": plt_dir,
-            "mod_dir": mod_dir,
-            "out_dir": out_dir,
-            "ckp_dir": ckp_dir,
-            "log_dir": log_dir,
-            "best_ckp_dir": best_ckp_dir,
-            "optuna_out_dir": optuna_out_dir,
-            "wandb_out_dir": wandb_out_dir,
-            "tensorboard_out_dir": tensorboard_out_dir,
-            'runtime_dir': os.getcwd(),
-            "working_dir": working_dir,
-            "dataset_dir": data_dir
+
+    dcfg = OmegaConf.create(
+        {
+            "dirs": {
+                "rnd_dir": rnd_dir,
+                "plt_dir": plt_dir,
+                "mod_dir": mod_dir,
+                "out_dir": out_dir,
+                "ckp_dir": ckp_dir,
+                "log_dir": log_dir,
+                "best_ckp_dir": best_ckp_dir,
+                "optuna_out_dir": optuna_out_dir,
+                "wandb_out_dir": wandb_out_dir,
+                "tensorboard_out_dir": tensorboard_out_dir,
+                "runtime_dir": os.getcwd(),
+                "working_dir": working_dir,
+                "dataset_dir": data_dir,
+            }
         }
-    })
-    
+    )
+
     cfg = OmegaConf.merge(cfg, dcfg)
-    OmegaConf.set_struct(cfg, True) # enable attribute access
-    
+    OmegaConf.set_struct(cfg, True)  # enable attribute access
+
     print("*" * 80)
     print("[CONFIGURATION]")
     print(OmegaConf.to_yaml(cfg))
     print("*" * 80)
-    print(f"Output Directory: {rnd_dir}")   
-    print(f"Root Directory: {os.getcwd()}")   
+    print(f"Output Directory: {rnd_dir}")
+    print(f"Root Directory: {os.getcwd()}")
     print("*" * 80)
-    
-    
-    OmegaConf.save(cfg, cfg.dirs.rnd_dir +'/config_pre_initialize.yaml')
+
+    OmegaConf.save(cfg, cfg.dirs.rnd_dir + "/config_pre_initialize.yaml")
     return cfg
-    
-    
-    
+
+
 def initialize(cfg):
-    
     set_reproducibility(cfg.glob.seed)
-    
+
     dm = hydra.utils.instantiate(cfg.datamodule)
     dm.setup()
-    
+
     model = hydra.utils.instantiate(cfg.model)
 
     if cfg.logging.wandb_enabled and cfg.reload.wandb_id is not None:
@@ -167,21 +167,18 @@ def initialize(cfg):
         exp_name=cfg.info.exp_name,
         project_name=cfg.info.project_name,
         entity_name=cfg.info.entity_name,
-        config=OmegaConf.to_container(cfg, resolve=True), 
+        config=OmegaConf.to_container(cfg, resolve=True),
         logdir_wandb=cfg.dirs.wandb_out_dir,
         logdir_tb=cfg.dirs.tensorboard_out_dir,
         wandb_enabled=cfg.logging.wandb_enabled,
         wandb_resume=cfg.reload.wandb_id is not None,
-        wandb_id=wandb_id)
-    
-    objs = {
-        "model": model,
-        "dm": dm,
-        "log_writer": log_writer
-    }
-    
+        wandb_id=wandb_id,
+    )
+
+    objs = {"model": model, "dm": dm, "log_writer": log_writer}
+
     exp_factory = hydra.utils.instantiate(cfg.training_strategy, _partial_=True)
     exp = exp_factory(cfg=cfg, objs=objs)
-    
-    OmegaConf.save(cfg, cfg.dirs.rnd_dir +'/config.yaml')
+
+    OmegaConf.save(cfg, cfg.dirs.rnd_dir + "/config.yaml")
     return exp

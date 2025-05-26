@@ -4,13 +4,21 @@ import pandas as pd
 import torch
 from einops import rearrange
 from omegaconf import ListConfig
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error, mean_absolute_error
+from sklearn.metrics import (
+    mean_squared_error,
+    r2_score,
+    mean_absolute_percentage_error,
+    mean_absolute_error,
+)
 
 from lmetk.benchmarks.forecasting_benchmark import ForecastingBenchmark
 
-warnings.filterwarnings("ignore", message="1Torch was not compiled with flash attention.")
+warnings.filterwarnings(
+    "ignore", message="1Torch was not compiled with flash attention."
+)
 
 from lmetk.utils.logging import MetricLogger, SmoothedValue
+
 
 class PersistenceStrategy(ForecastingBenchmark):
     def __init__(self, cfg, objs, contiguous=True, N_samples=None, verbose=False):
@@ -27,9 +35,8 @@ class PersistenceStrategy(ForecastingBenchmark):
     def run(self):
         results = []
         predictions = {}
-        log_writer = self.objs['log_writer']
+        log_writer = self.objs["log_writer"]
         self.model = self.objs["models"]
-
 
         dm = self.objs["dm"]
         N_samples = self.N_samples
@@ -44,17 +51,22 @@ class PersistenceStrategy(ForecastingBenchmark):
         constant_pred = self.predict()
 
         for id_step, step in enumerate(range(n_steps)):
-            header = 'Step: [{}]'.format(step)
+            header = "Step: [{}]".format(step)
             metric_logger = MetricLogger(delimiter="  ")
-            metric_logger.add_meter('mse', SmoothedValue(window_size=1, fmt='{value:.6f}'))
-            metric_logger.add_meter('r2', SmoothedValue(window_size=1, fmt='{value:.6f}'))
+            metric_logger.add_meter(
+                "mse", SmoothedValue(window_size=1, fmt="{value:.6f}")
+            )
+            metric_logger.add_meter(
+                "r2", SmoothedValue(window_size=1, fmt="{value:.6f}")
+            )
 
             if N_samples is not None:
                 y_test = y_test[:N_samples]
                 constant_pred = constant_pred[:N_samples]
 
-            for id_var, variable in enumerate(metric_logger.log_every(
-                    range(y_test.shape[1]), print_freq, header)):
+            for id_var, variable in enumerate(
+                metric_logger.log_every(range(y_test.shape[1]), print_freq, header)
+            ):
                 var_name = var_names[id_var]
                 y_test_var = rearrange(y_test[:, step, variable], "B -> B 1")
 
@@ -63,19 +75,23 @@ class PersistenceStrategy(ForecastingBenchmark):
                 r = self.evaluate(y_test_var, pred)
                 predictions[(var_name, step + 1)] = pred.squeeze()
 
-                metric_logger.update(mse=r['mse'], r2=r['r2'])
-                log_writer.update(head=f"Var: {var_name}",
-                                  step=step + 1,
-                                  mape=r['mape'],
-                                  mae=r['mae'],
-                                  mse=r['mse'],
-                                  r2=r['r2'])
+                metric_logger.update(mse=r["mse"], r2=r["r2"])
+                log_writer.update(
+                    head=f"Var: {var_name}",
+                    step=step + 1,
+                    mape=r["mape"],
+                    mae=r["mae"],
+                    mse=r["mse"],
+                    r2=r["r2"],
+                )
 
-                results.append({
-                    "step": step + 1,
-                    "variable": var_name,
-                    **r,
-                })
+                results.append(
+                    {
+                        "step": step + 1,
+                        "variable": var_name,
+                        **r,
+                    }
+                )
 
         df = pd.DataFrame(results)
         df.to_csv(self.cfg.dirs.out_dir + "/results.csv", index=False)
@@ -84,22 +100,31 @@ class PersistenceStrategy(ForecastingBenchmark):
         df_predictions.to_pickle(self.cfg.dirs.out_dir + "/predictions.pkl")
 
         mean_per_var = df.groupby(by=["variable"]).mean()
-        log_writer.update(head="Mean Vars",
-                          step=n_steps,
-                          **{f'Var {i}: {col}': mean_per_var.at[i, col] for i in mean_per_var.index for col in
-                             ['mape', 'mae', 'mse', 'r2']})
+        log_writer.update(
+            head="Mean Vars",
+            step=n_steps,
+            **{
+                f"Var {i}: {col}": mean_per_var.at[i, col]
+                for i in mean_per_var.index
+                for col in ["mape", "mae", "mse", "r2"]
+            },
+        )
 
         mean_overall = mean_per_var.mean()
-        log_writer.update(head="Mean Overall",
-                          step=n_steps,
-                          mape=mean_overall['mape'],
-                          mae=mean_overall['mae'],
-                          mse=mean_overall['mse'],
-                          r2=mean_overall['r2'])
+        log_writer.update(
+            head="Mean Overall",
+            step=n_steps,
+            mape=mean_overall["mape"],
+            mae=mean_overall["mae"],
+            mse=mean_overall["mse"],
+            r2=mean_overall["r2"],
+        )
 
     def evaluate(self, y, preds):
         # Evaluate the models
-        mape = 100 * mean_absolute_percentage_error(y, preds)  #  factor 100 due to unusual sklearn convention
+        mape = 100 * mean_absolute_percentage_error(
+            y, preds
+        )  #  factor 100 due to unusual sklearn convention
         mae = mean_absolute_error(y, preds)
         mse = mean_squared_error(y, preds)
         r2 = r2_score(y, preds)
@@ -134,7 +159,11 @@ class PersistenceStrategy(ForecastingBenchmark):
             y_context.append(y_c[:, :, :])
             y_target.append(y_t[:, :, :])
 
-        return torch.concat(X).numpy(), torch.concat(y_context).numpy(), torch.concat(y_target).numpy()
+        return (
+            torch.concat(X).numpy(),
+            torch.concat(y_context).numpy(),
+            torch.concat(y_target).numpy(),
+        )
 
     def fit(self, X_context, y_context):
         self.model.fit(X_context, y_context)

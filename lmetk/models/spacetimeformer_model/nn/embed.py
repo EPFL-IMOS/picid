@@ -26,8 +26,8 @@ class Embedding(nn.Module):
         is_encoder: bool = True,
         variable_emb=None,
         position_emb="abs",
-        timetable_emb="abs", # "t2v" or "abs
-        time_emb = "t2v", # "t2v" or "abs"
+        timetable_emb="abs",  # "t2v" or "abs
+        time_emb="t2v",  # "t2v" or "abs"
         embedding_router: Optional[torch.Tensor] = None,
         data_dropout=None,
         max_seq_len=None,
@@ -44,7 +44,7 @@ class Embedding(nn.Module):
         assert method in ["spatio-temporal", "temporal", "inverted"]
         if embedding_router is not None:
             assert method == "spatio-temporal"
-        
+
         if data_dropout is None:
             self.data_drop = lambda y: y
         else:
@@ -54,29 +54,29 @@ class Embedding(nn.Module):
 
         self.embedding_router = embedding_router
         if embedding_router is not None:
-            
             if timetable_emb is None:
                 # this can happen if we use the roter for negative start_token_len
                 # not visible here because we set it to 0 in the model
                 timetable_dim = 0
                 self.timetable_emb = None
                 d_x = int((torch.tensor(embedding_router) == 1).sum().item())
-                
+
             else:
                 self.mask_tt = torch.tensor(embedding_router) == 0
                 self.mask_t = torch.tensor(embedding_router) == 1
-                d_x_tt = self.mask_tt.sum()# timetable_dim
-                d_x = self.mask_t.sum() # time_dim
+                d_x_tt = self.mask_tt.sum()  # timetable_dim
+                d_x = self.mask_t.sum()  # time_dim
                 timetable_dim = time_emb_dim * d_x_tt
-        
+
                 if timetable_emb == "t2v":
                     self.timetable_emb = stf.Time2Vec(d_x_tt, embed_dim=timetable_dim)
                 elif timetable_emb == "linear":
-                    self.timetable_emb = nn.Linear(in_features=d_x_tt, out_features=timetable_dim)
+                    self.timetable_emb = nn.Linear(
+                        in_features=d_x_tt, out_features=timetable_dim
+                    )
         else:
             timetable_dim = 0
-        
-        
+
         self.max_seq_len = max_seq_len
         self.position_emb = position_emb
         if self.position_emb == "t2v":
@@ -88,26 +88,31 @@ class Embedding(nn.Module):
             self.local_emb = nn.Embedding(
                 num_embeddings=max_seq_len, embedding_dim=d_model
             )
-        
-        time_dim = time_emb_dim * d_x  if (self.method != "inverted") else d_model       
+
+        time_dim = time_emb_dim * d_x if (self.method != "inverted") else d_model
         if time_emb == "t2v":
             self.time_emb = stf.Time2Vec(d_x, embed_dim=time_dim)
         elif time_emb == "linear":
             self.time_emb = nn.Linear(in_features=d_x, out_features=time_dim)
-              
-        
-        y_emb_inp_dim = d_y if ((self.method == "temporal") | (self.method == "inverted")) else 1     
+
+        y_emb_inp_dim = (
+            d_y if ((self.method == "temporal") | (self.method == "inverted")) else 1
+        )
         if variable_emb == "t2v":
             self.variable_emb = stf.Time2Vec(y_emb_inp_dim, embed_dim=d_model)
             y_emb_inp_dim = d_model
         elif variable_emb == "linear":
-            self.variable_emb = nn.Linear(in_features=y_emb_inp_dim, out_features=d_model) 
-            y_emb_inp_dim = d_model   
+            self.variable_emb = nn.Linear(
+                in_features=y_emb_inp_dim, out_features=d_model
+            )
+            y_emb_inp_dim = d_model
         else:
             self.variable_emb = None
-        
+
         if self.method != "inverted":
-            self.val_time_emb = nn.Linear(y_emb_inp_dim + time_dim + timetable_dim, d_model)
+            self.val_time_emb = nn.Linear(
+                y_emb_inp_dim + time_dim + timetable_dim, d_model
+            )
 
         if self.method == "spatio-temporal":
             self.space_emb = nn.Embedding(num_embeddings=d_y, embedding_dim=d_model)
@@ -138,8 +143,8 @@ class Embedding(nn.Module):
         if self.method == "spatio-temporal":
             emb = self.spatio_temporal_embed
         elif self.method == "inverted":
-            y = rearrange(y, 'b l n -> b n l')
-            x = rearrange(x, 'b l n -> b n l')
+            y = rearrange(y, "b l n -> b n l")
+            x = rearrange(x, "b l n -> b n l")
             emb = self.temporal_embed
         elif self.method == "temporal":
             emb = self.temporal_embed
@@ -164,7 +169,6 @@ class Embedding(nn.Module):
         y = torch.nan_to_num(y)
         x = torch.nan_to_num(x)
 
-
         # keep track of pre-dropout y for given emb
         y_original = y.clone()
         if self.is_encoder:
@@ -188,32 +192,32 @@ class Embedding(nn.Module):
         if not self.use_time:
             x = torch.zeros_like(x)
         time_emb = self.time_emb(x)
-        
+
         if self.embedding_router is not None and self.timetable_emb is not None:
-            x_tt = x[:,:, self.mask_tt]
-            x = x[:,:, self.mask_t]
+            x_tt = x[:, :, self.mask_tt]
+            x = x[:, :, self.mask_t]
             timetable_emb = self.timetable_emb(x_tt)
         else:
             timetable_emb = None
-        
+
         if not self.use_val:
             y = torch.zeros_like(y)
-        
+
         # for use_given, need to be computed before variable emb
         y_dropped = (y == y_original).squeeze(-1)
         if self.variable_emb is not None:
             y = self.variable_emb(y)
-            
+
         # concat time_emb, y --> FF --> val_time_emb
         embed_dim_idx = 1 if self.method == "inverted" else -1
         if timetable_emb is not None:
             val_time_inp = torch.cat((time_emb, timetable_emb, y), dim=embed_dim_idx)
         else:
             val_time_inp = torch.cat((time_emb, y), dim=embed_dim_idx)
-        
+
         if self.method != "inverted":
             val_time_emb = self.val_time_emb(val_time_inp)
-            
+
             # "given" embedding. not important for temporal emb
             # when not using a start token
             given = torch.ones((bs, length)).long().to(x.device)
@@ -221,12 +225,9 @@ class Embedding(nn.Module):
                 given[:, self.start_token_len :] = 0
             given_emb = self.given_emb(given)
 
-        
             emb = local_emb + val_time_emb + given_emb
         else:
             emb = val_time_inp
-
-
 
         if self.is_encoder:
             # shorten the sequence
@@ -261,18 +262,18 @@ class Embedding(nn.Module):
             x = torch.zeros_like(x)
         x = torch.nan_to_num(x)
         x = repeat(x, f"batch len x_dim -> batch ({dy} len) x_dim")
-        
+
         if self.embedding_router is not None and self.timetable_emb is not None:
-            x_tt = x[:,:, self.mask_tt]
-            x = x[:,:, self.mask_t]
+            x_tt = x[:, :, self.mask_tt]
+            x = x[:, :, self.mask_t]
 
             if not self.use_timetable:
                 x_tt = torch.zeros_like(x_tt)
-                
+
             timetable_emb = self.timetable_emb(x_tt)
         else:
             timetable_emb = None
-            
+
         time_emb = self.time_emb(x)
 
         # protect against NaNs in y, but keep track for Given emb
@@ -287,12 +288,12 @@ class Embedding(nn.Module):
         y = self.data_drop(y)
         y = Flatten(y)
         mask = self.make_mask(y)
-        
+
         # for use_given, need to be computed before variable emb
         y_dropped = (y == y_original).squeeze(-1)
         if self.null_value is not None:
             y_null = (y != self.null_value).squeeze(-1)
-        
+
         if self.variable_emb is not None:
             y = self.variable_emb(y)
 
@@ -301,7 +302,7 @@ class Embedding(nn.Module):
             val_time_inp = torch.cat((time_emb, timetable_emb, y), dim=-1)
         else:
             val_time_inp = torch.cat((time_emb, y), dim=-1)
-            
+
         val_time_emb = self.val_time_emb(val_time_inp)
 
         # "given" embedding
@@ -346,24 +347,20 @@ class Embedding(nn.Module):
         space_emb = self.space_emb(var_idx)
 
         return val_time_emb, space_emb, var_idx_true, mask
-    
-    
-    
+
+
 class IEmbedding(nn.Module):
-    def __init__(self, c_in, d_model,  dropout=0.1):
+    def __init__(self, c_in, d_model, dropout=0.1):
         super().__init__()
         self.inverted_emb = DataEmbedding_inverted(
-                  c_in=c_in, 
-                  d_model=d_model, 
-                  dropout=dropout
-                )
-    
+            c_in=c_in, d_model=d_model, dropout=dropout
+        )
+
     def forward(self, y, x):
         val_time_emb = self.inverted_emb(x=y, x_mark=x)
-        
+
         # space emb not used for temporal method
         space_emb = torch.zeros_like(val_time_emb)
         mask = None
         var_idx_true = None
         return val_time_emb, space_emb, var_idx_true, mask
- 

@@ -47,13 +47,13 @@ class TimeSeriesDatasetInterface(ABC):
 
 
 class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
-
     def __init__(self, load_arguments, data_splitter, scalers, **kwargs):
-
         self.load_arguments: DictConfig = load_arguments
         self.data_splitter = data_splitter
-        self.scalers: Dict[str, TransformerMixin] = scalers  
-        self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {} # centralized storage
+        self.scalers: Dict[str, TransformerMixin] = scalers
+        self.data_dict: (
+            Dict[str, Dict[str, np.ndarray]] | Box
+        ) = {}  # centralized storage
 
     def get_data(self):
         return self.data_dict["features"], self.data_dict["timestamps"]
@@ -67,7 +67,7 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self._apply_transformations()
 
     @abstractmethod
-    def _load_data(self)-> dict:
+    def _load_data(self) -> dict:
         """
         Expected to return a dict with at least:
             - "features"
@@ -79,35 +79,59 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
 
     def _generate_splits(self):
         # Split the data (e.g., train/val/test sequences)
-        
-        train_data, val_data, test_data = self.data_splitter.split_data(self.data_dict['features'])
-        train_timestamps, val_timestamps, test_timestamps = self.data_splitter.split_data(self.data_dict['timestamps'])
+
+        train_data, val_data, test_data = self.data_splitter.split_data(
+            self.data_dict["features"]
+        )
+        train_timestamps, val_timestamps, test_timestamps = (
+            self.data_splitter.split_data(self.data_dict["timestamps"])
+        )
 
         # Check that splits are consistent
-        assert train_data.shape[0] == train_timestamps.shape[0], "Mismatch in train data and timestamps length"
-        assert val_data.shape[0] == val_timestamps.shape[0], "Mismatch in val data and timestamps length"
-        assert test_data.shape[0] == test_timestamps.shape[0], "Mismatch in test data and timestamps length"
+        assert train_data.shape[0] == train_timestamps.shape[0], (
+            "Mismatch in train data and timestamps length"
+        )
+        assert val_data.shape[0] == val_timestamps.shape[0], (
+            "Mismatch in val data and timestamps length"
+        )
+        assert test_data.shape[0] == test_timestamps.shape[0], (
+            "Mismatch in test data and timestamps length"
+        )
 
         # Update the self.data_dict
-        self.data_dict.update({"features": {"train": train_data, "val": val_data, "test": test_data}})
-        self.data_dict.update({"timestamps": {"train": train_timestamps, "val": val_timestamps, "test": test_timestamps}})
+        self.data_dict.update(
+            {"features": {"train": train_data, "val": val_data, "test": test_data}}
+        )
+        self.data_dict.update(
+            {
+                "timestamps": {
+                    "train": train_timestamps,
+                    "val": val_timestamps,
+                    "test": test_timestamps,
+                }
+            }
+        )
 
     def _apply_transformations(self):
         # Optionally scale the data
         if self.load_arguments.get("scale", True):
-
             for key, scaler in self.scalers.items():
                 scaler.fit(self.data_dict[key]["train"])
-            
+
             for split_name in ["train", "val", "test"]:
                 if split_name in self.data_dict["features"]:
                     for key, scaler in self.scalers.items():
-                        self.data_dict[key][split_name] = \
-                              scaler.transform(self.data_dict[key][split_name])
-        
-        self.data_dict = Box(self.data_dict)  # Convert to a Box object for easier access
+                        self.data_dict[key][split_name] = scaler.transform(
+                            self.data_dict[key][split_name]
+                        )
+
+        self.data_dict = Box(
+            self.data_dict
+        )  # Convert to a Box object for easier access
 
     def __repr__(self) -> str:
-        return f"loader_arguments: {self.load_arguments}, " \
-                f"data_splitter: {self.data_splitter}, " \
-                f"scaler: {self.scalers}"
+        return (
+            f"loader_arguments: {self.load_arguments}, "
+            f"data_splitter: {self.data_splitter}, "
+            f"scaler: {self.scalers}"
+        )

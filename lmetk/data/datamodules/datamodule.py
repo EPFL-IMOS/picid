@@ -1,114 +1,46 @@
+from typing import Dict, List, Optional, Tuple, Any
 
-from typing import Dict, List, Optional, Tuple, Any, Callable, cast, Union, Literal
 
-from box import Box
 import numpy as np
 import pytorch_lightning as pl
-import torch
-from torch.utils.data import (
-    DataLoader,
-    IterableDataset,
-    get_worker_info,
-    Dataset,
-)
 
-from lmetk.data.datasets.abstract_classes import AbstractTimeSeriesDataSource
+from torch.utils.data import Dataset, DataLoader
 
 
-
-
-
-
-class ConceptRULDataset(Dataset):
-
-    def __init__(self, 
-                data_split: Dict[str, np.ndarray],
-                window_size: int,
-                stride: int):
-
-        self.df_Y = data_split.labels
-        self.X = data_split.features
-        self.unit= data_split.unit
-        self.concepts = data_split.concepts
-
-        self.window_size = window_size
-        self.stride = stride
-        super().__init__()
-
-    def __len__(self):
-        return self.X.shape[0] // self.stride #Floor total length divided by stride
-
-    def __getitem__(self, i):
-
-        # X is the normalized data
-        
-
-        #Sequence is entirely within the data
-        if (i * self.stride >= self.window_size - 1):
-
-            unit = self.unit[i * self.stride - self.window_size + 1:i * self.stride + 1]  #Unit vector for desired sequence
-
-            cond = np.where(unit != unit[0])[0] #Index of first different value
-
-            if cond.size == 0: #If there is no index with different value
-                i_start = i * self.stride - self.window_size + 1
-                x = self.X[i_start:i * self.stride + 1, :].T
-            else:
-                counter = cond[0] #Find first index of switch
-                padding = self.X[i * self.stride -(self.window_size - counter) + 1].reshape(-1, 1).repeat(counter, 1)
-                x = self.X[i * self.stride - (self.window_size - counter) + 1:i * self.stride + 1, :].T
-                x = np.concatenate((padding, x), 1)
-
-            #Beginning of Sequence (backward filling)
-        else:
-            padding = self.X[0].reshape(-1, 1).repeat(self.window_size - i * self.stride - 1, 1)
-            x = self.X[0:i * self.stride + 1, :].T
-            x = np.concatenate((padding, x), 1)
-
-        x = x.ravel()
-
-        return torch.Tensor(x).squeeze(), torch.Tensor([self.df_Y[i * self.stride]]).squeeze(), torch.Tensor(self.concepts[i * self.stride])
-
-
-
-
-class SimlifiedRulDataModule(pl.LightningDataModule):
+class BaseDataModule(pl.LightningDataModule):
     """
     Data module for the RUL datasets.
     This is a similar module to the one in rul_datasets but simplified.
     """
 
-
     _data: Dict[str, Tuple[List[np.ndarray], List[np.ndarray]]]
 
     def __init__(
         self,
-        datasets: Dict[str, ConceptRULDataset],
+        datasets: Dict[str, Dataset],
         batch_size: int,
         shuffle_train: bool = True,
         shuffle_val: bool = False,
         shuffle_test: bool = False,
     ):
-        
         for ds in ["train", "val", "test"]:
             if ds not in datasets:
-                assert False, f"Missing {ds} dataset in the provided datasets dictionary."
-        
+                assert False, (
+                    f"Missing {ds} dataset in the provided datasets dictionary."
+                )
+
         super().__init__()
         hparams = dict(
             batch_size=batch_size,
         )
-
 
         self.shuffle_train = shuffle_train
         self.shuffle_val = shuffle_val
         self.shuffle_test = shuffle_test
 
         self.datasets = datasets
-        self.batch_size = batch_size 
-        self.save_hyperparameters(hparams)
-
-
+        self.batch_size = batch_size
+        self.save_hyperparameters(hparams, ignore=["datasets"])
 
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -124,7 +56,6 @@ class SimlifiedRulDataModule(pl.LightningDataModule):
             **kwargs: Ignored. Only for adhering to parent class interface.
         """
         pass
-
 
     def setup(self, stage: Optional[str] = None) -> None:
         """
