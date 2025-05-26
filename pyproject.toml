@@ -24,6 +24,8 @@ dependencies = [
     "openpyxl==3.1.2",
     "tabpfn==2.0.6",
     "jupyter>=1.1.1",
+    "python-box==3.4.5",
+    "pytest"
 ]
 
 [tool.setuptools]

@@ -24,6 +24,7 @@ class TestTimeSeriesDatasetLoaders:
                 return_hydra_config=True,
             )
             dataset = hydra.utils.instantiate(cfg.dataset.loader)
+            dataset._pipeline()
             return dataset
 
     def test_loader_behavior(self):

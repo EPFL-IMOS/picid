@@ -57,6 +57,7 @@ def dataset_val():
     })
 
     loader = hydra.utils.instantiate(loader_config)
+    loader._pipeline()  # Ensure the pipeline is executed
     splitted_data, splitted_timestamps = loader.get_data()
 
     ds_val = TimeSeriesDataset(
@@ -153,6 +154,7 @@ def test_efficient_timeseriesdataset_first_sample(dataset_val):
     })
 
     loader = hydra.utils.instantiate(loader_config)
+    loader._pipeline()  # Ensure the pipeline is executed
     splitted_data, splitted_timestamps = loader.get_data()
 
     batch_dataset = BatchDataset(

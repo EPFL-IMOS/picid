@@ -29,13 +29,15 @@ class TestRailwayDatasets:
                 return_hydra_config=True,
             )
             dataset = hydra.utils.instantiate(self.cfg.dataset.loader)
+            dataset._pipeline()
+            
             return dataset
 
     def test_timeseries_dataset(self):
         """Test that each dataset is properly loaded and processed."""
         for config_name in self.config_names:
             dataset = self._load_dataset(config_name)
-
+            
             # Validate basic functionality
             splitted_data, splitted_timestamps = dataset.get_data()
             
