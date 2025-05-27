@@ -6,7 +6,7 @@ for transformer models using standard PyTorch tensors and data structures.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Union
+from typing import Dict
 
 import torch
 

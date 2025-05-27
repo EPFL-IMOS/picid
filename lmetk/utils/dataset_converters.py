@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple, Any
 import numpy as np
 from einops import rearrange
 from abc import abstractmethod
-from tqdm import tqdm
 
 
 def cut_create_tensords(batch_size, *T):

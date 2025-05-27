@@ -3,16 +3,11 @@ import pytest
 import hydra
 
 from box import Box
-import hydra
 import torch
 
-from lmetk.data.datasets import ConceptRULDataset
 from lmetk.data.datamodules import BaseDataModule
 
 # This import is necessary to register the plugin
-from test.utils import ProjectSearchPathPlugin
-import os
-import torch
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -28,8 +23,8 @@ def cmapss_datamodule():
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_dataset",
-            f"+datasource=concepts_cmapss",
-            f"paths=rt_local",
+            "+datasource=concepts_cmapss",
+            "paths=rt_local",
         ],
         return_hydra_config=True,
     )

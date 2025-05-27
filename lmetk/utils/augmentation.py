@@ -1,5 +1,4 @@
 import numpy as np
-from tqdm import tqdm
 
 
 def jitter(x, sigma=0.03):

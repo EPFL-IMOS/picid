@@ -5,32 +5,22 @@ from sklearn.preprocessing import MinMaxScaler
 
 from lmetk.case_studies.common import (
     ContextBatchDataset,
-    check_boolean_vector,
     time_features,
 )
 from lmetk.case_studies.converters import dl_to_sklearn__with_context_for_tabpfn
 
 os.path.dirname(sys.executable)
 
-from pathlib import Path
-from omegaconf import OmegaConf
-import importlib
 
 # from main_nolightning import initialize, configure
 import pandas as pd
 import numpy as np
-from einops import rearrange
 import torch
 import pytorch_lightning as pl
-from typing import Optional, List, Tuple
-from abc import abstractmethod
+from typing import Optional
 from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
 
-from typing import Optional, List, Tuple
-from abc import abstractmethod
-from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
 
-from sklearn.preprocessing import MinMaxScaler
 
 
 class SpatialDataModule(pl.LightningDataModule):

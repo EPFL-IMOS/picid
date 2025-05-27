@@ -10,7 +10,7 @@ import torch
 
 from lmetk.case_studies.common import ContextBatchDataset, time_features
 
-from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
+from torch.utils.data import RandomSampler, BatchSampler, SequentialSampler
 
 
 class CSVLongTermForecastingModule(pl.LightningDataModule):

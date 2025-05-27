@@ -13,14 +13,10 @@
 
 import io
 import os
-import math
 import glob
 import time
-import json
 from collections import defaultdict, deque
 import datetime
-import numpy as np
-from typing import List
 
 try:
     from timm.utils import get_state_dict

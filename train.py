@@ -18,7 +18,6 @@ from lightning.pytorch import LightningDataModule, LightningModule
 
 from lmetk.utils import set_reproducibility, EarlyStopping
 from lmetk.training_strategy.timeseries_transformer import TrainLSTM, TrainSTF
-import lmetk.utils.distutil as utils
 from lmetk.utils.distutil import auto_load_model
 from lmetk.training_strategy.timeseries_transformer_validation import (
     extended_validation,
@@ -27,7 +26,6 @@ from lmetk.training_strategy.timeseries_transformer_validation import (
 import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
-import pandas as pd
 
 
 def create_parser():

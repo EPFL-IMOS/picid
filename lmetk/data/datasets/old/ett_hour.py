@@ -1,9 +1,5 @@
 import os
-import numpy as np
 import pandas as pd
-import glob
-import re
-import torch
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 from lmetk.utils.timefeatures import time_features
@@ -11,7 +7,6 @@ from lmetk.utils.timefeatures import time_features
 # from sktime.datasets import load_from_tsfile_to_dataframe
 import warnings
 from lmetk.utils.augmentation import run_augmentation_single
-from omegaconf import DictConfig
 
 warnings.filterwarnings("ignore")
 

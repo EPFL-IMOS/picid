@@ -1,12 +1,8 @@
 from functools import partial
 from typing import Optional
-import warnings
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.distributions as pyd
-from einops import rearrange, repeat
 
 from .extra_layers import ConvBlock, Normalization, FoldForPred
 from .encoder import Encoder, EncoderLayer

@@ -5,12 +5,11 @@ This module provides concrete implementations of common loss functions
 used in time series forecasting and analysis tasks.
 """
 
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from .abstract_loss import AbstractLoss
+from .base import AbstractLoss
 
 
 class MSELoss(AbstractLoss):

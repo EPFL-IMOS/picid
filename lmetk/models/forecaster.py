@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 import lightning.pytorch as pl
 import numpy as np
 

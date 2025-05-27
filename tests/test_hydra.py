@@ -27,7 +27,7 @@ class TestBaseline(unittest.TestCase):
         with self.subTest("cmapss"):
             parameters = hydra.compose(
                 config_name="run.yaml",
-                overrides=[f"dataset={data_name}", f"paths=rt_local"],
+                overrides=[f"dataset={data_name}", "paths=rt_local"],
                 return_hydra_config=True,
             )
 

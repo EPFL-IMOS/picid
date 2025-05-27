@@ -1,0 +1,29 @@
+2025-05-27 07:01:39,323 INFO    MainThread:1133780 [wandb_setup.py:_flush():70] Current SDK version is 0.19.11
+2025-05-27 07:01:39,323 INFO    MainThread:1133780 [wandb_setup.py:_flush():70] Configure stats pid to 1133780
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_setup.py:_flush():70] Loading settings from /home/levtel/.config/wandb/settings
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_setup.py:_flush():70] Loading settings from /home/levtel/projects/TabPHM/wandb/settings
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_setup.py:_flush():70] Loading settings from environment variables
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:setup_run_log_directory():724] Logging user logs to /home/levtel/projects/TabPHM/logs/train/runs/2025-05-27_07-01-38/wandb/run-20250527_070139-tzk5v113/logs/debug.log
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:setup_run_log_directory():725] Logging internal logs to /home/levtel/projects/TabPHM/logs/train/runs/2025-05-27_07-01-38/wandb/run-20250527_070139-tzk5v113/logs/debug-internal.log
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:init():852] calling init triggers
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:init():857] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:init():893] starting backend
+2025-05-27 07:01:39,324 INFO    MainThread:1133780 [wandb_init.py:init():897] sending inform_init request
+2025-05-27 07:01:39,327 INFO    MainThread:1133780 [backend.py:_multiprocessing_setup():101] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-05-27 07:01:39,327 INFO    MainThread:1133780 [wandb_init.py:init():907] backend started and connected
+2025-05-27 07:01:39,329 INFO    MainThread:1133780 [wandb_init.py:init():1005] updated telemetry
+2025-05-27 07:01:39,336 INFO    MainThread:1133780 [wandb_init.py:init():1029] communicating run to backend with 90.0 second timeout
+2025-05-27 07:01:39,910 INFO    MainThread:1133780 [wandb_init.py:init():1104] starting run threads in backend
+2025-05-27 07:01:40,045 INFO    MainThread:1133780 [wandb_run.py:_console_start():2573] atexit reg
+2025-05-27 07:01:40,045 INFO    MainThread:1133780 [wandb_run.py:_redirect():2421] redirect: wrap_raw
+2025-05-27 07:01:40,045 INFO    MainThread:1133780 [wandb_run.py:_redirect():2490] Wrapping output streams.
+2025-05-27 07:01:40,045 INFO    MainThread:1133780 [wandb_run.py:_redirect():2513] Redirects installed.
+2025-05-27 07:01:40,046 INFO    MainThread:1133780 [wandb_init.py:init():1150] run started, returning control to user process
+2025-05-27 07:01:40,048 INFO    MainThread:1133780 [wandb_run.py:_finish():2321] finishing run levsap/best_runs/tzk5v113
+2025-05-27 07:01:40,048 INFO    MainThread:1133780 [wandb_run.py:_atexit_cleanup():2538] got exitcode: 0
+2025-05-27 07:01:40,048 INFO    MainThread:1133780 [wandb_run.py:_restore():2520] restore
+2025-05-27 07:01:40,048 INFO    MainThread:1133780 [wandb_run.py:_restore():2526] restore done
+2025-05-27 07:01:40,837 INFO    MainThread:1133780 [wandb_run.py:_footer_history_summary_info():4188] rendering history
+2025-05-27 07:01:40,838 INFO    MainThread:1133780 [wandb_run.py:_footer_history_summary_info():4220] rendering summary
+2025-05-27 07:01:40,838 INFO    MainThread:1133780 [wandb_run.py:_footer_sync_info():4149] logging synced files

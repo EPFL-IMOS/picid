@@ -1,0 +1,28 @@
+defaults:
+  - model_checkpoint
+  - early_stopping
+  - model_summary
+  - _self_
+
+model_checkpoint:
+  dirpath: ${paths.output_dir}/checkpoints
+  filename: "epoch{epoch:03d}-val_loss{val/loss:.2f}" 
+  monitor: MSE
+  mode: max
+  auto_insert_metric_name: False
+  save_weights_only: False
+  save_top_k: 1
+  save_last: False
+
+
+early_stopping:
+  monitor: MSE
+  patience: 25
+  mode: max
+
+model_summary:
+  max_depth: -1
+
+learning_rate_monitor:
+  _target_: lightning.pytorch.callbacks.LearningRateMonitor
+  logging_interval: "epoch"

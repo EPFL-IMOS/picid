@@ -8,7 +8,6 @@ from hydra import initialize as hydra_initialize, compose
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import torch
-import yaml
 
 from lmetk.utils.logging import MultiLogger
 

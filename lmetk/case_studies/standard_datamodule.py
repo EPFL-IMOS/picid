@@ -1,8 +1,6 @@
 from typing import Optional
 import lightning as pl
 from omegaconf import OmegaConf
-import torch
-from einops import rearrange
 
 from lmetk.case_studies.tabularizer import HistoryAndContextTabularizer
 from .data_factory import data_provider

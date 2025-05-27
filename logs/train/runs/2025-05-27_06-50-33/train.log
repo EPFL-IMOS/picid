@@ -1,0 +1,30 @@
+[2025-05-27 06:50:33,271][lmetk.utils_refactor.utils][WARNING] - [rank: 0] Extras config not found! <cfg.extras=null>
+[2025-05-27 06:50:33,273][__main__][INFO] - [rank: 0] Instantiating loader <lmetk.data.datasources.ETThLoader>
+[2025-05-27 06:50:33,501][lmetk.utils_refactor.utils][ERROR] - [rank: 0] 
+Traceback (most recent call last):
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 92, in _call_target
+    return _target_(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: SWDataset.__init__() got an unexpected keyword argument 'splitted_features'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/levtel/projects/TabPHM/lmetk/utils_refactor/utils.py", line 95, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/projects/TabPHM/lmetk/run.py", line 87, in run
+    dataset_train = hydra.utils.instantiate(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 226, in instantiate
+    return instantiate_node(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 347, in instantiate_node
+    return _call_target(_target_, partial, args, kwargs, full_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 97, in _call_target
+    raise InstantiationException(msg) from e
+hydra.errors.InstantiationException: Error in call to target '__init__.sw_dataset.SWDataset':
+TypeError("SWDataset.__init__() got an unexpected keyword argument 'splitted_features'")
+full_key: dataset
+[2025-05-27 06:50:33,503][lmetk.utils_refactor.utils][INFO] - [rank: 0] Output dir: /home/levtel/projects/TabPHM/logs/train/runs/2025-05-27_06-50-33

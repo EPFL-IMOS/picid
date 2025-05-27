@@ -1,5 +1,4 @@
-from abc import abstractmethod
-from typing import List, Optional, Tuple
+from typing import List
 
 import torch
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer

@@ -4,7 +4,7 @@ import pandas as pd
 import glob
 import re
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 from lmetk.utils.timefeatures import time_features
 from .m4 import M4Dataset, M4Meta

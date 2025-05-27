@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from omegaconf import DictConfig
 from torch.optim import Optimizer
 
 from .lr_scheduler import LearningRateScheduler

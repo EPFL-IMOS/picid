@@ -1,0 +1,12 @@
+[2025-05-27 07:01:38,549][lmetk.utils_refactor.utils][WARNING] - [rank: 0] Extras config not found! <cfg.extras=null>
+[2025-05-27 07:01:38,551][__main__][INFO] - [rank: 0] Instantiating loader <lmetk.data.datasources.ETThLoader>
+[2025-05-27 07:01:38,937][__main__][INFO] - [rank: 0] Instantiating callbacks...
+[2025-05-27 07:01:38,938][lmetk.utils_refactor.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.ModelCheckpoint>
+[2025-05-27 07:01:38,940][lmetk.utils_refactor.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.EarlyStopping>
+[2025-05-27 07:01:38,941][lmetk.utils_refactor.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.RichModelSummary>
+[2025-05-27 07:01:38,941][lmetk.utils_refactor.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.LearningRateMonitor>
+[2025-05-27 07:01:38,941][__main__][INFO] - [rank: 0] Instantiating loggers...
+[2025-05-27 07:01:38,942][lmetk.utils_refactor.instantiators][INFO] - [rank: 0] Instantiating logger <lightning.pytorch.loggers.wandb.WandbLogger>
+[2025-05-27 07:01:40,047][lmetk.utils_refactor.utils][INFO] - [rank: 0] Output dir: /home/levtel/projects/TabPHM/logs/train/runs/2025-05-27_07-01-38
+[2025-05-27 07:01:40,048][lmetk.utils_refactor.utils][INFO] - [rank: 0] Closing wandb!
+[2025-05-27 07:01:40,838][lmetk.utils_refactor.utils][INFO] - [rank: 0] Metric name is None! Skipping metric value retrieval...

@@ -1,10 +1,6 @@
-import random
 from typing import Tuple
 
 import torch
-from torch import nn
-import torch.nn.functional as F
-import pytorch_lightning as pl
 
 from models.transformer_model.Transformer import Model as Transformer
 

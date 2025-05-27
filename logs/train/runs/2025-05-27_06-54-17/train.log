@@ -1,0 +1,71 @@
+[2025-05-27 06:54:17,911][lmetk.utils_refactor.utils][WARNING] - [rank: 0] Extras config not found! <cfg.extras=null>
+[2025-05-27 06:54:17,912][__main__][INFO] - [rank: 0] Instantiating loader <lmetk.data.datasources.ETThLoader>
+[2025-05-27 06:54:18,143][lmetk.utils_refactor.utils][ERROR] - [rank: 0] 
+Traceback (most recent call last):
+  File "/home/levtel/projects/TabPHM/lmetk/utils_refactor/utils.py", line 95, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/projects/TabPHM/lmetk/run.py", line 111, in run
+    hydra.utils.instantiate(cfg.loss)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 220, in instantiate
+    OmegaConf.resolve(config)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/omegaconf.py", line 785, in resolve
+    omegaconf._impl._resolve(cfg)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/_impl.py", line 40, in _resolve
+    _resolve_container_value(cfg, k)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/_impl.py", line 25, in _resolve_container_value
+    _resolve(node)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/_impl.py", line 40, in _resolve
+    _resolve_container_value(cfg, k)
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/_impl.py", line 14, in _resolve_container_value
+    resolved = node._dereference_node()
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 246, in _dereference_node
+    node = self._dereference_node_impl(throw_on_resolution_failure=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 277, in _dereference_node_impl
+    return parent._resolve_interpolation_from_parse_tree(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 584, in _resolve_interpolation_from_parse_tree
+    resolved = self.resolve_parse_tree(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 764, in resolve_parse_tree
+    return visitor.visit(parse_tree)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/antlr4/tree/Tree.py", line 34, in visit
+    return tree.accept(self)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar/gen/OmegaConfGrammarParser.py", line 206, in accept
+    return visitor.visitConfigValue(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar_visitor.py", line 101, in visitConfigValue
+    return self.visit(ctx.getChild(0))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/antlr4/tree/Tree.py", line 34, in visit
+    return tree.accept(self)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar/gen/OmegaConfGrammarParser.py", line 342, in accept
+    return visitor.visitText(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar_visitor.py", line 298, in visitText
+    return self.visitInterpolation(c)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar_visitor.py", line 125, in visitInterpolation
+    return self.visit(ctx.getChild(0))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/antlr4/tree/Tree.py", line 34, in visit
+    return tree.accept(self)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar/gen/OmegaConfGrammarParser.py", line 921, in accept
+    return visitor.visitInterpolationNode(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/grammar_visitor.py", line 158, in visitInterpolationNode
+    return self.node_interpolation_callback(inter_key, self.memo)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 745, in node_interpolation_callback
+    return self._resolve_node_interpolation(inter_key=inter_key, memo=memo)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/levtel/miniconda3/envs/phm2/lib/python3.11/site-packages/omegaconf/base.py", line 676, in _resolve_node_interpolation
+    raise InterpolationKeyError(f"Interpolation key '{inter_key}' not found")
+omegaconf.errors.InterpolationKeyError: Interpolation key 'dataset.parameters.task' not found
+[2025-05-27 06:54:18,146][lmetk.utils_refactor.utils][INFO] - [rank: 0] Output dir: /home/levtel/projects/TabPHM/logs/train/runs/2025-05-27_06-54-17

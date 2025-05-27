@@ -1,10 +1,7 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from .extra_layers import (
-    Flatten,
-    ConvBlock,
     Normalization,
     Localize,
     ReverseLocalize,

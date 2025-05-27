@@ -1,0 +1,129 @@
+task_name: train
+tags:
+- dev
+train: true
+test: true
+ckpt_path: null
+seed: 42
+datasource:
+  loader:
+    _target_: lmetk.data.datasources.ETThLoader
+    load_arguments:
+      data_name: ETTh1
+      data_folder: ETT-small
+      data_path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}/${datasource.loader.load_arguments.data_name}.csv
+      flag: train
+      size: null
+      features_mode: S
+      target_name: OT
+      scale: true
+      freq: h
+      timestamp_name: date
+      time_features:
+      - month
+      - day
+      - weekday
+      - hour
+      normalize_time_features: false
+    data_splitter:
+      _target_: lmetk.data.preprocessing.SimpleSplitter
+      train: 8640
+      val: 2880
+      test: null
+      seq_len: 384
+      label_len: 96
+      pred_len: 96
+    scaler:
+      features:
+        _target_: sklearn.preprocessing.StandardScaler
+dataset:
+  _target_: lmetk.data.datasets.SWDataset
+  seq_len: ${datasource.loader.data_splitter.seq_len}
+  label_len: ${datasource.loader.data_splitter.label_len}
+  pred_len: ${datasource.loader.data_splitter.pred_len}
+model:
+  _target_: tabpfn.TabPFNRegressor
+  ignore_pretraining_limits: true
+  random_state: ${glob.seed}
+  device: cuda
+optimizer:
+  _target_: lmetk.optimizer.default.DefaultOptimizer
+  optimizer_id: Adam
+  parameters:
+    lr: 0.001
+    weight_decay: 0.0
+  scheduler:
+    scheduler_id: StepLR
+    scheduler_params:
+      step_size: 50
+      gamma: 0.5
+loss:
+  _target_: lmetk.loss.default.MSELoss
+evaluator:
+  _target_: lmetk.evaluator.default.DefaultEvaluator
+callbacks:
+  model_checkpoint:
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    dirpath: ${paths.output_dir}/checkpoints
+    filename: epoch{epoch:03d}-val_loss{val/loss:.2f}
+    monitor: MSE
+    verbose: false
+    save_last: false
+    save_top_k: 1
+    mode: max
+    auto_insert_metric_name: false
+    save_weights_only: false
+    every_n_train_steps: null
+    train_time_interval: null
+    every_n_epochs: null
+    save_on_train_epoch_end: null
+  early_stopping:
+    _target_: lightning.pytorch.callbacks.EarlyStopping
+    monitor: MSE
+    patience: 25
+    mode: max
+    min_delta: 0.0
+    verbose: true
+    strict: true
+    check_finite: true
+    stopping_threshold: null
+    divergence_threshold: null
+    check_on_train_epoch_end: null
+  model_summary:
+    _target_: lightning.pytorch.callbacks.RichModelSummary
+    max_depth: -1
+  model_timer:
+    _target_: topobench.callbacks.timer_callback.PipelineTimer
+  learning_rate_monitor:
+    _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    logging_interval: epoch
+logger:
+  wandb:
+    _target_: lightning.pytorch.loggers.wandb.WandbLogger
+    save_dir: ${paths.output_dir}
+    offline: false
+    id: null
+    anonymous: null
+    project: best_runs
+    log_model: false
+    prefix: ''
+    group: ''
+    tags: []
+    job_type: ''
+trainer:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.output_dir}
+  min_epochs: 1
+  max_epochs: 300
+  accelerator: gpu
+  devices:
+  - 0
+  check_val_every_n_epoch: 1
+  deterministic: false
+  inference_mode: false
+paths:
+  root_dir: ${oc.env:PROJECT_ROOT}
+  data_dir: ${paths.root_dir}/datasets
+  log_dir: ${paths.root_dir}/logs
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
