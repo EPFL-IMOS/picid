@@ -7,7 +7,7 @@ catboost_info
 PRIVATE_RUNAI.md
 /datasets/
 results/
-#logs/
+logs/
 
 .DS_Store
 .venv
