@@ -1,6 +1,6 @@
 # Dataset loader config
 loader:
-  _target_: lmetk.data.datasets.cmapss.CMAPSSDataSource
+  _target_: lmetk.data.datasources.cmapss.CMAPSSDataSource
   
   load_arguments:
     data_folder: CMAPSS
@@ -34,8 +34,8 @@ loader:
   scalers:
 
     features:
-      _target_: lmetk.data.datasets.cmapss.CMAPSSScaler
+      _target_: lmetk.data.datasources.cmapss.CMAPSSScaler
 
     labels:
-      _target_: lmetk.data.datasets.cmapss.ConstantScaler
+      _target_: lmetk.data.datasources.cmapss.ConstantScaler
       factor: 0.01

@@ -24,6 +24,3 @@ class ProjectSearchPathPlugin(SearchPathPlugin):
         print("CWD:", Path.cwd())
         os.environ["PROJECT_ROOT"] = str(Path.cwd())
         Plugins.instance().register(ProjectSearchPathPlugin)
-
-
-ProjectSearchPathPlugin.register()

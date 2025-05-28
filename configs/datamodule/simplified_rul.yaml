@@ -1,2 +1,0 @@
-_target_: lmetk.data.datasets.rul_datamodule.SimlifiedRulDataModule
-batch_size: 32

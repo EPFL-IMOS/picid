@@ -8,6 +8,8 @@ import torch
 from lmetk.data.datamodules import BaseDataModule
 
 # This import is necessary to register the plugin
+from test.utils import ProjectSearchPathPlugin
+ProjectSearchPathPlugin.register()
 
 
 @pytest.fixture(scope="module", autouse=True)

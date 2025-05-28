@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
 
-from lmetk.case_studies.ncmapss import flatten_RUL
+from lmetk.data.datasources.n_cmapss import flatten_RUL
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
