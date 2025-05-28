@@ -36,7 +36,7 @@ def concepts_n_cmapss_datamodule():
 
     data_source = hydra.utils.instantiate(cfg.datasource.loader)
 
-    # data_source._load_data()
+    data_source._load_data()
     # data_source._generate_splits()
     # data_source._apply_transformations()
 

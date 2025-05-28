@@ -1,11 +1,13 @@
 
 import os
+from pathlib import Path
+import h5py
 import numpy as np
 import pandas as pd
 from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
 
 from sklearn.base import BaseEstimator, TransformerMixin
-
+from itertools import combinations
 
 
 def subsampling(df, subsampling_rate):
@@ -158,19 +160,20 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
         self.args = load_arguments
 
     def _load_data(self):
+        args = self.args
         # Load the data from the specified path
-        assert RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
-        print(f"Using {RUL} RUL.")
-        self.n_DS = n_DS
-        self.mode = mode
-        self.window_size = window_size
-        self.stride = stride
+        assert args.RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
+        print(f"Using {args.RUL} RUL.")
+        self.n_DS = args.n_DS
+        self.mode = args.mode
+        self.window_size = args.window_size
+        self.stride = args.stride
 
-        filename = os.path.join(path, f"N-CMAPSS_DS{n_DS}.h5")
+        filename = os.path.join(Path(args.path).expanduser(), f"N-CMAPSS_DS{args.n_DS}.h5")
         if not os.path.exists(filename):
             raise FileNotFoundError(f"File not found: {filename}")
         with h5py.File(filename, "r") as hdf:
-            if "train" in mode or "val" in mode:
+            if "train" in args.mode or "val" in args.mode:
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W
                 X_s = np.array(hdf.get("X_s_dev"))  # X_s
@@ -178,7 +181,7 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
                 T = np.array(hdf.get("T_dev"))  # T
                 Y = np.array(hdf.get("Y_dev"))  # RUL
                 A = np.array(hdf.get("A_dev"))  # Auxiliary
-            elif "test" in mode:
+            elif "test" in args.mode:
                 # Test set
                 W = np.array(hdf.get("W_test"))  # W
                 X_s = np.array(hdf.get("X_s_test"))  # X_s
@@ -225,7 +228,7 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
 
         del A, W, T, X_s, Y
 
-        if RUL == "flat":
+        if args.RUL == "flat":
             # Set RUL to flat constant value when hs == 1
             df_all = pd.concat((self.df_A, self.df_Y), axis=1)
             self.df_Y["RUL"] = df_all.groupby("unit", group_keys=False).apply(
@@ -233,30 +236,30 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
             )["RUL"]
             del df_all
 
-        if not include_healthy:
+        if not args.include_healthy:
             self.df_W = self.df_W.loc[self.df_A["hs"] == 0]
             self.df_T = self.df_T.loc[self.df_A["hs"] == 0]
             self.df_X = self.df_X.loc[self.df_A["hs"] == 0]
             self.df_Y = self.df_Y.loc[self.df_A["hs"] == 0]
             self.df_A = self.df_A.loc[self.df_A["hs"] == 0]
 
-        if units is not None:
+        if args.units is not None:
             # select only unit data
-            self.df_W = self.df_W.loc[self.df_A["unit"].isin(units)]
-            self.df_T = self.df_T.loc[self.df_A["unit"].isin(units)]
-            self.df_X = self.df_X.loc[self.df_A["unit"].isin(units)]
-            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(units)]
-            self.df_A = self.df_A.loc[self.df_A["unit"].isin(units)]
+            self.df_W = self.df_W.loc[self.df_A["unit"].isin(args.units)]
+            self.df_T = self.df_T.loc[self.df_A["unit"].isin(args.units)]
+            self.df_X = self.df_X.loc[self.df_A["unit"].isin(args.units)]
+            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(args.units)]
+            self.df_A = self.df_A.loc[self.df_A["unit"].isin(args.units)]
 
-        if subsampling_rate > 1:
+        if args.subsampling_rate > 1:
             # subsample
-            self.df_A = subsampling(self.df_A, subsampling_rate)
-            self.df_W = subsampling(self.df_W, subsampling_rate)
-            self.df_X = subsampling(self.df_X, subsampling_rate)
-            self.df_T = subsampling(self.df_T, subsampling_rate)
-            self.df_Y = subsampling(self.df_Y, subsampling_rate)
+            self.df_A = subsampling(self.df_A, args.subsampling_rate)
+            self.df_W = subsampling(self.df_W, args.subsampling_rate)
+            self.df_X = subsampling(self.df_X, args.subsampling_rate)
+            self.df_T = subsampling(self.df_T, args.subsampling_rate)
+            self.df_Y = subsampling(self.df_Y, args.subsampling_rate)
 
-        if cruise:
+        if args.cruise:
             # for each unit and cycle, get only 'cruising' state
             df_all = pd.concat((self.df_A, self.df_W), axis=1)
             df_cruise = df_all.groupby(["unit", "cycle"], group_keys=False).apply(
@@ -269,8 +272,8 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
             self.df_W = self.df_W.loc[df_cruise.index]
             del df_all, df_cruise
 
-        if concepts == "all":
-            concepts = [
+        if args.concepts == "all":
+            args.concepts = [
                 f"{c}-{m}"
                 for c in ("Fan", "LPC", "HPC", "LPT", "HPT")
                 for m in ("E", "F")
@@ -294,18 +297,18 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
                 "HPT-E": self.df_T["HPT_eff_mod"],
                 "HPT-F": self.df_T["HPT_flow_mod"],
             }
-        )[[c for c in concepts if c not in ["healthy", "Fc"]]]
+        )[[c for c in args.concepts if c not in ["healthy", "Fc"]]]
 
 
         # remove non-minimum degradation
         # self.concepts = self.concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
 
-        if binary_concepts:
+        if args.binary_concepts:
             self.concepts = self.concepts.apply(binarize_concept)
         else:  # continuous concepts (in [0,1] for BCE loss)
             self.concepts = self.concepts.apply(scale_concept)
         if (
-            combined_concepts
+            args.combined_concepts
         ):  # TODO: treat the case with continuous concepts (use mean instead of all?)
             for combination in combinations(self.concepts.columns.tolist(), 2):
                 combination_col = "+".join(combination)
@@ -316,9 +319,9 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
                     self.concepts[c] = np.logical_xor(
                         self.concepts[c], self.concepts[combination_col]
                     )
-        if "healthy" in concepts:
+        if "healthy" in args.concepts:
             self.concepts["healthy"] = (self.concepts == 0).all(axis=1)
-        if "Fc" in concepts:
+        if "Fc" in args.concepts:
             self.concepts = pd.concat(
                 (
                     self.concepts,
