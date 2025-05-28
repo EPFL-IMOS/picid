@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Tuple, Any
 
-
+import inspect
 import numpy as np
 import pytorch_lightning as pl
 
@@ -18,7 +18,9 @@ class BaseDataModule(pl.LightningDataModule):
     def __init__(
         self,
         datasets: Dict[str, Dataset],
-        batch_size: int,
+        train_batch_size: int,
+        val_batch_size: int,
+        test_batch_size: int,
         shuffle_train: bool = True,
         shuffle_val: bool = False,
         shuffle_test: bool = False,
@@ -30,16 +32,27 @@ class BaseDataModule(pl.LightningDataModule):
                 )
 
         super().__init__()
-        hparams = dict(
-            batch_size=batch_size,
-        )
 
-        self.shuffle_train = shuffle_train
-        self.shuffle_val = shuffle_val
-        self.shuffle_test = shuffle_test
+        # Automatically collect all init args
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        
+        # Remove 'self' and 'datasets' from the list
+        hparams = {arg: values[arg] for arg in args if arg not in ['self', 'datasets']}
 
         self.datasets = datasets
-        self.batch_size = batch_size
+        
+        # self.hparams = dict(
+        #     train_batch_size=train_batch_size,
+        #     val_batch_size=val_batch_size,
+        #     test_batch_size=test_batch_size,
+        # )
+
+        # self.shuffle_train = shuffle_train
+        # self.shuffle_val = shuffle_val
+        # self.shuffle_test = shuffle_test
+
+        #self.batch_size = batch_size
         self.save_hyperparameters(hparams, ignore=["datasets"])
 
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
@@ -95,11 +108,11 @@ class BaseDataModule(pl.LightningDataModule):
             The training data loader
         """
         dataset = self.datasets.train
-        drop_last = len(dataset) % self.batch_size == 1
+        drop_last = len(dataset) % self.hparams.train_batch_size == 1
         loader = DataLoader(
             dataset,
-            batch_size=self.batch_size,
-            shuffle=self.shuffle_train,
+            batch_size=self.hparams.train_batch_size,
+            shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
         )
@@ -125,8 +138,8 @@ class BaseDataModule(pl.LightningDataModule):
         """
         return DataLoader(
             self.datasets.val,
-            batch_size=self.batch_size,
-            shuffle=self.shuffle_val,
+            batch_size=self.hparams.val_batch_size,
+            shuffle=self.hparams.shuffle_val,
             pin_memory=True,
         )
 
@@ -149,7 +162,7 @@ class BaseDataModule(pl.LightningDataModule):
         """
         return DataLoader(
             self.datasets.test,
-            batch_size=self.batch_size,
-            shuffle=self.shuffle_test,
+            batch_size=self.hparams.test_batch_size,
+            shuffle=self.hparams.shuffle_test,
             pin_memory=True,
         )

@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 
 def time_features(
-    dates: pd.Series, use_features: Optional[list[str]] = None, normalize: bool = True
+    dates: pd.Series, use_features: Optional[list[str]] = None, normalize: bool = True, return_float=True,
 ) -> tuple[pd.DataFrame, pd.Series]:
     if use_features is None:
         use_features = ["year", "month", "day", "weekday", "hour", "minute"]
@@ -54,6 +54,9 @@ def time_features(
             raise ValueError(f"Column {col} contains NaN values.")
         if (df[col] == 0).all():
             raise ValueError(f"Column {col} is a zero column.")
+    # make all the time features to be float 
+    if return_float:
+        df = df.astype(float)
 
     return df[use_features], dates
 
@@ -71,6 +74,16 @@ def reconstruct_datetime_from_features(
     Returns:
     - pd.Series of datetime64[ns]
     """
+    
+    # Convert float columns to int if necessary
+    if isinstance(data, np.ndarray):
+        if np.issubdtype(data.dtype, np.floating):
+            data = np.round(data).astype(int)
+    elif isinstance(data, pd.DataFrame):
+        float_cols = data.select_dtypes(include=["float", "float64", "float32"]).columns
+        if len(float_cols) > 0:
+            data[float_cols] = data[float_cols].round().astype(int)
+
     # Convert numpy array to DataFrame using provided column names
     if isinstance(data, np.ndarray):
         if data.ndim != 2:

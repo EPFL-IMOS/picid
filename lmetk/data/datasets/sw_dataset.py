@@ -1,5 +1,5 @@
 """Refactored dataset class for time series features."""
-
+import torch
 from torch.utils.data import Dataset
 import numpy as np
 
@@ -40,8 +40,8 @@ class SWDataset(Dataset):
             "Not enough features points for even a single sample"
         )
 
-        self.features = features
-        self.time_features = time_features
+        self.features = torch.Tensor(features).to(torch.float32)
+        self.time_features = torch.Tensor(time_features).to(torch.float32) 
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len

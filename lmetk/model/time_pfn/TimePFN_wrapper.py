@@ -2,12 +2,12 @@
 import copy
 import torch.nn as nn
 import torch.nn.functional as F
-from lmetk.model.time_pfn.TimePFN import Model as TimePFN_Model
+from lmetk.model.time_pfn.TimePFN import TimePFN as TimePFN_Model
 
-class Model(nn.Module):
+class TimePFNWrapper(nn.Module):
 
     def __init__(self, configs):
-        super(Model, self).__init__()
+        super(TimePFNWrapper, self).__init__()
         #deep copy the configs 
         self.configs = configs
         self.copy_configs = copy.deepcopy(configs)

@@ -39,15 +39,18 @@ class SimpleSplitter(TimeSeriesSplitter):
             val_len = int(n * (self.val or 0))
             test_len = n - train_len - val_len
 
-        elif all(isinstance(x, int) for x in [self.train, self.val] if x is not None):
+        elif all(isinstance(x, int) for x in [self.train, self.val, self.test] if x is not None):
             train_len = self.train or 0
             val_len = self.val or 0
             test_len = self.test if self.test is not None else n - train_len - val_len
 
-            if train_len + val_len + test_len != n:
+            if (train_len + val_len + test_len != n) and (self.test is None):
                 raise ValueError(
                     "Train + val + test split sizes must sum to total data length."
                 )
+            else: 
+                assert train_len + val_len + test_len == self.train + self.val + self.test, "Train + val + test split sizes must sum to total data length."
+
         else:
             raise ValueError("train/val/test must all be float or int (not mixed).")
 
@@ -72,10 +75,23 @@ class SimpleSplitter(TimeSeriesSplitter):
             + (val_end - val_start - lookback)
             + (test_end - test_start - lookback)
         )
-        assert used_samples == n, (
-            f"Not all data used: {used_samples} out of {n} samples. "
-            "Ensure that train/val/test splits are set correctly."
-        )
+        
+        if self.test is None:
+            assert used_samples == n, (
+                f"Not all data used: {used_samples} out of {n} samples. "
+                "Ensure that train/val/test splits are set correctly."
+            )
+        else:
+            assert all(isinstance(x, int) for x in [self.train, self.val, self.test] if x is not None), (
+                f"Note that self.test is {self.test} and self.train, self.val, self.test should be int."
+            )
+
+            assert used_samples == self.train + self.val + self.test, (
+                f"Not all data used: {used_samples} out of {self.train + self.val + self.test} samples. "
+                "Ensure that train/val/test splits are set correctly."
+                
+            )
+
 
         # Each split must be long enough for one sample
         min_required = self.seq_len + self.pred_len

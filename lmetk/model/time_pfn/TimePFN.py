@@ -1,16 +1,14 @@
 import torch
 import torch.nn as nn
-from layers.Transformer_EncDec import Encoder, EncoderLayer
-from layers.SelfAttention_Family import FullAttention, AttentionLayer
-from layers.Embed import DataEmbedding_FeaturePatching
+from lmetk.model.layers.Transformer_EncDec import Encoder, EncoderLayer
+from lmetk.model.layers.SelfAttention_Family import FullAttention, AttentionLayer
+from lmetk.model.layers.Embed import DataEmbedding_FeaturePatching
 
 
 
-class Model(nn.Module):
-
-
+class TimePFN(nn.Module):
     def __init__(self, configs):
-        super(Model, self).__init__()
+        super(TimePFN, self).__init__()
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
         self.output_attention = configs.output_attention
