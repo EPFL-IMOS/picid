@@ -10,25 +10,27 @@ import torch
 
 from lmetk.case_studies.common import ContextBatchDataset, time_features
 
-from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
+from torch.utils.data import RandomSampler, BatchSampler, SequentialSampler
 
 
 class CSVLongTermForecastingModule(pl.LightningDataModule):
-    def __init__(self,
-                 train_ratio: float,
-                 val_ratio: float,
-                 test_ratio: float,
-                 step_train: int,
-                 step_val: int,
-                 step_test: int,
-                 data_dir: str,
-                 ts_in: int,
-                 ts_out: int,
-                 target_cols: list[str],
-                 datetime_features: bool = False,
-                 samples_per_day: Optional[int] = None,
-                 drop_cols: Optional[list] = None,
-                 batch_size: int = 32):
+    def __init__(
+        self,
+        train_ratio: float,
+        val_ratio: float,
+        test_ratio: float,
+        step_train: int,
+        step_val: int,
+        step_test: int,
+        data_dir: str,
+        ts_in: int,
+        ts_out: int,
+        target_cols: list[str],
+        datetime_features: bool = False,
+        samples_per_day: Optional[int] = None,
+        drop_cols: Optional[list] = None,
+        batch_size: int = 32,
+    ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -49,20 +51,21 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
 
         self.data_split_strategy = "default"
         self.datetime_features = datetime_features
-        self.target_cols = target_cols if isinstance(target_cols, ListConfig) else [target_cols]
+        self.target_cols = (
+            target_cols if isinstance(target_cols, ListConfig) else [target_cols]
+        )
         self.drop_cols = drop_cols
         self.samples_per_day = samples_per_day
 
     def setup(self, stage: Optional[str] = None):
         dd = Path(self.data_dir)
-        
+
         if dd.suffix == ".csv":
             data = pd.read_csv(self.data_dir)
-            data['time'] = pd.to_datetime(data.time)
-            data.set_index('time', inplace=True)
+            data["time"] = pd.to_datetime(data.time)
+            data.set_index("time", inplace=True)
         elif dd.suffix == ".xlsx":
             data = pd.read_excel(self.data_dir)
-            
 
         if self.drop_cols:
             data = data.drop(self.drop_cols, axis=1)
@@ -71,9 +74,11 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
 
         # use this to downsample the data
         if self.samples_per_day is None:
-            data_samples_per_day = data.index.to_series().groupby(data.index.date).count().iloc[0]
+            data_samples_per_day = (
+                data.index.to_series().groupby(data.index.date).count().iloc[0]
+            )
             samples_per_day = data_samples_per_day
-        else :
+        else:
             samples_per_day = self.samples_per_day
 
         test_ratio = self.test_ratio
@@ -111,41 +116,64 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
 
         if self.datetime_features:
             dtf = time_features(
-                pd.Series(data.index),
-                use_features=["month", "day", "weekday", "hour"])
+                pd.Series(data.index), use_features=["month", "day", "weekday", "hour"]
+            )
             self.dtf_train = dtf.iloc[r_train, :]
             self.dtf_val = dtf.iloc[r_val, :]
             self.dtf_test = dtf.iloc[r_test, :]
 
             self.scaler_mask = np.concatenate(
-                (np.ones(self.train_scaled.shape[1], dtype=bool), np.zeros(4, dtype=bool)))
+                (
+                    np.ones(self.train_scaled.shape[1], dtype=bool),
+                    np.zeros(4, dtype=bool),
+                )
+            )
 
             self.target_cols_mask = np.concatenate(
-                (self.target_cols_mask, np.zeros(4, dtype=bool)))
+                (self.target_cols_mask, np.zeros(4, dtype=bool))
+            )
 
             self.train_scaled = np.concatenate(
-                (self.train_scaled, self.dtf_train[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                (
+                    self.train_scaled,
+                    self.dtf_train[["hour", "day", "weekday", "month"]].values,
+                ),
+                axis=1,
+            )
             self.val_scaled = np.concatenate(
-                (self.val_scaled, self.dtf_val[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                (
+                    self.val_scaled,
+                    self.dtf_val[["hour", "day", "weekday", "month"]].values,
+                ),
+                axis=1,
+            )
             self.test_scaled = np.concatenate(
-                (self.test_scaled, self.dtf_test[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                (
+                    self.test_scaled,
+                    self.dtf_test[["hour", "day", "weekday", "month"]].values,
+                ),
+                axis=1,
+            )
             # self.test_small_scaled = np.concatenate(
             #     (self.test_small_scaled, self.dtf_test_small[['hour', 'day', 'weekday', 'month']].values), axis=1)
 
         self.scaler = scaler
 
         def to_ds(ds, step, raw_data):
-
             out_features_mask = None
 
             ds = ContextBatchDataset(
-                Features=torch.from_numpy(ds[:, self.target_cols_mask]).to(torch.float32),
-                Context=torch.from_numpy(ds[:, ~self.target_cols_mask]).to(torch.float32),
+                Features=torch.from_numpy(ds[:, self.target_cols_mask]).to(
+                    torch.float32
+                ),
+                Context=torch.from_numpy(ds[:, ~self.target_cols_mask]).to(
+                    torch.float32
+                ),
                 out_features_mask=out_features_mask,
                 ts_in=self.ts_in,
                 ts_out=self.ts_out,
                 step=step,
-                raw_data=raw_data
+                raw_data=raw_data,
             )
             return ds
 
@@ -177,26 +205,31 @@ class CSVLongTermForecastingModule(pl.LightningDataModule):
         return torch.concat(X).numpy(), torch.concat(y).numpy()
 
     def _create_dataloader(self, ds, batch_size, shuffle=True):
-
         sampler = BatchSampler(
             RandomSampler(ds) if shuffle else SequentialSampler(ds),
             batch_size=batch_size,
-            drop_last=self.drop_last
+            drop_last=self.drop_last,
         )
         loader_args = dict(
             sampler=sampler,
             num_workers=self.num_workers,
             # persistent_workers=True,
-            batch_size=None  # otherwise it adds a dimension with size 1 x ...
+            batch_size=None,  # otherwise it adds a dimension with size 1 x ...
             # due to the batch sampler providing the batch dimension already
         )
         return DataLoader(ds, **loader_args)
 
     def train_dataloader(self):
-        return self._create_dataloader(self.datasets['train'], batch_size=self.batch_size)
+        return self._create_dataloader(
+            self.datasets["train"], batch_size=self.batch_size
+        )
 
     def val_dataloader(self):
-        return self._create_dataloader(self.datasets['val'], batch_size=self.batch_size, shuffle=False)
+        return self._create_dataloader(
+            self.datasets["val"], batch_size=self.batch_size, shuffle=False
+        )
 
     def test_dataloader(self):
-        return self._create_dataloader(self.datasets['test'], batch_size=self.batch_size, shuffle=False)
+        return self._create_dataloader(
+            self.datasets["test"], batch_size=self.batch_size, shuffle=False
+        )

@@ -1,12 +1,11 @@
-class GenericBenchmark():
+class GenericBenchmark:
     def __init__(self, cfg, objs):
         self.cfg = cfg
         self.objs = objs
-        
-    
+
     def setup(self):
         pass
-    
+
     def run(self):
         pass
 

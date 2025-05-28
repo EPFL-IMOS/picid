@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 import lightning.pytorch as pl
 import numpy as np
 
@@ -82,7 +81,6 @@ class Forecaster(pl.LightningModule, ABC):
     def loss_fn(
         self, true: torch.Tensor, preds: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
-
         true = torch.nan_to_num(true)
 
         if self.loss == "mse":
@@ -98,9 +96,8 @@ class Forecaster(pl.LightningModule, ABC):
         return loss
 
     def forecasting_loss(
-        self, outputs: torch.Tensor, y_t: torch.Tensor, time_mask: int, feat_mask = None
+        self, outputs: torch.Tensor, y_t: torch.Tensor, time_mask: int, feat_mask=None
     ) -> Tuple[torch.Tensor]:
-
         if self.null_value is not None:
             null_mask_mat = y_t != self.null_value
         else:
@@ -112,12 +109,12 @@ class Forecaster(pl.LightningModule, ABC):
         time_mask_mat = torch.ones_like(y_t)
         if time_mask is not None:
             time_mask_mat[:, time_mask:] = False
-            
+
         feat_mask_mat = torch.ones_like(y_t)
         if feat_mask is not None:
             feat_mask_mat = torch.zeros_like(y_t)
             feat_mask_mat[:, :, feat_mask] = True
-            
+
         full_mask = time_mask_mat * null_mask_mat * feat_mask_mat
         forecasting_loss = self.loss_fn(y_t, outputs, full_mask)
         return forecasting_loss, full_mask
@@ -253,7 +250,6 @@ class Forecaster(pl.LightningModule, ABC):
         outs = self.step(batch, train=True)
         self._log_stats("train", outs)
         return {"loss": outs["loss"].mean()}
-    
 
     def validation_step(self, batch, batch_idx):
         stats = self.step(batch, train=False)
@@ -261,12 +257,10 @@ class Forecaster(pl.LightningModule, ABC):
         self._log_stats("val", stats)
         return stats
 
-
     def test_step(self, batch, batch_idx):
         outs = self.step(batch, train=False)
         self._log_stats("test", outs)
         return {"loss": outs["loss"].mean()}
-    
 
     def _log_stats(self, section, outs):
         for key in outs.keys():
@@ -274,7 +268,6 @@ class Forecaster(pl.LightningModule, ABC):
             if isinstance(stat, np.ndarray) or isinstance(stat, torch.Tensor):
                 stat = stat.mean()
             self.log(f"{section}/{key}", stat, sync_dist=True)
-
 
     def predict_step(self, batch, batch_idx):
         return self(*batch, **self.eval_step_forward_kwargs)

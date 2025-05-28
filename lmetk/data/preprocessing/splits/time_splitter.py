@@ -2,14 +2,17 @@ import numpy as np
 from typing import Optional, Union, Tuple
 from .base import TimeSeriesSplitter
 
+
 class SimpleSplitter(TimeSeriesSplitter):
-    def __init__(self,
-                 train: Optional[Union[int, float]] = None,
-                 val: Optional[Union[int, float]] = None,
-                 test: Optional[Union[int, float]] = None,
-                 seq_len: int = 384,
-                 label_len: int = 96,
-                 pred_len: int = 96):
+    def __init__(
+        self,
+        train: Optional[Union[int, float]] = None,
+        val: Optional[Union[int, float]] = None,
+        test: Optional[Union[int, float]] = None,
+        seq_len: int = 384,
+        label_len: int = 96,
+        pred_len: int = 96,
+    ):
         self.train = train
         self.val = val
         self.test = test
@@ -21,8 +24,14 @@ class SimpleSplitter(TimeSeriesSplitter):
     def get_splits(self, data: np.ndarray) -> dict:
         n = len(data)
 
-        if all(isinstance(x, float) for x in [self.train, self.val, self.test] if x is not None):
-            total_ratio = sum(x for x in [self.train, self.val, self.test] if x is not None)
+        if all(
+            isinstance(x, float)
+            for x in [self.train, self.val, self.test]
+            if x is not None
+        ):
+            total_ratio = sum(
+                x for x in [self.train, self.val, self.test] if x is not None
+            )
             if total_ratio > 1.0:
                 raise ValueError("Sum of proportions cannot exceed 1.0")
 
@@ -36,12 +45,14 @@ class SimpleSplitter(TimeSeriesSplitter):
             test_len = self.test if self.test is not None else n - train_len - val_len
 
             if train_len + val_len + test_len != n:
-                raise ValueError("Train + val + test split sizes must sum to total data length.")
+                raise ValueError(
+                    "Train + val + test split sizes must sum to total data length."
+                )
         else:
             raise ValueError("train/val/test must all be float or int (not mixed).")
 
         # Compute overlap between segments
-        lookback = self.seq_len # - self.pred_len
+        lookback = self.seq_len  # - self.pred_len
         if lookback < 0:
             raise ValueError("pred_len must be <= seq_len")
 
@@ -56,7 +67,11 @@ class SimpleSplitter(TimeSeriesSplitter):
         test_end = test_start + test_len + lookback
 
         # Final safety check: all data must be used
-        used_samples = (train_end - train_start) + (val_end - val_start - lookback) + (test_end - test_start - lookback)
+        used_samples = (
+            (train_end - train_start)
+            + (val_end - val_start - lookback)
+            + (test_end - test_start - lookback)
+        )
         assert used_samples == n, (
             f"Not all data used: {used_samples} out of {n} samples. "
             "Ensure that train/val/test splits are set correctly."
@@ -80,16 +95,15 @@ class SimpleSplitter(TimeSeriesSplitter):
         return {
             "train": (train_start, train_end),
             "val": (val_start, val_end),
-            "test": (test_start, test_end)
+            "test": (test_start, test_end),
         }
-
 
     def split_data(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self.splits_dict is None:
             self.splits_dict = self.get_splits(data)
-        train_data = data[self.splits_dict["train"][0]:self.splits_dict["train"][1]]
-        val_data = data[self.splits_dict["val"][0]:self.splits_dict["val"][1]]
-        test_data = data[self.splits_dict["test"][0]:self.splits_dict["test"][1]]
+        train_data = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
+        val_data = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]
+        test_data = data[self.splits_dict["test"][0] : self.splits_dict["test"][1]]
         return train_data, val_data, test_data
 
     def __repr__(self):

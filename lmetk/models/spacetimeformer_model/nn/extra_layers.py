@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .scalenorm import ScaleNorm
 from .powernorm import MaskPowerNorm
@@ -178,11 +177,11 @@ class ConvBlock(nn.Module):
 
     def forward(self, x):
         x = rearrange(
-            x, f"batch (sl len) d_model -> (batch sl) d_model len", sl=self.split_length
+            x, "batch (sl len) d_model -> (batch sl) d_model len", sl=self.split_length
         )
         x = self.conv_forward(x)
         x = rearrange(
-            x, f"(batch sl) d_model len -> batch (sl len) d_model", sl=self.split_length
+            x, "(batch sl) d_model len -> batch (sl len) d_model", sl=self.split_length
         )
         return x
 

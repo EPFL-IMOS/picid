@@ -2,8 +2,6 @@ import random
 
 import torch
 from torch import nn
-import torch.nn.functional as F
-import pytorch_lightning as pl
 
 import models as stf
 
@@ -167,9 +165,8 @@ class LSTM_Forecaster(stf.Forecaster):
             y_t = self.revin(y_t, mode="norm", update_stats=False)
         preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)
         return (preds,)
-    
-    
+
     def step(self, batch: torch.Tuple[torch.Tensor], train: bool = False):
         stats = super().step(batch, train)
-        stats['forecast_loss'] = stats['loss']
+        stats["forecast_loss"] = stats["loss"]
         return stats

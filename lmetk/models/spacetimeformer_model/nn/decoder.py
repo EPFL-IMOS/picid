@@ -1,6 +1,5 @@
 import warnings
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -75,14 +74,14 @@ class DecoderLayer(nn.Module):
 
         self.dropout_ff = nn.Dropout(dropout_ff)
         self.dropout_attn_out = nn.Dropout(dropout_attn_out)
-        
+
         if activation == "relu":
             self.activation = F.relu
         elif activation == "gelu":
             self.activation = F.gelu
         else:
             raise ValueError("Activation function not supported")
-        
+
         self.time_windows = time_windows
         self.time_window_offset = time_window_offset
         self.d_yt = d_yt

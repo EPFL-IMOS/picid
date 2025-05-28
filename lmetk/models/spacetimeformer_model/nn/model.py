@@ -1,12 +1,8 @@
 from functools import partial
 from typing import Optional
-import warnings
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.distributions as pyd
-from einops import rearrange, repeat
 
 from .extra_layers import ConvBlock, Normalization, FoldForPred
 from .encoder import Encoder, EncoderLayer
@@ -45,9 +41,9 @@ class Spacetimeformer(nn.Module):
         dropout_ff: float = 0.2,
         dropout_qkv: float = 0.0,
         pos_emb_type: str = "abs",
-        timetable_emb_enc_type: Optional[str]  ="abs",
-        timetable_emb_dec_type: Optional[str]  ="abs",
-        time_emb_type: str   = "t2v", 
+        timetable_emb_enc_type: Optional[str] = "abs",
+        timetable_emb_dec_type: Optional[str] = "abs",
+        time_emb_type: str = "t2v",
         inverted_encoder: bool = False,
         variable_emb_type: Optional[str] = None,
         global_self_attn: str = "performer",
@@ -62,7 +58,7 @@ class Spacetimeformer(nn.Module):
         attention_method: str = "non-causual",
         d_x_embedding_router: Optional[torch.Tensor] = None,
         activation: str = "gelu",
-        head_f: str = "linear", 
+        head_f: str = "linear",
         norm: str = "batch",
         use_final_norm: bool = True,
         initial_downsample_convs: int = 0,
@@ -89,12 +85,12 @@ class Spacetimeformer(nn.Module):
         if e_layers:
             assert intermediate_downsample_convs <= e_layers - 1
         if embed_method == "temporal":
-            assert (
-                local_self_attn == "none"
-            ), "local attention not compatible with Temporal-only embedding"
-            assert (
-                local_cross_attn == "none"
-            ), "Local Attention not compatible with Temporal-only embedding"
+            assert local_self_attn == "none", (
+                "local attention not compatible with Temporal-only embedding"
+            )
+            assert local_cross_attn == "none", (
+                "Local Attention not compatible with Temporal-only embedding"
+            )
             split_length_into = 1
         else:
             split_length_into = d_yc
@@ -113,18 +109,18 @@ class Spacetimeformer(nn.Module):
             drop_max_seq_len=recon_mask_max_seq_len,
             skip_all_drop=recon_mask_skip_all,
         )
-        
-        if d_x_embedding_router is not None:    
-            assert len(d_x_embedding_router) == d_x, "Embedding router must have same length as d_x"
+
+        if d_x_embedding_router is not None:
+            assert len(d_x_embedding_router) == d_x, (
+                "Embedding router must have same length as d_x"
+            )
 
         self.inverted_encoder = inverted_encoder
         if inverted_encoder:
-              self.enc_embedding = IEmbedding(
-                  c_in=max_seq_len, 
-                  d_model=d_model, 
-                  dropout=dropout_emb
-                )
-        else:    
+            self.enc_embedding = IEmbedding(
+                c_in=max_seq_len, d_model=d_model, dropout=dropout_emb
+            )
+        else:
             self.enc_embedding = Embedding(
                 d_y=d_yc,
                 d_x=d_x,
@@ -147,7 +143,7 @@ class Spacetimeformer(nn.Module):
                 use_timetable=use_tt_enc,
                 use_time=use_time,
                 use_space=use_space,
-                use_given=use_given
+                use_given=use_given,
             )
         self.dec_embedding = Embedding(
             d_y=d_yt,
@@ -171,7 +167,7 @@ class Spacetimeformer(nn.Module):
             use_timetable=use_tt_dec,
             use_time=use_time,
             use_space=use_space,
-            use_given=use_given
+            use_given=use_given,
         )
 
         attn_kwargs = {
@@ -261,15 +257,13 @@ class Spacetimeformer(nn.Module):
             out_dim = 1 if self.embed_method == "spatio-temporal" else d_yt
             recon_dim = 1 if self.embed_method == "spatio-temporal" else d_yc
 
-
         self.classifier = nn.Linear(d_model, d_yc, bias=True)
-        
+
         if head_f == "linear":
             self.forecaster = nn.Linear(d_model, out_dim, bias=True)
             self.reconstructor = nn.Linear(d_model, recon_dim, bias=True)
         else:
             raise ValueError(f"Unrecognized head_f code '{head_f}'")
-
 
     def forward(
         self,
@@ -280,8 +274,8 @@ class Spacetimeformer(nn.Module):
         output_attention=False,
     ):
         if self.inverted_encoder:
-           enc_y = torch.cat([enc_y, dec_y], dim=1)
-           enc_x = torch.cat([enc_x, dec_x], dim=1)
+            enc_y = torch.cat([enc_y, dec_y], dim=1)
+            enc_x = torch.cat([enc_x, dec_x], dim=1)
 
         enc_vt_emb, enc_s_emb, enc_var_idxs, enc_mask_seq = self.enc_embedding(
             y=enc_y, x=enc_x
@@ -295,11 +289,13 @@ class Spacetimeformer(nn.Module):
         )
 
         dec_vt_emb, dec_s_emb, _, dec_mask_seq = self.dec_embedding(y=dec_y, x=dec_x)
-        
+
         if self.attention_method == "causual":
             b, l, f = dec_y.shape
-            dec_mask_seq = TriangularCausalMask(b, l, device=dec_y.device).mask.squeeze(1)
-            
+            dec_mask_seq = TriangularCausalMask(b, l, device=dec_y.device).mask.squeeze(
+                1
+            )
+
         if enc_mask_seq is not None:
             enc_dec_mask_seq = enc_mask_seq.clone()
         else:
@@ -316,7 +312,7 @@ class Spacetimeformer(nn.Module):
 
         forecast_out = self.forecaster(dec_out)
         recon_out = self.reconstructor(enc_out)
-        
+
         if self.embed_method == "spatio-temporal":
             forecast_out = FoldForPred(forecast_out, dy=self.d_yt)
             recon_out = FoldForPred(recon_out, dy=self.d_yc)
@@ -348,7 +344,6 @@ class Spacetimeformer(nn.Module):
         performer_attn_kernel: str,
         performer_redraw_interval: int,
     ):
-
         if attn_str == "full":
             # standard full (n^2) attention
             Attn = AttentionLayer(

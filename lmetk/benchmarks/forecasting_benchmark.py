@@ -1,13 +1,12 @@
-class ForecastingBenchmark():
+class ForecastingBenchmark:
     def __init__(self, cfg, objs, verbose=False):
         self.cfg = cfg
         self.objs = objs
         self.verbose = verbose
-        
-    
+
     def setup(self):
         pass
-    
+
     def run(self):
         pass
 

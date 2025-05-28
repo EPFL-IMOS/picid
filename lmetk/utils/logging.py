@@ -44,7 +44,7 @@ class SmoothedValue(object):
         """
         if not is_dist_avail_and_initialized():
             return
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
+        t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
         dist.barrier()
         dist.all_reduce(t)
         t = t.tolist()
@@ -79,7 +79,8 @@ class SmoothedValue(object):
             avg=self.avg,
             global_avg=self.global_avg,
             max=self.max,
-            value=self.value)
+            value=self.value,
+        )
 
 
 class MetricLogger(object):
@@ -101,15 +102,14 @@ class MetricLogger(object):
             return self.meters[attr]
         if attr in self.__dict__:
             return self.__dict__[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, attr)
+        )
 
     def __str__(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {}".format(name, str(meter))
-            )
+            loss_str.append("{}: {}".format(name, str(meter)))
         return self.delimiter.join(loss_str)
 
     def synchronize_between_processes(self):
@@ -122,22 +122,22 @@ class MetricLogger(object):
     def log_every(self, iterable, print_freq, header=None):
         i = 0
         if not header:
-            header = ''
+            header = ""
         start_time = time.time()
         end = time.time()
-        iter_time = SmoothedValue(fmt='{avg:.4f}')
-        data_time = SmoothedValue(fmt='{avg:.4f}')
-        space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
+        iter_time = SmoothedValue(fmt="{avg:.4f}")
+        data_time = SmoothedValue(fmt="{avg:.4f}")
+        space_fmt = ":" + str(len(str(len(iterable)))) + "d"
         log_msg = [
             header,
-            '[{0' + space_fmt + '}/{1}]',
-            'eta: {eta}',
-            '{meters}',
-            'time: {time}',
-            'data: {data}'
+            "[{0" + space_fmt + "}/{1}]",
+            "eta: {eta}",
+            "{meters}",
+            "time: {time}",
+            "data: {data}",
         ]
         if torch.cuda.is_available():
-            log_msg.append('max mem: {memory:.0f}')
+            log_msg.append("max mem: {memory:.0f}")
         log_msg = self.delimiter.join(log_msg)
         MB = 1024.0 * 1024.0
         for obj in iterable:
@@ -148,73 +148,87 @@ class MetricLogger(object):
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                    print(
+                        log_msg.format(
+                            i,
+                            len(iterable),
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
+                            memory=torch.cuda.max_memory_allocated() / MB,
+                        )
+                    )
                 else:
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time)))
+                    print(
+                        log_msg.format(
+                            i,
+                            len(iterable),
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
+                        )
+                    )
             i += 1
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('{} Total time: {} ({:.4f} s / it)'.format(
-            header, total_time_str, total_time / len(iterable)))
+        print(
+            "{} Total time: {} ({:.4f} s / it)".format(
+                header, total_time_str, total_time / len(iterable)
+            )
+        )
 
 
 class MultiLogger(object):
-    
-    
-    def __init__(self, 
-                project_name, 
-                entity_name,
-                exp_name, 
-                config, 
-                metrics: List[str] = ["global_step"], 
-                logdir_wandb="./wandb",
-                logdir_tb="./tensorboard",
-                wandb_enabled=False,
-                wandb_resume=False,
-                wandb_id=None,
-                silent=False) -> None:
-        
+    def __init__(
+        self,
+        project_name,
+        entity_name,
+        exp_name,
+        config,
+        metrics: List[str] = ["global_step"],
+        logdir_wandb="./wandb",
+        logdir_tb="./tensorboard",
+        wandb_enabled=False,
+        wandb_resume=False,
+        wandb_id=None,
+        silent=False,
+    ) -> None:
         if wandb_enabled:
             wandb.login()
-            
+
             resume_args = {}
             if wandb_resume:
-                resume_args['resume'] = 'must'
+                resume_args["resume"] = "must"
                 id = wandb_id
             else:
                 id = wandb.util.generate_id()
-                resume_args['resume'] = 'never'
-                
+                resume_args["resume"] = "never"
+
             self.wandb_run = wandb.init(
                 name=exp_name,
-                project=project_name, 
-                id = id,
+                project=project_name,
+                id=id,
                 dir=logdir_wandb,
                 entity=entity_name,
                 config=config,
-                **resume_args
+                **resume_args,
             )
             for m in metrics:
                 wandb.define_metric(m)
-            
+
             self.wandb_id = id
-    
+
         self.wandb_enabled = wandb_enabled
-        self.registered_metrics = {}    
+        self.registered_metrics = {}
         self.silent = silent
-        
+
         self.tensorboard_writer = SummaryWriter(log_dir=logdir_tb)
         self.step = 0
-        self.log_dir_wandb=logdir_wandb
-        self.log_dir_tb=logdir_tb
+        self.log_dir_wandb = logdir_wandb
+        self.log_dir_tb = logdir_tb
 
     def set_step(self, step=None):
         if step is not None:
@@ -222,33 +236,34 @@ class MultiLogger(object):
         else:
             self.step += 1
 
-    def update(self, head='scalar', step=None, **kwargs):
+    def update(self, head="scalar", step=None, **kwargs):
         for k, v in kwargs.items():
             if v is None:
                 continue
             if isinstance(v, torch.Tensor):
                 v = v.item()
             assert isinstance(v, (float, int))
-            self.tensorboard_writer.add_scalar(head + "/" + k, v, self.step if step is None else step)
-            
+            self.tensorboard_writer.add_scalar(
+                head + "/" + k, v, self.step if step is None else step
+            )
+
             if self.wandb_enabled:
                 self.log({head + "/" + k: v}, step=self.step if step is None else step)
 
     def flush(self):
         self.tensorboard_writer.flush()
-        
-        
+
     def finish(self):
         if self.wandb_enabled:
             self.wandb_run.finish()
-        
-        
+
     def log(self, *args, **kwargs):
-        
         if "trainer/global_step" in args[0] and self.wandb_enabled:
             for key in args[0].keys():
                 if key not in self.registered_metrics and key != "trainer/global_step":
                     self.registered_metrics[key] = True
                     wandb.define_metric(key, step_metric="trainer/global_step")
-        
-        self.wandb_run.log(*args, **kwargs) if self.wandb_enabled else print(args, kwargs) if not self.silent else None
+
+        self.wandb_run.log(*args, **kwargs) if self.wandb_enabled else print(
+            args, kwargs
+        ) if not self.silent else None

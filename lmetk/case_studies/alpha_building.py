@@ -3,66 +3,65 @@ import sys
 
 from sklearn.preprocessing import MinMaxScaler
 
-from lmetk.case_studies.common import ContextBatchDataset, check_boolean_vector, time_features
-from lmetk.case_studies.converters import dl_to_sklearn__with_context_for_tabpfn
+from lmetk.case_studies.common import (
+    ContextBatchDataset,
+    check_boolean_vector,
+    time_features,
+)
 
 os.path.dirname(sys.executable)
 
-from pathlib import Path
-from omegaconf import OmegaConf
-import importlib
+
 # from main_nolightning import initialize, configure
 import pandas as pd
 import numpy as np
-from einops import rearrange
 import torch
 import pytorch_lightning as pl
-from typing import Optional, List, Tuple
-from abc import abstractmethod
+from typing import Optional
 from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
 
-from typing import Optional, List, Tuple
-from abc import abstractmethod
-from torch.utils.data import DataLoader, RandomSampler, BatchSampler, SequentialSampler
 
-from sklearn.preprocessing import MinMaxScaler
+
 
 class BuildingEnergyDataModule(pl.LightningDataModule):
-    def __init__(self,
-                 data_dir: str,
-                 test_ratio: float = 0.5,
-                 val_ratio: float = 0.084,
-                 train_ratio: float = 1.0,
-                 train_scaled: Optional[None] = None,
-                 val_scaled: Optional[None] = None,
-                 test_scaled: Optional[None] = None,
-                 batch_size=64,
-                 samples_per_day=None,
-                 trend_decomp_rolling_window=384,
-                 ts_in=336,
-                 ts_out=48,
-                 step_train=1,
-                 step_val=48,
-                 step_test=48,
-                 shuffle=True,
-                 drop_last=False,
-                 num_workers=0,
-                 data_split_strategy="default",
-                 include_bl_forecast=False,
-                 datetime_features=True,
-                 forecast_feature_name="",
-                 forecast_all_features=False,
-                 trend_decomp="disabled",
-                 subsample_strategy=None,
-                 spatial_aggregation: Optional[str] = None):
-
+    def __init__(
+        self,
+        data_dir: str,
+        test_ratio: float = 0.5,
+        val_ratio: float = 0.084,
+        train_ratio: float = 1.0,
+        train_scaled: Optional[None] = None,
+        val_scaled: Optional[None] = None,
+        test_scaled: Optional[None] = None,
+        batch_size=64,
+        samples_per_day=None,
+        trend_decomp_rolling_window=384,
+        ts_in=336,
+        ts_out=48,
+        step_train=1,
+        step_val=48,
+        step_test=48,
+        shuffle=True,
+        drop_last=False,
+        num_workers=0,
+        data_split_strategy="default",
+        include_bl_forecast=False,
+        datetime_features=True,
+        forecast_feature_name="",
+        forecast_all_features=False,
+        trend_decomp="disabled",
+        subsample_strategy=None,
+        spatial_aggregation: Optional[str] = None,
+    ):
         super().__init__()
         self.test_ratio = test_ratio
         self.val_ratio = val_ratio
         self.train_ratio = train_ratio
 
         if train_ratio < 1.0:
-            assert data_split_strategy == "scale_training_set", "Only scale_training_set strategy is supported"
+            assert data_split_strategy == "scale_training_set", (
+                "Only scale_training_set strategy is supported"
+            )
 
         self.samples_per_day = samples_per_day
         self.trend_decomp_rolling_window = trend_decomp_rolling_window
@@ -95,32 +94,41 @@ class BuildingEnergyDataModule(pl.LightningDataModule):
     def load_raw_data(self, data_dir):
         data_path = data_dir
         data = pd.read_csv(data_path, sep=",")
-        data.set_index('timestamp', inplace=True)
+        data.set_index("timestamp", inplace=True)
 
         return data
 
     def setup(self, stage: Optional[str] = None):
-
         if self.train_scaled is None:
             data = self.load_raw_data(self.data_dir)
 
             # use this to downsample the data
-            data_samples_per_day = data.index.to_series().groupby(data.index.date).count().iloc[0]
+            data_samples_per_day = (
+                data.index.to_series().groupby(data.index.date).count().iloc[0]
+            )
             samples_per_day = data_samples_per_day
 
             assert self.samples_per_day is None, "Subsampling not implemented"
             assert self.subsample_strategy is None, "Not implemented"
 
-            if not (self.subsample_strategy == "mean_1h" or self.subsample_strategy == None):
-                raise ValueError("Only mean_1h is supported, make sure the dataset is aligned with the small one")
+            if not (
+                self.subsample_strategy == "mean_1h" or self.subsample_strategy == None
+            ):
+                raise ValueError(
+                    "Only mean_1h is supported, make sure the dataset is aligned with the small one"
+                )
 
             if self.subsample_strategy == "select_1h":
-                hourly = pd.Series(data=pd.date_range(start=data.index.min(), end=data.index.max(), freq='1h'))
+                hourly = pd.Series(
+                    data=pd.date_range(
+                        start=data.index.min(), end=data.index.max(), freq="1h"
+                    )
+                )
                 data = data.loc[hourly]
             if self.subsample_strategy == "mean_1h":
-                data['Bahnlast'] = data['Bahnlast'].shift(-2).ffill()
+                data["Bahnlast"] = data["Bahnlast"].shift(-2).ffill()
                 data = data.shift(1).bfill().resample("1h").mean()
-                data = data.resample('1H').mean()
+                data = data.resample("1H").mean()
 
             self.data = {"full": data}
 
@@ -147,23 +155,29 @@ class BuildingEnergyDataModule(pl.LightningDataModule):
                 print("Spatial aggregation")
 
             if self.trend_decomp == "disabled":
-                gt = data[[
-                    'Site Total Energy (kWh)',
-                ]]
+                gt = data[
+                    [
+                        "Site Total Energy (kWh)",
+                    ]
+                ]
                 self.data = {"full": data, "gt": gt.copy()}
             else:
                 raise ValueError("Unknown trend decomposition")
 
             if not self.forecast_all_features:
                 # self.features_mask = (data.columns == "Bahnlast")
-                self.bahnlast_mask = (data.columns == self.forecast_feature_name)
-                self.bahnlast_mask_orig = (data.columns == self.forecast_feature_name)
+                self.bahnlast_mask = data.columns == self.forecast_feature_name
+                self.bahnlast_mask_orig = data.columns == self.forecast_feature_name
             else:
                 self.bahnlast_mask = np.ones(data.shape[1], dtype=bool)
                 self.bahnlast_mask_orig = np.ones(data.shape[1], dtype=bool)
 
-            assert check_boolean_vector(self.bahnlast_mask), "Should be boolean vector in order 1111...000"
-            assert check_boolean_vector(self.bahnlast_mask_orig), "Should be boolean vector in order 1111...000"
+            assert check_boolean_vector(self.bahnlast_mask), (
+                "Should be boolean vector in order 1111...000"
+            )
+            assert check_boolean_vector(self.bahnlast_mask_orig), (
+                "Should be boolean vector in order 1111...000"
+            )
 
             test_ratio = self.test_ratio
             val_ratio = self.val_ratio
@@ -184,9 +198,15 @@ class BuildingEnergyDataModule(pl.LightningDataModule):
 
             print("--" * 40)
             print("Dataset Split Summary:")
-            print(f"Train: {len(r_train)} , Start Date: {data.index[r_train[0]]} , End Date: {data.index[r_train[-1]]}")
-            print(f"Val: {len(r_val)} , Start Date: {data.index[r_val[0]]} , End Date: {data.index[r_val[-1]]}")
-            print(f"Test: {len(r_test)} , Start Date: {data.index[r_test[0]]} , End Date: {data.index[r_test[-1]]}")
+            print(
+                f"Train: {len(r_train)} , Start Date: {data.index[r_train[0]]} , End Date: {data.index[r_train[-1]]}"
+            )
+            print(
+                f"Val: {len(r_val)} , Start Date: {data.index[r_val[0]]} , End Date: {data.index[r_val[-1]]}"
+            )
+            print(
+                f"Test: {len(r_test)} , Start Date: {data.index[r_test[0]]} , End Date: {data.index[r_test[-1]]}"
+            )
             print("--" * 40)
 
             self.r_train, self.r_val, self.r_test = r_train, r_val, r_test
@@ -203,41 +223,65 @@ class BuildingEnergyDataModule(pl.LightningDataModule):
             if self.datetime_features:
                 dtf = time_features(
                     pd.Series(data.index),
-                    use_features=["month", "day", "weekday", "hour"])
+                    use_features=["month", "day", "weekday", "hour"],
+                )
                 self.dtf_train = dtf.iloc[r_train, :]
                 self.dtf_val = dtf.iloc[r_val, :]
                 self.dtf_test = dtf.iloc[r_test, :]
 
                 self.scaler_mask = np.concatenate(
-                    (np.ones(self.train_scaled.shape[1], dtype=bool), np.zeros(4, dtype=bool)))
+                    (
+                        np.ones(self.train_scaled.shape[1], dtype=bool),
+                        np.zeros(4, dtype=bool),
+                    )
+                )
 
                 self.bahnlast_mask = np.concatenate(
-                    (self.bahnlast_mask, np.zeros(4, dtype=bool)))
+                    (self.bahnlast_mask, np.zeros(4, dtype=bool))
+                )
 
                 self.train_scaled = np.concatenate(
-                    (self.train_scaled, self.dtf_train[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                    (
+                        self.train_scaled,
+                        self.dtf_train[["hour", "day", "weekday", "month"]].values,
+                    ),
+                    axis=1,
+                )
                 self.val_scaled = np.concatenate(
-                    (self.val_scaled, self.dtf_val[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                    (
+                        self.val_scaled,
+                        self.dtf_val[["hour", "day", "weekday", "month"]].values,
+                    ),
+                    axis=1,
+                )
                 self.test_scaled = np.concatenate(
-                    (self.test_scaled, self.dtf_test[['hour', 'day', 'weekday', 'month']].values), axis=1)
+                    (
+                        self.test_scaled,
+                        self.dtf_test[["hour", "day", "weekday", "month"]].values,
+                    ),
+                    axis=1,
+                )
 
             self.scaler = scaler
 
             def to_ds(ds, step, raw_data):
-
                 # out_features_mask = torch.from_numpy(data.columns == self.forecast_feature_name).to(torch.bool) \
                 #     if self.forecast_all_features else None
 
                 out_features_mask = None
 
                 ds = ContextBatchDataset(
-                    Features=torch.from_numpy(ds[:, self.bahnlast_mask]).to(torch.float32),
-                    Context=torch.from_numpy(ds[:, ~self.bahnlast_mask]).to(torch.float32),
+                    Features=torch.from_numpy(ds[:, self.bahnlast_mask]).to(
+                        torch.float32
+                    ),
+                    Context=torch.from_numpy(ds[:, ~self.bahnlast_mask]).to(
+                        torch.float32
+                    ),
                     out_features_mask=out_features_mask,
                     ts_in=self.ts_in,
                     ts_out=self.ts_out,
                     step=step,
-                    raw_data=raw_data
+                    raw_data=raw_data,
                 )
                 return ds
 
@@ -260,29 +304,36 @@ class BuildingEnergyDataModule(pl.LightningDataModule):
         return res[:, self.bahnlast_mask_orig]
 
     def _create_dataloader(self, ds, batch_size, shuffle=True):
-
         sampler = BatchSampler(
             RandomSampler(ds) if shuffle else SequentialSampler(ds),
             batch_size=batch_size,
-            drop_last=self.drop_last
+            drop_last=self.drop_last,
         )
         loader_args = dict(
             sampler=sampler,
             num_workers=self.num_workers,
             # persistent_workers=True,
-            batch_size=None  # otherwise it adds a dimension with size 1 x ...
+            batch_size=None,  # otherwise it adds a dimension with size 1 x ...
             # due to the batch sampler providing the batch dimension already
         )
         return DataLoader(ds, **loader_args)
 
     def train_dataloader(self):
-        return self._create_dataloader(self.datasets['train'], batch_size=self.batch_size)
+        return self._create_dataloader(
+            self.datasets["train"], batch_size=self.batch_size
+        )
 
     def val_dataloader(self):
-        return self._create_dataloader(self.datasets['val'], batch_size=self.batch_size, shuffle=False)
+        return self._create_dataloader(
+            self.datasets["val"], batch_size=self.batch_size, shuffle=False
+        )
 
     def test_dataloader(self):
-        return self._create_dataloader(self.datasets['test'], batch_size=self.batch_size, shuffle=False)
+        return self._create_dataloader(
+            self.datasets["test"], batch_size=self.batch_size, shuffle=False
+        )
 
     def test_small_dataloader(self):
-        return self._create_dataloader(self.datasets['test_small'], batch_size=self.batch_size, shuffle=False)
+        return self._create_dataloader(
+            self.datasets["test_small"], batch_size=self.batch_size, shuffle=False
+        )

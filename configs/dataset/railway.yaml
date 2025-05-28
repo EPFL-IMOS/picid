@@ -1,5 +1,5 @@
 loader:
-  _target_: lmetk.data.datasets.RailwayLoader
+  _target_: lmetk.data.datasources.RailwayLoader
   
   load_arguments:
     data_name: railway

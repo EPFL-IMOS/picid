@@ -74,11 +74,11 @@ class WarmupReduceLROnPlateauScheduler(LearningRateScheduler, ReduceLROnPlateau)
         ]
 
     def load_state_dict(self, state_dict):
-        self.schedulers[0].load_state_dict(state_dict['warmup'])
-        self.schedulers[1].load_state_dict(state_dict['reduce_lr_on_plateau'])
-        self.update_steps = state_dict['update_steps']
-        self.warmup_steps = state_dict['warmup_steps']
-        self.warmup_rate = state_dict['warmup_rate']
+        self.schedulers[0].load_state_dict(state_dict["warmup"])
+        self.schedulers[1].load_state_dict(state_dict["reduce_lr_on_plateau"])
+        self.update_steps = state_dict["update_steps"]
+        self.warmup_steps = state_dict["warmup_steps"]
+        self.warmup_rate = state_dict["warmup_rate"]
 
     def state_dict(self):
         return {

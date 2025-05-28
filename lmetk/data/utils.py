@@ -4,9 +4,7 @@ from typing import Optional, Union
 
 
 def time_features(
-    dates: pd.Series,
-    use_features: Optional[list[str]] = None,
-    normalize: bool = True
+    dates: pd.Series, use_features: Optional[list[str]] = None, normalize: bool = True
 ) -> tuple[pd.DataFrame, pd.Series]:
     if use_features is None:
         use_features = ["year", "month", "day", "weekday", "hour", "minute"]
@@ -59,17 +57,17 @@ def time_features(
 
     return df[use_features], dates
 
+
 def reconstruct_datetime_from_features(
-    data: Union[np.ndarray, pd.DataFrame],
-    columns: list[str]
+    data: Union[np.ndarray, pd.DataFrame], columns: list[str]
 ) -> pd.Series:
     """
     Reconstruct datetime from features (either DataFrame or NumPy array).
-    
+
     Parameters:
     - data: pd.DataFrame or np.ndarray containing time components
     - columns: List of column names corresponding to the input
-    
+
     Returns:
     - pd.Series of datetime64[ns]
     """
