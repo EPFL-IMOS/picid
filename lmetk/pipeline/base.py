@@ -1,229 +1,361 @@
-"""
-Base pipeline strategy for transformer model training and evaluation.
+"""This module defines the `TBModel` class."""
 
-This module provides an abstract base class for implementing different
-transformer training strategies with standardized interfaces for setup,
-training, evaluation, and model persistence.
-"""
+from typing import Any
 
-from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Any, Dict, Optional, Union
-import warnings
-
-from omegaconf import DictConfig
+import torch
+from lightning import LightningModule
+from torchmetrics import MeanMetric
 
 
+class LMETKModel(LightningModule):
+    r"""A `LightningModule` to define a network.
 
-# Suppress flash attention warning
-warnings.filterwarnings(
-    "ignore", 
-    message=".*Torch was not compiled with flash attention.*"
-)
-
-
-class BasePipelineStrategy(ABC):
+    Parameters
+    ----------
+    backbone : torch.nn.Module
+        The backbone model to train.
+    backbone_wrapper : torch.nn.Module
+        The backbone wrapper class.
+    readout : torch.nn.Module
+        The readout class.
+    loss : torch.nn.Module
+        The loss class.
+    feature_encoder : torch.nn.Module, optional
+        The feature encoder (default: None).
+    evaluator : Any, optional
+        The evaluator class (default: None).
+    optimizer : Any, optional
+        The optimizer class (default: None).
+    **kwargs : Any
+        Additional keyword arguments.
     """
-    Abstract base class for transformer training pipeline strategies.
-    
-    This class defines the standard interface for implementing different
-    training strategies for transformer models. Subclasses must implement
-    all abstract methods to provide specific functionality.
-    
-    Attributes:
-        cfg (DictConfig): Configuration object containing experiment parameters
-        datamodule (Any): PyTorch Lightning datamodule for data loading
-        model (Any): PyTorch model to be trained
-        evaluator (Any): Evaluator object for model assessment
-        logger (Any): Logger for experiment tracking
-        optimizer (Any): Optimizer for model training
-        loss (Any): Loss function for training
-        _is_setup (bool): Flag indicating if setup has been completed
-    """
-    
+
     def __init__(
         self,
-        cfg: DictConfig,
-        datamodule: Any,
-        model: Any,
-        evaluator: Any,
-        logger: Any,
-        optimizer: Any,
-        loss: Any
+        backbone: torch.nn.Module,
+        backbone_wrapper: torch.nn.Module,
+        readout: torch.nn.Module,
+        loss: torch.nn.Module,
+        feature_encoder: torch.nn.Module | None = None,
+        evaluator: Any = None,
+        optimizer: Any = None,
+        **kwargs,
     ) -> None:
-        """
-        Initialize the pipeline strategy.
-        
-        Args:
-            cfg: Configuration object with experiment parameters
-            datamodule: PyTorch Lightning datamodule for data loading
-            model: PyTorch model to be trained
-            evaluator: Evaluator object for model assessment
-            logger: Logger for experiment tracking
-            optimizer: Optimizer for model training
-            loss: Loss function for training
-            
-        Raises:
-            ValueError: If required configuration parameters are missing
-        """
-        self._validate_config(cfg)
-        
-        self.cfg = cfg
-        self.datamodule = datamodule
-        self.model = model
-        self.evaluator = evaluator
-        self.logger = logger
-        self.optimizer = optimizer
-        self.loss = loss
-        self._is_setup = False
-    
-    def _validate_config(self, cfg: DictConfig) -> None:
-        """
-        Validate the configuration object.
-        
-        Args:
-            cfg: Configuration to validate
-            
-        Raises:
-            ValueError: If required configuration parameters are missing
-        """
-        if not hasattr(cfg, 'info') or not hasattr(cfg.info, 'exp_name'):
-            raise ValueError("Configuration must contain 'info.exp_name'")
+        super().__init__()
 
-    
-    @abstractmethod
-    def setup(self) -> None:
-        """
-        Setup the pipeline strategy.
-        
-        This method should initialize all necessary components for training,
-        including data loaders, model initialization, optimizer setup, etc.
-        
-        Must be called before run() or evaluate().
-        """
-        pass
-    
-    @abstractmethod
-    def train(self) -> Dict[str, Any]:
-        """
-        Execute the training phase.
-        
-        Returns:
-            Dictionary containing training results and metrics
-            
-        Raises:
-            RuntimeError: If setup() has not been called
-        """
-        pass
-    
-    @abstractmethod
-    def test(self) -> Dict[str, Any]:
-        """
-        Execute the testing phase.
-        
-        Returns:
-            Dictionary containing test results and metrics
-            
-        Raises:
-            RuntimeError: If setup() has not been called
-        """
-        pass
-    
-    @abstractmethod
-    def predict(self, data_loader: Optional[Any] = None) -> Any:
-        """
-        Generate predictions using the trained model.
-        
-        Args:
-            data_loader: Optional data loader for prediction. If None,
-                        uses the default prediction data loader.
-        
-        Returns:
-            Model predictions
-            
-        Raises:
-            RuntimeError: If setup() has not been called
-        """
-        pass
-    
-    @abstractmethod
-    def evaluate(self, data_loader: Optional[Any] = None) -> Dict[str, float]:
-        """
-        Evaluate the model performance.
-        
-        Args:
-            data_loader: Optional data loader for evaluation. If None,
-                        uses the default evaluation data loader.
-        
-        Returns:
-            Dictionary containing evaluation metrics
-            
-        Raises:
-            RuntimeError: If setup() has not been called
-        """
-        pass
-    
-    @abstractmethod
-    def save(self, checkpoint_path: Union[str, Path]) -> None:
-        """
-        Save model checkpoint and training state.
-        
-        Args:
-            checkpoint_path: Path where to save the checkpoint
-            
-        Raises:
-            IOError: If unable to save checkpoint
-        """
-        pass
-    
-    @abstractmethod
-    def load(self, checkpoint_path: Union[str, Path]) -> None:
-        """
-        Load model checkpoint and training state.
-        
-        Args:
-            checkpoint_path: Path to the checkpoint file
-            
-        Raises:
-            FileNotFoundError: If checkpoint file doesn't exist
-            IOError: If unable to load checkpoint
-        """
-        pass
-
-    
-    def _ensure_setup(self) -> None:
-        """
-        Ensure that setup has been called before executing other methods.
-        
-        Raises:
-            RuntimeError: If setup() has not been called
-        """
-        if not self._is_setup:
-            raise RuntimeError(
-                "setup() must be called before running the pipeline. "
-                "Call setup() first."
-            )
-    
-    @property
-    def experiment_name(self) -> str:
-        """Get the experiment name from configuration."""
-        return self.cfg.info.exp_name
-    
-    @property
-    def is_setup(self) -> bool:
-        """Check if the pipeline has been set up."""
-        return self._is_setup
-    
-    def __str__(self) -> str:
-        """String representation of the pipeline strategy."""
-        status = "configured" if self._is_setup else "not configured"
-        return f"{self.__class__.__name__}(experiment='{self.experiment_name}', status='{status}')"
-    
-    def __repr__(self) -> str:
-        """Detailed string representation of the pipeline strategy."""
-        return (
-            f"{self.__class__.__name__}("
-            f"experiment='{self.experiment_name}', "
-            f"setup={self._is_setup}, "
-            f"lags={self.lags})"
+        # This line allows to access init params with 'self.hparams' attribute
+        # also ensures init params will be stored in ckpt
+        self.save_hyperparameters(
+            logger=False, ignore=["backbone", "readout", "feature_encoder"]
         )
+
+        self.feature_encoder = feature_encoder
+        if backbone_wrapper is None:
+            self.backbone = backbone
+        else:
+            self.backbone = backbone_wrapper(backbone)
+        self.readout = readout
+
+        # Evaluator
+        self.evaluator = evaluator
+        self.train_metrics_logged = False
+
+        # Optimizer (it also internally manages Scheduler if provided)
+        self.optimizer = optimizer
+
+        # Loss function
+        self.loss = loss
+        self.task_level = self.readout.task_level
+
+        # Tracking best so far validation accuracy
+        self.val_acc_best = MeanMetric()
+        self.metric_collector_val = []
+        self.metric_collector_val2 = []
+        self.metric_collector_test = []
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(backbone={self.backbone}, readout={self.readout}, loss={self.loss}, feature_encoder={self.feature_encoder})"
+
+    def forward(self, batch) -> dict:
+        r"""Perform a forward pass through the model `self.backbone`.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output.
+        """
+        return self.backbone(batch)
+
+    def model_step(self, batch) -> dict:
+        r"""Perform a single model step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
+        """
+        # Allow batch object to know the phase of the training
+        batch["model_state"] = self.state_str
+
+        # Feature Encoder
+        model_out = self.feature_encoder(batch)
+
+        # Domain model
+        model_out = self.forward(model_out)
+
+        # Readout
+        if self.readout is not None:
+            model_out = self.readout(model_out=model_out, batch=batch)
+
+        # Loss
+        model_out = self.process_outputs(model_out=model_out, batch=batch)
+
+        # Metric
+        model_out = self.loss(model_out=model_out, batch=batch)
+        self.evaluator.update(model_out)
+
+        return model_out
+
+    def training_step(self, batch, batch_idx: int) -> torch.Tensor:
+        r"""Perform a single training step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of losses between model predictions and targets.
+        """
+        self.state_str = "Training"
+        model_out = self.model_step(batch)
+
+        # Update and log metrics
+        self.log(
+            "train/loss",
+            model_out["loss"],
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=1,
+        )
+
+        # Return loss for backpropagation step
+        return model_out["loss"]
+
+    def validation_step(self, batch, batch_idx: int) -> None:
+        r"""Perform a single validation step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+        """
+        self.state_str = "Validation"
+        model_out = self.model_step(batch)
+
+        # Log Loss
+        self.log(
+            "val/loss",
+            model_out["loss"],
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=1,
+        )
+
+    def test_step(self, batch, batch_idx: int) -> None:
+        r"""Perform a single test step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+        """
+        self.state_str = "Test"
+        model_out = self.model_step(batch)
+
+        # Log loss
+        self.log(
+            "test/loss",
+            model_out["loss"],
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=1,
+        )
+
+    def process_outputs(self, model_out: dict, batch) -> dict:
+        r"""Handle model outputs.
+
+        Parameters
+        ----------
+        model_out : dict
+            Dictionary containing the model output.
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the updated model output.
+        """
+        # Get the correct mask
+        if self.state_str == "Training":
+            mask = batch.train_mask
+        elif self.state_str == "Validation":
+            mask = batch.val_mask
+        elif self.state_str == "Test":
+            mask = batch.test_mask
+        else:
+            raise ValueError("Invalid state_str")
+
+        if self.task_level == "node":
+            # Keep only train data points
+            for key, val in model_out.items():
+                if key in ["logits", "labels"]:
+                    model_out[key] = val[mask]
+
+        return model_out
+
+    def log_metrics(self, mode=None):
+        r"""Log metrics.
+
+        Parameters
+        ----------
+        mode : str, optional
+            The mode of the model, either "train", "val", or "test" (default: None).
+        """
+        metrics_dict = self.evaluator.compute()
+        for key in metrics_dict:
+            self.log(
+                f"{mode}/{key}",
+                metrics_dict[key],
+                prog_bar=True,
+                on_step=False,
+            )
+
+        # Reset evaluator for next epoch
+        self.evaluator.reset()
+
+    def on_validation_epoch_start(self) -> None:
+        r"""Hook called when a validation epoch begins.
+
+        According pytorch lightning documentation this hook is called at the
+        beginning of the validation epoch.
+
+        https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#hooks
+
+        Note that the validation step is within the train epoch. Hence here we have to log the train metrics
+        before we reset the evaluator to start the validation loop.
+        """
+        # Log train metrics and reset evaluator
+        self.log_metrics(mode="train")
+        self.train_metrics_logged = True
+
+    def on_train_epoch_end(self) -> None:
+        r"""Lightning hook that is called when a train epoch ends.
+
+        This hook is used to log the train metrics.
+        """
+        # Log train metrics and reset evaluator
+        if not self.train_metrics_logged:
+            self.log_metrics(mode="train")
+            self.train_metrics_logged = True
+
+    def on_validation_epoch_end(self) -> None:
+        r"""Lightning hook that is called when a validation epoch ends.
+
+        This hook is used to log the validation metrics.
+        """
+        # Log validation metrics and reset evaluator
+        self.log_metrics(mode="val")
+
+    def on_test_epoch_end(self) -> None:
+        r"""Lightning hook that is called when a test epoch ends.
+
+        This hook is used to log the test metrics.
+        """
+        self.log_metrics(mode="test")
+        print()
+
+    def on_train_epoch_start(self) -> None:
+        r"""Lightning hook that is called when a train epoch begins.
+
+        This hook is used to reset the train metrics.
+        """
+        self.evaluator.reset()
+        self.train_metrics_logged = False
+
+    def on_val_epoch_start(self) -> None:
+        r"""Lightning hook that is called when a validation epoch begins.
+
+        This hook is used to reset the validation metrics.
+        """
+        self.evaluator.reset()
+
+    def on_test_epoch_start(self) -> None:
+        r"""Lightning hook that is called when a test epoch begins.
+
+        This hook is used to reset the test metrics.
+        """
+        self.evaluator.reset()
+
+    def setup(self, stage: str) -> None:
+        r"""Hook to call torch.compile.
+
+        Lightning hook that is called at the beginning of fit (train +
+        validate), validate, test, or predict.
+
+        This is a good hook when you need to build models dynamically or adjust
+        something about them. This hook is called on every process when using
+        DDP.
+
+        Parameters
+        ----------
+        stage : str
+            Either "fit", "validate", "test", or "predict".
+        """
+        if self.hparams.compile and stage == "fit":
+            self.net = torch.compile(self.net)
+
+    def configure_optimizers(self) -> dict[str, Any]:
+        r"""Configure optimizers and learning-rate schedulers.
+
+        Choose what optimizers and learning-rate schedulers to use in your
+        optimization. Normally you'd need one. But in the case of GANs or
+        similar you might have multiple.
+
+        Examples:
+            https://lightning.ai/docs/pytorch/latest/common/lightning_module.html#configure-optimizers
+
+        Returns
+        -------
+        dict:
+            A dict containing the configured optimizers and learning-rate schedulers to be used for training.
+        """
+        optimizer_config = self.optimizer.configure_optimizer(
+            list(self.backbone.parameters())
+            + list(self.readout.parameters())
+            + list(self.feature_encoder.parameters())
+        )
+
+        return optimizer_config
