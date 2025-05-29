@@ -1,13 +1,15 @@
 # Dataset loader config
 loader:
-  _target_: lmetk.data.datasources.ncmapss.N_CMAPSSDataSource
+  _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSDataSource
   
   load_arguments:
-    data_folder: CMAPSS
+    data_folder: N-CMAPSS
     path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}
-    n_DS: "FD001"
+    n_DS: "02"
     mode: "train"
+    cruise: false
     units: null
+    subsampling_rate: 1
     concepts:
       - "HPC"
       - "Fan"
@@ -15,8 +17,9 @@ loader:
     binary_concepts: true
     RUL: "linear"
     include_healthy: true
-    window_size: 1
+    window_size: 50
     stride: 1
+    scaling: "legacy"
 
   
   data_splitter:
@@ -34,7 +37,7 @@ loader:
   scalers:
 
     features:
-      _target_: lmetk.data.datasources.cmapss.CMAPSSScaler
+      _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSScaler
 
     labels:
       _target_: lmetk.data.datasources.cmapss.ConstantScaler

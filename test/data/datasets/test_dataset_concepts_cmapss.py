@@ -5,7 +5,7 @@ import hydra
 from box import Box
 import torch
 
-from lmetk.data.datamodules import BaseDataModule
+from lmetk.data.datamodules.datamodule import BaseDataModule
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
