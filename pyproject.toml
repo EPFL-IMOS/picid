@@ -15,7 +15,7 @@ dependencies = [
     "omegaconf==2.3.0",
     "torchsummary==1.5.1",
     "pyrootutils==1.0.4",
-    "lightning==2.0.0",
+    "lightning==2.4.0", # "lightning==2.0.0",
     "hydra-colorlog", # already specified with version above — can remove this line unless intended
     "performer-pytorch==1.1.4",
     "torchinfo==1.7.1",
@@ -32,6 +32,15 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["lmetk"]
+
+test = [
+    "pytest",
+    "pytest-cov",
+    "coverage",
+    "jupyter",
+    "mypy",
+    "pytest-mock"
+]
 
 # [build-system]
 # requires = ["setuptools", "wheel"]

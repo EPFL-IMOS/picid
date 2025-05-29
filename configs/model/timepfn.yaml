@@ -28,3 +28,8 @@ use_amp: False
 # output_attention behaves weirdly, as argparset has True as default but debugger tells it is False and cannot find where it is overwriten
 output_attention: False #True
 inverse: False
+
+
+# Additional params needed for wrapper to run:
+features_mode: ${datasource.loader.load_arguments.features_mode}
+device: 'cuda:0'

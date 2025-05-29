@@ -5,7 +5,7 @@ import numpy as np
 import pytorch_lightning as pl
 
 from torch.utils.data import Dataset, DataLoader
-
+from lmetk.data.datamodules.utils import collate_fn
 
 class BaseDataModule(pl.LightningDataModule):
     """
@@ -17,7 +17,10 @@ class BaseDataModule(pl.LightningDataModule):
 
     def __init__(
         self,
-        datasets: Dict[str, Dataset],
+        # datasets: Dict[str, Dataset],
+        dataset_train,
+        dataset_val,
+        dataset_test,
         train_batch_size: int,
         val_batch_size: int,
         test_batch_size: int,
@@ -25,11 +28,11 @@ class BaseDataModule(pl.LightningDataModule):
         shuffle_val: bool = False,
         shuffle_test: bool = False,
     ):
-        for ds in ["train", "val", "test"]:
-            if ds not in datasets:
-                assert False, (
-                    f"Missing {ds} dataset in the provided datasets dictionary."
-                )
+        # for ds in ["train", "val", "test"]:
+        #     if ds not in datasets:
+        #         assert False, (
+        #             f"Missing {ds} dataset in the provided datasets dictionary."
+        #         )
 
         super().__init__()
 
@@ -38,22 +41,13 @@ class BaseDataModule(pl.LightningDataModule):
         args, _, _, values = inspect.getargvalues(frame)
         
         # Remove 'self' and 'datasets' from the list
-        hparams = {arg: values[arg] for arg in args if arg not in ['self', 'datasets']}
+        hparams = {arg: values[arg] for arg in args if arg not in ['self', 'datasets', 'dataset_train', 'dataset_val', 'dataset_test']}
 
-        self.datasets = datasets
+        self.dataset_train = dataset_train
+        self.dataset_val = dataset_val
+        self.dataset_test = dataset_test
         
-        # self.hparams = dict(
-        #     train_batch_size=train_batch_size,
-        #     val_batch_size=val_batch_size,
-        #     test_batch_size=test_batch_size,
-        # )
-
-        # self.shuffle_train = shuffle_train
-        # self.shuffle_val = shuffle_val
-        # self.shuffle_test = shuffle_test
-
-        #self.batch_size = batch_size
-        self.save_hyperparameters(hparams, ignore=["datasets"])
+        self.save_hyperparameters(hparams, ignore=["datasets",  'dataset_train', 'dataset_val', 'dataset_test'])
 
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -107,14 +101,14 @@ class BaseDataModule(pl.LightningDataModule):
         Returns:
             The training data loader
         """
-        dataset = self.datasets.train
-        drop_last = len(dataset) % self.hparams.train_batch_size == 1
+        drop_last = len(self.dataset_train) % self.hparams.train_batch_size == 1
         loader = DataLoader(
-            dataset,
+            self.dataset_train,
             batch_size=self.hparams.train_batch_size,
             shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
+            # collate_fn=collate_fn,
         )
 
         return loader
@@ -137,10 +131,11 @@ class BaseDataModule(pl.LightningDataModule):
             The validation data loader
         """
         return DataLoader(
-            self.datasets.val,
+            self.dataset_val,
             batch_size=self.hparams.val_batch_size,
             shuffle=self.hparams.shuffle_val,
             pin_memory=True,
+            collate_fn=collate_fn,
         )
 
     def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
@@ -161,8 +156,9 @@ class BaseDataModule(pl.LightningDataModule):
             The test data loader
         """
         return DataLoader(
-            self.datasets.test,
+            self.dataset_test,
             batch_size=self.hparams.test_batch_size,
             shuffle=self.hparams.shuffle_test,
             pin_memory=True,
+            collate_fn=collate_fn,
         )

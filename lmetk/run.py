@@ -108,12 +108,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Instantiate dataloader
     datamodule = hydra.utils.instantiate(cfg.datamodule, 
-        datasets = {"train": dataset_train,
-                    "val": dataset_val,
-                    "test": dataset_test
-                }
+        dataset_train = dataset_train,
+        dataset_val = dataset_val,
+        dataset_test = dataset_test,
     )
-    evaluator = hydra.utils.instantiate(cfg.evaluator)
+    evaluator = hydra.utils.instantiate(cfg.evaluator, scaler=scaler)
     print(f"Evaluator: {cfg.evaluator._target_}")
 
     # Instantiate optimizer
@@ -132,122 +131,207 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # TimePFN
     from lmetk.model.time_pfn.TimePFN import TimePFN
+    from lmetk.model.wrappers.timepfn_wrapper import TimePFNWrapper
+    from lmetk.pipeline.base import LMETKModel
 
     train_loader = datamodule.train_dataloader()
     val_loader = datamodule.val_dataloader()
     test_loader = datamodule.test_dataloader()
 
     #seq_x, seq_y, seq_x_mark, seq_y_mark = next(iter(train_loader))
-    model = TimePFN(cfg.model)
-    model.load_state_dict(torch.load(cfg.model.load_path))
-    device='cuda:0'
-    model.to(device)
-    #preds = model.forward(x_enc=seq_x, x_mark_enc=seq_x_mark, x_dec=seq_y, x_mark_dec=seq_y_mark)
+    
+    
+    backbone = TimePFN(cfg.model)
+    backbone.load_state_dict(torch.load(cfg.model.load_path))
 
-    preds = []
-    trues = []
-    folder_path = './test_results/'
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    backbone_wrapper = TimePFNWrapper(backbone, **cfg.model)
+    
+    model = LMETKModel(
+        backbone=backbone, 
+        backbone_wrapper=backbone_wrapper,
+        loss=loss,
+        evaluator=evaluator,
+        optimizer=optimizer,
+        )
+    
+    
+    trainer: Trainer = hydra.utils.instantiate(
+        cfg.trainer,
+        callbacks=callbacks,
+        logger=logger,
+        num_sanity_val_steps=0,
+    )
+    trainer.test(model=model, dataloaders=datamodule.test_dataloader())
+    
 
-    model.eval()
-    with torch.no_grad():
-        for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
-            batch_x = batch_x.float().to(device)
-            batch_y = batch_y.float().to(device)
-            channel_size = batch_x.size(2)
-            max_channel_size = cfg.model.max_channel
-            number_of_iter = channel_size // max_channel_size + 1
+    # object_dict = {
+    #     "cfg": cfg,
+    #     "datamodule": datamodule,
+    #     "model": model,
+    #     "callbacks": callbacks,
+    #     "logger": logger,
+    #     "trainer": trainer,
+    # }
+    
+    
+    # ----REFACTOR 2---- 29/05 evening
+    
+    # device='cuda:0'
+    # model.to(device)
+    # #preds = model.forward(x_enc=seq_x, x_mark_enc=seq_x_mark, x_dec=seq_y, x_mark_dec=seq_y_mark)
 
-            pred = None
-            true = None
+    # preds = []
+    # trues = []
+    # folder_path = './test_results/'
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
 
-            for j in range(number_of_iter):
-                batch_x_subset = batch_x[:, :, j * max_channel_size:(j + 1) * max_channel_size]
-                batch_y_subset = batch_y[:, :, j * max_channel_size:(j + 1) * max_channel_size]
+    # model.eval()
+    # with torch.no_grad():
+    #     for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
+    #         batch_x = batch_x.float().to(device)
+    #         batch_y = batch_y.float().to(device)
+    #         channel_size = batch_x.size(2)
+    #         max_channel_size = cfg.model.max_channel
+    #         number_of_iter = channel_size // max_channel_size + 1
 
-                # if 'PEMS' in cfg.model.data or 'Solar' in cfg.model.data:
-                #     batch_x_mark = None
-                #     batch_y_mark = None
-                # else:
-                batch_x_mark = batch_x_mark.to(device)
-                batch_y_mark = batch_y_mark.to(device)
+    #         pred = None
+    #         true = None
 
-                # decoder input
-                dec_inp = torch.zeros_like(batch_y_subset[:, -cfg.model.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y_subset[:, :cfg.model.label_len, :], dec_inp], dim=1).float().to(device)
-                # encoder - decoder
-                if cfg.model.use_amp:
-                    with torch.cuda.amp.autocast():
-                        if cfg.model.output_attention:
-                            outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
-                        else:
-                            outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
-                else:
-                    if cfg.model.output_attention:
-                        outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
+    #         for j in range(number_of_iter):
+    #             batch_x_subset = batch_x[:, :, j * max_channel_size:(j + 1) * max_channel_size]
+    #             batch_y_subset = batch_y[:, :, j * max_channel_size:(j + 1) * max_channel_size]
 
-                    else:
-                        outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
+    #             # if 'PEMS' in cfg.model.data or 'Solar' in cfg.model.data:
+    #             #     batch_x_mark = None
+    #             #     batch_y_mark = None
+    #             # else:
+    #             batch_x_mark = batch_x_mark.to(device)
+    #             batch_y_mark = batch_y_mark.to(device)
 
-                f_dim = -1 if cfg.datasource.loader.load_arguments.features_mode == 'MS' else 0
-                outputs = outputs[:, -cfg.model.pred_len:, f_dim:]
-                batch_y_subset = batch_y_subset[:, -cfg.model.pred_len:, f_dim:].to(device)
-                outputs = outputs.detach().cpu().numpy()
-                batch_y_subset = batch_y_subset.detach().cpu().numpy()
+    #             # decoder input
+    #             dec_inp = torch.zeros_like(batch_y_subset[:, -cfg.model.pred_len:, :]).float()
+    #             dec_inp = torch.cat([batch_y_subset[:, :cfg.model.label_len, :], dec_inp], dim=1).float().to(device)
+    #             # encoder - decoder
+    #             if cfg.model.use_amp:
+    #                 with torch.cuda.amp.autocast():
+    #                     if cfg.model.output_attention:
+    #                         outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
+    #                     else:
+    #                         outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
+    #             else:
+    #                 if cfg.model.output_attention:
+    #                     outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
 
-                if pred is None:
-                    pred = outputs
-                    true = batch_y_subset
-                else:
-                    pred = np.concatenate((pred, outputs), axis=2)
-                    true = np.concatenate((true, batch_y_subset), axis=2)
+    #                 else:
+    #                     outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
+
+    #             f_dim = -1 if cfg.datasource.loader.load_arguments.features_mode == 'MS' else 0
+
+    #             outputs = outputs[:, -cfg.model.pred_len:, f_dim:]
+    #             batch_y_subset = batch_y_subset[:, -cfg.model.pred_len:, f_dim:].to(device)
+    #             outputs = outputs.detach().cpu().numpy()
+    #             batch_y_subset = batch_y_subset.detach().cpu().numpy()
+
+    #             # # Apply inverse transform if needed
+    #             # if scaler and cfg.model.inverse:
+    #             #     shape_pred = outputs.shape
+    #             #     shape_true = batch_y_subset.shape
+    #             #     outputs = scaler.inverse_transform(outputs.squeeze(0)).reshape(shape_pred)
+    #             #     batch_y_subset = scaler.inverse_transform(batch_y_subset.squeeze(0)).reshape(shape_true)
+
+    #             # Update evaluator with current batch (replaces the accumulation logic)
+    #             model_out = {
+    #                 'predictions': outputs,
+    #                 'targets': batch_y_subset
+    #             }
+    #             evaluator.update(model_out)
+                
+                
+
+    #     # Compute final metrics (replaces the old metric computation)
+    #     final_metrics = evaluator.compute()
+
+        
+
+    #     # If you specifically need MAE and MSE for backward compatibility:
+    #     mae_value = final_metrics.get('mae', 0)
+    #     mse_value = final_metrics.get('mse', 0)
+    #     print(f'mse:{mse_value:.6f}, mae:{mae_value:.6f}')
+
             
             
             
             
-            #true = batch_y.detach().cpu().numpy()
-            if true.shape != pred.shape:
-                print(true.shape, pred.shape)
             
-            if scaler and cfg.model.inverse:
-                shape = pred.shape
-                pred = scaler.inverse_transform(pred.squeeze(0)).reshape(shape)
-                true = scaler.inverse_transform(true.squeeze(0)).reshape(shape)
+            
+            
+            
+            
+           # ----REFACTOR 1---- 29/05 midday 
+            
+            # # Optional: Access visualization data if needed
+            # if visualization_data:
+            #     print(f"Stored {len(visualization_data)} visualization samples")
+
+    # Commented
+    #             outputs = outputs[:, -cfg.model.pred_len:, f_dim:]
+    #             batch_y_subset = batch_y_subset[:, -cfg.model.pred_len:, f_dim:].to(device)
+    #             outputs = outputs.detach().cpu().numpy()
+    #             batch_y_subset = batch_y_subset.detach().cpu().numpy()
+
+    #             if pred is None:
+    #                 pred = outputs
+    #                 true = batch_y_subset
+    #             else:
+    #                 pred = np.concatenate((pred, outputs), axis=2)
+    #                 true = np.concatenate((true, batch_y_subset), axis=2)
+            
+            
+            
+            
+    #         #true = batch_y.detach().cpu().numpy()
+    #         if true.shape != pred.shape:
+    #             print(true.shape, pred.shape)
+            
+    #         if scaler and cfg.model.inverse:
+    #             shape = pred.shape
+    #             pred = scaler.inverse_transform(pred.squeeze(0)).reshape(shape)
+    #             true = scaler.inverse_transform(true.squeeze(0)).reshape(shape)
 
             
-            preds.append(pred)
-            trues.append(true)
-            if i % 20 == 0:
-                input = batch_x.detach().cpu().numpy()
-                if scaler and cfg.model.inverse:
-                    shape = input.shape
-                    input = scaler.inverse_transform(input.squeeze(0)).reshape(shape)
-                gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                #visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+    #         preds.append(pred)
+    #         trues.append(true)
+    #         if i % 20 == 0:
+    #             input = batch_x.detach().cpu().numpy()
+    #             if scaler and cfg.model.inverse:
+    #                 shape = input.shape
+    #                 input = scaler.inverse_transform(input.squeeze(0)).reshape(shape)
+    #             gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
+    #             pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
+    #             #visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
 
-    preds = np.array(preds)
-    trues = np.array(trues)
-    print('test shape:', preds.shape, trues.shape)
-    preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-    trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-    print('test shape:', preds.shape, trues.shape)
-    #self.record_test_shape = preds.shape
+    # preds = np.array(preds)
+    # trues = np.array(trues)
+    # print('test shape:', preds.shape, trues.shape)
+    # preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+    # trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+    # print('test shape:', preds.shape, trues.shape)
+    # #self.record_test_shape = preds.shape
 
-    # result save
-    folder_path = f'{os.getcwd()}/results/'
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    # # result save
+    # folder_path = f'{os.getcwd()}/results/'
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
 
-    mae, mse, rmse, mape, mspe = metric(preds, trues)
-    print('mse:{}, mae:{}'.format(mse, mae))
-    f = open("result_long_term_forecast.txt", 'a')
-    f.write("  \n")
-    f.write('mse:{}, mae:{}'.format(mse, mae))
-    f.write('\n')
-    f.write('\n')
-    f.close()
+    # mae, mse, rmse, mape, mspe = metric(preds, trues)
+    # print('mse:{}, mae:{}'.format(mse, mae))
+    # f = open("result_long_term_forecast.txt", 'a')
+    # f.write("  \n")
+    # f.write('mse:{}, mae:{}'.format(mse, mae))
+    # f.write('\n')
+    # f.write('\n')
+    # f.close()
 
     
 

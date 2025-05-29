@@ -1,1 +1,3 @@
 _target_: lmetk.evaluator.default.DefaultEvaluator
+metric_names: ['mae', 'mse',] # 'rmse', 'mape', 'mspe' 
+apply_inverse_scaling: False

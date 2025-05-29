@@ -4,7 +4,7 @@ from typing import Any
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MeanMetric
+#from torchmetrics import MeanMetric
 
 
 class LMETKModel(LightningModule):
@@ -34,9 +34,7 @@ class LMETKModel(LightningModule):
         self,
         backbone: torch.nn.Module,
         backbone_wrapper: torch.nn.Module,
-        readout: torch.nn.Module,
         loss: torch.nn.Module,
-        feature_encoder: torch.nn.Module | None = None,
         evaluator: Any = None,
         optimizer: Any = None,
         **kwargs,
@@ -49,12 +47,12 @@ class LMETKModel(LightningModule):
             logger=False, ignore=["backbone", "readout", "feature_encoder"]
         )
 
-        self.feature_encoder = feature_encoder
+        #self.feature_encoder = feature_encoder
         if backbone_wrapper is None:
             self.backbone = backbone
         else:
-            self.backbone = backbone_wrapper(backbone)
-        self.readout = readout
+            self.backbone = backbone_wrapper #(backbone)
+
 
         # Evaluator
         self.evaluator = evaluator
@@ -65,16 +63,17 @@ class LMETKModel(LightningModule):
 
         # Loss function
         self.loss = loss
-        self.task_level = self.readout.task_level
+        
+        # self.task_level = self.readout.task_level
 
         # Tracking best so far validation accuracy
-        self.val_acc_best = MeanMetric()
+        #self.val_acc_best = MeanMetric()
         self.metric_collector_val = []
         self.metric_collector_val2 = []
         self.metric_collector_test = []
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(backbone={self.backbone}, readout={self.readout}, loss={self.loss}, feature_encoder={self.feature_encoder})"
+        return f"{self.__class__.__name__}(backbone={self.backbone}, loss={self.loss}"
 
     def forward(self, batch) -> dict:
         r"""Perform a forward pass through the model `self.backbone`.
@@ -107,21 +106,15 @@ class LMETKModel(LightningModule):
         # Allow batch object to know the phase of the training
         batch["model_state"] = self.state_str
 
-        # Feature Encoder
-        model_out = self.feature_encoder(batch)
-
         # Domain model
-        model_out = self.forward(model_out)
-
-        # Readout
-        if self.readout is not None:
-            model_out = self.readout(model_out=model_out, batch=batch)
+        model_out = self.forward(batch)
 
         # Loss
-        model_out = self.process_outputs(model_out=model_out, batch=batch)
+        #model_out = self.process_outputs(model_out=model_out, batch=batch)
 
         # Metric
-        model_out = self.loss(model_out=model_out, batch=batch)
+        # model_out = self.loss(model_out=model_out, batch=batch)
+        model_out['loss'] = 1
         self.evaluator.update(model_out)
 
         return model_out
@@ -334,8 +327,8 @@ class LMETKModel(LightningModule):
         stage : str
             Either "fit", "validate", "test", or "predict".
         """
-        if self.hparams.compile and stage == "fit":
-            self.net = torch.compile(self.net)
+        # if self.hparams.compile and stage == "fit":
+        #     self.net = torch.compile(self.net)
 
     def configure_optimizers(self) -> dict[str, Any]:
         r"""Configure optimizers and learning-rate schedulers.
