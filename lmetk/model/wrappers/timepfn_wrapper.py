@@ -1,21 +1,28 @@
-"""Wrapper for the TopoTune model."""
+"""Wrapper for the TimePFN model."""
 import torch
 import numpy as np
 from .base import AbstractWrapper
 
+from lmetk.model.time_pfn.TimePFN import TimePFN
+from lightning_fabric.utilities.data import AttributeDict
 
 class TimePFNWrapper(AbstractWrapper):
     r"""Wrapper for the TimePFN model.
 
-    This wrapper defines the forward pass of the TopoTune model.
+    This wrapper defines the forward pass of the TimePFN model.
     """
+    def __init__(self, **kwargs):
+        backbone=TimePFN(AttributeDict(kwargs))
+        super().__init__(backbone=backbone, **kwargs)
+    
+        
 
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
 
         Parameters
         ----------
-        batch : torch_geometric.data.Data
+        batch : dict
             Batch object containing the batched data.
 
         Returns
@@ -67,7 +74,8 @@ class TimePFNWrapper(AbstractWrapper):
             # ------ Workout above if needed -----
 
             outputs = self.backbone(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
-
+            
+            # I believe the logic of processing outputs should be disentangled from the model wrapper into some additional module. 
             f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
 
             outputs = outputs[:, -self.kwargs.pred_len:, f_dim:]

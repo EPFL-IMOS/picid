@@ -55,6 +55,6 @@ class AbstractWrapper(ABC, torch.nn.Module):
 
         Parameters
         ----------
-        batch : torch_geometric.data.Data
+        batch : dict 
             Batch object containing the batched data.
         """

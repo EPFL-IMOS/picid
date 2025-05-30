@@ -1,0 +1,13 @@
+_target_: lmetk.model.wrappers.ses_model_wrapper.SESModelWrapper
+
+# There values will be read from the model parameters similarly to how we deal with data_path.
+seq_len: ${datasource.loader.data_splitter.seq_len}      # window size
+label_len: ${datasource.loader.data_splitter.label_len}  # overlap size
+
+# Model parameters
+alpha: 0.3
+pred_len: ${datasource.loader.data_splitter.pred_len}    # prediction size
+
+# Additional params needed for wrapper to run:
+features_mode: ${datasource.loader.load_arguments.features_mode}
+device: 'cuda:0'

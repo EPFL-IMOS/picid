@@ -130,25 +130,29 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
     # TimePFN
-    from lmetk.model.time_pfn.TimePFN import TimePFN
+    #from lmetk.model.time_pfn.TimePFN import TimePFN
     from lmetk.model.wrappers.timepfn_wrapper import TimePFNWrapper
     from lmetk.pipeline.base import LMETKModel
 
-    train_loader = datamodule.train_dataloader()
-    val_loader = datamodule.val_dataloader()
-    test_loader = datamodule.test_dataloader()
+    # train_loader = datamodule.train_dataloader()
+    # val_loader = datamodule.val_dataloader()
+    # test_loader = datamodule.test_dataloader()
 
     #seq_x, seq_y, seq_x_mark, seq_y_mark = next(iter(train_loader))
     
     
-    backbone = TimePFN(cfg.model)
-    backbone.load_state_dict(torch.load(cfg.model.load_path))
+    # backbone = TimePFN(cfg.model)
+    # backbone.load_state_dict(torch.load(cfg.model.load_path))
 
-    backbone_wrapper = TimePFNWrapper(backbone, **cfg.model)
+    backbone_wrapper = hydra.utils.instantiate(cfg.model) # TimePFNWrapper(backbone, **cfg.model)
+    
+    if cfg.model.get('load_path', False):
+        backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
     
     model = LMETKModel(
-        backbone=backbone, 
-        backbone_wrapper=backbone_wrapper,
+        #backbone=backbone, 
+        #backbone_wrapper=backbone_wrapper,
+        backbone = backbone_wrapper,
         loss=loss,
         evaluator=evaluator,
         optimizer=optimizer,

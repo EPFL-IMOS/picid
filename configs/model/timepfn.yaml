@@ -1,3 +1,6 @@
+_target_: lmetk.model.wrappers.timepfn_wrapper.TimePFNWrapper 
+#lmetk.model.time_pfn.TimePFN.TimePFN
+
 # There values will be read from the model parameters similarly to how we deal with data_path.
 seq_len: ${datasource.loader.data_splitter.seq_len}    # window size
 label_len: ${datasource.loader.data_splitter.label_len}  # overlap size
@@ -33,3 +36,4 @@ inverse: False
 # Additional params needed for wrapper to run:
 features_mode: ${datasource.loader.load_arguments.features_mode}
 device: 'cuda:0'
+

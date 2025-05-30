@@ -33,7 +33,7 @@ class LMETKModel(LightningModule):
     def __init__(
         self,
         backbone: torch.nn.Module,
-        backbone_wrapper: torch.nn.Module,
+        # backbone_wrapper: torch.nn.Module,
         loss: torch.nn.Module,
         evaluator: Any = None,
         optimizer: Any = None,
@@ -48,10 +48,10 @@ class LMETKModel(LightningModule):
         )
 
         #self.feature_encoder = feature_encoder
-        if backbone_wrapper is None:
-            self.backbone = backbone
-        else:
-            self.backbone = backbone_wrapper #(backbone)
+        #if backbone_wrapper is None:
+        self.backbone = backbone
+        # else:
+        #     self.backbone = backbone_wrapper #(backbone)
 
 
         # Evaluator

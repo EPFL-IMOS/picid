@@ -7,7 +7,7 @@ defaults:
   - datasource: ETTh1_timepfn
   - dataset: sliding_window
   - datamodule: base_datamodule
-  - model: timepfn
+  - model: linear_regression #timepfn
   - optimizer: default
   - loss: default
   - evaluator: default
