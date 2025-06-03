@@ -71,6 +71,12 @@ class LMETKModel(LightningModule):
         self.metric_collector_val = []
         self.metric_collector_val2 = []
         self.metric_collector_test = []
+        
+        # Make sure effective prediction lenght of the model is greater of equal to evaluator effective prediction lenght
+        # Determine the effective prediction length, defaulting to 0 if not set
+        self.effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
+        if self.effective_pred_len:
+            assert self.backbone.kwargs.pred_len >= self.effective_pred_len, f"Not possible to have self.evaluator.effective_pred_len:{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone}, loss={self.loss}"
@@ -110,11 +116,11 @@ class LMETKModel(LightningModule):
         model_out = self.forward(batch)
 
         # Loss
-        model_out = self.process_outputs(model_out=model_out, batch=batch)
 
         # Metric
         # model_out = self.loss(model_out=model_out, batch=batch)
         model_out['loss'] = 1
+        model_out = self.process_outputs(model_out=model_out, batch=batch)
         self.evaluator.update(model_out)
 
         return model_out
@@ -211,6 +217,19 @@ class LMETKModel(LightningModule):
         dict
             Dictionary containing the updated model output.
         """
+        
+        # Determine the effective prediction length, defaulting to 0 if not set
+        effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
+        
+        
+        f_dim = -1 if self.evaluator.features_mode == 'MS' else 0
+        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, f_dim:].detach().cpu().numpy()
+        model_out['targets'] = model_out['targets'][:, :effective_pred_len, f_dim:].detach().cpu().numpy()
+        
+        
+            
+        #     self.evaluator.effective_pred_len
+
         # # Get the correct mask
         # if self.state_str == "Training":
         #     mask = batch.train_mask
@@ -231,11 +250,11 @@ class LMETKModel(LightningModule):
         # outputs = outputs.detach().cpu().numpy()
         # batch_y_subset = batch_y_subset.detach().cpu().numpy()
 
-        if self.task_level == "node":
-            # Keep only train data points
-            for key, val in model_out.items():
-                if key in ["logits", "labels"]:
-                    model_out[key] = val[mask]
+        # if self.task_level == "node":
+        #     # Keep only train data points
+        #     for key, val in model_out.items():
+        #         if key in ["logits", "labels"]:
+        #             model_out[key] = val[mask]
 
         return model_out
 

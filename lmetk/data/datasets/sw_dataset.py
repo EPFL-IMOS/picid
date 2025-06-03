@@ -5,7 +5,7 @@ import numpy as np
 
 
 class SWDataset(Dataset):
-    """Standard 'sliding window' Time Series Dataset Class."""
+    """Standard 'sliding window' applicable in the 'rolling window' scnetario Time Series Dataset Class."""
 
     def __init__(
         self,

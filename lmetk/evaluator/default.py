@@ -59,8 +59,8 @@ class DefaultEvaluator(AbstractEvaluator):
         model_out : dict
             Dictionary containing 'predictions' and 'targets' keys with numpy arrays
         """
-        predictions = np.asarray(model_out['predictions'])
-        targets = np.asarray(model_out['targets'])
+        predictions = model_out['predictions']
+        targets = model_out['targets']
         
         if predictions.shape != targets.shape:
             raise ValueError(f"Shape mismatch: predictions {predictions.shape} vs targets {targets.shape}")

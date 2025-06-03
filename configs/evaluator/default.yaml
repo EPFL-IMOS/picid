@@ -5,5 +5,6 @@ apply_inverse_scaling: False
 model_seq_len: ${model.seq_len}
 model_label_leb: ${model.label_len}
 model_pred_len: ${model.pred_len}
+features_mode: ${model.features_mode}
 
-effective_pred_len: 96
+effective_pred_len: null
