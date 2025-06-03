@@ -10,13 +10,19 @@ import torch
 from typing import Dict, List, Optional, Any, Union
 from .base import AbstractEvaluator
 from lmetk.metrics.metric_factory import MetricFactory
+from lightning_fabric.utilities.data import AttributeDict
 
 class DefaultEvaluator(AbstractEvaluator):
     """Default evaluator that updates metrics incrementally."""
     
     """Sequential evaluator that updates metrics incrementally."""
     
-    def __init__(self, metric_names: List[str], scaler: Optional[Any] = None, apply_inverse_scaling: bool = False):
+    def __init__(self, 
+                 metric_names: List[str], 
+                 scaler: Optional[Any] = None, 
+                 apply_inverse_scaling: bool = False,
+                 **kwargs
+                ):
         """
         Initialize the evaluator with specified metrics and optional scaling.
         
@@ -29,7 +35,7 @@ class DefaultEvaluator(AbstractEvaluator):
         apply_inverse : bool
             Whether to apply inverse scaling before computing metrics
         """
-        super().__init__(scaler, apply_inverse_scaling)
+        super().__init__(scaler, apply_inverse_scaling, **kwargs)
         
         # Validate and create metrics
         self.metrics = {}

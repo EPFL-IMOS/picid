@@ -1,17 +1,17 @@
 """Abstract evaluator and sequential evaluator implementation."""
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
+import inspect
+
 from typing import List, Dict, Optional, Any
 import numpy as np
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.evaluator.scaling_wrapper import ScalingWrapper
 
-
 class AbstractEvaluator(ABC):
     """Abstract class for the evaluator class."""
 
-    def __init__(self, scaler: Optional[Any] = None, apply_inverse: bool = False):
+    def __init__(self, scaler: Optional[Any] = None, apply_inverse: bool = False, **kwargs):
         """
         Initialize the evaluator.
         
@@ -24,6 +24,17 @@ class AbstractEvaluator(ABC):
         """
         super().__init__()
         self.scaling_wrapper = ScalingWrapper(scaler, apply_inverse)
+
+        
+        # Automatically set all kwargs as instance variables
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        attrs = {k: v for k, v in self.__dict__.items()}
+        return f"<{cls_name}({attrs})>"
 
     @abstractmethod
     def update(self, model_out: dict):

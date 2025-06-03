@@ -110,7 +110,7 @@ class LMETKModel(LightningModule):
         model_out = self.forward(batch)
 
         # Loss
-        #model_out = self.process_outputs(model_out=model_out, batch=batch)
+        model_out = self.process_outputs(model_out=model_out, batch=batch)
 
         # Metric
         # model_out = self.loss(model_out=model_out, batch=batch)
@@ -211,15 +211,25 @@ class LMETKModel(LightningModule):
         dict
             Dictionary containing the updated model output.
         """
-        # Get the correct mask
-        if self.state_str == "Training":
-            mask = batch.train_mask
-        elif self.state_str == "Validation":
-            mask = batch.val_mask
-        elif self.state_str == "Test":
-            mask = batch.test_mask
-        else:
-            raise ValueError("Invalid state_str")
+        # # Get the correct mask
+        # if self.state_str == "Training":
+        #     mask = batch.train_mask
+        # elif self.state_str == "Validation":
+        #     mask = batch.val_mask
+        # elif self.state_str == "Test":
+        #     mask = batch.test_mask
+        # else:
+        #     raise ValueError("Invalid state_str")
+
+
+        # I believe the logic of processing outputs should be disentangled from the model wrapper into some additional module. 
+        # f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
+
+        # outputs = outputs[:, -self.kwargs.pred_len:, f_dim:]
+        # batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, f_dim:]
+        
+        # outputs = outputs.detach().cpu().numpy()
+        # batch_y_subset = batch_y_subset.detach().cpu().numpy()
 
         if self.task_level == "node":
             # Keep only train data points

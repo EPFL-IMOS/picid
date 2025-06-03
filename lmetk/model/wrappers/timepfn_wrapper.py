@@ -75,21 +75,21 @@ class TimePFNWrapper(AbstractWrapper):
 
             outputs = self.backbone(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
             
-            # I believe the logic of processing outputs should be disentangled from the model wrapper into some additional module. 
-            f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
+            # # I believe the logic of processing outputs should be disentangled from the model wrapper into some additional module. 
+            # f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
 
-            outputs = outputs[:, -self.kwargs.pred_len:, f_dim:]
-            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, f_dim:]
+            outputs = outputs[:, -self.kwargs.pred_len:, :]
+            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, :]
             
-            outputs = outputs.detach().cpu().numpy()
-            batch_y_subset = batch_y_subset.detach().cpu().numpy()
+            # outputs = outputs.detach().cpu().numpy()
+            # batch_y_subset = batch_y_subset.detach().cpu().numpy()
 
             if pred is None:
                 pred = outputs
                 true = batch_y_subset
             else:
-                pred = np.concatenate((pred, outputs), axis=2)
-                true = np.concatenate((true, batch_y_subset), axis=2)
+                pred = torch.concat((pred, outputs), dim=-1)
+                true = torch.concat((true, batch_y_subset), axis=-1)
 
         # Update evaluator with current batch (replaces the accumulation logic)
         model_out = {

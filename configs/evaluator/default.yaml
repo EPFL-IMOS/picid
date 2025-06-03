@@ -1,3 +1,9 @@
 _target_: lmetk.evaluator.default.DefaultEvaluator
-metric_names: ['mae', 'mse',] # 'rmse', 'mape', 'mspe' 
+metric_names: ['mae', 'mse'] # 'rmse', 'mape', 'mspe' 
 apply_inverse_scaling: False
+
+model_seq_len: ${model.seq_len}
+model_label_leb: ${model.label_len}
+model_pred_len: ${model.pred_len}
+
+effective_pred_len: 96
