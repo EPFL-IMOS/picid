@@ -61,7 +61,10 @@ def cmapss_datamodule():
     )
 
     # Use hydra to partially initialize BaseDataModule, override datasets with our datasets
-    dm = hydra.utils.instantiate(cfg.datamodule, datasets=datasets)
+    dm = hydra.utils.instantiate(cfg.datamodule, 
+                                 dataset_train=datasets["train"], 
+                                 dataset_val=datasets["val"], 
+                                 dataset_test=datasets["test"])
 
     return dm
 
@@ -100,7 +103,7 @@ def test_cmapss_datamodule(cmapss_datamodule):
 
 
 def test_sample_shapes_from_train_dataset(cmapss_datamodule):
-    ds = cmapss_datamodule.datasets.train
+    ds = cmapss_datamodule.dataset_train
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
     assert sample[0].shape == torch.Size([24]), (
@@ -115,7 +118,7 @@ def test_sample_shapes_from_train_dataset(cmapss_datamodule):
 
 
 def test_sample_shapes_from_val_dataset(cmapss_datamodule):
-    ds = cmapss_datamodule.datasets.val
+    ds = cmapss_datamodule.dataset_val
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
     assert sample[0].shape == torch.Size([24]), (
@@ -130,7 +133,7 @@ def test_sample_shapes_from_val_dataset(cmapss_datamodule):
 
 
 def test_sample_shapes_from_test_dataset(cmapss_datamodule):
-    ds = cmapss_datamodule.datasets.test
+    ds = cmapss_datamodule.dataset_test
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
     assert sample[0].shape == torch.Size([24]), (

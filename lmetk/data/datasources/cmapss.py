@@ -170,7 +170,7 @@ class CMAPSSDataSource(AbstractTimeSeriesDataSource):
             timestamps=self.df_X["cycle"].values,
             health_states=self.df_X["hs"].values,
             unit=self.df_X["unit"].values,
-            labels=self.df_Y.values,
+            rul=self.df_Y.values,
             concepts=self.concepts.values
         )
         
@@ -178,6 +178,6 @@ class CMAPSSDataSource(AbstractTimeSeriesDataSource):
     def _generate_splits(self):
         super()._generate_splits()
         # Also split health_states, labels, and concepts
-        for k in ["health_states", "labels", "concepts", "unit"]:
+        for k in ["health_states", "rul", "concepts", "unit"]:
             split_tuple = self.data_splitter.split_data(self.data_dict[k])
             self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}

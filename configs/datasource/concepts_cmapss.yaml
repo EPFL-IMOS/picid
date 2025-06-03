@@ -36,6 +36,6 @@ loader:
     features:
       _target_: lmetk.data.datasources.cmapss.CMAPSSScaler
 
-    labels:
+    rul:
       _target_: lmetk.data.datasources.cmapss.ConstantScaler
       factor: 0.01

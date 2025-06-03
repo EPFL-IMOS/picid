@@ -36,15 +36,49 @@ def flatten_RUL(df):
     return df
 
 
+class N_CMAPSSScaler_W(BaseEstimator, TransformerMixin):
 
-class N_CMAPSSScaler(BaseEstimator, TransformerMixin):
+    def __init__(self, scaling="standard"):
+        self.scaling = scaling
+
+
+    def fit(self, W, y=None):
+        pass  # No fitting needed for this scaler
+
+    def transform(self, W):
+        scaling = self.scaling
+        if scaling == "standard":
+            W_mean_1457 = np.array(
+                [1.6362398e04, 5.4544175e-01, 6.1369926e01, 4.8835443e02]
+            )
+            W_std_1457 = np.array(
+                [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
+            )
+            W = (W - W_mean_1457) / W_std_1457
+
+
+        elif scaling == "min-max":
+            # min-max scaling in [-1, 1] range
+            W_min_1457 = np.array(
+                [3.0020000e03, 2.0002499e-01, 2.3730299e01, 4.2319705e02]
+            )
+            W_max_1457 = np.array(
+                [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
+            )
+            W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+        return W
+
+
+class N_CMAPSSScaler_X(BaseEstimator, TransformerMixin):
 
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
 
     def fit(self, X, y=None):
+        pass  # No fitting needed for this scaler
 
+    def transform(self, X):
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling
@@ -66,9 +100,7 @@ class N_CMAPSSScaler(BaseEstimator, TransformerMixin):
                     2.4945383e00,
                 ]
             )
-            W_mean_1457 = np.array(
-                [1.6362398e04, 5.4544175e-01, 6.1369926e01, 4.8835443e02]
-            )
+
             X_std_1457 = np.array(
                 [
                     2.0833166e01,
@@ -87,11 +119,8 @@ class N_CMAPSSScaler(BaseEstimator, TransformerMixin):
                     7.6335633e-01,
                 ]
             )
-            W_std_1457 = np.array(
-                [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
-            )
-            self.df_X = (self.df_X - X_mean_1457) / X_std_1457
-            self.df_W = (self.df_W - W_mean_1457) / W_std_1457
+
+            X = (X - X_mean_1457) / X_std_1457
 
 
         elif scaling == "min-max":
@@ -114,9 +143,7 @@ class N_CMAPSSScaler(BaseEstimator, TransformerMixin):
                     7.4892521e-01,
                 ]
             )
-            W_min_1457 = np.array(
-                [3.0020000e03, 2.0002499e-01, 2.3730299e01, 4.2319705e02]
-            )
+
             X_max_1457 = np.array(
                 [
                     6.3150879e02,
@@ -135,11 +162,9 @@ class N_CMAPSSScaler(BaseEstimator, TransformerMixin):
                     5.6173835e00,
                 ]
             )
-            W_max_1457 = np.array(
-                [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
-            )
-            self.df_X = 2 * (self.df_X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-            self.df_W = 2 * (self.df_W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+
+            X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+        return X
 
 
 class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
@@ -336,9 +361,22 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
         print("Used concepts:", self.concepts.columns)
         self.concepts = self.concepts.astype(int)
 
+        
+        self.data_dict = dict(
+            features=self.df_X.values, # sensor data measurements
+            timestamps=self.df_X.index.values,  # cycle numbers
+            health_states=self.df_A["hs"].values,
+            unit=self.df_A["unit"].values,
+            descriptors=self.df_W.values, # operating conditions
+            # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
+            # degradation=self.df_T.values, # degradation resp. concepts
+            concepts=self.concepts.values,
+            rul=self.df_Y.values, # RUL
+        )
+
     def _generate_splits(self):
         super()._generate_splits()
         # Also split health_states, labels, and concepts
-        for k in ["health_states", "labels", "concepts", "unit"]:
+        for k in ["health_states", "rul", "concepts", "unit", "descriptors"]:
             split_tuple = self.data_splitter.split_data(self.data_dict[k])
             self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}

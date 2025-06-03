@@ -6,7 +6,7 @@ import lmetk
 from box import Box
 import torch
 
-from lmetk.data.datamodules import BaseDataModule
+from lmetk.data.datamodules.datamodule import BaseDataModule
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
@@ -37,35 +37,37 @@ def concepts_n_cmapss_datamodule():
     data_source = hydra.utils.instantiate(cfg.datasource.loader)
 
     data_source._load_data()
-    # data_source._generate_splits()
-    # data_source._apply_transformations()
+    data_source._generate_splits()
+    data_source._apply_transformations()
 
-    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    # ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
+    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
 
-    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    # ds_val = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
+    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    ds_val = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
 
-    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    # ds_test = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
+    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    ds_test = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
 
-    # sample = next(iter(ds_train))
-    # for id_t, t in enumerate(sample):
-    #     print(f"Tensor {id_t} shape: {t.shape}")
+    sample = next(iter(ds_train))
+    for id_t, t in enumerate(sample):
+        print(f"Tensor {id_t} shape: {t.shape}")
 
-    # datasets = Box(
-    #     dict(
-    #         train=ds_train,
-    #         val=ds_val,
-    #         test=ds_test,
-    #     )
-    # )
+    datasets = Box(
+        dict(
+            train=ds_train,
+            val=ds_val,
+            test=ds_test,
+        )
+    )
 
-    # # Use hydra to partially initialize BaseDataModule, override datasets with our datasets
-    # dm = hydra.utils.instantiate(cfg.datamodule, datasets=datasets)
+    # Use hydra to partially initialize BaseDataModule, override datasets with our datasets
+    dm = hydra.utils.instantiate(cfg.datamodule, 
+                                 dataset_train=datasets["train"], 
+                                 dataset_val=datasets["val"], 
+                                 dataset_test=datasets["test"])
 
-    # return dm
-    return None
+    return dm
 
 
 # def test_batch_contents(concepts_n_cmapss_datamodule):
@@ -91,57 +93,57 @@ def concepts_n_cmapss_datamodule():
 #         )
 
 
-def test_cmapss_datamodule(concepts_n_cmapss_datamodule):
-    # assert cmapss_datamodule is not None, "Datamodule is None"
-    # assert isinstance(cmapss_datamodule, BaseDataModule), (
-    #     "Datamodule is not of the expected type"
-    # )
-    # assert len(cmapss_datamodule.train_dataloader()) > 0, "Train dataloader is empty"
-    # assert len(cmapss_datamodule.val_dataloader()) > 0, "Validation dataloader is empty"
-    # assert len(cmapss_datamodule.test_dataloader()) > 0, "Test dataloader is empty"
+def test_n_cmapss_datamodule(concepts_n_cmapss_datamodule):
+    assert concepts_n_cmapss_datamodule is not None, "Datamodule is None"
+    assert isinstance(concepts_n_cmapss_datamodule, BaseDataModule), (
+        "Datamodule is not of the expected type"
+    )
+    assert len(concepts_n_cmapss_datamodule.train_dataloader()) > 0, "Train dataloader is empty"
+    assert len(concepts_n_cmapss_datamodule.val_dataloader()) > 0, "Validation dataloader is empty"
+    assert len(concepts_n_cmapss_datamodule.test_dataloader()) > 0, "Test dataloader is empty"
     pass
 
 
-# def test_sample_shapes_from_train_dataset(cmapss_datamodule):
-#     ds = cmapss_datamodule.datasets.train
-#     sample = next(iter(ds))
-#     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-#     assert sample[0].shape == torch.Size([24]), (
-#         f"Tensor 0 shape is incorrect: {sample[0].shape}"
-#     )
-#     assert sample[1].shape == torch.Size([]), (
-#         f"Tensor 1 shape is incorrect: {sample[1].shape}"
-#     )
-#     assert sample[2].shape == torch.Size([2]), (
-#         f"Tensor 2 shape is incorrect: {sample[2].shape}"
-#     )
+def test_sample_shapes_from_train_dataset(concepts_n_cmapss_datamodule):
+    ds = concepts_n_cmapss_datamodule.dataset_train
+    sample = next(iter(ds))
+    assert len(sample) == 3, "Sample does not contain the expected number of tensors"
+    assert sample[0].shape == torch.Size([14]), (
+        f"Tensor 0 shape is incorrect: {sample[0].shape}"
+    )
+    assert sample[1].shape == torch.Size([]), (
+        f"Tensor 1 shape is incorrect: {sample[1].shape}"
+    )
+    assert sample[2].shape == torch.Size([2]), (
+        f"Tensor 2 shape is incorrect: {sample[2].shape}"
+    )
 
 
-# def test_sample_shapes_from_val_dataset(cmapss_datamodule):
-#     ds = cmapss_datamodule.datasets.val
-#     sample = next(iter(ds))
-#     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-#     assert sample[0].shape == torch.Size([24]), (
-#         f"Tensor 0 shape is incorrect: {sample[0].shape}"
-#     )
-#     assert sample[1].shape == torch.Size([]), (
-#         f"Tensor 1 shape is incorrect: {sample[1].shape}"
-#     )
-#     assert sample[2].shape == torch.Size([2]), (
-#         f"Tensor 2 shape is incorrect: {sample[2].shape}"
-#     )
+def test_sample_shapes_from_val_dataset(concepts_n_cmapss_datamodule):
+    ds = concepts_n_cmapss_datamodule.dataset_val
+    sample = next(iter(ds))
+    assert len(sample) == 3, "Sample does not contain the expected number of tensors"
+    assert sample[0].shape == torch.Size([14]), (
+        f"Tensor 0 shape is incorrect: {sample[0].shape}"
+    )
+    assert sample[1].shape == torch.Size([]), (
+        f"Tensor 1 shape is incorrect: {sample[1].shape}"
+    )
+    assert sample[2].shape == torch.Size([2]), (
+        f"Tensor 2 shape is incorrect: {sample[2].shape}"
+    )
 
 
-# def test_sample_shapes_from_test_dataset(cmapss_datamodule):
-#     ds = cmapss_datamodule.datasets.test
-#     sample = next(iter(ds))
-#     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-#     assert sample[0].shape == torch.Size([24]), (
-#         f"Tensor 0 shape is incorrect: {sample[0].shape}"
-#     )
-#     assert sample[1].shape == torch.Size([]), (
-#         f"Tensor 1 shape is incorrect: {sample[1].shape}"
-#     )
-#     assert sample[2].shape == torch.Size([2]), (
-#         f"Tensor 2 shape is incorrect: {sample[2].shape}"
-#     )
+def test_sample_shapes_from_test_dataset(concepts_n_cmapss_datamodule):
+    ds = concepts_n_cmapss_datamodule.dataset_test
+    sample = next(iter(ds))
+    assert len(sample) == 3, "Sample does not contain the expected number of tensors"
+    assert sample[0].shape == torch.Size([14]), (
+        f"Tensor 0 shape is incorrect: {sample[0].shape}"
+    )
+    assert sample[1].shape == torch.Size([]), (
+        f"Tensor 1 shape is incorrect: {sample[1].shape}"
+    )
+    assert sample[2].shape == torch.Size([2]), (
+        f"Tensor 2 shape is incorrect: {sample[2].shape}"
+    )
