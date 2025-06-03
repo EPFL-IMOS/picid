@@ -7,4 +7,4 @@ model_label_leb: ${model.label_len}
 model_pred_len: ${model.pred_len}
 features_mode: ${model.features_mode}
 
-effective_pred_len: null
+effective_pred_len: null #24

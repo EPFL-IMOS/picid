@@ -68,6 +68,9 @@ class DefaultEvaluator(AbstractEvaluator):
         # Apply inverse scaling if configured
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(predictions, targets)
         
+        # Based on the feature mode take the features: 
+        f_dim = 1 if self.features_mode == 'MS' else None
+        predictions, targets = predictions[:,:,:f_dim], targets[:,:,:f_dim]
         # Update all metrics
         for metric in self.metrics.values():
             metric.update(predictions, targets)

@@ -23,7 +23,11 @@ class AbstractEvaluator(ABC):
             Whether to apply inverse scaling before computing metrics
         """
         super().__init__()
-        self.scaling_wrapper = ScalingWrapper(scaler, apply_inverse)
+        self.scaling_wrapper = ScalingWrapper(
+            scaler=scaler, 
+            apply_inverse_scaling=apply_inverse,
+            features_mode=kwargs.get("features_mode", False)
+            )
 
         
         # Automatically set all kwargs as instance variables

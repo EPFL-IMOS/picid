@@ -16,7 +16,7 @@ loader:
 
     time_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: True
-    features_mode: M
+    features_mode: MS
 
   data_splitter:
     _target_: lmetk.data.preprocessing.splits.DateBasedSplitter

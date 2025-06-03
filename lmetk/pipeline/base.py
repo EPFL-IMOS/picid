@@ -222,9 +222,13 @@ class LMETKModel(LightningModule):
         effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
         
         
-        f_dim = -1 if self.evaluator.features_mode == 'MS' else 0
-        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, f_dim:].detach().cpu().numpy()
-        model_out['targets'] = model_out['targets'][:, :effective_pred_len, f_dim:].detach().cpu().numpy()
+        #f_dim = 1 if self.evaluator.features_mode == 'MS' else None
+        # model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :f_dim].detach().cpu().numpy()
+        # model_out['targets'] = model_out['targets'][:, :effective_pred_len, :f_dim].detach().cpu().numpy()
+
+        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
+        model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
+        
         
         
             
