@@ -7,6 +7,13 @@ from hydra.core.global_hydra import GlobalHydra
 class TestTimeSeriesDatasetLoaders:
     """Test suite for loading and validating time series datasets."""
 
+    @pytest.fixture(scope="module")
+    def path_cfg(self, request) -> str:
+        """Return the path to the configuration file."""
+        return request.config.getoption("--paths")
+
+
+
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup paths and config list."""
@@ -16,22 +23,25 @@ class TestTimeSeriesDatasetLoaders:
         self.config_names = ["ETTh1", "railway"]  # "cmapss_refactored"
         self.test_splits = ["train", "val", "test"]
 
-    def _load_dataset(self, config_name: str):
+    def _load_dataset(self, config_name: str, path_cfg: str):
         """Hydra-based dataset instantiation."""
         with hydra.initialize(version_base="1.3", config_path=self.relative_config_dir):
             cfg = hydra.compose(
                 config_name="run.yaml",
-                overrides=[f"dataset={config_name}"],
+                overrides=[
+                    f"dataset={config_name}",                
+                    f"paths={path_cfg}",
+                ],
                 return_hydra_config=True,
             )
             dataset = hydra.utils.instantiate(cfg.dataset.loader)
             dataset._pipeline()
             return dataset
 
-    def test_loader_behavior(self):
+    def test_loader_behavior(self, path_cfg):
         """Test that each dataset is properly loaded and processed."""
         for config_name in self.config_names:
-            dataset = self._load_dataset(config_name)
+            dataset = self._load_dataset(config_name, path_cfg)
 
             # Validate basic functionality
             features, timestamps = dataset.get_data()

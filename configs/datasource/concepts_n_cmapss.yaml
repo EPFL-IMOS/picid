@@ -1,49 +1,49 @@
 # Dataset loader config
-loader:
-  _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSDataSource
+
+_target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
+
+load_arguments:
+  data_folder: N-CMAPSS
+  path: ${paths.data_dir}/${.data_folder}
+  n_DS: "02"
+  mode: "train"
+  cruise: false
+  units: null
+  subsampling_rate: 1
+  concepts:
+    - "HPC"
+    - "Fan"
+  combined_concepts: false
+  binary_concepts: true
+  RUL: "linear"
+  include_healthy: true
+  window_size: 50
+  stride: 1
+  scaling: "legacy"
+
+
+data_splitter:
+  _target_: lmetk.data.preprocessing.SimpleSplitter
+  train: 8640 # int or float. In case of float it is a percentage of the dataset
+  val: 2880 # int or float. In case of float it is a percentage of the dataset
+  test: 2880 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)
+
+  # There values will be read from the model parameters similarly to how we deal with data_path.
+  seq_len: 384 #384    # window size
+  label_len: 96  # overlap size
+  pred_len: 96   # prediction size
+
+
+scalers:
+
+  features:
+    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
+    scaling: standard
   
-  load_arguments:
-    data_folder: N-CMAPSS
-    path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}
-    n_DS: "02"
-    mode: "train"
-    cruise: false
-    units: null
-    subsampling_rate: 1
-    concepts:
-      - "HPC"
-      - "Fan"
-    combined_concepts: false
-    binary_concepts: true
-    RUL: "linear"
-    include_healthy: true
-    window_size: 50
-    stride: 1
-    scaling: "legacy"
+  descriptors:
+    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
+    scaling: standard
 
-  
-  data_splitter:
-    _target_: lmetk.data.preprocessing.SimpleSplitter
-    train: 8640 # int or float. In case of float it is a percentage of the dataset
-    val: 2880 # int or float. In case of float it is a percentage of the dataset
-    test: 2880 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)
-
-    # There values will be read from the model parameters similarly to how we deal with data_path.
-    seq_len: 384 #384    # window size
-    label_len: 96  # overlap size
-    pred_len: 96   # prediction size
-
-  
-  scalers:
-
-    features:
-      _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSScaler_X
-      scaling: standard
-    
-    descriptors:
-      _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSScaler_W
-      scaling: standard
-
-    rul:
-      _target_: lmetk.data.datasources.cmapss.ConstantScaler
-      factor: 0.01
+  rul:
+    _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler
+    factor: 0.01

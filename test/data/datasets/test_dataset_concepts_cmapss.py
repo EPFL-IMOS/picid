@@ -19,21 +19,28 @@ def hydra_context(request):
 
 
 @pytest.fixture(scope="module")
-def cmapss_datamodule():
+def path_cfg(request) -> str:
+    """Return the path to the configuration file."""
+    return request.config.getoption("--paths")
+
+
+@pytest.fixture(scope="module")
+def cmapss_datamodule(path_cfg):
+
     cfg = hydra.compose(
         config_name="test.yaml",
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_dataset",
             "+datasource=concepts_cmapss",
-            "paths=rt_local",
+            f"paths={path_cfg}",
         ],
         return_hydra_config=True,
     )
 
     print(f"Config file: {cfg.dataset}")
 
-    data_source = hydra.utils.instantiate(cfg.datasource.loader)
+    data_source = hydra.utils.instantiate(cfg.datasource)
 
     data_source._load_data()
     data_source._generate_splits()

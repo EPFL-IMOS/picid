@@ -17,6 +17,7 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestArgs": [
     "test",
-    "--tb=short"
+    "--tb=short",
+    "--paths=rt_local"
   ]
 }

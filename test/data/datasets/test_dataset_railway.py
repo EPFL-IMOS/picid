@@ -20,13 +20,24 @@ class TestRailwayDatasets:
         self.relative_config_dir = "../../../configs"
         self.config_names = ["railway"]
         self.test_splits = ["test"]
+        
+    
+    @pytest.fixture(scope="module")
+    def path_cfg(self, request) -> str:
+        """Return the path to the configuration file."""
+        return request.config.getoption("--paths")
 
-    def _load_dataset(self, config_name: str):
+
+    def _load_dataset(self, config_name: str, path_cfg: str):
         """Hydra-based dataset instantiation."""
+
         with hydra.initialize(version_base="1.3", config_path=self.relative_config_dir):
             self.cfg = hydra.compose(
                 config_name="run.yaml",
-                overrides=[f"dataset={config_name}"],
+                overrides=[
+                    f"dataset={config_name}",
+                    f"paths={path_cfg}",
+                ],
                 return_hydra_config=True,
             )
             dataset = hydra.utils.instantiate(self.cfg.dataset.loader)
@@ -34,10 +45,13 @@ class TestRailwayDatasets:
 
             return dataset
 
-    def test_timeseries_dataset(self):
+    def test_timeseries_dataset(self, path_cfg): 
+        
+        path_cfg = "default" if path_cfg is None else path_cfg
+
         """Test that each dataset is properly loaded and processed."""
         for config_name in self.config_names:
-            dataset = self._load_dataset(config_name)
+            dataset = self._load_dataset(config_name, path_cfg)
 
             # Validate basic functionality
             splitted_data, splitted_timestamps = dataset.get_data()
