@@ -33,7 +33,7 @@ def cmapss_datamodule():
 
     print(f"Config file: {cfg.dataset}")
 
-    data_source = hydra.utils.instantiate(cfg.datasource.loader)
+    data_source = hydra.utils.instantiate(cfg.datasource)
 
     data_source._load_data()
     data_source._generate_splits()
