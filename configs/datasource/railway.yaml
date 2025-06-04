@@ -4,7 +4,7 @@ loader:
   load_arguments:
     data_name: railway
     data_folder: railway
-    data_path: ${paths.data_dir}/${dataset.loader.load_arguments.data_folder}/${dataset.loader.load_arguments.data_name}.csv
+    data_path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}/${datasource.loader.load_arguments.data_name}.csv
     
     samples_per_day: 24
     target_name: Bahnlast

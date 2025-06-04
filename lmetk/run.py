@@ -5,7 +5,7 @@ import random
 import torch
 # shutil
 from typing import Any
-
+import lmetk
 import hydra
 import lightning as L
 import numpy as np
@@ -79,7 +79,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     dataset_source = hydra.utils.instantiate(cfg.datasource.loader)
     dataset_source._pipeline()
     
-
     # Get data
     features, time_features = dataset_source.get_data()
     scaler = dataset_source.get_scaler()['features']
@@ -112,6 +111,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         dataset_val = dataset_val,
         dataset_test = dataset_test,
     )
+
     evaluator = hydra.utils.instantiate(cfg.evaluator, scaler=scaler)
     print(f"Evaluator: {cfg.evaluator._target_}")
 
@@ -165,6 +165,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         logger=logger,
         num_sanity_val_steps=0,
     )
+
+    # if cfg.get("train"):
+    #     log.info("Starting training!")
+    #     trainer.fit(
+    #         model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path")
+    #     )
+    
     trainer.test(model=model, dataloaders=datamodule.test_dataloader())
     
 

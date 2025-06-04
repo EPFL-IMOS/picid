@@ -35,12 +35,8 @@ class DriftModelWrapper(AbstractWrapper):
         outputs = self.backbone(batch_x)
             
         # Process outputs following your pattern
-        f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
-        outputs = outputs[:, -self.kwargs.pred_len:, f_dim:]
-        batch_y = batch_y[:, -self.kwargs.pred_len:, f_dim:]
-        
-        outputs = outputs.detach().cpu().numpy()
-        batch_y = batch_y.detach().cpu().numpy()
+        outputs = outputs[:, -self.kwargs.pred_len:, :]
+        batch_y = batch_y[:, -self.kwargs.pred_len:, :]
             
         model_out = {
             'predictions': outputs,

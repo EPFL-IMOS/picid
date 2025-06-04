@@ -10,13 +10,19 @@ import torch
 from typing import Dict, List, Optional, Any, Union
 from .base import AbstractEvaluator
 from lmetk.metrics.metric_factory import MetricFactory
+from lightning_fabric.utilities.data import AttributeDict
 
 class DefaultEvaluator(AbstractEvaluator):
     """Default evaluator that updates metrics incrementally."""
     
     """Sequential evaluator that updates metrics incrementally."""
     
-    def __init__(self, metric_names: List[str], scaler: Optional[Any] = None, apply_inverse_scaling: bool = False):
+    def __init__(self, 
+                 metric_names: List[str], 
+                 scaler: Optional[Any] = None, 
+                 apply_inverse_scaling: bool = False,
+                 **kwargs
+                ):
         """
         Initialize the evaluator with specified metrics and optional scaling.
         
@@ -29,7 +35,7 @@ class DefaultEvaluator(AbstractEvaluator):
         apply_inverse : bool
             Whether to apply inverse scaling before computing metrics
         """
-        super().__init__(scaler, apply_inverse_scaling)
+        super().__init__(scaler, apply_inverse_scaling, **kwargs)
         
         # Validate and create metrics
         self.metrics = {}
@@ -53,8 +59,8 @@ class DefaultEvaluator(AbstractEvaluator):
         model_out : dict
             Dictionary containing 'predictions' and 'targets' keys with numpy arrays
         """
-        predictions = np.asarray(model_out['predictions'])
-        targets = np.asarray(model_out['targets'])
+        predictions = model_out['predictions']
+        targets = model_out['targets']
         
         if predictions.shape != targets.shape:
             raise ValueError(f"Shape mismatch: predictions {predictions.shape} vs targets {targets.shape}")
@@ -62,6 +68,9 @@ class DefaultEvaluator(AbstractEvaluator):
         # Apply inverse scaling if configured
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(predictions, targets)
         
+        # Based on the feature mode take the features: 
+        f_dim = 1 if self.features_mode == 'MS' else None
+        predictions, targets = predictions[:,:,:f_dim], targets[:,:,:f_dim]
         # Update all metrics
         for metric in self.metrics.values():
             metric.update(predictions, targets)

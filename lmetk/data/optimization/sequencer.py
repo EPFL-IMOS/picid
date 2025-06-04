@@ -41,9 +41,9 @@ class IndexSequencer:
         assert seq_len >= label_len, (
             "seq_len must be greater than or equal to label_len"
         )
-        assert label_len + pred_len <= seq_len, (
-            "label_len + pred_len must be less than or equal to seq_len"
-        )
+        # assert label_len + pred_len <= seq_len, (
+        #     "label_len + pred_len must be less than or equal to seq_len"
+        # )
         assert length >= seq_len + pred_len, (
             "Not enough data points for even a single sample"
         )

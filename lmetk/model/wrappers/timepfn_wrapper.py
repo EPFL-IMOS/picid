@@ -55,8 +55,6 @@ class TimePFNWrapper(AbstractWrapper):
 
             # Decoder input
             
-            dec_inp = torch.zeros_like(batch_y_subset[:, -self.kwargs.pred_len:, :], device=self.kwargs.device).float()
-            dec_inp = torch.cat([batch_y_subset[:, :self.kwargs.label_len, :], dec_inp], dim=1).float()
             
             # ------ Workout this if needed -----
             # encoder - decoder
@@ -73,23 +71,16 @@ class TimePFNWrapper(AbstractWrapper):
             #     else:
             # ------ Workout above if needed -----
 
-            outputs = self.backbone(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
-            
-            # I believe the logic of processing outputs should be disentangled from the model wrapper into some additional module. 
-            f_dim = -1 if self.kwargs.features_mode == 'MS' else 0
-
-            outputs = outputs[:, -self.kwargs.pred_len:, f_dim:]
-            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, f_dim:]
-            
-            outputs = outputs.detach().cpu().numpy()
-            batch_y_subset = batch_y_subset.detach().cpu().numpy()
+            outputs = self.backbone(batch_x_subset, batch_x_mark)
+            outputs = outputs[:, -self.kwargs.pred_len:, :]
+            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, :]       
 
             if pred is None:
                 pred = outputs
                 true = batch_y_subset
             else:
-                pred = np.concatenate((pred, outputs), axis=2)
-                true = np.concatenate((true, batch_y_subset), axis=2)
+                pred = torch.concat((pred, outputs), dim=-1)
+                true = torch.concat((true, batch_y_subset), axis=-1)
 
         # Update evaluator with current batch (replaces the accumulation logic)
         model_out = {
