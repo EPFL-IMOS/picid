@@ -21,14 +21,21 @@ def hydra_context(request):
 
 
 @pytest.fixture(scope="module")
-def multi_source_data_source():
+def path_cfg(request) -> str:
+    """Return the path to the configuration file."""
+    return request.config.getoption("--paths")
+
+
+@pytest.fixture(scope="module")
+def multi_source_data_source(path_cfg):
+
     cfg = hydra.compose(
         config_name="test.yaml",
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_multiunit_dataset",
             "+datasource=concepts_cmapss_multi_source",
-            "paths=rt_local",
+            f"paths={path_cfg}",
         ],
         return_hydra_config=True,
     )

@@ -5,3 +5,6 @@ import os
 
 print(os.environ['PROJECT_ROOT']) 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+def pytest_addoption(parser):
+    parser.addoption("--paths", action="store", default="default", help="A hydra paths config name to localize testing.")

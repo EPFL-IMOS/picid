@@ -8,12 +8,26 @@ from lmetk.data.datasets import SWDataset, SWBatchDataset
 import os
 from pathlib import Path
 
+# This import is necessary to register the plugin
+from test.utils import ProjectSearchPathPlugin
+ProjectSearchPathPlugin.register()
+
 
 @pytest.fixture(scope="module")
-def dataset_val():
+def path_cfg(request) -> str:
+    """Return the path to the configuration file."""
+    return request.config.getoption("--paths")
+
+
+@pytest.fixture(scope="module")
+def dataset_val(path_cfg: str):
+
     GlobalHydra.instance().clear()
     base_dir = Path(__file__).resolve().parents[3]
-    data_path = os.path.abspath(f"{base_dir}/datasets/ETT-small/ETTh1.csv")
+    paths_cfg = OmegaConf.load(f"{base_dir}/configs/paths/{path_cfg}.yaml")
+
+
+    data_path = Path(f"{paths_cfg.data_dir}/ETT-small/ETTh1.csv").expanduser()
     assert os.path.exists(data_path), f"File not found: {data_path}"
 
     loader_config = OmegaConf.create(
