@@ -70,27 +70,28 @@ def concepts_n_cmapss_datamodule():
     return dm
 
 
-# def test_batch_contents(concepts_n_cmapss_datamodule):
-#     """Test the contents of a batch from the datamodule.
-#     Fetch a batch from the train dataloader and check its contents.
-#     Verify with a batch that is stored on the file system.
-#     """
+def test_batch_contents(concepts_n_cmapss_datamodule):
+    """Test the contents of a batch from the datamodule.
+    Fetch a batch from the train dataloader and check its contents.
+    Verify with a batch that is stored on the file system.
+    """
 
-#     path = Path("test/assets/data/datasets")
-#     batch_file = path / "reference_batch_cmapss.pt"
-#     batch = next(iter(cmapss_datamodule.train_dataloader()))
+    path = Path("test/assets/data/datasets")
+    batch_file = path / "reference_batch_n_cmapss.pt"
+    batch = next(iter(concepts_n_cmapss_datamodule.train_dataloader()))
 
-#     if batch_file.exists():
-#         reference = torch.load(batch_file)
-#         # Compare each tensor in the batch with the reference
-#         for idx, (b, r) in enumerate(zip(batch, reference)):
-#             assert torch.allclose(b, r), f"Batch tensor {idx} does not match reference"
-#     else:
-#         # Uncomment the following line to recreate the reference batch
-#         # torch.save(batch, batch_file)
-#         assert False, (
-#             f"Reference batch file {batch_file} does not exist. Uncomment save line to create it."
-#         )
+    if batch_file.exists():
+        reference = torch.load(batch_file)
+        # Compare each tensor in the batch with the reference
+        for idx, (b, r) in enumerate(zip(batch, reference)):
+            assert torch.allclose(b, r), f"Batch tensor {idx} does not match reference"
+            print(f"Batch tensor {idx} with shape: {b.shape} matches reference: {r.shape}")
+    else:
+        # Uncomment the following line to recreate the reference batch
+        # torch.save(batch, batch_file)
+        assert False, (
+            f"Reference batch file {batch_file} does not exist. Uncomment save line to create it."
+        )
 
 
 def test_n_cmapss_datamodule(concepts_n_cmapss_datamodule):
@@ -108,7 +109,7 @@ def test_sample_shapes_from_train_dataset(concepts_n_cmapss_datamodule):
     ds = concepts_n_cmapss_datamodule.dataset_train
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-    assert sample[0].shape == torch.Size([14]), (
+    assert sample[0].shape == torch.Size([18]), (
         f"Tensor 0 shape is incorrect: {sample[0].shape}"
     )
     assert sample[1].shape == torch.Size([]), (
@@ -123,7 +124,7 @@ def test_sample_shapes_from_val_dataset(concepts_n_cmapss_datamodule):
     ds = concepts_n_cmapss_datamodule.dataset_val
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-    assert sample[0].shape == torch.Size([14]), (
+    assert sample[0].shape == torch.Size([18]), (
         f"Tensor 0 shape is incorrect: {sample[0].shape}"
     )
     assert sample[1].shape == torch.Size([]), (
@@ -138,7 +139,7 @@ def test_sample_shapes_from_test_dataset(concepts_n_cmapss_datamodule):
     ds = concepts_n_cmapss_datamodule.dataset_test
     sample = next(iter(ds))
     assert len(sample) == 3, "Sample does not contain the expected number of tensors"
-    assert sample[0].shape == torch.Size([14]), (
+    assert sample[0].shape == torch.Size([18]), (
         f"Tensor 0 shape is incorrect: {sample[0].shape}"
     )
     assert sample[1].shape == torch.Size([]), (

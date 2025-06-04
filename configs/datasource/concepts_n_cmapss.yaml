@@ -1,6 +1,6 @@
 # Dataset loader config
 loader:
-  _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSDataSource
+  _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
   
   load_arguments:
     data_folder: N-CMAPSS
@@ -37,13 +37,13 @@ loader:
   scalers:
 
     features:
-      _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSScaler_X
+      _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
       scaling: standard
     
     descriptors:
-      _target_: lmetk.data.datasources.n_cmapss.N_CMAPSSScaler_W
+      _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
       scaling: standard
 
     rul:
-      _target_: lmetk.data.datasources.cmapss.ConstantScaler
+      _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler
       factor: 0.01

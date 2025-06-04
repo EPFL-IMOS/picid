@@ -36,7 +36,7 @@ def flatten_RUL(df):
     return df
 
 
-class N_CMAPSSScaler_W(BaseEstimator, TransformerMixin):
+class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin):
 
     def __init__(self, scaling="standard"):
         self.scaling = scaling
@@ -69,7 +69,7 @@ class N_CMAPSSScaler_W(BaseEstimator, TransformerMixin):
         return W
 
 
-class N_CMAPSSScaler_X(BaseEstimator, TransformerMixin):
+class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin):
 
     def __init__(self, scaling="standard"):
         self.scaling = scaling

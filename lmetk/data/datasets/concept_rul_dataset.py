@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import torch
@@ -7,12 +7,19 @@ from torch.utils.data import Dataset
 
 class ConceptRULDataset(Dataset):
     def __init__(
-        self, data_split: Dict[str, np.ndarray], window_size: int, stride: int
+        self, 
+        data_split: Dict[str, np.ndarray], 
+        window_size: int, 
+        stride: int
     ):
         self.df_Y = data_split.rul
         self.X = data_split.features
         self.unit = data_split.unit
         self.concepts = data_split.concepts
+
+        if "descriptors" in data_split:
+            print("The dataset contains descriptors, concatenating them to the features.")
+            self.X = np.concatenate((self.X, data_split.descriptors), axis=1)
 
         self.window_size = window_size
         self.stride = stride
@@ -59,7 +66,7 @@ class ConceptRULDataset(Dataset):
             x = self.X[0 : i * self.stride + 1, :].T
             x = np.concatenate((padding, x), 1)
 
-        x = x.ravel()
+        # x = x.ravel()
 
         return (
             torch.Tensor(x).squeeze(),
