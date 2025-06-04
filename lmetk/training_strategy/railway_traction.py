@@ -13,7 +13,7 @@ class RailwayTractionStrategy(MultiModelUnivariateForecastingStrategy):
             cfg, objs, lags=lags, feature_mode=feature_mode, N_samples=N_samples
         )
         # factor_agg = pd.read_csv("datasets/railway_agg.csv")['Bahnlast'].abs().mean()
-        self.factor_full = pd.read_csv("datasets/railway.csv")["Bahnlast"].abs().mean()
+        self.factor_full = 1 # pd.read_csv("datasets/railway/railway.csv")["Bahnlast"].abs().mean()
 
     def _custom_metrics(self, y, preds):
         dm = self.dm
