@@ -73,7 +73,7 @@ class TestRailwayDatasets:
         assert (
             str(
                 reconstruct_datetime_from_features(
-                    seq_x_mark, ["year", "month", "day", "weekday", "hour"]
+                    seq_x_mark.numpy(), ["year", "month", "day", "weekday", "hour"]
                 )[0]
             )
             == "2023-01-24 00:00:00"
@@ -93,7 +93,7 @@ class TestRailwayDatasets:
         assert (
             str(
                 reconstruct_datetime_from_features(
-                    d["target"]["x_time"].long().numpy(),
+                    d["target"]["x_mark"].long().numpy(),
                     ["year", "month", "day", "weekday", "hour"],
                 )[0]
             )

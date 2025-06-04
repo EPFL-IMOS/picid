@@ -13,10 +13,17 @@ from test.utils import ProjectSearchPathPlugin
 ProjectSearchPathPlugin.register()
 
 
+@pytest.fixture(scope="module", autouse=True)
+def hydra_context(request):
+    with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
+        yield
+
+
 @pytest.fixture(scope="module")
 def path_cfg(request) -> str:
     """Return the path to the configuration file."""
     return request.config.getoption("--paths")
+
 
 
 @pytest.fixture(scope="module")
