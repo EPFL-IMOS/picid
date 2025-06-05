@@ -85,19 +85,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Prepare datasets
     dataset_train = hydra.utils.instantiate(
-        cfg.dataset,
+        cfg.datasource,
         features=features["train"], 
         time_features=time_features["train"]
         )
 
     dataset_val = hydra.utils.instantiate(
-        cfg.dataset,
+        cfg.datasource,
         features=features["val"], 
         time_features=time_features["val"]
         )
     
     dataset_test = hydra.utils.instantiate(
-            cfg.dataset,
+            cfg.datasource,
             features=features["test"], 
             time_features=time_features["test"]
             )

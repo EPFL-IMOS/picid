@@ -1,39 +1,38 @@
 # Dataset loader config
-loader:
-  _target_: lmetk.data.datasources.ETThLoader
-  
-  load_arguments:
-    data_name: ETTh1
-    data_folder: ETT-small
-    data_path: ${paths.data_dir}/${datasource.loader.load_arguments.data_folder}/${datasource.loader.load_arguments.data_name}.csv
-    
-    flag: train
-    size: null 
-    
-    features_mode: M
-    target_name: OT
-    scale: True
-    
-    timeenc: timepfn_timefeatures # Disable for now till we got a model that need it
-    freq: h 
+_target_: lmetk.data.datasources.ETThLoader
 
-    timestamp_name: date
-    time_features: ["month", "day", "weekday", "hour"]
-    normalize_time_features: True
+load_arguments:
+  data_name: ETTh1
+  data_folder: ETT-small
+  data_path: ${paths.data_dir}/${datasource.load_arguments.data_folder}/${datasource.load_arguments.data_name}.csv
   
-  data_splitter:
-    _target_: lmetk.data.preprocessing.SimpleSplitter
-    train: 8640 # int or float. In case of float it is a percentage of the dataset
-    val: 2880 # int or float. In case of float it is a percentage of the dataset
-    test: 2880 # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
-
-    # There values will be read from the model parameters similarly to how we deal with data_path.
-    seq_len: 96    #    # window size
-    label_len: 48  #96  # overlap size
-    pred_len: 96   # prediction size
-
+  flag: train
+  size: null 
   
-  scaler:
-    features:
-      _target_: sklearn.preprocessing.StandardScaler
-    
+  features_mode: M
+  target_name: OT
+  scale: True
+  
+  timeenc: timepfn_timefeatures # Disable for now till we got a model that need it
+  freq: h 
+
+  timestamp_name: date
+  time_features: ["month", "day", "weekday", "hour"]
+  normalize_time_features: True
+
+data_splitter:
+  _target_: lmetk.data.preprocessing.SimpleSplitter
+  train: 8640 # int or float. In case of float it is a percentage of the dataset
+  val: 2880 # int or float. In case of float it is a percentage of the dataset
+  test: 2880 # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
+
+  # There values will be read from the model parameters similarly to how we deal with data_path.
+  seq_len: 96    #    # window size
+  label_len: 48  #96  # overlap size
+  pred_len: 96   # prediction size
+
+
+scaler:
+  features:
+    _target_: sklearn.preprocessing.StandardScaler
+  

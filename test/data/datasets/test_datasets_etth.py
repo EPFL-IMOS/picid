@@ -10,22 +10,22 @@ from lmetk.data.datasets import SWDataset, SWBatchDataset
 import os
 from pathlib import Path
 
-# This import is necessary to register the plugin
-from test.utils import ProjectSearchPathPlugin
-ProjectSearchPathPlugin.register()
+# # This import is necessary to register the plugin
+# from test.utils import ProjectSearchPathPlugin
+# ProjectSearchPathPlugin.register()
 
 
-@pytest.fixture(scope="module", autouse=True)
-def hydra_context(request):
-    with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
-        yield
+# @pytest.fixture(scope="module", autouse=True)
+# def hydra_context(request):
+#     with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
+#         yield
 
 
-@pytest.fixture(scope="module")
-def path_cfg(request) -> str:
-    ProjectSearchPathPlugin.register()
-    """Return the path to the configuration file."""
-    return request.config.getoption("--paths")
+# @pytest.fixture(scope="module")
+# def path_cfg(request) -> str:
+#     ProjectSearchPathPlugin.register()
+#     """Return the path to the configuration file."""
+#     return request.config.getoption("--paths")
 
 
 
@@ -38,8 +38,7 @@ def dataset_val(path_cfg: str):
     cfg = hydra.compose(
         config_name="test.yaml",
         overrides=[
-            "datasource=etth_timepfn",
-            "dataset=ETTh1",
+            "datasource=ETTh1_timepfn",
             f"paths={path_cfg}",
         ],
         return_hydra_config=True,

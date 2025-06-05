@@ -2,6 +2,10 @@ import numpy as np
 from typing import Optional, Union, Tuple
 from .base import TimeSeriesSplitter
 
+import warnings
+class ValueWarning(Warning):
+    pass
+
 
 class SimpleSplitter(TimeSeriesSplitter):
     def __init__(
@@ -44,15 +48,18 @@ class SimpleSplitter(TimeSeriesSplitter):
             val_len = self.val or 0
             test_len = self.test if self.test is not None else n - train_len - val_len
 
-            if (train_len + val_len + test_len != n) and (self.test is None):
-                raise ValueError(
-                    "Train + val + test split sizes must sum to total data length."
-                )
-            else: 
-                assert train_len + val_len + test_len == self.train + self.val + self.test, "Train + val + test split sizes must sum to total data length."
-
         else:
             raise ValueError("train/val/test must all be float or int (not mixed).")
+        
+        # Check the splits sizes
+        if self.test is None:
+                assert train_len + val_len + test_len == n, "Train + val + test split sizes must sum to total data length."
+            
+        else: 
+            print('Test size is specified and equal to:', self.test)
+            train_len + val_len + test_len
+            assert n >= (train_len + val_len + test_len), 'The specified test size is not correct as the total num. of points n >= (train_len + val_len + test_len)'
+            warnings.warn(f'Test size is specified and equal to: {self.test}, hence train_len + val_len + test_len = {train_len + val_len + test_len}, implying missing {n - (train_len + val_len + test_len)}', ValueWarning)
 
         # Compute overlap between segments
         lookback = self.seq_len  # - self.pred_len
