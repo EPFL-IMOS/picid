@@ -14,6 +14,7 @@ class SWBatchDataset(torch.utils.data.Dataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int,
+        **kwargs
     ):
         self.feature_sequencer = AutoregressiveSequencer(
             features=features,

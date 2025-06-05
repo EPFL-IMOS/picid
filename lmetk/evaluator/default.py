@@ -5,12 +5,9 @@ This module provides an evaluator class that inherits from AbstractEvaluator
 and implements evaluation logic for transformer-based forecasting models.
 """
 
-import numpy as np
-import torch
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from .base import AbstractEvaluator
 from lmetk.metrics.metric_factory import MetricFactory
-from lightning_fabric.utilities.data import AttributeDict
 
 class DefaultEvaluator(AbstractEvaluator):
     """Default evaluator that updates metrics incrementally."""

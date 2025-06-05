@@ -1,11 +1,8 @@
 """Abstract evaluator and sequential evaluator implementation."""
 
 from abc import ABC, abstractmethod
-import inspect
 
-from typing import List, Dict, Optional, Any
-import numpy as np
-from lmetk.metrics.metric_factory import MetricFactory
+from typing import Optional, Any
 from lmetk.evaluator.scaling_wrapper import ScalingWrapper
 
 class AbstractEvaluator(ABC):

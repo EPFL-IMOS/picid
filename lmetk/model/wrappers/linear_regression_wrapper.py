@@ -1,10 +1,7 @@
 """Wrapper for the LinearRegression model."""
-import torch
-import numpy as np
 from .base import AbstractWrapper
 
 from lmetk.model.methods.linear_regression_model import LinearRegressionModelBaseline
-from lightning_fabric.utilities.data import AttributeDict
 
 class LinearRegressionModelWrapper(AbstractWrapper):
     r"""Wrapper for the LinearRegressionModel baseline.

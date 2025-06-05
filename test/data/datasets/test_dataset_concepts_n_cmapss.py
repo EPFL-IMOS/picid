@@ -1,7 +1,6 @@
 from pathlib import Path
 import pytest
 import hydra
-import lmetk
 
 from box import Box
 import torch

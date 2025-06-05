@@ -43,6 +43,23 @@ def test_splits():
     return ["train", "val", "test"]
 
 @pytest.fixture(scope="function")
+def config_loader():
+    """Factory fixture to create hydra configs."""
+    def _load_config(config_name: str):
+        """Hydra-based config instantiation."""
+        cfg = hydra.compose(
+            config_name="test.yaml",
+            overrides=[
+                f"datasource={config_name}",                
+            ],
+            return_hydra_config=True,
+        )
+        return cfg
+    
+    return _load_config
+
+
+@pytest.fixture(scope="function")
 def datasource_loader():
     """Factory fixture to create dataset loaders."""
     def _load_dataset(config_name: str):

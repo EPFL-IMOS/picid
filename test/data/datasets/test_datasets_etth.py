@@ -1,13 +1,10 @@
-import lmetk
 import os
 import numpy as np
 import pytest
 import hydra
-from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf
 
 from lmetk.data.datasets import SWDataset, SWBatchDataset
-import os
 from pathlib import Path
 
 

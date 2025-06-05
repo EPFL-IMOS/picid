@@ -1,5 +1,4 @@
 from einops import rearrange
-import pandas as pd
 import numpy as np
 
 from lmetk.training_strategy.generic_training_strategy import (

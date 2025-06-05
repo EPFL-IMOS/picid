@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 import torch
@@ -10,7 +10,8 @@ class ConceptRULDataset(Dataset):
         self, 
         data_split: Dict[str, np.ndarray], 
         window_size: int, 
-        stride: int
+        stride: int,
+        **kwargs
     ):
         self.df_Y = data_split.rul
         self.X = data_split.features

@@ -1,7 +1,6 @@
 """Wrapper for the NaiveModel model."""
 from .base import AbstractWrapper
 from lmetk.model.methods.naive_model import NaiveModelBaseline
-from lightning_fabric.utilities.data import AttributeDict
 
 class NaiveModelWrapper(AbstractWrapper):
     r"""Wrapper for the NaiveModel model.

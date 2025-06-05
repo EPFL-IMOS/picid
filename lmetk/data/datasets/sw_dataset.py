@@ -14,6 +14,7 @@ class SWDataset(Dataset):
         seq_len: int,
         label_len: int,
         pred_len: int,
+        **kwargs
     ):
         # Type checking
         assert isinstance(features, np.ndarray), "features must be a numpy array"
@@ -23,7 +24,7 @@ class SWDataset(Dataset):
         assert isinstance(seq_len, int) and seq_len > 0, (
             "seq_len must be a positive integer"
         )
-        assert isinstance(label_len, int) and label_len > 0, (
+        assert isinstance(label_len, int) and label_len >= 0, (
             "label_len must be a positive integer"
         )
         assert isinstance(pred_len, int) and pred_len > 0, (

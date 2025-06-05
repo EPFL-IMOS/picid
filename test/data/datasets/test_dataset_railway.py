@@ -36,7 +36,7 @@ def test_railway_loader_behavior(config_name, datasource_loader, test_splits):
 
 
 @pytest.mark.parametrize("config_name", list_of_railway_datasets)
-def test_railway_timeseries_datasets(config_name, datasource_loader):
+def test_railway_timeseries_datasets(config_name, datasource_loader, config_loader):
     """Test railway dataset with specific timeseries functionality and datetime validation."""
     
     # Load the dataset using the factory fixture
@@ -47,7 +47,8 @@ def test_railway_timeseries_datasets(config_name, datasource_loader):
     
     # Access configuration through the dataset (assuming it stores cfg internally)
     # If not available, you might need to modify datasource_loader to return cfg too
-    data_splitter_params = dataset.cfg.datasource.data_splitter
+    cfg = config_loader(config_name)
+    data_splitter_params = cfg.datasource.data_splitter
     seq_len = data_splitter_params.seq_len
     label_len = data_splitter_params.label_len
     pred_len = data_splitter_params.pred_len

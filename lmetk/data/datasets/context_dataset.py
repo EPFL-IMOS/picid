@@ -14,21 +14,23 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
+        **kwargs
     ):
-        target_feature = features[..., mask]
-        context_features = features[..., ~mask]
+        self.target_feature = features[..., mask]
+        self.context_features = features[..., ~mask]
+        self.time_features = time_features
 
         self.target_dataset = SWBatchDataset(
-            features=target_feature,
-            time_features=time_features,
+            features=self.target_feature,
+            time_features=self.time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
         )
         self.context_dataset = SWBatchDataset(
-            features=context_features,
-            time_features=time_features,
+            features=self.context_features,
+            time_features=self.time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,

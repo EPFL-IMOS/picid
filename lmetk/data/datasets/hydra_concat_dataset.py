@@ -7,7 +7,7 @@ from hydra.utils import instantiate
 class HydraConcatDataset(ConcatDataset):
     def __init__(self, 
                  dataset_cfg,
-                 data_split: Dict[str, List[torch.Tensor]]):
+                 data_split: Dict[str, List[torch.Tensor]], **kwargs):
         """
         Args:
             dataset_cfg: the dataset configuration.

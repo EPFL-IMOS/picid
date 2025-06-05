@@ -3,11 +3,11 @@ from typing import Dict, List, Optional, Tuple, Any
 import inspect
 import numpy as np
 import pytorch_lightning as pl
-
-from torch.utils.data import Dataset, DataLoader
+from lightning import LightningDataModule
+from torch.utils.data import DataLoader
 from lmetk.data.datamodules.utils import context_collate_fn
 
-class ContextBaseDataModule(pl.LightningDataModule):
+class ContextBaseDataModule(LightningDataModule):
     """
     Data module for the RUL datasets.
     This is a similar module to the one in rul_datasets but simplified.

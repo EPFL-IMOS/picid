@@ -1,8 +1,6 @@
 """Concrete metric implementations."""
 
 import numpy as np
-from collections import defaultdict
-from typing import List
 from .base import AbstractMetric
 
 

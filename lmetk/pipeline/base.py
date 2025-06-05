@@ -141,7 +141,9 @@ class LMETKModel(LightningModule):
             A tensor of losses between model predictions and targets.
         """
         self.state_str = "Training"
-        model_out = self.model_step(batch)
+        # Solely for tabpfn for now:
+        self.backbone.fit(batch)
+        #model_out = self.model_step(batch)
 
         # Update and log metrics
         self.log(
@@ -378,10 +380,11 @@ class LMETKModel(LightningModule):
         dict:
             A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        optimizer_config = self.optimizer.configure_optimizer(
-            list(self.backbone.parameters())
-            + list(self.readout.parameters())
-            + list(self.feature_encoder.parameters())
-        )
+        optimizer_config = {"optimizer": torch.optim.Adam([torch.Tensor([0])])}
+        # self.optimizer.configure_optimizer(
+        #     list(self.backbone.parameters())
+        #     #+ list(self.readout.parameters())
+        #     #+ list(self.feature_encoder.parameters())
+        # )
 
         return optimizer_config
