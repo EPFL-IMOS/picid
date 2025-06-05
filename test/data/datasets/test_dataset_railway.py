@@ -1,12 +1,25 @@
 import pytest
 import hydra
-from pathlib import Path
 from hydra.core.global_hydra import GlobalHydra
-
+from pathlib import Path
 
 from lmetk.data.datasets import SWDataset, ContextBatchDataset
-
 from lmetk.data.utils import reconstruct_datetime_from_features
+
+# This import is necessary to register the plugin
+from test.utils import ProjectSearchPathPlugin
+ProjectSearchPathPlugin.register()
+
+@pytest.fixture(scope="module", autouse=True)
+def hydra_context(request):
+    with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
+        yield
+
+
+@pytest.fixture(scope="module")
+def path_cfg(request) -> str:
+    """Return the path to the configuration file."""
+    return request.config.getoption("--paths")
 
 
 class TestRailwayDatasets:
