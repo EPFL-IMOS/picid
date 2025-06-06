@@ -24,8 +24,8 @@ class MultiSourceTransformMixin():
         """
         train_splits = []
         for source_name, source in sources_dict.items():
-            if hasattr(source, "get_data"):
-                train_splits.append(source.get_data()[feature_key])
+            if hasattr(source, "get_data_dict"):
+                train_splits.append(source.get_data_dict()[feature_key])
             else:
                 raise ValueError(f"Source {source_name} does not implement get_data method.")
             
@@ -36,11 +36,22 @@ class MultiSourceTransformMixin():
         """
         Transform the data from all sources using the fitted scalers.
         """
-        transformed_sources = {}
+
         for source_name, source in sources_dict.items():
-            if hasattr(source, "get_data"):
-                data = source.get_data()
+
+            assert not source._is_split, \
+                f"Source {source_name} is already split. This logic is currently not supported. "
+            
+            transformed_data_dict = {}
+            if hasattr(source, "get_data_dict"):
+                data = source.get_data_dict()[feature_key]
                 transformed_data = self.transform(data)
-                transformed_sources[source_name] = transformed_data
+                transformed_data_dict[feature_key] = transformed_data
             else:
                 raise ValueError(f"Source {source_name} does not implement get_data method.")
+            
+            # Update the source's data_dict with the transformed data
+            if hasattr(source, "update_data_dict"):
+                source.update_data_dict(transformed_data_dict)
+            else:
+                raise ValueError(f"Source {source_name} does not implement update_data_dict method.")

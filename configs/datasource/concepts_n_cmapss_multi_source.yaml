@@ -12,20 +12,28 @@ defaults:
 
 _target_: lmetk.data.datasources.multi_source_pipeline.MultiSourcePipeline
 
-load_arguments: null
+load_arguments: 
+  scale: True
 
 
 data_splitter: 
   _target_: lmetk.data.preprocessing.BySourceSplitter
   sources_train: [train1, train2, train3, train4]
   sources_test: [test1, test2, test3, test4]
+  # sources_train: [train1, train2]
+  # sources_test: [test1, test2]
   sources_val: [] # TODO: why are there no val test sources in the original setup?
 
 
 scalers:
 
   features:
-    _target_: lmetk.data.datasources.concepts_cmapss.CMAPSSScaler
+    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
+    scaling: standard
+  
+  descriptors:
+    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
+    scaling: standard
 
   rul:
     _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler

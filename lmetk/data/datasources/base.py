@@ -17,6 +17,17 @@ class TimeSeriesDatasetInterface(ABC):
         pass
 
     @abstractmethod
+    def get_data_dict(self) -> Dict[str, Dict[str, np.ndarray]] | Dict [str, np.ndarray]:
+        """Return the data dictionary containing features and timestamps."""
+        pass
+
+    
+    @abstractmethod
+    def update_data_dict(self, data_dict: Dict [str, np.ndarray]):
+        """Set the data dictionary."""
+        pass
+
+    @abstractmethod
     def get_scaler(self):
         """Return the fitted scaler."""
         pass
@@ -70,6 +81,25 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.data_dict.update(self._load_data())
         self._generate_splits()
         self._apply_transformations()
+
+    def get_data_dict(self) -> Dict[str, Dict[str, np.ndarray]] | Dict [str, np.ndarray]:
+        """
+        Return the data dictionary containing features and timestamps.
+        """
+        assert self._is_loaded, "Data must be loaded before accessing the data dictionary."
+        return self.data_dict
+    
+    def update_data_dict(self, data_dict: Dict [str, np.ndarray]):
+        """
+        Set the data dictionary.
+        This is useful for updating the data after loading.
+        """
+        assert isinstance(data_dict, dict), "data_dict must be a dictionary."
+        # This feature is mostly used by MultiSourcePipeline to scale the data.
+        # So it does not work with by source splitting.
+        assert not self._is_split, "Cannot update data_dict after splitting."
+        self.data_dict.update(data_dict)
+        self._is_loaded = True
 
     @abstractmethod
     def _load_data(self) -> dict:

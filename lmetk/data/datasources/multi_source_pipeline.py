@@ -49,6 +49,18 @@ class MultiSourcePipeline(TimeSeriesDatasetInterface):
 
     def get_scaler(self):
         return self.scalers
+    
+
+    def get_data_dict(self) -> Dict[str, Dict[str, np.ndarray]] | Dict [str, np.ndarray]:
+        raise NotImplementedError(
+            "get_data_dict is not implemented for MultiSourcePipeline. "
+        )
+
+
+    def update_data_dict(self, data_dict: Dict [str, np.ndarray]):
+        raise NotImplementedError(
+            "set_data_dict is not implemented for MultiSourcePipeline. "
+        )
 
 
     def _pipeline(self):
@@ -56,20 +68,48 @@ class MultiSourcePipeline(TimeSeriesDatasetInterface):
         self._generate_splits()
         self._apply_transformations()
 
-        for source_key, src in self.sources.items():
-            for key, value in src.data_dict.items(): # features, timestamps etc.
-                if key not in self.data_dict:
-                    self.data_dict[key] = {}
+        # Here we collate based on splitted data sources (its the individual data sources that take care of the splitting)
+        if self.data_splitter is None and self.scalers is None:
+            for source_key, src in self.sources.items():
+                for key, value in src.data_dict.items(): # features, timestamps etc.
+                    if key not in self.data_dict:
+                        self.data_dict[key] = {}
 
-                # collect all the data from each source
-                for sub_key, sub_value in value.items(): # train, val, test
-                    if sub_key not in self.data_dict[key]:
-                        self.data_dict[key][sub_key] = []
-                    self.data_dict[key][sub_key].append(sub_value)
+                    # collect all the data from each source
+                    for sub_key, sub_value in value.items(): # train, val, test
+                        if sub_key not in self.data_dict[key]:
+                            self.data_dict[key][sub_key] = []
+                        self.data_dict[key][sub_key].append(sub_value)
 
-        self.data_dict = Box(
-            self.data_dict
-        )  # Convert to a Box object for easier access
+            self.data_dict = Box(
+                self.data_dict
+            )  # Convert to a Box object for easier access
+
+        # If data_splitter and scalers are provided, we need to collect the data from each source and split by source
+        elif self.data_splitter is not None and self.scalers is not None:
+            #  Collect all the data from each source into a single data_dict
+            for split_key, src_dict in self.split_sources.items():
+                for source_name, src in src_dict.items(): # train, val, test
+                    assert not src._is_split, "Source {source_name} is already split. This logic is currently not supported."
+                    assert not src._is_transformed, "Source {source_name} is already transformed. This logic is currently not supported."
+
+                    # collect all the data from each source
+                    for data_key, array in src.get_data_dict().items(): #  features, etc
+                        if data_key not in self.data_dict:
+                            self.data_dict[data_key] = {}
+
+                        if split_key not in self.data_dict[data_key]:
+                            self.data_dict[data_key][split_key] = []
+                        self.data_dict[data_key][split_key].append(array)
+
+            self.data_dict = Box(
+                self.data_dict
+            )  # Convert to a Box object for easier access
+
+        else:
+            raise ValueError(
+                "Either data_splitter and scalers must be provided or neither, but found only one of them."
+            )
 
 
     def _load_data(self):
@@ -119,9 +159,6 @@ class MultiSourcePipeline(TimeSeriesDatasetInterface):
             "Data has already been transformed. "
             "If you want to re-transform, please reset the data source."
         )
-        # assert if split_sources is not empty dict
-        assert self.split_sources, "Split sources must not be empty."
-
 
         if self.scalers is None:
             """Apply any preprocessing, such as scaling."""
@@ -132,6 +169,9 @@ class MultiSourcePipeline(TimeSeriesDatasetInterface):
                 )
                 src._apply_transformations()
         else:
+            # assert if split_sources is not empty dict
+            assert self.split_sources, "Split sources must not be empty."
+
             if self.load_arguments.get("scale", True):
 
                 # fit
@@ -140,11 +180,14 @@ class MultiSourcePipeline(TimeSeriesDatasetInterface):
 
                 # transform
                 for split_name in ["train", "val", "test"]:
-                    if split_name in self.data_dict["features"]:
+                    if split_name in self.split_sources:
                         for key, scaler in self.scalers.items():
-                            self.data_dict[key][split_name] = scaler.transform(
-                                self.data_dict[key][split_name]
-                            )
+                            scaler.transform_sources(self.split_sources[split_name], key)
+                    else:
+                        raise ValueError(
+                            f"Split {split_name} not found in split_sources."
+                        )
+
 
         self._is_transformed = True  # Mark data as transformed
 

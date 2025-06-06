@@ -31,7 +31,7 @@ def multi_source_data_source(path_cfg):
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_multiunit_dataset",
-            "+datasource=concepts_cmapss_multi_source",
+            "datasource=concepts_cmapss_multi_source",
             f"paths={path_cfg}",
         ],
         return_hydra_config=True,
