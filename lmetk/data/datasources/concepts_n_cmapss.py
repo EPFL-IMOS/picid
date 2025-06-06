@@ -73,7 +73,7 @@ class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin, MultiSourceTra
         return W
 
 
-class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin):
+class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
 
     def __init__(self, scaling="standard"):
         self.scaling = scaling

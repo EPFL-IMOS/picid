@@ -31,6 +31,7 @@ def hydra_context():
     # Clean up after tests
     GlobalHydra.instance().clear()
 
+
 @pytest.fixture(scope="session")
 def datasources_names():
     """Return list of configuration names to test."""
@@ -42,15 +43,17 @@ def test_splits():
     """Return list of test splits."""
     return ["train", "val", "test"]
 
+
 @pytest.fixture(scope="function")
-def config_loader():
+def config_loader(path_cfg):
     """Factory fixture to create hydra configs."""
     def _load_config(config_name: str):
         """Hydra-based config instantiation."""
         cfg = hydra.compose(
             config_name="test.yaml",
             overrides=[
-                f"datasource={config_name}",                
+                f"datasource={config_name}",   
+                f"paths={path_cfg}",               
             ],
             return_hydra_config=True,
         )
@@ -60,14 +63,15 @@ def config_loader():
 
 
 @pytest.fixture(scope="function")
-def datasource_loader():
+def datasource_loader(path_cfg):
     """Factory fixture to create dataset loaders."""
     def _load_dataset(config_name: str):
         """Hydra-based dataset instantiation."""
         cfg = hydra.compose(
             config_name="test.yaml",
             overrides=[
-                f"datasource={config_name}",                
+                f"datasource={config_name}",
+                f"paths={path_cfg}",  
             ],
             return_hydra_config=True,
         )

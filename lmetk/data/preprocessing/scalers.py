@@ -37,13 +37,10 @@ class MultiSourceTransformMixin():
         Transform the data from all sources using the fitted scalers.
         """
         transformed_sources = {}
-        for split, sources in sources_dict.items():
-            transformed_sources[split] = {}
-            for source_name, source in sources.items():
-                if hasattr(source, "get_data"):
-                    data = source.get_data()
-                    transformed_data = self.transform(data)
-                    transformed_sources[split][source_name] = transformed_data
-                else:
-                    raise ValueError(f"Source {source_name} does not implement get_data method.")
-        return transformed_sources
+        for source_name, source in sources_dict.items():
+            if hasattr(source, "get_data"):
+                data = source.get_data()
+                transformed_data = self.transform(data)
+                transformed_sources[source_name] = transformed_data
+            else:
+                raise ValueError(f"Source {source_name} does not implement get_data method.")

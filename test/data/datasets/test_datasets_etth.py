@@ -103,9 +103,23 @@ def test_SWDataset_first_sample(dataset_val):
     print("✅ SWDataset first sample check passed.")
 
 
-def test_efficient_SWDataset_first_sample(dataset_val):
-    base_dir = Path(__file__).resolve().parents[3]
-    data_path = os.path.abspath(f"{base_dir}/datasets/ETT-small/ETTh1.csv")
+def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
+    # base_dir = Path(__file__).resolve().parents[3]
+    # data_path = os.path.abspath(f"{base_dir}/datasets/ETT-small/ETTh1.csv")
+    # assert os.path.exists(data_path), f"File not found: {data_path}"
+
+
+    cfg = hydra.compose(
+        config_name="test.yaml",
+        overrides=[
+            "datasource=ETTh1_timepfn",
+            f"paths={path_cfg}",
+        ],
+        return_hydra_config=True,
+    )
+    paths_cfg = cfg.paths
+
+    data_path = Path(f"{paths_cfg.data_dir}/ETT-small/ETTh1.csv").expanduser()
     assert os.path.exists(data_path), f"File not found: {data_path}"
 
     loader_config = OmegaConf.create(

@@ -114,3 +114,5 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
                 }
             }
         )
+
+        self._is_split = True  # Mark data as split
