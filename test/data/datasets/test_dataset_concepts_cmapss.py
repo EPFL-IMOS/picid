@@ -32,7 +32,7 @@ def cmapss_datamodule(path_cfg):
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_dataset",
-            "+datasource=concepts_cmapss",
+            "datasource=concepts_cmapss",
             f"paths={path_cfg}",
         ],
         return_hydra_config=True,

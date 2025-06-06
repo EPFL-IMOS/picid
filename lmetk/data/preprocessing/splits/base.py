@@ -1,6 +1,30 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import Tuple
+from typing import Dict, Tuple
+
+from lmetk.data.datasources.base import TimeSeriesDatasetInterface
+
+
+class SourceSplitter(ABC):
+    @abstractmethod
+    def split_data(self, sources: Dict[str, TimeSeriesDatasetInterface]) -> Dict[str, Dict[str, TimeSeriesDatasetInterface]]:
+        """
+        Split the data by source.
+
+        Parameters
+        ----------
+        data : Dict[str, np.ndarray]
+            Dictionary containing data arrays for each source.
+
+        Returns
+        -------
+        Dict[str, np.ndarray]
+            Dictionary containing split data arrays for each source.
+        """
+        pass
+
+
+
 
 
 class TimeSeriesSplitter(ABC):

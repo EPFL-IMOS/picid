@@ -12,8 +12,19 @@ class TimeSeriesDatasetInterface(ABC):
         pass
 
     @abstractmethod
-    def get_data(self):
+    def get_data(self) -> Dict[str, np.ndarray]:
         """Return splitted data and timestamps."""
+        pass
+
+    @abstractmethod
+    def get_data_dict(self) -> Dict[str, Dict[str, np.ndarray]] | Dict [str, np.ndarray]:
+        """Return the data dictionary containing features and timestamps."""
+        pass
+
+    
+    @abstractmethod
+    def update_data_dict(self, data_dict: Dict [str, np.ndarray]):
+        """Set the data dictionary."""
         pass
 
     @abstractmethod
@@ -51,6 +62,11 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.load_arguments: DictConfig = load_arguments
         self.data_splitter = data_splitter
         self.scalers: Dict[str, TransformerMixin] = scalers
+
+        self._is_loaded = False  # Flag to check if data is loaded
+        self._is_split = False  # Flag to check if data is split    
+        self._is_transformed = False  # Flag to check if data is transformed
+
         self.data_dict: (
             Dict[str, Dict[str, np.ndarray]] | Box
         ) = {}  # centralized storage
@@ -66,6 +82,25 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self._generate_splits()
         self._apply_transformations()
 
+    def get_data_dict(self) -> Dict[str, Dict[str, np.ndarray]] | Dict [str, np.ndarray]:
+        """
+        Return the data dictionary containing features and timestamps.
+        """
+        assert self._is_loaded, "Data must be loaded before accessing the data dictionary."
+        return self.data_dict
+    
+    def update_data_dict(self, data_dict: Dict [str, np.ndarray]):
+        """
+        Set the data dictionary.
+        This is useful for updating the data after loading.
+        """
+        assert isinstance(data_dict, dict), "data_dict must be a dictionary."
+        # This feature is mostly used by MultiSourcePipeline to scale the data.
+        # So it does not work with by source splitting.
+        assert not self._is_split, "Cannot update data_dict after splitting."
+        self.data_dict.update(data_dict)
+        self._is_loaded = True
+
     @abstractmethod
     def _load_data(self) -> dict:
         """
@@ -75,10 +110,17 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         Optional keys like:
             - "mask", "labels", etc.
         """
-        pass
+        self._is_loaded = True  # Mark data as loaded
+
 
     def _generate_splits(self):
         # Split the data (e.g., train/val/test sequences)
+
+        assert self._is_loaded, "Data must be loaded before splitting."
+        assert not self._is_split, (
+            "Data has already been split. "
+            "If you want to re-split, please reset the data source."
+        )
 
         train_data, val_data, test_data = self.data_splitter.split_data(
             self.data_dict["features"]
@@ -112,7 +154,17 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
             }
         )
 
+        self._is_split = True  # Mark data as split
+
     def _apply_transformations(self):
+
+        assert self._is_split, "Data must be split before applying transformations."
+        assert self._is_loaded, "Data must be loaded before applying transformations."
+        assert not self._is_transformed, (
+            "Data has already been transformed. "
+            "If you want to re-transform, please reset the data source."
+        )
+
         # Optionally scale the data
         if self.load_arguments.get("scale", True):
             for key, scaler in self.scalers.items():
@@ -128,6 +180,8 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
         self.data_dict = Box(
             self.data_dict
         )  # Convert to a Box object for easier access
+
+        self._is_transformed = True  # Mark data as transformed
 
     def __repr__(self) -> str:
         return (
