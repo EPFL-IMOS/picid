@@ -26,7 +26,9 @@ class RailwayLoader(AbstractTimeSeriesDataSource):
         df = pd.concat(
             [df[[target_col_name]], df.drop(columns=[target_col_name])], axis=1
         )
-
+        # temp
+        self.df, self.df_stamp = df, df_stamp
+        
         if self.load_arguments.trend_decomp:
             """
             Decomposes the target variable by subtracting the mean of a rolling window.
