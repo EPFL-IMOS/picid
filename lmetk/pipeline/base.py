@@ -142,8 +142,8 @@ class LMETKModel(LightningModule):
         """
         self.state_str = "Training"
         # Solely for tabpfn for now:
-        self.backbone.fit(batch)
-        #model_out = self.model_step(batch)
+        # self.backbone.fit(batch)
+        model_out = self.model_step(batch)
 
         # Update and log metrics
         self.log(

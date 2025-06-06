@@ -73,6 +73,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
     dataset_source = hydra.utils.instantiate(cfg.datasource)
     dataset_source._pipeline()
+
+    # Splitting
+
+    # Preprocessing / remove trend 
+    
     
     # Get data
     features, time_features = dataset_source.get_data()

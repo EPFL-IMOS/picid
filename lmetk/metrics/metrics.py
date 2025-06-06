@@ -23,6 +23,7 @@ class MAEMetric(AbstractMetric):
         return np.mean(self.values)
 
 
+
 class MSEMetric(AbstractMetric):
     """Mean Squared Error metric."""
     
