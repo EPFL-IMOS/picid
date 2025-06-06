@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 from lmetk.data.datasets.sw_batch_dataset import SWBatchDataset
-
+from lightning_fabric.utilities.data import AttributeDict
 
 class ContextBatchDataset(torch.utils.data.Dataset):
     def __init__(
@@ -14,21 +14,23 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
+        **kwargs
     ):
-        target_feature = features[..., mask]
-        context_features = features[..., ~mask]
+        self.target_feature = features[..., mask]
+        self.context_features = features[..., ~mask]
+        self.time_features = time_features
 
         self.target_dataset = SWBatchDataset(
-            features=target_feature,
-            time_features=time_features,
+            features=self.target_feature,
+            time_features=self.time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
         )
         self.context_dataset = SWBatchDataset(
-            features=context_features,
-            time_features=time_features,
+            features=self.context_features,
+            time_features=self.time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
@@ -42,26 +44,26 @@ class ContextBatchDataset(torch.utils.data.Dataset):
         return len(self.target_dataset)
 
     def __getitem__(self, batch_idx: List[int]):
-        d = {
+        d = AttributeDict({
             "batch_idx": batch_idx,
-        }
-        seq_x, seq_y, seq_x_time, seq_y_time = self.target_dataset.__getitem__(
+        })
+        seq_x, seq_y, seq_x_mark, seq_y_mark = self.target_dataset.__getitem__(
             batch_idx
         )
-        d["target"] = {
+        d["target"] = AttributeDict({
             "x": seq_x,
             "y": seq_y,
-            "x_time": seq_x_time,
-            "y_time": seq_y_time,
-        }
+            "x_mark": seq_x_mark,
+            "y_mark": seq_y_mark,
+        })
 
-        seq_x, seq_y, seq_x_time, seq_y_time = self.target_dataset.__getitem__(
+        seq_x, seq_y, seq_x_mark, seq_y_mark = self.context_dataset.__getitem__(
             batch_idx
         )
-        d["context"] = {
+        d["context"] = AttributeDict({
             "x": seq_x,
             "y": seq_y,
-            "x_time": seq_x_time,
-            "y_time": seq_y_time,
-        }
-        return d
+            "x_mark": seq_x_mark,
+            "y_mark": seq_y_mark,
+        })
+        return AttributeDict(d)

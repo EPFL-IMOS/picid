@@ -1,13 +1,10 @@
-from pathlib import Path
 from omegaconf import OmegaConf
 import pytest
 import hydra
 import lmetk
 
 from box import Box
-import torch
 
-from lmetk.data.datamodules.datamodule import BaseDataModule
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin

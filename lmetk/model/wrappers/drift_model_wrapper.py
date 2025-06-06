@@ -1,10 +1,7 @@
 """Wrapper for the LinearRegression model."""
-import torch
-import numpy as np
 from .base import AbstractWrapper
 
 from lmetk.model.methods.drift_model import DriftModelBaseline
-from lightning_fabric.utilities.data import AttributeDict
 
 
 class DriftModelWrapper(AbstractWrapper):

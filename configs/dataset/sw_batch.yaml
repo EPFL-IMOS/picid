@@ -1,7 +1,7 @@
 _target_: lmetk.data.datasets.SWBatchDataset
 
-seq_len: ${datasource.loader.data_splitter.seq_len} 
-label_len: ${datasource.loader.data_splitter.label_len} 
-pred_len: ${datasource.loader.data_splitter.pred_len} 
+seq_len: ${datasource.data_splitter.seq_len} 
+label_len: ${datasource.data_splitter.label_len} 
+pred_len: ${datasource.data_splitter.pred_len} 
 
 stride: 1 #24

@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 
 import torch
-import torch.nn as nn
 from lightning_fabric.utilities.data import AttributeDict
 
 class AbstractWrapper(ABC, torch.nn.Module):

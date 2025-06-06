@@ -1,6 +1,5 @@
 """Wrapper for the TimePFN model."""
 import torch
-import numpy as np
 from .base import AbstractWrapper
 
 from lmetk.model.time_pfn.TimePFN import TimePFN

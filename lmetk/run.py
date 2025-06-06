@@ -1,26 +1,21 @@
 """Main entry point for training and testing models."""
 
-import os
 import random
 import torch
 # shutil
 from typing import Any
-import lmetk
 import hydra
 import lightning as L
 import numpy as np
-import torch
-from lightning import Callback, LightningModule, Trainer
+from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig, OmegaConf
-from lmetk.evaluator.utils import metric
+from omegaconf import DictConfig
 from lmetk.utils_refactor import (
     RankedLogger,
     extras,
     get_metric_value,
     instantiate_callbacks,
     instantiate_loggers,
-    log_hyperparameters,
     task_wrapper,
 )
 
@@ -75,31 +70,39 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     random.seed(cfg.seed)
 
     # Instantiate and load dataset
-    log.info(f"Instantiating loader <{cfg.datasource.loader._target_}>")
-    dataset_source = hydra.utils.instantiate(cfg.datasource.loader)
+    log.info(f"Instantiating loader <{cfg.datasource._target_}>")
+    dataset_source = hydra.utils.instantiate(cfg.datasource)
     dataset_source._pipeline()
     
     # Get data
     features, time_features = dataset_source.get_data()
     scaler = dataset_source.get_scaler()['features']
+    
+    # Extract additional inputs to dataset if needed.
+    add_args = {}
+    if cfg.datasource.load_arguments.data_name == 'railway':
+        add_args['mask'] = dataset_source.data_dict['mask']
 
     # Prepare datasets
     dataset_train = hydra.utils.instantiate(
         cfg.dataset,
         features=features["train"], 
-        time_features=time_features["train"]
+        time_features=time_features["train"],
+        **add_args
         )
 
     dataset_val = hydra.utils.instantiate(
         cfg.dataset,
         features=features["val"], 
-        time_features=time_features["val"]
+        time_features=time_features["val"],
+        **add_args
         )
     
     dataset_test = hydra.utils.instantiate(
             cfg.dataset,
             features=features["test"], 
-            time_features=time_features["test"]
+            time_features=time_features["test"],
+            **add_args
             )
     print(f"Train dataset size: {dataset_train.__len__()}")
     print(f"Validation dataset size: {dataset_val.__len__()}")
@@ -131,7 +134,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # TimePFN
     #from lmetk.model.time_pfn.TimePFN import TimePFN
-    from lmetk.model.wrappers.timepfn_wrapper import TimePFNWrapper
     from lmetk.pipeline.base import LMETKModel
 
     # train_loader = datamodule.train_dataloader()
@@ -143,8 +145,12 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     # backbone = TimePFN(cfg.model)
     # backbone.load_state_dict(torch.load(cfg.model.load_path))
+    add_backbone_args = {}
+    if cfg.datasource.load_arguments.data_name == 'railway':
+        add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
+        add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
 
-    backbone_wrapper = hydra.utils.instantiate(cfg.model) # TimePFNWrapper(backbone, **cfg.model)
+    backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args) # TimePFNWrapper(backbone, **cfg.model)
     
     if cfg.model.get('load_path', False):
         backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
@@ -169,10 +175,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # if cfg.get("train"):
     #     log.info("Starting training!")
     #     trainer.fit(
-    #         model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path")
+    #         model=model, datamodule=datamodule,
     #     )
     
-    trainer.test(model=model, dataloaders=datamodule.test_dataloader())
+    trainer.test(model=model, datamodule=datamodule,)
     
 
     # object_dict = {

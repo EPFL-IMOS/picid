@@ -1,10 +1,7 @@
 """Wrapper for the LinearRegression model."""
-import torch
-import numpy as np
 from .base import AbstractWrapper
 
 from lmetk.model.methods.ses_model import SESModelBaseline
-from lightning_fabric.utilities.data import AttributeDict
 
 
 class SESModelWrapper(AbstractWrapper):

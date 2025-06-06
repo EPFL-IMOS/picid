@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict
 from box import Box
-import hydra
 import numpy as np
 from omegaconf import DictConfig
 from sklearn.base import TransformerMixin

@@ -1,0 +1,10 @@
+_target_: lmetk.model.wrappers.tabpfn_wrapper.TabPFNWrapper
+ignore_pretraining_limits: True
+device: 'cuda:0'
+
+features_mode: no_feature_mode
+seq_len: ${datasource.data_splitter.seq_len}      # window size
+label_len: ${datasource.data_splitter.label_len}  # overlap size
+
+# Model parameters
+pred_len: ${datasource.data_splitter.pred_len}    # prediction size
