@@ -17,5 +17,5 @@ src2:
     n_DS: "FD002"
 
 source_list:
-  - ${datasource.src1}
-  - ${datasource.src2}
+  src1: ${..src1}
+  src2: ${..src2}

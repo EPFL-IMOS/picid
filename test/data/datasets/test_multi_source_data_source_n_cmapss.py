@@ -34,13 +34,13 @@ def multi_source_data_source(path_cfg):
         overrides=[
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_multiunit_dataset",
-            "+datasource=concepts_cmapss_multi_source",
+            "+datasource=concepts_n_cmapss_multi_source",
             f"paths={path_cfg}",
         ],
         return_hydra_config=True,
     )
 
-    print(f"Config file: {cfg.dataset}")
+    # print(f"Config file: {cfg.dataset}")
 
     print(OmegaConf.to_yaml(cfg.datasource, resolve=True))
 
@@ -72,7 +72,7 @@ def test_create_multi_source_data_source(multi_source_data_source):
     
     # check if sources are different units
     units = set()
-    for source in multi_source_data_source.sources:
+    for key, source in multi_source_data_source.sources.items():
         units.add(source.load_arguments.n_DS)
     
     assert len(units) == len(multi_source_data_source.sources), "All sources are from different units."

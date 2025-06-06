@@ -1,16 +1,19 @@
 
 import os
+from typing import Dict
 import numpy as np
 import pandas as pd
-from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
+from lmetk.data.datasources.base import AbstractTimeSeriesDataSource, TimeSeriesDatasetInterface
 
 from lmetk.data.datasources.concepts_n_cmapss import flatten_RUL
 from sklearn.base import BaseEstimator, TransformerMixin
 
+from lmetk.data.preprocessing.scalers import MultiSourceTransformMixin
 
 
-class ConstantScaler(BaseEstimator, TransformerMixin):
+class ConstantScaler(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
     def __init__(self, factor=1.0):
+        super().__init__()
         self.factor = factor
 
     def fit(self, X, y=None):
@@ -20,10 +23,10 @@ class ConstantScaler(BaseEstimator, TransformerMixin):
         return X * self.factor
 
 
-class CMAPSSScaler(BaseEstimator, TransformerMixin):
+class CMAPSSScaler(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
 
     def __init__(self):
-        pass
+        super().__init__()
 
 
     def fit(self, data):
@@ -173,6 +176,8 @@ class CMAPSSDataSource(AbstractTimeSeriesDataSource):
             rul=self.df_Y.values,
             concepts=self.concepts.values
         )
+
+        super()._load_data()
         
         
     def _generate_splits(self):

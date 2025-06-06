@@ -25,7 +25,7 @@ def dataset_val(path_cfg: str):
     GlobalHydra.instance().clear()
     base_dir = Path(__file__).resolve().parents[3]
     paths_cfg = OmegaConf.load(f"{base_dir}/configs/paths/{path_cfg}.yaml")
-
+    print(paths_cfg.log_dir)
 
     data_path = Path(f"{paths_cfg.data_dir}/ETT-small/ETTh1.csv").expanduser()
     assert os.path.exists(data_path), f"File not found: {data_path}"

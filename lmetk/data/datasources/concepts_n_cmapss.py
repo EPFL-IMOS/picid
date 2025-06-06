@@ -9,6 +9,8 @@ from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
 from sklearn.base import BaseEstimator, TransformerMixin
 from itertools import combinations
 
+from lmetk.data.preprocessing.scalers import MultiSourceTransformMixin
+
 
 def subsampling(df, subsampling_rate):
     """
@@ -36,9 +38,11 @@ def flatten_RUL(df):
     return df
 
 
-class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin):
+class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
 
     def __init__(self, scaling="standard"):
+
+        super().__init__()
         self.scaling = scaling
 
 
@@ -373,6 +377,8 @@ class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
             concepts=self.concepts.values,
             rul=self.df_Y.values, # RUL
         )
+
+        super()._load_data()
 
     def _generate_splits(self):
         super()._generate_splits()

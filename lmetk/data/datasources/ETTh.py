@@ -43,6 +43,7 @@ class ETThLoader(AbstractTimeSeriesDataSource):
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
 
+        super()._load_data()
         return {"features": df.values, "timestamps": df_stamp.values, "mask": mask}
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
