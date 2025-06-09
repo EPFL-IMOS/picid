@@ -11,6 +11,7 @@ load_arguments:
   
   features_mode: S
   target_name: OT
+  
   scale: True
   timeenc: railway_timefeatures # Optiona: railway_timefeatures, timepfn_timefeatures
   freq: h 
@@ -30,8 +31,24 @@ data_splitter:
   label_len: 48 #96  # overlap size
   pred_len: 96   # prediction size
 
+# data = {features: {train, val, test}}
+# 1. train Tr_num , val: N - Tr_num + label_len, 
+# 2. train Tr_num , val: N - Tr_num, 
 
-scaler:
-  features:
-    _target_: sklearn.preprocessing.StandardScaler
+# data {features, train_splits} -> train Tr_num , val: N - Tr_num, 
+
+# train Tr_num , val: N - Tr_num,
+
+
+# transforms:
+#   scaler:
+#     features:
+#       _target_: sklearn.preprocessing.StandardScaler
   
+#   transform2: 
+#     _target_: sklearn.preprocessing.StandardScaler
+#       towhom: [featurs, target]
+#       arg1:
+scaler:
+    features:
+      _target_: sklearn.preprocessing.StandardScaler

@@ -177,6 +177,7 @@ class AbstractTimeSeriesDataSource(TimeSeriesDatasetInterface):
                             self.data_dict[key][split_name]
                         )
 
+
         self.data_dict = Box(
             self.data_dict
         )  # Convert to a Box object for easier access

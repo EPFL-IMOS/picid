@@ -61,3 +61,4 @@ class ETThLoader(AbstractTimeSeriesDataSource):
         df_stamp = df[self.load_arguments.timestamp_name].copy()
         df.drop(columns=[self.load_arguments.timestamp_name], inplace=True)
         return df, df_stamp
+    
