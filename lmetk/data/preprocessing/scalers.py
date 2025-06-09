@@ -1,7 +1,7 @@
 from typing import Dict
 
 import numpy as np
-from lmetk.data.datasources.base import TimeSeriesDatasetInterface
+from lmetk.data.datasources.base import DataSourceLoader
 
 
 class MultiSourceTransformMixin():
@@ -18,7 +18,7 @@ class MultiSourceTransformMixin():
             raise TypeError("MultiSourceTransformMixin requires the class to implement fit and transform methods.")
 
 
-    def fit_sources(self, sources_dict: Dict[str, TimeSeriesDatasetInterface], feature_key: str) -> None:
+    def fit_sources(self, sources_dict: Dict[str, DataSourceLoader], feature_key: str) -> None:
         """
         Get all train sources and fit the scalers to them.
         """
@@ -32,7 +32,7 @@ class MultiSourceTransformMixin():
         train = np.concatenate(train_splits, axis=0)
         self.fit(train)
 
-    def transform_sources(self, sources_dict: Dict[str, TimeSeriesDatasetInterface], feature_key: str) -> None:
+    def transform_sources(self, sources_dict: Dict[str, DataSourceLoader], feature_key: str) -> None:
         """
         Transform the data from all sources using the fitted scalers.
         """

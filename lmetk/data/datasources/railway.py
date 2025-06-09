@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
 from omegaconf import DictConfig
-from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
+from lmetk.data.datasources.base import DataSourceLoader
 from lmetk.data.utils import time_features
 import warnings
 
 warnings.filterwarnings("ignore")
 
 
-class RailwayLoader(AbstractTimeSeriesDataSource):
+class RailwayLoader(DataSourceLoader):
     def __init__(
         self,
         load_arguments: DictConfig,

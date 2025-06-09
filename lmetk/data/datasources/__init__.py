@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 # Import base class from separate module (like your working example)
-from .base import AbstractTimeSeriesDataSource
+from .base import DataSourceLoader
 
 
 class ModuleExportsManager:
@@ -25,13 +25,13 @@ class ModuleExportsManager:
         -------
         bool
             True if the object is a valid DataSource class (non-private class
-            inheriting from AbstractTimeSeriesDataSource), False otherwise.
+            inheriting from DataSourceLoader), False otherwise.
         """
         return (
             inspect.isclass(obj)
             and not obj.__name__.startswith("_")
-            and issubclass(obj, AbstractTimeSeriesDataSource)
-            and obj != AbstractTimeSeriesDataSource
+            and issubclass(obj, DataSourceLoader)
+            and obj != DataSourceLoader
         )
     
     @classmethod
@@ -73,8 +73,8 @@ class ModuleExportsManager:
                         inspect.isclass(obj)
                         and obj.__module__ == module.__name__
                         and not name.startswith("_")
-                        and issubclass(obj, AbstractTimeSeriesDataSource)
-                        and obj != AbstractTimeSeriesDataSource
+                        and issubclass(obj, DataSourceLoader)
+                        and obj != DataSourceLoader
                     )
                 }
                 datasources.update(new_datasources)
@@ -91,7 +91,7 @@ ALL_CLASSES = manager.discover_datasources(__file__)
 # Automatically generate __all__
 __all__ = [
     *ALL_CLASSES.keys(),
-    "AbstractTimeSeriesDataSource", 
+    "DataSourceLoader", 
     "ALL_CLASSES",
 ]
 

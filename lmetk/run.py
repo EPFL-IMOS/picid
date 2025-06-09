@@ -71,8 +71,20 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
-    dataset_source = hydra.utils.instantiate(cfg.datasource)
-    dataset_source._pipeline()
+    dataset_source = hydra.utils.instantiate(cfg.datasource, _recursive_=False)
+    data_lst = dataset_source.get_data()
+
+    if isinstance(data_lst, list)==False:
+        # Check that it is the datasource class
+
+        # Wrap into list to follow the pipeline
+        data_lst = [data_lst]
+
+    
+    # Finished here for now 
+    data_lst
+    
+    #dataset_source._pipeline()
 
     # Splitting
 

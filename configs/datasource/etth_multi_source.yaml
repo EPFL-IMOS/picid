@@ -1,0 +1,21 @@
+defaults:
+  - /datasource@src1: ETTh1
+  - /datasource@src2: ETTh1
+
+
+_target_: lmetk.data.datasources.multi_source_pipeline.MultiSource
+source_list:
+  src1: ${..src1}
+  src2: ${..src2}
+
+#load_arguments: null
+#data_splitter: null
+#scalers: null
+
+# src1:
+#   load_arguments:
+#     n_DS: "FD001"
+# src2:
+#   load_arguments:
+#     n_DS: "FD002"
+

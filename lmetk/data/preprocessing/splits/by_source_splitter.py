@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple
 
-from lmetk.data.datasources.base import TimeSeriesDatasetInterface
+from lmetk.data.datasources.base import DataSourceLoader
 from .base import TimeSeriesSplitter
 
 
@@ -28,15 +28,15 @@ class BySourceSplitter:
         if len(all_sources) != (len(self.sources_train) + len(self.sources_val) + len(self.sources_test)):
             raise ValueError("Sources must be disjoint sets. Some sources appear in multiple splits.")
 
-    def split_data(self, sources: Dict[str, TimeSeriesDatasetInterface]) -> Dict[str, Dict[str, TimeSeriesDatasetInterface]]:
+    def split_data(self, sources: Dict[str, DataSourceLoader]) -> Dict[str, Dict[str, DataSourceLoader]]:
 
         """
         Split the data by source.
 
         Parameters
         ----------
-        sources : Dict[str, TimeSeriesDatasetInterface]
-            Dictionary containing TimeSeriesDatasetInterface instances for each source.
+        sources : Dict[str, DataSourceLoader]
+            Dictionary containing DataSourceLoader instances for each source.
 
         Returns
         -------
@@ -44,6 +44,13 @@ class BySourceSplitter:
             Dictionary containing split data arrays for each source.
         """
         split_data = {
+            "train": {},
+            "val": {},
+            "test": {}
+        }
+        
+        # TODO: how to get masks here? 
+        split_data_mask = {
             "train": {},
             "val": {},
             "test": {}
@@ -56,6 +63,7 @@ class BySourceSplitter:
             for s in sources_list:
                 if s in sources:
                     split_data[split][s] = sources[s]
+                    
                 else:
                     raise ValueError(f"Source {s} not found in provided sources.")
             

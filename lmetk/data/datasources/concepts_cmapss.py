@@ -3,7 +3,7 @@ import os
 from typing import Dict
 import numpy as np
 import pandas as pd
-from lmetk.data.datasources.base import AbstractTimeSeriesDataSource, TimeSeriesDatasetInterface
+from lmetk.data.datasources.base import DataSourceLoader
 
 from lmetk.data.datasources.concepts_n_cmapss import flatten_RUL
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -81,7 +81,7 @@ class CMAPSSScaler(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
         return X
 
 
-class CMAPSSDataSource(AbstractTimeSeriesDataSource):
+class CMAPSSDataSource(DataSourceLoader):
 
     def __init__(self, 
                 load_arguments,

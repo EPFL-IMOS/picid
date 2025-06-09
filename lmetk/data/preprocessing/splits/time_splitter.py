@@ -7,7 +7,7 @@ class ValueWarning(Warning):
     pass
 
 
-class SimpleSplitter(TimeSeriesSplitter):
+class TimeSplitter(TimeSeriesSplitter):
     def __init__(
         self,
         train: Optional[Union[int, float]] = None,
@@ -16,6 +16,7 @@ class SimpleSplitter(TimeSeriesSplitter):
         seq_len: int = 384,
         label_len: int = 96,
         pred_len: int = 96,
+        **kwargs,
     ):
         self.train = train
         self.val = val
@@ -115,19 +116,47 @@ class SimpleSplitter(TimeSeriesSplitter):
             f"and pred_len={self.pred_len}. Need at least {min_required}."
         )
 
-        return {
+        # Create corresponding effective masks
+        # Train mask is all ones as no lookback is applied
+        train_mask = np.ones(train_end - train_start, dtype=bool)
+        
+        # Val is lookback zeros then val_len of ones
+        val_mask = np.concatenate([
+            np.zeros(lookback, dtype=bool),
+            np.ones(val_len, dtype=bool)
+        ])
+        
+        # Test is lookback zeros then test_len of ones
+        test_mask = np.concatenate([
+            np.zeros(lookback, dtype=bool),
+            np.ones(test_len, dtype=bool)
+        ])
+
+        masks = {
+            "train": train_mask,
+            "val": val_mask,
+            "test": test_mask,
+        }
+
+        splits = {
             "train": (train_start, train_end),
             "val": (val_start, val_end),
             "test": (test_start, test_end),
         }
+        return splits, masks
 
     def split_data(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        
         if self.splits_dict is None:
-            self.splits_dict = self.get_splits(data)
+            self.splits_dict, self.split_masks = self.get_splits(data)
+
         train_data = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
         val_data = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]
         test_data = data[self.splits_dict["test"][0] : self.splits_dict["test"][1]]
-        return train_data, val_data, test_data
+        
+        splitted_data = {"train": train_data, "val": val_data, "test": test_data}
+
+        return splitted_data, self.split_masks #train_data, val_data, test_data
 
     def __repr__(self):
         return f"SimpleSplitter(train={self.train}, val={self.val}, test={self.test})"

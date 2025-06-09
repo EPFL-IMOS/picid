@@ -1,9 +1,9 @@
-from .time_splitter import SimpleSplitter
-from .database_splitter import DateBasedSplitter
+from .time_splitter import TimeSplitter
+from .database_splitter import TimeStampSplitter
 from .by_source_splitter import BySourceSplitter
 
 __all__ = [
-    "SimpleSplitter",
-    "DateBasedSplitter",
+    "TimeSplitter",
+    "TimeStampSplitter",
     "BySourceSplitter",
 ]

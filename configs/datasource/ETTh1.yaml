@@ -1,35 +1,54 @@
 # Dataset loader config
 _target_: lmetk.data.datasources.ETThLoader
 
-load_arguments:
-  data_name: ETTh1
-  data_folder: ETT-small
-  data_path: ${paths.data_dir}/${datasource.load_arguments.data_folder}/${datasource.load_arguments.data_name}.csv
-  
-  flag: train
-  size: null 
-  
-  features_mode: S
-  target_name: OT
-  
-  scale: True
-  timeenc: railway_timefeatures # Optiona: railway_timefeatures, timepfn_timefeatures
-  freq: h 
+data_name: ETTh1
+data_folder: ETT-small
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
-  timestamp_name: date
-  time_features: ["month", "day", "weekday", "hour"]
-  normalize_time_features: False
+task_mode: univariate
+target_name: OT
+timestamp_name: date
+# scale: True
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.SimpleSplitter
+  _target_: lmetk.data.preprocessing.TimeSplitter
+  splitter_type: TimeSplitter
   train: 8640 # int or float. In case of float it is a percentage of the dataset
   val: 2880 # int or float. In case of float it is a percentage of the dataset
   test: null # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
-
+  
   # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: 96 #384 #384    # window size
-  label_len: 48 #96  # overlap size
-  pred_len: 96   # prediction size
+  seq_len: ${oc.select:model.seq_len,null}     # 96   # 384  # window size
+  label_len: ${oc.select:model.label_len,null} # 48 # 96  # overlap size
+  pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
+
+loader_default_transforms:
+  scaler:
+      features:
+        _target_: sklearn.preprocessing.StandardScaler
+  
+  time_features_transform:
+      _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+      freq: h 
+
+
+
+
+
+     
+      
+  # - time_features_transform:
+  #     _target_: lmetk.transforms.
+  #     towhom: ['timestamps']
+
+  #     timeenc: railway_timefeatures # Optiona: railway_timefeatures, timepfn_timefeatures
+  #     freq: h 
+
+  #   
+  #   time_features: ["month", "day", "weekday", "hour"]
+  #   normalize_time_features: False
+
+
 
 # data = {features: {train, val, test}}
 # 1. train Tr_num , val: N - Tr_num + label_len, 
@@ -49,6 +68,3 @@ data_splitter:
 #     _target_: sklearn.preprocessing.StandardScaler
 #       towhom: [featurs, target]
 #       arg1:
-scaler:
-    features:
-      _target_: sklearn.preprocessing.StandardScaler

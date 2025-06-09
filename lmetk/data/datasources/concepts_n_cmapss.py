@@ -4,7 +4,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-from lmetk.data.datasources.base import AbstractTimeSeriesDataSource
+from lmetk.data.datasources.base import DataSourceLoader
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from itertools import combinations
@@ -171,7 +171,7 @@ class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin, MultiSourceTransf
         return X
 
 
-class N_CMAPSSDataSource(AbstractTimeSeriesDataSource):
+class N_CMAPSSDataSource(DataSourceLoader):
 
     def __init__(self, 
                 load_arguments,

@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from .base import TimeSeriesSplitter
 
 
-class DateBasedSplitter(TimeSeriesSplitter):
+class TimeStampSplitter(TimeSeriesSplitter):
     def __init__(
         self,
         test_start: str,
@@ -16,6 +16,7 @@ class DateBasedSplitter(TimeSeriesSplitter):
         pred_len: int = 96,
         frequency: str = "D",
         apply_lookback: bool = False,
+        **kwargs,
     ):
         """
         Parameters:
@@ -88,22 +89,49 @@ class DateBasedSplitter(TimeSeriesSplitter):
         assert (i_val_end - i_val_start) >= min_required, "Validation split too short."
         assert (i_test_end - i_test_start) >= min_required, "Test split too short."
 
-        self.splits_dict = {
+        # Create corresponding effective masks
+        # Train mask is all ones as no lookback is applied
+        train_mask = np.ones(i_train_end - 0, dtype=bool)
+        
+        # Val is lookback zeros then val_len of ones
+        val_mask = np.concatenate([
+            np.zeros(lookback, dtype=bool),
+            np.ones(i_val_end - i_val_start + lookback, dtype=bool)
+        ])
+        
+        # Test is lookback zeros then test_len of ones
+        test_mask = np.concatenate([
+            np.zeros(lookback, dtype=bool),
+            np.ones(i_test_end - i_test_start + lookback, dtype=bool)
+        ])
+
+        masks = {
+            "train_mask": train_mask,
+            "val_mask": val_mask,
+            "test_mask": test_mask,
+        }
+
+
+        splits_dict = {
             "train": (0, i_train_end),
             "val": (i_val_start, i_val_end),
             "test": (i_test_start, i_test_end),
         }
-        return self.splits_dict
+        return splits_dict, masks
 
     def split_data(
         self, data: np.ndarray, dates: pd.Series
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self.splits_dict is None:
-            self.get_splits(data, dates)
+            self.splits_dict, self.masks = self.get_splits(data, dates)
+        
         train = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
         val = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]
         test = data[self.splits_dict["test"][0] : self.splits_dict["test"][1]]
-        return train, val, test
+        
+        splitted_data = {"train": train, "val": val, "test": test}
+
+        return splitted_data, self.masks
 
     def __repr__(self):
         return (
