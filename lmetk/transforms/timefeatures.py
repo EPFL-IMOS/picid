@@ -22,12 +22,12 @@ class TimePFNTimeFeaturesTransform():
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}({args})"
 
-    def __call__(self, data: dict):
+    def __call__(self, data):
         r"""Apply the transform to the input data.
 
         Parameters
         ----------
-        data : torch_geometric.data.Data
+        data : 
             The input data.
 
         Returns
@@ -35,13 +35,11 @@ class TimePFNTimeFeaturesTransform():
         dict
             The same data.
         """
-        df_stamp = data['timestamps']
 
-        initial_dates = pd.DataFrame(pd.to_datetime(df_stamp))
+        initial_dates = pd.DataFrame(pd.to_datetime(data))
         df_stamp = time_features(pd.to_datetime(initial_dates['date'].values), freq=self.freq)
         df_stamp = pd.DataFrame(df_stamp.transpose(1, 0))
-
-        data['timestamps'] = df_stamp
-        data['initial_dates'] = initial_dates
-
-        return data
+        return df_stamp.values
+    
+    def transform(self, data):
+        return self(data)

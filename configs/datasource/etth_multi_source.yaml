@@ -4,17 +4,23 @@ defaults:
 
 
 _target_: lmetk.data.datasources.multi_source_pipeline.MultiSource
-
+_recursive_: False
 source_list:
   src1: ${..src1}
   src2: ${..src2}
 
-multisource_transforms:
-  scaler:
-    features:
-      _target_: sklearn.preprocessing.StandardScaler
+# multisource_transforms:
+#   scaler:
+#     features:
+#       _target_: sklearn.preprocessing.StandardScaler
     
-    source_list: [src1, src2]
+#     metadata:
+#       apply_to: features
+#       fit_on: train
+#       source_list: [src1, src2]
+
+
+
 #load_arguments: null
 #data_splitter: null
 #scalers: null

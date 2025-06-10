@@ -24,22 +24,38 @@ data_splitter:
 
 data_default_transforms:
   scaler:
-    features:
+    transform:
       _target_: sklearn.preprocessing.StandardScaler
+    
+    metadata:
+      apply_to: features
+      fit_on: train 
   
   time_features_transform:
-    _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
-    freq: h 
+    transform:
+      _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+      freq: h 
+    
+    metadata:
+      apply_to:  timestamps
 
 
 transforms:
   scaler2:
-    features:
+    transform:
       _target_: sklearn.preprocessing.StandardScaler
+    
+    metadata:
+      apply_to: features
+      fit_on: train 
 
-  time_features_transform2:
-    _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
-    freq: h 
+  # time_features_transform2:
+  #   transform:
+  #     _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+  #     freq: h 
+    
+  #   metadata:
+  #     apply_to:  timestamps
 
 
      

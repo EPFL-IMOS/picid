@@ -72,7 +72,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
-    dataset_source = hydra.utils.instantiate(cfg.datasource, _recursive_=False)
+    dataset_source = hydra.utils.instantiate(cfg.datasource)
 
     preprocessor = PreProcessor(dataset_source)
     preprocessor.pipeline()
