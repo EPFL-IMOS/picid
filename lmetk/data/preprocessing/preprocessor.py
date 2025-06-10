@@ -1,18 +1,25 @@
-"""Preprocessor for data."""
-
-import json
 import os
 import time
-import hydra
-import torch
-
-import torch
-
-from typing import Any, Union,  Dict, List, Tuple, Optional
-from omegaconf import DictConfig
+from typing import Any, Union, Dict, List, Optional
 from collections import OrderedDict
 
+# To allow instantiation of Hydra-configured objects
+try:
+    import hydra
+    from omegaconf import DictConfig, OmegaConf
+except ImportError:
+    # Dummy classes for DictConfig and disabling Hydra features if not installed
+    class DictConfig:
+        pass
+    class DummyHydra:
+        def __getattr__(self, name):
+            raise NotImplementedError(f"Hydra is not installed. Cannot call hydra.{name}.")
+    hydra = DummyHydra()
+
+
 from lmetk.transforms.data_transform import DataTransform
+import numpy as np
+
 
 class PreProcessor:
     """Preprocessor of data."""
@@ -20,7 +27,6 @@ class PreProcessor:
     def __init__(self, datasource, **kwargs):
         self.datasource = datasource
         
-        # self.transforms = self.instantiate_pre_transform(transforms_config)
         self.data_lst: Optional[List[Any]] = None
         self.data_name_lst: Optional[List[Any]] = None
         self.source_transforms_lst: Optional[List[Any]] = None
@@ -31,60 +37,108 @@ class PreProcessor:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
         data_name_lst = self.datasource.get_data_name()
-        source_transforms_lst  = self.datasource.get_transforms()
+        source_transforms_raw = self.datasource.get_transforms() 
 
-        # Ensure all outputs are lists
+        # Ensure all outputs are lists for consistent processing
         if not isinstance(data_lst, list):
             data_lst = [data_lst]
         
         if not isinstance(data_name_lst, list):
             data_name_lst = [data_name_lst]
         
-        
-        if not isinstance(source_transforms_lst, list):
-            source_transforms_lst = [source_transforms_lst]
+        # Ensure source_transforms_raw is a list, as MultiSource.get_transforms() returns a list
+        # and DataSourceLoader.get_transforms() returns a single OrderedDict.
+        if not isinstance(source_transforms_raw, list):
+            source_transforms_raw = [source_transforms_raw]
 
         self.data_lst = data_lst
         self.data_name_lst = data_name_lst
-        self.source_transforms_lst = source_transforms_lst
+        self.source_transforms_lst = source_transforms_raw
+
 
     def prepare_multisource_transforms(self) -> None:
         """Prepare and store multisource transforms from the datasource."""
-        multisource_transforms = None
+        multisource_transforms_config = None
         if hasattr(self.datasource, 'get_multisource_transforms'):
-            multisource_transforms = self.datasource.get_multisource_transforms()
-        self.multisource_transforms = self._prepare_transforms(multisource_transforms)
+            
+            config_from_method = self.datasource.get_multisource_transforms()
+            if isinstance(config_from_method, (OrderedDict, DictConfig)):
+                multisource_transforms_config = config_from_method
+            # Removed the warning for unexpected types, as it's a demonstration print.
+            # elif config_from_method is not None:
+            #     print(f"Warning: get_multisource_transforms() returned unexpected type: {type(config_from_method)}. Expected OrderedDict or DictConfig. Skipping multi-source transforms.")
+        # Removed the print for no method found.
+        # else:
+        #     print("Datasource has no 'get_multisource_transforms' method. No multi-source transforms will be applied.")
+
+        self.multisource_transforms = self._prepare_transforms(multisource_transforms_config)
+
 
     def prepare_source_transforms(self) -> None:
-        """Prepare and update source transforms list."""
+        """
+        Prepare and update source transforms list by instantiating them.
+        This method assumes `self.source_transforms_lst` has already been populated
+        with the raw transform configurations (OrderedDicts or DictConfigs) by `prepare_data()`.
+        """
         if self.source_transforms_lst is None:
             raise ValueError("Source transforms not initialized. Call prepare_data() first.")
-        self.source_transforms_lst = [
-            self._prepare_transforms(transforms) for transforms in self.source_transforms_lst
-        ]
+        
+        if len(self.data_lst) != len(self.source_transforms_lst):
+            raise ValueError(
+                f"Mismatch: Number of loaded data sources ({len(self.data_lst)}) "
+                f"does not match number of source transform configurations ({len(self.source_transforms_lst)})."
+            )
 
-    def _prepare_transforms(self, transforms: Optional[Dict[str, Dict[str, Any]]]) -> List[DataTransform]:
-        """Convert a dictionary of transforms into a list of DataTransform objects."""
-        if not transforms:
+        instantiated_source_transforms = []
+        for transforms_config_for_source in self.source_transforms_lst:
+            instantiated_source_transforms.append(
+                self._prepare_transforms(transforms_config_for_source)
+            )
+        self.source_transforms_lst = instantiated_source_transforms
+
+
+    def _prepare_transforms(self, transforms_config: Optional[Union[DictConfig, OrderedDict]]) -> List[DataTransform]:
+        """
+        Convert a dictionary/DictConfig of transforms into a list of DataTransform objects.
+        This method is responsible for using Hydra's instantiate on the 'transform' part.
+        """
+        if not transforms_config:
             return []
+        
         out_transforms: List[DataTransform] = []
-        for transform_name, transform_metadata in transforms.items():
-            transform = transform_metadata.get('transform')
-            metadata = transform_metadata.get('metadata', {})
+        if not isinstance(transforms_config, OrderedDict):
+            raise ValueError('transforms_config should be OrderedDict at this stage of pipeline')
+
+        items_to_process = transforms_config.items() 
+
+        for transform_name, transform_entry_config in items_to_process:
+            
+            instantiated_transform_obj = transform_entry_config.get('transform')
+            metadata = transform_entry_config.get('metadata', {})
             out_transforms.append(
                 DataTransform(
                     transform_name=transform_name,
-                    transform=transform,
+                    transform=instantiated_transform_obj,
                     metadata=metadata
                 )
             )
+
         return out_transforms
         
+
     def _apply_transforms(self, data: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]], transforms: List[DataTransform]) -> Any:
         """Apply all transforms in sequence to the data."""
+        current_data = data
         for transform in transforms:
-            data = transform.forward(data)
-        return data
+            # Removed detailed print statements for each transform application.
+            # print(f"  Applying transform: '{transform.transform_name}' (Strategy: {transform.strategy.__class__.__name__})")
+            # start_time = time.time()
+            current_data = transform.forward(current_data)
+            # end_time = time.time()
+            # print(f"    - Completed in {end_time - start_time:.4f} seconds.")
+            
+            # Removed detailed logging of data after each transform.
+        return current_data
 
     def apply_source_transforms(self, data_lst: List[Any], transforms_lst: List[List[DataTransform]]) -> List[Any]:
         """
@@ -95,15 +149,18 @@ class PreProcessor:
         Returns:
             List of transformed data items.
         """
+        # Removed "--- Applying Source-Specific Transforms ---" print.
         if not isinstance(transforms_lst, list) or not all(isinstance(t, list) for t in transforms_lst):
             raise ValueError("transforms_lst must be a list of lists of DataTransform objects.")
         if len(data_lst) != len(transforms_lst):
-            raise ValueError("data_lst and transforms_lst must have the same length.")
+            raise ValueError(f"Length mismatch: data_lst ({len(data_lst)}) and transforms_lst ({len(transforms_lst)}) must have the same length.")
 
-        return [
-            self._apply_transforms(data, transforms)
-            for data, transforms in zip(data_lst, transforms_lst)
-        ]
+        transformed_data_lst = []
+        for data, transforms in zip(data_lst, transforms_lst):
+            # Removed per-source processing print.
+            # print(f"\nProcessing source {i+1}/{len(data_lst)}: {self.data_name_lst[i] if self.data_name_lst else f'Source_{i}'}")
+            transformed_data_lst.append(self._apply_transforms(data, transforms))
+        return transformed_data_lst
 
     def apply_multisource_transforms(self, data: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]], transforms: List[DataTransform]) -> Any:
         """
@@ -114,19 +171,26 @@ class PreProcessor:
         Returns:
             Transformed data.
         """
+        if not transforms:
+            # Removed "No multi-source transforms to apply." print.
+            return data
+
+        # Removed "--- Applying Multi-Source Transforms ---" print.
         return self._apply_transforms(data, transforms)
 
 
     def pipeline(self):
         """Run the preprocessing pipeline."""
+        # Removed "Starting preprocessing pipeline..." print.
         self.prepare_data()
         self.prepare_source_transforms()
         self.prepare_multisource_transforms()
-        
+
         self.data_lst = self.apply_source_transforms(self.data_lst, self.source_transforms_lst)
         self.data_lst = self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
-        return self.data_lst
         
+        # Removed "Preprocessing pipeline completed." print.
+        return self.data_lst
 
 def key_exists_anywhere(data, target_key):
     # Check if object has dict-like methods
