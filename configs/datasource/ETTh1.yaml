@@ -22,17 +22,24 @@ data_splitter:
   label_len: ${oc.select:model.label_len,null} # 48 # 96  # overlap size
   pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
 
-loader_default_transforms:
+data_default_transforms:
   scaler:
-      features:
-        _target_: sklearn.preprocessing.StandardScaler
+    features:
+      _target_: sklearn.preprocessing.StandardScaler
   
   time_features_transform:
-      _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
-      freq: h 
+    _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+    freq: h 
 
 
+transforms:
+  scaler2:
+    features:
+      _target_: sklearn.preprocessing.StandardScaler
 
+  time_features_transform2:
+    _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+    freq: h 
 
 
      

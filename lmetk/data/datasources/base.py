@@ -5,7 +5,7 @@ import numpy as np
 from omegaconf import DictConfig
 from sklearn.base import TransformerMixin
 from box import Box
-
+from collections import OrderedDict
 
 class DataSourceLoader(ABC):
     def __init__(self, **kwargs):
@@ -24,13 +24,10 @@ class DataSourceLoader(ABC):
 
         # Load the data
         self.data_dict.update(self._load_data())
-        
+        self.data_name = kwargs['data_name']
         # Flag
         self._is_splitted = False
-        self._is_loaded = True
-
-        # Get default trainsform list
-        self.default_transform_lst = self._init_default_transforms()
+        self._is_loaded = True    
 
         # Get already instantiated data splitter
         self.data_splitter = kwargs['data_splitter']
@@ -41,8 +38,34 @@ class DataSourceLoader(ABC):
         return f"{self.__class__.__name__}({args})"
     
     def get_data(self) -> Dict[str, np.ndarray]:
-        """Return splitted data and timestamps."""
+        """Return splitted data dict."""
         return self.data_dict
+    
+    def get_data_name(self):
+        """Return data name."""
+        return self.data_name
+    
+    def get_data_default_transforms(self):
+        """Return data default transforms."""
+        return self.data_default_transforms
+    
+    def get_transforms(self) -> None:
+        """Append the instantiated transforms to the instance data_transforms_lst."""
+        source_transforms = OrderedDict()
+        if self.data_default_transforms is not None:
+            for key, item in self.data_default_transforms.items():
+                source_transforms[key] = item
+            
+        
+        if self.transforms is not None: 
+            for key, item in self.transforms.items():
+                # Check if such key already exist
+                if key in source_transforms.keys():
+                    raise KeyError('The key is already exist, make sure to give unique name for each transform applied')
+                
+                source_transforms[key] = item
+
+        return source_transforms
 
     def _split_data(self) ->  Dict[str, np.ndarray]:
         assert self._is_loaded, "Data must be loaded before splitting."
