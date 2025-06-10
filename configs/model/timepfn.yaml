@@ -34,6 +34,6 @@ inverse: False
 
 
 # Additional params needed for wrapper to run:
-features_mode: ${datasource.load_arguments.features_mode}
+features_mode: ${datasource.task_mode}
 device: 'cuda:0'
 

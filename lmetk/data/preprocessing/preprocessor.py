@@ -3,18 +3,11 @@ import time
 from typing import Any, Union, Dict, List, Optional
 from collections import OrderedDict
 
-# To allow instantiation of Hydra-configured objects
-try:
-    import hydra
-    from omegaconf import DictConfig, OmegaConf
-except ImportError:
-    # Dummy classes for DictConfig and disabling Hydra features if not installed
-    class DictConfig:
-        pass
-    class DummyHydra:
-        def __getattr__(self, name):
-            raise NotImplementedError(f"Hydra is not installed. Cannot call hydra.{name}.")
-    hydra = DummyHydra()
+
+
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
 
 
 from lmetk.transforms.data_transform import DataTransform
@@ -31,7 +24,10 @@ class PreProcessor:
         self.data_name_lst: Optional[List[Any]] = None
         self.source_transforms_lst: Optional[List[Any]] = None
         self.multisource_transforms: Optional[List[Any]] = None
+        self._is_preprocessed = False
 
+    def get_processed_data(self,):
+        return self.data_lst, self.source_transforms_lst, self.multisource_transforms
 
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
@@ -189,7 +185,8 @@ class PreProcessor:
         self.data_lst = self.apply_source_transforms(self.data_lst, self.source_transforms_lst)
         self.data_lst = self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
         
-        # Removed "Preprocessing pipeline completed." print.
+        self._is_preprocessed = True
+        
         return self.data_lst
 
 def key_exists_anywhere(data, target_key):

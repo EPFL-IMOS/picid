@@ -152,7 +152,7 @@ class SklearnStandardScalerAdapter(BaseTransform):
         """Transforms a single data segment using the internal StandardScaler."""
         np_data, original_type = _convert_to_numpy(data_segment)
         transformed_np_data = self.scaler.transform(np_data)
-        return _convert_from_numpy(transformed_np_data, original_type, data_segment)
+        return transformed_np_data #_convert_from_numpy(transformed_np_data, original_type, data_segment)
 
 # Example: Adapter for sklearn.preprocessing.MinMaxScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -192,7 +192,7 @@ class SklearnMinMaxScalerAdapter(BaseTransform):
         """Transforms a single data segment using the internal MinMaxScaler."""
         np_data, original_type = _convert_to_numpy(data_segment)
         transformed_np_data = self.scaler.transform(np_data)
-        return _convert_from_numpy(transformed_np_data, original_type, data_segment)
+        return transformed_np_data #_convert_from_numpy(transformed_np_data, original_type, data_segment)
 
 # Example: A simple custom direct transform (no fitting)
 class LogTransformAdapter(BaseTransform):
@@ -217,4 +217,4 @@ class LogTransformAdapter(BaseTransform):
         # Use np.maximum to handle negative numbers gracefully if they occur
         transformed_np_data = np.log1p(np.maximum(0, np_data)) # log(1 + x) for x >= 0
 
-        return _convert_from_numpy(transformed_np_data, original_type, data_segment)
+        return transformed_np_data #_convert_from_numpy(transformed_np_data, original_type, data_segment)

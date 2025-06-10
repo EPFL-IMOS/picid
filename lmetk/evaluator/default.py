@@ -66,7 +66,7 @@ class DefaultEvaluator(AbstractEvaluator):
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(predictions, targets)
         
         # Based on the feature mode take the features: 
-        f_dim = 1 if self.features_mode == 'MS' else None
+        f_dim = 1 if self.task_mode == 'MS' else None
         predictions, targets = predictions[:,:,:f_dim], targets[:,:,:f_dim]
         # Update all metrics
         for metric in self.metrics.values():

@@ -8,7 +8,7 @@ from typing import Optional, Any, Tuple
 class ScalingWrapper:
     """Wrapper class to handle inverse scaling operations."""
     
-    def __init__(self, scaler: Optional[Any] = None, apply_inverse_scaling: bool = False, features_mode: bool = False):
+    def __init__(self, scaler: Optional[Any] = None, apply_inverse_scaling: bool = False, task_mode: bool = False):
         """
         Initialize the scaling wrapper.
         
@@ -21,7 +21,7 @@ class ScalingWrapper:
         """
         self.scaler = scaler
         self.apply_inverse = apply_inverse_scaling
-        self.features_mode = features_mode
+        self.task_mode = task_mode
     
     def inverse_transform_if_needed(self, 
                                     predictions: Tuple[torch.Tensor, np.ndarray], 

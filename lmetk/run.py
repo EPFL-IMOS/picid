@@ -72,37 +72,24 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
-    dataset_source = hydra.utils.instantiate(cfg.datasource, _recursive_=False)
+    dataset_source = hydra.utils.instantiate(cfg.datasource)
 
     preprocessor = PreProcessor(dataset_source)
     preprocessor.pipeline()
 
-    #data_lst = dataset_source.get_data()
-
-    # if isinstance(data_lst, list)==False:
-    #     # Check that it is the datasource class
-
-    #     # Wrap into list to follow the pipeline
-    #     data_lst = [data_lst]
-
+    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
     
-    # Finished here for now 
-    # data_lst
-    
-    #dataset_source._pipeline()
 
-    # Splitting
-
-    # Preprocessing / remove trend 
+    if isinstance(data_lst, list) and len(data_lst)==1:
+        data_dict = data_lst[0]
+        features = data_dict['features']
+        time_features = data_dict['timestamps']
+        scaler = source_transforms_lst[0][0].transform_instance.scaler
     
-    
-    # Get data
-    features, time_features = dataset_source.get_data()
-    scaler = dataset_source.get_scaler()['features']
     
     # Extract additional inputs to dataset if needed.
     add_args = {}
-    if cfg.datasource.load_arguments.data_name == 'railway':
+    if cfg.datasource.data_name == 'railway':
         add_args['mask'] = dataset_source.data_dict['mask']
 
     # Prepare datasets
@@ -168,7 +155,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # backbone = TimePFN(cfg.model)
     # backbone.load_state_dict(torch.load(cfg.model.load_path))
     add_backbone_args = {}
-    if cfg.datasource.load_arguments.data_name == 'railway':
+    if cfg.datasource.data_name == 'railway':
         add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
         add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
 

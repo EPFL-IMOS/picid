@@ -23,7 +23,7 @@ class AbstractEvaluator(ABC):
         self.scaling_wrapper = ScalingWrapper(
             scaler=scaler, 
             apply_inverse_scaling=apply_inverse,
-            features_mode=kwargs.get("features_mode", False)
+            task_mode=kwargs.get("task_mode", False)
             )
 
         
