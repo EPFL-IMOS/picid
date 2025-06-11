@@ -1,49 +1,86 @@
 # Dataset loader config
+# Must have keys: data_name, task_mode
 
 _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
 
-load_arguments:
-  data_folder: N-CMAPSS
-  path: ${paths.data_dir}/${.data_folder}
-  n_DS: "02"
-  mode: "train"
-  cruise: false
-  units: null
-  subsampling_rate: 1
-  concepts:
-    - "HPC"
-    - "Fan"
-  combined_concepts: false
-  binary_concepts: true
-  RUL: "linear"
-  include_healthy: true
-  window_size: 50
-  stride: 1
-  scaling: "legacy"
+# Must have keys
+data_name: ${.data_folder}_${.n_DS}
+task_mode: multivariate
+
+# Additional
+data_folder: N-CMAPSS
+path: ${paths.data_dir}/${.data_folder}
+n_DS: "02"
+mode: "train"
+cruise: false
+units: null
+subsampling_rate: 1
+concepts:
+  - "HPC"
+  - "Fan"
+combined_concepts: false
+binary_concepts: true
+RUL: "linear"
+include_healthy: true
+window_size: 50
+stride: 1
+scaling: "legacy"
 
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.SimpleSplitter
+  _target_: lmetk.data.preprocessing.TimeSplitter
   train: 8640 # int or float. In case of float it is a percentage of the dataset
   val: 2880 # int or float. In case of float it is a percentage of the dataset
   test: 2880 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)
+  
+  # Optional feature: by def. we generate splits for features and timestamps
+  create_splits_for: [features, timestamps, health_states, rul, concepts, unit, descriptors]
 
   # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: 384 #384    # window size
-  label_len: 96  # overlap size
+  seq_len: 96 #384    # window size
+  label_len: 48  # overlap size
   pred_len: 96   # prediction size
 
 
-scalers:
+data_default_transforms:
+  scaler_1:
+    transform:
+      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+      scaling: standard
 
-  features:
-    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
-    scaling: standard
+    metadata:
+      apply_to: features
+      fit_on: train
   
-  descriptors:
-    _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
-    scaling: standard
+  scaler_2:
+    transform:
+      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+      scaling: standard
+      
+    metadata:
+      apply_to: descriptors
+      # fit_on: train
+      
+  scaler_3:
+    transform:
+      _target_:  lmetk.data.datasources.concepts_n_cmapss.ConstantScaler #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+      factor: 0.01
+      
+    metadata:
+      apply_to: rul
+      fit_on: train
+ 
+# Old 
+# scalers:
 
-  rul:
-    _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler
-    factor: 0.01
+#   features:
+#     _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
+#     scaling: standard
+  
+#   descriptors:
+#     _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
+#     scaling: standard
+
+#   rul:
+#     _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler
+#     factor: 0.01

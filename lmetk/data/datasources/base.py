@@ -12,6 +12,7 @@ class DataSourceLoader(ABC):
         
         # Store kwargs for repr
         self._init_kwargs = kwargs
+        
 
         # Auto-assign keyword arguments to instance attributes
         for key, value in kwargs.items():
@@ -22,16 +23,23 @@ class DataSourceLoader(ABC):
             Dict[str, Dict[str, np.ndarray]] | Box
         ) = {}  # centralized storage
 
+        # Split flag, create before load, as some datasets might have predefined splits, hence then _load_data method has to upadte self._is_splitted flag
+        self._is_splitted = False
+        
         # Load the data
         self.data_dict.update(self._load_data())
         self.data_name = kwargs['data_name']
-        # Flag
-        self._is_splitted = False
         self._is_loaded = True    
+        
+        # Check if splits already has been predefined and done during the loading
+        if self._is_splitted==False:
+            # Get already instantiated data splitter
+            self.data_splitter = kwargs['data_splitter']
+            # By default create splits for features and timestamps
+            for key in getattr(self.data_splitter, 'create_splits_for', ['features', 'timestamps']):
+                self._split_data(key)
 
-        # Get already instantiated data splitter
-        self.data_splitter = kwargs['data_splitter']
-        self._split_data()
+            self._is_splitted = True
 
     def __repr__(self):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
@@ -52,12 +60,12 @@ class DataSourceLoader(ABC):
     def get_transforms(self) -> None:
         """Append the instantiated transforms to the instance data_transforms_lst."""
         source_transforms = OrderedDict()
-        if self.data_default_transforms is not None:
+        if getattr(self, 'data_default_transforms', None) is not None:
             for key, item in self.data_default_transforms.items():
                 source_transforms[key] = item
             
         
-        if self.transforms is not None: 
+        if getattr(self, 'transforms', None) is not None: 
             for key, item in self.transforms.items():
                 # Check if such key already exist
                 if key in source_transforms.keys():
@@ -67,54 +75,90 @@ class DataSourceLoader(ABC):
 
         return source_transforms
 
-    def _split_data(self) ->  Dict[str, np.ndarray]:
+    def _split_data(self, variable) ->  Dict[str, np.ndarray]:
         assert self._is_loaded, "Data must be loaded before splitting."
-        assert not self._is_splitted, (
-            "Data has already been split. "
-            "If you want to re-split, please reset the data source."
-        )
-
+        
         splitted_data, split_masks = self.data_splitter.split_data(
-            self.data_dict["features"]
+            self.data_dict[variable]
         )
         
-        splitted_timestamps, _ = (
-            self.data_splitter.split_data(self.data_dict["timestamps"])
-        )
+        # splitted_timestamps, _ = (
+        #     self.data_splitter.split_data(self.data_dict["timestamps"])
+        # )
         
         # Check 
-        for key in splitted_data.keys():
-            # Check that splits are consistent
-            assert splitted_data[key].shape[0] == splitted_timestamps[key].shape[0], (
-                f"Mismatch in {key} data and timestamps length"
-            )
-           
-
-        # Update the self.data_dict
-        self.data_dict.update(
-            {"features": {"train": splitted_data["train"], "val": splitted_data["val"], "test": splitted_data["test"]}}
-        )
-
-        self.data_dict.update(
-            {
-                "timestamps": {
-                    "train": splitted_timestamps["train"],
-                    "val": splitted_timestamps['val'],
-                    "test": splitted_timestamps['test'],
-                }
-            }
-        )
-
-        self.data_dict.update({
+        if not self.data_dict.get("split_masks", None):
+            self.data_dict.update({
                 "split_masks":{
                     "train": split_masks["train"],
                     "val": split_masks['val'],
                     "test": split_masks['test'],
                 }
             }
+            )
+        else: 
+            # Check that splits masks are consistent
+            for key in split_masks.keys():
+                assert splitted_data[key].shape[0] == self.data_dict['split_masks'][key].shape[0], (
+                    f"Mismatch in {key} data and timestamps length"
+                )
+        
+        # Update the self.data_dict
+        self.data_dict.update(
+            {variable: {"train": splitted_data["train"], "val": splitted_data["val"], "test": splitted_data["test"]}}
         )
 
-        self._is_splitted = True  # Mark data as split
+        
+
+    # Mark data as split
+    # def _split_data(self) ->  Dict[str, np.ndarray]:
+    #     assert self._is_loaded, "Data must be loaded before splitting."
+    #     assert not self._is_splitted, (
+    #         "Data has already been split. "
+    #         "If you want to re-split, please reset the data source."
+    #     )
+
+    #     splitted_data, split_masks = self.data_splitter.split_data(
+    #         self.data_dict["features"]
+    #     )
+        
+    #     splitted_timestamps, _ = (
+    #         self.data_splitter.split_data(self.data_dict["timestamps"])
+    #     )
+        
+    #     # Check 
+    #     for key in splitted_data.keys():
+    #         # Check that splits are consistent
+    #         assert splitted_data[key].shape[0] == splitted_timestamps[key].shape[0], (
+    #             f"Mismatch in {key} data and timestamps length"
+    #         )
+           
+
+    #     # Update the self.data_dict
+    #     self.data_dict.update(
+    #         {"features": {"train": splitted_data["train"], "val": splitted_data["val"], "test": splitted_data["test"]}}
+    #     )
+
+    #     self.data_dict.update(
+    #         {
+    #             "timestamps": {
+    #                 "train": splitted_timestamps["train"],
+    #                 "val": splitted_timestamps['val'],
+    #                 "test": splitted_timestamps['test'],
+    #             }
+    #         }
+    #     )
+
+    #     self.data_dict.update({
+    #             "split_masks":{
+    #                 "train": split_masks["train"],
+    #                 "val": split_masks['val'],
+    #                 "test": split_masks['test'],
+    #             }
+    #         }
+    #     )
+
+    #     self._is_splitted = True  # Mark data as split
 
     
     @abstractmethod

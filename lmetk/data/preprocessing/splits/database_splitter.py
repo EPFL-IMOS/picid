@@ -40,6 +40,7 @@ class TimeStampSplitter(TimeSeriesSplitter):
         self.frequency = frequency
         self.apply_lookback = apply_lookback
         self.splits_dict = None
+        self.create_splits_for = kwargs.get('create_splits_for', ['features', 'timestamps'])
 
         if not np.isclose(train_ratio + val_ratio, 1.0):
             raise ValueError("train_ratio + val_ratio must equal 1.0")

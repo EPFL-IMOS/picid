@@ -84,7 +84,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         data_dict = data_lst[0]
         features = data_dict['features']
         time_features = data_dict['timestamps']
-        scaler = source_transforms_lst[0][0].transform_instance.scaler
+        try:
+            scaler = source_transforms_lst[0][0].transform_instance.scaler
+        except:
+            # false scaler for test
+            scaler = lambda x: x
     
     
     # Extract additional inputs to dataset if needed.

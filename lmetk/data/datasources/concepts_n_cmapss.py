@@ -11,6 +11,8 @@ from itertools import combinations
 
 from lmetk.data.preprocessing.scalers import MultiSourceTransformMixin
 
+from lmetk.transforms.base_transform import BaseTransform
+from typing import Any, List, Union, Tuple, Type
 
 def subsampling(df, subsampling_rate):
     """
@@ -38,7 +40,7 @@ def flatten_RUL(df):
     return df
 
 
-class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
+class N_CMAPSSScaler_Descriptors(BaseTransform): #BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
 
     def __init__(self, scaling="standard"):
 
@@ -46,10 +48,15 @@ class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin, MultiSourceTra
         self.scaling = scaling
 
 
-    def fit(self, W, y=None):
-        pass  # No fitting needed for this scaler
+    # def fit(self, W, y=None):
+    #     pass  # No fitting needed for this scaler
+    def fit_single_source(self, data_segment: Any):
+        pass
 
-    def transform(self, W):
+    def fit_multi_source(self, list_of_data_segments: List[Any]):
+        pass
+
+    def transform_data(self, W):
         scaling = self.scaling
         if scaling == "standard":
             W_mean_1457 = np.array(
@@ -73,16 +80,19 @@ class N_CMAPSSScaler_Descriptors(BaseEstimator, TransformerMixin, MultiSourceTra
         return W
 
 
-class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
+class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
 
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
 
-    def fit(self, X, y=None):
-        pass  # No fitting needed for this scaler
+    def fit_single_source(self, data_segment: Any):
+        pass
 
-    def transform(self, X):
+    def fit_multi_source(self, list_of_data_segments: List[Any]):
+        pass
+
+    def transform_data(self, X):
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling
@@ -170,39 +180,40 @@ class N_CMAPSSScaler_Features(BaseEstimator, TransformerMixin, MultiSourceTransf
             X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
         return X
 
+class ConstantScaler(BaseTransform):
+    def __init__(self, factor=1.0):
+        super().__init__()
+        self.factor = factor
+
+    def fit_single_source(self, data_segment: Any):
+        pass
+
+    def fit_multi_source(self, list_of_data_segments: List[Any]):
+        pass
+
+    def transform_data(self, X):
+        return X * self.factor
 
 class N_CMAPSSDataSource(DataSourceLoader):
 
-    def __init__(self, 
-                load_arguments,
-                data_splitter,
-                scalers,
-                **kwargs):
+    def __init__(self, **kwargs):
         
-        super().__init__(
-            load_arguments,
-            data_splitter,
-            scalers,
-            **kwargs)
-        
-
-        self.args = load_arguments
+        super().__init__(**kwargs)
 
     def _load_data(self):
-        args = self.args
         # Load the data from the specified path
-        assert args.RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
-        print(f"Using {args.RUL} RUL.")
-        self.n_DS = args.n_DS
-        self.mode = args.mode
-        self.window_size = args.window_size
-        self.stride = args.stride
+        assert self.RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
+        print(f"Using {self.RUL} RUL.")
+        self.n_DS = self.n_DS
+        self.mode = self.mode
+        self.window_size = self.window_size
+        self.stride = self.stride
 
-        filename = os.path.join(Path(args.path).expanduser(), f"N-CMAPSS_DS{args.n_DS}.h5")
+        filename = os.path.join(Path(self.path).expanduser(), f"N-CMAPSS_DS{self.n_DS}.h5")
         if not os.path.exists(filename):
             raise FileNotFoundError(f"File not found: {filename}")
         with h5py.File(filename, "r") as hdf:
-            if "train" in args.mode or "val" in args.mode:
+            if "train" in self.mode or "val" in self.mode:
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W
                 X_s = np.array(hdf.get("X_s_dev"))  # X_s
@@ -210,7 +221,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
                 T = np.array(hdf.get("T_dev"))  # T
                 Y = np.array(hdf.get("Y_dev"))  # RUL
                 A = np.array(hdf.get("A_dev"))  # Auxiliary
-            elif "test" in args.mode:
+            elif "test" in self.mode:
                 # Test set
                 W = np.array(hdf.get("W_test"))  # W
                 X_s = np.array(hdf.get("X_s_test"))  # X_s
@@ -257,7 +268,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
 
         del A, W, T, X_s, Y
 
-        if args.RUL == "flat":
+        if self.RUL == "flat":
             # Set RUL to flat constant value when hs == 1
             df_all = pd.concat((self.df_A, self.df_Y), axis=1)
             self.df_Y["RUL"] = df_all.groupby("unit", group_keys=False).apply(
@@ -265,30 +276,30 @@ class N_CMAPSSDataSource(DataSourceLoader):
             )["RUL"]
             del df_all
 
-        if not args.include_healthy:
+        if not self.include_healthy:
             self.df_W = self.df_W.loc[self.df_A["hs"] == 0]
             self.df_T = self.df_T.loc[self.df_A["hs"] == 0]
             self.df_X = self.df_X.loc[self.df_A["hs"] == 0]
             self.df_Y = self.df_Y.loc[self.df_A["hs"] == 0]
             self.df_A = self.df_A.loc[self.df_A["hs"] == 0]
 
-        if args.units is not None:
+        if self.units is not None:
             # select only unit data
-            self.df_W = self.df_W.loc[self.df_A["unit"].isin(args.units)]
-            self.df_T = self.df_T.loc[self.df_A["unit"].isin(args.units)]
-            self.df_X = self.df_X.loc[self.df_A["unit"].isin(args.units)]
-            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(args.units)]
-            self.df_A = self.df_A.loc[self.df_A["unit"].isin(args.units)]
+            self.df_W = self.df_W.loc[self.df_A["unit"].isin(self.units)]
+            self.df_T = self.df_T.loc[self.df_A["unit"].isin(self.units)]
+            self.df_X = self.df_X.loc[self.df_A["unit"].isin(self.units)]
+            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(self.units)]
+            self.df_A = self.df_A.loc[self.df_A["unit"].isin(self.units)]
 
-        if args.subsampling_rate > 1:
+        if self.subsampling_rate > 1:
             # subsample
-            self.df_A = subsampling(self.df_A, args.subsampling_rate)
-            self.df_W = subsampling(self.df_W, args.subsampling_rate)
-            self.df_X = subsampling(self.df_X, args.subsampling_rate)
-            self.df_T = subsampling(self.df_T, args.subsampling_rate)
-            self.df_Y = subsampling(self.df_Y, args.subsampling_rate)
+            self.df_A = subsampling(self.df_A, self.subsampling_rate)
+            self.df_W = subsampling(self.df_W, self.subsampling_rate)
+            self.df_X = subsampling(self.df_X, self.subsampling_rate)
+            self.df_T = subsampling(self.df_T, self.subsampling_rate)
+            self.df_Y = subsampling(self.df_Y, self.subsampling_rate)
 
-        if args.cruise:
+        if self.cruise:
             # for each unit and cycle, get only 'cruising' state
             df_all = pd.concat((self.df_A, self.df_W), axis=1)
             df_cruise = df_all.groupby(["unit", "cycle"], group_keys=False).apply(
@@ -301,8 +312,8 @@ class N_CMAPSSDataSource(DataSourceLoader):
             self.df_W = self.df_W.loc[df_cruise.index]
             del df_all, df_cruise
 
-        if args.concepts == "all":
-            args.concepts = [
+        if self.concepts == "all":
+            self.concepts = [
                 f"{c}-{m}"
                 for c in ("Fan", "LPC", "HPC", "LPT", "HPT")
                 for m in ("E", "F")
@@ -326,18 +337,18 @@ class N_CMAPSSDataSource(DataSourceLoader):
                 "HPT-E": self.df_T["HPT_eff_mod"],
                 "HPT-F": self.df_T["HPT_flow_mod"],
             }
-        )[[c for c in args.concepts if c not in ["healthy", "Fc"]]]
+        )[[c for c in self.concepts if c not in ["healthy", "Fc"]]]
 
 
         # remove non-minimum degradation
         # self.concepts = self.concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
 
-        if args.binary_concepts:
+        if self.binary_concepts:
             self.concepts = self.concepts.apply(binarize_concept)
         else:  # continuous concepts (in [0,1] for BCE loss)
             self.concepts = self.concepts.apply(scale_concept)
         if (
-            args.combined_concepts
+            self.combined_concepts
         ):  # TODO: treat the case with continuous concepts (use mean instead of all?)
             for combination in combinations(self.concepts.columns.tolist(), 2):
                 combination_col = "+".join(combination)
@@ -348,9 +359,9 @@ class N_CMAPSSDataSource(DataSourceLoader):
                     self.concepts[c] = np.logical_xor(
                         self.concepts[c], self.concepts[combination_col]
                     )
-        if "healthy" in args.concepts:
+        if "healthy" in self.concepts:
             self.concepts["healthy"] = (self.concepts == 0).all(axis=1)
-        if "Fc" in args.concepts:
+        if "Fc" in self.concepts:
             self.concepts = pd.concat(
                 (
                     self.concepts,
@@ -366,23 +377,25 @@ class N_CMAPSSDataSource(DataSourceLoader):
         self.concepts = self.concepts.astype(int)
 
         
-        self.data_dict = dict(
-            features=self.df_X.values, # sensor data measurements
-            timestamps=self.df_X.index.values,  # cycle numbers
-            health_states=self.df_A["hs"].values,
-            unit=self.df_A["unit"].values,
-            descriptors=self.df_W.values, # operating conditions
-            # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
+         
+        return { 
+            "features": self.df_X.values, # sensor data measurements
+            "timestamps": self.df_X.index.values.reshape(-1,1),  # cycle numbers
+            "health_states": self.df_A["hs"].values,
+            'unit': self.df_A["unit"].values,
+            "descriptors": self.df_W.values, # operating conditions
+            "concepts": self.concepts.values,
+            "rul":self.df_Y.values, # RUL
             # degradation=self.df_T.values, # degradation resp. concepts
-            concepts=self.concepts.values,
-            rul=self.df_Y.values, # RUL
-        )
+            # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
+        }
 
-        super()._load_data()
+        
 
-    def _generate_splits(self):
-        super()._generate_splits()
-        # Also split health_states, labels, and concepts
-        for k in ["health_states", "rul", "concepts", "unit", "descriptors"]:
-            split_tuple = self.data_splitter.split_data(self.data_dict[k])
-            self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}
+    # def _generate_splits(self):
+    #     super()._generate_splits()
+
+    #     # Also split health_states, labels, and concepts
+    #     for k in ["health_states", "rul", "concepts", "unit", "descriptors"]:
+    #         split_tuple = self.data_splitter.split_data(self.data_dict[k])
+    #         self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}

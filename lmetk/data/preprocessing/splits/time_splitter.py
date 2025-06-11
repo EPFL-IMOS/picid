@@ -25,6 +25,7 @@ class TimeSplitter(TimeSeriesSplitter):
         self.label_len = label_len
         self.pred_len = pred_len
         self.splits_dict = None
+        self.create_splits_for = kwargs.get('create_splits_for', ['features', 'timestamps'])
 
     def get_splits(self, data: np.ndarray) -> dict:
         n = len(data)

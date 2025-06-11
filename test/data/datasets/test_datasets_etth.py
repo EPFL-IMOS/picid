@@ -5,6 +5,7 @@ import hydra
 from omegaconf import OmegaConf
 
 from lmetk.data.datasets import SWDataset, SWBatchDataset
+from lmetk.data.preprocessing.preprocessor import PreProcessor
 from pathlib import Path
 
 
@@ -30,23 +31,25 @@ def dataset_val(path_cfg: str):
     loader_config = OmegaConf.create(
         {
             "_target_": "lmetk.data.datasources.ETThLoader",
-            "load_arguments": {
+            
                 "data_name": "ETTh1",
                 "data_folder": "ETT-small",
                 "data_path": data_path,
-                "flag": "train",
-                "size": None,
-                "features_mode": "S",
+                "task_mode": "univariate",
                 "target_name": "OT",
-                "scale": True,
-                "freq": "h",
                 "timestamp_name": "date",
-                "time_features": ["month", "day", "weekday", "hour"],
-                "normalize_time_features": False,
-                "timeenc": 'timepfn_timefeatures',
-            },
+                
+                #"size": None,
+                #"flag": "train",
+                #"scale": True,
+                #"freq": "h",
+                #"time_features": ["month", "day", "weekday", "hour"],
+                #"normalize_time_features": False,
+                #"timeenc": 'timepfn_timefeatures',
+                
             "data_splitter": {
-                "_target_": "lmetk.data.preprocessing.SimpleSplitter",
+                "_target_": "lmetk.data.preprocessing.TimeSplitter",
+                "splitter_type": 'TimeSplitter',
                 "train": 8640,
                 "val": 2880,
                 "test": 2880,
@@ -54,21 +57,46 @@ def dataset_val(path_cfg: str):
                 "label_len": 96,
                 "pred_len": 96,
             },
-            "scaler": {
-                "features": {"_target_": "sklearn.preprocessing.StandardScaler"}
-            },
+            'data_default_transforms' :{
+                "scaler": {
+                    "transform": {
+                        "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
+                    },
+                    "metadata": {
+                        "apply_to": "features",
+                        "fit_on": "train"
+                    }
+                },
+                "time_features_transform": {
+                    "transform": {
+                        "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
+                        "freq": "h"
+                    },
+                    "metadata": {
+                        "apply_to": "timestamps"
+                    }
+                }
+            }
+
         }
     )
 
     
-    loader = hydra.utils.instantiate(loader_config)
+    dataset_source = hydra.utils.instantiate(loader_config)
+
+    preprocessor = PreProcessor(dataset_source)
+    preprocessor.pipeline()
+
+    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
+
+    data_dict = data_lst[0]
+    features = data_dict['features']
+    time_features = data_dict['timestamps']
     
-    loader._pipeline()  # Ensure the pipeline is executed
-    splitted_data, splitted_timestamps = loader.get_data()
 
     ds_val = SWDataset(
-        features=splitted_data["val"],
-        time_features=splitted_timestamps["val"],
+        features=features["val"],
+        time_features=time_features["val"],
         seq_len=384,
         label_len=96,
         pred_len=96,
@@ -125,23 +153,25 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
     loader_config = OmegaConf.create(
         {
             "_target_": "lmetk.data.datasources.ETThLoader",
-            "load_arguments": {
+            
                 "data_name": "ETTh1",
                 "data_folder": "ETT-small",
                 "data_path": data_path,
-                "flag": "train",
-                "size": None,
-                "features_mode": "S",
+                "task_mode": "univariate",
                 "target_name": "OT",
-                "scale": True,
-                "freq": "h",
                 "timestamp_name": "date",
-                "time_features": ["month", "day", "weekday", "hour"],
-                "normalize_time_features": False,
-                "timeenc": 'timepfn_timefeatures',
-            },
+                
+                #"size": None,
+                #"flag": "train",
+                #"scale": True,
+                #"freq": "h",
+                #"time_features": ["month", "day", "weekday", "hour"],
+                #"normalize_time_features": False,
+                #"timeenc": 'timepfn_timefeatures',
+                
             "data_splitter": {
-                "_target_": "lmetk.data.preprocessing.SimpleSplitter",
+                "_target_": "lmetk.data.preprocessing.TimeSplitter",
+                "splitter_type": 'TimeSplitter',
                 "train": 8640,
                 "val": 2880,
                 "test": 2880,
@@ -149,19 +179,43 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
                 "label_len": 96,
                 "pred_len": 96,
             },
-            "scaler": {
-                "features": {"_target_": "sklearn.preprocessing.StandardScaler"}
-            },
+            'data_default_transforms' :{
+                "scaler": {
+                    "transform": {
+                        "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
+                    },
+                    "metadata": {
+                        "apply_to": "features",
+                        "fit_on": "train"
+                    }
+                },
+                "time_features_transform": {
+                    "transform": {
+                        "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
+                        "freq": "h"
+                    },
+                    "metadata": {
+                        "apply_to": "timestamps"
+                    }
+                }
+            }
+
         }
     )
 
-    loader = hydra.utils.instantiate(loader_config)
-    loader._pipeline()  # Ensure the pipeline is executed
-    splitted_data, splitted_timestamps = loader.get_data()
+    dataset_source = hydra.utils.instantiate(loader_config)
+    preprocessor = PreProcessor(dataset_source)
+    preprocessor.pipeline()
+
+    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
+
+    data_dict = data_lst[0]
+    features = data_dict['features']
+    time_features = data_dict['timestamps']
 
     batch_dataset = SWBatchDataset(
-        features=splitted_data["val"],
-        time_features=splitted_timestamps["val"],
+        features=features["val"],
+        time_features=time_features["val"],
         seq_len=384,
         label_len=96,
         pred_len=96,
