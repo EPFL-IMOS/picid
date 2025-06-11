@@ -31,10 +31,15 @@ class DataSourceLoader(ABC):
         self.data_name = kwargs['data_name']
         self._is_loaded = True    
         
-        # Check if splits already has been predefined and done during the loading
-        if self._is_splitted==False:
-            # Get already instantiated data splitter
+        self.multisource_data_splitter = getattr(kwargs, 'multisource_data_splitter', None)
+        # Get already instantiated data splitter
+        if not self.multisource_data_splitter:
             self.data_splitter = kwargs['data_splitter']
+            self.split_data(kwargs)
+
+    def split_data(self, kwargs):
+        # Check if splits already has been predefined and done during the loading
+        if not self._is_splitted:
             # By default create splits for features and timestamps
             for key in getattr(self.data_splitter, 'create_splits_for', ['features', 'timestamps']):
                 self._split_data(key)
@@ -74,6 +79,9 @@ class DataSourceLoader(ABC):
                 source_transforms[key] = item
 
         return source_transforms
+    
+    def get_multisource_data_splitter(self):
+        return self.multisource_data_splitter
 
     def _split_data(self, variable) ->  Dict[str, np.ndarray]:
         assert self._is_loaded, "Data must be loaded before splitting."
@@ -81,10 +89,6 @@ class DataSourceLoader(ABC):
         splitted_data, split_masks = self.data_splitter.split_data(
             self.data_dict[variable]
         )
-        
-        # splitted_timestamps, _ = (
-        #     self.data_splitter.split_data(self.data_dict["timestamps"])
-        # )
         
         # Check 
         if not self.data_dict.get("split_masks", None):

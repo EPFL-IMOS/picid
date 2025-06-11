@@ -24,6 +24,7 @@ class PreProcessor:
         self.data_name_lst: Optional[List[Any]] = None
         self.source_transforms_lst: Optional[List[Any]] = None
         self.multisource_transforms: Optional[List[Any]] = None
+        self.multisource_data_splitter: Optional[Any] = None
         self._is_preprocessed = False
 
     def get_processed_data(self,):
@@ -34,6 +35,7 @@ class PreProcessor:
         data_lst = self.datasource.get_data()
         data_name_lst = self.datasource.get_data_name()
         source_transforms_raw = self.datasource.get_transforms() 
+        multisource_data_splitter = self.datasource.get_self.multisource_data_splitter()
 
         # Ensure all outputs are lists for consistent processing
         if not isinstance(data_lst, list):
@@ -50,6 +52,7 @@ class PreProcessor:
         self.data_lst = data_lst
         self.data_name_lst = data_name_lst
         self.source_transforms_lst = source_transforms_raw
+        self.multisource_data_splitter = multisource_data_splitter
 
 
     def prepare_multisource_transforms(self) -> None:
@@ -179,11 +182,17 @@ class PreProcessor:
         """Run the preprocessing pipeline."""
         # Removed "Starting preprocessing pipeline..." print.
         self.prepare_data()
-        self.prepare_source_transforms()
-        self.prepare_multisource_transforms()
-
-        self.data_lst = self.apply_source_transforms(self.data_lst, self.source_transforms_lst)
-        self.data_lst = self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
+        
+        # if multisource_data_splitter do not exist, then we work with separate sources
+        if self.multisource_data_splitter:
+            self.prepare_source_transforms()
+            self.data_lst = self.apply_source_transforms(self.data_lst, self.source_transforms_lst)
+        else:
+            # if multisource_data_splitter exist, then each source represent some part of the split
+            
+            # First retrive  
+            self.prepare_multisource_transforms()
+            self.data_lst = self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
         
         self._is_preprocessed = True
         

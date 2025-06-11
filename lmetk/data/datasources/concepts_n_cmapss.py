@@ -213,6 +213,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
         if not os.path.exists(filename):
             raise FileNotFoundError(f"File not found: {filename}")
         with h5py.File(filename, "r") as hdf:
+            
             if "train" in self.mode or "val" in self.mode:
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W
@@ -221,6 +222,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
                 T = np.array(hdf.get("T_dev"))  # T
                 Y = np.array(hdf.get("Y_dev"))  # RUL
                 A = np.array(hdf.get("A_dev"))  # Auxiliary
+            
             elif "test" in self.mode:
                 # Test set
                 W = np.array(hdf.get("W_test"))  # W
@@ -389,13 +391,3 @@ class N_CMAPSSDataSource(DataSourceLoader):
             # degradation=self.df_T.values, # degradation resp. concepts
             # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
         }
-
-        
-
-    # def _generate_splits(self):
-    #     super()._generate_splits()
-
-    #     # Also split health_states, labels, and concepts
-    #     for k in ["health_states", "rul", "concepts", "unit", "descriptors"]:
-    #         split_tuple = self.data_splitter.split_data(self.data_dict[k])
-    #         self.data_dict[k] = {k: v for k, v in zip(["train", "val", "test"], split_tuple)}

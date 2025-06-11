@@ -10,12 +10,14 @@ from lmetk.data.datasources.base import DataSourceLoader
 from hydra.utils import instantiate 
 from collections import OrderedDict
 
-class MultiSource:
+class MultiSource():
+    """This class instantiates each of the soure"""
     def __init__(self, **kwargs):
         self.source_names = kwargs.get('source_list', [])
         self.sources = []
         self.source_params = []
         self.transforms_list = []
+        self.multisource_data_splitter = getattr(kwargs, 'multisource_data_splitter', None)
 
         for key in self.source_names:
             # Store params as dict
@@ -23,7 +25,7 @@ class MultiSource:
             self.source_params.append(src_params)
 
             # Instantiate datasource
-            datasource = instantiate(kwargs[key])
+            datasource = instantiate(kwargs[key], multisource_data_splitter=True if self.multisource_data_splitter else False)
             if not getattr(datasource, '_is_loaded', False):
                 raise RuntimeError(f'Source {key} has not been loaded')
             if not getattr(datasource, '_is_splitted', False):
@@ -54,5 +56,10 @@ class MultiSource:
     def get_multisource_transforms(self):
         """Return multisource data transforms."""
         return self.multisource_transforms
+    
+    def get_multisource_data_splitter(self):
+        """Return multisource data splitter."""
+        return self.multisource_data_splitter
+
 
     
