@@ -35,7 +35,7 @@ class PreProcessor:
         data_lst = self.datasource.get_data()
         data_name_lst = self.datasource.get_data_name()
         source_transforms_raw = self.datasource.get_transforms() 
-        multisource_data_splitter = self.datasource.get_self.multisource_data_splitter()
+        multisource_data_splitter = self.datasource.get_multisource_data_splitter()
 
         # Ensure all outputs are lists for consistent processing
         if not isinstance(data_lst, list):
@@ -70,7 +70,7 @@ class PreProcessor:
         # else:
         #     print("Datasource has no 'get_multisource_transforms' method. No multi-source transforms will be applied.")
 
-        self.multisource_transforms = self._prepare_transforms(multisource_transforms_config)
+        self.multisource_transforms = [self._prepare_transforms(multisource_transforms_config)]
 
 
     def prepare_source_transforms(self) -> None:
@@ -184,15 +184,13 @@ class PreProcessor:
         self.prepare_data()
         
         # if multisource_data_splitter do not exist, then we work with separate sources
-        if self.multisource_data_splitter:
+        if not self.multisource_data_splitter:
             self.prepare_source_transforms()
             self.data_lst = self.apply_source_transforms(self.data_lst, self.source_transforms_lst)
         else:
-            # if multisource_data_splitter exist, then each source represent some part of the split
-            
-            # First retrive  
+            # First reasemble sources: self.data_lst
             self.prepare_multisource_transforms()
-            self.data_lst = self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
+            self.data_lst = self.apply_source_transforms(self.data_lst, self.multisource_transforms) #self.apply_multisource_transforms(self.data_lst, self.multisource_transforms)
         
         self._is_preprocessed = True
         

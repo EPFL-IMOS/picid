@@ -8,22 +8,35 @@ from torch.utils.data import Dataset
 class ConceptRULDataset(Dataset):
     def __init__(
         self, 
-        data_split: Dict[str, np.ndarray], 
+        data_dict,
+        split,
+        #data_split: Dict[str, np.ndarray], 
         window_size: int, 
         stride: int,
         **kwargs
     ):
-        self.df_Y = data_split.rul
-        self.X = data_split.features
-        self.unit = data_split.unit
-        self.concepts = data_split.concepts
-
-        if "descriptors" in data_split:
-            print("The dataset contains descriptors, concatenating them to the features.")
-            self.X = np.concatenate((self.X, data_split.descriptors), axis=1)
-
+        
         self.window_size = window_size
         self.stride = stride
+
+        for key, item in data_dict.items():
+            if key == 'rul':
+                self.df_Y = item[split]
+            elif key == 'features':
+                self.X = item[split]
+            else:    
+                setattr(self, key, item[split])    
+        
+        # self.df_Y = data_split.rul
+        # self.X = data_split.features
+        # self.unit = data_split.unit
+        # self.concepts = data_split.concepts
+
+        if getattr(self, 'descriptors', None) is not None:
+            print("The dataset contains descriptors, concatenating them to the features.")
+            self.X = np.concatenate((self.X, data_dict['descriptors'][split]), axis=1)
+
+        
         super().__init__()
 
     def __len__(self):

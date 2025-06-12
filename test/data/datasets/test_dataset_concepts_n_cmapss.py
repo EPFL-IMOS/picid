@@ -6,6 +6,7 @@ from box import Box
 import torch
 
 from lmetk.data.datamodules.datamodule import BaseDataModule
+from lmetk.data.preprocessing.preprocessor import PreProcessor
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
@@ -39,30 +40,27 @@ def concepts_n_cmapss_datamodule(path_cfg):
 
     print(f"Config file: {cfg.dataset}")
 
-    data_source = hydra.utils.instantiate(cfg.datasource)
+    dataset_source = hydra.utils.instantiate(cfg.datasource)
 
-    data_source._load_data()
-    data_source._generate_splits()
-    data_source._apply_transformations()
+    preprocessor = PreProcessor(dataset_source)
+    preprocessor.pipeline()
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
+    data_lst, _, _ = preprocessor.get_processed_data()
+    data_dict = data_lst[0]
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    ds_val = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
+    dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
+    dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')
+    dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    ds_test = hydra.utils.instantiate(cfg.dataset, data_split=in_box)
-
-    sample = next(iter(ds_train))
+    sample = next(iter(dataset_train))
     for id_t, t in enumerate(sample):
         print(f"Tensor {id_t} shape: {t.shape}")
 
     datasets = Box(
         dict(
-            train=ds_train,
-            val=ds_val,
-            test=ds_test,
+            train=dataset_train,
+            val=dataset_val,
+            test=dataset_test,
         )
     )
 

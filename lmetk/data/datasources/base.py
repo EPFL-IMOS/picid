@@ -31,8 +31,9 @@ class DataSourceLoader(ABC):
         self.data_name = kwargs['data_name']
         self._is_loaded = True    
         
-        self.multisource_data_splitter = getattr(kwargs, 'multisource_data_splitter', None)
+        self.multisource_data_splitter = kwargs.get('multisource_data_splitter', None)
         # Get already instantiated data splitter
+        
         if not self.multisource_data_splitter:
             self.data_splitter = kwargs['data_splitter']
             self.split_data(kwargs)

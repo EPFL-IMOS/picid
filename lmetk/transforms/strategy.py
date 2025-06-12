@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Union
+import warnings
 import numpy as np # Used for stacking in MultiSourceFitTransformStrategy
 from lmetk.transforms.base_transform import BaseTransform # Import your BaseTransform ABC
 
@@ -71,7 +72,11 @@ class DirectTransformStrategy(TransformStrategy):
         transformed_target_data_splits = {}
         
         for split_name, split_data in target_data_splits.items():
-            transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+            if split_data is not None:
+                transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+            else:
+                transformed_target_data_splits[split_name] = None
+                warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
         
         transformed_data[apply_to_key] = transformed_target_data_splits
         
@@ -121,7 +126,12 @@ class FitTransformStrategy(TransformStrategy):
         # 2. Transform all splits using BaseTransform's transform method
         transformed_target_data_splits = {}
         for split_name, split_data in target_data_splits.items():
-            transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+            if split_data is not None:
+                transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+            else:
+                transformed_target_data_splits[split_name] = None
+                warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
+                
         
         transformed_data[apply_to_key] = transformed_target_data_splits
         
