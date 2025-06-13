@@ -2,56 +2,9 @@ import numpy as np
 import pandas as pd
 import torch
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, Tuple, Type
-
-
-# --- Utility for Type Conversion ---
-def _convert_to_numpy(data: Any) -> Tuple[np.ndarray, Type]:
-    """Converts input data to numpy.ndarray and returns its original type."""
-    original_type = type(data)
-    
-    if isinstance(data, np.ndarray):
-        return data, original_type
-    elif isinstance(data, pd.DataFrame):
-        return data.values, original_type
-    elif isinstance(data, pd.Series):
-        return data.values, original_type
-    elif isinstance(data, torch.Tensor):
-        return data.cpu().numpy(), original_type # Move to CPU if on GPU, then convert
-    else:
-        # For other types, try direct conversion or raise error if unsupported
-        try:
-            return np.asarray(data), original_type
-        except Exception as e:
-            raise TypeError(f"Unsupported data type for conversion to numpy: {original_type}. Error: {e}")
-
-def _convert_from_numpy(numpy_data: np.ndarray, original_type: Type, original_data: Any) -> Any:
-    """Converts numpy.ndarray back to the original data type."""
-    if original_type is np.ndarray:
-        return numpy_data
-    elif original_type is pd.DataFrame:
-        # Attempt to reconstruct DataFrame, preserving index and columns if possible
-        if isinstance(original_data, pd.DataFrame):
-            return pd.DataFrame(numpy_data, index=original_data.index, columns=original_data.columns)
-        return pd.DataFrame(numpy_data) # Fallback
-    elif original_type is pd.Series:
-        # Attempt to reconstruct Series, preserving index and name if possible
-        if isinstance(original_data, pd.Series):
-            return pd.Series(numpy_data.flatten(), index=original_data.index, name=original_data.name)
-        return pd.Series(numpy_data.flatten()) # Fallback
-    elif original_type is torch.Tensor:
-        # Convert back to Tensor, preserving original device if possible
-        if isinstance(original_data, torch.Tensor):
-            return torch.from_numpy(numpy_data).to(original_data.device)
-        return torch.from_numpy(numpy_data) # Fallback to CPU
-    else:
-        # If the original type was not explicitly handled, return numpy array
-        # as it was the intermediate format. This might lead to unexpected types
-        # downstream if not careful.
-        return numpy_data
-
+from typing import Any, List, Union, Tuple, Type, Optional, Dict
+from lmetk.transforms.utils import _convert_to_numpy, _convert_from_numpy
 # --- BaseTransform ABC ---
-
 class BaseTransform(ABC):
     """
     Abstract base class for all custom and wrapped external transformation objects.
@@ -62,23 +15,28 @@ class BaseTransform(ABC):
     must inherit from this class and implement its abstract methods.
     """
     
-    @abstractmethod
-    def fit_single_source(self, data_segment: Any):
+    def fit_single_source(self, data_segment: Any, auxiliary_data: Optional[Dict[str, Any]] = None):
         """
         Fits the transform on a single data segment (e.g., a 'train' split from one source).
+        
+        Default implementation raises NotImplementedError. Override in subclasses that require fitting.
         
         Parameters
         ----------
         data_segment : Any
             The data segment to fit on. Its type can be numpy.ndarray, pandas.DataFrame,
             pandas.Series, torch.Tensor, or other array-like structures.
+        auxiliary_data : Optional[Dict[str, Any]]
+            Optional auxiliary information for fitting.
         """
-        pass
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_single_source. "
+                                 f"Consider using DirectTransform if no fitting is required.")
         
-    @abstractmethod
-    def fit_multi_source(self, list_of_data_segments: List[Any]):
+    def fit_multi_source(self, list_of_data_segments: List[Any], auxiliary_data: Optional[List[Dict[str, Any]]] = None):
         """
         Fits the transform on a list of data segments, aggregated across multiple sources.
+        
+        Default implementation raises NotImplementedError. Override in subclasses that require fitting.
         
         This method is responsible for:
         1. Aggregating/stacking the `list_of_data_segments` into a single structure
@@ -90,8 +48,11 @@ class BaseTransform(ABC):
         list_of_data_segments : List[Any]
             A list where each element is a data segment (e.g., 'train' split)
             from a different source.
+        auxiliary_data : Optional[List[Dict[str, Any]]]
+            Optional list of auxiliary information corresponding to each data segment.
         """
-        pass
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_multi_source. "
+                                 f"Consider using DirectTransform if no fitting is required.")
         
     @abstractmethod
     def transform_data(self, data_segment: Any) -> Any:

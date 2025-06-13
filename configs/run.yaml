@@ -4,8 +4,8 @@
 # order of defaults determines the order in which configs override each other
 defaults:
   - _self_
-  - datasource: concepts_n_cmapss #ETTh1_timepfn #concepts_n_cmapss #ETTh1_timepfn #etth_multi_source #ETTh1 #railway_timepfn #railway_timepfn #ETTh1_timepfn
-  - dataset: concept_rul_dataset #sliding_window
+  - datasource: concepts_n_cmapss_multi_source #concepts_n_cmapss_multi_source # concepts_n_cmapss #ETTh1_timepfn #concepts_n_cmapss #ETTh1_timepfn #etth_multi_source #ETTh1 #railway_timepfn #railway_timepfn #ETTh1_timepfn
+  - dataset: sliding_window #concept_rul_multiunit_dataset # concept_rul_dataset #sliding_window
   - datamodule: base_datamodule
   - model: timepfn #timepfn
   - optimizer: default

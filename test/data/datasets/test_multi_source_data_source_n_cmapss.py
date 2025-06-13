@@ -7,8 +7,7 @@ import lmetk
 from box import Box
 import torch
 
-from lmetk.data.datamodules.datamodule import BaseDataModule
-
+from lmetk.data.preprocessing.preprocessor import PreProcessor
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
 ProjectSearchPathPlugin.register()
@@ -44,42 +43,58 @@ def multi_source_data_source(path_cfg):
 
     print(OmegaConf.to_yaml(cfg.datasource, resolve=True))
 
-    data_source = hydra.utils.instantiate(cfg.datasource)
-
-    data_source._pipeline()
 
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+    dataset_source = hydra.utils.instantiate(cfg.datasource)
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    # To partially initialize without instantiating sub _target_ fields, use _recursive_=False
-    ds_val = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+    preprocessor = PreProcessor(dataset_source)
+    preprocessor.pipeline()
 
-    in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
-    ds_test = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+    data_lst, _, _ = preprocessor.get_processed_data()
+    data_dict = data_lst[0]
 
-    sample = next(iter(ds_train))
+    dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train', _recursive_=False)
+    dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val', _recursive_=False)
+    dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test', _recursive_=False)
+
+
+
+    # data_source = hydra.utils.instantiate(cfg.datasource)
+
+    # data_source._pipeline()
+
+
+    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    # ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+
+    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    # # To partially initialize without instantiating sub _target_ fields, use _recursive_=False
+    # ds_val = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+
+    # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
+    # ds_test = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
+
+    sample = next(iter(dataset_train))
     for id_t, t in enumerate(sample):
         print(f"Tensor {id_t} shape: {t.shape}")
 
-    return data_source
+    return dataset_source
 
 
 def test_create_multi_source_data_source(multi_source_data_source):
-    assert isinstance(multi_source_data_source, lmetk.data.datasources.multi_source_pipeline.MultiSourcePipeline)
-    assert len(multi_source_data_source.sources) > 0, "No sources found in the multi-source pipeline"
+    assert isinstance(multi_source_data_source, lmetk.data.datasources.multi_source_pipeline.MultiSource)
+    assert len(multi_source_data_source.data_lst) > 0, "No sources found in the multi-source pipeline"
 
     # Check if data_dict is populated
-    assert multi_source_data_source.data_dict, "Data dictionary is empty"
+    assert multi_source_data_source.data_lst[0], "Data dictionary is empty"
     
     # Check if scalers are instantiated
     # assert multi_source_data_source.get_scaler(), "Scalers are not instantiated"
     
     # Check if data is split correctly
-    assert 'train' in multi_source_data_source.data_dict['features'], "Train split not found in features"
+    assert 'train' in multi_source_data_source.data_lst['features'], "Train split not found in features"
 
     # TODO: Uncomment when validation split is available, why is it not available?
     # assert 'val' in multi_source_data_source.data_dict['features'], "Validation split not found in features"
-    assert 'test' in multi_source_data_source.data_dict['features'], "Test split not found in features"
+    assert 'test' in multi_source_data_source.data_lst['features'], "Test split not found in features"
 

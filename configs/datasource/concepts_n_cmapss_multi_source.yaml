@@ -2,7 +2,7 @@ _target_: lmetk.data.datasources.multi_source_pipeline.MultiSource
 _recursive_: False
 
 # Must have keys for the pipeline
-data_name: MultiSource_concepts_n_cmapss
+data_name: MultiSource_concepts_N-CMAPSS
 task_mode: multivariate
 
 defaults:

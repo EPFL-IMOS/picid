@@ -1,31 +1,61 @@
 _target_: lmetk.data.datasources.RailwayLoader
 
-load_arguments:
-  data_name: railway
-  data_folder: railway
-  data_path: ${paths.data_dir}/${datasource.load_arguments.data_folder}/${datasource.load_arguments.data_name}.csv
-  
-  samples_per_day: 24
-  target_name: Bahnlast
-  timestamp_name: datetime
-  
-  # In case true, define trend_decomp_rolling_window
-  trend_decomp: False
-  trend_decomp_rolling_window: null
 
-  time_features: ["year", "month", "day", "weekday", "hour"]
-  normalize_time_features: False
+data_name: railway
+data_folder: railway
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
+
+samples_per_day: 24
+target_name: Bahnlast
+timestamp_name: datetime
+
+# In case true, define trend_decomp_rolling_window
+trend_decomp: False
+trend_decomp_rolling_window: null
+# Need to be defined actually
+task_mode: univariate
+  
+
+
+# data_splitter:
+#   _target_: lmetk.data.preprocessing.splits.DateBasedSplitter
+#   test_start: "2023-01-24 00:00:00"
+#   train_ratio: 0.9 
+#   val_ratio: 0.1 
+#   seq_len: 48 #384
+#   label_len: 0 #96
+#   pred_len: 24 #96
+#   apply_lookback: True # Should be true if TimeSeriesDataset is used
+
+
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.splits.DateBasedSplitter
+  _target_: lmetk.data.preprocessing.TimeStampSplitter
+  splitter_type: TimeStampSplitter
   test_start: "2023-01-24 00:00:00"
   train_ratio: 0.9 
   val_ratio: 0.1 
-  seq_len: 48 #384
-  label_len: 0 #96
-  pred_len: 24 #96
-  apply_lookback: True # Should be true if TimeSeriesDataset is used
+  
+  # There values will be read from the model parameters similarly to how we deal with data_path.
+  seq_len: ${oc.select:model.seq_len,null}     # 96   # 384  # window size
+  label_len: ${oc.select:model.label_len,null} # 48 # 96  # overlap size
+  pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
+  apply_lookback: True
 
-scaler:
-  features:
-    _target_: sklearn.preprocessing.MinMaxScaler
+data_default_transforms:
+  scaler:
+    transform:
+      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter # Your wrapper class
+    
+    metadata:
+      apply_to: features
+      fit_on: train
+  
+  time_features_transform:
+    transform:
+      _target_: lmetk.transforms.timefeatures_railway.RailwayTimeFeaturesTransform
+      use_features: ["year", "month", "day", "weekday", "hour"]
+      normalize_time_features: False
+    
+    metadata:
+      apply_to:  timestamps

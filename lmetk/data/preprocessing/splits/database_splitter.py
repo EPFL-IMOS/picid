@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from .base import TimeSeriesSplitter
 
 
@@ -40,6 +40,7 @@ class TimeStampSplitter(TimeSeriesSplitter):
         self.frequency = frequency
         self.apply_lookback = apply_lookback
         self.splits_dict = None
+        self.masks = None
         self.create_splits_for = kwargs.get('create_splits_for', ['features', 'timestamps'])
 
         if not np.isclose(train_ratio + val_ratio, 1.0):
@@ -55,11 +56,17 @@ class TimeStampSplitter(TimeSeriesSplitter):
             return len(dates)
         return dates.searchsorted(rounded)
 
-    def get_splits(self, data: np.ndarray, dates: pd.Series) -> dict:
-        if not isinstance(dates, pd.Series) or not isinstance(
-            dates.iloc[0], pd.Timestamp
-        ):
-            raise ValueError("`dates` must be a pandas Series of timestamps.")
+    def get_splits(self, data: Any, dates: Any) -> dict:
+        if not isinstance(dates, pd.Series):
+            raise ValueError("`dates` must be a pandas Series.")
+        
+        if not isinstance(dates.iloc[0], pd.Timestamp):
+            try: 
+                dates = pd.to_datetime(dates)
+            except:
+                raise ValueError("`dates` must be a pandas Series of timestamps.")
+
+
         if len(dates) != len(data):
             raise ValueError("Length of `dates` must match length of `data`.")
 
@@ -84,6 +91,8 @@ class TimeStampSplitter(TimeSeriesSplitter):
         if self.apply_lookback:
             i_val_start = max(0, i_val_start - lookback)
             i_test_start = max(0, i_test_start - lookback)
+        else:
+            lookback = 0
 
         # Sanity checks
         assert (i_train_end - 0) >= min_required, "Train split too short."
@@ -97,19 +106,19 @@ class TimeStampSplitter(TimeSeriesSplitter):
         # Val is lookback zeros then val_len of ones
         val_mask = np.concatenate([
             np.zeros(lookback, dtype=bool),
-            np.ones(i_val_end - i_val_start + lookback, dtype=bool)
+            np.ones(i_val_end - (i_val_start + lookback), dtype=bool)
         ])
         
         # Test is lookback zeros then test_len of ones
         test_mask = np.concatenate([
             np.zeros(lookback, dtype=bool),
-            np.ones(i_test_end - i_test_start + lookback, dtype=bool)
+            np.ones(i_test_end - (i_test_start+ lookback), dtype=bool)
         ])
 
         masks = {
-            "train_mask": train_mask,
-            "val_mask": val_mask,
-            "test_mask": test_mask,
+            "train": train_mask,
+            "val": val_mask,
+            "test": test_mask,
         }
 
 
@@ -120,11 +129,34 @@ class TimeStampSplitter(TimeSeriesSplitter):
         }
         return splits_dict, masks
 
-    def split_data(
-        self, data: np.ndarray, dates: pd.Series
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def split_data(self, data_dict: Dict[str, Any], split_variable: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        Splitting method.
+        
+        Inputs
+        ------
+        data_dict: Dict[str, Any]
+            Dictionary containing the data.
+
+        split_variable: str
+            Name of the variable to split.
+
+        Returns
+        -------
+        splitted_data: Dict[str, np.ndarray]
+            Dictionary containing the splitted data.
+        
+        split_masks: Dict[str, np.ndarray]
+            Dictionary containing the mask of the splits
+        
+        """
+        # Extract data that corresponds to the split variable
+        data = data_dict[split_variable]
+
+        # This splitter produces splits based on the timestamps hence it is required to pass the corresponding timestamps.
+        timestamps = data_dict["timestamps"]
         if self.splits_dict is None:
-            self.splits_dict, self.masks = self.get_splits(data, dates)
+            self.splits_dict, self.masks = self.get_splits(data, timestamps)
         
         train = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
         val = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]

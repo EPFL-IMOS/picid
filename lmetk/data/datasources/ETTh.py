@@ -30,11 +30,6 @@ class ETThLoader(DataSourceLoader):
     def _load_data(self) -> dict:
         # Read raw CSV
         df, df_stamp = self.read_data()
-
-        # Determine columns to use
-        if self.task_mode in ["univariate"]:
-            df = df[[self.target_name]]
-
         
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
@@ -66,6 +61,11 @@ class ETThLoader(DataSourceLoader):
         # Get timestamps
         df_stamp = df[self.timestamp_name].copy()
         df.drop(columns=[self.timestamp_name], inplace=True)
+
+        # Determine columns to use
+        if self.task_mode in ["univariate"]:
+            df = df[[self.target_name]]
+            
         return df, df_stamp
     
     def _init_default_transforms(self):

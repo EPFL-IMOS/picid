@@ -88,7 +88,7 @@ class DataSourceLoader(ABC):
         assert self._is_loaded, "Data must be loaded before splitting."
         
         splitted_data, split_masks = self.data_splitter.split_data(
-            self.data_dict[variable]
+            data_dict = self.data_dict.copy(), split_variable = variable,
         )
         
         # Check 

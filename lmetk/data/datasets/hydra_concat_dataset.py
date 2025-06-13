@@ -7,13 +7,16 @@ from hydra.utils import instantiate
 class HydraConcatDataset(ConcatDataset):
     def __init__(self, 
                  dataset_cfg,
-                 data_split: Dict[str, List[torch.Tensor]], **kwargs):
+                 data_dict: dict,
+                 split: str,
+                 **kwargs):
         """
         Args:
             dataset_cfg: the dataset configuration.
             tensor_dict: dictionary of tensors.
         """
-
+        # TODO rework it. 
+        
         # Fetch the first item from the dict
         first_key = next(iter(data_split))
         first_item = data_split[first_key]

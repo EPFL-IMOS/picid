@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Dict, Any
 from .base import TimeSeriesSplitter
 
 import warnings
@@ -146,8 +146,30 @@ class TimeSplitter(TimeSeriesSplitter):
         }
         return splits, masks
 
-    def split_data(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def split_data(self, data_dict: Dict[str, Any], split_variable: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        Splitting function.
         
+        Inputs
+        ------
+        data_dict: Dict[str, Any]
+            Dictionary containing the data.
+
+        split_variable: str
+            Name of the variable to split.
+
+        Returns
+        -------
+        splitted_data: Dict[str, np.ndarray]
+            Dictionary containing the splitted data.
+        
+        split_masks: Dict[str, np.ndarray]
+            Dictionary containing the mask of the splits
+        
+        """
+        # Extract data that corresponds to the split variable
+        data = data_dict[split_variable]
+
         if self.splits_dict is None:
             self.splits_dict, self.split_masks = self.get_splits(data)
 

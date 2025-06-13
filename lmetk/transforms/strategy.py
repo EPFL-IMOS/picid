@@ -54,16 +54,33 @@ class DirectTransformStrategy(TransformStrategy):
               transform_instance: BaseTransform, 
               data: Dict[str, Any], 
               apply_to_key: str, 
+              auxiliary_keys: Optional[List[str]] = None,
               fit_on_split: Optional[str] = None # Not used by this strategy, but kept for signature consistency
              ) -> Dict[str, Any]:
         """
         Applies the transform directly to the specified `apply_to_key` within
         each split of the single source's data, using `transform_instance.transform_data()`.
+        
+        Args:
+            transform_instance: The transform to apply
+            data: Dictionary containing the data splits
+            apply_to_key: Key identifying which data to transform
+            auxiliary_keys: Optional list of keys for auxiliary information to pass to transform
+            fit_on_split: Not used by this strategy, kept for signature consistency
+            
+        Returns:
+            Dictionary with transformed data
         """
         if not isinstance(data, dict):
             raise TypeError(f"{self.__class__.__name__} expects a single data dictionary (for a single source).")
         if apply_to_key not in data:
             raise KeyError(f"Data key '{apply_to_key}' not found in data. Available keys: {list(data.keys())}")
+        
+        # Validate auxiliary keys if provided
+        if auxiliary_keys:
+            missing_keys = [key for key in auxiliary_keys if key not in data]
+            if missing_keys:
+                raise KeyError(f"Auxiliary keys {missing_keys} not found in data. Available keys: {list(data.keys())}")
         
         # Make a copy to avoid modifying original input data directly
         transformed_data = data.copy()
@@ -73,7 +90,25 @@ class DirectTransformStrategy(TransformStrategy):
         
         for split_name, split_data in target_data_splits.items():
             if split_data is not None:
-                transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+                # Prepare auxiliary data for this split if auxiliary_keys are provided
+                auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if split_name in aux_splits and aux_splits[split_name] is not None:
+                            auxiliary_data[aux_key] = aux_splits[split_name]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
+                
+                # Apply transform with or without auxiliary data
+                if auxiliary_data:
+                    # Assuming transform_instance.transform_data can accept auxiliary data
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                        split_data, 
+                        auxiliary_data=auxiliary_data
+                    )
+                else:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
@@ -94,13 +129,24 @@ class FitTransformStrategy(TransformStrategy):
               transform_instance: BaseTransform, 
               data: Dict[str, Any], 
               apply_to_key: str, 
-              fit_on_split: str
+              fit_on_split: str,
+              auxiliary_keys: Optional[List[str]] = None
              ) -> Dict[str, Any]:
         """
         Fits the transform instance on the specified `fit_on_split` data
         from `apply_to_key` of a single source, then transforms all splits
         under the same `apply_to_key`. Uses `transform_instance.fit_single_source()`
         and `transform_instance.transform_data()`.
+        
+        Args:
+            transform_instance: The transform to apply
+            data: Dictionary containing the data splits
+            apply_to_key: Key identifying which data to transform
+            fit_on_split: Split to use for fitting the transform
+            auxiliary_keys: Optional list of keys for auxiliary information to pass to transform
+            
+        Returns:
+            Dictionary with transformed data
         """
         if not isinstance(data, dict):
             raise TypeError(f"{self.__class__.__name__} expects a single data dictionary (for a single source).")
@@ -108,6 +154,12 @@ class FitTransformStrategy(TransformStrategy):
             raise KeyError(f"Data key '{apply_to_key}' not found in data. Available keys: {list(data.keys())}")
         if fit_on_split is None:
             raise ValueError(f"{self.__class__.__name__} requires 'fit_on_split' to be specified.")
+        
+        # Validate auxiliary keys if provided
+        if auxiliary_keys:
+            missing_keys = [key for key in auxiliary_keys if key not in data]
+            if missing_keys:
+                raise KeyError(f"Auxiliary keys {missing_keys} not found in data. Available keys: {list(data.keys())}")
         
         # Make a copy to avoid modifying original input data directly
         transformed_data = data.copy()
@@ -117,7 +169,26 @@ class FitTransformStrategy(TransformStrategy):
         # 1. Fit on the specified split using BaseTransform's single-source fit method
         if fit_on_split in target_data_splits:
             try:
-                transform_instance.fit_single_source(target_data_splits[fit_on_split])
+                # Prepare auxiliary data for fitting if auxiliary_keys are provided
+                fit_auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if fit_on_split in aux_splits and aux_splits[fit_on_split] is not None:
+                            fit_auxiliary_data[aux_key] = aux_splits[fit_on_split]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for fitting split '{fit_on_split}' is None or missing.")
+                
+                # Fit with or without auxiliary data
+                if fit_auxiliary_data:
+                    # Assuming fit_single_source can accept auxiliary data
+                    transform_instance.fit_single_source(
+                        target_data_splits[fit_on_split], 
+                        auxiliary_data=fit_auxiliary_data
+                    )
+                else:
+                    transform_instance.fit_single_source(target_data_splits[fit_on_split])
+                    
             except Exception as e:
                 raise RuntimeError(f"Error during single-source fitting of '{transform_instance.__class__.__name__}' on split '{fit_on_split}': {e}")
         else:
@@ -127,7 +198,24 @@ class FitTransformStrategy(TransformStrategy):
         transformed_target_data_splits = {}
         for split_name, split_data in target_data_splits.items():
             if split_data is not None:
-                transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+                # Prepare auxiliary data for this split if auxiliary_keys are provided
+                auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if split_name in aux_splits and aux_splits[split_name] is not None:
+                            auxiliary_data[aux_key] = aux_splits[split_name]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
+                
+                # Apply transform with or without auxiliary data
+                if auxiliary_data:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                        split_data, 
+                        auxiliary_data=auxiliary_data
+                    )
+                else:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")

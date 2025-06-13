@@ -49,6 +49,7 @@ class DataTransform:
         
         self.apply_to = metadata.get('apply_to', None)
         self.fit_on = metadata.get('fit_on', None)
+        self.auxiliary_keys = metadata.get('auxiliary_keys', None)
         self.multi_source_fit = metadata.get('multi_source_fit', False)
 
         if self.apply_to is None:
@@ -70,6 +71,10 @@ class DataTransform:
             self.transform_instance: BaseTransform = instantiate(transform)
         else:
             self.transform_instance = transform
+            assert isinstance(self.transform_instance, BaseTransform), (
+                f"Transform instance for '{transform_name}' (type: {type(self.transform_instance)}) "
+                f"must inherit from 'lmetk.transforms.base_transform.BaseTransform'."
+            )
         
         if not isinstance(self.transform_instance, BaseTransform):
             raise TypeError(
@@ -114,7 +119,8 @@ class DataTransform:
             self.transform_instance, 
             data, 
             apply_to_key=self.apply_to, 
-            fit_on_split=self.fit_on
+            fit_on_split=self.fit_on,
+            auxiliary_keys = self.auxiliary_keys
         )
         
         # --- Post-transformation Validation ---
