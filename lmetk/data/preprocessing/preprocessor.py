@@ -23,18 +23,24 @@ class PreProcessor:
         self.data_lst: Optional[List[Any]] = None
         self.data_name_lst: Optional[List[Any]] = None
         self.source_transforms_lst: Optional[List[Any]] = None
+        self.source_transform_names_lst: Optional[List[Any]] = None
         self.multisource_transforms: Optional[List[Any]] = None
         self.multisource_data_splitter: Optional[Any] = None
         self._is_preprocessed = False
 
     def get_processed_data(self,):
         return self.data_lst, self.source_transforms_lst, self.multisource_transforms
+    
+    # TODO: that is needed at least for evaluator, extend it for multisource maybe
+    def get_transform_names(self,):
+        return self.source_transform_names_lst
 
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
         data_name_lst = self.datasource.get_data_name()
         source_transforms_raw = self.datasource.get_transforms() 
+        source_transform_names_raw = self.datasource.get_transform_names()
         multisource_data_splitter = self.datasource.get_multisource_data_splitter()
 
         # Ensure all outputs are lists for consistent processing
@@ -52,6 +58,7 @@ class PreProcessor:
         self.data_lst = data_lst
         self.data_name_lst = data_name_lst
         self.source_transforms_lst = source_transforms_raw
+        self.source_transform_names_lst = source_transform_names_raw
         self.multisource_data_splitter = multisource_data_splitter
 
 

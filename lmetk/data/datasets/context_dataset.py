@@ -7,17 +7,17 @@ from lightning_fabric.utilities.data import AttributeDict
 class ContextBatchDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        features: torch.Tensor,
+        context: torch.Tensor,
+        target: torch.Tensor,
         time_features: torch.Tensor,
-        mask: torch.Tensor,  # True for target, False for the rest of covariates
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
         **kwargs
     ):
-        self.target_feature = features[..., mask]
-        self.context_features = features[..., ~mask]
+        self.target_feature = target
+        self.context_features = context
         self.time_features = time_features
 
         self.target_dataset = SWBatchDataset(

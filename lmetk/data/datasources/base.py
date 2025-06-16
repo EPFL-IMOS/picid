@@ -80,6 +80,23 @@ class DataSourceLoader(ABC):
                 source_transforms[key] = item
 
         return source_transforms
+
+    def get_transform_names(self) -> None:
+        """Append the instantiated transforms to the instance data_transforms_lst."""
+        source_transform_names = list()
+        if getattr(self, 'data_default_transforms', None) is not None:
+            for key, item in self.data_default_transforms.items():
+                source_transform_names.append(key)
+            
+        
+        if getattr(self, 'transforms', None) is not None: 
+            for key, item in self.transforms.items():
+                # Check if such key already exist
+                if key in source_transform_names:
+                    raise KeyError('The key is already exist, make sure to give unique name for each transform applied')
+                
+                source_transform_names.append(key)
+        return source_transform_names
     
     def get_multisource_data_splitter(self):
         return self.multisource_data_splitter

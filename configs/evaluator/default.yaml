@@ -1,6 +1,7 @@
 _target_: lmetk.evaluator.default.DefaultEvaluator
-metric_names: ['mae', 'mse'] # 'rmse', 'mape', 'mspe' 
-apply_inverse_scaling: False
+metric_names: ['mae', 'mse', 'mae_railway', 'mse_railway'] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
+
+apply_inverse_scaling: True
 
 model_seq_len: ${model.seq_len}
 model_label_leb: ${model.label_len}

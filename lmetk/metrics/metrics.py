@@ -2,6 +2,46 @@
 
 import numpy as np
 from .base import AbstractMetric
+import pandas as pd
+
+class NormalizedMAEMetricRailway(AbstractMetric):
+    """Normalized Mean Absolute Error metric for Railvay."""
+    
+    def __init__(self):
+        super().__init__("mae")
+        self.factor = pd.read_csv("datasets/railway/railway.csv")["Bahnlast"].abs().mean()
+    
+    def reset(self):
+        self.values = []
+    
+    def update(self, predictions: np.ndarray, targets: np.ndarray):
+        abs_errors = (np.mean(np.abs(predictions - targets)) * 100) / self.factor
+        self.values.extend(abs_errors.flatten())
+    
+    def compute(self) -> float:
+        if not self.values:
+            raise ValueError("No data available for computation")
+        return np.mean(self.values)
+
+class NormalizedMSEMetricRailway(AbstractMetric):
+    """"Normalized Mean Squared Error metric for Railvay."""
+    
+    def __init__(self):
+        super().__init__("mse")
+        self.factor = pd.read_csv("datasets/railway/railway.csv")["Bahnlast"].abs().mean()
+    
+    def reset(self):
+        self.values = []
+    
+    def update(self, predictions: np.ndarray, targets: np.ndarray):
+        squared_errors = (np.mean((predictions - targets) ** 2) * 100) / self.factor
+        self.values.extend(squared_errors.flatten())
+    
+    def compute(self) -> float:
+        if not self.values:
+            raise ValueError("No data available for computation")
+        return np.mean(self.values)
+
 
 
 class MAEMetric(AbstractMetric):

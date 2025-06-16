@@ -24,11 +24,8 @@ class TabPFNWrapper(AbstractWrapper):
         self.train_dataloader = kwargs['train_dataloader']
         self.val_dataloader = kwargs['val_dataloader']
     
-    def fit(self, batch):
-        batch_x = batch['context']['x'][:, self.lag, :]
-        batch_y = batch['target']['x'][:, self.lag, :]
-
-        self.backbone.fit(batch_x.cpu(), batch_y.cpu())
+    def fit(self, x, y):
+        self.backbone.fit(x.cpu(), y.cpu())
     
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
@@ -43,25 +40,22 @@ class TabPFNWrapper(AbstractWrapper):
         dict
             Dictionary containing the updated model output.
         """
-        # Option 2 (better one)
-        if self.model_fit_flag == False:
-            batch = next(iter(self.train_dataloader))
-            self.fit(batch)
-             
-        batch_x = batch['batch_x']
-        batch_y = batch['batch_y']
-        batch_x_mark = batch['batch_x_mark']
-        batch_y_mark = batch['batch_y_mark']
         
-        outputs = self.backbone(batch_y, batch_x_mark)
-        outputs = outputs[:, -self.kwargs.pred_len:, :]
-        batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, :]       
+         
+        context_fit = batch['context']['x'].squeeze(0)
+        target_fit = batch['target']['x'].squeeze(0)
+        self.fit(context_fit, target_fit)
 
+        context = batch['context']['y'].squeeze(0)
+        target = batch['target']['y']
+        outputs = self.backbone.predict(context.cpu())
+    
+        
         
         # Update evaluator with current batch (replaces the accumulation logic)
         model_out = {
-            'predictions': outputs,
-            'targets': batch_y_subset
+            'predictions': torch.Tensor(outputs).reshape(batch['target']['y'].shape),
+            'targets': target
         }
 
         

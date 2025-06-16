@@ -86,7 +86,14 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         features = data_dict['features']
         time_features = data_dict['timestamps']
         try:
-            scaler = source_transforms_lst[0][0].transform_instance.scaler
+            transform_names = preprocessor.get_transform_names()
+            if 'scaler_target' in transform_names:
+                target_scaler_idx = transform_names.index('scaler_target')
+                scaler = source_transforms_lst[0][target_scaler_idx].transform_instance.scaler
+            else:
+                scaler = source_transforms_lst[0][0].transform_instance.scaler
+
+            
         except:
             # false scaler for test
             scaler = lambda x: x
@@ -103,27 +110,54 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
 
     else:
-        # Prepare datasets
-        dataset_train = hydra.utils.instantiate(
-            cfg.dataset,
-            features=features["train"], 
-            time_features=time_features["train"],
-            **add_args
-            )
-
-        dataset_val = hydra.utils.instantiate(
-            cfg.dataset,
-            features=features["val"], 
-            time_features=time_features["val"],
-            **add_args
-            )
-        
-        dataset_test = hydra.utils.instantiate(
+        if cfg.datasource.mode_mode == 'context':
+            # Prepare datasets
+            dataset_train = hydra.utils.instantiate(
                 cfg.dataset,
-                features=features["test"], 
-                time_features=time_features["test"],
+                context=features["train"],
+                target= data_dict['target']["train"],
+                time_features=time_features["train"],
+                
+                )
+
+            dataset_val = hydra.utils.instantiate(
+                cfg.dataset,
+                context=features["val"], 
+                target= data_dict['target']["val"],
+                time_features=time_features["val"],
+                
+                )
+            
+            dataset_test = hydra.utils.instantiate(
+                    cfg.dataset,
+                    context=features["test"], 
+                    target= data_dict['target']["test"],
+                    time_features=time_features["test"],
+                    
+                    )
+
+        else:
+            # Prepare datasets
+            dataset_train = hydra.utils.instantiate(
+                cfg.dataset,
+                features=features["train"], 
+                time_features=time_features["train"],
                 **add_args
                 )
+
+            dataset_val = hydra.utils.instantiate(
+                cfg.dataset,
+                features=features["val"], 
+                time_features=time_features["val"],
+                **add_args
+                )
+            
+            dataset_test = hydra.utils.instantiate(
+                    cfg.dataset,
+                    features=features["test"], 
+                    time_features=time_features["test"],
+                    **add_args
+                    )
     print(f"Train dataset size: {dataset_train.__len__()}")
     print(f"Validation dataset size: {dataset_val.__len__()}")
     print(f"Test dataset size: {dataset_test.__len__()}")

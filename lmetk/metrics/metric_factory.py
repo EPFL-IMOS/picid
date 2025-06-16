@@ -2,7 +2,7 @@
 
 from typing import Dict, Type
 from .base import AbstractMetric
-from lmetk.metrics.metrics import MAEMetric, MSEMetric, RMSEMetric, MAPEMetric, MSPEMetric, RSEMetric, CORRMetric
+from lmetk.metrics.metrics import MAEMetric, MSEMetric, RMSEMetric, MAPEMetric, MSPEMetric, RSEMetric, CORRMetric, NormalizedMAEMetricRailway, NormalizedMSEMetricRailway
 
 
 class MetricFactory:
@@ -16,6 +16,8 @@ class MetricFactory:
         'mspe': MSPEMetric,
         'rse': RSEMetric,
         'corr': CORRMetric,
+        'mae_railway': NormalizedMAEMetricRailway,
+        'mse_railway': NormalizedMSEMetricRailway,
     }
     
     @classmethod

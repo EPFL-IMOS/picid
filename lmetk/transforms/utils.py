@@ -14,7 +14,7 @@ def _convert_to_numpy(data: Any) -> Tuple[np.ndarray, Type]:
     elif isinstance(data, pd.DataFrame):
         return data.values, original_type
     elif isinstance(data, pd.Series):
-        return data.values, original_type
+        return data.values.reshape(-1,1), original_type
     elif isinstance(data, torch.Tensor):
         return data.cpu().numpy(), original_type # Move to CPU if on GPU, then convert
     else:

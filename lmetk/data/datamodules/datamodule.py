@@ -108,7 +108,7 @@ class BaseDataModule(LightningDataModule):
             shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
-            # collate_fn=collate_fn,
+            collate_fn=collate_fn,
         )
 
         return loader
