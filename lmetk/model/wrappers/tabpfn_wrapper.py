@@ -41,7 +41,6 @@ class TabPFNWrapper(AbstractWrapper):
             Dictionary containing the updated model output.
         """
         
-         
         context_fit = batch['context']['x'].squeeze(0)
         target_fit = batch['target']['x'].squeeze(0)
         self.fit(context_fit, target_fit)
