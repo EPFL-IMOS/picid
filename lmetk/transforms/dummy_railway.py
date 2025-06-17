@@ -46,8 +46,14 @@ class RailwayDummyTransform(BaseTransform):
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
         
+        assert self.shift in [168], "dummy shift must be 24, 168, or 336"
+
         dummy_leak = np.concatenate([np.zeros((self.shift,1)), auxiliary_data['target'][:-self.shift]])
         assert dummy_leak.shape[0] == data_segment.shape[0]
+        initial_dates = list(auxiliary_data['initial_dates'])
+        initial_dates_shifted = initial_dates[self.shift:]
+        print(initial_dates[:5])
+        print(initial_dates_shifted[:5])
         
         data_segment = np.concatenate([data_segment, dummy_leak], axis=1)
         

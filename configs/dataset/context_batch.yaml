@@ -4,4 +4,5 @@ seq_len: ${datasource.data_splitter.seq_len}
 label_len: ${datasource.data_splitter.label_len} 
 pred_len: ${datasource.data_splitter.pred_len} 
 
-stride: 24
+# predict the next day
+stride: ${oc.select:model.pred_len} #24
