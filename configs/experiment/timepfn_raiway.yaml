@@ -1,0 +1,91 @@
+# @package _global_
+defaults:
+  - override /datasource: railway_noleak
+  - override /dataset: sw_batch
+  - override /datamodule: base_datamodule
+  - override /model: timepfn
+  - override /evaluator: railway
+
+
+evaluator: 
+  effective_pred_len: 24
+  task_mode: univariate
+  target_dim_position: -1
+
+dataset:
+  stride: 24
+
+datasource: 
+  mode_mode: other
+
+  data_default_transforms:
+    scaler_features:
+      transform:
+        _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+      
+      metadata:
+        apply_to: features
+        fit_on: train
+    
+    scaler_target:
+      transform:
+        _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+      
+      metadata:
+        apply_to: target
+        fit_on: train
+    
+    time_features_transform:
+      transform:
+        _target_: lmetk.transforms.timefeatures_railway.RailwayTimeFeaturesTransform
+        use_features: ["year", "month", "day", "weekday", "hour"]
+        normalize_time_features: False
+      
+      metadata:
+        apply_to: timestamps
+  
+    # time_features_transform:
+    #   transform:
+    #     _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+    #     freq: h 
+      
+    #   metadata:
+    #     apply_to:  timestamps
+      
+    scaler_timefeatures:
+      transform:
+        _target_: lmetk.transforms.base_transform.SklearnStandardScalerAdapter 
+      
+      metadata:
+        apply_to: timestamps
+        fit_on: train
+  
+    concatenate_features:
+      transform:
+        _target_: lmetk.transforms.concatenate.ConcatenateTransform
+      
+      metadata:
+        apply_to: features
+        auxiliary_keys: ['timestamps'] 
+    
+    dummy_leak_seasonal:
+    # Note that shift is infered from the seq_len of the model. Dummy shift supports only 168, otherwise the shift breaks the week symmetry. 
+      transform:
+        _target_: lmetk.transforms.seasonal_dummy_railway.SeasonalDummyTransform #lmetk.transforms.dummy_railway.RailwayDummyTransform
+        shift: ${oc.select:model.seq_len} # we have to ensure that context from target do not have any future information!
+      
+      metadata:
+        apply_to: features
+        auxiliary_keys: ['target', 'initial_dates']   
+
+    dummy_leak:
+      # Note that for time_pfn we use dummy leak with shift 24 (the same as effective prediction length)
+      transform:
+        _target_: lmetk.transforms.dummy_railway.RailwayDummyTransform #
+        shift: 24 # we have to ensure that context from target do not have any future information!
+      
+      metadata:
+        apply_to: features
+        auxiliary_keys: ['target', 'initial_dates']    
+      
+    

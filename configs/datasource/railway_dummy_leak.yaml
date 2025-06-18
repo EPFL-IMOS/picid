@@ -84,12 +84,12 @@ data_default_transforms:
       apply_to: features
       auxiliary_keys: ['timestamps'] 
 
-  # Dropping autocorrelated features harms the performance 
-  # drop_autocorrelated_features:
-  # transform:
-  #   _target_: lmetk.transforms.autocorr_drop.AutocorrFeatureDropTransform
-  #   correlation_threshold: 0.95
-  
-  # metadata:
-  #   apply_to: features
-  #   fit_on: train
+# Dropping autocorrelated features harms the performance 
+# drop_autocorrelated_features:
+# transform:
+#   _target_: lmetk.transforms.autocorr_drop.AutocorrFeatureDropTransform
+#   correlation_threshold: 0.95
+
+# metadata:
+#   apply_to: features
+#   fit_on: train

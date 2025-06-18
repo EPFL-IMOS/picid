@@ -1,0 +1,14 @@
+_target_: lmetk.evaluator.default.DefaultEvaluator
+metric_names: ['mae', 'mse', 'mae_railway', 'mse_railway'] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
+
+apply_inverse_scaling: True
+
+model_seq_len: ${model.seq_len}
+model_label_leb: ${model.label_len}
+model_pred_len: ${model.pred_len}
+
+# Some models predict always a multivariate time-series but then at evaluation we have to evaluate on one particular variable, hence here is a proposition how to tackle such cases
+task_mode: ${datasource.task_mode} # univariate/multivariate
+target_dim_position: null #${datasource.target_var_dim}
+
+effective_pred_len: null #24

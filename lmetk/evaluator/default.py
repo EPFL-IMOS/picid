@@ -62,20 +62,27 @@ class DefaultEvaluator(AbstractEvaluator):
         if predictions.shape != targets.shape:
             raise ValueError(f"Shape mismatch: predictions {predictions.shape} vs targets {targets.shape}")
         
+        # Based on the feature mode take the features: 
+        # f_dim = 1 if self.task_mode == 'MS' else: None
+        # PATCH: logic here need to be improved as self.target_dim_position is not always defined as None
+        if self.task_mode == 'univariate' and self.target_dim_position is not None:
+            f_dim = self.target_dim_position
+            predictions, targets = predictions[:,:,f_dim], targets[:,:,f_dim]
+        
+        # else: 
+        #     f_dim = None
+
         # Apply inverse scaling if configured
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(predictions, targets)
-        
-        # Based on the feature mode take the features: 
-        f_dim = 1 if self.task_mode == 'MS' else None
-        predictions, targets = predictions[:,:,:f_dim], targets[:,:,:f_dim]
+
         # Update all metrics
         for metric in self.metrics.values():
             metric.update(predictions, targets)
-    
+
     def compute(self) -> Dict[str, float]:
         """
         Compute final metric values.
-        
+
         Returns
         -------
         Dict[str, float]
