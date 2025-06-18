@@ -17,19 +17,9 @@ from lmetk.transforms.base_transform import BaseTransform
 
 class RailwayDummyTransform(BaseTransform):
 
-    def __init__(self, use_features: List[str], normalize_time_features: bool, **kwargs):
-        # Call the BaseTransform constructor. 
-        # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
-        # so just pass any generic kwargs along.
-        super().__init__(**kwargs) 
-        
-        # Store the frequency, which is specific to this transform
-        self.use_features = use_features
-        self.normalize_time_features = normalize_time_features
-        # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
-        # (your provided BaseTransform doesn't show _init_kwargs in its __init__, 
-        # but your original TimePFNTimeFeaturesTransform did, so keeping it consistent for your repr)
+    def __init__(self, **kwargs):
         self._init_kwargs = kwargs 
+        self.shift = kwargs['shift']
 
     def __repr__(self):
         # Ensure 'freq' is included in the representation, along with any other init args
@@ -56,7 +46,16 @@ class RailwayDummyTransform(BaseTransform):
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
         
-        pass
+        assert self.shift in [168], "dummy shift must be 24, 168, or 336"
+
+        dummy_leak = np.concatenate([np.zeros((self.shift,1)), auxiliary_data['target'][:-self.shift]])
+        assert dummy_leak.shape[0] == data_segment.shape[0]
+        initial_dates = list(auxiliary_data['initial_dates'])
+        initial_dates_shifted = initial_dates[self.shift:]
+        print(initial_dates[:5])
+        print(initial_dates_shifted[:5])
+        
+        data_segment = np.concatenate([data_segment, dummy_leak], axis=1)
         
         # Return the values as a NumPy array.
         return data_segment

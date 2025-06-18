@@ -3,8 +3,8 @@ ignore_pretraining_limits: True
 device: 'cuda:0'
 
 features_mode: no_feature_mode
-seq_len: 168 # 7*24      # window size
+seq_len: 168 #168 # 7*24      # window size
 label_len: 0  # overlap size
 
 # Model parameters
-pred_len: 24    # prediction size
+pred_len: 24 #168 #24    # prediction size
