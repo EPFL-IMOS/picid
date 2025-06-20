@@ -40,7 +40,7 @@ class RailwayDummyTransform(BaseTransform):
         """
         pass
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict) -> Any:
+    def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
         
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
@@ -62,6 +62,6 @@ class RailwayDummyTransform(BaseTransform):
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
-    def __call__(self, data_segment: Any, auxiliary_data: Dict) -> Any:
-        return self.transform_data(data_segment, auxiliary_data)
+    def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
+        return self.transform_data(data_segment, auxiliary_data,  mode: str)
     

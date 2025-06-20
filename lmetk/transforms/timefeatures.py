@@ -54,7 +54,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         """
         pass
 
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, mode: str) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -96,7 +96,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
     def __call__(self, data: Any) -> Any:
         return self.transform_data(data)
     
-    def transform(self, data: Any) -> Any:
+    def transform(self, data: Any, mode: str) -> Any:
         return self(data)
 
 # """Identity transform that does nothing to the input data."""

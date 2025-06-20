@@ -57,6 +57,7 @@ data_default_transforms:
     
     metadata:
       apply_to: features
+      #fit_on: train
       auxiliary_keys: ['target', 'initial_dates']      
   
   time_features_transform:

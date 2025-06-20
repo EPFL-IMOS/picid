@@ -55,7 +55,7 @@ class BaseTransform(ABC):
                                  f"Consider using DirectTransform if no fitting is required.")
         
     @abstractmethod
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, mode: str = None) -> Any:
         """
         Applies the transformation to a single data segment.
 
@@ -64,6 +64,8 @@ class BaseTransform(ABC):
         data_segment : Any
             The data segment to transform. Its type can be numpy.ndarray, pandas.DataFrame,
             pandas.Series, torch.Tensor, or other array-like structures.
+        mode : str, 
+            An optional mode parameter that can be used to specify different transformation
 
         Returns
         -------
@@ -109,7 +111,7 @@ class SklearnStandardScalerAdapter(BaseTransform):
         
         self.scaler.fit(aggregated_data)
         
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, mode: str) -> Any:
         """Transforms a single data segment using the internal StandardScaler."""
         np_data, original_type = _convert_to_numpy(data_segment)
         transformed_np_data = self.scaler.transform(np_data)
@@ -149,7 +151,7 @@ class SklearnMinMaxScalerAdapter(BaseTransform):
         
         self.scaler.fit(aggregated_data)
         
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, mode: str) -> Any:
         """Transforms a single data segment using the internal MinMaxScaler."""
         np_data, original_type = _convert_to_numpy(data_segment)
         transformed_np_data = self.scaler.transform(np_data)
@@ -170,7 +172,7 @@ class LogTransformAdapter(BaseTransform):
         """No fitting needed for a direct log transform."""
         pass 
 
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any,  mode: str) -> Any:
         """Applies a natural logarithm transformation."""
         np_data, original_type = _convert_to_numpy(data_segment)
         

@@ -233,7 +233,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     #         model=model, datamodule=datamodule,
     #     )
     
-    trainer.test(model=model, datamodule=datamodule,)
+    trainer.test(model=model, datamodule=datamodule)
     
 
     # object_dict = {

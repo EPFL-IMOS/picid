@@ -60,11 +60,3 @@ data_default_transforms:
       apply_to:  timestamps
 
 
-# transforms:
-#   scaler2:
-#     transform:
-#       _target_: lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-    
-#     metadata:
-#       apply_to: features
-#       fit_on: train 
