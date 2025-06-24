@@ -3,9 +3,11 @@ metric_names: ['mae', 'mse', 'mae_railway', 'mse_railway'] # 'rmse', 'mape', 'ms
 
 apply_inverse_scaling: True
 
-model_seq_len: ${model.seq_len}
-model_label_leb: ${model.label_len}
-model_pred_len: ${model.pred_len}
+model_seq_len: ${task_definition.seq_len}
+model_label_leb: ${task_definition.label_len}
+model_pred_len: ${task_definition.pred_len}
 task_mode: ${datasource.task_mode}
 
 effective_pred_len: null #24
+
+paths: ${paths}

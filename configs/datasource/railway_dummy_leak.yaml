@@ -27,9 +27,9 @@ data_splitter:
 
   
   # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: ${oc.select:model.seq_len,null}     # 96   # 384  # window size
-  label_len: ${oc.select:model.label_len,null} # 48 # 96  # overlap size
-  pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
+  seq_len: ${oc.select:task_definition.seq_len,null}     # 96   # 384  # window size
+  label_len: ${oc.select:task_definition.label_len,null} # 48 # 96  # overlap size
+  pred_len:  ${oc.select:task_definition.pred_len,null}  #96  # prediction size
   apply_lookback: True
 
 data_default_transforms:
@@ -53,7 +53,7 @@ data_default_transforms:
   # Note that shift is infered from the seq_len of the model. Dummy shift supports only 168, otherwise the shift breaks the week symmetry. 
     transform:
       _target_: lmetk.transforms.seasonal_dummy_railway.SeasonalDummyTransform #lmetk.transforms.dummy_railway.RailwayDummyTransform
-      shift: ${oc.select:model.seq_len} # we have to ensure that context from target do not have any future information!
+      shift: ${oc.select:task_definition.seq_len} # we have to ensure that context from target do not have any future information!
     
     metadata:
       apply_to: features
