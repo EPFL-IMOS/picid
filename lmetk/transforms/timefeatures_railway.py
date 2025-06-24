@@ -63,7 +63,7 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         """
         pass
 
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any,  mode: str) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -92,11 +92,11 @@ class RailwayTimeFeaturesTransform(BaseTransform):
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
-    def __call__(self, data: Any) -> Any:
-        return self.transform_data(data)
-    
-    def transform(self, data: Any) -> Any:
-        return self(data)
+    def __call__(self, data: Any,  mode: str) -> Any:
+        return self.transform_data(data,  mode=mode)
+
+    def transform(self, data: Any,  mode: str) -> Any:
+        return self(data,  mode=mode)
 
 def time_features(
     dates: pd.Series, use_features: Optional[list[str]] = None, normalize: bool = True, return_float=True,

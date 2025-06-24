@@ -25,7 +25,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         # Call the BaseTransform constructor. 
         # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
         # so just pass any generic kwargs along.
-        super().__init__(**kwargs) 
+        super().__init__() 
         
         # Store the frequency, which is specific to this transform
         self.freq = freq
@@ -54,7 +54,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         """
         pass
 
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, mode: str) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -80,7 +80,10 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         # Call your existing time_features function with the extracted dates and frequency.
         # This function is expected to return a structure that can be converted to a DataFrame
         # and then transposed.
-        df_stamp_raw = time_features(pd.to_datetime(initial_dates['date'].values), freq=self.freq)
+        try:
+            df_stamp_raw = time_features(pd.to_datetime(initial_dates['date'].values), freq=self.freq)
+        except:
+            df_stamp_raw = time_features(pd.to_datetime(initial_dates['datetime'].values), freq=self.freq)
         
         # Convert the result to a DataFrame and transpose, as per your original working code.
         df_stamp_processed = pd.DataFrame(df_stamp_raw.transpose(1, 0))
@@ -93,7 +96,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
     def __call__(self, data: Any) -> Any:
         return self.transform_data(data)
     
-    def transform(self, data: Any) -> Any:
+    def transform(self, data: Any, mode: str) -> Any:
         return self(data)
 
 # """Identity transform that does nothing to the input data."""

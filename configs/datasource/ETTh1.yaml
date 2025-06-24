@@ -7,6 +7,7 @@ data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
 task_mode: univariate
 target_name: OT
+target_dim_position: 0
 timestamp_name: date
 # scale: True
 

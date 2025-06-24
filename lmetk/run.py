@@ -21,6 +21,7 @@ from lmetk.utils_refactor import (
     instantiate_loggers,
     task_wrapper,
 )
+from lmetk.pipeline.base import LMETKModel
 
 
 
@@ -192,7 +193,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # TimePFN
     #from lmetk.model.time_pfn.TimePFN import TimePFN
-    from lmetk.pipeline.base import LMETKModel
+    
 
     # train_loader = datamodule.train_dataloader()
     # val_loader = datamodule.val_dataloader()
@@ -242,7 +243,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             model=model, datamodule=datamodule,
         )
     
-    trainer.test(model=model, datamodule=datamodule,)
+    trainer.test(model=model, datamodule=datamodule)
     
 
     # object_dict = {

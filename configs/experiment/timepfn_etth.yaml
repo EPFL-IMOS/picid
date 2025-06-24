@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - override /datasource: ETTh1_timepfn
+  - override /dataset: sw_batch
+  - override /datamodule: base_datamodule
+  - override /model: timepfn
+
+
+datasource: 
+  mode_mode: other

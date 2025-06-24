@@ -55,13 +55,25 @@ class ScalingWrapper:
         pred_shape = predictions.shape
         target_shape = targets.shape
         
-        # Apply inverse transform (assuming scaler expects 2D input)
-        predictions_transformed = self.scaler.inverse_transform(
-            predictions.squeeze(0)
-        ).reshape(pred_shape)
+        # IT IS A PATCH: we should define the correct shate of input of the metrics! TABFPM produces [N_pred:NUM VAR TO PREDICT], TIMEPFN prodcuces: [1, N_pred, NUM VAR TO PREDICT]
+        if len(pred_shape)==3:
+            # Apply inverse transform (assuming scaler expects 2D input)
+            predictions_transformed = self.scaler.inverse_transform(
+                predictions.squeeze(0)
+            ).reshape(pred_shape)
+            
+            targets_transformed = self.scaler.inverse_transform(
+                targets.squeeze(0)
+            ).reshape(target_shape)
         
-        targets_transformed = self.scaler.inverse_transform(
-            targets.squeeze(0)
-        ).reshape(target_shape)
+        elif len(pred_shape)==2:
+            # Apply inverse transform (assuming scaler expects 2D input)
+            predictions_transformed = self.scaler.inverse_transform(predictions
+            ).reshape((1,-1))
+            
+            targets_transformed = self.scaler.inverse_transform(targets
+            ).reshape((1,-1))
+        else:
+            raise ValueError(f"Unexpected shape: {pred_shape}")
         
         return predictions_transformed, targets_transformed

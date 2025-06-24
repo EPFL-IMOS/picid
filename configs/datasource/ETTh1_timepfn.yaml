@@ -7,6 +7,7 @@ data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
 task_mode: multivariate
 target_name: OT
+target_dim_position: 0
 timestamp_name: date
 
 # before refactor parameters: 
@@ -59,11 +60,3 @@ data_default_transforms:
       apply_to:  timestamps
 
 
-# transforms:
-#   scaler2:
-#     transform:
-#       _target_: lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-    
-#     metadata:
-#       apply_to: features
-#       fit_on: train 

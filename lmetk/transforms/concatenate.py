@@ -41,7 +41,7 @@ class ConcatenateTransform(BaseTransform):
         """
         pass
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict) -> Any:
+    def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
         """
         Concatenate all auxiliary_data values to the data_segment.
         
@@ -101,5 +101,5 @@ class ConcatenateTransform(BaseTransform):
         
         return result
 
-    def __call__(self, data_segment: Any, auxiliary_data: Dict) -> Any:
-        return self.transform_data(data_segment, auxiliary_data)
+    def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
+        return self.transform_data(data_segment, auxiliary_data,  mode=mode)

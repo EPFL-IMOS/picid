@@ -105,10 +105,11 @@ class DirectTransformStrategy(TransformStrategy):
                     # Assuming transform_instance.transform_data can accept auxiliary data
                     transformed_target_data_splits[split_name] = transform_instance.transform_data(
                         split_data, 
-                        auxiliary_data=auxiliary_data
+                        auxiliary_data=auxiliary_data,
+                        mode=split_name,
                     )
                 else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
@@ -212,10 +213,11 @@ class FitTransformStrategy(TransformStrategy):
                 if auxiliary_data:
                     transformed_target_data_splits[split_name] = transform_instance.transform_data(
                         split_data, 
-                        auxiliary_data=auxiliary_data
+                        auxiliary_data=auxiliary_data,
+                        mode=split_name,
                     )
                 else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data)
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
