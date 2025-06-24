@@ -1,0 +1,19 @@
+#@package _global_
+
+defaults:
+  # - override /datamodule: railway_traction.yaml
+  # - override /training_strategy: railway_traction.yaml
+  - /task_definition: railway_day_ahead.yaml
+  
+  - override /trainer: stf.yaml
+  - override /model: stf.yaml
+
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+
+  model_checkpoint:
+    monitor: val/loss
+
+  

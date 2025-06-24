@@ -1,0 +1,38 @@
+_target_: lmetk.baselines.spacetimeformer_model.Spacetimeformer_Forecaster
+
+metadata:
+  lightning_model: true
+
+max_seq_len: 198
+start_token_len: 6
+d_yc:  1
+d_yt:  1
+d_x: 60 # 56
+d_ff: 128
+n_heads: 7
+d_model: 128
+
+use_revin: false
+use_seasonal_decomp: false
+decay_factor: 0.95
+warmup_steps: 15000
+patience: 5
+init_lr: 1.0e-10
+base_lr: 5.0e-4
+e_layers: 2
+d_layers: 3
+
+global_cross_attn: "full"
+global_self_attn: "full"
+local_cross_attn: "full"
+local_self_attn: "full"
+time_emb_dim: 12
+dropout_attn_matrix: 0.0
+dropout_qkv: 0.1
+dropout_emb: 0.0
+dropout_ff: 0.2
+
+pos_emb_type: abs
+timetable_emb_type: linear
+time_emb_type: linear
+d_x_embedding_router:  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1]
