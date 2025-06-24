@@ -7,6 +7,8 @@ from lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from lmetk.data.datamodules.utils import context_collate_fn
 
+from torch.utils.data import Subset
+
 class ContextBaseDataModule(LightningDataModule):
     """
     Data module for the RUL datasets.
@@ -27,6 +29,7 @@ class ContextBaseDataModule(LightningDataModule):
         shuffle_train: bool = True,
         shuffle_val: bool = False,
         shuffle_test: bool = False,
+        subset_range: Optional[Tuple[int, int, int]] = None, # Used for debugging purposes
     ):
         # for ds in ["train", "val", "test"]:
         #     if ds not in datasets:
@@ -43,9 +46,9 @@ class ContextBaseDataModule(LightningDataModule):
         # Remove 'self' and 'datasets' from the list
         hparams = {arg: values[arg] for arg in args if arg not in ['self', 'datasets', 'dataset_train', 'dataset_val', 'dataset_test']}
 
-        self.dataset_train = dataset_train
-        self.dataset_val = dataset_val
-        self.dataset_test = dataset_test
+        self.dataset_train = dataset_train if subset_range is None else Subset(dataset_train, range(*subset_range))
+        self.dataset_val = dataset_val if  subset_range is None else Subset(dataset_val, range(*subset_range))
+        self.dataset_test = dataset_test if subset_range is None else Subset(dataset_test, range(*subset_range))
         
         self.save_hyperparameters(hparams, ignore=["datasets",  'dataset_train', 'dataset_val', 'dataset_test'])
 
