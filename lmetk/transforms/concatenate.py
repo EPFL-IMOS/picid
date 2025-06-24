@@ -4,6 +4,8 @@ from typing import Any, List, Dict, Optional, Union
 
 from lmetk.transforms.base_transform import BaseTransform 
 
+import logging
+logger = logging.getLogger(__name__) 
 
 class ConcatenateTransform(BaseTransform):
 
@@ -86,15 +88,15 @@ class ConcatenateTransform(BaseTransform):
                                f"Only 1D and 2D arrays are supported.")
             
             aux_arrays.append(value)
-            print(f"Adding auxiliary data '{key}' with shape {value.shape}")
+            logging.info(f"Adding auxiliary data '{key}' with shape {value.shape}")
         
         # Concatenate all arrays horizontally
         if aux_arrays:
             all_arrays = [data_segment] + aux_arrays
             result = np.concatenate(all_arrays, axis=1)
-            print(f"Final concatenated shape: {result.shape}")
+            logging.info(f"Final concatenated shape: {result.shape}")
         else:
-            print("No auxiliary data to concatenate")
+            logging.info("No auxiliary data to concatenate")
             result = data_segment
         
         return result

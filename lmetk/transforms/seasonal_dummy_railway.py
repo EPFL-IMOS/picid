@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
+import logging
 from typing import Any, List, Dict
 
 from lmetk.transforms.base_transform import BaseTransform 
-
+logger = logging.getLogger(__name__) 
 
 class SeasonalDummyTransform(BaseTransform):
 
@@ -82,10 +83,10 @@ class SeasonalDummyTransform(BaseTransform):
             *seasonal_stats        # All seasonal statistics
         ], axis=1)
         
-        print(f"Original data shape: {data_segment.shape}")
-        print(f"Shifted target shape: {dummy_leak.shape}")
-        print(f"Seasonal stats shapes: {[stat.shape for stat in seasonal_stats]}")
-        print(f"Final concatenated shape: {result.shape}")
+        logger.info(f"Original data shape: {data_segment.shape}")
+        logger.info(f"Shifted target shape: {dummy_leak.shape}")
+        logger.info(f"Seasonal stats shapes: {[stat.shape for stat in seasonal_stats]}")
+        logger.info(f"Final concatenated shape: {result.shape}")
         
         return result
 
