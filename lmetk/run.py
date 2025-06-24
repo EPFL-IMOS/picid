@@ -4,6 +4,7 @@ import random
 import torch
 # shutil
 from typing import Any
+from pathlib import Path
 import hydra
 import lightning as L
 import numpy as np
@@ -70,6 +71,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     np.random.seed(cfg.seed)
     # Seed for python random
     random.seed(cfg.seed)
+
+    for k, d in cfg.paths.items():
+        log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")

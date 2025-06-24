@@ -1,0 +1,8 @@
+# configs/logger/csv.yaml
+
+csv:
+  _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
+  save_dir: "${paths.output_dir}"  # root dir to save logs
+  name: "csv_logs"                 # subdir name for this run
+  version: null                    # set to control the run version (e.g., a seed or timestamp)
+  prefix: ""                       # prefix for metric keys
