@@ -21,8 +21,8 @@ class TabPFNWrapper(AbstractWrapper):
         self.model_fit_flag = False
         self.lag = 0
 
-        self.train_dataloader = kwargs['train_dataloader']
-        self.val_dataloader = kwargs['val_dataloader']
+        #self.train_dataloader = kwargs['train_dataloader']
+        #self.val_dataloader = kwargs['val_dataloader']
         
         self.aux_context = None
         self.y_aux = None

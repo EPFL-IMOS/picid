@@ -1,0 +1,71 @@
+_target_: lmetk.data.datasources.BatteryLoader
+
+
+data_name: constant_load #first
+data_folder: battery
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
+
+#samples_per_day: 24
+target_name: v # voltage
+timestamp_name: time
+
+# Need to be discussed
+task_mode: univariate
+mode_mode: context
+  
+data_splitter:
+  _target_: lmetk.data.preprocessing.TimeSplitter
+  splitter_type: TimeSplitter
+  train: 8640 # int or float. In case of float it is a percentage of the dataset
+  val: 2880 # int or float. In case of float it is a percentage of the dataset
+  test: null # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
+  create_splits_for: [features, timestamps, target, initial_dates]
+  
+  # There values will be read from the model parameters similarly to how we deal with data_path.
+  seq_len: ${oc.select:model.seq_len,null}     # 96   # 384  # window size
+  label_len: ${oc.select:model.label_len,null} # 48 # 96  # overlap size
+  pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
+  apply_lookback: True
+
+data_default_transforms:
+  scaler_features:
+    transform:
+      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    
+    metadata:
+      apply_to: features
+      fit_on: train
+  
+  scaler_target:
+    transform:
+      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    
+    metadata:
+      apply_to: target
+      fit_on: train  
+  
+  scaler_timefeatures:
+    transform:
+      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    
+    metadata:
+      apply_to: timestamps
+      fit_on: train
+ 
+  concatenate_features:
+    transform:
+      _target_: lmetk.transforms.concatenate.ConcatenateTransform
+    
+    metadata:
+      apply_to: features
+      auxiliary_keys: ['timestamps'] 
+
+# Dropping autocorrelated features harms the performance 
+# drop_autocorrelated_features:
+# transform:
+#   _target_: lmetk.transforms.autocorr_drop.AutocorrFeatureDropTransform
+#   correlation_threshold: 0.95
+
+# metadata:
+#   apply_to: features
+#   fit_on: train

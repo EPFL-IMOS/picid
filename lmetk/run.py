@@ -201,9 +201,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # backbone = TimePFN(cfg.model)
     # backbone.load_state_dict(torch.load(cfg.model.load_path))
     add_backbone_args = {}
-    if cfg.datasource.data_name == 'railway':
-        add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
-        add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
+    # if cfg.datasource.data_name == 'railway':
+    #     add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
+    #     add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
 
     backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args) # TimePFNWrapper(backbone, **cfg.model)
     

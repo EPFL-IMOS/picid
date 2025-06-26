@@ -46,7 +46,7 @@ class RailwayDummyTransform(BaseTransform):
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
         
-        assert self.shift in [24, 168], "dummy shift must be 24 for the timepfn, and 168 for the tabpfn!"
+        assert self.shift in [24, 168, 100], "dummy shift must be 24 for the timepfn, and 168 for the tabpfn for railway and 100 for the battery!"
 
         dummy_leak = np.concatenate([np.zeros((self.shift,1)), auxiliary_data['target'][:-self.shift]])
         assert dummy_leak.shape[0] == data_segment.shape[0]
@@ -63,5 +63,5 @@ class RailwayDummyTransform(BaseTransform):
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
     def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data,  mode: str)
+        return self.transform_data(data_segment, auxiliary_data,  mode)
     
