@@ -3,15 +3,14 @@ from typing import Dict, List, Optional
 import numpy as np
 from box import Box
 from omegaconf import DictConfig, OmegaConf
-from sklearn.base import TransformerMixin
 
-from lmetk.data.datasources.base import DataSourceLoader
+from lmetk.data.datasources.base import MultiSourceInterface
 # from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 from hydra.utils import instantiate 
 from collections import OrderedDict
 from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 
-class MultiSource():
+class MultiSource(MultiSourceInterface):
     """This class instantiates each of the soure"""
     def __init__(self, **kwargs):
         self.data_lst = []
@@ -65,7 +64,7 @@ class MultiSource():
         self._is_loaded = True
 
     def __repr__(self) -> str:
-        return f"MultiSourceDataSource(sources={len(self.data_lst)} units)"
+        return f"MultiSource(sources={len(self.data_lst)} units)"
 
     def get_data(self) -> list[dict]:
         """Return data sources."""
@@ -78,6 +77,10 @@ class MultiSource():
     def get_transforms(self) -> list[dict]:
         """Return data transforms per source."""
         return self.transforms_list
+    
+    def get_transform_names(self) -> list[str]:
+        """Return transform names."""
+        return [name for name in self.multisource_transforms.keys()] if self.multisource_transforms else []
 
     def get_multisource_transforms(self):
         """Return multisource data transforms."""

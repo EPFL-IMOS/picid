@@ -43,7 +43,7 @@ data_splitter:
 
 
 data_default_transforms:
-  scaler_1:
+  scaler_features:
     transform:
       _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
       scaling: standard
@@ -52,7 +52,7 @@ data_default_transforms:
       apply_to: features
       fit_on: train
   
-  scaler_2:
+  scaler_descriptors:
     transform:
       _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
       scaling: standard
@@ -61,7 +61,7 @@ data_default_transforms:
       apply_to: descriptors
       # fit_on: train
       
-  scaler_3:
+  scaler_rul:
     transform:
       _target_:  lmetk.data.datasources.concepts_n_cmapss.ConstantScaler #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
       factor: 0.01

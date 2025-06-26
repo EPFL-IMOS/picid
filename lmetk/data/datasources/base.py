@@ -7,7 +7,51 @@ from sklearn.base import TransformerMixin
 from box import Box
 from collections import OrderedDict
 
-class DataSourceLoader(ABC):
+
+from abc import ABC, abstractmethod
+from typing import Dict, Optional
+import numpy as np
+from collections import OrderedDict
+
+class DataSourceInterface(ABC):
+    
+    @abstractmethod
+    def get_data(self) -> Dict[str, np.ndarray]:
+        pass
+
+    @abstractmethod
+    def get_data_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_transforms(self) -> Dict[str, object]:
+        pass
+
+    @abstractmethod
+    def get_transform_names(self) -> list[str]:
+        pass
+
+    @abstractmethod
+    def split_data(self, kwargs: dict) -> None:
+        pass
+
+
+
+class DataSourceLoaderInterface(DataSourceInterface):
+
+    @abstractmethod
+    def get_data_default_transforms(self) -> Optional[Dict[str, object]]:
+        pass
+
+
+class MultiSourceInterface(DataSourceInterface):
+
+    @abstractmethod
+    def get_multisource_data_splitter(self) -> Optional[object]:
+        pass
+
+
+class DataSourceLoader(DataSourceLoaderInterface):
     def __init__(self, **kwargs):
         
         # Store kwargs for repr
@@ -81,7 +125,7 @@ class DataSourceLoader(ABC):
 
         return source_transforms
 
-    def get_transform_names(self) -> None:
+    def get_transform_names(self) -> list[str]:
         """Append the instantiated transforms to the instance data_transforms_lst."""
         source_transform_names = list()
         if getattr(self, 'data_default_transforms', None) is not None:
