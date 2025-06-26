@@ -85,7 +85,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
     
-
+    # TODO: some hack, push this down to the preprocessor
     if isinstance(data_lst, list) and len(data_lst)==1:
         data_dict = data_lst[0]
         features = data_dict['features']

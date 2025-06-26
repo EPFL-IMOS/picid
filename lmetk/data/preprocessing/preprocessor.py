@@ -2,8 +2,7 @@ import os
 import time
 from typing import Any, Union, Dict, List, Optional
 from collections import OrderedDict
-
-
+from numpy import ndarray
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -28,7 +27,21 @@ class PreProcessor:
         self.multisource_data_splitter: Optional[Any] = None
         self._is_preprocessed = False
 
-    def get_processed_data(self,):
+    def get_processed_data(self,) ->  dict[str, dict[str, ndarray | list[ndarray]]]:
+        """
+        Returns the final processed data
+        the dictionary should be structured as follows:
+        - features:
+            - train: ndarray | list[ndarray]
+            - val: ndarray | list[ndarray]
+            - test: ndarray | list[ndarray]
+        - target:
+            - train: ndarray | list[ndarray]
+            - val: ndarray | list[ndarray]
+            - test: ndarray | list[ndarray]
+        - other_named_tensor:
+            - ...
+        """
         return self.data_lst, self.source_transforms_lst, self.multisource_transforms
     
     # TODO: that is needed at least for evaluator, extend it for multisource maybe

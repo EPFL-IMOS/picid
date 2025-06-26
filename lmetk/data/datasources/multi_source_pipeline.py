@@ -13,7 +13,7 @@ from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 class MultiSource(MultiSourceInterface):
     """This class instantiates each of the soure"""
     def __init__(self, **kwargs):
-        self.data_lst = []
+        self.data_source_dict = {}
         self.source_params = []
         self.transforms_list = []
         self.multisource_data_splitter = None
@@ -30,12 +30,25 @@ class MultiSource(MultiSourceInterface):
 
         # Load sources
         for key in self.source_names:
+
             # Store params as dict
             src_params = OmegaConf.to_container(kwargs[key], resolve=True)
             self.source_params.append(src_params)
 
-            # Instantiate datasource
+             # Instantiate datasource
             datasource = instantiate(kwargs[key], multisource_data_splitter=True if self.multisource_data_splitter else False)
+            self.data_source_dict[key] = datasource
+        
+    def __repr__(self) -> str:
+        return f"MultiSource(sources={len(self.data_source_dict)} units)"
+
+    def get_data(self) -> list[dict]:
+        """Return data sources."""
+
+        # Load data from each source
+
+        data_lst = []
+        for key, datasource in self.source_names.items():
 
             if not getattr(datasource, '_is_loaded', False):
                 raise RuntimeError(f'Source {key} has not been loaded')
@@ -52,7 +65,7 @@ class MultiSource(MultiSourceInterface):
                         f"Source '{key}' must be split when multisource_data_splitter is not provided."
                     )
 
-            self.data_lst.append(datasource.get_data())
+            data_lst.append(datasource.get_data())
             self.transforms_list.append(datasource.get_transforms())
         
         # Split data in case of multisouce data splitting
@@ -60,15 +73,10 @@ class MultiSource(MultiSourceInterface):
             self.split_data()
 
         # Multisource transforms
-        self.multisource_transforms = OrderedDict(kwargs['multisource_transforms']) if 'multisource_transforms' in kwargs else None
+        self.multisource_transforms = OrderedDict(self._init_kwargs['multisource_transforms']) if 'multisource_transforms' in self._init_kwargs else None
         self._is_loaded = True
-
-    def __repr__(self) -> str:
-        return f"MultiSource(sources={len(self.data_lst)} units)"
-
-    def get_data(self) -> list[dict]:
-        """Return data sources."""
-        return self.data_lst
+        
+        return data_lst
 
     def get_data_name(self) -> list[str]:
         """Return source data names."""
