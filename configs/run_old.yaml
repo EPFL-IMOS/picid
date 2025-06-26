@@ -1,7 +1,0 @@
-# defaults:
-#   - _self_
-#   - model: tabpfn.yaml
-#   - dataset: ETT_hour
-#   - paths: default
-#   # - training_strategy: railway_traction.yaml
-#   # - experiment: default.yaml

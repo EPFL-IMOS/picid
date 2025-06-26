@@ -48,8 +48,8 @@ class MultiSource(MultiSourceInterface):
         # Load data from each source
 
         data_lst = []
-        for key, datasource in self.source_names.items():
-
+        for key in self.source_names:
+            datasource = self.data_source_dict[key]
             if not getattr(datasource, '_is_loaded', False):
                 raise RuntimeError(f'Source {key} has not been loaded')
             
@@ -70,7 +70,7 @@ class MultiSource(MultiSourceInterface):
         
         # Split data in case of multisouce data splitting
         if self.multisource_data_splitter:
-            self.split_data()
+            self.split_data(data_lst, self.source_names)
 
         # Multisource transforms
         self.multisource_transforms = OrderedDict(self._init_kwargs['multisource_transforms']) if 'multisource_transforms' in self._init_kwargs else None
@@ -98,9 +98,9 @@ class MultiSource(MultiSourceInterface):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
 
-    def split_data(self):
+    def split_data(self, data_lst: list[Dict], source_names: list[str]):
         assert isinstance(self.multisource_data_splitter, BySourceSplitter), "multisource_data_splitter must be an instance of BySourceSplitter"
-        self.data_lst, self.source_names = self.multisource_data_splitter(self.data_lst, self.source_names)
+        self.data_lst, self.source_names = self.multisource_data_splitter(data_lst, source_names)
     
     def _combine_sources(self,):
         """

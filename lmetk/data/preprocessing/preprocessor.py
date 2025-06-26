@@ -83,6 +83,7 @@ class PreProcessor:
             config_from_method = self.datasource.get_multisource_transforms()
             if isinstance(config_from_method, (OrderedDict, DictConfig)):
                 multisource_transforms_config = config_from_method
+            
             # Removed the warning for unexpected types, as it's a demonstration print.
             # elif config_from_method is not None:
             #     print(f"Warning: get_multisource_transforms() returned unexpected type: {type(config_from_method)}. Expected OrderedDict or DictConfig. Skipping multi-source transforms.")
