@@ -14,6 +14,8 @@ from lmetk.transforms.strategy import (
     MultiSourceFitTransformStrategy
 )
 
+import logging
+logger = logging.getLogger(__name__) 
 
 class DataTransform:
     """
@@ -159,7 +161,7 @@ class DataTransform:
             # Additional check for data types (optional but good practice)
             for split_name in original_splits:
                 if not isinstance(data[self.apply_to][split_name], type(transformed_data[self.apply_to][split_name])):
-                    print(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}.")
+                    logger.warning(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}.")
 
 
         elif isinstance(data, list): # Validate for multi-source transformations
@@ -205,7 +207,7 @@ class DataTransform:
                 # Additional check for data types (optional but good practice)
                 for split_name in original_splits:
                     if not isinstance(original_source[self.apply_to][split_name], type(transformed_source[self.apply_to][split_name])):
-                        print(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}.")
+                        logger.warning(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}.")
 
         else:
             raise TypeError(

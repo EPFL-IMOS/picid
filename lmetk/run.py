@@ -4,6 +4,7 @@ import random
 import torch
 # shutil
 from typing import Any
+from pathlib import Path
 import hydra
 import lightning as L
 import numpy as np
@@ -71,6 +72,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     np.random.seed(cfg.seed)
     # Seed for python random
     random.seed(cfg.seed)
+
+    for k, d in cfg.paths.items():
+        log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
@@ -159,9 +163,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                     time_features=time_features["test"],
                     **add_args
                     )
-    print(f"Train dataset size: {dataset_train.__len__()}")
-    print(f"Validation dataset size: {dataset_val.__len__()}")
-    print(f"Test dataset size: {dataset_test.__len__()}")
+    log.info(f"Train dataset size: {dataset_train.__len__()}")
+    log.info(f"Validation dataset size: {dataset_val.__len__()}")
+    log.info(f"Test dataset size: {dataset_test.__len__()}")
 
     # Instantiate dataloader
     datamodule = hydra.utils.instantiate(cfg.datamodule, 
@@ -171,15 +175,15 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     )
 
     evaluator = hydra.utils.instantiate(cfg.evaluator, scaler=scaler)
-    print(f"Evaluator: {cfg.evaluator._target_}")
+    log.info(f"Evaluator: {cfg.evaluator._target_}")
 
     # Instantiate optimizer
     optimizer = hydra.utils.instantiate(cfg.optimizer)
-    print(f"Optimizer: {cfg.optimizer._target_}")
+    log.info(f"Optimizer: {cfg.optimizer._target_}")
     
     # Instantiate loss function
     loss = hydra.utils.instantiate(cfg.loss)
-    print(f"Loss: {cfg.loss._target_}")
+    log.info(f"Loss: {cfg.loss._target_}")
 
     log.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
@@ -200,24 +204,30 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     # backbone = TimePFN(cfg.model)
     # backbone.load_state_dict(torch.load(cfg.model.load_path))
-    add_backbone_args = {}
-    # if cfg.datasource.data_name == 'railway':
-    #     add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
-    #     add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
 
-    backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args) # TimePFNWrapper(backbone, **cfg.model)
-    
-    if cfg.model.get('load_path', False):
-        backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
-    
-    model = LMETKModel(
-        #backbone=backbone, 
-        #backbone_wrapper=backbone_wrapper,
-        backbone = backbone_wrapper,
-        loss=loss,
-        evaluator=evaluator,
-        optimizer=optimizer,
-        )
+    if not cfg.model.get('metadata', False):
+        add_backbone_args = {}
+        if cfg.datasource.data_name == 'railway':
+            add_backbone_args['train_dataloader'] = datamodule.train_dataloader()
+            add_backbone_args['val_dataloader'] = datamodule.val_dataloader()
+
+        backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args) # TimePFNWrapper(backbone, **cfg.model)
+        
+        if cfg.model.get('load_path', False):
+            backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
+        
+        model = LMETKModel(
+            #backbone=backbone, 
+            #backbone_wrapper=backbone_wrapper,
+            backbone = backbone_wrapper,
+            loss=loss,
+            evaluator=evaluator,
+            optimizer=optimizer,
+            )
+    else:
+        if cfg.model.metadata.get("lightning_model", False):
+            # Model is already a standard LightningModule and does not require a wrapper
+            model = hydra.utils.instantiate(cfg.model)
     
     
     trainer: Trainer = hydra.utils.instantiate(
@@ -227,11 +237,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
-    # if cfg.get("train"):
-    #     log.info("Starting training!")
-    #     trainer.fit(
-    #         model=model, datamodule=datamodule,
-    #     )
+    if cfg.task_definition.get("requires_training", False):
+        log.info("Starting training!")
+        trainer.fit(
+            model=model, datamodule=datamodule,
+        )
     
     trainer.test(model=model, datamodule=datamodule)
     

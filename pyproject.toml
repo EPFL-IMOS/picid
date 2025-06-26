@@ -27,12 +27,15 @@ dependencies = [
     "python-box>=7.3.2",
     "pytest>=8.3.5",
     "positional-encodings==6.0.3",
-    "wandb"
+    "wandb",
+    "progpy>=1.7.1",
+    "pyarrow>=20.0.0",
 ]
 
 [tool.setuptools]
 packages = ["lmetk"]
 
+[project.optional-dependencies]
 test = [
     "pytest",
     "pytest-cov",
@@ -43,5 +46,5 @@ test = [
 ]
 
 # [build-system]
-# requires = ["setuptools", "wheel"]
+# requires = ["setuptools", "wheel", "hydra-core"]
 # build-backend = "setuptools.build_meta"

@@ -5,4 +5,4 @@ label_len: ${datasource.data_splitter.label_len}
 pred_len: ${datasource.data_splitter.pred_len} 
 
 # predict the next day
-stride: ${oc.select:model.pred_len} #24
+stride: ${oc.select:task_definition.pred_len} #24

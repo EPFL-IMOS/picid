@@ -25,3 +25,12 @@ class AbstractMetric(ABC):
     def compute(self) -> float:
         """Compute and return the final metric value."""
         pass
+
+
+class AbstractFileSystemMetric(AbstractMetric):
+    """Abstract base class for railway
+    specific metrics."""
+    
+    def __init__(self, name: str, paths: dict = None):
+        super().__init__(name)
+        self.paths = paths

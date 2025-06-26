@@ -37,7 +37,7 @@ class DefaultEvaluator(AbstractEvaluator):
         # Validate and create metrics
         self.metrics = {}
         for name in metric_names:
-            metric = MetricFactory.create_metric(name)
+            metric = MetricFactory.create_metric(name, paths=kwargs.get('paths', None))
             self.metrics[name.lower()] = metric
         
         self.metric_names = [name.lower() for name in metric_names]
