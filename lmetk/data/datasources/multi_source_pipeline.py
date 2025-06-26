@@ -8,7 +8,7 @@ from lmetk.data.datasources.base import MultiSourceInterface
 # from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 from hydra.utils import instantiate 
 from collections import OrderedDict
-from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
+from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter, convert_outer_list_to_inner
 
 class MultiSource(MultiSourceInterface):
     """This class instantiates each of the soure"""
@@ -17,7 +17,8 @@ class MultiSource(MultiSourceInterface):
         self.source_params = []
         self.transforms_list = []
         self.multisource_data_splitter = None
-        
+        self.multisource_transforms = None
+        self._init_kwargs = kwargs
         # Assign keys needed for the pipeline 
         self.data_name = kwargs['data_name']
         self.task_mode = kwargs['task_mode']
@@ -27,7 +28,7 @@ class MultiSource(MultiSourceInterface):
         
         # Instantiate multisource_data_splitter if is not none
         self.multisource_data_splitter = instantiate(kwargs['multisource_data_splitter']) if kwargs.get('multisource_data_splitter', None) is not None else None
-
+        
         # Load sources
         for key in self.source_names:
 
@@ -46,9 +47,9 @@ class MultiSource(MultiSourceInterface):
         """Return data sources."""
 
         # Load data from each source
-
         data_lst = []
-        for key in self.source_names:
+        source_names = self.data_source_dict.keys()
+        for key in source_names:
             datasource = self.data_source_dict[key]
             if not getattr(datasource, '_is_loaded', False):
                 raise RuntimeError(f'Source {key} has not been loaded')
@@ -70,13 +71,30 @@ class MultiSource(MultiSourceInterface):
         
         # Split data in case of multisouce data splitting
         if self.multisource_data_splitter:
-            self.split_data(data_lst, self.source_names)
-
-        # Multisource transforms
-        self.multisource_transforms = OrderedDict(self._init_kwargs['multisource_transforms']) if 'multisource_transforms' in self._init_kwargs else None
-        self._is_loaded = True
+            # In case we define multisource splitter, we need to split the data and reassign the names accordingly
+            data_dict, source_names_tree_view = self.split_data(data_lst, source_names)
+            
+            # Multisource transforms
+            self.multisource_transforms = OrderedDict(self._init_kwargs['multisource_transforms']) if 'multisource_transforms' in self._init_kwargs else None
+            self._is_loaded = True
+            
+            return data_dict
         
-        return data_lst
+        else: 
+            # # assert all of the data_lst dict has the same keys
+            # assert all(data_lst[0].keys() == data_lst[i].keys() for i in range(1, len(data_lst))), "All data sources must have the same keys in their data dictionaries."
+            # data_dict= {
+            #     key: {'train': None, 'val': None, 'test': None}
+            #     for key in data_lst[0].keys()
+            # }
+            # # Invert the list of dicts of dicts into dict of dict of lists
+            # for split in ["train", "val", "test"]:
+            #     for key in data_dict.keys():
+            #         data_dict[key][split] = [data[key][split] for data in data_lst]
+            self._is_loaded = True
+            return data_lst
+            
+        
 
     def get_data_name(self) -> list[str]:
         """Return source data names."""
@@ -100,7 +118,9 @@ class MultiSource(MultiSourceInterface):
 
     def split_data(self, data_lst: list[Dict], source_names: list[str]):
         assert isinstance(self.multisource_data_splitter, BySourceSplitter), "multisource_data_splitter must be an instance of BySourceSplitter"
-        self.data_lst, self.source_names = self.multisource_data_splitter(data_lst, source_names)
+        # TODO: Normalize input output, why 
+        data_dict, source_names_tree_view = self.multisource_data_splitter(data_lst, source_names)
+        return data_dict, source_names_tree_view
     
     def _combine_sources(self,):
         """

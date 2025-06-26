@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 
+
+
 class BySourceSplitter:
     """
     Splitter that splits the dataset by source.
@@ -57,10 +59,10 @@ class BySourceSplitter:
             # Collect data dicts from selected sources
             selected_data_dicts = [sources[key] for key in split_sources_list]
 
-            # Stack them
-            stacked = stack_dicts_with_concat(selected_data_dicts)
+            # Stack features into a list 
+            stacked = convert_outer_list_to_inner(selected_data_dicts)
 
-            # Assign each stacked key to its correct place in split_data
+            # Assign each stacked list to its correct place in split_data
             for key in stacked:
                 split_data[key][split] = stacked[key]
 
@@ -93,7 +95,7 @@ class BySourceSplitter:
                 lines.append(f"   |- {source}")
         return "\n".join(lines)
 
-def stack_dicts_with_concat(data_list):
+def convert_outer_list_to_inner(data_list):
     if not data_list:
         return {}
 
@@ -107,7 +109,13 @@ def stack_dicts_with_concat(data_list):
     stacked = {}
     for key in keys:
         try:
-            stacked[key] = np.concatenate([d[key] for d in data_list], axis=0)
+            stacked[key] = [d[key] for d in data_list]
         except Exception as e:
             raise ValueError(f"Failed to concatenate key '{key}': {e}")
+
+    # Check that all keys in the stacked have the same length
+    lengths = [len(stacked[key]) for key in stacked]
+    if len(set(lengths)) != 1:
+        raise ValueError("All keys in the stacked dict must have the same length.")
+    
     return stacked  

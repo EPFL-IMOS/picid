@@ -42,6 +42,7 @@ class PreProcessor:
         - other_named_tensor:
             - ...
         """
+        
         return self.data_lst, self.source_transforms_lst, self.multisource_transforms
     
     # TODO: that is needed at least for evaluator, extend it for multisource maybe

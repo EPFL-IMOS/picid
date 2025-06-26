@@ -30,11 +30,11 @@ source_list:
   #test4: ${..test4}
 
 
-multisource_data_splitter: 
-  _target_: lmetk.data.preprocessing.BySourceSplitter
-  sources_train: [train1, train2] #[train1, train2, train3, train4]
-  sources_test: [test1, test2] #[test1, test2, test3, test4]
-  sources_val: [] # TODO: why are there no val test sources in the original setup?
+# multisource_data_splitter: 
+#   _target_: lmetk.data.preprocessing.BySourceSplitter
+#   sources_train: [train1, train2] #[train1, train2, train3, train4]
+#   sources_test: [test1, test2] #[test1, test2, test3, test4]
+#   sources_val: [] # TODO: why are there no val test sources in the original setup?
 
 
 multisource_transforms:

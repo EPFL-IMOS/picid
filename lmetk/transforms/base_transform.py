@@ -54,6 +54,8 @@ class BaseTransform(ABC):
         raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_multi_source. "
                                  f"Consider using DirectTransform if no fitting is required.")
         
+   # I want to have a decorator  
+
     @abstractmethod
     def transform_data(self, data_segment: Any, mode: str = None) -> Any:
         """

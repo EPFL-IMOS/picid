@@ -59,7 +59,7 @@ class N_CMAPSSScaler_Descriptors(BaseTransform): #BaseEstimator, TransformerMixi
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, W, mode: str):
+    def transform_data(self, list_of_data_segments: List[np.array], mode: str):
         scaling = self.scaling
         if scaling == "standard":
             W_mean_1457 = np.array(
@@ -68,7 +68,8 @@ class N_CMAPSSScaler_Descriptors(BaseTransform): #BaseEstimator, TransformerMixi
             W_std_1457 = np.array(
                 [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
             )
-            W = (W - W_mean_1457) / W_std_1457
+            list_of_data_segments = [ (data_segment - W_mean_1457) / W_std_1457 for data_segment in list_of_data_segments]
+            #W = (W - W_mean_1457) / W_std_1457
 
 
         elif scaling == "min-max":
@@ -79,8 +80,9 @@ class N_CMAPSSScaler_Descriptors(BaseTransform): #BaseEstimator, TransformerMixi
             W_max_1457 = np.array(
                 [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
             )
-            W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
-        return W
+            list_of_data_segments = [ 2 * (data_segment - W_min_1457) / (W_max_1457 - W_min_1457) - 1 for data_segment in list_of_data_segments]
+            #W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+        return list_of_data_segments
 
 
 class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
@@ -95,7 +97,7 @@ class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, 
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, X, mode: str):
+    def transform_data(self, list_of_data_segments: List[np.array], mode: str):
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling
@@ -136,8 +138,8 @@ class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, 
                     7.6335633e-01,
                 ]
             )
-
-            X = (X - X_mean_1457) / X_std_1457
+            list_of_data_segments = [ (data_segment - X_mean_1457) / X_std_1457 for data_segment in list_of_data_segments]
+            
 
 
         elif scaling == "min-max":
@@ -179,9 +181,9 @@ class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, 
                     5.6173835e00,
                 ]
             )
-
-            X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-        return X
+            list_of_data_segments = [ 2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1 for data_segment in list_of_data_segments]
+            #X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+        return list_of_data_segments
 
 class ConstantScaler(BaseTransform):
     def __init__(self, factor=1.0):
@@ -194,8 +196,9 @@ class ConstantScaler(BaseTransform):
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, X, mode: str):
-        return X * self.factor
+    def transform_data(self, list_of_data_segments: List[np.array], mode: str):
+        
+        return [ data_segment * self.factor for data_segment in list_of_data_segments] 
 
 class N_CMAPSSDataSource(DataSourceLoader):
 
