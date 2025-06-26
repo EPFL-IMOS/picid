@@ -14,6 +14,9 @@ from lmetk.data.preprocessing.scalers import MultiSourceTransformMixin
 from lmetk.transforms.base_transform import BaseTransform
 from typing import Any, List, Union, Tuple, Type
 
+import logging
+logger = logging.getLogger(__name__) 
+
 def subsampling(df, subsampling_rate):
     """
     reduce computational cost by subsampling the data
@@ -203,7 +206,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
     def _load_data(self):
         # Load the data from the specified path
         assert self.RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
-        print(f"Using {self.RUL} RUL.")
+        logger.info(f"Using {self.RUL} RUL.")
         self.n_DS = self.n_DS
         self.mode = self.mode
         self.window_size = self.window_size
@@ -375,7 +378,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
             )
         # drop constant concepts
         # self.concepts = self.concepts.loc[:, (self.concepts != self.concepts.iloc[0]).any()]
-        print("Used concepts:", self.concepts.columns)
+        logger.info(f"Used concepts: {self.concepts.columns}")
         self.concepts = self.concepts.astype(int)
 
         

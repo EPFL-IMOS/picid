@@ -54,7 +54,7 @@
                     "--working_dir", "testwdir"]
         },
         {
-            "name": "Python Debugger: lmetk/run.py",
+            "name": "Railway Traction: Spacetimeformer (STF)",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -62,6 +62,18 @@
             "args": [
                 "paths=rt_local", 
                 "experiment=railway_traction/stf",
+                "debug=default"
+            ]
+        },
+        {
+            "name": "N-CMAPSS: TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local", 
+                "experiment=concepts_n_cmapss/tabpfn",
                 "debug=default"
             ]
         }
