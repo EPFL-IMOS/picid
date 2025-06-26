@@ -59,7 +59,7 @@ class N_CMAPSSScaler_Descriptors(BaseTransform): #BaseEstimator, TransformerMixi
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, W):
+    def transform_data(self, W, mode: str):
         scaling = self.scaling
         if scaling == "standard":
             W_mean_1457 = np.array(
@@ -95,7 +95,7 @@ class N_CMAPSSScaler_Features(BaseTransform): #BaseEstimator, TransformerMixin, 
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, X):
+    def transform_data(self, X, mode: str):
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling
@@ -194,7 +194,7 @@ class ConstantScaler(BaseTransform):
     def fit_multi_source(self, list_of_data_segments: List[Any]):
         pass
 
-    def transform_data(self, X):
+    def transform_data(self, X, mode: str):
         return X * self.factor
 
 class N_CMAPSSDataSource(DataSourceLoader):
