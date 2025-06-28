@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 # Import base class from separate module (like your working example)
-from .base import DataSourceLoader
-
+from .single_source_loader import DataSourceLoader
+from .multi_source_loader import MultiSourceLoader
 
 class ModuleExportsManager:
     """Manages automatic discovery and registration of DataSource classes."""

@@ -3,7 +3,7 @@ import numpy as np
 from omegaconf import DictConfig
 from lmetk.data.utils import time_features as railway_timefeatures
 from lmetk.data.timefeatures import time_features as timepfn_timefeatures
-from lmetk.data.datasources.base import DataSourceLoader
+from lmetk.data.datasources import DataSourceLoader
 import warnings
 
 

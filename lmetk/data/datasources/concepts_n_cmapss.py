@@ -4,7 +4,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-from lmetk.data.datasources.base import DataSourceLoader
+from lmetk.data.datasources import DataSourceLoader
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from itertools import combinations

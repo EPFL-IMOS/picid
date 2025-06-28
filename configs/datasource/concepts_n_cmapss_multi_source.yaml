@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasources.multi_source_pipeline.MultiSource
+_target_: lmetk.data.datasources.multi_source_loader.MultiSourceLoader
 _recursive_: False
 
 # Must have keys for the pipeline
@@ -30,39 +30,11 @@ source_list:
   #test4: ${..test4}
 
 
-# multisource_data_splitter: 
-#   _target_: lmetk.data.preprocessing.BySourceSplitter
-#   sources_train: [train1, train2] #[train1, train2, train3, train4]
-#   sources_test: [test1, test2] #[test1, test2, test3, test4]
-#   sources_val: [] # TODO: why are there no val test sources in the original setup?
-
-
-multisource_transforms:
-
-  # These scalers are pre-computed and do not need to be fitted on the data.
-  scaler_features:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features  # Your wrapper class
-      scaling: standard
-
-    metadata:
-      apply_to: features
-  
-  scaler_descriptors:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors # Your wrapper class
-      scaling: standard
-      
-    metadata:
-      apply_to: descriptors
-      
-  scaler_rul:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.ConstantScaler # Your wrapper class
-      factor: 0.01
-      
-    metadata:
-      apply_to: rul
+multisource_data_splitter: 
+  _target_: lmetk.data.preprocessing.BySourceSplitter
+  sources_train: [train1, train2] #[train1, train2, train3, train4]
+  sources_test: [test1, test2] #[test1, test2, test3, test4]
+  sources_val: [] # TODO: why are there no val test sources in the original setup?
 
 # Setup taken over from https://github.com/EPFL-IMOS/concept-prognostics/tree/main
 

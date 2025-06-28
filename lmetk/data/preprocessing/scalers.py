@@ -1,7 +1,7 @@
 from typing import Dict
 
 import numpy as np
-from lmetk.data.datasources.base import DataSourceLoader
+from lmetk.data.datasources import DataSourceLoader
 
 
 class MultiSourceTransformMixin():
