@@ -7,7 +7,7 @@ import lmetk
 from box import Box
 import torch
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
+from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
 ProjectSearchPathPlugin.register()

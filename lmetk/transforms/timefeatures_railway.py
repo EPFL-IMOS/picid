@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 import pandas as pd
 import numpy as np
-from typing import Any, List
+from typing import Any, List, Dict
 
 # Assuming this import path is correct for your project
 
@@ -49,21 +49,7 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def fit_single_source(self, data_segment: Any):
-        """
-        Time feature extraction is a stateless operation, so no fitting is required.
-        This method does nothing.
-        """
-        pass
-
-    def fit_multi_source(self, list_of_data_segments: List[Any]):
-        """
-        Time feature extraction is a stateless operation, so no fitting is required
-        across multiple sources. This method does nothing.
-        """
-        pass
-
-    def transform_data(self, data_segment: Any,  mode: str) -> Any:
+    def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),

@@ -1,28 +1,16 @@
-from typing import Dict, List, Optional
-
-import numpy as np
-from box import Box
+from typing import Dict
+from hydra.utils import instantiate 
 from omegaconf import DictConfig, OmegaConf
 
-from lmetk.data.datasources.base import MultiSourceInterface
-# from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
-from hydra.utils import instantiate 
-from collections import OrderedDict
-from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter, convert_outer_list_to_inner
+from lmetk.data.datasources.base import DataSourceLoaderInterface
+from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 
-class MultiSource(MultiSourceInterface):
+class MultiSourceLoader(DataSourceLoaderInterface):
     """This class instantiates each of the soure"""
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.data_source_dict = {}
-        self.source_params = []
-        self.transforms_list = []
-        self.multisource_data_splitter = None
-        self.multisource_transforms = None
-        self._init_kwargs = kwargs
-        # Assign keys needed for the pipeline 
-        self.data_name = kwargs['data_name']
-        self.task_mode = kwargs['task_mode']
-        
+        self.source_params = []    
         # Get source names as list
         self.source_names = list(kwargs.get('source_list', {}).keys())
         
@@ -43,8 +31,13 @@ class MultiSource(MultiSourceInterface):
     def __repr__(self) -> str:
         return f"MultiSource(sources={len(self.data_source_dict)} units)"
 
-    def get_data(self) -> list[dict]:
-        """Return data sources."""
+    def get_data(self) -> dict | list[dict]:
+        """Return data sources.
+        
+        Returns:
+            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
+
+        """
 
         # Load data from each source
         data_lst = []
@@ -67,50 +60,19 @@ class MultiSource(MultiSourceInterface):
                     )
 
             data_lst.append(datasource.get_data())
-            self.transforms_list.append(datasource.get_transforms())
         
         # Split data in case of multisouce data splitting
         if self.multisource_data_splitter:
             # In case we define multisource splitter, we need to split the data and reassign the names accordingly
             data_dict, source_names_tree_view = self.split_data(data_lst, source_names)
-            
-            # Multisource transforms
-            self.multisource_transforms = OrderedDict(self._init_kwargs['multisource_transforms']) if 'multisource_transforms' in self._init_kwargs else None
-            self._is_loaded = True
-            
+            self._is_loaded = True    
             return data_dict
         
-        else: 
-            # # assert all of the data_lst dict has the same keys
-            # assert all(data_lst[0].keys() == data_lst[i].keys() for i in range(1, len(data_lst))), "All data sources must have the same keys in their data dictionaries."
-            # data_dict= {
-            #     key: {'train': None, 'val': None, 'test': None}
-            #     for key in data_lst[0].keys()
-            # }
-            # # Invert the list of dicts of dicts into dict of dict of lists
-            # for split in ["train", "val", "test"]:
-            #     for key in data_dict.keys():
-            #         data_dict[key][split] = [data[key][split] for data in data_lst]
-            self._is_loaded = True
+        else:
             return data_lst
-            
-        
-
     def get_data_name(self) -> list[str]:
         """Return source data names."""
         return self.source_names
-
-    def get_transforms(self) -> list[dict]:
-        """Return data transforms per source."""
-        return self.transforms_list
-    
-    def get_transform_names(self) -> list[str]:
-        """Return transform names."""
-        return [name for name in self.multisource_transforms.keys()] if self.multisource_transforms else []
-
-    def get_multisource_transforms(self):
-        """Return multisource data transforms."""
-        return self.multisource_transforms
     
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
@@ -122,13 +84,13 @@ class MultiSource(MultiSourceInterface):
         data_dict, source_names_tree_view = self.multisource_data_splitter(data_lst, source_names)
         return data_dict, source_names_tree_view
     
-    def _combine_sources(self,):
-        """
-        Rearage self.data_lst into one data object [dict].
-        Case when we have multiple sources and multisource_data_splitter
-        We have to rearenge as assume loading sources, where the source
-        represents a split. 
-        """
+    # def _combine_sources(self,):
+    #     """
+    #     Rearage self.data_lst into one data object [dict].
+    #     Case when we have multiple sources and multisource_data_splitter
+    #     We have to rearenge as assume loading sources, where the source
+    #     represents a split. 
+    #     """
 
 
     

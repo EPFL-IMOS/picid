@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from typing import Dict, Tuple
 
-from lmetk.data.datasources.base import DataSourceLoader
+from lmetk.data.datasources import DataSourceLoader
 
 
 class SourceSplitter(ABC):
