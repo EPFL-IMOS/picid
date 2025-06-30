@@ -101,15 +101,15 @@ class DirectTransformStrategy(TransformStrategy):
                             warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
                 
                 # Apply transform with or without auxiliary data
-                if auxiliary_data:
-                    # Assuming transform_instance.transform_data can accept auxiliary data
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
-                        split_data, 
-                        auxiliary_data=auxiliary_data,
-                        mode=split_name,
-                    )
-                else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
+                #if auxiliary_data:
+                # Assuming transform_instance.transform_data can accept auxiliary data
+                transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                    split_data, 
+                    auxiliary_data=auxiliary_data,
+                    mode=split_name,
+                )
+                # else:
+                #     transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
@@ -181,14 +181,15 @@ class FitTransformStrategy(TransformStrategy):
                             warnings.warn(f"Auxiliary key '{aux_key}' for fitting split '{fit_on_split}' is None or missing.")
                 
                 # Fit with or without auxiliary data
-                if fit_auxiliary_data:
-                    # Assuming fit_data can accept auxiliary data
-                    transform_instance.fit_data(
-                        target_data_splits[fit_on_split], 
-                        auxiliary_data=fit_auxiliary_data
-                    )
-                else:
-                    transform_instance.fit_data(target_data_splits[fit_on_split])
+                #if fit_auxiliary_data:
+                # Assuming fit_data can accept auxiliary data
+                transform_instance.fit_data(
+                    target_data_splits[fit_on_split], 
+                    auxiliary_data=fit_auxiliary_data,
+                    mode=fit_on_split,
+                )
+                # else:
+                #     transform_instance.fit_data(target_data_splits[fit_on_split])
                     
             except Exception as e:
                 raise RuntimeError(f"Error during single-source fitting of '{transform_instance.__class__.__name__}' on split '{fit_on_split}': {e}")
@@ -210,14 +211,14 @@ class FitTransformStrategy(TransformStrategy):
                             warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
                 
                 # Apply transform with or without auxiliary data
-                if auxiliary_data:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
-                        split_data, 
-                        auxiliary_data=auxiliary_data,
-                        mode=split_name,
-                    )
-                else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
+                #if auxiliary_data:
+                transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                    split_data, 
+                    auxiliary_data=auxiliary_data,
+                    mode=split_name,
+                )
+                # else:
+                #     transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
@@ -316,14 +317,14 @@ class MultiSourceFitTransformStrategy(TransformStrategy):
                             warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
                 
                 # Apply transform with or without auxiliary data
-                if auxiliary_data:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
-                        split_data, 
-                        auxiliary_data=auxiliary_data,
-                        mode=split_name,
-                    )
-                else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
+                #if auxiliary_data:
+                transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                    split_data, 
+                    auxiliary_data=auxiliary_data,
+                    mode=split_name,
+                )
+                # else:
+                #     transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
@@ -396,15 +397,15 @@ class MultiSourceDirectTransformStrategy(TransformStrategy):
                             warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
                 
                 # Apply transform with or without auxiliary data
-                if auxiliary_data:
+                #if auxiliary_data:
                     # Assuming transform_instance.transform_data can accept auxiliary data
-                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(
-                        split_data, 
-                        auxiliary_data=auxiliary_data,
-                        mode=split_name,
-                    )
-                else:
-                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(split_data, mode=split_name)
+                transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(
+                    split_data, 
+                    auxiliary_data=auxiliary_data,
+                    mode=split_name,
+                )
+                # else:
+                #     transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(split_data, mode=split_name)
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")

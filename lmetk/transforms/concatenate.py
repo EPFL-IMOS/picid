@@ -27,20 +27,6 @@ class ConcatenateTransform(BaseTransform):
             return f"{self.__class__.__name__}({exclude_str}, {args})"
         return f"{self.__class__.__name__}({exclude_str})"
 
-    def fit_single_source(self, data_segment: Any):
-        """
-        Concatenation is a stateless operation, so no fitting is required.
-        This method does nothing.
-        """
-        pass
-
-    def fit_multi_source(self, list_of_data_segments: List[Any]):
-        """
-        Concatenation is a stateless operation, so no fitting is required
-        across multiple sources. This method does nothing.
-        """
-        pass
-
     def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
         """
         Concatenate all auxiliary_data values to the data_segment.
