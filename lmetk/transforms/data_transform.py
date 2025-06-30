@@ -11,8 +11,10 @@ from lmetk.transforms.strategy import (
     TransformStrategy,
     DirectTransformStrategy,
     FitTransformStrategy,
-    MultiSourceFitTransformStrategy
+    MultiSourceFitTransformStrategy,
+    MultiSourceDirectTransformStrategy
 )
+from lmetk.transforms.multisource import BaseMultiSourceTransformMixin
 
 import logging
 logger = logging.getLogger(__name__) 
@@ -58,14 +60,23 @@ class DataTransform:
             raise ValueError(f"Metadata for transform '{transform_name}' must specify 'apply_to' key.")
 
         # Infer the strategy based on metadata flags
-        if self.multi_source_fit:
-            if self.fit_on is None:
-                raise ValueError(f"Multi-source transform '{transform_name}' requires 'fit_on' split in metadata.")
-            self.strategy: TransformStrategy = MultiSourceFitTransformStrategy()
-        elif self.fit_on is not None:
-            self.strategy = FitTransformStrategy()
+        # TODO: this logic might be a bit broken
+        if isinstance(transform, BaseTransform) and isinstance(transform, BaseMultiSourceTransformMixin):
+            if self.fit_on is not None:
+                self.strategy = MultiSourceFitTransformStrategy()
+            else:
+                self.strategy = MultiSourceDirectTransformStrategy()
+        
         else:
-            self.strategy = DirectTransformStrategy()
+            assert isinstance(transform, BaseTransform), (
+                f"Transform instance for '{transform_name}' (type: {type(transform)}) "
+                "must implement BaseTransform."
+            )
+            # Determine the strategy based on the presence of 'fit_on'
+            if  self.fit_on is not None:
+                self.strategy = FitTransformStrategy()
+            else:
+                self.strategy = DirectTransformStrategy()
             
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform

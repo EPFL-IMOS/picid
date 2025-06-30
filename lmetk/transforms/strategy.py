@@ -136,7 +136,7 @@ class FitTransformStrategy(TransformStrategy):
         """
         Fits the transform instance on the specified `fit_on_split` data
         from `apply_to_key` of a single source, then transforms all splits
-        under the same `apply_to_key`. Uses `transform_instance.fit_single_source()`
+        under the same `apply_to_key`. Uses `transform_instance.fit_data()`
         and `transform_instance.transform_data()`.
         
         Args:
@@ -182,13 +182,13 @@ class FitTransformStrategy(TransformStrategy):
                 
                 # Fit with or without auxiliary data
                 if fit_auxiliary_data:
-                    # Assuming fit_single_source can accept auxiliary data
-                    transform_instance.fit_single_source(
+                    # Assuming fit_data can accept auxiliary data
+                    transform_instance.fit_data(
                         target_data_splits[fit_on_split], 
                         auxiliary_data=fit_auxiliary_data
                     )
                 else:
-                    transform_instance.fit_single_source(target_data_splits[fit_on_split])
+                    transform_instance.fit_data(target_data_splits[fit_on_split])
                     
             except Exception as e:
                 raise RuntimeError(f"Error during single-source fitting of '{transform_instance.__class__.__name__}' on split '{fit_on_split}': {e}")
@@ -238,54 +238,240 @@ class MultiSourceFitTransformStrategy(TransformStrategy):
     
     def apply(self, 
               transform_instance: BaseTransform, 
-              list_of_data_dicts: List[Dict[str, Any]], 
+              data: Dict[str, Any], 
               apply_to_key: str, 
-              fit_on_split: str
+              fit_on_split: str,
+              auxiliary_keys: Optional[List[str]] = None
              ) -> List[Dict[str, Any]]:
         """
         Fits the transform instance on aggregated data from the `fit_on_split`
         across all sources (from `apply_to_key`), then applies the fitted
         transform to the `apply_to_key` within each split of each source.
+        
+        Args:
+            transform_instance: The transform to apply
+            list_of_data_dicts: List of data dictionaries (one per source)
+            apply_to_key: Key identifying which data to transform
+            fit_on_split: Split to use for fitting the transform
+            auxiliary_keys: Optional list of keys for auxiliary information to pass to transform
+            
+        Returns:
+            List of dictionaries with transformed data
         """
-        if not isinstance(list_of_data_dicts, list) or not all(isinstance(d, dict) for d in list_of_data_dicts):
-            raise TypeError(f"{self.__class__.__name__} expects a list of data dictionaries.")
-        if fit_on_split is None:
-            raise ValueError(f"{self.__class__.__name__} requires 'fit_on_split' to be specified.")
-
-        # 1. Collect data segments for fitting, delegating aggregation to transform_instance
-        data_segments_for_fitting = []
-        for i, source_data in enumerate(list_of_data_dicts):
-            if apply_to_key not in source_data:
-                raise KeyError(f"Key '{apply_to_key}' not found in source data dictionary at index {i}.")
-            
-            if fit_on_split not in source_data[apply_to_key]:
-                 raise KeyError(f"Split '{fit_on_split}' not found under '{apply_to_key}' in source data dictionary at index {i} for fitting.")
-
-            data_segments_for_fitting.append(source_data[apply_to_key][fit_on_split])
+        # Checking the inputs
+        for d in data.values():
+            for split in ['train', 'val', 'test']:
+                if d[split]:
+                    if not isinstance(d[split], list):
+                        raise TypeError(f"Data for split '{split}' must be a list.")
         
-        if not data_segments_for_fitting:
-            raise ValueError("No data segments found to fit the multi-source transformer.")
-
-        # 2. Fit the transform instance using its multi-source fit method
-        try:
-            transform_instance.fit_multi_source(data_segments_for_fitting)
-        except Exception as e:
-            raise RuntimeError(f"Error during multi-source fitting of '{transform_instance.__class__.__name__}': {e}")
-
-        # 3. Apply the fitted transform to each source's data
-        transformed_list_of_data_dicts = []
-        for source_data in list_of_data_dicts:
-            # Make a shallow copy of the source_data dict itself.
-            # The nested dict for apply_to_key will be recreated or updated.
-            transformed_source_data = source_data.copy() 
-
-            if apply_to_key in transformed_source_data:
-                transformed_splits = {}
-                for split_name, split_data in transformed_source_data[apply_to_key].items():
-                    # Apply transform to each split using BaseTransform's transform method
-                    transformed_splits[split_name] = transform_instance.transform_data(split_data)
-                transformed_source_data[apply_to_key] = transformed_splits
-            
-            transformed_list_of_data_dicts.append(transformed_source_data)
         
-        return transformed_list_of_data_dicts
+        #TODO: The logic belo needs to be adapted
+        
+        # Make a copy to avoid modifying original input data directly
+        transformed_data = data.copy()
+
+        target_data_splits = transformed_data[apply_to_key]
+
+        # 1. Fit on the specified split using BaseTransform's single-source fit method
+        if fit_on_split in target_data_splits:
+            try:
+                # Prepare auxiliary data for fitting if auxiliary_keys are provided
+                fit_auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if fit_on_split in aux_splits and aux_splits[fit_on_split] is not None:
+                            fit_auxiliary_data[aux_key] = aux_splits[fit_on_split]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for fitting split '{fit_on_split}' is None or missing.")
+                
+                # Fit with or without auxiliary data
+                if fit_auxiliary_data:
+                    # Assuming fit_data can accept auxiliary data
+                    transform_instance.fit_data(
+                        target_data_splits[fit_on_split], 
+                        auxiliary_data=fit_auxiliary_data
+                    )
+                else:
+                    transform_instance.fit_data(target_data_splits[fit_on_split])
+                    
+            except Exception as e:
+                raise RuntimeError(f"Error during single-source fitting of '{transform_instance.__class__.__name__}' on split '{fit_on_split}': {e}")
+        else:
+            raise KeyError(f"Split '{fit_on_split}' not found under key '{apply_to_key}' in data. Available splits: {list(target_data_splits.keys())}")
+        
+        # 2. Transform all splits using BaseTransform's transform method
+        transformed_target_data_splits = {}
+        for split_name, split_data in target_data_splits.items():
+            if split_data is not None:
+                # Prepare auxiliary data for this split if auxiliary_keys are provided
+                auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if split_name in aux_splits and aux_splits[split_name] is not None:
+                            auxiliary_data[aux_key] = aux_splits[split_name]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
+                
+                # Apply transform with or without auxiliary data
+                if auxiliary_data:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
+                        split_data, 
+                        auxiliary_data=auxiliary_data,
+                        mode=split_name,
+                    )
+                else:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_data(split_data, mode=split_name)
+            else:
+                transformed_target_data_splits[split_name] = None
+                warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
+                
+        
+        transformed_data[apply_to_key] = transformed_target_data_splits
+        
+        return transformed_data
+
+class MultiSourceDirectTransformStrategy(TransformStrategy):
+    """
+    Strategy for transforms that need to be fitted across multiple sources (datasets)
+    on a specified split (e.g., 'train'), and then applied to corresponding splits
+    within each source separately. Uses `transform_instance.fit_multi_source()`
+    and `transform_instance.transform_data()`.
+    """
+    
+    def apply(self, 
+              transform_instance: BaseTransform, 
+              data: Dict[str, Any], 
+              apply_to_key: str, 
+              fit_on_split: str,
+              auxiliary_keys: Optional[List[str]] = None
+             ) -> List[Dict[str, Any]]:
+        """
+        Fits the transform instance on aggregated data from the `fit_on_split`
+        across all sources (from `apply_to_key`), then applies the fitted
+        transform to the `apply_to_key` within each split of each source.
+        
+        Args:
+            transform_instance: The transform to apply
+            list_of_data_dicts: List of data dictionaries (one per source)
+            apply_to_key: Key identifying which data to transform
+            fit_on_split: Split to use for fitting the transform
+            auxiliary_keys: Optional list of keys for auxiliary information to pass to transform
+            
+        Returns:
+            List of dictionaries with transformed data
+        """
+        # Checking the inputs
+        for d in data.values():
+            for split in ['train', 'val', 'test']:
+                if d[split]:
+                    if not isinstance(d[split], list):
+                        raise TypeError(f"Data for split '{split}' must be a list.")
+        
+        
+        # Validate auxiliary keys if provided
+        if auxiliary_keys:
+            missing_keys = [key for key in auxiliary_keys if key not in data]
+            if missing_keys:
+                raise KeyError(f"Auxiliary keys {missing_keys} not found in data. Available keys: {list(data.keys())}")
+        
+        # Make a copy to avoid modifying original input data directly
+        transformed_data = data.copy()
+        
+        target_data_splits = transformed_data[apply_to_key]
+        transformed_target_data_splits = {}
+        
+        for split_name, split_data in target_data_splits.items():
+            if split_data is not None:
+                # Prepare auxiliary data for this split if auxiliary_keys are provided
+                auxiliary_data = {}
+                if auxiliary_keys:
+                    for aux_key in auxiliary_keys:
+                        aux_splits = data[aux_key]
+                        if split_name in aux_splits and aux_splits[split_name] is not None:
+                            auxiliary_data[aux_key] = aux_splits[split_name]
+                        else:
+                            warnings.warn(f"Auxiliary key '{aux_key}' for split '{split_name}' is None or missing.")
+                
+                # Apply transform with or without auxiliary data
+                if auxiliary_data:
+                    # Assuming transform_instance.transform_data can accept auxiliary data
+                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(
+                        split_data, 
+                        auxiliary_data=auxiliary_data,
+                        mode=split_name,
+                    )
+                else:
+                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(split_data, mode=split_name)
+            else:
+                transformed_target_data_splits[split_name] = None
+                warnings.warn(f"For feature '{apply_to_key}', the split '{split_name}' is None.")
+        
+        transformed_data[apply_to_key] = transformed_target_data_splits
+        
+        return transformed_data
+
+
+# class MultiSourceFitTransformStrategy(TransformStrategy):
+#     """
+#     Strategy for transforms that need to be fitted across multiple sources (datasets)
+#     on a specified split (e.g., 'train'), and then applied to corresponding splits
+#     within each source separately. Uses `transform_instance.fit_multi_source()`
+#     and `transform_instance.transform_data()`.
+#     """
+    
+#     def apply(self, 
+#               transform_instance: BaseTransform, 
+#               list_of_data_dicts: List[Dict[str, Any]], 
+#               apply_to_key: str, 
+#               fit_on_split: str
+#              ) -> List[Dict[str, Any]]:
+#         """
+#         Fits the transform instance on aggregated data from the `fit_on_split`
+#         across all sources (from `apply_to_key`), then applies the fitted
+#         transform to the `apply_to_key` within each split of each source.
+#         """
+#         if not isinstance(list_of_data_dicts, list) or not all(isinstance(d, dict) for d in list_of_data_dicts):
+#             raise TypeError(f"{self.__class__.__name__} expects a list of data dictionaries.")
+#         if fit_on_split is None:
+#             raise ValueError(f"{self.__class__.__name__} requires 'fit_on_split' to be specified.")
+
+#         # 1. Collect data segments for fitting, delegating aggregation to transform_instance
+#         data_segments_for_fitting = []
+#         for i, source_data in enumerate(list_of_data_dicts):
+#             if apply_to_key not in source_data:
+#                 raise KeyError(f"Key '{apply_to_key}' not found in source data dictionary at index {i}.")
+            
+#             if fit_on_split not in source_data[apply_to_key]:
+#                  raise KeyError(f"Split '{fit_on_split}' not found under '{apply_to_key}' in source data dictionary at index {i} for fitting.")
+
+#             data_segments_for_fitting.append(source_data[apply_to_key][fit_on_split])
+        
+#         if not data_segments_for_fitting:
+#             raise ValueError("No data segments found to fit the multi-source transformer.")
+
+#         # 2. Fit the transform instance using its multi-source fit method
+#         try:
+#             transform_instance.fit_multi_source(data_segments_for_fitting)
+#         except Exception as e:
+#             raise RuntimeError(f"Error during multi-source fitting of '{transform_instance.__class__.__name__}': {e}")
+
+#         # 3. Apply the fitted transform to each source's data
+#         transformed_list_of_data_dicts = []
+#         for source_data in list_of_data_dicts:
+#             # Make a shallow copy of the source_data dict itself.
+#             # The nested dict for apply_to_key will be recreated or updated.
+#             transformed_source_data = source_data.copy() 
+
+#             if apply_to_key in transformed_source_data:
+#                 transformed_splits = {}
+#                 for split_name, split_data in transformed_source_data[apply_to_key].items():
+#                     # Apply transform to each split using BaseTransform's transform method
+#                     transformed_splits[split_name] = transform_instance.transform_multi_source(split_data)
+#                 transformed_source_data[apply_to_key] = transformed_splits
+            
+#             transformed_list_of_data_dicts.append(transformed_source_data)
+        
+#         return transformed_list_of_data_dicts

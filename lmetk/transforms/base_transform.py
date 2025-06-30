@@ -4,77 +4,116 @@ import torch
 from abc import ABC, abstractmethod
 from typing import Any, List, Union, Tuple, Type, Optional, Dict
 from lmetk.transforms.utils import _convert_to_numpy, _convert_from_numpy
+from numpy import ndarray
+
+# --- BaseTransform ABC ---
+# class BaseTransform(ABC):
+#     """
+#     Abstract base class for all custom and wrapped external transformation objects.
+#     This defines the expected interface for fitting and transforming data within
+#     the lmetk preprocessing pipeline, especially considering multi-source scenarios.
+
+#     All concrete transformation implementations (including adapters for external libraries)
+#     must inherit from this class and implement its abstract methods.
+#     """
+    
+#     def fit_single_source(self, data_segment: Any, auxiliary_data: Optional[Dict[str, Any]] = None):
+#         """
+#         Fits the transform on a single data segment (e.g., a 'train' split from one source).
+        
+#         Default implementation raises NotImplementedError. Override in subclasses that require fitting.
+        
+#         Parameters
+#         ----------
+#         data_segment : Any
+#             The data segment to fit on. Its type can be numpy.ndarray, pandas.DataFrame,
+#             pandas.Series, torch.Tensor, or other array-like structures.
+#         auxiliary_data : Optional[Dict[str, Any]]
+#             Optional auxiliary information for fitting.
+#         """
+#         raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_single_source. "
+#                                  f"Consider using DirectTransform if no fitting is required.")
+        
+#     def fit_multi_source(self, list_of_data_segments: List[Any], auxiliary_data: Optional[List[Dict[str, Any]]] = None):
+#         """
+#         Fits the transform on a list of data segments, aggregated across multiple sources.
+        
+#         Default implementation raises NotImplementedError. Override in subclasses that require fitting.
+        
+#         This method is responsible for:
+#         1. Aggregating/stacking the `list_of_data_segments` into a single structure
+#            suitable for the underlying transformation logic (e.g., vstacking NumPy arrays).
+#         2. Performing the fitting operation on this aggregated data.
+
+#         Parameters
+#         ----------
+#         list_of_data_segments : List[Any]
+#             A list where each element is a data segment (e.g., 'train' split)
+#             from a different source.
+#         auxiliary_data : Optional[List[Dict[str, Any]]]
+#             Optional list of auxiliary information corresponding to each data segment.
+#         """
+#         raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_multi_source. "
+#                                  f"Consider using DirectTransform if no fitting is required.")
+        
+#    # I want to have a decorator  
+
+#     @abstractmethod
+#     def transform_data(self, data_segment: Any, mode: str = None) -> Any:
+#         """
+#         Applies the transformation to a single data segment.
+
+#         Parameters
+#         ----------
+#         data_segment : Any
+#             The data segment to transform. Its type can be numpy.ndarray, pandas.DataFrame,
+#             pandas.Series, torch.Tensor, or other array-like structures.
+#         mode : str, 
+#             An optional mode parameter that can be used to specify different transformation
+
+#         Returns
+#         -------
+#         Any
+#             The transformed data segment. Its type should ideally match the input type.
+#         """
+#         pass
 # --- BaseTransform ABC ---
 class BaseTransform(ABC):
     """
-    Abstract base class for all custom and wrapped external transformation objects.
-    This defines the expected interface for fitting and transforming data within
-    the lmetk preprocessing pipeline, especially considering multi-source scenarios.
-
-    All concrete transformation implementations (including adapters for external libraries)
-    must inherit from this class and implement its abstract methods.
+    Simplified base transform interface. Transforms only need to implement
+    the core transformation logic, not the fitting strategies.
     """
     
-    def fit_single_source(self, data_segment: Any, auxiliary_data: Optional[Dict[str, Any]] = None):
-        """
-        Fits the transform on a single data segment (e.g., a 'train' split from one source).
-        
-        Default implementation raises NotImplementedError. Override in subclasses that require fitting.
-        
-        Parameters
-        ----------
-        data_segment : Any
-            The data segment to fit on. Its type can be numpy.ndarray, pandas.DataFrame,
-            pandas.Series, torch.Tensor, or other array-like structures.
-        auxiliary_data : Optional[Dict[str, Any]]
-            Optional auxiliary information for fitting.
-        """
-        raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_single_source. "
-                                 f"Consider using DirectTransform if no fitting is required.")
-        
-    def fit_multi_source(self, list_of_data_segments: List[Any], auxiliary_data: Optional[List[Dict[str, Any]]] = None):
-        """
-        Fits the transform on a list of data segments, aggregated across multiple sources.
-        
-        Default implementation raises NotImplementedError. Override in subclasses that require fitting.
-        
-        This method is responsible for:
-        1. Aggregating/stacking the `list_of_data_segments` into a single structure
-           suitable for the underlying transformation logic (e.g., vstacking NumPy arrays).
-        2. Performing the fitting operation on this aggregated data.
-
-        Parameters
-        ----------
-        list_of_data_segments : List[Any]
-            A list where each element is a data segment (e.g., 'train' split)
-            from a different source.
-        auxiliary_data : Optional[List[Dict[str, Any]]]
-            Optional list of auxiliary information corresponding to each data segment.
-        """
-        raise NotImplementedError(f"{self.__class__.__name__} does not implement fit_multi_source. "
-                                 f"Consider using DirectTransform if no fitting is required.")
-        
-   # I want to have a decorator  
-
     @abstractmethod
-    def transform_data(self, data_segment: Any, mode: str = None) -> Any:
+    def transform_data(self, data_segment: ndarray | list[ndarray] , auxiliary_data: Optional[Dict[str, Any]] = None, 
+                      mode: Optional[str] = None) -> Any:
         """
-        Applies the transformation to a single data segment.
-
+        Transform a single data segment.
+        
         Parameters
         ----------
-        data_segment : Any
-            The data segment to transform. Its type can be numpy.ndarray, pandas.DataFrame,
-            pandas.Series, torch.Tensor, or other array-like structures.
-        mode : str, 
-            An optional mode parameter that can be used to specify different transformation
-
-        Returns
-        -------
-        Any
-            The transformed data segment. Its type should ideally match the input type.
+        data : Any
+            The data to transform
+        auxiliary_data : Optional[Dict[str, Any]]
+            Additional data needed for transformation
+        mode : Optional[str]
+            Transformation mode (e.g., 'train', 'val', 'test')
         """
         pass
+    
+    def fit_data(self, data_segment: ndarray | list[ndarray], auxiliary_data: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
+        """
+        Fit the transform on data. Default implementation does nothing (for stateless transforms).
+        Override this method for transforms that need fitting.
+        """
+        return self
+    
+    def supports_multi_source_fit(self) -> bool:
+        """
+        Whether this transform can handle multi-source fitting.
+        Override to return True if the transform can handle aggregated data from multiple sources.
+        """
+        return True  # Most transforms can handle concatenated data
 
 # --- Adapter Examples for External Libraries ---
 

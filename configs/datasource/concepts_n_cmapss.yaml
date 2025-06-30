@@ -41,46 +41,32 @@ data_splitter:
   label_len: 48  # overlap size
   pred_len: 96   # prediction size
 
+# TODO: MOVE TO transforms configs
+# data_default_transforms:
+#   scaler_features:
+#     transform:
+#       _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+#       scaling: standard
 
-data_default_transforms:
-  scaler_features:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-      scaling: standard
-
-    metadata:
-      apply_to: features
-      fit_on: train
+#     metadata:
+#       apply_to: features
+#       fit_on: train
   
-  scaler_descriptors:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-      scaling: standard
+#   scaler_descriptors:
+#     transform:
+#       _target_:  lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+#       scaling: standard
       
-    metadata:
-      apply_to: descriptors
-      # fit_on: train
+#     metadata:
+#       apply_to: descriptors
+#       # fit_on: train
       
-  scaler_rul:
-    transform:
-      _target_:  lmetk.data.datasources.concepts_n_cmapss.ConstantScaler #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-      factor: 0.01
+#   scaler_rul:
+#     transform:
+#       _target_:  lmetk.data.datasources.concepts_n_cmapss.ConstantScaler #lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
+#       factor: 0.01
       
-    metadata:
-      apply_to: rul
-      fit_on: train
+#     metadata:
+#       apply_to: rul
+#       fit_on: train
  
-# Old 
-# scalers:
-
-#   features:
-#     _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Features
-#     scaling: standard
-  
-#   descriptors:
-#     _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSScaler_Descriptors
-#     scaling: standard
-
-#   rul:
-#     _target_: lmetk.data.datasources.concepts_cmapss.ConstantScaler
-#     factor: 0.01

@@ -24,7 +24,6 @@ class MultiSourcePreProcessor(PreProcessorInterface):
         )
         
         self.data_lst: Optional[List[Any]] = None
-        self.multisource_data_splitter: Optional[Any] = None
         self._is_preprocessed = False
 
     def get_processed_data(self) -> dict[str, ndarray | list[ndarray]]:
@@ -69,14 +68,12 @@ class MultiSourcePreProcessor(PreProcessorInterface):
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
-        multisource_data_splitter = self.datasource.get_multisource_data_splitter()
 
         # Ensure all outputs are lists for consistent processing
         if not isinstance(data_lst, list):
             data_lst = [data_lst]
         
         self.data_lst = data_lst
-        self.multisource_data_splitter = multisource_data_splitter
 
     def apply_transforms(self, data_lst: List[Any], transforms) -> List[Any]:
         """
