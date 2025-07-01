@@ -56,7 +56,7 @@ class MultiSourcePreProcessor(PreProcessorInterface):
         elif isinstance(self.data_lst, list):
             # TODO: HAVE NOT TESTED
             # If multiple sources, return as a list
-            return convert_outer_list_to_inner(self.data_lst)
+            pass
         
         else:
             raise ValueError("Processed data is in an unexpected format.")
@@ -112,28 +112,3 @@ class MultiSourcePreProcessor(PreProcessorInterface):
         self._is_preprocessed = True
         
         return self.data_lst
-
-def convert_outer_list_to_inner(data_list):
-    if not data_list:
-        return {}
-
-    # Ensure all dictionaries have the same keys
-    keys = data_list[0].keys()
-    for d in data_list:
-        if d.keys() != keys:
-            raise ValueError("Not all dicts have the same keys!")
-
-    # Concatenate values for each key
-    stacked = {}
-    for key in keys:
-        try:
-            stacked[key] = [d[key] for d in data_list]
-        except Exception as e:
-            raise ValueError(f"Failed to concatenate key '{key}': {e}")
-
-    # Check that all keys in the stacked have the same length
-    lengths = [len(stacked[key]) for key in stacked]
-    if len(set(lengths)) != 1:
-        raise ValueError("All keys in the stacked dict must have the same length.")
-    
-    return stacked  

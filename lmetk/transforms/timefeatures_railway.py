@@ -73,6 +73,11 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         
         df_stamp_raw = time_features(data_segment, use_features=self.use_features, normalize=self.normalize_time_features)
         
+        # Check is there are any nan values
+        if df_stamp_raw.isnull().values.any():
+            raise ValueError("NaN values found in df_stamp_raw")
+
+
         # Return the values as a NumPy array.
         return df_stamp_raw.values
 

@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 class BySourceSplitter:
     """
@@ -108,14 +109,12 @@ def convert_outer_list_to_inner(data_list):
     # Concatenate values for each key
     stacked = {}
     for key in keys:
-        try:
-            stacked[key] = [d[key] for d in data_list]
-        except Exception as e:
-            raise ValueError(f"Failed to concatenate key '{key}': {e}")
-
+        stacked[key] = [d[key] for d in data_list]
+        
     # Check that all keys in the stacked have the same length
     lengths = [len(stacked[key]) for key in stacked]
     if len(set(lengths)) != 1:
+        logger.error(f"Not all keys in the stacked dict have the same length. Lengths: {lengths}")
         raise ValueError("All keys in the stacked dict must have the same length.")
     
     return stacked  
