@@ -66,7 +66,8 @@ class DefaultEvaluator(AbstractEvaluator):
         # f_dim = 1 if self.task_mode == 'MS' else: None
         # TODO: logic here need to be improved as self.target_dim_position is not always defined as None
         # running etth and railway datasets here is important checks
-        if self.task_mode == 'univariate' or (self.task_mode == 'multivariate' and self.target_dim_position is not None):
+        #if self.task_mode == 'univariate' or (self.task_mode == 'multivariate' and self.target_dim_position is not None):
+        if self.task_mode == 'univariate' and self.target_dim_position is not None:
             f_dim = self.target_dim_position
             predictions, targets = predictions[:,:,f_dim], targets[:,:,f_dim]
 
