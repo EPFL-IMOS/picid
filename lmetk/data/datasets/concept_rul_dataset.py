@@ -5,6 +5,9 @@ import torch
 from torch.utils.data import Dataset
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ConceptRULDataset(Dataset):
     def __init__(
         self, 
@@ -31,7 +34,7 @@ class ConceptRULDataset(Dataset):
         # self.concepts = data_split.concepts
 
         if getattr(self, 'descriptors', None) is not None:
-            print("The dataset contains descriptors, concatenating them to the features.")
+            logger.info("The dataset contains descriptors, concatenating them to the features.")
             self.X = np.concatenate((self.X, data_dict['descriptors']), axis=1)
 
         
