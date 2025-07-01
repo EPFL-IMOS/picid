@@ -11,6 +11,7 @@ import numpy as np
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, OmegaConf
+from hydra.core.hydra_config import HydraConfig
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
 from box import Box
@@ -68,6 +69,58 @@ def display_targets(cfg):
     Console().print(table)
 
 
+def get_config_info(cfg):
+    overrides = HydraConfig.get().overrides.task
+    defaults = cfg.defaults if 'defaults' in cfg else []
+
+    # 1. Build a mapping of override keys (from CLI or config)
+    override_map = {}
+    for item in overrides:
+        if '=' in item:
+            k, v = item.split('=', 1)
+            override_map[k] = f"CLI ({item})"
+
+    # 2. Traverse defaults chain to see where each group came from
+    default_sources = {}
+    for d in defaults:
+        if isinstance(d, dict):
+            for k, v in d.items():
+                if v is not None:
+                    default_sources[k] = f"{k}/{v}.yaml"
+        elif isinstance(d, str):
+            name = d.split("/")[0]
+            default_sources[name] = f"{d}.yaml"
+
+    # 3. Traverse config tree
+    table_data = []
+    def recurse(node, prefix=""):
+        if not OmegaConf.is_dict(node):
+            return
+        for k, v in node.items():
+            key_path = f"{prefix}.{k}" if prefix else k
+            if OmegaConf.is_dict(v):
+                recurse(v, prefix=key_path)
+            else:
+                # Who set it?
+                override = override_map.get(key_path, default_sources.get(k, ""))
+                source = getattr(cfg._metadata.config_sources.get(k, {}), "path", "")
+                table_data.append((key_path, str(v), override or "default", source or ""))
+    recurse(cfg)
+    return table_data
+
+
+def display_config_sources(cfg):
+    data = get_config_info(cfg)
+    table = Table(title="Hydra Config Resolution")
+    table.add_column("Key", style="cyan")
+    table.add_column("Final Value", style="magenta")
+    table.add_column("Overridden By", style="green")
+    table.add_column("Source Config", style="yellow")
+
+    for row in data:
+        table.add_row(*row)
+
+    Console(width=180).print(table)
 
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
@@ -120,7 +173,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     for k, d in cfg.paths.items():
         log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
 
-
+    # HydraConfig.set_config(cfg)
+    # display_config_sources(cfg)
     display_targets(cfg)
 
     # Instantiate and load dataset
@@ -130,15 +184,15 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     # Get transform names
-    print("Transform names:", transforms_manager.get_transform_names())
+    log.info("Transform names:", transforms_manager.get_transform_names())
     
     # Get transforms that apply to features
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
-    print("Feature transforms:", list(feature_transforms.keys()))
+    log.info("Feature transforms:", list(feature_transforms.keys()))
     
     # Get transforms with auxiliary keys
     aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
-    print("Transforms with auxiliary keys:", list(aux_transforms.keys()))
+    log.info("Transforms with auxiliary keys:", list(aux_transforms.keys()))
     
     if isinstance(dataset_source, DataSourceLoader):
         preprocessor = PreProcessor(dataset_source, transforms_manager, logger=log)
