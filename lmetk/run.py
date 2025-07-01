@@ -10,7 +10,7 @@ import lightning as L
 import numpy as np
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
 from box import Box
@@ -22,6 +22,11 @@ from lmetk.utils_refactor import (
     instantiate_loggers,
     task_wrapper,
 )
+
+from rich.table import Table
+from rich.console import Console
+
+
 from lmetk.pipeline.base import LMETKModel
 from lmetk.transforms.transform_manager import ConfigTransformManager
 
@@ -29,6 +34,25 @@ from lmetk.transforms.transform_manager import ConfigTransformManager
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
 
+
+def extract_targets(cfg, prefix=""):
+    targets = []
+    for k, v in cfg.items():
+        full_key = f"{prefix}.{k}" if prefix else k
+        if isinstance(v, dict) or OmegaConf.is_dict(v):
+            if "_target_" in v:
+                targets.append((full_key, v["_target_"]))
+            targets.extend(extract_targets(v, prefix=full_key))
+    return targets
+
+
+def display_targets(cfg):
+    table = Table(title="Hydra _target_ Classes")
+    table.add_column("Config Path", style="cyan", no_wrap=True)
+    table.add_column("_target_", style="magenta")
+    for path, target in extract_targets(cfg):
+        table.add_row(path, target)
+    Console().print(table)
 
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
@@ -80,6 +104,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     for k, d in cfg.paths.items():
         log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
+
+
+    display_targets(cfg)
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
