@@ -121,7 +121,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     add_args = {}
     if "N-CMAPSS" in cfg.datasource.data_name:
         dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
-        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')
+        
+        #TODO: For now we are not working with the validation, only test
+        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
+        
         dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
 
     elif cfg.datasource.data_name == 'railway':
