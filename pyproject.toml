@@ -38,6 +38,7 @@ dependencies = [
 packages = ["lmetk"]
 
 [project.optional-dependencies]
+
 test = [
     "pytest",
     "pytest-cov",

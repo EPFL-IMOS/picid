@@ -24,7 +24,7 @@ def dataloader_to_dataframe(dataloader):
 
 
 
-class TabPFNWrapper(AbstractWrapper):
+class AutoGluonWrapper(AbstractWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
