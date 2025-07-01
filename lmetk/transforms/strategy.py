@@ -5,7 +5,6 @@ import numpy as np # Used for stacking in MultiSourceFitTransformStrategy
 from lmetk.transforms.base_transform import BaseTransform # Import your BaseTransform ABC
 
 # --- Transform Strategies ---
-
 class TransformStrategy(ABC):
     """
     Abstract base class for different transformation strategies.
@@ -180,16 +179,13 @@ class FitTransformStrategy(TransformStrategy):
                         else:
                             warnings.warn(f"Auxiliary key '{aux_key}' for fitting split '{fit_on_split}' is None or missing.")
                 
-                # Fit with or without auxiliary data
-                #if fit_auxiliary_data:
                 # Assuming fit_data can accept auxiliary data
                 transform_instance.fit_data(
                     target_data_splits[fit_on_split], 
                     auxiliary_data=fit_auxiliary_data,
                     mode=fit_on_split,
                 )
-                # else:
-                #     transform_instance.fit_data(target_data_splits[fit_on_split])
+                
                     
             except Exception as e:
                 raise RuntimeError(f"Error during single-source fitting of '{transform_instance.__class__.__name__}' on split '{fit_on_split}': {e}")
@@ -413,66 +409,3 @@ class MultiSourceDirectTransformStrategy(TransformStrategy):
         transformed_data[apply_to_key] = transformed_target_data_splits
         
         return transformed_data
-
-
-# class MultiSourceFitTransformStrategy(TransformStrategy):
-#     """
-#     Strategy for transforms that need to be fitted across multiple sources (datasets)
-#     on a specified split (e.g., 'train'), and then applied to corresponding splits
-#     within each source separately. Uses `transform_instance.fit_multi_source()`
-#     and `transform_instance.transform_data()`.
-#     """
-    
-#     def apply(self, 
-#               transform_instance: BaseTransform, 
-#               list_of_data_dicts: List[Dict[str, Any]], 
-#               apply_to_key: str, 
-#               fit_on_split: str
-#              ) -> List[Dict[str, Any]]:
-#         """
-#         Fits the transform instance on aggregated data from the `fit_on_split`
-#         across all sources (from `apply_to_key`), then applies the fitted
-#         transform to the `apply_to_key` within each split of each source.
-#         """
-#         if not isinstance(list_of_data_dicts, list) or not all(isinstance(d, dict) for d in list_of_data_dicts):
-#             raise TypeError(f"{self.__class__.__name__} expects a list of data dictionaries.")
-#         if fit_on_split is None:
-#             raise ValueError(f"{self.__class__.__name__} requires 'fit_on_split' to be specified.")
-
-#         # 1. Collect data segments for fitting, delegating aggregation to transform_instance
-#         data_segments_for_fitting = []
-#         for i, source_data in enumerate(list_of_data_dicts):
-#             if apply_to_key not in source_data:
-#                 raise KeyError(f"Key '{apply_to_key}' not found in source data dictionary at index {i}.")
-            
-#             if fit_on_split not in source_data[apply_to_key]:
-#                  raise KeyError(f"Split '{fit_on_split}' not found under '{apply_to_key}' in source data dictionary at index {i} for fitting.")
-
-#             data_segments_for_fitting.append(source_data[apply_to_key][fit_on_split])
-        
-#         if not data_segments_for_fitting:
-#             raise ValueError("No data segments found to fit the multi-source transformer.")
-
-#         # 2. Fit the transform instance using its multi-source fit method
-#         try:
-#             transform_instance.fit_multi_source(data_segments_for_fitting)
-#         except Exception as e:
-#             raise RuntimeError(f"Error during multi-source fitting of '{transform_instance.__class__.__name__}': {e}")
-
-#         # 3. Apply the fitted transform to each source's data
-#         transformed_list_of_data_dicts = []
-#         for source_data in list_of_data_dicts:
-#             # Make a shallow copy of the source_data dict itself.
-#             # The nested dict for apply_to_key will be recreated or updated.
-#             transformed_source_data = source_data.copy() 
-
-#             if apply_to_key in transformed_source_data:
-#                 transformed_splits = {}
-#                 for split_name, split_data in transformed_source_data[apply_to_key].items():
-#                     # Apply transform to each split using BaseTransform's transform method
-#                     transformed_splits[split_name] = transform_instance.transform_multi_source(split_data)
-#                 transformed_source_data[apply_to_key] = transformed_splits
-            
-#             transformed_list_of_data_dicts.append(transformed_source_data)
-        
-#         return transformed_list_of_data_dicts

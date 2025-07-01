@@ -6,7 +6,7 @@ defaults:
   - override /model: tabpfn_refactor
   - override /evaluator: railway
   - override /task_definition: railway_day_ahead
-  - override /transforms: railway_no_leak
+  - override /transforms: railway/railway_no_leak
 
 task_definition: 
   requires_training: false

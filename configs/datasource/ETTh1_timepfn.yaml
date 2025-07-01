@@ -42,21 +42,3 @@ data_splitter:
   pred_len:  ${oc.select:model.pred_len,null}  #96  # prediction size
 
 
-data_default_transforms:
-  scaler:
-    transform:
-      _target_: lmetk.transforms.base_transform.SklearnStandardScalerAdapter # Your wrapper class
-    
-    metadata:
-      apply_to: features
-      fit_on: train
-  
-  time_features_transform:
-    transform:
-      _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
-      freq: h 
-    
-    metadata:
-      apply_to:  timestamps
-
-

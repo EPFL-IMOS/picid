@@ -84,41 +84,38 @@ class LinearRegressionModelBaseline(nn.Module):
                         X_features
                     ], dim=1)
                     
-                    try:
-                        # Use least squares solution
-                        XtX = torch.matmul(X_with_bias.T, X_with_bias)
-                        Xty = torch.matmul(X_with_bias.T, y_targets)
+                    
+                    # Use least squares solution
+                    XtX = torch.matmul(X_with_bias.T, X_with_bias)
+                    Xty = torch.matmul(X_with_bias.T, y_targets)
+                    
+                    # Add small regularization for numerical stability
+                    reg = 1e-6 * torch.eye(XtX.shape[0], device=x.device)
+                    theta = torch.linalg.solve(XtX + reg, Xty)
+                    
+                    # Generate predictions
+                    pred = []
+                    current_features = sample_data[-effective_lag:].clone()
+                    
+                    for h in range(self.forecast_horizon):
+                        # Prepare features with bias
+                        features_with_bias = torch.cat([
+                            torch.ones(1, device=x.device),
+                            current_features
+                        ])
                         
-                        # Add small regularization for numerical stability
-                        reg = 1e-6 * torch.eye(XtX.shape[0], device=x.device)
-                        theta = torch.linalg.solve(XtX + reg, Xty)
+                        # Predict next value
+                        next_pred = torch.dot(theta, features_with_bias)
+                        pred.append(next_pred)
                         
-                        # Generate predictions
-                        pred = []
-                        current_features = sample_data[-effective_lag:].clone()
+                        # Update features for next prediction (shift window)
+                        current_features = torch.cat([
+                            current_features[1:],
+                            next_pred.unsqueeze(0)
+                        ])
+                    
+                    pred = torch.stack(pred)
                         
-                        for h in range(self.forecast_horizon):
-                            # Prepare features with bias
-                            features_with_bias = torch.cat([
-                                torch.ones(1, device=x.device),
-                                current_features
-                            ])
-                            
-                            # Predict next value
-                            next_pred = torch.dot(theta, features_with_bias)
-                            pred.append(next_pred)
-                            
-                            # Update features for next prediction (shift window)
-                            current_features = torch.cat([
-                                current_features[1:],
-                                next_pred.unsqueeze(0)
-                            ])
-                        
-                        pred = torch.stack(pred)
-                        
-                    except:
-                        # If linear regression fails, fall back to last value
-                        pred = sample_data[-1].repeat(self.forecast_horizon)
                 
                 feature_predictions.append(pred)
             

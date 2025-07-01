@@ -4,6 +4,8 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 from lmetk.transforms.data_transform import DataTransform
 
+import logging
+logger = logging.getLogger(__name__) 
 
 class ConfigTransformManager:
     """
@@ -46,29 +48,36 @@ class ConfigTransformManager:
         data_transforms = OrderedDict()
         
         for transform_name, transform_entry_config in self.config.items():
-            try:
-                # Get the transform configuration
-                transform_config = transform_entry_config.get('transform')
-                if transform_config is None:
-                    raise ValueError(f"Transform '{transform_name}' missing 'transform' configuration")
-                
-                # Instantiate the raw transform using Hydra
-                instantiated_transform = instantiate(transform_config)
-                
-                # Get metadata
-                metadata = transform_entry_config.get('metadata', {})
-                
-                # Create DataTransform object
-                data_transform = DataTransform(
-                    transform_name=transform_name,
-                    transform=instantiated_transform,
-                    metadata=metadata
-                )
-                
-                data_transforms[transform_name] = data_transform
-                
-            except Exception as e:
-                raise RuntimeError(f"Failed to instantiate transform '{transform_name}': {e}")
+            # Get the transform configuration
+            transform_config = transform_entry_config.get('transform')
+            
+            if transform_config is None:
+                logger.error(f"Transform '{transform_name}' missing 'transform' configuration")
+            
+            # Instantiate the raw transform using Hydra
+            instantiated_transform = instantiate(transform_config)
+
+            # assert the instantiated_transform is instantiated:
+            if instantiated_transform is None:
+                logger.error(f"Failed to instantiate transform '{transform_name}' from config: {transform_config}")
+                raise RuntimeError(f"Failed to instantiate transform '{transform_name}' from config: {transform_config}")
+
+            
+            # Get metadata
+            metadata = transform_entry_config.get('metadata', {})
+            
+            # Create DataTransform object
+            data_transform = DataTransform(
+                transform_name=transform_name,
+                transform=instantiated_transform,
+                metadata=metadata
+            )
+            
+            data_transforms[transform_name] = data_transform
+            
+
+
+            
         
         self._data_transforms = data_transforms
         self._is_instantiated = True
@@ -340,52 +349,3 @@ def create_transform_manager_from_config(config_path: Optional[str] = None,
         transforms_config=config, 
         lazy_instantiation=lazy_instantiation
     )
-
-
-# # Example usage
-# if __name__ == "__main__":
-#     example_config = {
-#         "scaler_features": {
-#             "transform": {
-#                 "_target_": "lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter"
-#             },
-#             "metadata": {
-#                 "apply_to": "features",
-#                 "fit_on": "train"
-#             }
-#         },
-#         "time_features_transform": {
-#             "transform": {
-#                 "_target_": "lmetk.transforms.timefeatures_railway.RailwayTimeFeaturesTransform",
-#                 "use_features": ["year", "month", "day", "weekday", "hour"],
-#                 "normalize_time_features": False
-#             },
-#             "metadata": {
-#                 "apply_to": "timestamps"
-#             }
-#         }
-#     }
-    
-#     # Create manager - transforms instantiated immediately by default
-#     manager = ConfigTransformManager(transforms_config=example_config)
-    
-#     # Efficient access to transforms (no re-instantiation)
-#     scaler = manager.get_transform("scaler_features")
-#     all_transforms = manager.get_transforms()  # Primary method
-    
-#     # DataTransform objects when needed
-#     data_transforms = manager.prepare_transforms()
-#     feature_transforms = manager.get_transforms_by_apply_to("features")
-    
-#     print(f"Manager status: {manager}")
-#     print(f"Transform names: {manager.get_transform_names()}")
-    
-#     # Safe state management example
-#     try:
-#         manager.add_transforms_config({"new_transform": {}})  # Will raise error
-#     except RuntimeError as e:
-#         print(f"Expected error: {e}")
-        
-#     # Proper way to add more transforms
-#     manager.clear_cache()
-#     manager.add_transforms_config({"new_transform": {"transform": {"_target_": "some.Transform"}}})
