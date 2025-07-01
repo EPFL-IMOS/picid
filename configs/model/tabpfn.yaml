@@ -1,4 +1,4 @@
 _target_: tabpfn.TabPFNRegressor
 ignore_pretraining_limits: True
 random_state: ${glob.seed}
-device: 'cuda'
+device: ${trainer.accelerator}
