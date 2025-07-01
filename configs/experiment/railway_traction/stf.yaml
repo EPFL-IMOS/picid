@@ -3,7 +3,7 @@
 defaults:
   # - override /datamodule: railway_traction.yaml
   # - override /training_strategy: railway_traction.yaml
-  - /task_definition: railway_day_ahead.yaml
+  - override /task_definition: railway_day_ahead.yaml
   
   - override /trainer: stf.yaml
   - override /model: stf.yaml
