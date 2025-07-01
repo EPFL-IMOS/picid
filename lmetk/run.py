@@ -37,22 +37,37 @@ from lmetk.data.datasources.multi_source_loader import MultiSourceLoader
 
 def extract_targets(cfg, prefix=""):
     targets = []
+    if not OmegaConf.is_dict(cfg):
+        return targets
+
     for k, v in cfg.items():
         full_key = f"{prefix}.{k}" if prefix else k
-        if isinstance(v, dict) or OmegaConf.is_dict(v):
+        if OmegaConf.is_dict(v):
             if "_target_" in v:
-                targets.append((full_key, v["_target_"]))
+                target_str = v["_target_"]
+                if "." in target_str and not target_str.endswith(".py"):
+                    # Try to resolve to a Python file (best effort)
+                    module_path = Path(target_str.replace(".", "/") + ".py").resolve().as_uri()
+                else:
+                    module_path = ""
+                targets.append((full_key, target_str, module_path))
+            # recurse into nested dict
             targets.extend(extract_targets(v, prefix=full_key))
     return targets
-
 
 def display_targets(cfg):
     table = Table(title="Hydra _target_ Classes")
     table.add_column("Config Path", style="cyan", no_wrap=True)
     table.add_column("_target_", style="magenta")
-    for path, target in extract_targets(cfg):
-        table.add_row(path, target)
+    table.add_column("Resolved Module Path", style="green", overflow="fold", no_wrap=False)
+
+
+    for path, target, resolved in extract_targets(cfg):
+        table.add_row(path, target, resolved)
+
     Console().print(table)
+
+
 
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
