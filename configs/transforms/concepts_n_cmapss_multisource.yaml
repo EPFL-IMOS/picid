@@ -1,0 +1,24 @@
+# These scalers are pre-computed and do not need to be fitted on the data.
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.multisource.N_CMAPSSScaler_Features  # Your wrapper class
+    scaling: standard
+
+  metadata:
+    apply_to: features
+
+scaler_descriptors:
+  transform:
+    _target_:  lmetk.transforms.multisource.N_CMAPSSScaler_Descriptors # Your wrapper class
+    scaling: standard
+    
+  metadata:
+    apply_to: descriptors
+    
+scaler_rul:
+  transform:
+    _target_:  lmetk.transforms.multisource.ConstantScaler # Your wrapper class
+    factor: 0.01
+    
+  metadata:
+    apply_to: rul

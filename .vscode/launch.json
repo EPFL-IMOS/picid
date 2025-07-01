@@ -66,6 +66,18 @@
             ]
         },
         {
+            "name": "Railway Traction: TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local", 
+                "experiment=railway_traction/tabpfn_railway_seasonal_context",
+                "debug=default"
+            ]
+        },
+        {
             "name": "N-CMAPSS: TabPFN",
             "type": "debugpy",
             "request": "launch",

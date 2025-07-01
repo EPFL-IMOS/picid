@@ -26,20 +26,6 @@ class RailwayDummyTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def fit_single_source(self, data_segment: Any):
-        """
-        Time feature extraction is a stateless operation, so no fitting is required.
-        This method does nothing.
-        """
-        pass
-
-    def fit_multi_source(self, list_of_data_segments: List[Any]):
-        """
-        Time feature extraction is a stateless operation, so no fitting is required
-        across multiple sources. This method does nothing.
-        """
-        pass
-
     def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
         
         # Your original working logic: Convert input to DataFrame and extract 'date' values.

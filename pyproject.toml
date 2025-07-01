@@ -31,6 +31,7 @@ dependencies = [
     "progpy>=1.7.1",
     "pyarrow>=20.0.0",
     "autogluon>=1.3.1",
+    "rich>=14.0.0",
 ]
 
 [tool.setuptools]

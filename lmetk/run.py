@@ -10,8 +10,9 @@ import lightning as L
 import numpy as np
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
-from lmetk.data.preprocessing.preprocessor import PreProcessor
+from omegaconf import DictConfig, OmegaConf
+from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
+from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
 from box import Box
 from lmetk.utils_refactor import (
     RankedLogger,
@@ -21,7 +22,50 @@ from lmetk.utils_refactor import (
     instantiate_loggers,
     task_wrapper,
 )
+
+from rich.table import Table
+from rich.console import Console
+
+
 from lmetk.pipeline.base import LMETKModel
+from lmetk.transforms.transform_manager import ConfigTransformManager
+
+
+from lmetk.data.datasources import DataSourceLoader
+from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
+
+
+def extract_targets(cfg, prefix=""):
+    targets = []
+    if not OmegaConf.is_dict(cfg):
+        return targets
+
+    for k, v in cfg.items():
+        full_key = f"{prefix}.{k}" if prefix else k
+        if OmegaConf.is_dict(v):
+            if "_target_" in v:
+                target_str = v["_target_"]
+                if "." in target_str and not target_str.endswith(".py"):
+                    # Try to resolve to a Python file (best effort)
+                    module_path = Path(target_str.replace(".", "/") + ".py").resolve().as_uri()
+                else:
+                    module_path = ""
+                targets.append((full_key, target_str, module_path))
+            # recurse into nested dict
+            targets.extend(extract_targets(v, prefix=full_key))
+    return targets
+
+def display_targets(cfg):
+    table = Table(title="Hydra _target_ Classes")
+    table.add_column("Config Path", style="cyan", no_wrap=True)
+    table.add_column("_target_", style="magenta")
+    table.add_column("Resolved Module Path", style="green", overflow="fold", no_wrap=False)
+
+
+    for path, target, resolved in extract_targets(cfg):
+        table.add_row(path, target, resolved)
+
+    Console().print(table)
 
 
 
@@ -76,68 +120,79 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     for k, d in cfg.paths.items():
         log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
 
+
+    display_targets(cfg)
+
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
     dataset_source = hydra.utils.instantiate(cfg.datasource)
-
-    preprocessor = PreProcessor(dataset_source)
+    # Create manager
+    
+    transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
+    # Get transform names
+    print("Transform names:", transforms_manager.get_transform_names())
+    
+    # Get transforms that apply to features
+    feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
+    print("Feature transforms:", list(feature_transforms.keys()))
+    
+    # Get transforms with auxiliary keys
+    aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
+    print("Transforms with auxiliary keys:", list(aux_transforms.keys()))
+    
+    if isinstance(dataset_source, DataSourceLoader):
+        preprocessor = PreProcessor(dataset_source, transforms_manager, logger=log)
+    
+    elif isinstance(dataset_source, MultiSourceLoader):
+        preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
+    
+    else:
+        raise ValueError("Invalid dataset source type")
+    
     preprocessor.pipeline()
 
-    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
+    data_dict = preprocessor.get_processed_data()
     
-    # TODO: some hack, push this down to the preprocessor
-    if isinstance(data_lst, list) and len(data_lst)==1:
-        data_dict = data_lst[0]
-        features = data_dict['features']
-        time_features = data_dict['timestamps']
-        try:
-            transform_names = preprocessor.get_transform_names()
-            if 'scaler_target' in transform_names:
-                target_scaler_idx = transform_names.index('scaler_target')
-                scaler = source_transforms_lst[0][target_scaler_idx].transform_instance.scaler
-            else:
-                scaler = source_transforms_lst[0][0].transform_instance.scaler
+    if dataset_source.get_data_name() == 'railway':
+        scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
+    else: 
+        scaler = lambda x: x
 
-            
-        except:
-            # false scaler for test
-            scaler = lambda x: x
-    
     
     # Extract additional inputs to dataset if needed.
     add_args = {}
-    if cfg.datasource.data_name == 'railway':
-        add_args['mask'] = dataset_source.data_dict['mask']
-
     if "N-CMAPSS" in cfg.datasource.data_name:
         dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
-        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')
+        
+        #TODO: For now we are not working with the validation, only test
+        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
+        
         dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
 
-    else:
+    elif cfg.datasource.data_name == 'railway':
         if cfg.datasource.mode_mode == 'context':
             # Prepare datasets
             dataset_train = hydra.utils.instantiate(
                 cfg.dataset,
-                context=features["train"],
+                context=data_dict['features']["train"],
                 target= data_dict['target']["train"],
-                time_features=time_features["train"],
+                time_features=data_dict['timestamps']["train"],
                 
                 )
 
             dataset_val = hydra.utils.instantiate(
                 cfg.dataset,
-                context=features["val"], 
+                context=data_dict['features']["val"], 
                 target= data_dict['target']["val"],
-                time_features=time_features["val"],
+                time_features=data_dict['timestamps']["val"],
                 
                 )
             
             dataset_test = hydra.utils.instantiate(
                     cfg.dataset,
-                    context=features["test"], 
+                    context=data_dict['features']["test"], 
                     target= data_dict['target']["test"],
-                    time_features=time_features["test"],
+                    time_features=data_dict['timestamps']["test"],
                     
                     )
 
@@ -145,22 +200,22 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             # Prepare datasets
             dataset_train = hydra.utils.instantiate(
                 cfg.dataset,
-                features=features["train"], 
-                time_features=time_features["train"],
+                features=data_dict['features']["train"], 
+                time_features=data_dict['timestamps']["train"],
                 **add_args
                 )
 
             dataset_val = hydra.utils.instantiate(
                 cfg.dataset,
-                features=features["val"], 
-                time_features=time_features["val"],
+                features=data_dict['features']["val"], 
+                time_features=data_dict['timestamps']["val"],
                 **add_args
                 )
             
             dataset_test = hydra.utils.instantiate(
                     cfg.dataset,
-                    features=features["test"], 
-                    time_features=time_features["test"],
+                    features=data_dict['features']["test"], 
+                    time_features=data_dict['timestamps']["test"],
                     **add_args
                     )
     log.info(f"Train dataset size: {dataset_train.__len__()}")

@@ -1,5 +1,5 @@
 _target_: lmetk.data.datasets.SWDataset
 
-seq_len: ${datasource.data_splitter.seq_len} 
-label_len: ${datasource.data_splitter.label_len} 
-pred_len: ${datasource.data_splitter.pred_len} 
+seq_len: ${task_definition.seq_len} 
+label_len: ${task_definition.label_len} 
+pred_len: ${task_definition.pred_len} 

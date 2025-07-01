@@ -1,10 +1,14 @@
 # @package _global_
 defaults:
-  - override /datasource: railway_dummy_leak
+  - override /datasource: railway
   - override /dataset: context_batch
   - override /datamodule: context_datamodule
   - override /model: tabpfn_refactor
   - override /evaluator: railway
+  - override /task_definition: railway_day_ahead
+  - override /transforms: railway_no_leak
 
+task_definition: 
+  requires_training: false
    
   

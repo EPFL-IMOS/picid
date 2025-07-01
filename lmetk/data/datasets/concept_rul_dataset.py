@@ -5,12 +5,13 @@ import torch
 from torch.utils.data import Dataset
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ConceptRULDataset(Dataset):
     def __init__(
         self, 
         data_dict,
-        split,
-        #data_split: Dict[str, np.ndarray], 
         window_size: int, 
         stride: int,
         **kwargs
@@ -21,11 +22,11 @@ class ConceptRULDataset(Dataset):
 
         for key, item in data_dict.items():
             if key == 'rul':
-                self.df_Y = item[split]
+                self.df_Y = item
             elif key == 'features':
-                self.X = item[split]
+                self.X = item
             else:    
-                setattr(self, key, item[split])    
+                setattr(self, key, item)    
         
         # self.df_Y = data_split.rul
         # self.X = data_split.features
@@ -33,8 +34,8 @@ class ConceptRULDataset(Dataset):
         # self.concepts = data_split.concepts
 
         if getattr(self, 'descriptors', None) is not None:
-            print("The dataset contains descriptors, concatenating them to the features.")
-            self.X = np.concatenate((self.X, data_dict['descriptors'][split]), axis=1)
+            logger.info("The dataset contains descriptors, concatenating them to the features.")
+            self.X = np.concatenate((self.X, data_dict['descriptors']), axis=1)
 
         
         super().__init__()

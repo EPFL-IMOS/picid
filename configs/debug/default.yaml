@@ -8,3 +8,8 @@ defaults:
 # We do that by using torch Subset which is configured in the datamodule.
 datamodule:
   subset_range: [0, 32, 1]  # [start, end, step]
+
+
+trainer:
+  accelerator: cpu
+  devices: 1

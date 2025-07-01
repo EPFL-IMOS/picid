@@ -5,7 +5,7 @@ import hydra
 from omegaconf import OmegaConf
 
 from lmetk.data.datasets import SWDataset, SWBatchDataset
-from lmetk.data.preprocessing.preprocessor import PreProcessor
+from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from pathlib import Path
 
 

@@ -76,7 +76,9 @@ class LMETKModel(LightningModule):
         # Determine the effective prediction length, defaulting to 0 if not set
         self.effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
         if self.effective_pred_len:
-            assert self.backbone.kwargs.pred_len >= self.effective_pred_len, f"Not possible to have self.evaluator.effective_pred_len:{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
+            assert self.backbone.kwargs.pred_len >= self.effective_pred_len, \
+                f"Not possible to have self.evaluator.effective_pred_len: " + \
+                f"{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone}, loss={self.loss}"
