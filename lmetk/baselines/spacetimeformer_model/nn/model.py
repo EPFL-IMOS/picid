@@ -64,7 +64,6 @@ class Spacetimeformer(nn.Module):
         use_final_norm: bool = True,
         initial_downsample_convs: int = 0,
         intermediate_downsample_convs: int = 0,
-        device=torch.device("cuda:0"),
         null_value: float = None,
         pad_value: float = None,
         out_dim: int = None,

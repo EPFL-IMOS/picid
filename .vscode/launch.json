@@ -63,7 +63,8 @@
                 "paths=rt_local", 
                 "experiment=railway_traction/stf",
                 "debug=default"
-            ]
+            ],
+            "env": {"HYDRA_FULL_ERROR": "1"}
         },
         {
             "name": "Railway Traction: TabPFN",

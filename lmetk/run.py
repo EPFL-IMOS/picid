@@ -28,7 +28,7 @@ from rich.table import Table
 from rich.console import Console
 
 
-from lmetk.pipeline.base import LMETKModel
+from lmetk.pipeline.base import ConstantLossLightningModule
 from lmetk.transforms.transform_manager import ConfigTransformManager
 
 
@@ -283,8 +283,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         dataset_test = dataset_test,
     )
 
-    evaluator = hydra.utils.instantiate(cfg.evaluator, scaler=scaler)
-    log.info(f"Evaluator: {cfg.evaluator._target_}")
+    evaluators = {}
+    for s in ["train", "val", "test"]:
+        evaluator = hydra.utils.instantiate(cfg.evaluator[s], scaler=scaler)
+        log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
+        evaluators[s] = evaluator
 
     # Instantiate optimizer
     optimizer = hydra.utils.instantiate(cfg.optimizer)
@@ -311,18 +314,16 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if cfg.model.get('load_path', False):
             backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
         
-        model = LMETKModel(
-            #backbone=backbone, 
-            #backbone_wrapper=backbone_wrapper,
+        model = ConstantLossLightningModule(
             backbone = backbone_wrapper,
             loss=loss,
-            evaluator=evaluator,
+            evaluators=evaluators,
             optimizer=optimizer,
             )
     else:
         if cfg.model.metadata.get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper
-            model = hydra.utils.instantiate(cfg.model)
+            model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
     
     
     trainer: Trainer = hydra.utils.instantiate(
