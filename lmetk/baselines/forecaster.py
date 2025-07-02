@@ -75,13 +75,15 @@ class Forecaster(CustomEvaluatorLightningModule):
     @property
     @abstractmethod
     def train_step_forward_kwargs(self):
-        return {}
+        # can just return an empty dict if no kwargs are needed
+        pass
 
 
     @property
     @abstractmethod
     def eval_step_forward_kwargs(self):
-        return {}
+        # can just return an empty dict if no kwargs are needed
+        pass
 
 
     def loss_fn(
@@ -237,9 +239,9 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         return {
             "loss": loss.mean(),
-            "outputs": outputs,
+            "predictions": outputs.squeeze(2),
             "mask": mask,
-            "targets": y_t,
+            "targets": y_t.squeeze(2),
         }
 
 

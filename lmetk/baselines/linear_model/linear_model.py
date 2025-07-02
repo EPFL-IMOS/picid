@@ -22,6 +22,7 @@ class Linear_Forecaster(Forecaster):
         linear_shared_weights: bool = False,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
+        **kwargs
     ):
         super().__init__(
             d_x=d_x,
@@ -34,6 +35,7 @@ class Linear_Forecaster(Forecaster):
             linear_shared_weights=linear_shared_weights,
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
+            evaluators=kwargs.get("evaluators", None),
         )
 
         self.model = LinearModel(
