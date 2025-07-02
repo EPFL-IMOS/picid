@@ -383,7 +383,9 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.validation_step_outputs.append(outs)
         return outs
 
+
     def on_validation_epoch_end(self):
+        super().on_validation_epoch_end()
         outs = self.validation_step_outputs
         total = 0
         count = 0
