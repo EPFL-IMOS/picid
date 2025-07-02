@@ -1,4 +1,4 @@
-seq_len: 98 #168 # 7*24      # window size
+seq_len: 96 #168 # 7*24      # window size
 label_len: 48  # overlap size
 
 # Model parameters

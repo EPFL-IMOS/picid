@@ -9,5 +9,5 @@ window_size_to_average: 1
 pred_len: ${task_definition.pred_len}    # prediction size
 
 # Additional params needed for wrapper to run:
-features_mode: ${datasource.load_arguments.features_mode}
+features_mode: ${datasource.task_mode}
 device: 'cuda:0'

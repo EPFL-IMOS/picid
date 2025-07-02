@@ -84,13 +84,6 @@ class MultiSourceLoader(DataSourceLoaderInterface):
         data_dict, source_names_tree_view = self.multisource_data_splitter(data_lst, source_names)
         return data_dict, source_names_tree_view
     
-    # def _combine_sources(self,):
-    #     """
-    #     Rearage self.data_lst into one data object [dict].
-    #     Case when we have multiple sources and multisource_data_splitter
-    #     We have to rearenge as assume loading sources, where the source
-    #     represents a split. 
-    #     """
-
+    
 
     

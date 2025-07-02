@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 from lmetk.data.datasets import SWDataset, SWBatchDataset
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from pathlib import Path
+from lmetk.transforms.transform_manager import ConfigTransformManager
 
 
 @pytest.fixture(scope="module")
@@ -39,13 +40,6 @@ def dataset_val(path_cfg: str):
                 "target_name": "OT",
                 "timestamp_name": "date",
                 
-                #"size": None,
-                #"flag": "train",
-                #"scale": True,
-                #"freq": "h",
-                #"time_features": ["month", "day", "weekday", "hour"],
-                #"normalize_time_features": False,
-                #"timeenc": 'timepfn_timefeatures',
                 
             "data_splitter": {
                 "_target_": "lmetk.data.preprocessing.TimeSplitter",
@@ -57,7 +51,10 @@ def dataset_val(path_cfg: str):
                 "label_len": 96,
                 "pred_len": 96,
             },
-            'data_default_transforms' :{
+        }
+    )
+
+    transforms_configs =  OmegaConf.create({
                 "scaler": {
                     "transform": {
                         "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
@@ -76,20 +73,19 @@ def dataset_val(path_cfg: str):
                         "apply_to": "timestamps"
                     }
                 }
-            }
-
-        }
-    )
+            })
 
     
     dataset_source = hydra.utils.instantiate(loader_config)
+    
+    # Create manager
+    transforms_manager = ConfigTransformManager(transforms_config=transforms_configs)
 
-    preprocessor = PreProcessor(dataset_source)
+    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
     preprocessor.pipeline()
 
-    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
+    data_dict = preprocessor.get_processed_data()
 
-    data_dict = data_lst[0]
     features = data_dict['features']
     time_features = data_dict['timestamps']
     
@@ -161,13 +157,6 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
                 "target_name": "OT",
                 "timestamp_name": "date",
                 
-                #"size": None,
-                #"flag": "train",
-                #"scale": True,
-                #"freq": "h",
-                #"time_features": ["month", "day", "weekday", "hour"],
-                #"normalize_time_features": False,
-                #"timeenc": 'timepfn_timefeatures',
                 
             "data_splitter": {
                 "_target_": "lmetk.data.preprocessing.TimeSplitter",
@@ -179,7 +168,9 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
                 "label_len": 96,
                 "pred_len": 96,
             },
-            'data_default_transforms' :{
+        }
+    )
+    transforms_configs =  OmegaConf.create({
                 "scaler": {
                     "transform": {
                         "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
@@ -198,18 +189,18 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
                         "apply_to": "timestamps"
                     }
                 }
-            }
-
-        }
-    )
+            })
 
     dataset_source = hydra.utils.instantiate(loader_config)
-    preprocessor = PreProcessor(dataset_source)
+    
+    # Create manager
+    transforms_manager = ConfigTransformManager(transforms_config=transforms_configs)
+
+    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
     preprocessor.pipeline()
 
-    data_lst, source_transforms_lst, multisource_transforms = preprocessor.get_processed_data()
+    data_dict = preprocessor.get_processed_data()
 
-    data_dict = data_lst[0]
     features = data_dict['features']
     time_features = data_dict['timestamps']
 

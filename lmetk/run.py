@@ -13,6 +13,7 @@ from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, OmegaConf
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
+from lmetk.data.preprocessing.per_source_multi_source_preprocessor import PerSourceMultiSourcePreProcessor
 from box import Box
 from lmetk.utils_refactor import (
     RankedLogger,
@@ -33,6 +34,7 @@ from lmetk.transforms.transform_manager import ConfigTransformManager
 
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
+from lmetk.data.datasources.phmd_battery import PHMDMultiSourceLoader
 
 
 def extract_targets(cfg, prefix=""):
@@ -145,6 +147,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     elif isinstance(dataset_source, MultiSourceLoader):
         preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
+   
+    elif isinstance(dataset_source, PHMDMultiSourceLoader):
+        preprocessor = PerSourceMultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
     
     else:
         raise ValueError("Invalid dataset source type")
