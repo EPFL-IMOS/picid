@@ -18,6 +18,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         # Get source names as list
         #self.source_names = list(kwargs.get('source_list', {}).keys())
         self.fold = kwargs['fold']
+        self.task_mode = kwargs['task_mode']
         # Instantiate multisource_data_splitter if is not none
         assert kwargs.get('multisource_data_splitter') == None, 'For PHMD, multisource_data_splitter is not supported. PHMD are given with splits.'
         self.multisource_data_splitter = 'For PHMD, multisource_data_splitter is not supported. PHMD are given with splits.'
@@ -57,14 +58,14 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
     def _load_data(self, ):
         # Load dataset and metadata
         ds = datasets.Dataset(self.data_name, cache_dir='data')
-        task = ds['rul']
+        task = ds[self.task_mode]
         folds = task[self.fold]  # fold_num = 0 by default
 
-        unit_id = ds['rul'].meta['identifier']
+        unit_id = ds[self.task_mode].meta['identifier']
         assert len(unit_id) == 1, "There should be only one identifier"
         unit_col = unit_id[0]
-        features_col = ds['rul'].meta['features']
-        target_col = 'rul'
+        features_col = ds[self.task_mode].meta['features']
+        target_col = self.task_mode
 
         # Process each split
         data = defaultdict(list)

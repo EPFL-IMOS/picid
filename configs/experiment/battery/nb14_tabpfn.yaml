@@ -2,6 +2,6 @@
 
 defaults:
   - override /task_definition: concepts_n_cmapss_rul_prediction
-  - override /datasource: nb1_battery
+  - override /datasource: nb14_battery
   #- override /dataset: concept_rul_multiunit_dataset #sliding_window
-  - override /transforms: concepts_n_cmapss_multisource
+  - override /transforms: battery/bosello
