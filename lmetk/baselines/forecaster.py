@@ -1,12 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 import lightning.pytorch as pl
 import numpy as np
 
+from lmetk.baselines.linear_model.linear_ar import LinearModel
+from lmetk.evaluator.base import AbstractEvaluator
+from lmetk.model.utils.revin import RevIN, SeriesDecomposition
+from lmetk.pipeline.base import CustomEvaluatorLightningModule
 
-class Forecaster(pl.LightningModule, ABC):
+
+class Forecaster(CustomEvaluatorLightningModule):
     def __init__(
         self,
         d_x: int,
@@ -20,10 +25,9 @@ class Forecaster(pl.LightningModule, ABC):
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
         verbose: int = True,
+        evaluators: dict[str, AbstractEvaluator] = {},
     ):
-        super().__init__()
-
-        qprint = lambda _msg_: print(_msg_) if verbose else None
+        super().__init__(evaluators=evaluators)
 
         self._inv_scaler = lambda x: x
         self.l2_coeff = l2_coeff
@@ -33,7 +37,7 @@ class Forecaster(pl.LightningModule, ABC):
         self.loss = loss
 
         if linear_window:
-            self.linear_model = stf.linear_model.LinearModel(
+            self.linear_model = LinearModel(
                 linear_window, shared_weights=linear_shared_weights, d_yt=d_yt
             )
         else:
@@ -42,13 +46,13 @@ class Forecaster(pl.LightningModule, ABC):
         self.use_revin = use_revin
         if use_revin:
             assert d_yc == d_yt, "TODO: figure out exo case for revin"
-            self.revin = stf.revin.RevIN(num_features=d_yc)
+            self.revin = RevIN(num_features=d_yc)
         else:
             self.revin = lambda x, *args, **kwargs: x
 
         self.use_seasonal_decomp = use_seasonal_decomp
         if use_seasonal_decomp:
-            self.seasonal_decomp = stf.revin.SeriesDecomposition(kernel_size=25)
+            self.seasonal_decomp = SeriesDecomposition(kernel_size=25)
         else:
             self.seasonal_decomp = lambda x: (x, x.clone())
 
@@ -56,6 +60,7 @@ class Forecaster(pl.LightningModule, ABC):
         self.d_yc = d_yc
         self.d_yt = d_yt
         self.save_hyperparameters()
+
 
     def set_null_value(self, val: float) -> None:
         self.null_value = val
@@ -66,15 +71,20 @@ class Forecaster(pl.LightningModule, ABC):
     def set_scaler(self, scaler) -> None:
         self._scaler = scaler
 
+
     @property
     @abstractmethod
     def train_step_forward_kwargs(self):
-        return {}
+        # can just return an empty dict if no kwargs are needed
+        pass
+
 
     @property
     @abstractmethod
     def eval_step_forward_kwargs(self):
-        return {}
+        # can just return an empty dict if no kwargs are needed
+        pass
+
 
     def loss_fn(
         self, true: torch.Tensor, preds: torch.Tensor, mask: torch.Tensor
@@ -92,6 +102,7 @@ class Forecaster(pl.LightningModule, ABC):
         else:
             raise ValueError(f"Unrecognized Loss Function : {self.loss}")
         return loss
+
 
     def forecasting_loss(
         self, outputs: torch.Tensor, y_t: torch.Tensor, time_mask: int, feat_mask=None
@@ -117,6 +128,7 @@ class Forecaster(pl.LightningModule, ABC):
         forecasting_loss = self.loss_fn(y_t, outputs, full_mask)
         return forecasting_loss, full_mask
 
+
     def compute_loss(
         self,
         batch: Tuple[torch.Tensor],
@@ -131,6 +143,7 @@ class Forecaster(pl.LightningModule, ABC):
             outputs=outputs, y_t=y_t, time_mask=time_mask
         )
         return loss, outputs, mask
+
 
     def predict(
         self,
@@ -164,6 +177,7 @@ class Forecaster(pl.LightningModule, ABC):
         )
         return preds
 
+
     @abstractmethod
     def forward_model_pass(
         self,
@@ -175,8 +189,10 @@ class Forecaster(pl.LightningModule, ABC):
     ) -> Tuple[torch.Tensor]:
         return NotImplemented
 
+
     def nan_to_num(self, *inps):
         return (torch.nan_to_num(i) for i in inps)
+
 
     def forward(
         self,
@@ -207,143 +223,73 @@ class Forecaster(pl.LightningModule, ABC):
             return (output,) + tuple(extra)
         return (output,)
 
-    def _compute_stats(
-        self, pred: torch.Tensor, true: torch.Tensor, mask: torch.Tensor
-    ):
-        pred = pred * mask
-        true = torch.nan_to_num(true) * mask
 
-        adj = mask.mean().cpu().numpy() + 1e-5
-        pred = pred.detach().cpu().numpy()
-        true = true.detach().cpu().numpy()
-        scaled_pred = self._inv_scaler(pred)
-        scaled_true = self._inv_scaler(true)
-        stats = {
-            # "mape": stf.eval_stats.mape(scaled_true, scaled_pred) / adj,
-            # "mae": stf.eval_stats.mae(scaled_true, scaled_pred) / adj,
-            # "mse": stf.eval_stats.mse(scaled_true, scaled_pred) / adj,
-            # "smape": stf.eval_stats.smape(scaled_true, scaled_pred) / adj,
-            # "norm_mae": stf.eval_stats.mae(true, pred) / adj,
-            # "norm_mse": stf.eval_stats.mse(true, pred) / adj,
-        }
-        return stats
-
-    def step(self, batch: Tuple[torch.Tensor], train: bool = False):
+    def step(self, batch: Tuple[torch.Tensor], train: bool = False) -> dict[str, torch.Tensor]:
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
         time_mask = self.time_masked_idx if train else None
 
-        loss, output, mask = self.compute_loss(
+        loss, outputs, mask = self.compute_loss(
             batch=batch,
             time_mask=time_mask,
             forward_kwargs=kwargs,
         )
         *_, y_t = batch
-        stats = self._compute_stats(output, y_t, mask)
-        stats["loss"] = loss
-        return stats
 
-    def training_step(self, batch, batch_idx):
+        return {
+            "loss": loss.mean(),
+            "predictions": outputs.squeeze(2),
+            "mask": mask,
+            "targets": y_t.squeeze(2),
+        }
+
+
+    def _training_step(self, batch, batch_idx):
+
+        # x_c, y_c, x_t, y_t, 
+        batch = (
+            batch["context"]["x"],
+            batch["target"]["x"],
+            batch["context"]["y"],
+            batch["target"]["y"]
+        )
+
         outs = self.step(batch, train=True)
-        self._log_stats("train", outs)
-        return {"loss": outs["loss"].mean()}
+        return outs
 
-    def validation_step(self, batch, batch_idx):
-        stats = self.step(batch, train=False)
-        self.current_val_stats = stats
-        self._log_stats("val", stats)
-        return stats
 
-    def test_step(self, batch, batch_idx):
+    def _validation_step(self, batch, batch_idx):
+
+        # x_c, y_c, x_t, y_t, 
+        batch = (
+            batch["context"]["x"],
+            batch["target"]["x"],
+            batch["context"]["y"],
+            batch["target"]["y"]
+        )
+
         outs = self.step(batch, train=False)
-        self._log_stats("test", outs)
-        return {"loss": outs["loss"].mean()}
+        return outs
+
+
+    def _test_step(self, batch, batch_idx):
+
+        # x_c, y_c, x_t, y_t, 
+        batch = (
+            batch["context"]["x"],
+            batch["target"]["x"],
+            batch["context"]["y"],
+            batch["target"]["y"]
+        )
+
+        outs = self.step(batch, train=False)
+        return outs
     
-    def log_metrics(self, mode=None):
-        r"""Log metrics.
-
-        Parameters
-        ----------
-        mode : str, optional
-            The mode of the model, either "train", "val", or "test" (default: None).
-        """
-        metrics_dict = self.evaluator.compute()
-        for key in metrics_dict:
-            self.log(
-                f"{mode}/{key}",
-                metrics_dict[key],
-                prog_bar=True,
-                on_step=False,
-            )
-
-        # Reset evaluator for next epoch
-        self.evaluator.reset()
-
-    def on_validation_epoch_start(self) -> None:
-        r"""Hook called when a validation epoch begins.
-
-        According pytorch lightning documentation this hook is called at the
-        beginning of the validation epoch.
-
-        https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#hooks
-
-        Note that the validation step is within the train epoch. Hence here we have to log the train metrics
-        before we reset the evaluator to start the validation loop.
-        """
-        # Log train metrics and reset evaluator
-        self.log_metrics(mode="train")
-        self.train_metrics_logged = True
-
-    def on_train_epoch_end(self) -> None:
-        r"""Lightning hook that is called when a train epoch ends.
-
-        This hook is used to log the train metrics.
-        """
-        # Log train metrics and reset evaluator
-        if not self.train_metrics_logged:
-            self.log_metrics(mode="train")
-            self.train_metrics_logged = True
-
-    def on_validation_epoch_end(self) -> None:
-        r"""Lightning hook that is called when a validation epoch ends.
-
-        This hook is used to log the validation metrics.
-        """
-        # Log validation metrics and reset evaluator
-        self.log_metrics(mode="val")
-
-    def on_train_epoch_start(self) -> None:
-        r"""Lightning hook that is called when a train epoch begins.
-
-        This hook is used to reset the train metrics.
-        """
-        self.evaluator.reset()
-        self.train_metrics_logged = False
-
-    def on_val_epoch_start(self) -> None:
-        r"""Lightning hook that is called when a validation epoch begins.
-
-        This hook is used to reset the validation metrics.
-        """
-        self.evaluator.reset()
-
-    def on_test_epoch_start(self) -> None:
-        r"""Lightning hook that is called when a test epoch begins.
-
-        This hook is used to reset the test metrics.
-        """
-        self.evaluator.reset()
-
-    def _log_stats(self, section, outs):
-        for key in outs.keys():
-            stat = outs[key]
-            if isinstance(stat, np.ndarray) or isinstance(stat, torch.Tensor):
-                stat = stat.mean()
-            self.log(f"{section}/{key}", stat, sync_dist=True)
 
     def predict_step(self, batch, batch_idx):
         return self(*batch, **self.eval_step_forward_kwargs)
+
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -361,17 +307,3 @@ class Forecaster(pl.LightningModule, ABC):
                 "monitor": "val/loss",
             },
         }
-
-    @classmethod
-    def add_cli(self, parser):
-        parser.add_argument("--gpus", type=int, nargs="+")
-        parser.add_argument("--l2_coeff", type=float, default=1e-6)
-        parser.add_argument("--learning_rate", type=float, default=1e-4)
-        parser.add_argument("--grad_clip_norm", type=float, default=0)
-        parser.add_argument("--linear_window", type=int, default=0)
-        parser.add_argument("--use_revin", action="store_true")
-        parser.add_argument(
-            "--loss", type=str, default="mse", choices=["mse", "mae", "smape"]
-        )
-        parser.add_argument("--linear_shared_weights", action="store_true")
-        parser.add_argument("--use_seasonal_decomp", action="store_true")

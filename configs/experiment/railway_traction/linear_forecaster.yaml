@@ -1,0 +1,20 @@
+#@package _global_
+
+defaults:
+  - override /datasource: railway
+  - override /dataset: context_batch
+  - override /datamodule: context_datamodule
+  - override /model: linear_forecaster
+  - override /evaluator: railway
+  - override /task_definition: railway_day_ahead
+  - override /transforms: railway/railway_seasonal_leak
+
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+
+  model_checkpoint:
+    monitor: val/loss
+
+  

@@ -1,12 +1,13 @@
 #@package _global_
 
 defaults:
-  # - override /datamodule: railway_traction.yaml
-  # - override /training_strategy: railway_traction.yaml
-  - override /task_definition: railway_day_ahead.yaml
-  
-  - override /trainer: stf.yaml
-  - override /model: stf.yaml
+  - override /datasource: railway
+  - override /dataset: context_batch
+  - override /datamodule: context_datamodule
+  - override /model: stf
+  - override /evaluator: railway
+  - override /task_definition: railway_day_ahead
+  - override /transforms: railway/railway_seasonal_leak
 
 
 callbacks:

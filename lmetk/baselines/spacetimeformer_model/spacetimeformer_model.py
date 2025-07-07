@@ -108,6 +108,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            evaluators=kwargs.get("evaluators", None),
         )
 
         self.torchmetrics_version = pkg_resources.get_distribution(
@@ -153,7 +154,6 @@ class Spacetimeformer_Forecaster(Forecaster):
             local_cross_attn=local_cross_attn,
             activation=activation,
             head_f=head_f,
-            device=self.device,
             norm=norm,
             use_final_norm=use_final_norm,
             embed_method=embed_method,
@@ -217,15 +217,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             kwargs["target_mask"] = self.target_mask
         return kwargs
 
-    def step(self, batch: Tuple[torch.Tensor], train: bool):
-
-        # x_c, y_c, x_t, y_t, 
-        batch = (
-            batch["context"]["x"],
-            batch["target"]["x"],
-            batch["context"]["y"],
-            batch["target"]["y"]
-        )
+    def step(self, batch: Tuple[torch.Tensor], train: bool) -> dict[str, torch.Tensor]:
 
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
@@ -243,7 +235,11 @@ class Spacetimeformer_Forecaster(Forecaster):
         forecast_mask = loss_dict["forecast_mask"]
         *_, y_t = batch
 
-        stats = self._compute_stats(forecast_out, y_t, forecast_mask)
+        stats = {
+            "predictions": forecast_out.squeeze(2),
+            "targets": y_t.squeeze(2),
+            "mask": forecast_mask.squeeze(2)
+        }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
         stats["class_loss"] = loss_dict["class_loss"]
@@ -256,6 +252,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         )
         stats["acc"] = loss_dict["acc"]
         return stats
+
 
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
@@ -285,6 +282,7 @@ class Spacetimeformer_Forecaster(Forecaster):
                     num_classes=d_y.item(),
                 )
         return class_loss, acc
+
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
         x_c, y_c, x_t, y_t = batch
@@ -380,12 +378,14 @@ class Spacetimeformer_Forecaster(Forecaster):
             return forecast_output, recon_output, (logits, labels), attn
         return forecast_output, recon_output, (logits, labels)
 
-    def validation_step(self, batch, batch_idx):
-        outs = super().validation_step(batch, batch_idx)
+    def _validation_step(self, batch, batch_idx):
+        outs = super()._validation_step(batch, batch_idx)
         self.validation_step_outputs.append(outs)
         return outs
 
+
     def on_validation_epoch_end(self):
+        super().on_validation_epoch_end()
         outs = self.validation_step_outputs
         total = 0
         count = 0
@@ -397,10 +397,12 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.scheduler.step(avg_val_loss, is_end_epoch=True)
         self.validation_step_outputs.clear()
 
+
     def training_step(self, batch, batch_idx):
         outs = super().training_step(batch, batch_idx)
         self.scheduler.step()
         return outs
+
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.AdamW(
