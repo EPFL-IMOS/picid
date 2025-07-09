@@ -15,6 +15,9 @@ from hydra.core.hydra_config import HydraConfig
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
 from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
 from box import Box
+from lightning.pytorch.loggers.wandb import WandbLogger
+
+
 from lmetk.utils_refactor import (
     RankedLogger,
     extras,
@@ -34,6 +37,14 @@ from lmetk.transforms.transform_manager import ConfigTransformManager
 
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
+
+def get_hydra_override(key: str):
+    if not HydraConfig.initialized():
+        return None
+    for override in HydraConfig.get().overrides.task:
+        if override.startswith(f"{key}="):
+            return override.split("=", 1)[1]
+    return None
 
 
 def extract_targets(cfg, prefix=""):
@@ -332,6 +343,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         logger=logger,
         num_sanity_val_steps=0,
     )
+
+    # has to happen after trainer is instantiated
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+            cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
+            cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+                # cannot resolve because not all interpolations are covered by us for now
+                HydraConfig.get(), resolve=False
+            )
+            exp_name = get_hydra_override("experiment")
+            cfg_to_wandb["exp_name"] = exp_name
+            lgr.experiment.config.update(cfg_to_wandb)
+
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")
