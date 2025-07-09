@@ -1,7 +1,13 @@
 #@package _global_
 
 defaults:
-  - override /task_definition: concepts_n_cmapss_rul_prediction
   - override /datasource: nb14_battery
-  #- override /dataset: concept_rul_multiunit_dataset #sliding_window
   - override /transforms: battery/bosello_nb14
+  - override /model: tabpfn_refactor
+  - override /dataset: battery_rul_multiunit_dataset
+  - override /datamodule: context_datamodule
+  - override /evaluator: default
+  - override /task_definition: battery_phmd
+
+task_definition: 
+  requires_training: false

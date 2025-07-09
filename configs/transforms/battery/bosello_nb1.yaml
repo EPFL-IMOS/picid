@@ -49,6 +49,14 @@ scaler_features:
     fit_on: train
 
 
+FixTimeFeatures:
+  transform:
+    _target_:  lmetk.transforms.battery.nb1_transforms.FixTimeFeatures  # Your wrapper class
+    
+  metadata:
+    apply_to: timestamps
+    auxiliary_keys: ['features']
+
 
 # scaler_descriptors:
 #   transform:

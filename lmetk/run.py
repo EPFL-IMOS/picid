@@ -264,7 +264,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                     time_features=data_dict['timestamps']["test"],
                     
                     )
-
+    elif cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21']:
+        dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
+        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')
+        dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
     else:
         assert cfg.datasource.mode_mode == 'other', " Ban naming of the variable (datasource.mode_mode). This one basically help to identify which are the inputs of the dataset object. context means features and targets, while others means features (where one of the features is actually a target) and timestamps"
         # Prepare datasets

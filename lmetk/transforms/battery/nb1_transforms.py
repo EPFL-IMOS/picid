@@ -45,7 +45,22 @@ class UpdateTarget(BaseTransform, BaseMultiSourceTransformMixin):
     def transform_data(self, data_segment: Any, auxiliary_data: Optional[Dict],  mode: Optional[str]) -> Any:
         """Transforms a single data segment using the internal ."""
         assert 'features' in auxiliary_data, 'features features are not passed in auxiliary_data'
-        data_segment = auxiliary_data['features'][self.target_name]
+        data_segment = auxiliary_data['features'][self.target_name].values.reshape(-1,1).astype(float)
+        return data_segment 
+
+import numpy as np
+class FixTimeFeatures(BaseTransform, BaseMultiSourceTransformMixin):
+    """
+    Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
+    """
+        
+    def fit_data(self, data_segment: Any, auxiliary_data: Optional[Dict],  mode: Optional[str]):
+        pass
+        
+    def transform_data(self, data_segment: Any, auxiliary_data: Optional[Dict],  mode: Optional[str]) -> Any:
+        """Transforms a single data segment using the internal ."""
+        assert 'features' in auxiliary_data, 'features features are not passed in auxiliary_data'
+        data_segment = np.arange(auxiliary_data['features'].shape[0]).reshape(-1,1).astype(float)
         return data_segment 
 
 

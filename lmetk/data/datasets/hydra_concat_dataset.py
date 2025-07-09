@@ -46,6 +46,7 @@ class HydraConcatDataset(ConcatDataset):
             if len(val[split]) == 0:
                 raise ValueError(f"Data list for split '{split}' in '{key}' is empty.")
             
+            # TODO: I belive that is not necessary, val[split] here goes over the all units, so why the lenghts should be the same? For the battery that does not hold
             # Go over the list and check that all elements have the same length
             for tensor in val[split]:
                 if len(tensor) != len(val[split][0]):

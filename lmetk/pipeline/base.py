@@ -390,7 +390,7 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         """
         
         # Determine the effective prediction length, defaulting to 0 if not set
-        effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
+        effective_pred_len = getattr(self.evaluators[batch["model_state"]], 'effective_pred_len', None)
         model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
         model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
         return model_out

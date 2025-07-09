@@ -1,0 +1,3 @@
+_target_: lmetk.data.datasets.battery_dataset.BatteryRULDataset
+window_size: 1
+stride: 1

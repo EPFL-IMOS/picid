@@ -45,7 +45,7 @@ class IndexSequencer:
         #     "label_len + pred_len must be less than or equal to seq_len"
         # )
         assert length >= seq_len + pred_len, (
-            "Not enough data points for even a single sample"
+            f"Not enough data points for even a single sample, length {length} < seq_len: {seq_len} + pred_len: {pred_len}"
         )
         # Question: can stride be smaller than prediction length? In such case during the validation/test we predict the same variable multiple times with different context
         # assert stride <= pred_len, "stride must be less than or equal to pred_len"
