@@ -40,7 +40,24 @@ class BaseMultiSourceTransformMixin(ABC):
         """
         Transform the data from all sources using the fitted scalers.
         """
-        return [self.transform_data(data_segment, mode=mode, auxiliary_data=auxiliary_data) for data_segment in data_segments] 
+        
+        # Check that auxiliary_data dict is not empty
+        if len(auxiliary_data.keys()) >0:
+            for key in auxiliary_data.keys():
+                len(auxiliary_data[key]) == len(data_segments), f"The length of the auxiliary data is not the same as the length of the data segments. {len(auxiliary_data[key])} != {len(data_segments)}"
+        
+            # Transform the data from all sources using the fitted scalers.
+            out = []
+            for idx in range(len(data_segments)):
+                aux_data_per_segment  = {key: auxiliary_data[key][idx] for key in auxiliary_data.keys()}
+                out.append(self.transform_data(data_segment=data_segments[idx], mode=mode, auxiliary_data=aux_data_per_segment))
+
+
+        
+        else:
+            out = [self.transform_data(data_segment, mode=mode, auxiliary_data=auxiliary_data) for data_segment in data_segments] 
+        
+        return out
         
 
 class ConstantScaler(BaseTransform, BaseMultiSourceTransformMixin):

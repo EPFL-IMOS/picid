@@ -64,9 +64,25 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         unit_id = ds[self.task_mode].meta['identifier']
         assert len(unit_id) == 1, "There should be only one identifier"
         unit_col = unit_id[0]
+
+        # allign UNIBO dataset with the NB1 and NB14
+        if unit_col == 'test_name':
+            folds['train'] = folds['train'].rename(columns={'test_name':'unit'})
+            folds['val'] = folds['val'].rename(columns={'test_name':'unit'})
+            folds['test'] = folds['test'].rename(columns={'test_name':'unit'})
+            unit_col = 'unit'
+
         features_col = ds[self.task_mode].meta['features']
         target_col = self.task_mode
 
+        if self.data_name == 'NB1':
+            # The features_col in 'NB1' is quite weird, so allign to UNIBO and NB14
+            folds['train'] = folds['train'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
+            folds['val'] = folds['val'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
+            folds['test'] = folds['test'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
+            features_col = ['mode','voltage', 'current', 'temperature']
+
+        
         # Process each split
         data = defaultdict(list)
         for split in ['train', 'val', 'test']:
@@ -97,8 +113,9 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
     
 # Helper function to process a single unit
 def process_unit(df_unit, unit_name, features_col, target_col):
-    df_features = df_unit[features_col].copy().reset_index(drop=True)
+    df_features = df_unit #df_unit[features_col].copy().reset_index(drop=True)
     df_target = df_unit[target_col].copy().reset_index(drop=True)
+    #df_features = df_unit.copy().reset_index(drop=True)
 
     if df_unit.isna().any().any():
         logger.info(f"NaN values detected in unit {unit_name}. Details:\n{df_unit.isna()}")
@@ -108,11 +125,12 @@ def process_unit(df_unit, unit_name, features_col, target_col):
         "features": df_features,
         "timestamps": np.array(df_features.index),
         "target": df_target,
-        "columns": df_features.columns,
-        "target_name": target_col,
         "metadata": {
             'unit_id': unit_name,
-            'unit_length': len(df_features)
+            'unit_length': len(df_features),
+            'features_columns': features_col,
+            'target_col': target_col,
+            "target_in_the_featurs": True,
         }
     }
 
