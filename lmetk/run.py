@@ -225,6 +225,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     if dataset_source.get_data_name() == 'railway':
         scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
+    
+    elif cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21']:
+        scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
+    
     else: 
         scaler = lambda x: x
 

@@ -13,8 +13,8 @@ defaults:
 callbacks:
   early_stopping:
     monitor: val/loss
+    mode: min
 
   model_checkpoint:
     monitor: val/loss
-
-  
+    mode: min

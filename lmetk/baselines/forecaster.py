@@ -239,6 +239,7 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         return {
             "loss": loss.mean(),
+            # This is needed because evaluator works over the numpy arrays
             "predictions": outputs.squeeze(2),
             "mask": mask,
             "targets": y_t.squeeze(2),

@@ -236,8 +236,8 @@ class Spacetimeformer_Forecaster(Forecaster):
         *_, y_t = batch
 
         stats = {
-            "predictions": forecast_out.squeeze(2),
-            "targets": y_t.squeeze(2),
+            "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
+            "targets": y_t.squeeze(2).detach().cpu().numpy(),
             "mask": forecast_mask.squeeze(2)
         }
 

@@ -45,3 +45,11 @@ FixTimeFeatures:
   metadata:
     apply_to: timestamps
     auxiliary_keys: ['features']
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.battery.scaler.MinMaxScalerSklearn
+  
+  metadata:
+    apply_to: target
+    fit_on: train

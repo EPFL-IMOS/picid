@@ -3,11 +3,12 @@ import numpy as np
 from typing import Any, List, Dict, Optional, Union
 
 from lmetk.transforms.base_transform import BaseTransform 
+from lmetk.transforms.multisource import BaseMultiSourceTransformMixin
 
 import logging
 logger = logging.getLogger(__name__) 
 
-class ConcatenateTransform(BaseTransform):
+class ConcatenateTransform(BaseTransform, BaseMultiSourceTransformMixin):
 
     def __init__(self, exclude_keys: Optional[List[str]] = None, **kwargs):
         """
