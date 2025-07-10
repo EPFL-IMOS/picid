@@ -239,6 +239,25 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.log_epoch_metrics(mode="test")
 
 
+    def process_outputs(self, model_out: dict, batch) -> dict:
+        """Handle model outputs.
+
+        Parameters
+        ----------
+        model_out : dict
+            Dictionary containing the model output.
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the updated model output.
+        """
+        model_out['predictions'] = model_out['predictions'].detach().cpu().numpy()
+        model_out['targets'] = model_out['targets'].detach().cpu().numpy()
+        return model_out
+
 
 
 class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
@@ -373,28 +392,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return model_out
 
 
-    def process_outputs(self, model_out: dict, batch) -> dict:
-        """Handle model outputs.
-
-        Parameters
-        ----------
-        model_out : dict
-            Dictionary containing the model output.
-        batch : dict
-            Batch object containing the batched data.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the updated model output.
-        """
-        
-        # Determine the effective prediction length, defaulting to 0 if not set
-        effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
-        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
-        model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
-        return model_out
-
 
     def setup(self, stage: str) -> None:
         """Hook to call torch.compile.
@@ -415,6 +412,40 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         # if self.hparams.compile and stage == "fit":
         #     self.net = torch.compile(self.net)
 
+
+
+
+class CustomTimePFNLightningModule(CustomEvaluatorLightningModule):
+
+
+    def process_outputs(self, model_out: dict, batch) -> dict:
+        """Handle model outputs.
+
+        Parameters
+        ----------
+        model_out : dict
+            Dictionary containing the model output.
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the updated model output.
+        """
+        
+        # TODO: (Raffael)  this is a hack to make sure the model outputs are in the right format
+        # Determine the effective prediction length, defaulting to 0 if not set
+        effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
+        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
+        model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
+        return model_out
+
+    def __init__(self, backbone, loss, evaluators, optimizer = None, **kwargs):
+        super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
+
+
+    
 
 
 class ConstantLossLightningModule(BackboneWrapperLightningModule):

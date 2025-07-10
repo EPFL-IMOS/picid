@@ -1,7 +1,16 @@
 #@package _global_
 
 defaults:
+
+
+  - override /datamodule: context_datamodule
+  - override /model: tabpfn_refactor
+  - override /evaluator: default
+
   - override /task_definition: concepts_n_cmapss_rul_prediction
   - override /datasource: concepts_n_cmapss_multi_source
   - override /dataset: concept_rul_multiunit_dataset #sliding_window
   - override /transforms: concepts_n_cmapss_multisource
+
+task_definition:
+  requires_training: false

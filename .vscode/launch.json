@@ -92,7 +92,7 @@
             ]
         },
         {
-            "name": "N-CMAPSS: TabPFN",
+            "name": "Concepts N-CMAPSS: TabPFN",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -101,7 +101,8 @@
                 "paths=rt_local", 
                 "experiment=concepts_n_cmapss/tabpfn",
                 "debug=default"
-            ]
-        }
+            ],
+            "env": {"HYDRA_FULL_ERROR": "1"}
+        },
     ]
 }
