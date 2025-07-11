@@ -4,19 +4,18 @@
 get_simple_feature_statistics:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
-    target_name: rul
+    target_name: ahRul
+    cycles_identifier: rul
     battery_mode_state: mode
   
   metadata:
     apply_to: features
     auxiliary_keys: ['metadata']
   
-
-
 assign_updated_taget_from_features:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
-    target_name: rul
+    target_name: ahRul
     
   metadata:
     apply_to: target

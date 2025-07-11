@@ -5,6 +5,7 @@ get_simple_feature_statistics:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
     target_name: rul
+    cycles_identifier: rul
     battery_mode_state: mode
   
   metadata:

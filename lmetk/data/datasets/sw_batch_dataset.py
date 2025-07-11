@@ -16,6 +16,9 @@ class SWBatchDataset(torch.utils.data.Dataset):
         stride: int,
         **kwargs
     ):
+        # Make sure that the stide covers all the data
+
+        
         self.feature_sequencer = AutoregressiveSequencer(
             features=features,
             time_features=time_features,

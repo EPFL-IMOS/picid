@@ -64,42 +64,95 @@ class MAEMetric(AbstractMetric):
 
 
 
+# class MSEMetric(AbstractMetric):
+#     """Mean Squared Error metric."""
+    
+#     def __init__(self):
+#         super().__init__("mse")
+    
+#     def reset(self):
+#         self.values = []
+    
+#     def update(self, predictions: np.ndarray, targets: np.ndarray):
+#         squared_errors = np.mean((predictions - targets) ** 2) 
+#         self.values.extend(squared_errors.flatten())
+    
+#     def compute(self) -> float:
+#         if not self.values:
+#             raise ValueError("No data available for computation")
+#         return np.mean(self.values)
+
 class MSEMetric(AbstractMetric):
-    """Mean Squared Error metric."""
+    """Mean Squared Error metric with batch-wise accumulation for (B, L, 1) shapes."""
     
     def __init__(self):
         super().__init__("mse")
+        self.reset()
     
     def reset(self):
-        self.values = []
+        self.total_squared_error = 0.0
+        self.total_count = 0
     
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        squared_errors = np.mean((predictions - targets) ** 2) 
-        self.values.extend(squared_errors.flatten())
+        # Ensure shapes are compatible
+        assert predictions.shape == targets.shape, "Shape mismatch between predictions and targets"
+        
+        # Compute squared errors
+        squared_errors = (predictions - targets) ** 2
+        
+        # Accumulate
+        self.total_squared_error += np.sum(squared_errors)
+        self.total_count += predictions.shape[0] * predictions.shape[1]  # B * L
     
     def compute(self) -> float:
-        if not self.values:
+        if self.total_count == 0:
             raise ValueError("No data available for computation")
-        return np.mean(self.values)
-
+        return self.total_squared_error / self.total_count
 
 class RMSEMetric(AbstractMetric):
-    """Root Mean Squared Error metric."""
+    """Root Mean Squared Error metric with batch-wise accumulation for (B, L, 1) shapes."""
     
     def __init__(self):
         super().__init__("rmse")
+        self.reset()
     
     def reset(self):
-        self.values = []
+        self.total_squared_error = 0.0
+        self.total_count = 0
     
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        squared_errors = np.sqrt(np.mean((predictions - targets) ** 2))
-        self.values.extend(squared_errors.flatten())
+        # Ensure shapes match
+        assert predictions.shape == targets.shape, "Shape mismatch between predictions and targets"
+
+        # Compute squared errors
+        squared_errors = (predictions - targets) ** 2
+
+        # Accumulate sum and count
+        self.total_squared_error += np.sum(squared_errors)
+        self.total_count += np.prod(targets.shape)  # B * L * 1
     
     def compute(self) -> float:
-        if not self.values:
+        if self.total_count == 0:
             raise ValueError("No data available for computation")
-        return np.mean(self.values)
+        return np.sqrt(self.total_squared_error / self.total_count)
+
+# class RMSEMetric(AbstractMetric):
+#     """Root Mean Squared Error metric."""
+    
+#     def __init__(self):
+#         super().__init__("rmse")
+    
+#     def reset(self):
+#         self.values = []
+    
+#     def update(self, predictions: np.ndarray, targets: np.ndarray):
+#         squared_errors = np.sqrt(np.mean((predictions - targets) ** 2))
+#         self.values.extend(squared_errors.flatten())
+    
+#     def compute(self) -> float:
+#         if not self.values:
+#             raise ValueError("No data available for computation")
+#         return np.mean(self.values)
 
 
 class MAPEMetric(AbstractMetric):

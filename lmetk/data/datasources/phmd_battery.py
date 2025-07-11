@@ -7,6 +7,7 @@ from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 import numpy as np
 from phmd import datasets
 import logging
+import pandas as pd
 logger = logging.getLogger(__name__)
 
 class PHMDMultiSourceLoader(DataSourceLoaderInterface):
@@ -64,6 +65,17 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         unit_id = ds[self.task_mode].meta['identifier']
         assert len(unit_id) == 1, "There should be only one identifier"
         unit_col = unit_id[0]
+
+        # Make the ahRul dataset to have rul values as well
+        if self.data_name == 'NB14' and self.task_mode == 'ahRul':
+            folds_rul = ds['rul'][self.fold]
+            assert all([all(folds[key]['unit'] == folds_rul[key]['unit']) for key in ['train', 'val', 'test']]), "The units in NB14 rul and ahrul are not the same"
+            
+            # Add rul column to the ahrul task to construct the y
+            for key in ['train', 'val', 'test']:
+                folds[key] = pd.concat([folds[key], folds_rul[key]['rul']], axis=1)
+            
+            del folds_rul
 
         # allign UNIBO dataset with the NB1 and NB14
         if unit_col == 'test_name':
