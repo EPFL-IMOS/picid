@@ -125,7 +125,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
     
 # Helper function to process a single unit
 def process_unit(df_unit, unit_name, features_col, target_col):
-    df_features = df_unit #df_unit[features_col].copy().reset_index(drop=True)
+    df_features = df_unit.reset_index(drop=True) #df_unit[features_col].copy().reset_index(drop=True)
     df_target = df_unit[target_col].copy().reset_index(drop=True)
     #df_features = df_unit.copy().reset_index(drop=True)
 
@@ -133,6 +133,20 @@ def process_unit(df_unit, unit_name, features_col, target_col):
         logger.info(f"NaN values detected in unit {unit_name}. Details:\n{df_unit.isna()}")
         df_features = df_features.dropna()  # Optionally handle df_target too
 
+    # check if df_target has infinity values
+    if np.isinf(df_target).any():
+        logger.info(f"Infinity values detected in unit {unit_name}. Details:\n{df_target}")
+        # Replace inf with nan
+        df_target = df_target.replace([np.inf, -np.inf], np.nan)
+        # Find nan indexes
+        nan_indexes = df_target[df_target.isna()].index
+        # Drop nan rows from both target and features
+        df_target = df_target.drop(nan_indexes)
+        df_features = df_features.drop(nan_indexes)
+        # Ensure the number of rows is the same
+        assert len(df_target) == len(df_features), "Mismatch after dropping nan/infinity rows"
+
+        
     return {
         "features": df_features,
         "timestamps": np.array(df_features.index),

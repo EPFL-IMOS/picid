@@ -6,7 +6,8 @@ from box import Box
 import torch
 
 from lmetk.data.datamodules.datamodule import BaseDataModule
-from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
+from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
+from lmetk.transforms.transform_manager import ConfigTransformManager
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
@@ -33,6 +34,7 @@ def concepts_n_cmapss_datamodule(path_cfg):
             "+datamodule=test_simplified_rul",
             "dataset=concept_rul_dataset",
             "datasource=concepts_n_cmapss",
+            "transforms=concepts_n_cmapss_multisource",
             f"paths={path_cfg}",
         ],
         return_hydra_config=True,
@@ -42,11 +44,12 @@ def concepts_n_cmapss_datamodule(path_cfg):
 
     dataset_source = hydra.utils.instantiate(cfg.datasource)
 
-    preprocessor = PreProcessor(dataset_source)
+    transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
+
+    preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager)
     preprocessor.pipeline()
 
-    data_lst, _, _ = preprocessor.get_processed_data()
-    data_dict = data_lst[0]
+    data_dict = preprocessor.get_processed_data()
 
     dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
     dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')

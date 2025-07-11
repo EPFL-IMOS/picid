@@ -392,31 +392,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return model_out
 
 
-<<<<<<< HEAD
-    def process_outputs(self, model_out: dict, batch) -> dict:
-        """Handle model outputs.
-
-        Parameters
-        ----------
-        model_out : dict
-            Dictionary containing the model output.
-        batch : dict
-            Batch object containing the batched data.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the updated model output.
-        """
-        
-        # Determine the effective prediction length, defaulting to 0 if not set
-        effective_pred_len = getattr(self.evaluators[batch["model_state"]], 'effective_pred_len', None)
-        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
-        model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
-        return model_out
-
-=======
->>>>>>> main
 
     def setup(self, stage: str) -> None:
         """Hook to call torch.compile.

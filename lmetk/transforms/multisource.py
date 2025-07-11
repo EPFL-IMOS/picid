@@ -42,7 +42,7 @@ class BaseMultiSourceTransformMixin(ABC):
         """
         
         # Check that auxiliary_data dict is not empty
-        if len(auxiliary_data.keys()) >0:
+        if len(auxiliary_data.keys()) > 0:
             for key in auxiliary_data.keys():
                 len(auxiliary_data[key]) == len(data_segments), f"The length of the auxiliary data is not the same as the length of the data segments. {len(auxiliary_data[key])} != {len(data_segments)}"
         

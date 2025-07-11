@@ -7,7 +7,8 @@ import lmetk
 from box import Box
 import torch
 
-from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
+from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
+from lmetk.transforms.transform_manager import ConfigTransformManager
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
 ProjectSearchPathPlugin.register()
@@ -46,12 +47,14 @@ def multi_source_data_source(path_cfg):
 
 
     dataset_source = hydra.utils.instantiate(cfg.datasource)
+    
+    
+    transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
 
-    preprocessor = PreProcessor(dataset_source)
+    preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
     preprocessor.pipeline()
 
-    data_lst, _, _ = preprocessor.get_processed_data()
-    data_dict = data_lst[0]
+    data_dict = preprocessor.get_processed_data()
 
     dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train', _recursive_=False)
     dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val', _recursive_=False)
