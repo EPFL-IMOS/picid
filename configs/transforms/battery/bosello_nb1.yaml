@@ -1,6 +1,4 @@
 # These scalers are pre-computed and do not need to be fitted on the data.
-
-
 get_simple_feature_statistics:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
