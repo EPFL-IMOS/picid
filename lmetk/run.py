@@ -295,6 +295,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 time_features=data_dict['timestamps']["test"],
                 **add_args
                 )
+        
     log.info(f"Train dataset size: {dataset_train.__len__()}")
     log.info(f"Validation dataset size: {dataset_val.__len__()}")
     log.info(f"Test dataset size: {dataset_test.__len__()}")

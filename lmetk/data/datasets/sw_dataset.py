@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 
+from lmetk.data.datasets.collate_functions import forecasting_collate_fn
+
 
 class SWDataset(Dataset):
     """Standard 'sliding window' applicable in the 'rolling window' scnetario Time Series Dataset Class."""
@@ -81,3 +83,7 @@ class SWDataset(Dataset):
         # Ensure indexing remains within bounds for full prediction window
         # self.seq_len because we added self.seq_len
         return len(self.features) - self.seq_len - self.pred_len + 1
+
+    @staticmethod
+    def collate_fn(batch):
+        return forecasting_collate_fn(batch)

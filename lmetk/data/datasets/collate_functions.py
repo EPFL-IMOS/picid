@@ -1,6 +1,6 @@
 import torch 
 
-def collate_fn(batch):
+def forecasting_collate_fn(batch):
     batch_x = torch.stack([item[0] for item in batch], dim=0)
     batch_y = torch.stack([item[1] for item in batch], dim=0)
     batch_x_mark = torch.stack([item[2] for item in batch], dim=0)

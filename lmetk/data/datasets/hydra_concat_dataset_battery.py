@@ -1,10 +1,11 @@
 from typing import Dict, List
-import torch
-from torch.utils.data import ConcatDataset
 from hydra.utils import instantiate
 import omegaconf
 
-class HydraConcatDataset(ConcatDataset):
+from lmetk.data.datasets.base import BaseConcatDataset
+from lmetk.data.datasets.collate_functions import context_collate_fn
+
+class HydraConcatDataset(BaseConcatDataset):
     def __init__(self, 
                  dataset_cfg,
                  data_dict: dict,
@@ -74,3 +75,7 @@ class HydraConcatDataset(ConcatDataset):
 
 
         super().__init__(datasets)
+    
+    @staticmethod
+    def collate_fn(batch):
+        return context_collate_fn(batch)
