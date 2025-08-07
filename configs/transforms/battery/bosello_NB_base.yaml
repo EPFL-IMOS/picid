@@ -1,4 +1,5 @@
-# These scalers are pre-computed and do not need to be fitted on the data.
+# This transform is used for NB1 and NB14. The only required change is the `columns_to_keep` parameter.
+# This file reads from datasource to find the task_mode i.e., rul or ahRul (${datasource.task_mode})
 get_simple_feature_statistics:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
