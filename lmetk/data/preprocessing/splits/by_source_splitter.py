@@ -68,14 +68,14 @@ class BySourceSplitter:
                 split_data[key][split] = stacked[key]
 
 
-        print("Split tree view:")
+        logger.info("Split tree view:")
         for split, split_sources_list in zip(
             ["train", "val", "test"],
             [self.sources_train, self.sources_val, self.sources_test]
         ):
-            print(f"|- {split}")
+            logger.info(f"|- {split}")
             for source in split_sources_list:
-                print(f"   |- {source}")
+                logger.info(f"   |- {source}")
 
         return split_data
     

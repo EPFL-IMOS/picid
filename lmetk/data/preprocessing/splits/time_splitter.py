@@ -6,7 +6,8 @@ import warnings
 class ValueWarning(Warning):
     pass
 
-
+import logging
+logger = logging.getLogger(__name__)
 class TimeSplitter(TimeSeriesSplitter):
     def __init__(
         self,
@@ -58,7 +59,7 @@ class TimeSplitter(TimeSeriesSplitter):
                 assert train_len + val_len + test_len == n, "Train + val + test split sizes must sum to total data length."
             
         else: 
-            print('Test size is specified and equal to:', self.test)
+            logger.info('Test size is specified and equal to:', self.test)
             train_len + val_len + test_len
             assert n >= (train_len + val_len + test_len), 'The specified test size is not correct as the total num. of points n >= (train_len + val_len + test_len)'
             warnings.warn(f'Test size is specified and equal to: {self.test}, hence train_len + val_len + test_len = {train_len + val_len + test_len}, implying missing {n - (train_len + val_len + test_len)}', ValueWarning)

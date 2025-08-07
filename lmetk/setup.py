@@ -14,6 +14,8 @@ from lmetk.utils.logging import MultiLogger
 import importlib
 import inspect
 
+import logging
+logger = logging.getLogger(__name__)
 
 def set_reproducibility(seed=42, deterministic=True):
     # reproducibility stuff
@@ -24,14 +26,14 @@ def set_reproducibility(seed=42, deterministic=True):
     torch.cuda.manual_seed_all(seed)
     # Note that this Deterministic mode can have a performance impact
     torch.backends.cudnn.deterministic = deterministic
-    print("warn: fix deterministic mode")
+    logger.warning("warn: fix deterministic mode")
     # torch.use_deterministic_algorithms(deterministic)
     torch.backends.cudnn.benchmark = False
 
 
 def get_class_defaults(class_str: str):
     splits = class_str.split(".")
-    print(splits)
+    logger.info("splits: %s", splits)
     module_str = ".".join(splits[:-1])
     module = importlib.import_module(module_str)
     clazz = getattr(module, splits[-1])
@@ -63,14 +65,14 @@ def configure(
     working_dir = "testwdir" if working_dir is None else working_dir
 
     if data_dir is not None and "data_dir" in cfg.datamodule:
-        print(
+        logger.warning(
             f"[WARNING] Overriding datamodule data_dir with command line argument {data_dir}"
         )
         cfg.datamodule.data_dir = data_dir
 
     if guild_mode:
         flags = OmegaConf.load("flags.yaml")
-        print(f"[GUILD MODE], merging in flags {flags}")
+        logger.info(f"[GUILD MODE], merging in flags {flags}")
         cfg = OmegaConf.merge(cfg, flags)
 
     now = datetime.datetime.now()
@@ -137,13 +139,13 @@ def configure(
     cfg = OmegaConf.merge(cfg, dcfg)
     OmegaConf.set_struct(cfg, True)  # enable attribute access
 
-    print("*" * 80)
-    print("[CONFIGURATION]")
-    print(OmegaConf.to_yaml(cfg))
-    print("*" * 80)
-    print(f"Output Directory: {rnd_dir}")
-    print(f"Root Directory: {os.getcwd()}")
-    print("*" * 80)
+    logger.info("*" * 80)
+    logger.info("[CONFIGURATION]")
+    logger.info(OmegaConf.to_yaml(cfg))
+    logger.info("*" * 80)
+    logger.info(f"Output Directory: {rnd_dir}")
+    logger.info(f"Root Directory: {os.getcwd()}")
+    logger.info("*" * 80)
 
     OmegaConf.save(cfg, cfg.dirs.rnd_dir + "/config_pre_initialize.yaml")
     return cfg

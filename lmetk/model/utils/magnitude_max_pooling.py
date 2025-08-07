@@ -33,4 +33,4 @@ input_tensor = torch.tensor([[[1.0, -3.0, 2.0, 4.0, -1.0, 6.0, -7.0, 8.0, 5.0],
 pool_size = 2
 stride = 1
 output_tensor = magnitude_max_pooling_1d(input_tensor, pool_size, stride)
-print(output_tensor)
+

@@ -14,6 +14,8 @@ from typing import Any, List, Dict
 
 from lmetk.transforms.base_transform import BaseTransform 
 
+import logging
+logger = logging.getLogger(__name__)
 
 class RailwayDummyTransform(BaseTransform):
 
@@ -38,8 +40,8 @@ class RailwayDummyTransform(BaseTransform):
         assert dummy_leak.shape[0] == data_segment.shape[0]
         initial_dates = list(auxiliary_data['initial_dates'])
         initial_dates_shifted = initial_dates[self.shift:]
-        print(initial_dates[:5])
-        print(initial_dates_shifted[:5])
+        logger.info(initial_dates[:5])
+        logger.info(initial_dates_shifted[:5])
         
         data_segment = np.concatenate([data_segment, dummy_leak], axis=1)
         

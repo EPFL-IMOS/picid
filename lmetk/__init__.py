@@ -6,6 +6,8 @@ from pathlib import Path
 
 # Your existing imports
 # ... other imports ...
+import logging
+logger = logging.getLogger(__name__)
 
 def _setup_project_root():
     if 'PROJECT_ROOT' in os.environ:
@@ -19,7 +21,7 @@ def _setup_project_root():
             os.environ['PROJECT_ROOT'] = str(project_root)
             return
     except Exception as e:
-        print("[WARN] Method 1 failed:", e)
+        logger.warning("[WARN] Method 1 failed:", e)
     
     try:
         current = Path.cwd()
@@ -27,10 +29,10 @@ def _setup_project_root():
         for path in [current] + list(current.parents):
             if any((path / marker).exists() for marker in markers):
                 os.environ['PROJECT_ROOT'] = str(path)
-                print("[INFO] PROJECT_ROOT set (method 2):", os.environ['PROJECT_ROOT'])
+                logger.info("[INFO] PROJECT_ROOT set (method 2):", os.environ['PROJECT_ROOT'])
                 return
     except Exception as e:
-        print("[WARN] Method 2 failed:", e)
+        logger.warning("[WARN] Method 2 failed:", e)
     
     os.environ['PROJECT_ROOT'] = str(Path.cwd())
     

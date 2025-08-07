@@ -187,7 +187,6 @@ def spawner(x, labels, sigma=0.05, verbose=0):
                 (np.vstack(path1), np.vstack(path2 + random_points[i])), axis=1
             )
             if verbose:
-                # print(random_points[i])
                 dtw_value, cost, DTW_map, path = dtw.dtw(
                     pat,
                     random_sample,
