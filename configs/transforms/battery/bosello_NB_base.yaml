@@ -1,10 +1,9 @@
-# These scalers are pre-computed and do not need to be fitted on the data.
-
-
+# This transform is used for NB1 and NB14. The only required change is the `columns_to_keep` parameter.
+# This file reads from datasource to find the task_mode i.e., rul or ahRul (${datasource.task_mode})
 get_simple_feature_statistics:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
-    target_name: ahRul
+    target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
     cycles_identifier: rul
     battery_mode_state: mode
   
@@ -15,7 +14,7 @@ get_simple_feature_statistics:
 assign_updated_taget_from_features:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
-    target_name: ahRul
+    target_name: ${datasource.task_mode}
     
   metadata:
     apply_to: target
@@ -24,10 +23,11 @@ assign_updated_taget_from_features:
 filter_features:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.NB1_filtering  # Your wrapper class
-    columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var'] # 'temperature_mean', 'temperature_var'
+    columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
 
   metadata:
     apply_to: features
+
 
 scaler_features:
   transform:
@@ -36,7 +36,8 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
-  
+
+
 FixTimeFeatures:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.FixTimeFeatures  # Your wrapper class

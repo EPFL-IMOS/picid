@@ -3,6 +3,8 @@ import random
 import numpy as np
 import json
 
+import logging
+logger = logging.getLogger(__name__)
 
 def set_reproducibility(seed=42, deterministic=True):
     torch.manual_seed(seed)
@@ -31,7 +33,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model, path)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            logger.info(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -41,7 +43,7 @@ class EarlyStopping:
 
     def save_checkpoint(self, val_loss, model, path):
         if self.verbose:
-            print(
+            logger.info(
                 f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ..."
             )
         torch.save(model.state_dict(), path + "/" + "checkpoint.pth")

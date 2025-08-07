@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: nb1_battery
-  - override /transforms: battery/bosello_nb1
+  - override /transforms: battery/bosello_NB_base #battery/bosello_nb1
   - override /model: tabpfn_refactor
   - override /dataset: battery_rul_multiunit_dataset
   - override /datamodule: context_datamodule
@@ -21,3 +21,9 @@ evaluator:
   
   test:
     apply_inverse_scaling: True
+
+transforms:
+  filter_features:
+    transform: 
+      columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var']
+

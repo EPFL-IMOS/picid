@@ -4,7 +4,8 @@ from typing import Any, List, Dict, Optional, Union
 
 from lmetk.transforms.base_transform import BaseTransform 
 
-
+import logging
+logger = logging.getLogger(__name__)
 class AutocorrFeatureDropTransform(BaseTransform):
 
     def __init__(self, correlation_threshold: float = 0.95, method: str = 'pearson', 
@@ -87,12 +88,12 @@ class AutocorrFeatureDropTransform(BaseTransform):
         self.features_to_keep = [i for i in range(n_features) if i not in features_to_drop]
         self.is_fitted = True
         
-        print(f"Correlation analysis complete:")
-        print(f"  - Total features: {n_features}")
-        print(f"  - Features to drop: {len(self.features_to_drop)} {self.features_to_drop}")
-        print(f"  - Features to keep: {len(self.features_to_keep)}")
-        print(f"  - Correlation threshold: {self.correlation_threshold}")
-        print(f"  - Method: {self.method}")
+        logger.info(f"Correlation analysis complete:")
+        logger.info(f"  - Total features: {n_features}")
+        logger.info(f"  - Features to drop: {len(self.features_to_drop)} {self.features_to_drop}")
+        logger.info(f"  - Features to keep: {len(self.features_to_keep)}")
+        logger.info(f"  - Correlation threshold: {self.correlation_threshold}")
+        logger.info(f"  - Method: {self.method}")
 
     def fit_multi_source(self, list_of_data_segments: List[Any],  mode: str):
         """
@@ -123,7 +124,7 @@ class AutocorrFeatureDropTransform(BaseTransform):
         # Concatenate all segments
         combined_data = np.concatenate(processed_segments, axis=0)
         
-        print(f"Fitting on {len(list_of_data_segments)} segments with combined shape: {combined_data.shape}")
+        logger.info(f"Fitting on {len(list_of_data_segments)} segments with combined shape: {combined_data.shape}")
         
         # Fit on combined data
         self.fit_single_source(combined_data)
@@ -157,7 +158,7 @@ class AutocorrFeatureDropTransform(BaseTransform):
         # Keep only the selected features
         result = data_segment[:, self.features_to_keep]
         
-        print(f"Transformed data from shape {data_segment.shape} to {result.shape}")
+        logger.info(f"Transformed data from shape {data_segment.shape} to {result.shape}")
         
         return result
 

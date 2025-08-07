@@ -30,10 +30,10 @@ commands=(
     "python lmetk/run.py experiment=battery/nb1_tabpfn"
     "python lmetk/run.py experiment=battery/nb14_stf trainer.max_epochs=5"
     "python lmetk/run.py experiment=battery/nb14_tabpfn"
-    "python lmetk/run.py experiment=railway_traction/timepfn"
-    "python lmetk/run.py experiment=railway_traction/tabpfn_railway_seasonal_context"
-    "python lmetk/run.py experiment=railway_traction/tabpfn_no_target_context"
-    "python lmetk/run.py experiment=concepts_n_cmapss/tabpfn"
+    # "python lmetk/run.py experiment=railway_traction/timepfn"
+    # "python lmetk/run.py experiment=railway_traction/tabpfn_railway_seasonal_context"
+    # "python lmetk/run.py experiment=railway_traction/tabpfn_no_target_context"
+    # "python lmetk/run.py experiment=concepts_n_cmapss/tabpfn"
  
 )
 
