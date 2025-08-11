@@ -104,5 +104,18 @@
             ],
             "env": {"HYDRA_FULL_ERROR": "1"}
         },
+        {
+            "name": "NB14 Battery: TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local", 
+                "experiment=battery/nb14_tabpfn",
+                "debug=default"
+            ],
+            "env": {"HYDRA_FULL_ERROR": "1"}
+        },
     ]
 }
