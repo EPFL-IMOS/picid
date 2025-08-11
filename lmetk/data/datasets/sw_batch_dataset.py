@@ -1,10 +1,12 @@
 from typing import List
 
 import torch
+from lmetk.data.datasets.base import BaseDataset
+from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 
 
-class SWBatchDataset(torch.utils.data.Dataset):
+class SWBatchDataset(BaseDataset):
     """Efficient implementation of Standard 'sliding window' Time Series Dataset Class."""
     def __init__(
         self,
@@ -47,3 +49,7 @@ class SWBatchDataset(torch.utils.data.Dataset):
             batch_idx
         )
         return seq_x, seq_y, seq_x_time, seq_y_time
+
+    @staticmethod
+    def collate_fn(batch):
+        return forecasting_collate_fn(batch)

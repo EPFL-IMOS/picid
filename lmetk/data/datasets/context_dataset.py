@@ -1,10 +1,12 @@
 from typing import List
 
 import torch
+from lmetk.data.datasets.base import BaseDataset
+from lmetk.data.datasets.collate_functions import context_collate_fn
 from lmetk.data.datasets.sw_batch_dataset import SWBatchDataset
 from lightning_fabric.utilities.data import AttributeDict
 
-class ContextBatchDataset(torch.utils.data.Dataset):
+class ContextBatchDataset(BaseDataset):
     def __init__(
         self,
         context: torch.Tensor,
@@ -67,3 +69,7 @@ class ContextBatchDataset(torch.utils.data.Dataset):
             "y_mark": seq_y_mark,
         })
         return AttributeDict(d)
+    
+    @staticmethod
+    def collate_fn(batch):
+        return context_collate_fn(batch)

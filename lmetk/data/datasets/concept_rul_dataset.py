@@ -2,13 +2,14 @@ from typing import Dict
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
-
+from lmetk.data.datasets.base import BaseDataset
 
 import logging
+from torch.utils.data._utils.collate import default_collate
+
 logger = logging.getLogger(__name__)
 
-class ConceptRULDataset(Dataset):
+class ConceptRULDataset(BaseDataset):
     def __init__(
         self, 
         data_dict,
@@ -88,3 +89,7 @@ class ConceptRULDataset(Dataset):
             torch.Tensor([self.df_Y[i * self.stride]]).squeeze(),
             torch.Tensor(self.concepts[i * self.stride]),
         )
+    
+    @staticmethod
+    def collate_fn(batch):
+        return default_collate(batch)

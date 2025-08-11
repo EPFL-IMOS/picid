@@ -19,5 +19,6 @@
     "test",
     "--tb=short",
     "--paths=rt_local"
-  ]
+  ],
+  "python-envs.pythonProjects": []
 }

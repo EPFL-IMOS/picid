@@ -5,9 +5,9 @@ import numpy as np
 import pytorch_lightning as pl
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from lmetk.data.datamodules.utils import collate_fn
+from lmetk.data.datasets.collate_functions import context_collate_fn as collate_fn
 
-class BaseDataModule(LightningDataModule):
+class TabPFNBaseDataModule(LightningDataModule):
     """
     Data module for the RUL datasets.
     This is a similar module to the one in rul_datasets but simplified.
@@ -21,10 +21,7 @@ class BaseDataModule(LightningDataModule):
         dataset_train,
         dataset_val,
         dataset_test,
-        train_batch_size: int,
-        val_batch_size: int,
-        test_batch_size: int,
-        shuffle_train: bool = True,
+        shuffle_train: bool = False,
         shuffle_val: bool = False,
         shuffle_test: bool = False,
     ):
@@ -49,20 +46,20 @@ class BaseDataModule(LightningDataModule):
         
         self.save_hyperparameters(hparams, ignore=["datasets",  'dataset_train', 'dataset_val', 'dataset_test'])
 
-    def prepare_data(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Download and pre-process the underlying data.
+    # def prepare_data(self, *args: Any, **kwargs: Any) -> None:
+    #     """
+    #     Download and pre-process the underlying data.
 
-        This calls the `prepare_data` function of the underlying reader. All
-        previously completed preparation steps are skipped. It is called
-        automatically by `pytorch_lightning` and executed on the first GPU in
-        distributed mode.
+    #     This calls the `prepare_data` function of the underlying reader. All
+    #     previously completed preparation steps are skipped. It is called
+    #     automatically by `pytorch_lightning` and executed on the first GPU in
+    #     distributed mode.
 
-        Args:
-            *args: Ignored. Only for adhering to parent class interface.
-            **kwargs: Ignored. Only for adhering to parent class interface.
-        """
-        pass
+    #     Args:
+    #         *args: Ignored. Only for adhering to parent class interface.
+    #         **kwargs: Ignored. Only for adhering to parent class interface.
+    #     """
+    #     pass
 
     def setup(self, stage: Optional[str] = None) -> None:
         """
@@ -101,10 +98,10 @@ class BaseDataModule(LightningDataModule):
         Returns:
             The training data loader
         """
-        drop_last = len(self.dataset_train) % self.hparams.train_batch_size == 1
+        drop_last = False #len(self.dataset_train) % self.hparams.train_batch_size == 1
         loader = DataLoader(
             self.dataset_train,
-            batch_size=self.hparams.train_batch_size,
+            batch_size=self.dataset_train.__len__(),
             shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
@@ -132,7 +129,7 @@ class BaseDataModule(LightningDataModule):
         """
         return DataLoader(
             self.dataset_val,
-            batch_size=self.hparams.val_batch_size,
+            batch_size=self.dataset_val.__len__(),
             shuffle=self.hparams.shuffle_val,
             pin_memory=True,
             collate_fn=collate_fn,
@@ -157,7 +154,7 @@ class BaseDataModule(LightningDataModule):
         """
         return DataLoader(
             self.dataset_test,
-            batch_size=self.hparams.test_batch_size,
+            batch_size=self.dataset_test.__len__(),
             shuffle=self.hparams.shuffle_test,
             pin_memory=True,
             collate_fn=collate_fn,
