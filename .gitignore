@@ -9,6 +9,7 @@ PRIVATE_RUNAI.md
 checkpoints/
 results/
 logs/
+scripts/*.log
 
 .DS_Store
 .venv
