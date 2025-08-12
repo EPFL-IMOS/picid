@@ -48,10 +48,11 @@ class BaseDataModule(LightningDataModule):
                 assert isinstance(size, int) and size > 0, f"Batch size must be a positive integer, got {size}"
 
         for shuffle in [shuffle_val, shuffle_test]:
-            logging.warning(
-                "Shuffling validation and test datasets is not recommended. "
-                "This may lead to unexpected results, especially in evaluation metrics."
-            )
+            if shuffle:
+                logging.warning(
+                    "Shuffling validation and test datasets is not recommended. "
+                    "This may lead to unexpected results, especially in evaluation metrics."
+                )
 
         if not shuffle_train:
             logging.warning(
@@ -139,7 +140,7 @@ class BaseDataModule(LightningDataModule):
         else:
             batch_size = self.hparams.train_batch_size
 
-        drop_last = len(self.dataset_train) % self.hparams.train_batch_size == 1
+        drop_last = len(self.dataset_train) % batch_size == 1
         loader = DataLoader(
             self.dataset_train,
             batch_size=batch_size,
