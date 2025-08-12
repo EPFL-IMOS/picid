@@ -1,4 +1,5 @@
 from typing import Dict, List
+from numpy import ndarray
 import torch
 from hydra.utils import instantiate
 import omegaconf
@@ -9,8 +10,7 @@ from torch.utils.data._utils.collate import default_collate
 class HydraConcatDataset(BaseConcatDataset):
     def __init__(self, 
                  dataset_cfg,
-                 data_dict: dict,
-                 split: str,
+                 data_dict: dict[str, ndarray | list[ndarray]], 
                  **kwargs):
         """
         Args:
@@ -18,61 +18,38 @@ class HydraConcatDataset(BaseConcatDataset):
             tensor_dict: dictionary of tensors.
             data_sict: dictionary of data.
                 {
-                "features": {
-                    "train": list[ndarray],
-                    "val": list[ndarray],
-                    "test": list[ndarray]
-                },
-                "target": {
-                    "train": list[ndarray],
-                    "val": list[ndarray],
-                    "test": list[ndarray]
-                },
-                "other_named_tensor": {
-                    ...
-                }
-            
-            split: split to cosider
-
+                "features":  list[ndarray],
+                "target":  list[ndarray],
+                "other_named_tensor": list[ndarray],
         }
         """
     
         # Checking the inputs
         lenghts = []
         for key, val in data_dict.items():
-            
-            if split not in val:
-                raise KeyError(f"Split '{split}' not found in data_dict['{key}']. Available splits: {list(val.keys())}")
-            if not isinstance(val[split], list) and not isinstance(val[split], omegaconf.listconfig.ListConfig):
-                raise TypeError(f"Data for split '{split}' in '{key}' must be a list, got {type(val[split])}.")
-            if len(val[split]) == 0:
-                raise ValueError(f"Data list for split '{split}' in '{key}' is empty.")
-            
-            # TODO: I belive that is not necessary, val[split] here goes over the all units, so why the lenghts should be the same? For the battery that does not hold
-            # Go over the list and check that all elements have the same length
-            for tensor in val[split]:
-                if len(tensor) != len(val[split][0]):
-                    raise ValueError(f"All tensors in the list for split '{split}' in '{key}' must have the same length.")
+            if not isinstance(val, list) and not isinstance(val, omegaconf.listconfig.ListConfig):
+                raise TypeError(f"Data in '{key}' must be a list, got {type(val)}.")
+            if len(val) == 0:
+                raise ValueError(f"Data list in '{key}' is empty.")
 
-            lenghts.append(len(val[split]))
+            lenghts.append(len(val))
         
         assert all(lenght == lenghts[0] for lenght in lenghts), "All lists must have the same length."
                     
         datasets = []
         # For every tensor in the list, create a dataset
         for idx in range(lenghts[0]):
-            split_data_dict = {}
+            sub_data_dict = {}
             
             # Go ovet the all keys and collect the corresponding tensors
             for key, val in data_dict.items():
-                split_data_dict[key] = val[split][idx]
-            
-            dataset = instantiate(dataset_cfg, data_dict=split_data_dict)
+                sub_data_dict[key] = val[idx]
+
+            dataset = instantiate(dataset_cfg, data_dict=sub_data_dict)
             datasets.append(dataset)
 
 
         super().__init__(datasets)
 
-    @staticmethod
-    def collate_fn(batch):
-        return default_collate(batch)
+    def get_collate_fn(self):
+        return default_collate
