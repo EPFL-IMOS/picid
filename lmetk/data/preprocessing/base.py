@@ -31,7 +31,7 @@ class PreProcessorInterface(ABC):
         
 
     @abstractmethod
-    def get_processed_data(self,) ->  dict[str, dict[str, ndarray | list[ndarray]]]:
+    def get_processed_data_dict(self,) ->  dict[str, dict[str, ndarray | list[ndarray]]]:
         """
         Returns the final processed data
         the dictionary should be structured as follows:

@@ -1,5 +1,6 @@
 from typing import List
 
+from numpy import ndarray
 import torch
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import context_collate_fn
@@ -9,18 +10,19 @@ from lightning_fabric.utilities.data import AttributeDict
 class ContextBatchDataset(BaseDataset):
     def __init__(
         self,
-        context: torch.Tensor,
-        target: torch.Tensor,
-        time_features: torch.Tensor,
+        # context: torch.Tensor,
+        # target: torch.Tensor,
+        # time_features: torch.Tensor,
+        data_dict: dict[str, ndarray | list[ndarray]],         
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
         **kwargs
     ):
-        self.target_feature = target
-        self.context_features = context
-        self.time_features = time_features
+        self.target_feature = data_dict["target"]
+        self.context_features = data_dict["context"]
+        self.time_features = data_dict["time"]
 
         self.target_dataset = SWBatchDataset(
             features=self.target_feature,
@@ -38,6 +40,8 @@ class ContextBatchDataset(BaseDataset):
             pred_len=pred_len,
             stride=stride,
         )
+    
+        super().__init__(data_dict, **kwargs)
 
     def __len__(self):
         assert len(self.target_dataset) == len(self.context_dataset), (
@@ -71,5 +75,5 @@ class ContextBatchDataset(BaseDataset):
         return AttributeDict(d)
     
     @staticmethod
-    def collate_fn(batch):
-        return context_collate_fn(batch)
+    def get_collate_fn(self):
+        return context_collate_fn

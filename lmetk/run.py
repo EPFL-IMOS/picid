@@ -12,9 +12,7 @@ from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
-from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
-from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
-from lmetk.data.preprocessing.per_source_multi_source_preprocessor import PerSourceMultiSourcePreProcessor
+from lmetk.data.preprocessing.preprocessor import PreProcessor
 from box import Box
 from lightning.pytorch.loggers.wandb import WandbLogger
 
@@ -30,7 +28,8 @@ from lmetk.utils_refactor import (
 
 from rich.table import Table
 from rich.console import Console
-
+from rich.tree import Tree
+from rich import print as rprint
 
 from lmetk.pipeline.base import ConstantLossLightningModule
 from lmetk.transforms.transform_manager import ConfigTransformManager
@@ -39,6 +38,7 @@ from lmetk.transforms.transform_manager import ConfigTransformManager
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
 from lmetk.data.datasources.phmd_battery import PHMDMultiSourceLoader
+
 
 def get_hydra_override(key: str):
     if not HydraConfig.initialized():
@@ -80,6 +80,39 @@ def display_targets(cfg):
         table.add_row(path, target, resolved)
 
     Console().print(table)
+
+
+# Plot the data_dict structure with tensor dimensions
+def print_data_dict_structure(data_dict):
+
+    def describe(obj):
+        if isinstance(obj, dict):
+            return "{...}"
+        elif isinstance(obj, np.ndarray):
+            return f"np.ndarray{obj.shape}"
+        elif torch.is_tensor(obj):
+            return f"torch.Tensor{tuple(obj.shape)}"
+        elif isinstance(obj, list):
+            if obj and (torch.is_tensor(obj[0]) or isinstance(obj[0], np.ndarray)):
+                return f"list\\[{describe(obj[0])}\\] x {len(obj)}"
+            return f"list\\[{type(obj[0]).__name__ if obj else 'empty'}\\] x {len(obj)}"
+        else:
+            return str(type(obj).__name__)
+
+    def add_to_tree(tree, d):
+        if isinstance(d, dict):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    branch = tree.add(f"[bold]{k}[/bold] {describe(v)}")
+                    add_to_tree(branch, v)
+                else:
+                    tree.add(f"[bold]{k}[/bold]: {describe(v)}")
+        else:
+            tree.add(describe(d))
+
+    tree = Tree("[bold]data_dict[/bold]")
+    add_to_tree(tree, data_dict)
+    rprint(tree)
 
 
 def get_config_info(cfg):
@@ -197,104 +230,48 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     # Get transform names
-    log.info("Transform names:", transforms_manager.get_transform_names())
+    log.info("Transform names:" + str(transforms_manager.get_transform_names()))
     
     # Get transforms that apply to features
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
-    log.info("Feature transforms:", list(feature_transforms.keys()))
-    
+    log.info("Feature transforms:" + str(list(feature_transforms.keys())))
+
     # Get transforms with auxiliary keys
     aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
-    log.info("Transforms with auxiliary keys:", list(aux_transforms.keys()))
-    
-    if isinstance(dataset_source, DataSourceLoader):
-        preprocessor = PreProcessor(dataset_source, transforms_manager, logger=log)
+    log.info("Transforms with auxiliary keys:" + str(list(aux_transforms.keys())))
+
+    if isinstance(dataset_source, DataSourceLoader) or isinstance(dataset_source, PHMDMultiSourceLoader):
+        preprocessor_mode = "per_unit"
     
     elif isinstance(dataset_source, MultiSourceLoader):
-        preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
-   
-    elif isinstance(dataset_source, PHMDMultiSourceLoader):
-        preprocessor = PerSourceMultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
-    
+        preprocessor_mode = "cross_unit"
+
     else:
         raise ValueError("Invalid dataset source type")
     
+    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager, logger=log)
     preprocessor.pipeline()
 
-    data_dict = preprocessor.get_processed_data()
+    data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
+    assert set(data_dict.keys()) == {"train", "val", "test"}
+
+    features_set = set(data_dict["train"].keys())
+    for split in ["val", "test"]:
+        assert set(data_dict[split].keys()) == features_set, \
+            f"Mismatch in features for split {split}. Expected: {features_set}, Found: {set(data_dict[split].keys())}"
     
-    if dataset_source.get_data_name() == 'railway':
-        scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
-    
-    elif cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21']:
+    if cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21', 'railway']:
         scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
     
     else: 
         scaler = lambda x: x
 
-    
+    print_data_dict_structure(data_dict)
+
     # Extract additional inputs to dataset if needed.
-    add_args = {}
-    if "N-CMAPSS" in cfg.datasource.data_name:
-        dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
-        
-        #TODO: For now we are not working with the validation, only test
-        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
-        
-        dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
-
-    elif cfg.datasource.data_name == 'railway' and cfg.datasource.mode_mode == 'context':
-            # Prepare datasets
-            dataset_train = hydra.utils.instantiate(
-                cfg.dataset,
-                context=data_dict['features']["train"],
-                target= data_dict['target']["train"],
-                time_features=data_dict['timestamps']["train"],
-                
-                )
-
-            dataset_val = hydra.utils.instantiate(
-                cfg.dataset,
-                context=data_dict['features']["val"], 
-                target= data_dict['target']["val"],
-                time_features=data_dict['timestamps']["val"],
-                
-                )
-            
-            dataset_test = hydra.utils.instantiate(
-                    cfg.dataset,
-                    context=data_dict['features']["test"], 
-                    target= data_dict['target']["test"],
-                    time_features=data_dict['timestamps']["test"],
-                    
-                    )
-    elif cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21']:
-        dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train')
-        dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val')
-        dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test')
-    else:
-        assert cfg.datasource.mode_mode == 'other', " Ban naming of the variable (datasource.mode_mode). This one basically help to identify which are the inputs of the dataset object. context means features and targets, while others means features (where one of the features is actually a target) and timestamps"
-        # Prepare datasets
-        dataset_train = hydra.utils.instantiate(
-            cfg.dataset,
-            features=data_dict['features']["train"], 
-            time_features=data_dict['timestamps']["train"],
-            **add_args
-            )
-
-        dataset_val = hydra.utils.instantiate(
-            cfg.dataset,
-            features=data_dict['features']["val"], 
-            time_features=data_dict['timestamps']["val"],
-            **add_args
-            )
-        
-        dataset_test = hydra.utils.instantiate(
-                cfg.dataset,
-                features=data_dict['features']["test"], 
-                time_features=data_dict['timestamps']["test"],
-                **add_args
-                )
+    dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict["train"])
+    dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict["test"])
+    dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict["test"])
         
     log.info(f"Train dataset size: {dataset_train.__len__()}")
     log.info(f"Validation dataset size: {dataset_val.__len__()}")

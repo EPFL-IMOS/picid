@@ -12,38 +12,41 @@ depending on the dataset type and task type.
 We have omitted this so far to keep the code simple and focused on the task at hand.
 
 """
+from numpy import ndarray
+
+import logging
+logger = logging.getLogger(__name__)
 
 class BaseDataset(Dataset, ABC):
 
-    @staticmethod
+
+    def __init__(self, 
+                 data_dict: dict[str, ndarray | list[ndarray]], 
+                 **kwargs):
+        super().__init__()
+
+        if kwargs:
+            logger.warning(f"Unused parameters in BaseDataset __init__: {list(kwargs.keys())}")
+        self.data_dict = data_dict
+
+
     @abstractmethod
-    def collate_fn(batch):
+    def get_collate_fn():
         """
         Collate function to be implemented by subclasses.
         This function should combine a list of samples into a batch.
-        
-        Args:
-            batch (list): List of samples to collate.
-        
-        Returns:
-            The collated batch.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
 
+
+
 class BaseConcatDataset(ConcatDataset, ABC):
 
-    @staticmethod
     @abstractmethod
-    def collate_fn(batch):
+    def get_collate_fn():
         """
         Collate function to be implemented by subclasses.
         This function should combine a list of samples into a batch.
-        
-        Args:
-            batch (list): List of samples to collate.
-        
-        Returns:
-            The collated batch.
         """
         raise NotImplementedError("Subclasses must implement this method.")

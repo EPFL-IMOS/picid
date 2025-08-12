@@ -67,23 +67,13 @@ class BaseDataModule(LightningDataModule):
 
 
         # We need them because the debug subset does not have this function.
-        collate_fn_train = getattr(dataset_train, "collate_fn", None)
-        collate_fn_val = getattr(dataset_val, "collate_fn", None)
-        collate_fn_test = getattr(dataset_test, "collate_fn", None)
+        self.collate_fn_train = dataset_train.get_collate_fn() if hasattr(dataset_train, "get_collate_fn") else None
+        self.collate_fn_val = dataset_val.get_collate_fn() if getattr(dataset_val, "get_collate_fn", None) else None
+        self.collate_fn_test = dataset_test.get_collate_fn() if getattr(dataset_test, "get_collate_fn", None) else None
 
         self.dataset_train = dataset_train if subset_range is None else Subset(dataset_train, range(*subset_range))
         self.dataset_val = dataset_val if  subset_range is None else Subset(dataset_val, range(*subset_range))
         self.dataset_test = dataset_test if subset_range is None else Subset(dataset_test, range(*subset_range))
-
-        if subset_range is not None:
-            for ds_attr, collate_fn in [
-                ("dataset_train", collate_fn_train),
-                ("dataset_val", collate_fn_val),
-                ("dataset_test", collate_fn_test),
-            ]:
-                ds = getattr(self, ds_attr)
-                if isinstance(ds, Subset):
-                    ds.collate_fn = collate_fn
         
         self.save_hyperparameters(hparams, ignore=["datasets",  'dataset_train', 'dataset_val', 'dataset_test'])
 
@@ -156,7 +146,7 @@ class BaseDataModule(LightningDataModule):
             shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
             pin_memory=True,
-            collate_fn=self.dataset_train.collate_fn
+            collate_fn=self.collate_fn_train,
         )
 
         return loader
@@ -189,7 +179,7 @@ class BaseDataModule(LightningDataModule):
             batch_size=batch_size,
             shuffle=self.hparams.shuffle_val,
             pin_memory=True,
-            collate_fn=self.dataset_val.collate_fn,
+            collate_fn=self.collate_fn_val,
         )
 
     def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
@@ -219,5 +209,5 @@ class BaseDataModule(LightningDataModule):
             batch_size=batch_size,
             shuffle=self.hparams.shuffle_test,
             pin_memory=True,
-            collate_fn=self.dataset_test.collate_fn,
+            collate_fn=self.collate_fn_test,
         )

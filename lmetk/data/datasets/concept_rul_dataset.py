@@ -1,6 +1,8 @@
 from typing import Dict
 
 import numpy as np
+from numpy import ndarray
+
 import torch
 from lmetk.data.datasets.base import BaseDataset
 
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ConceptRULDataset(BaseDataset):
     def __init__(
         self, 
-        data_dict,
+        data_dict: dict[str, ndarray | list[ndarray]], 
         window_size: int, 
         stride: int,
         **kwargs
@@ -38,8 +40,7 @@ class ConceptRULDataset(BaseDataset):
             logger.info("The dataset contains descriptors, concatenating them to the features.")
             self.X = np.concatenate((self.X, data_dict['descriptors']), axis=1)
 
-        
-        super().__init__()
+        super().__init__(data_dict, **kwargs)
 
     def __len__(self):
         return self.X.shape[0] // self.stride  # Floor total length divided by stride
@@ -89,7 +90,6 @@ class ConceptRULDataset(BaseDataset):
             torch.Tensor([self.df_Y[i * self.stride]]).squeeze(),
             torch.Tensor(self.concepts[i * self.stride]),
         )
-    
-    @staticmethod
-    def collate_fn(batch):
-        return default_collate(batch)
+
+    def get_collate_fn(self):
+        return default_collate

@@ -1,7 +1,9 @@
 """Refactored dataset class for time series features."""
 import torch
 from torch.utils.data import Dataset
+
 import numpy as np
+from numpy import ndarray
 
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 
@@ -11,14 +13,20 @@ class SWDataset(Dataset):
 
     def __init__(
         self,
-        features: np.ndarray,
-        time_features: np.ndarray,
+        # features: np.ndarray,
+        # time_features: np.ndarray,
+        data_dict: dict[str, ndarray | list[ndarray]], 
         seq_len: int,
         label_len: int,
         pred_len: int,
         **kwargs
     ):
-        # Type checking
+        features = data_dict["features"]
+        time_features = data_dict["time_features"]
+
+        raise NotImplementedError("SWDataset should not be used anymore, call R.T.")
+
+        # Type checkin
         assert isinstance(features, np.ndarray), "features must be a numpy array"
         assert isinstance(time_features, np.ndarray), (
             "time_features must be a numpy array"
