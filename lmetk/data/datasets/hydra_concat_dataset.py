@@ -48,8 +48,14 @@ class HydraConcatDataset(BaseConcatDataset):
             dataset = instantiate(dataset_cfg, data_dict=sub_data_dict)
             datasets.append(dataset)
 
+        for ds in datasets:
+            assert type(ds) is type(datasets[0]), (
+                f"All datasets must be of the same type. Found {type(ds)} and {type(datasets[0])}."
+            )
+
+        self.collate_fn = datasets[0].get_collate_fn() if hasattr(datasets[0], "get_collate_fn") else default_collate
 
         super().__init__(datasets)
 
     def get_collate_fn(self):
-        return default_collate
+        return self.collate_fn
