@@ -74,6 +74,5 @@ class ContextBatchDataset(BaseDataset):
         })
         return AttributeDict(d)
     
-    @staticmethod
     def get_collate_fn(self):
         return context_collate_fn

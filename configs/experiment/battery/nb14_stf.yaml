@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: nb14_battery
-  - override /transforms: battery/bosello_nb14
+  - override /transforms: battery/bosello_NB_base
   - override /model: stf
   - override /dataset: battery_rul_multiunit_dataset
   - override /datamodule: context_datamodule

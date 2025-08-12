@@ -92,6 +92,5 @@ class SWDataset(Dataset):
         # self.seq_len because we added self.seq_len
         return len(self.features) - self.seq_len - self.pred_len + 1
 
-    @staticmethod
-    def collate_fn(batch):
-        return forecasting_collate_fn(batch)
+    def collate_fn(self):
+        return forecasting_collate_fn

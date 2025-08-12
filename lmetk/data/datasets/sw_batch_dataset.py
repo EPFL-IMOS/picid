@@ -27,11 +27,10 @@ class SWBatchDataset(BaseDataset):
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
             
         # Convert the data_dict["features"] and data_dict["time_features"] to torch.Tensor
-        # TODO: Should we move the features and time_features to the device?
         features = torch.Tensor(data_dict["features"])
         time_features = torch.Tensor(data_dict["time_features"])
-        
-        # TODO: Make sure that the stide covers all the data
+
+        # TODO: Make sure that the stride covers all the data
         self.feature_sequencer = AutoregressiveSequencer(
             features=features,
             time_features=time_features,
@@ -61,6 +60,5 @@ class SWBatchDataset(BaseDataset):
         )
         return seq_x, seq_y, seq_x_time, seq_y_time
 
-    @staticmethod
-    def collate_fn(batch):
-        return forecasting_collate_fn(batch)
+    def collate_fn(self):
+        return forecasting_collate_fn

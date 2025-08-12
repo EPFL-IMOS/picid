@@ -2,10 +2,10 @@
 
 defaults:
   - override /datasource: nb1_battery
-  - override /transforms: battery/bosello_nb1
+  - override /transforms: battery/bosello_NB_base
   - override /model: stf
   - override /dataset: battery_rul_multiunit_dataset
-  - override /datamodule: context_datamodule
+  - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
   #- override /trainer: cpu

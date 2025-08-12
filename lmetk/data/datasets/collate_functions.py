@@ -13,8 +13,6 @@ def forecasting_collate_fn(batch):
         'batch_y_mark': batch_y_mark  # (B, L, D)
     }
 
-
-
 def context_collate_fn(batch):
     target_x = torch.stack([item.target.x for item in batch], dim=0) # (B, L, D)
     target_y = torch.stack([item.target.y for item in batch], dim=0)
