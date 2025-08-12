@@ -19,12 +19,22 @@ class SWBatchDataset(BaseDataset):
         pred_len: int,  # prediction size
         stride: int,
         **kwargs
-    ):
-        # Make sure that the stide covers all the data
-
+    ):  
+        # Make sure that the data_dict contains the required keys
+        required_keys = ["features", "time_features"]
+        for key in required_keys:
+            if key not in data_dict:
+                raise ValueError(f"Data dictionary must contain the key: '{key}'")
+            
+        # Convert the data_dict["features"] and data_dict["time_features"] to torch.Tensor
+        # TODO: Should we move the features and time_features to the device?
+        features = torch.Tensor(data_dict["features"])
+        time_features = torch.Tensor(data_dict["time_features"])
+        
+        # TODO: Make sure that the stide covers all the data
         self.feature_sequencer = AutoregressiveSequencer(
-            features=data_dict["features"],
-            time_features=data_dict["time_features"],
+            features=features,
+            time_features=time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,

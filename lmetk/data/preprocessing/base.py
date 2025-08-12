@@ -22,11 +22,9 @@ class PreProcessorInterface(ABC):
     def __init__(self, 
                  datasource: Union[DataSourceLoader, DataSourceLoader], 
                  transforms: ConfigTransformManager,
-                 logger=None,
                  **kwargs):
         self.datasource = datasource
         self.transforms = transforms
-        self.logger = logger
         
         
 

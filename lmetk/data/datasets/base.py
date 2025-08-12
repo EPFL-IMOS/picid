@@ -39,8 +39,6 @@ class BaseDataset(Dataset, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
 
-
-
 class BaseConcatDataset(ConcatDataset, ABC):
 
     @abstractmethod

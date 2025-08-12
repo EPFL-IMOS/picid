@@ -11,7 +11,9 @@ from omegaconf import DictConfig, OmegaConf
 
 from lmetk.transforms.data_transform import DataTransform
 from lmetk.data.preprocessing.base import PreProcessorInterface
-import numpy as np
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 def swap_first_second_level(data: dict[str, ndarray | list[ndarray]]) -> dict[str, ndarray | list[ndarray]]:
@@ -40,11 +42,10 @@ def swap_first_second_level(data: dict[str, ndarray | list[ndarray]]) -> dict[st
 class PreProcessor(PreProcessorInterface):
     """Preprocessor of data."""
 
-    def __init__(self, mode, datasource, transforms, logger=None,**kwargs):
+    def __init__(self, mode, datasource, transforms, **kwargs):
         super().__init__(
             datasource=datasource, 
             transforms=transforms, 
-            logger=logger
         )
 
         assert mode in ["per_unit", "cross_unit"], f"Unsupported mode: {mode}. Supported modes are 'per_unit' and 'cross_unit'."
@@ -119,14 +120,12 @@ class PreProcessor(PreProcessorInterface):
         for current_data in data_lst:
             for transform_name, transform in transforms.items():
                 # Removed detailed print statements for each transform application.
-                if self.logger:
-                    self.logger.info(f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})")
+
+                logger.info(f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})")
                 start_time = time.time()
                 current_data = transform.forward(current_data)
                 end_time = time.time()
-
-                if self.logger:
-                    self.logger.info(f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds.")
+                logger.info(f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds.")
             
             transformed_data_lst.append(current_data)
         return transformed_data_lst

@@ -249,7 +249,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     else:
         raise ValueError("Invalid dataset source type")
     
-    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager, logger=log)
+    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
     preprocessor.pipeline()
 
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
@@ -260,6 +260,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         assert set(data_dict[split].keys()) == features_set, \
             f"Mismatch in features for split {split}. Expected: {features_set}, Found: {set(data_dict[split].keys())}"
     
+    # TODO: Get rid of this if/else
     if cfg.datasource.data_name in ['NB1', 'NB14','UNIBO21', 'railway']:
         scaler = transforms_manager.get_data_transform('scaler_target').transform_instance.scaler
     
