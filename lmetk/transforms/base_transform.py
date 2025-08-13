@@ -14,7 +14,9 @@ class BaseTransform(ABC):
     """
     
     @abstractmethod
-    def transform_data(self, data_segment: ndarray | list[ndarray] , auxiliary_data: Optional[Dict[str, Any]] = None, 
+    def transform_data(self, 
+                      data_segment: ndarray | list[ndarray] , 
+                      auxiliary_data: Optional[Dict[str, Any]] = None, 
                       mode: Optional[str] = None) -> Any:
         """
         Transform a single data segment.
@@ -30,19 +32,31 @@ class BaseTransform(ABC):
         """
         pass
     
-    def fit_data(self, data_segment: ndarray | list[ndarray], auxiliary_data: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
+    
+    def fit_data(self, 
+                 data_segment: ndarray | list[ndarray], 
+                 auxiliary_data: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
         """
         Fit the transform on data. Default implementation does nothing (for stateless transforms).
         Override this method for transforms that need fitting.
         """
         return self
     
+
     def supports_multi_source_fit(self) -> bool:
         """
         Whether this transform can handle multi-source fitting.
         Override to return True if the transform can handle aggregated data from multiple sources.
         """
         return True  # Most transforms can handle concatenated data
+    
+
+    def __repr__(self):
+        args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
+        exclude_str = f"exclude_keys={self.exclude_keys!r}"
+        if args:
+            return f"{self.__class__.__name__}({exclude_str}, {args})"
+        return f"{self.__class__.__name__}({exclude_str})"
 
 # --- Adapter Examples for External Libraries ---
 

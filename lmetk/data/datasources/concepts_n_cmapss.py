@@ -1,15 +1,17 @@
-
+import logging
 import os
+from itertools import combinations
 from pathlib import Path
+from typing import Any, List, Tuple, Type, Union
+
 import h5py
 import numpy as np
 import pandas as pd
-from lmetk.data.datasources import DataSourceLoader
-from itertools import combinations
-from typing import Any, List, Union, Tuple, Type
 
-import logging
-logger = logging.getLogger(__name__) 
+from lmetk.data.datasources import SingleSourceLoader
+
+logger = logging.getLogger(__name__)
+
 
 def subsampling(df, subsampling_rate):
     """
@@ -36,10 +38,11 @@ def flatten_RUL(df):
         ]
     return df
 
-class N_CMAPSSDataSource(DataSourceLoader):
+
+class N_CMAPSSDataSource(SingleSourceLoader):
 
     def __init__(self, **kwargs):
-        
+
         super().__init__(**kwargs)
 
     def _load_data(self):
@@ -51,11 +54,13 @@ class N_CMAPSSDataSource(DataSourceLoader):
         self.window_size = self.window_size
         self.stride = self.stride
 
-        filename = os.path.join(Path(self.path).expanduser(), f"N-CMAPSS_DS{self.n_DS}.h5")
+        filename = os.path.join(
+            Path(self.path).expanduser(), f"N-CMAPSS_DS{self.n_DS}.h5"
+        )
         if not os.path.exists(filename):
             raise FileNotFoundError(f"File not found: {filename}")
         with h5py.File(filename, "r") as hdf:
-            
+
             if "train" in self.mode or "val" in self.mode:
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W
@@ -64,7 +69,7 @@ class N_CMAPSSDataSource(DataSourceLoader):
                 T = np.array(hdf.get("T_dev"))  # T
                 Y = np.array(hdf.get("Y_dev"))  # RUL
                 A = np.array(hdf.get("A_dev"))  # Auxiliary
-            
+
             elif "test" in self.mode:
                 # Test set
                 W = np.array(hdf.get("W_test"))  # W
@@ -183,7 +188,6 @@ class N_CMAPSSDataSource(DataSourceLoader):
             }
         )[[c for c in self.concepts if c not in ["healthy", "Fc"]]]
 
-
         # remove non-minimum degradation
         # self.concepts = self.concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
 
@@ -220,16 +224,14 @@ class N_CMAPSSDataSource(DataSourceLoader):
         logger.info(f"Used concepts: {self.concepts.columns}")
         self.concepts = self.concepts.astype(int)
 
-        
-         
-        return { 
-            "features": self.df_X.values, # sensor data measurements
-            "timestamps": self.df_X.index.values.reshape(-1,1),  # cycle numbers
+        return {
+            "features": self.df_X.values,  # sensor data measurements
+            "timestamps": self.df_X.index.values.reshape(-1, 1),  # cycle numbers
             "health_states": self.df_A["hs"].values,
-            'unit': self.df_A["unit"].values,
-            "descriptors": self.df_W.values, # operating conditions
+            "unit": self.df_A["unit"].values,
+            "descriptors": self.df_W.values,  # operating conditions
             "concepts": self.concepts.values,
-            "rul":self.df_Y.values, # RUL
+            "rul": self.df_Y.values,  # RUL
             # degradation=self.df_T.values, # degradation resp. concepts
             # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
         }

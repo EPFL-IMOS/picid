@@ -1,7 +1,11 @@
-
-
-from torch.utils.data import Dataset, ConcatDataset
+import logging
 from abc import ABC, abstractmethod
+
+from numpy import ndarray
+from torch.utils.data import ConcatDataset, Dataset
+
+logger = logging.getLogger(__name__)
+
 
 """
 IMPORTANT: 
@@ -12,26 +16,21 @@ depending on the dataset type and task type.
 We have omitted this so far to keep the code simple and focused on the task at hand.
 
 """
-from numpy import ndarray
 
-import logging
-logger = logging.getLogger(__name__)
 
 class BaseDataset(Dataset, ABC):
 
-
-    def __init__(self, 
-                 data_dict: dict[str, ndarray | list[ndarray]], 
-                 **kwargs):
+    def __init__(self, data_dict: dict[str, ndarray | list[ndarray]], **kwargs):
         super().__init__()
 
         if kwargs:
-            logger.warning(f"Unused parameters in BaseDataset __init__: {list(kwargs.keys())}")
+            logger.warning(
+                f"Unused parameters in BaseDataset __init__: {list(kwargs.keys())}"
+            )
         self.data_dict = data_dict
 
-
     @abstractmethod
-    def get_collate_fn():
+    def get_collate_fn(self):
         """
         Collate function to be implemented by subclasses.
         This function should combine a list of samples into a batch.
@@ -42,7 +41,7 @@ class BaseDataset(Dataset, ABC):
 class BaseConcatDataset(ConcatDataset, ABC):
 
     @abstractmethod
-    def get_collate_fn():
+    def get_collate_fn(self):
         """
         Collate function to be implemented by subclasses.
         This function should combine a list of samples into a batch.

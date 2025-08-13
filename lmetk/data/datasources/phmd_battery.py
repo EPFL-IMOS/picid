@@ -1,36 +1,50 @@
-from typing import Dict
-from hydra.utils import instantiate 
-from omegaconf import DictConfig, OmegaConf
-from collections import defaultdict
-from lmetk.data.datasources.base import DataSourceLoaderInterface
-from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
-import numpy as np
-from phmd import datasets
 import logging
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict
+
+import numpy as np
 import pandas as pd
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
+
+from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
+from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
+from phmd import datasets
+
 logger = logging.getLogger(__name__)
+
 
 class PHMDMultiSourceLoader(DataSourceLoaderInterface):
     """This class instantiates each of the soure"""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        #self.data_source_dict = {}
-        #self.source_params = []    
+        # self.data_source_dict = {}
+        # self.source_params = []
         # Get source names as list
-        #self.source_names = list(kwargs.get('source_list', {}).keys())
-        self.fold = kwargs['fold']
-        self.task_mode = kwargs['task_mode']
+        # self.source_names = list(kwargs.get('source_list', {}).keys())
+        self.fold = kwargs["fold"]
+        self.task_mode = kwargs["task_mode"]
+        self.cache_dir = kwargs.get("cache_dir", "data")
+
+        cache_path = Path(self.cache_dir).expanduser()
+        if not cache_path.exists():
+            cache_path.mkdir(parents=True, exist_ok=True)
+        self.cache_dir = str(cache_path)
+
         # Instantiate multisource_data_splitter if is not none
-        assert kwargs.get('multisource_data_splitter') == None, 'For PHMD, multisource_data_splitter is not supported. PHMD are given with splits.'
-        self.multisource_data_splitter = 'For PHMD, multisource_data_splitter is not supported. PHMD are given with splits.'
-        
-        
+        assert (
+            kwargs.get("multisource_data_splitter") == None
+        ), "For PHMD, multisource_data_splitter is not supported. PHMD are given with splits."
+        self.multisource_data_splitter = "For PHMD, multisource_data_splitter is not supported. PHMD are given with splits."
+
     def __repr__(self) -> str:
         return f"MultiSource(sources={len(self.data_source_dict)} units)"
 
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
-        
+
         Returns:
             dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
 
@@ -41,13 +55,13 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
-        
+
         return self.data_dict
-        
+
     def get_data_name(self) -> list[str]:
         """Return source data names."""
-        return self.data_dict['metadata']
-    
+        return self.data_dict["metadata"]
+
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
@@ -55,58 +69,89 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
     def split_data(self, data_lst: list[Dict], source_names: list[str]):
         "Predefined splits"
         pass
-    
-    def _load_data(self, ):
+
+    def _load_data(
+        self,
+    ):
         # Load dataset and metadata
-        ds = datasets.Dataset(self.data_name, cache_dir='data')
+        ds = datasets.Dataset(self.data_name, cache_dir=self.cache_dir)
         task = ds[self.task_mode]
         folds = task[self.fold]  # fold_num = 0 by default
 
-        unit_id = ds[self.task_mode].meta['identifier']
+        unit_id = ds[self.task_mode].meta["identifier"]
         assert len(unit_id) == 1, "There should be only one identifier"
         unit_col = unit_id[0]
 
         # Make the ahRul dataset to have rul values as well
-        if self.data_name == 'NB14' and self.task_mode == 'ahRul':
-            folds_rul = ds['rul'][self.fold]
-            assert all([all(folds[key]['unit'] == folds_rul[key]['unit']) for key in ['train', 'val', 'test']]), "The units in NB14 rul and ahrul are not the same"
-            
+        if self.data_name == "NB14" and self.task_mode == "ahRul":
+            folds_rul = ds["rul"][self.fold]
+            assert all(
+                [
+                    all(folds[key]["unit"] == folds_rul[key]["unit"])
+                    for key in ["train", "val", "test"]
+                ]
+            ), "The units in NB14 rul and ahrul are not the same"
+
             # Add rul column to the ahrul task to construct the y
-            for key in ['train', 'val', 'test']:
-                folds[key] = pd.concat([folds[key], folds_rul[key]['rul']], axis=1)
-            
+            for key in ["train", "val", "test"]:
+                folds[key] = pd.concat([folds[key], folds_rul[key]["rul"]], axis=1)
+
             del folds_rul
 
         # allign UNIBO dataset with the NB1 and NB14
-        if unit_col == 'test_name':
-            folds['train'] = folds['train'].rename(columns={'test_name':'unit'})
-            folds['val'] = folds['val'].rename(columns={'test_name':'unit'})
-            folds['test'] = folds['test'].rename(columns={'test_name':'unit'})
-            unit_col = 'unit'
+        if unit_col == "test_name":
+            folds["train"] = folds["train"].rename(columns={"test_name": "unit"})
+            folds["val"] = folds["val"].rename(columns={"test_name": "unit"})
+            folds["test"] = folds["test"].rename(columns={"test_name": "unit"})
+            unit_col = "unit"
 
-        features_col = ds[self.task_mode].meta['features']
+        features_col = ds[self.task_mode].meta["features"]
         target_col = self.task_mode
 
-        if self.data_name == 'NB1':
+        if self.data_name == "NB1":
             # The features_col in 'NB1' is quite weird, so allign to UNIBO and NB14
-            folds['train'] = folds['train'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
-            folds['val'] = folds['val'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
-            folds['test'] = folds['test'].rename(columns={'voltage_battery':'voltage', 'current_battery':'current', 'temp_battery':'temperature'})
-            features_col = ['mode','voltage', 'current', 'temperature']
+            folds["train"] = folds["train"].rename(
+                columns={
+                    "voltage_battery": "voltage",
+                    "current_battery": "current",
+                    "temp_battery": "temperature",
+                }
+            )
+            folds["val"] = folds["val"].rename(
+                columns={
+                    "voltage_battery": "voltage",
+                    "current_battery": "current",
+                    "temp_battery": "temperature",
+                }
+            )
+            folds["test"] = folds["test"].rename(
+                columns={
+                    "voltage_battery": "voltage",
+                    "current_battery": "current",
+                    "temp_battery": "temperature",
+                }
+            )
+            features_col = ["mode", "voltage", "current", "temperature"]
 
-        
         # Process each split
         data = defaultdict(list)
-        for split in ['train', 'val', 'test']:
+        for split in ["train", "val", "test"]:
             df = folds[split]
             for unit_name in np.unique(df[unit_col]):
                 df_unit = df[df[unit_col] == unit_name]
-                data[split].append(process_unit(df_unit=df_unit, unit_name=unit_name, features_col=features_col, target_col=target_col))
+                data[split].append(
+                    process_unit(
+                        df_unit=df_unit,
+                        unit_name=unit_name,
+                        features_col=features_col,
+                        target_col=target_col,
+                    )
+                )
 
         # Convert to desired format
-        train = convert_outer_list_to_inner(data['train'])
-        val = convert_outer_list_to_inner(data['val'])
-        test = convert_outer_list_to_inner(data['test'])
+        train = convert_outer_list_to_inner(data["train"])
+        val = convert_outer_list_to_inner(data["val"])
+        test = convert_outer_list_to_inner(data["test"])
 
         out_dict = {}
         for key in train.keys():
@@ -114,28 +159,32 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
                 "train": train[key],
                 "val": val[key],
                 "test": test[key],
-                }
+            }
         logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
         logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
         return out_dict
 
-    
 
-    
 # Helper function to process a single unit
 def process_unit(df_unit, unit_name, features_col, target_col):
-    df_features = df_unit.reset_index(drop=True) #df_unit[features_col].copy().reset_index(drop=True)
+    df_features = df_unit.reset_index(
+        drop=True
+    )  # df_unit[features_col].copy().reset_index(drop=True)
     df_target = df_unit[target_col].copy().reset_index(drop=True)
-    #df_features = df_unit.copy().reset_index(drop=True)
+    # df_features = df_unit.copy().reset_index(drop=True)
 
     if df_unit.isna().any().any():
-        logger.info(f"NaN values detected in unit {unit_name}. Details:\n{df_unit.isna()}")
+        logger.info(
+            f"NaN values detected in unit {unit_name}. Details:\n{df_unit.isna()}"
+        )
         df_features = df_features.dropna()  # Optionally handle df_target too
 
     # check if df_target has infinity values
     if np.isinf(df_target).any():
-        logger.info(f"Infinity values detected in unit {unit_name}. Details:\n{df_target}")
+        logger.info(
+            f"Infinity values detected in unit {unit_name}. Details:\n{df_target}"
+        )
         # Replace inf with nan
         df_target = df_target.replace([np.inf, -np.inf], np.nan)
         # Find nan indexes
@@ -144,21 +193,23 @@ def process_unit(df_unit, unit_name, features_col, target_col):
         df_target = df_target.drop(nan_indexes)
         df_features = df_features.drop(nan_indexes)
         # Ensure the number of rows is the same
-        assert len(df_target) == len(df_features), "Mismatch after dropping nan/infinity rows"
+        assert len(df_target) == len(
+            df_features
+        ), "Mismatch after dropping nan/infinity rows"
 
-        
     return {
         "features": df_features,
         "timestamps": np.array(df_features.index),
         "target": df_target,
         "metadata": {
-            'unit_id': unit_name,
-            'unit_length': len(df_features),
-            'features_columns': features_col,
-            'target_col': target_col,
+            "unit_id": unit_name,
+            "unit_length": len(df_features),
+            "features_columns": features_col,
+            "target_col": target_col,
             "target_in_the_featurs": True,
-        }
+        },
     }
+
 
 def convert_outer_list_to_inner(data_list):
     if not data_list:
@@ -174,10 +225,10 @@ def convert_outer_list_to_inner(data_list):
     stacked = {}
     for key in keys:
         stacked[key] = [d[key] for d in data_list]
-        
+
     # Check that all keys in the stacked have the same length
     lengths = [len(stacked[key]) for key in stacked]
     if len(set(lengths)) != 1:
         raise ValueError("All keys in the stacked dict must have the same length.")
-    
-    return stacked  
+
+    return stacked

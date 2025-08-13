@@ -3,7 +3,7 @@ import unittest
 
 import hydra
 
-from lmetk.data.datasources.multi_source_loader import MultiUnitDataSource
+from lmetk.data.datasources.base.multi_source_loader import MultiUnitDataSource
 
 CONFIG_DIR = os.path.join(".", "assets", "configs")
 

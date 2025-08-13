@@ -16,3 +16,4 @@ scripts/*.log
 .venv
 *.egg-info
 build
+data

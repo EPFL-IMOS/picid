@@ -20,5 +20,10 @@
     "--tb=short",
     "--paths=rt_local"
   ],
-  "python-envs.pythonProjects": []
+  "python-envs.pythonProjects": [],
+
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+      "source.organizeImports": true
+  }
 }
