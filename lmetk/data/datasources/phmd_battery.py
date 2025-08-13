@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
@@ -25,6 +26,13 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         # self.source_names = list(kwargs.get('source_list', {}).keys())
         self.fold = kwargs["fold"]
         self.task_mode = kwargs["task_mode"]
+        self.cache_dir = kwargs.get("cache_dir", "data")
+
+        cache_path = Path(self.cache_dir).expanduser()
+        if not cache_path.exists():
+            cache_path.mkdir(parents=True, exist_ok=True)
+        self.cache_dir = str(cache_path)
+
         # Instantiate multisource_data_splitter if is not none
         assert (
             kwargs.get("multisource_data_splitter") == None
@@ -66,7 +74,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         self,
     ):
         # Load dataset and metadata
-        ds = datasets.Dataset(self.data_name, cache_dir="data")
+        ds = datasets.Dataset(self.data_name, cache_dir=self.cache_dir)
         task = ds[self.task_mode]
         folds = task[self.fold]  # fold_num = 0 by default
 

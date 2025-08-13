@@ -2,5 +2,5 @@ _target_: lmetk.data.datasources.phmd_battery.PHMDMultiSourceLoader
 
 fold: 0
 data_name: UNIBO21
-
 task_mode: soc
+cache_dir: ${paths.data_dir}/phmd_cache
