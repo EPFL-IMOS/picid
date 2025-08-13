@@ -14,8 +14,6 @@ class TimePFNWrapper(AbstractWrapper):
         backbone=TimePFN(AttributeDict(kwargs))
         super().__init__(backbone=backbone, **kwargs)
     
-        
-
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
 
@@ -29,6 +27,7 @@ class TimePFNWrapper(AbstractWrapper):
         dict
             Dictionary containing the updated model output.
         """
+        
         batch_x = batch['batch_x']
         batch_y = batch['batch_y']
         batch_x_mark = batch['batch_x_mark']

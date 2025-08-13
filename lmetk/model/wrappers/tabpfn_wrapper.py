@@ -61,7 +61,6 @@ class TabPFNWrapper(AbstractWrapper):
             'predictions': torch.Tensor(outputs).reshape(batch['target']['y'].shape),
             'targets': target
         }
-
         
         return model_out
 
