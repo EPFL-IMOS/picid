@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -57,6 +57,14 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface):
         self._is_isplitted = True
 
         return self.data_dict
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """
+        Return metadata about the data source.
+        This can include information like data source name, version, etc.
+        """
+        assert self._is_loaded, "Data must be loaded before getting metadata."
+        return {}
 
     def get_data_name(self) -> list[str]:
         """Return source data names."""
