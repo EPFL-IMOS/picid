@@ -13,6 +13,7 @@ import torch
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
 from lmetk.data.datasources import SingleSourceLoader

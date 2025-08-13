@@ -92,5 +92,5 @@ class SlidingWindowDataset(Dataset):
         # self.seq_len because we added self.seq_len
         return len(self.features) - self.seq_len - self.pred_len + 1
 
-    def collate_fn(self):
+    def get_collate_fn(self):
         return forecasting_collate_fn

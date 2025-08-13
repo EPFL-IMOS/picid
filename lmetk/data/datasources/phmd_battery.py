@@ -207,7 +207,7 @@ def process_unit(df_unit, unit_name, features_col, target_col):
 
     return {
         "features": df_features,
-        "timestamps": np.array(df_features.index),
+        "time_features": np.array(df_features.index),
         "target": df_target,
         "metadata": {
             "unit_id": unit_name,

@@ -62,5 +62,5 @@ class SlidingWindowBatchDataset(BaseDataset):
         )
         return seq_x, seq_y, seq_x_time, seq_y_time
 
-    def collate_fn(self):
+    def get_collate_fn(self):
         return forecasting_collate_fn

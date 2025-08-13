@@ -43,7 +43,7 @@ FixTimeFeatures:
     _target_:  lmetk.transforms.battery.nb1_transforms.FixTimeFeatures  # Your wrapper class
     
   metadata:
-    apply_to: timestamps
+    apply_to: time_features
     auxiliary_keys: ['features']
 
 scaler_target:

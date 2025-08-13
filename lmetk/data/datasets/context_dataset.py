@@ -23,14 +23,20 @@ class ContextBatchDataset(BaseDataset):
         stride: int = 1,
         **kwargs,
     ):
+        # Make sure that the data_dict contains the required keys
+        required_keys = ["features", "time_features"]
+        for key in required_keys:
+            if key not in data_dict:
+                raise ValueError(f"Data dictionary must contain the key: '{key}'")
+            
         self.target_feature = torch.from_numpy(data_dict["target"])
         self.context_features = torch.from_numpy(data_dict["features"])
-        self.timestamps = torch.from_numpy(data_dict["timestamps"])
+        self.time_features = torch.from_numpy(data_dict["time_features"])
 
         self.target_dataset = SlidingWindowBatchDataset(
             data_dict=dict(
                 features=self.target_feature,
-                timestamps=self.timestamps,
+                time_features=self.time_features,
             ),
             seq_len=seq_len,
             label_len=label_len,
@@ -40,7 +46,7 @@ class ContextBatchDataset(BaseDataset):
         self.context_dataset = SlidingWindowBatchDataset(
             data_dict=dict(
                 features=self.context_features,
-                timestamps=self.timestamps,
+                time_features=self.time_features,
             ),
             seq_len=seq_len,
             label_len=label_len,
