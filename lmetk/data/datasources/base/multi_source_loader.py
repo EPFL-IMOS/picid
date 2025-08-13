@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Any, Dict
 
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
@@ -82,6 +82,14 @@ class MultiSourceLoader(DataSourceLoaderInterface):
 
         else:
             return data_lst
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """
+        Return metadata about the data source.
+        This can include information like data source name, version, etc.
+        """
+        assert self._is_loaded, "Data must be loaded before getting metadata."
+        return {}
 
     def get_data_name(self) -> list[str]:
         """Return source data names."""
