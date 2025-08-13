@@ -1,10 +1,10 @@
 from typing import Dict
 
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
-from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
+from lmetk.data.preprocessing.splits import BySourceSplitter
 
 
 class MultiSourceLoader(DataSourceLoaderInterface):

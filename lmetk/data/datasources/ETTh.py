@@ -1,53 +1,54 @@
-import pandas as pd
-import numpy as np
-from omegaconf import DictConfig
-from lmetk.data.utils import time_features as railway_timefeatures
-from lmetk.data.timefeatures import time_features as timepfn_timefeatures
-from lmetk.data.datasources import DataSourceLoader
 import warnings
 
+import numpy as np
+import pandas as pd
+from omegaconf import DictConfig
 
+from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.timefeatures import time_features as timepfn_timefeatures
+from lmetk.data.utils import time_features as railway_timefeatures
 
 warnings.filterwarnings("ignore")
 
-class ETThLoader(DataSourceLoader):
+
+class ETThLoader(SingleSourceLoader):
     def __init__(
         self,
         data_path: str,
         timestamp_name: str,
-        task_mode: str, 
-        target_name: tuple[str,list], 
-        **kwargs
+        task_mode: str,
+        target_name: tuple[str, list],
+        **kwargs,
     ):
         super().__init__(
-            data_path=data_path, 
-            timestamp_name=timestamp_name, 
+            data_path=data_path,
+            timestamp_name=timestamp_name,
             task_mode=task_mode,
             target_name=target_name,
-            **kwargs
-            )
-    
+            **kwargs,
+        )
+
     def _load_data(self) -> dict:
         # Read raw CSV
         df, df_stamp = self.read_data()
-        
+
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
 
         return {
-            "features": df, 
-            "timestamps": df_stamp, 
-            "mask": mask, 
-            "columns": df.columns, 
+            "features": df,
+            "timestamps": df_stamp,
+            "mask": mask,
+            "columns": df.columns,
             "target_name": self.target_name,
-            "metadata": None, 
-            }
+            "metadata": None,
+        }
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         if self.task_mode in ["univariate"]:
             mask = np.array((df.columns == self.target_name))
-        else: 
+        else:
             mask = "TODO: need to be defined"
 
         return mask
@@ -65,14 +66,13 @@ class ETThLoader(DataSourceLoader):
         # Determine columns to use
         if self.task_mode in ["univariate"]:
             df = df[[self.target_name]]
-            
+
         return df, df_stamp
-    
+
     def _init_default_transforms(self):
-        default_transforms = getattr(self, 'loader_default_transforms', {})
+        default_transforms = getattr(self, "loader_default_transforms", {})
         return default_transforms
-       
-       
+
         # This has to go default loader transforms
         # # Extract time features
         # if self.load_arguments.timeenc == 'railway_timefeatures':

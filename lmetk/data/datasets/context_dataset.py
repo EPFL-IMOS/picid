@@ -25,12 +25,12 @@ class ContextBatchDataset(BaseDataset):
     ):
         self.target_feature = torch.from_numpy(data_dict["target"])
         self.context_features = torch.from_numpy(data_dict["features"])
-        self.time_features = torch.from_numpy(data_dict["timestamps"])
+        self.timestamps = torch.from_numpy(data_dict["timestamps"])
 
         self.target_dataset = SlidingWindowBatchDataset(
             data_dict=dict(
                 features=self.target_feature,
-                time_features=self.time_features,
+                timestamps=self.timestamps,
             ),
             seq_len=seq_len,
             label_len=label_len,
@@ -40,7 +40,7 @@ class ContextBatchDataset(BaseDataset):
         self.context_dataset = SlidingWindowBatchDataset(
             data_dict=dict(
                 features=self.context_features,
-                time_features=self.time_features,
+                timestamps=self.timestamps,
             ),
             seq_len=seq_len,
             label_len=label_len,

@@ -1,37 +1,37 @@
 import os
 import time
-from typing import Any, Union, Dict, List, Optional
+from abc import ABC, abstractmethod
 from collections import OrderedDict
-from numpy import ndarray
+from typing import Any, Dict, List, Optional, Union
 
 import hydra
+import numpy as np
+from numpy import ndarray
 from omegaconf import DictConfig, OmegaConf
 
-
-
+from lmetk.data.datasources import SingleSourceLoader
 from lmetk.transforms.data_transform import DataTransform
-import numpy as np
-from abc import ABC, abstractmethod
-from lmetk.data.datasources import DataSourceLoader
 from lmetk.transforms.transform_manager import ConfigTransformManager
 
 
 class PreProcessorInterface(ABC):
     """Preprocessor of data."""
 
-    def __init__(self, 
-                 datasource: Union[DataSourceLoader, DataSourceLoader], 
-                 transforms: ConfigTransformManager,
-                 logger=None,
-                 **kwargs):
+    def __init__(
+        self,
+        datasource: Union[SingleSourceLoader, SingleSourceLoader],
+        transforms: ConfigTransformManager,
+        logger=None,
+        **kwargs,
+    ):
         self.datasource = datasource
         self.transforms = transforms
         self.logger = logger
-        
-        
 
     @abstractmethod
-    def get_processed_data_dict(self,) ->  dict[str, dict[str, ndarray | list[ndarray]]]:
+    def get_processed_data_dict(
+        self,
+    ) -> dict[str, dict[str, ndarray | list[ndarray]]]:
         """
         Returns the final processed data
         the dictionary should be structured as follows:
@@ -46,8 +46,12 @@ class PreProcessorInterface(ABC):
         - other_named_tensor:
             - ...
         """
-        raise NotImplementedError("get_processed_data method not implemented.") 
-    
+        raise NotImplementedError("get_processed_data method not implemented.")
+
+    @abstractmethod
+    def get_meta_data_dict(self):
+        raise NotImplementedError("get_meta_data_dict method not implemented.")
+
     @abstractmethod
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
@@ -67,6 +71,3 @@ class PreProcessorInterface(ABC):
     def pipeline(self):
         """Run the preprocessing pipeline."""
         raise NotImplementedError("pipeline method not implemented.")
-
-
-   

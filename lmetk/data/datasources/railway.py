@@ -5,13 +5,13 @@ import pandas as pd
 from omegaconf import DictConfig
 from pyparsing import Any, Dict
 
-from lmetk.data.datasources import DataSourceLoader
+from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.utils import time_features
 
 warnings.filterwarnings("ignore")
 
 
-class RailwayLoader(DataSourceLoader):
+class RailwayLoader(SingleSourceLoader):
     def __init__(self, data_path, timestamp_name, task_mode, target_name, **kwargs):
         super().__init__(
             data_path=data_path,
@@ -38,7 +38,7 @@ class RailwayLoader(DataSourceLoader):
             "initial_dates": df_stamp,
         }
 
-    def get_meta_data(self) -> Dict[str, Any]:
+    def get_meta_data(self) -> dict[str, any]:
         meta_data = super().get_meta_data()
 
         return {

@@ -3,12 +3,11 @@ from typing import Any, Dict
 
 import numpy as np
 from box import Box
-from omegaconf import DictConfig
 
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
 
 
-class DataSourceLoader(DataSourceLoaderInterface):
+class SingleSourceLoader(DataSourceLoaderInterface):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

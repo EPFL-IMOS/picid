@@ -23,10 +23,17 @@ class SlidingWindowBatchDataset(BaseDataset):
         **kwargs,
     ):
         # Make sure that the stide covers all the data
+        features = data_dict["features"]
+        time_features = data_dict["timestamps"]
+
+        if not torch.is_tensor(features):
+            features = torch.from_numpy(features)
+        if not torch.is_tensor(time_features):
+            time_features = torch.from_numpy(time_features)
 
         self.feature_sequencer = AutoregressiveSequencer(
-            features=data_dict["features"],
-            time_features=data_dict["timestamps"],
+            features=features,
+            time_features=time_features,
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
