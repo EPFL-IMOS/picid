@@ -1,24 +1,26 @@
 from typing import List
 
-from numpy import ndarray
 import torch
+from numpy import ndarray
+
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 
 
-class SWBatchDataset(BaseDataset):
+class SlidingWindowBatchDataset(BaseDataset):
     """Efficient implementation of Standard 'sliding window' Time Series Dataset Class."""
+
     def __init__(
         self,
         # features: torch.Tensor,
         # time_features: torch.Tensor,
-        data_dict: dict[str, ndarray | list[ndarray]],         
+        data_dict: dict[str, ndarray | list[ndarray]],
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int,
-        **kwargs
+        **kwargs,
     ):
         # Make sure that the stide covers all the data
 
@@ -50,7 +52,6 @@ class SWBatchDataset(BaseDataset):
             batch_idx
         )
         return seq_x, seq_y, seq_x_time, seq_y_time
-
 
     def get_collate_fn(self):
         return forecasting_collate_fn

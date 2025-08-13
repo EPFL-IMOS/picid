@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasets.SWBatchDataset
+_target_: lmetk.data.datasets.SlidingWindowBatchDataset
 
 seq_len: ${task_definition.seq_len} 
 label_len: ${task_definition.label_len} 

@@ -1,61 +1,55 @@
-import pandas as pd
+import warnings
+
 import numpy as np
+import pandas as pd
 from omegaconf import DictConfig
 from pyparsing import Any, Dict
+
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.utils import time_features
-import warnings
 
 warnings.filterwarnings("ignore")
 
 
 class RailwayLoader(DataSourceLoader):
-    def __init__(
-        self,
-        data_path,
-        timestamp_name,
-        task_mode,
-        target_name,
-        **kwargs
-    ):
+    def __init__(self, data_path, timestamp_name, task_mode, target_name, **kwargs):
         super().__init__(
-            data_path=data_path, 
-            timestamp_name=timestamp_name, 
+            data_path=data_path,
+            timestamp_name=timestamp_name,
             task_mode=task_mode,
             target_name=target_name,
-            **kwargs
-            )
-
+            **kwargs,
+        )
 
     def _load_data(self):
         # Read raw CSV
-        df, df_target, df_stamp = self.read_data()        
+        df, df_target, df_stamp = self.read_data()
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         self.mask = self.extract_mask(df)
 
-        assert all(self.mask) == False, \
-            "For the datasets that potentially can have context, avoid placing the target in features, as it should be done with the preprocessing as an transformation."
+        assert (
+            all(self.mask) == False
+        ), "For the datasets that potentially can have context, avoid placing the target in features, as it should be done with the preprocessing as an transformation."
 
         return {
             "features": df,
             "target": df_target,
             "timestamps": df_stamp,
-
             "initial_dates": df_stamp,
         }
 
-
     def get_meta_data(self) -> Dict[str, Any]:
+        meta_data = super().get_meta_data()
+
         return {
+            **meta_data,
             "mask": self.mask,
         }
-
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = np.array((df.columns == self.target_name))
         return mask
-
 
     def read_data(self):
         # Read raw CSV
