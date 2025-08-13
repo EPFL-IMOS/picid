@@ -72,7 +72,15 @@ class PreProcessor(PreProcessorInterface):
                 ...
             }
         }
+
+        If return_splits_on_first_level is True, the function will return the splits at the first level.
         """
+        self.data_lst[0]["mask"] = {
+            "train": self.data_lst[0]["mask"].copy(),
+            "val": self.data_lst[0]["mask"].copy(),
+            "test": self.data_lst[0]["mask"].copy()
+        }
+
         if not self._is_preprocessed or self.data_lst is None:
             raise RuntimeError("Data has not been preprocessed. Please run the pipeline() first.")
 

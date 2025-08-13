@@ -24,7 +24,7 @@ class SWBatchDataset(BaseDataset):
 
         self.feature_sequencer = AutoregressiveSequencer(
             features=data_dict["features"],
-            time_features=data_dict["time_features"],
+            time_features=data_dict["timestamps"],
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
@@ -51,6 +51,6 @@ class SWBatchDataset(BaseDataset):
         )
         return seq_x, seq_y, seq_x_time, seq_y_time
 
-    @staticmethod
-    def collate_fn(batch):
-        return forecasting_collate_fn(batch)
+
+    def get_collate_fn(self):
+        return forecasting_collate_fn

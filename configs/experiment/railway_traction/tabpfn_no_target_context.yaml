@@ -2,7 +2,7 @@
 defaults:
   - override /datasource: railway
   - override /dataset: context_batch
-  - override /datamodule: context_datamodule
+  - override /datamodule: base_datamodule_tabpfn
   - override /model: tabpfn_refactor
   - override /evaluator: railway
   - override /task_definition: railway_day_ahead

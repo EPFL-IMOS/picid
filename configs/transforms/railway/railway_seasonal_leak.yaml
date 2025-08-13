@@ -44,9 +44,17 @@ scaler_timefeatures:
     fit_on: train
 
 concatenate_features:
+  # Concatenate time-features to the feature set
   transform:
     _target_: lmetk.transforms.concatenate.ConcatenateTransform
   
   metadata:
     apply_to: features
     auxiliary_keys: ['timestamps'] 
+
+# tabularizer:
+#   transform:
+#     _target_: lmetk.transforms.tabularization.TabularizationTransform
+#   metadata:
+#     apply_to: features
+#     auxiliary_keys: ['target'] 

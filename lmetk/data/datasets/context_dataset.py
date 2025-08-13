@@ -13,28 +13,33 @@ class ContextBatchDataset(BaseDataset):
         # context: torch.Tensor,
         # target: torch.Tensor,
         # time_features: torch.Tensor,
-        data_dict: dict[str, ndarray | list[ndarray]],         
+        data_dict: dict[str, ndarray | list[ndarray]],
+        meta_data_dict: dict[str, any],
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
         **kwargs
     ):
-        self.target_feature = data_dict["target"]
-        self.context_features = data_dict["context"]
-        self.time_features = data_dict["time"]
+        self.target_feature = torch.from_numpy(data_dict["target"])
+        self.context_features = torch.from_numpy(data_dict["features"])
+        self.time_features = torch.from_numpy(data_dict["timestamps"])
 
         self.target_dataset = SWBatchDataset(
-            features=self.target_feature,
-            time_features=self.time_features,
+            data_dict=dict(
+                features=self.target_feature,
+                time_features=self.time_features,
+            ),
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
         )
         self.context_dataset = SWBatchDataset(
-            features=self.context_features,
-            time_features=self.time_features,
+            data_dict=dict(
+                features=self.context_features,
+                time_features=self.time_features,
+            ),
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
@@ -74,6 +79,6 @@ class ContextBatchDataset(BaseDataset):
         })
         return AttributeDict(d)
     
-    @staticmethod
+
     def get_collate_fn(self):
         return context_collate_fn

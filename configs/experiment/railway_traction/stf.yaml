@@ -3,7 +3,7 @@
 defaults:
   - override /datasource: railway
   - override /dataset: context_batch
-  - override /datamodule: context_datamodule
+  - override /datamodule: base_datamodule
   - override /model: stf
   - override /evaluator: railway
   - override /task_definition: railway_day_ahead

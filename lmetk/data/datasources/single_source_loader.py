@@ -21,6 +21,7 @@ class DataSourceLoader(DataSourceLoaderInterface):
         # Split flag, create before load, as some datasets might have predefined splits, hence then _load_data method has to upadte self._is_splitted flag
         self._is_splitted = False
         
+        # TODO: Move the data loading to get_data
         # Load the data
         self.data_dict.update(self._load_data())
         self.data_name = kwargs['data_name']
@@ -32,11 +33,13 @@ class DataSourceLoader(DataSourceLoaderInterface):
             self.data_splitter = kwargs['data_splitter']
             self.split_data(kwargs)
     
+
     @abstractmethod
     def _load_data(self) -> Dict[str, np.ndarray]:
         """Load data from the data source."""
         raise NotImplementedError("Subclasses must implement this method.")
     
+
     def split_data(self, kwargs):
         # Check if splits already has been predefined and done during the loading
         if not self._is_splitted:
@@ -46,13 +49,16 @@ class DataSourceLoader(DataSourceLoaderInterface):
 
             self._is_splitted = True
     
+
     def get_data(self) -> Dict[str, np.ndarray]:
         """Return splitted data dict."""
         return self.data_dict
     
+
     def get_data_name(self):
         """Return data name."""
         return self.data_name
+
 
     def _split_data(self, variable) ->  Dict[str, np.ndarray]:
         assert self._is_loaded, "Data must be loaded before splitting."

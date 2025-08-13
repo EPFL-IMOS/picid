@@ -117,5 +117,18 @@
             ],
             "env": {"HYDRA_FULL_ERROR": "1"}
         },
+        {
+            "name": "XJTU_SY : TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local", 
+                "experiment=xjtu_sy/tabpfn",
+                "debug=default"
+            ],
+            "env": {"HYDRA_FULL_ERROR": "1"}
+        },
     ]
 }

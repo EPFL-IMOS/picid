@@ -70,13 +70,17 @@ class MultiSourceLoader(DataSourceLoaderInterface):
         
         else:
             return data_lst
+        
+
     def get_data_name(self) -> list[str]:
         """Return source data names."""
         return self.source_names
     
+
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
+
 
     def split_data(self, data_lst: list[Dict], source_names: list[str]):
         assert isinstance(self.multisource_data_splitter, BySourceSplitter), "multisource_data_splitter must be an instance of BySourceSplitter"

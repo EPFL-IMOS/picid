@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Any, Dict
 from box import Box
 import numpy as np
 from omegaconf import DictConfig
@@ -32,6 +32,13 @@ class DataSourceLoaderInterface(ABC):
     @abstractmethod
     def get_data(self) -> Dict[str, np.ndarray]:
         pass
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """
+        Return metadata about the data source.
+        This can include information like data source name, version, etc.
+        """
+        return {}
 
     @abstractmethod
     def get_data_name(self) -> str:

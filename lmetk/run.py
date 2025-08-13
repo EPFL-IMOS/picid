@@ -38,6 +38,7 @@ from lmetk.transforms.transform_manager import ConfigTransformManager
 from lmetk.data.datasources import DataSourceLoader
 from lmetk.data.datasources.multi_source_loader import MultiSourceLoader    
 from lmetk.data.datasources.phmd_battery import PHMDMultiSourceLoader
+from lmetk.data.datasources.xjtu_sy import PHMDMultiSourceLoader as XJTUPHMDMultiSourceLoader
 
 
 def get_hydra_override(key: str):
@@ -240,7 +241,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
     log.info("Transforms with auxiliary keys:" + str(list(aux_transforms.keys())))
 
-    if isinstance(dataset_source, DataSourceLoader) or isinstance(dataset_source, PHMDMultiSourceLoader):
+    if isinstance(dataset_source, DataSourceLoader) \
+       or isinstance(dataset_source, PHMDMultiSourceLoader) \
+       or isinstance(dataset_source, XJTUPHMDMultiSourceLoader):
         preprocessor_mode = "per_unit"
     
     elif isinstance(dataset_source, MultiSourceLoader):

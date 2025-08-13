@@ -57,5 +57,6 @@ class HydraConcatDataset(BaseConcatDataset):
 
         super().__init__(datasets)
 
+
     def get_collate_fn(self):
         return self.collate_fn

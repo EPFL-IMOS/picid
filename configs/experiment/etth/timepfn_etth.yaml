@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - override /datasource: ETTh1
-  - override /dataset: sw_batch
+  - override /dataset: sliding_window_batch
   - override /datamodule: base_datamodule
   - override /model: timepfn
   - override /evaluator: default
