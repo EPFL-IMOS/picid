@@ -6,6 +6,7 @@ from numpy import ndarray
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
+from lmetk.data.utils import to_torch_tensor
 
 
 class SlidingWindowBatchDataset(BaseDataset):
@@ -29,8 +30,8 @@ class SlidingWindowBatchDataset(BaseDataset):
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
             
         # Convert the data_dict["features"] and data_dict["time_features"] to torch.Tensor
-        features = torch.Tensor(data_dict["features"])
-        time_features = torch.Tensor(data_dict["time_features"])
+        features = to_torch_tensor(data_dict["features"])
+        time_features = to_torch_tensor(data_dict["time_features"])
 
         # TODO: Make sure that the stride covers all the data
         self.feature_sequencer = AutoregressiveSequencer(

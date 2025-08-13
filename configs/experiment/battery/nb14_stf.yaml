@@ -5,7 +5,7 @@ defaults:
   - override /transforms: battery/bosello_NB_base
   - override /model: stf
   - override /dataset: battery_rul_multiunit_dataset
-  - override /datamodule: base_datamodule_tabpfn
+  - override /datamodule: base_datamodule
   - override /evaluator: default
   - override /task_definition: battery_phmd
   #- override /trainer: cpu
