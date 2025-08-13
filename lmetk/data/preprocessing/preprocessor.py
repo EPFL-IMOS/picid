@@ -59,7 +59,11 @@ class PreProcessor(PreProcessorInterface):
         self._is_preprocessed = False
 
     def get_meta_data_dict(self):
-        return self.datasource.get_meta_data()
+        if hasattr(self.datasource, "get_meta_data") and callable(getattr(self.datasource, "get_meta_data", None)):
+            meta_data_dict = self.datasource.get_meta_data()
+        else:
+            meta_data_dict = {}
+        return meta_data_dict
 
     def get_processed_data_dict(
         self, return_splits_on_first_level: bool = False
@@ -115,7 +119,11 @@ class PreProcessor(PreProcessorInterface):
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
-        meta_data_lst = self.datasource.get_meta_data()
+        
+        if hasattr(self.datasource, "get_meta_data") and callable(getattr(self.datasource, "get_meta_data", None)):
+            meta_data_lst = self.datasource.get_meta_data()
+        else:
+            meta_data_lst = [{}]
 
         # Ensure all outputs are lists for consistent processing
         if not isinstance(data_lst, list):
@@ -147,21 +155,11 @@ class PreProcessor(PreProcessorInterface):
                 # Removed detailed print statements for each transform application.
 
                 logger.info(f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})")
-                if self.logger:
-                    self.logger.info(
-                        f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})"
-                    )
                 start_time = time.time()
                 current_data = transform.forward(current_data)
                 end_time = time.time()
                 logger.info(f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds.")
             
-
-                if self.logger:
-                    self.logger.info(
-                        f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds."
-                    )
-
             transformed_data_lst.append(current_data)
         return transformed_data_lst
 
