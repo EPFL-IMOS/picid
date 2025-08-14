@@ -458,24 +458,12 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
     def model_step(self, batch, stage: str) -> dict:
         model_out = super().model_step(batch, stage)
         # TODO: (Raffael)  what is going on here?
-        model_out['loss'] = 1 
-        return model_out 
-    
+        model_out['loss'] = torch.tensor([1])
+        return model_out
 
-    def configure_optimizers(self) -> dict[str, Any]:
-        """Configure optimizers and learning-rate schedulers.
+    @property
+    def automatic_optimization(self):
+        return False
 
-        Choose what optimizers and learning-rate schedulers to use in your
-        optimization. Normally you'd need one. But in the case of GANs or
-        similar you might have multiple.
-
-        Examples:
-            https://lightning.ai/docs/pytorch/latest/common/lightning_module.html#configure-optimizers
-
-        Returns
-        -------
-        dict:
-            A dict containing the configured optimizers and learning-rate schedulers to be used for training.
-        """
-        optimizer_config = {"optimizer": torch.optim.Adam([torch.Tensor([0])])}
-        return optimizer_config
+    def configure_optimizers(self):
+        return None
