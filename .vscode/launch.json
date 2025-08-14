@@ -4,16 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Python Debugger: main [etth1]",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "C:/Users/Raffael/Documents/Datasets/standard_timeseries_ds",
-                    "--working_dir", "testwdir",
-                    "--exp_name=etth1_batched_sample_inference"]
+            "args": [
+                "--dataset_dir",
+                "C:/Users/Raffael/Documents/Datasets/standard_timeseries_ds",
+                "--working_dir",
+                "testwdir",
+                "--exp_name=etth1_batched_sample_inference"
+            ]
         },
         {
             "name": "Python Debugger: main [wind_farm]",
@@ -21,9 +24,13 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "datasets",
-                    "--working_dir", "testwdir",
-                    "--exp_name=wind_farm"]
+            "args": [
+                "--dataset_dir",
+                "datasets",
+                "--working_dir",
+                "testwdir",
+                "--exp_name=wind_farm"
+            ]
         },
         {
             "name": "Python Debugger: main [railway traction]",
@@ -31,9 +38,13 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "datasets",
-                    "--working_dir", "testwdir",
-                    "--exp_name=railway_traction"]
+            "args": [
+                "--dataset_dir",
+                "datasets",
+                "--working_dir",
+                "testwdir",
+                "--exp_name=railway_traction"
+            ]
         },
         {
             "name": "Python Debugger: main [default]",
@@ -41,8 +52,12 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "datasets",
-                    "--working_dir", "testwdir"]
+            "args": [
+                "--dataset_dir",
+                "datasets",
+                "--working_dir",
+                "testwdir"
+            ]
         },
         {
             "name": "Python Debugger: Current File",
@@ -50,8 +65,12 @@
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["--dataset_dir", "C:/Users/Raffael/Documents/Datasets/wind_farm_dataset/Data_Per_Wind_Farm",
-                    "--working_dir", "testwdir"]
+            "args": [
+                "--dataset_dir",
+                "C:/Users/Raffael/Documents/Datasets/wind_farm_dataset/Data_Per_Wind_Farm",
+                "--working_dir",
+                "testwdir"
+            ]
         },
         {
             "name": "Railway Traction: Spacetimeformer (STF)",
@@ -60,11 +79,13 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=railway_traction/stf",
                 "debug=default"
             ],
-            "env": {"HYDRA_FULL_ERROR": "1"}
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
         },
         {
             "name": "Railway Traction: Linear Model (Linear_Forecaster)",
@@ -73,11 +94,13 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=railway_traction/linear_forecaster",
                 "debug=default"
             ],
-            "env": {"HYDRA_FULL_ERROR": "1"}
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
         },
         {
             "name": "Railway Traction: TabPFN",
@@ -86,7 +109,7 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=railway_traction/tabpfn_railway_seasonal_context",
                 "debug=default"
             ]
@@ -98,11 +121,28 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=concepts_n_cmapss/tabpfn",
                 "debug=default"
             ],
-            "env": {"HYDRA_FULL_ERROR": "1"}
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "NB1 Battery: TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=battery/nb1_tabpfn",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
         },
         {
             "name": "NB14 Battery: TabPFN",
@@ -111,11 +151,13 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=battery/nb14_tabpfn",
                 "debug=default"
             ],
-            "env": {"HYDRA_FULL_ERROR": "1"}
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
         },
         {
             "name": "XJTU_SY : TabPFN",
@@ -124,11 +166,13 @@
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
-                "paths=rt_local", 
+                "paths=rt_local",
                 "experiment=xjtu_sy/tabpfn",
                 "debug=default"
             ],
-            "env": {"HYDRA_FULL_ERROR": "1"}
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
         },
     ]
 }
