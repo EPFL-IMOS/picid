@@ -1,5 +1,5 @@
 _target_: lmetk.data.datasources.xjtu_sy.PHMDMultiSourceLoader
 fold: 0
-data_name: NB1
-task_mode: rul
+data_name: XJTU-SY
+task_mode: rul # rul, fault
 cache_dir: ${paths.data_dir}/phmd_cache
