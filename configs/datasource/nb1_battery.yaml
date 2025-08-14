@@ -1,6 +1,0 @@
-_target_: lmetk.data.datasources.phmd_battery.PHMDMultiSourceLoader
-
-fold: 0
-data_name: NB1
-task_mode: rul
-cache_dir: ${paths.data_dir}/phmd_cache
