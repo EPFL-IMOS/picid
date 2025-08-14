@@ -47,11 +47,17 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         self.fold = kwargs["fold"]
         self.task_mode = kwargs["task_mode"]
         self.cache_dir = kwargs["cache_dir"]
+        self.auxiliary_tasks = kwargs.get("auxiliary_tasks", [])
 
         cache_path = Path(self.cache_dir).expanduser()
         if not cache_path.exists():
             cache_path.mkdir(parents=True, exist_ok=True)
         self.cache_dir = str(cache_path)
+
+        self._is_isplitted = False
+        self._is_loaded = False
+        self.data_dict = None
+        self.meta_data = None
 
         # Instantiate multisource_data_splitter if is not none
         assert (
@@ -60,7 +66,9 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         self.multisource_data_splitter = "For PHMD, multisource_data_splitter is not supported. PHMD are given with splits."
 
     def __repr__(self) -> str:
-        return f"MultiSource(sources={len(self.data_source_dict)} units)"
+        if self._is_loaded:
+            return f"MultiSource(sources={len(self.data_source_dict)} units)"
+        return "MultiSource(unloaded)"
 
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
@@ -69,9 +77,6 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
             dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
 
         """
-
-        # Load data from each source
-        # Load sources
         self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
@@ -84,7 +89,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         This can include information like data source name, version, etc.
         """
         assert self._is_loaded, "Data must be loaded before getting metadata."
-        return {}
+        return self.meta_data
 
     def get_data_name(self) -> list[str]:
         """Return source data names."""
@@ -99,48 +104,91 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
             "PHMD does not support data splitting. The project relies on predefined splits."
         )
 
-    def _load_data(self):
+    def _init_phmd_dataset(self, task_names):
 
         ds = datasets.Dataset(self.data_name, cache_dir=self.cache_dir)
-        task = ds[self.task_mode]
-        meta_data = task.meta
-        folds = task[self.fold]  # fold_num = 0 by default
 
-        features_col = meta_data["features"]
-        unit_id = meta_data["identifier"]
-        assert len(unit_id) == 1, "There should be only one identifier"
+        tasks_fold_dict = {}
+        for t in task_names:
+            task = ds.get_task(t)
+            fold = task[self.fold]
+            if t == self.task_mode:
+                # Extract the main task meta data
+                self.meta_data = task.meta
 
-        unit_col = unit_id[0]
-        target_col = self.task_mode
-        features_col = ["mode", "voltage", "current", "temperature"]
+            tasks_fold_dict[t] = fold
+        return tasks_fold_dict
+
+    def _load_data(self):
+
+        tasks_fold_dict = self._init_phmd_dataset(
+            self.auxiliary_tasks + [self.task_mode]
+        )
+
+        main_fold = tasks_fold_dict[self.task_mode]
+        auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
+        auxiliary_tasks_fold_dict.pop(self.task_mode, None)
+        main_fold = self._preprocess_fold(main_fold, auxiliary_tasks_fold_dict)
 
         # Process each split
         data = defaultdict(list)
+        unit_col = self._get_unit_column()
+
         for split in ["train", "val", "test"]:
-            df = folds[split]
+            df = main_fold[split]
             for unit_name in np.unique(df[unit_col]):
                 df_unit = df[df[unit_col] == unit_name]
                 data[split].append(
                     self._process_unit(
                         df_unit=df_unit,
                         unit_name=unit_name,
-                        features_col=features_col,
-                        target_col=target_col,
+                        features_col=self._get_features_columns(),
+                        target_col=self._get_target_column(),
                     )
                 )
+
+        # The data structure in data is:
+        # {
+        #     "train": [unit1_data, unit2_data, ...],
+        #     "val": [unit1_data, unit2_data, ...],
+        #     "test": [unit1_data, unit2_data, ...]
+        # }
+        # where unitx_data has the structure
+        # {
+        #     "features": ...,
+        #     "timestamps": ...,
+        #     "target": ...,
+        #     "metadata":
+        # }
 
         # Convert to desired format
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
         test = convert_outer_list_to_inner(data["test"])
 
+        # Now train has the structure
+        # {
+        #     "features": [unit1_data, unit2_data, ...],
+        #     "timestamps": [unit1_data, unit2_data, ...],
+        #     "target": [unit1_data, unit2_data, ...],
+        #     "metadata": [unit1_data, unit2_data, ...]
+        # }
+
         out_dict = {}
-        for key in train.items():
+        for key in train.keys():
             out_dict[key] = {
                 "train": train[key],
                 "val": val[key],
                 "test": test[key],
             }
+
+        # Now the structure is
+        # {
+        #     "features": {"train": [...], "val": [...], "test": [...]},
+        #     "timestamps": {"train": [...], "val": [...], "test": [...]},
+        #     "target": {"train": [...], "val": [...], "test": [...]},
+        #     "metadata": {"train": [...], "val": [...], "test": [...]}
+        # }
 
         logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
@@ -152,5 +200,23 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         raise NotImplementedError("Subclasses must implement _process_unit")
 
     @abstractmethod
-    def _rename_columns(self, folds):
+    def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
+        """
+        Preprocess the fold for the main task
+        """
         raise NotImplementedError("Subclasses must implement _rename_columns")
+
+    @abstractmethod
+    def _get_features_columns(self) -> list[str]:
+        """Return the list of feature columns."""
+        raise NotImplementedError("Subclasses must implement _get_features_columns")
+
+    @abstractmethod
+    def _get_target_column(self) -> str:
+        """Return the target column name."""
+        raise NotImplementedError("Subclasses must implement _get_target_column")
+
+    @abstractmethod
+    def _get_unit_column(self) -> str:
+        """Return the unit column name."""
+        raise NotImplementedError("Subclasses must implement _get_unit_column")

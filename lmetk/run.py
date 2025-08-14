@@ -10,18 +10,18 @@ import hydra
 import lightning as L
 import numpy as np
 import torch
+from hydra.core.hydra_config import HydraConfig
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
-from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
 from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
-from lmetk.data.datasources.phmd_battery import PHMDMultiSourceLoader
-from lmetk.data.datasources.xjtu_sy import (
-    PHMDMultiSourceLoader as XJTUPHMDMultiSourceLoader,
+from lmetk.data.datasources.base.phmd_loader import (
+    PHMDMultiSourceLoader as BasePHMDLoader,
 )
+from lmetk.data.datasources.phmd_battery import PHMDMultiSourceLoader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.pipeline.base import ConstantLossLightningModule
 from lmetk.transforms.transform_manager import ConfigTransformManager
@@ -120,7 +120,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     if (
         isinstance(dataset_source, SingleSourceLoader)
         or isinstance(dataset_source, PHMDMultiSourceLoader)
-        or isinstance(dataset_source, XJTUPHMDMultiSourceLoader)
+        or isinstance(dataset_source, BasePHMDLoader)
     ):
         preprocessor_mode = "per_unit"
 
@@ -130,9 +130,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     else:
         raise ValueError("Invalid dataset source type")
 
-    preprocessor = PreProcessor(
-        preprocessor_mode, dataset_source, transforms_manager
-    )
+    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
     preprocessor.pipeline()
 
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
