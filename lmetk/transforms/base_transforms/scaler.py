@@ -1,14 +1,38 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Optional
 
-# Example: Adapter for sklearn.preprocessing.StandardScaler
+import numpy as np
+from numpy import ndarray
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
-from lmetk.transforms.utils import _convert_to_numpy
+from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 logger = logging.getLogger(__name__)
+
+
+class ConstantScaler(BaseTransform, BaseMultiSourceTransformMixin):
+    def __init__(self, factor=1.0):
+        super().__init__()
+        self.factor = factor
+
+    def fit_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
+        """This transform do not require fitting."""
+        return self
+
+    def transform_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
+        return data_segment * self.factor
 
 
 class MinMaxScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
