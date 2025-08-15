@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import torch
 from lightning_fabric.utilities.data import AttributeDict
 
+
 class AbstractWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.
 
@@ -22,7 +23,6 @@ class AbstractWrapper(ABC, torch.nn.Module):
         super().__init__()
         self.backbone = backbone
         self.kwargs = AttributeDict(kwargs)
-        
 
     def __repr__(self):
         return f"{self.__class__.__name__}(backbone={self.backbone}, out_channels={self.backbone.out_channels}, dimensions={self.dimensions}, residual_connections={self.residual_connections})"
@@ -43,10 +43,8 @@ class AbstractWrapper(ABC, torch.nn.Module):
             Dictionary containing the model output.
         """
         model_out = self.forward(batch)
-        
-        return model_out
 
-    
+        return model_out
 
     @abstractmethod
     def forward(self, batch):
@@ -54,6 +52,6 @@ class AbstractWrapper(ABC, torch.nn.Module):
 
         Parameters
         ----------
-        batch : dict 
+        batch : dict
             Batch object containing the batched data.
         """
