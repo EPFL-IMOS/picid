@@ -9,7 +9,7 @@ defaults:
 
   - override /task_definition: concepts_n_cmapss_rul_prediction
   - override /datasource: concepts_n_cmapss_multi_source
-  - override /dataset: concept_rul_multiunit_dataset #sliding_window
+  - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
   - override /transforms: concepts_n_cmapss/concepts_n_cmapss_multisource_extended
 
 task_definition:

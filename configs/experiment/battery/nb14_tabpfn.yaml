@@ -4,7 +4,7 @@ defaults:
   - override /datasource: nb14
   - override /transforms: battery/bosello_NB_base
   - override /model: tabpfn_refactor
-  - override /dataset: battery_rul_multiunit_dataset
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd

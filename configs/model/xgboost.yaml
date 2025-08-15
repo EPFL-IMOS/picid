@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.xgboost_wrapper.XGBoostWrapper
+_target_: lmetk.model.wrappers.batchcontext_xgboost_wrapper.BatchContextXGBoostWrapper
 
 # There values will be read from the model parameters similarly to how we deal with data_path.
 seq_len: 168      # window size

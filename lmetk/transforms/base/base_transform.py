@@ -14,7 +14,7 @@ class BaseTransform(ABC):
     Simplified base transform interface. Transforms only need to implement
     the core transformation logic, not the fitting strategies.
     """
-    
+
     @abstractmethod
     def transform_data(self, 
                       data_segment: ndarray | list[ndarray] , 
@@ -22,7 +22,7 @@ class BaseTransform(ABC):
                       ) -> Any:
         """
         Transform a single data segment.
-        
+
         Parameters
         ----------
         data : Any
@@ -41,7 +41,6 @@ class BaseTransform(ABC):
         Override this method for transforms that need fitting.
         """
         return self
-    
 
     def supports_multi_source_fit(self) -> bool:
         """
@@ -49,11 +48,10 @@ class BaseTransform(ABC):
         Override to return True if the transform can handle aggregated data from multiple sources.
         """
         return True  # Most transforms can handle concatenated data
-    
 
     def __repr__(self):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         exclude_str = f"exclude_keys={self.exclude_keys!r}"
         if args:
             return f"{self.__class__.__name__}({exclude_str}, {args})"
-        return f"{self.__class__.__name__}({exclude_str})"   
+        return f"{self.__class__.__name__}({exclude_str})"
