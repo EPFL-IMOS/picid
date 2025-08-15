@@ -1,7 +1,7 @@
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
   
   metadata:
     apply_to: features
@@ -9,7 +9,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
   
   metadata:
     apply_to: target
@@ -38,23 +38,3 @@ concatenate_features:
   metadata:
     apply_to: features
     auxiliary_keys: ['timestamps', 'target'] 
-
-# dummy_leak_seasonal:
-# # Note that shift is infered from the seq_len of the model. Dummy shift supports only 168, otherwise the shift breaks the week symmetry. 
-#   transform:
-#     _target_: lmetk.transforms.seasonal_dummy_railway.SeasonalDummyTransform #lmetk.transforms.dummy_railway.RailwayDummyTransform
-#     shift: ${oc.select:model.seq_len} # we have to ensure that context from target do not have any future information!
-  
-#   metadata:
-#     apply_to: features
-#     auxiliary_keys: ['target', 'initial_dates']   
-
-# dummy_leak:
-#   # Note that for time_pfn we use dummy leak with shift 24 (the same as effective prediction length)
-#   transform:
-#     _target_: lmetk.transforms.dummy_railway.RailwayDummyTransform #
-#     shift: 24 # we have to ensure that context from target do not have any future information!
-  
-#   metadata:
-#     apply_to: features
-#     auxiliary_keys: ['target', 'initial_dates']   

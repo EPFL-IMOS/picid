@@ -29,27 +29,25 @@ class BaseMultiSourceUnitWiseTransformMixin(ABC):
     def fit_multi_source(
         self,
         data_segments: list[ndarray],
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Get all train sources and fit the scalers to them.
         """
 
         train = np.concatenate(data_segments, axis=0)
-        self.fit_data(train, mode=mode, auxiliary_data=auxiliary_data)
+        self.fit_data(train, metadata=metadata)
 
     def transform_multi_source(
         self,
         data_segments: list[ndarray],
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> list[ndarray]:
         """
         Transform the data from all sources using the fitted scalers.
         """
         return [
-            self.transform_data(data_segment, mode=mode, auxiliary_data=auxiliary_data)
+            self.transform_data(data_segment, metadata=metadata)
             for data_segment in data_segments
         ]
 
@@ -62,8 +60,7 @@ class ConstantScaler(BaseTransform, BaseMultiSourceTransformMixin):
     def fit_data(
         self,
         data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """This transform do not require fitting."""
         return self
@@ -71,7 +68,6 @@ class ConstantScaler(BaseTransform, BaseMultiSourceTransformMixin):
     def transform_data(
         self,
         data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         return data_segment * self.factor

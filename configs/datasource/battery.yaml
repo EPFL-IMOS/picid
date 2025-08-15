@@ -30,7 +30,7 @@ data_splitter:
 data_default_transforms:
   scaler_features:
     transform:
-      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+      _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
     
     metadata:
       apply_to: features
@@ -38,7 +38,7 @@ data_default_transforms:
   
   scaler_target:
     transform:
-      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+      _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
     
     metadata:
       apply_to: target
@@ -46,7 +46,7 @@ data_default_transforms:
   
   scaler_timefeatures:
     transform:
-      _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+      _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
     
     metadata:
       apply_to: timestamps
@@ -59,13 +59,3 @@ data_default_transforms:
     metadata:
       apply_to: features
       auxiliary_keys: ['timestamps'] 
-
-# Dropping autocorrelated features harms the performance 
-# drop_autocorrelated_features:
-# transform:
-#   _target_: lmetk.transforms.autocorr_drop.AutocorrFeatureDropTransform
-#   correlation_threshold: 0.95
-
-# metadata:
-#   apply_to: features
-#   fit_on: train

@@ -18,8 +18,8 @@ class BaseTransform(ABC):
     @abstractmethod
     def transform_data(self, 
                       data_segment: ndarray | list[ndarray] , 
-                      auxiliary_data: Optional[Dict[str, Any]] = None, 
-                      mode: Optional[str] = None) -> Any:
+                      metadata: Optional[Dict[str, Any]] = None
+                      ) -> Any:
         """
         Transform a single data segment.
         
@@ -27,17 +27,15 @@ class BaseTransform(ABC):
         ----------
         data : Any
             The data to transform
-        auxiliary_data : Optional[Dict[str, Any]]
-            Additional data needed for transformation
-        mode : Optional[str]
-            Transformation mode (e.g., 'train', 'val', 'test')
+        metadata : Optional[Dict[str, Any]]
+            Additional data needed for transformation, Transformation mode (e.g., 'train', 'val', 'test')
         """
         pass
     
     
     def fit_data(self, 
                  data_segment: ndarray | list[ndarray], 
-                 auxiliary_data: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
+                 metadata: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
         """
         Fit the transform on data. Default implementation does nothing (for stateless transforms).
         Override this method for transforms that need fitting.

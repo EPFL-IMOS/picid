@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
-
+import omegaconf
 # Import your strategy and base transform classes
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
@@ -52,43 +52,57 @@ class DataTransform:
         self.metadata = metadata
 
         self.apply_to = metadata.get("apply_to", None)
-        self.fit_on = metadata.get("fit_on", None)
-        self.auxiliary_keys = metadata.get("auxiliary_keys", None)
-        self.multi_source_fit = metadata.get("multi_source_fit", False)
-
         if self.apply_to is None:
             raise ValueError(
                 f"Metadata for transform '{transform_name}' must specify 'apply_to' key."
             )
+        # Ensure apply_to is a list if it is a ListConfig
+        if isinstance(self.apply_to, omegaconf.listconfig.ListConfig):
+            self.apply_to = list(self.apply_to)
+        
+        self.assign_to = metadata.get("assign_to", None)
+        # Check whenever self.assign_to is None, if so, assign self.apply_to to it
+        if self.assign_to is None:
+            # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
+            if isinstance(self.apply_to, list):
+                raise ValueError(
+                    f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'assign_to' is not specified. Please specify 'assign_to' to avoid ambiguity."
+                )
+            self.assign_to = self.apply_to    
+        
+        # TODO: is there actually a use case with fitting on validation/test?
+        self.fit_on_split = metadata.get("fit_on", None)
+        assert self.fit_on_split in (None, "train", "val", "test")
+        # Define fit on key, if not specified, it is the same as apply_to
+        self.fit_on_key = metadata.get("fit_on_key", None)
+        if self.fit_on_split is not None and self.fit_on_key is None:
+            # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
+            if isinstance(self.apply_to, list):
+                raise ValueError(
+                    f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'fit_on_key' is not specified. Please specify 'fit_on_key' to avoid ambiguity."
+                )
+            self.fit_on_key = self.apply_to
+    
 
+        # TODO: Define the logic here similar to self.fit_on_split 
+        self.multi_source_fit = metadata.get("multi_source_fit", False)
+
+
+        
+        # Instantiate transform
         assert isinstance(transform, BaseTransform), (
             f"Transform instance for '{transform_name}' (type: {type(transform)}) "
             "must implement BaseTransform."
         )
 
-        if self.fit_on is not None:
+        if self.fit_on_split is not None:
+            assert self.fit_on_key is not None, (
+                f"Transform '{transform_name}': 'fit_on_split' is specified but 'fit_on_key' is None. "
+                "Please specify 'fit_on_key' in metadata."
+            )
             self.strategy = UnifiedFitTransformStrategy()
         else:
             self.strategy = UnifiedDirectTransformStrategy()
-
-        # Infer the strategy based on metadata flags
-        # TODO: this logic might be a bit broken
-        # if isinstance(transform, BaseTransform) and isinstance(transform, BaseMultiSourceTransformMixin):
-        #     if self.fit_on is not None:
-        #         self.strategy = MultiSourceFitTransformStrategy()
-        #     else:
-        #         self.strategy = MultiSourceDirectTransformStrategy()
-
-        # else:
-        #     assert isinstance(transform, BaseTransform), (
-        #         f"Transform instance for '{transform_name}' (type: {type(transform)}) "
-        #         "must implement BaseTransform."
-        #     )
-        #     # Determine the strategy based on the presence of 'fit_on'
-        #     if  self.fit_on is not None:
-        #         self.strategy = FitTransformStrategy()
-        #     else:
-        #         self.strategy = DirectTransformStrategy()
 
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform
@@ -134,21 +148,22 @@ class DataTransform:
             If the strategy returns an unexpected data type, or if keys in transformed
             data don't hold dictionaries of splits.
         KeyError
-            If there's a mismatch in keys (splits or apply_to_key) between original and transformed data.
+            If there's a mismatch in keys (splits or apply_to_keys) between original and transformed data.
         ValueError
             If multi-source transform changes the number of sources.
         """
         # Delegate the transformation application to the chosen strategy
         # The strategy is responsible for handling the internal structure of `data`
-        # (single dict vs. list of dicts) and using `apply_to` and `fit_on`.
+        # (single dict vs. list of dicts) and using `apply_to_keys`, `assign_to_key`, `fit_on_split`, `fit_on_key`.
         transformed_data = self.strategy.apply(
-            self.transform_instance,
-            data,
-            apply_to_key=self.apply_to,
-            fit_on_split=self.fit_on,
-            auxiliary_keys=self.auxiliary_keys,
+            transform_instance=self.transform_instance,
+            data=data,
+            apply_to_keys=self.apply_to,
+            assign_to_key=self.assign_to,
+            fit_on_split=self.fit_on_split,
+            fit_on_key=self.fit_on_key
         )
-
+        
         # --- Post-transformation Validation ---
         # This centralizes validation logic, ensuring consistency regardless of strategy.
 
@@ -160,37 +175,38 @@ class DataTransform:
                 )
 
             # Ensure the top-level 'apply_to' key is present in the transformed data
-            if self.apply_to not in transformed_data:
+            if self.assign_to not in transformed_data:
                 raise KeyError(
                     f"Transform '{self.transform_name}': Transformed data from strategy does not "
-                    f"contain '{self.apply_to}' key at the top level."
+                    f"contain '{self.assign_to}' key at the top level."
                 )
 
             # Ensure the value at 'apply_to' is still a dict of splits
-            if not isinstance(transformed_data[self.apply_to], dict):
+            if not isinstance(transformed_data[self.assign_to], dict):
                 raise TypeError(
-                    f"Transform '{self.transform_name}': Data at '{self.apply_to}' key in transformed data "
-                    f"is of type {type(transformed_data[self.apply_to])}, expected dict of splits."
+                    f"Transform '{self.transform_name}': Data at '{self.assign_to}' key in transformed data "
+                    f"is of type {type(transformed_data[self.assign_to])}, expected dict of splits."
                 )
 
             # Validate that all sub-keys (splits) within 'apply_to' match
-            original_splits = set(data[self.apply_to].keys())
-            transformed_splits = set(transformed_data[self.apply_to].keys())
-            if original_splits != transformed_splits:
-                raise KeyError(
-                    f"Transform '{self.transform_name}': Split key mismatch at '{self.apply_to}'. "
-                    f"Original splits: {original_splits}, Transformed splits: {transformed_splits}."
-                )
-
-            # Additional check for data types (optional but good practice)
-            for split_name in original_splits:
-                if not isinstance(
-                    data[self.apply_to][split_name],
-                    type(transformed_data[self.apply_to][split_name]),
-                ):
-                    logger.warning(
-                        f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}."
+            if self.assign_to == self.apply_to:
+                original_splits = set(data[self.apply_to].keys())
+                transformed_splits = set(transformed_data[self.apply_to].keys())
+                if original_splits != transformed_splits:
+                    raise KeyError(
+                        f"Transform '{self.transform_name}': Split key mismatch at '{self.apply_to}'. "
+                        f"Original splits: {original_splits}, Transformed splits: {transformed_splits}."
                     )
+
+                # Additional check for data types (optional but good practice)
+                for split_name in original_splits:
+                    if not isinstance(
+                        data[self.apply_to][split_name],
+                        type(transformed_data[self.apply_to][split_name]),
+                    ):
+                        logger.warning(
+                            f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}."
+                        )
 
         elif isinstance(data, list):  # Validate for multi-source transformations
             if not isinstance(transformed_data, list) or not all(
@@ -217,34 +233,34 @@ class DataTransform:
                         f"is of type {type(transformed_source)}, expected dict."
                     )
 
-                if self.apply_to not in transformed_source:
+                if self.assign_to not in transformed_source:
                     raise KeyError(
                         f"Transform '{self.transform_name}': Transformed source at index {i} "
-                        f"does not contain '{self.apply_to}' key."
+                        f"does not contain '{self.assign_to}' key."
                     )
 
-                if not isinstance(transformed_source[self.apply_to], dict):
+                if not isinstance(transformed_source[self.assign_to], dict):
                     raise TypeError(
-                        f"Transform '{self.transform_name}': Data at '{self.apply_to}' key in transformed "
-                        f"source {i} is of type {type(transformed_source[self.apply_to])}, expected dict of splits."
+                        f"Transform '{self.transform_name}': Data at '{self.assign_to}' key in transformed "
+                        f"source {i} is of type {type(transformed_source[self.assign_to])}, expected dict of splits."
                     )
-
-                original_splits = set(original_source[self.apply_to].keys())
-                transformed_splits = set(transformed_source[self.apply_to].keys())
-                if original_splits != transformed_splits:
-                    raise KeyError(
-                        f"Transform '{self.transform_name}': Split key mismatch at '{self.apply_to}' "
-                        f"for source index {i}. Original splits: {original_splits}, Transformed splits: {transformed_splits}."
-                    )
-                # Additional check for data types (optional but good practice)
-                for split_name in original_splits:
-                    if not isinstance(
-                        original_source[self.apply_to][split_name],
-                        type(transformed_source[self.apply_to][split_name]),
-                    ):
-                        logger.warning(
-                            f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}."
+                if self.assign_to == self.apply_to:
+                    original_splits = set(original_source[self.apply_to].keys())
+                    transformed_splits = set(transformed_source[self.apply_to].keys())
+                    if original_splits != transformed_splits:
+                        raise KeyError(
+                            f"Transform '{self.transform_name}': Split key mismatch at '{self.apply_to}' "
+                            f"for source index {i}. Original splits: {original_splits}, Transformed splits: {transformed_splits}."
                         )
+                    # Additional check for data types (optional but good practice)
+                    for split_name in original_splits:
+                        if not isinstance(
+                            original_source[self.apply_to][split_name],
+                            type(transformed_source[self.apply_to][split_name]),
+                        ):
+                            logger.warning(
+                                f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}."
+                            )
 
         else:
             raise TypeError(

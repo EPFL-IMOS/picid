@@ -110,9 +110,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
-    # Get transforms with auxiliary keys
-    aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
-    log.info("Transforms with auxiliary keys:" + str(list(aux_transforms.keys())))
 
     if isinstance(dataset_source, SingleSourceLoader) or isinstance(
         dataset_source, PHMDMultiSourceLoader

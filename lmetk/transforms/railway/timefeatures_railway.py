@@ -44,7 +44,7 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
+    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -65,9 +65,11 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
-
+        
+        # make sure timestamps are in data_segment
+        assert 'timestamps' in data_segment.keys(), 'timestamps key is not in data_segment {data_segment}, add timestamps into apply_to argument'
         df_stamp_raw = time_features(
-            data_segment,
+            data_segment['timestamps'],
             use_features=self.use_features,
             normalize=self.normalize_time_features,
         )
@@ -81,11 +83,11 @@ class RailwayTimeFeaturesTransform(BaseTransform):
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
-    def __call__(self, data: Any, mode: str) -> Any:
-        return self.transform_data(data, mode=mode)
+    def __call__(self, data: Any, metadata: Dict) -> Any:
+        return self.transform_data(data, metadata=metadata)
 
-    def transform(self, data: Any, mode: str) -> Any:
-        return self(data, mode=mode)
+    def transform(self, data: Any, metadata: Dict) -> Any:
+        return self(data, metadata=metadata)
 
 
 def time_features(

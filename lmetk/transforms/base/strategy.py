@@ -1,9 +1,9 @@
 import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
-
+import omegaconf
 import numpy as np  # Used for stacking in MultiSourceFitTransformStrategy
-
+import copy
 from lmetk.transforms.base.base_transform import \
     BaseTransform  # Import your BaseTransform ABC
 
@@ -18,7 +18,7 @@ class TransformStrategy(ABC):
     def apply(self, 
               transform_instance: BaseTransform, 
               data: Union[Dict[str, Any], List[Dict[str, Any]]], 
-              apply_to_key: str, 
+              apply_to_key: str | List[str],
               fit_on_split: Optional[str] = None
              ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """
@@ -31,7 +31,7 @@ class TransformStrategy(ABC):
         data : Union[Dict[str, Any], List[Dict[str, Any]]]
             The input data. Can be a single dictionary representing one source's
             splits, or a list of such dictionaries for multiple sources.
-        apply_to_key : str
+        apply_to_keys : str
             The top-level key within each source's data dictionary (e.g., 'features')
             to which the transformation should be applied.
         fit_on_split : Optional[str], default=None
@@ -45,39 +45,36 @@ class TransformStrategy(ABC):
         """
         pass
 
-    def _prepare_single_aux(self, data, auxiliary_keys, split_name):
+    def _prepare_single_data(self, data, split_name):
         aux_data = {}
-        if auxiliary_keys:
-            for aux_key in auxiliary_keys:
-                aux_splits = data.get(aux_key, {})
-                if isinstance(aux_splits, dict) and split_name in aux_splits:
-                    aux_data[aux_key] = aux_splits[split_name]
-                else:
-                    warnings.warn(f"Missing or None auxiliary '{aux_key}' for split '{split_name}'.")
+        keys = list(data.keys())
+    
+        for key in keys:
+            splits = data.get(key, {})
+            if isinstance(splits, dict) and split_name in splits:
+                aux_data[key] = splits[split_name]
+            else:
+                warnings.warn(f"Missing or None auxiliary '{key}' for split '{split_name}'.")
         return aux_data
 
-    def _prepare_multi_aux(self, data, auxiliary_keys, split_name, num_sources):
-        if auxiliary_keys:
-            missing_keys = [key for key in auxiliary_keys if key not in data]
-            if missing_keys:
-                raise KeyError(f"Auxiliary keys {missing_keys} not found in data. Available keys: {list(data.keys())}")
-
+    def _prepare_multi_data(self, data, split_name):
+        keys = list(data.keys())
         aux_data = {}
-        if auxiliary_keys:
-            for aux_key in auxiliary_keys:
-                aux_splits = data.get(aux_key, {})
-                if split_name not in aux_splits:
-                    warnings.warn(f"Missing auxiliary key '{aux_key}' for split '{split_name}'.")
-                    continue
+        
+        for key in keys:
+            splits = data.get(key, {})
+            if split_name not in splits:
+                warnings.warn(f"Missing auxiliary key '{key}' for split '{split_name}'.")
+                continue
 
-                split_aux_list = aux_splits[split_name]
-                if not isinstance(split_aux_list, list) or len(split_aux_list) != num_sources:
-                    raise ValueError(
-                        f"Expected a list of {num_sources} items for auxiliary key '{aux_key}' on split '{split_name}', "
-                        f"but got type {type(split_aux_list)} with length {len(split_aux_list) if isinstance(split_aux_list, list) else 'N/A'}."
-                    )
+            split_aux_list = splits[split_name]
+            if not isinstance(split_aux_list, list):
+                raise ValueError(
+                    f"Expected a list of items for key '{key}' on split '{split_name}', "
+                    f"but got type {type(split_aux_list)} with length {len(split_aux_list) if isinstance(split_aux_list, list) else 'N/A'}."
+                )
 
-                aux_data[aux_key] = split_aux_list
+            aux_data[key] = split_aux_list
 
         return aux_data
 
@@ -92,41 +89,74 @@ class UnifiedDirectTransformStrategy(TransformStrategy):
     def apply(self,
               transform_instance,
               data: Dict[str, Any],
-              apply_to_key: str,
-              fit_on_split: Optional[str] = None,
-              auxiliary_keys: Optional[List[str]] = None
+              apply_to_keys: str | List[str],
+              assign_to_key: str, 
+              **kwargs
               ) -> Dict[str, Any]:
+        
+        if isinstance(apply_to_keys, omegaconf.listconfig.ListConfig):
+            apply_to_keys = list(apply_to_keys)
 
-        assert isinstance(data[apply_to_key], dict), f"Expected a dictionary of train/val/test for apply_to_key '{apply_to_key}', but got {type(data[apply_to_key])}"
+        if isinstance(apply_to_keys, list):
+            assert all(isinstance(data[key], dict) for key in apply_to_keys), (
+                f"Expected a dictionary of train/val/test for apply_to_keys '{apply_to_keys}', "
+                f"but got {[type(data[key]) for key in apply_to_keys]}"
+            )
+            
+        else:
+            assert isinstance(data[apply_to_keys], dict), f"Expected a dictionary of train/val/test for apply_to_keys '{apply_to_keys}', but got {type(data[apply_to_keys])}"
+            apply_to_keys = [apply_to_keys]
         
         
-        transformed_data = data.copy()
-        target_data_splits = transformed_data[apply_to_key]
-        transformed_target_data_splits = {}
-
-        for split_name, split_data in target_data_splits.items():
-            if split_data is not None:
+        transformed_data = copy.deepcopy(data)
+        
+        # Collect all key/values for apply_to_keys list
+        target_data_splits = {key: transformed_data[key] for key in apply_to_keys}
+        
+        # The target_data_splits structure when apply_to_keys=["features", "timestamps"] is:
+        # in the case of multi-source:
+        # {
+        #     "features": {"train": [...], "val": [...], "test": [...]},
+        #     "timestamps": {"train": [...], "val": [...], "test": [...]},
+        # }
+        # in the case of single-source:
+        # {
+        #     "features": {"train": np.ndarray "val": np.ndarray "test": np.ndarray},
+        #     "timestamps": {"train": np.ndarray "val": np.ndarray "test": np.ndarray},
+        
+        transformed_target_data_splits = {assign_to_key: {}}
+        for split_name in ['train', 'val', 'test']:
+            # TODO: handle the case when the target_data_splits[apply_to_keys]['val'] is None for one of apply_to_keys
+            # if split_data is not None:
+            #     pass
+            # else:
+            #     transformed_target_data_splits[split_name] = None
+            #     warnings.warn(f"Split '{split_name}' is None.")
                 
-                # In the case of multisource, data is provided as a list of dictionaries
-                if isinstance(split_data, list):
-                    aux_data_list = self._prepare_multi_aux(data, auxiliary_keys, split_name, len(split_data))
-                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(
-                        split_data,
-                        auxiliary_data=aux_data_list,
-                        mode=split_name
-                    )
-                else:
-                    aux_data = self._prepare_single_aux(data, auxiliary_keys, split_name)
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
-                        split_data,
-                        auxiliary_data=aux_data,
-                        mode=split_name
-                    )
+            
+            
+            # TODO: Such flag can fail when we have single source but with list data, need to improve the check
+            # In the case of multisource, data is provided as dictionary of lists
+            single_multi_data_flag = all(
+                isinstance(v, list)
+                for inner in target_data_splits.values()
+                for v in inner.values()
+            )
+            if single_multi_data_flag:
+                prepared_data = self._prepare_multi_data(target_data_splits, split_name)
+                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_multi_source(
+                    prepared_data,
+                    metadata={"mode": split_name},
+                )
             else:
-                transformed_target_data_splits[split_name] = None
-                warnings.warn(f"Split '{split_name}' is None.")
+                prepared_data = self._prepare_single_data(target_data_splits, split_name)
+                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_data(
+                    prepared_data,
+                    metadata={"mode": split_name},
+                )
+            
         
-        transformed_data[apply_to_key] = transformed_target_data_splits
+        transformed_data[assign_to_key] = transformed_target_data_splits[assign_to_key]
         return transformed_data
 
 
@@ -139,48 +169,75 @@ class UnifiedFitTransformStrategy(TransformStrategy):
     def apply(self,
               transform_instance,
               data: Dict[str, Any],
-              apply_to_key: str,
+              apply_to_keys: str | List[str],
+              assign_to_key: str, 
               fit_on_split: str,
-              auxiliary_keys: Optional[List[str]] = None
+              fit_on_key: str,
               ) -> Dict[str, Any]:
 
-        assert isinstance(data[apply_to_key], dict), f"Expected a dictionary for apply_to_key '{apply_to_key}', but got {type(data[apply_to_key])}"
-        
-        transformed_data = data.copy()
-        target_data_splits = transformed_data[apply_to_key]
-
-        if fit_on_split not in target_data_splits:
-            raise KeyError(f"'{fit_on_split}' not found in data[{apply_to_key}]")
-        
-        fit_data = target_data_splits[fit_on_split]
-        if isinstance(fit_data, list):
-            aux_data_list = self._prepare_multi_aux(data, auxiliary_keys, fit_on_split, len(fit_data))
-            transform_instance.fit_multi_source(fit_data, auxiliary_data=aux_data_list, mode=fit_on_split)
+        if isinstance(apply_to_keys, list):
+            assert all(isinstance(data[key], dict) for key in apply_to_keys), (
+                f"Expected a dictionary of train/val/test for apply_to_keys '{apply_to_keys}', "
+                f"but got {[type(data[key]) for key in apply_to_keys]}"
+            )
         else:
-            aux_data = self._prepare_single_aux(data, auxiliary_keys, fit_on_split)
-            transform_instance.fit_data(fit_data, auxiliary_data=aux_data, mode=fit_on_split)
+            assert isinstance(data[apply_to_keys], dict), f"Expected a dictionary of train/val/test for apply_to_keys '{apply_to_keys}', but got {type(data[apply_to_keys])}"
+            # Convert str to list for uniform processing
+            apply_to_keys = [apply_to_keys]
+        
+        transformed_data = copy.deepcopy(data)
+        
+    
+        # Collect all key/values for apply_to_keys list
+        target_data_splits = {key: transformed_data[key] for key in apply_to_keys}
+        
+        # The target_data_splits structure when apply_to_keys=["features", "timestamps"] is:
+        # in the case of multi-source:
+        # {
+        #     "features": {"train": [...], "val": [...], "test": [...]},
+        #     "timestamps": {"train": [...], "val": [...], "test": [...]},
+        # }
+        # in the case of single-source:
+        # {
+        #     "features": {"train": np.ndarray "val": np.ndarray "test": np.ndarray},
+        #     "timestamps": {"train": np.ndarray "val": np.ndarray "test": np.ndarray},
+        
+        # Check that fit_on_split exists in all target_data_splits
+        if any([fit_on_split not in transformed_data[key].keys() for key in apply_to_keys]):
+            raise KeyError(f"'{fit_on_split}' not found in data[{apply_to_keys}]")
 
-        transformed_target_data_splits = {}
-        for split_name, split_data in target_data_splits.items():
-            if split_data is not None:
-                # In the case of multisource, data is provided as a list of dictionaries
-                if isinstance(split_data, list):
-                    aux_data_list = self._prepare_multi_aux(data, auxiliary_keys, split_name, len(split_data))
-                    transformed_target_data_splits[split_name] = transform_instance.transform_multi_source(
-                        split_data,
-                        auxiliary_data=aux_data_list,
-                        mode=split_name
-                    )
-                else:
-                    aux_data = self._prepare_single_aux(data, auxiliary_keys, split_name)
-                    transformed_target_data_splits[split_name] = transform_instance.transform_data(
-                        split_data,
-                        auxiliary_data=aux_data,
-                        mode=split_name
-                    )
+        # To stay consistent with the fit_data and transform_data method's inputs
+        fit_data = {}
+        fit_data[fit_on_key] = target_data_splits[fit_on_key][fit_on_split]
+        
+        single_multi_data_flag = isinstance(fit_data[fit_on_key], list)
+        if single_multi_data_flag:
+            transform_instance.fit_multi_source(fit_data, metadata={"mode": fit_on_split})
+        else:
+            transform_instance.fit_data(fit_data, metadata={"mode": fit_on_split})
+
+        transformed_target_data_splits = {assign_to_key: {}}
+        for split_name in ['train', 'val', 'test']:
+            
+            # TODO: handle the case when the target_data_splits[apply_to_keys]['val'] is None for one of apply_to_keys
+            # if split_data is not None:
+            #     pass
+            # else:
+            #     transformed_target_data_splits[split_name] = None
+            #     warnings.warn(f"Split '{split_name}' is None.")
+            # In the case of multisource, data is provided as a list of dictionaries
+
+            if single_multi_data_flag:
+                prepared_data = self._prepare_multi_data(target_data_splits, split_name)
+                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_multi_source(
+                    prepared_data,
+                    metadata={"mode": split_name})
             else:
-                transformed_target_data_splits[split_name] = None
-                warnings.warn(f"Split '{split_name}' is None.")
+                prepared_data = self._prepare_single_data(target_data_splits, split_name)
+                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_data(
+                    prepared_data,
+                    metadata={"mode": split_name})
+            
 
-        transformed_data[apply_to_key] = transformed_target_data_splits
+        transformed_data[assign_to_key] = transformed_target_data_splits[assign_to_key]
         return transformed_data       

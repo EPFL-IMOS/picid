@@ -35,7 +35,6 @@ class RailwayLoader(SingleSourceLoader):
             "features": df,
             "target": df_target,
             "timestamps": df_stamp,
-            "time_features": None,
             "initial_dates": df_stamp,
         }
 

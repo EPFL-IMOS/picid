@@ -31,24 +31,27 @@ class SeasonalDummyTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(shift={self.shift!r}, seq_len={self.seq_len!r}, {args})"
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
+    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
         """
         Transform data by adding shifted target values and seasonal statistics.
         All seasonal history management happens here.
 
         Args:
-            data_segment: The main data segment (numpy array)
-            auxiliary_data: Dictionary containing 'target' and other auxiliary data
-            mode: The mode of transformation ('train', 'val', 'test')
+            data_segment: The main data segment (dict)
 
         Returns:
             Concatenated data with shifted targets and seasonal statistics
         """
         # Validate inputs
-        if "target" not in auxiliary_data:
-            raise ValueError("auxiliary_data must contain 'target' key")
+        if "target" not in data_segment:
+            raise ValueError("data_segment must contain 'target' key to make the hist. features.")
+        target = data_segment["target"]
+        
+        if "features" not in data_segment:
+            raise ValueError("data_segment must contain 'features' key to make the hist. features.")    
+        features = data_segment["features"]
+        
 
-        target = auxiliary_data["target"]
         if not isinstance(target, np.ndarray):
             target = np.array(target)
 
@@ -56,16 +59,16 @@ class SeasonalDummyTransform(BaseTransform):
         if target.ndim == 1:
             target = target.reshape(-1, 1)
 
-        # Ensure data_segment is 2D
-        if not isinstance(data_segment, np.ndarray):
-            data_segment = np.array(data_segment)
-        if data_segment.ndim == 1:
-            data_segment = data_segment.reshape(-1, 1)
+        # Ensure features is 2D
+        if not isinstance(features, np.ndarray):
+            features = np.array(features)
+        if features.ndim == 1:
+            features = features.reshape(-1, 1)
 
         # Validate dimensions
-        if target.shape[0] != data_segment.shape[0]:
+        if target.shape[0] != features.shape[0]:
             raise ValueError(
-                f"Target length {target.shape[0]} doesn't match data_segment length {data_segment.shape[0]}"
+                f"Target length {target.shape[0]} doesn't match features length {features.shape[0]}"
             )
 
         # Create shifted target (dummy leak)
@@ -74,19 +77,19 @@ class SeasonalDummyTransform(BaseTransform):
         )
 
         # Calculate seasonal statistics and update history
-        seasonal_stats = self._calculate_seasonal_stats_vectorized(dummy_leak, mode)
+        seasonal_stats = self._calculate_seasonal_stats_vectorized(dummy_leak, metadata['mode'])
 
         # Concatenate all features
         result = np.concatenate(
             [
-                data_segment,  # Original features
+                features,  # Original features
                 dummy_leak,  # Shifted target values
                 *seasonal_stats,  # All seasonal statistics
             ],
             axis=1,
         )
 
-        logger.info(f"Original data shape: {data_segment.shape}")
+        logger.info(f"Original data shape: {features.shape}")
         logger.info(f"Shifted target shape: {dummy_leak.shape}")
         logger.info(f"Seasonal stats shapes: {[stat.shape for stat in seasonal_stats]}")
         logger.info(f"Final concatenated shape: {result.shape}")
@@ -154,6 +157,14 @@ class SeasonalDummyTransform(BaseTransform):
         # Update seasonal history
         self._update_seasonal_history(shifted_target, mode)
         # seasonal_trend
+        
+        # Check if there are any NaNs in seasonal_mean or seasonal_std, fill with 0 and log a warning
+        if np.isnan(seasonal_mean).any() or np.isnan(seasonal_std).any():
+
+            logger.warning(f"NaNs detected in seasonal statistics. Filling NaNs with 0. Num. NaNs {np.isnan(seasonal_mean).sum()} for seasonal_mean")
+            seasonal_mean = np.nan_to_num(seasonal_mean, nan=0.0)
+            seasonal_std = np.nan_to_num(seasonal_std, nan=0.0)
+            
         return [seasonal_mean, seasonal_std]
 
     def _update_seasonal_history(self, shifted_target: np.ndarray, mode: str):
@@ -205,8 +216,5 @@ class SeasonalDummyTransform(BaseTransform):
         """
         self.seasonal_history = {i: [] for i in range(self.seq_len)}
 
-    def __call__(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data, mode)
-
-    def __call__(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data, mode)
+    def __call__(self, data_segment: Any, metadata: Dict) -> Any:
+        return self.transform_data(data_segment, metadata=metadata)

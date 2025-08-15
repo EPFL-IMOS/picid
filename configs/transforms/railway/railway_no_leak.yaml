@@ -1,7 +1,7 @@
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
   
   metadata:
     apply_to: features
@@ -9,7 +9,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transform.SklearnMinMaxScalerAdapter 
+    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
   
   metadata:
     apply_to: target

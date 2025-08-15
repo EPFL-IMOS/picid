@@ -241,20 +241,6 @@ class ConfigTransformManager:
             if dt.metadata.get('fit_on') == fit_on
         )
     
-    def get_transforms_with_auxiliary_keys(self) -> List[DataTransform]:
-        """
-        Get DataTransform objects that have auxiliary_keys in their metadata.
-        
-        Returns:
-            List of DataTransform objects with auxiliary keys
-        """
-        data_transforms = self.get_data_transforms()
-        return OrderedDict(
-            (dt.transform_name, dt) 
-            for dt in data_transforms.values() 
-            if 'auxiliary_keys' in dt.metadata
-        )
-    
     def remove_transform(self, name: str) -> None:
         """
         Remove a transform from configuration.

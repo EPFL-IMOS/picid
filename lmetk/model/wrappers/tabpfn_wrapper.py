@@ -48,7 +48,7 @@ class TabPFNWrapper(AbstractWrapper):
         target_fit = batch['target']['x'].squeeze(0)
 
         context = batch['context']['y'].squeeze(0)
-        target = batch['target']['y']
+        target = batch['target']['y'].squeeze(0)
         
         # Extent the context with auxiliary features to give sence of seasonality
         self.fit(context_fit, target_fit)
@@ -58,7 +58,7 @@ class TabPFNWrapper(AbstractWrapper):
             
         # Update evaluator with current batch (replaces the accumulation logic)
         model_out = {
-            'predictions': torch.Tensor(outputs).reshape(batch['target']['y'].shape),
+            'predictions': torch.Tensor(outputs).reshape(target.shape),
             'targets': target
         }
         

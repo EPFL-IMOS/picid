@@ -37,7 +37,7 @@ class AutocorrFeatureDropTransform(BaseTransform):
             return f"{self.__class__.__name__}({main_args}, {args})"
         return f"{self.__class__.__name__}({main_args})"
 
-    def fit_single_source(self, data_segment: Any, mode: str):
+    def fit_single_source(self, data_segment: Any):
         """
         Fit the transform by identifying highly correlated features to drop.
         
@@ -96,7 +96,7 @@ class AutocorrFeatureDropTransform(BaseTransform):
         logger.info(f"  - Correlation threshold: {self.correlation_threshold}")
         logger.info(f"  - Method: {self.method}")
 
-    def fit_multi_source(self, list_of_data_segments: List[Any],  mode: str):
+    def fit_multi_source(self, list_of_data_segments: List[Any]):
         """
         Fit the transform using multiple data segments.
         Concatenates all segments for correlation analysis.
@@ -130,7 +130,7 @@ class AutocorrFeatureDropTransform(BaseTransform):
         # Fit on combined data
         self.fit_single_source(combined_data)
 
-    def transform_data(self, data_segment: Any) -> Any:
+    def transform_data(self, data_segment: Any, metadata: Any) -> Any:
         """
         Transform data by dropping highly correlated features.
         

@@ -10,84 +10,99 @@ from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
 logger = logging.getLogger(__name__) 
 
 class ConcatenateTransform(BaseTransform, BaseMultiSourceTransformMixin):
-
-    def __init__(self, exclude_keys: Optional[List[str]] = None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize the transform.
         
         Args:
-            exclude_keys: List of auxiliary_data keys to exclude from concatenation
             **kwargs: Additional keyword arguments
         """
-        self._init_kwargs = kwargs 
-        self.exclude_keys = exclude_keys or []
-
-    def __repr__(self):
-        args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
-        exclude_str = f"exclude_keys={self.exclude_keys!r}"
-        if args:
-            return f"{self.__class__.__name__}({exclude_str}, {args})"
-        return f"{self.__class__.__name__}({exclude_str})"
-
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
+        super().__init__(**kwargs)
+        
+    def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
+        """Convert value to numpy array if it isn't already."""
+        if not isinstance(value, np.ndarray):
+            try:
+                value = np.array(value)
+                logging.info(f"Converted key '{key}' to numpy array")
+            except Exception as e:
+                raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
+        return value
+    
+    def _ensure_2d(self, value: np.ndarray, key: str) -> np.ndarray:
+        """Ensure array is 2D for concatenation."""
+        if value.ndim == 1:
+            value = value.reshape(-1, 1)
+            logging.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
+        elif value.ndim > 2:
+            raise ValueError(f"Key '{key}' has unsupported dimensions: {value.ndim}. "
+                           f"Only 1D and 2D arrays are supported.")
+        return value
+    
+    def _check_length_consistency(self, arrays: List[np.ndarray], keys: List[str]) -> int:
+        """Check that all arrays have the same number of rows."""
+        if not arrays:
+            raise ValueError("No arrays to concatenate")
+        
+        lengths = [arr.shape[0] for arr in arrays]
+        unique_lengths = set(lengths)
+        
+        if len(unique_lengths) > 1:
+            length_info = {keys[i]: lengths[i] for i in range(len(keys))}
+            raise ValueError(f"Length mismatch between arrays: {length_info}")
+        
+        return lengths[0]
+    
+    def _check_for_nans(self, arrays: List[np.ndarray], keys: List[str]) -> None:
+        """Check for NaN values and raise error if found."""
+        for arr, key in zip(arrays, keys):
+            if np.any(np.isnan(arr)):
+                raise ValueError(f"NaN values found in array '{key}'")
+    
+    def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """
-        Concatenate all auxiliary_data values to the data_segment.
+        Concatenate all data arrays horizontally.
         
         Args:
-            data_segment: The main data segment (assumed to be numpy array)
-            auxiliary_data: Dictionary containing auxiliary data to concatenate
+            data: Dictionary containing numpy arrays to concatenate
+            metadata: Dictionary containing auxiliary metadata (unused in this transform)
             
         Returns:
-            Concatenated data segment with auxiliary data
+            Concatenated numpy array
         """
-        # Convert data_segment to numpy array if it isn't already
-        if not isinstance(data_segment, np.ndarray):
-            data_segment = np.array(data_segment)
+        if not data:
+            raise ValueError("No data provided for concatenation")
         
-        # Ensure data_segment is 2D
-        if data_segment.ndim == 1:
-            data_segment = data_segment.reshape(-1, 1)
+        # Collect arrays to concatenate
+        arrays = []
+        keys = []
         
-        # Collect all auxiliary data arrays to concatenate
-        aux_arrays = []
-        
-        for key, value in auxiliary_data.items():
-            # Skip excluded keys
-            if key in self.exclude_keys:
-                continue
-                
-            # Convert value to numpy array
-            if not isinstance(value, np.ndarray):
-                value = np.array(value)
+        for key, value in data.items():
+            # Convert to numpy array
+            value = self._convert_to_numpy(value, key)
             
-            # Ensure the auxiliary data has the same number of rows as data_segment
-            if value.ndim == 1:
-                if len(value) == data_segment.shape[0]:
-                    value = value.reshape(-1, 1)
-                else:
-                    raise ValueError(f"Auxiliary data key '{key}' length mismatch. "
-                                   f"Expected {data_segment.shape[0]}, got {len(value)}")
-            elif value.ndim == 2:
-                if value.shape[0] != data_segment.shape[0]:
-                    raise ValueError(f"Auxiliary data key '{key}' row count mismatch. "
-                                   f"Expected {data_segment.shape[0]}, got {value.shape[0]}")
-            else:
-                raise ValueError(f"Auxiliary data key '{key}' has unsupported dimensions: {value.ndim}. "
-                               f"Only 1D and 2D arrays are supported.")
+            # Ensure 2D shape
+            value = self._ensure_2d(value, key)
             
-            aux_arrays.append(value)
-            logging.info(f"Adding auxiliary data '{key}' with shape {value.shape}")
+            arrays.append(value)
+            keys.append(key)
+            logging.info(f"Added data '{key}' with shape {value.shape}")
         
-        # Concatenate all arrays horizontally
-        if aux_arrays:
-            all_arrays = [data_segment] + aux_arrays
-            result = np.concatenate(all_arrays, axis=1)
-            logging.info(f"Final concatenated shape: {result.shape}")
-        else:
-            logging.info("No auxiliary data to concatenate")
-            result = data_segment
+        if not arrays:
+            raise ValueError("No arrays to concatenate")
+        
+        # Check length consistency
+        n_rows = self._check_length_consistency(arrays, keys)
+        logging.info(f"All arrays have consistent length: {n_rows}")
+        
+        # Check for NaN values (will raise error if found)
+        self._check_for_nans(arrays, keys)
+        
+        # Final concatenation
+        result = np.concatenate(arrays, axis=1)
+        logging.info(f"Final concatenated shape: {result.shape}")
         
         return result
-
-    def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data,  mode=mode) 
+    
+    def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
+        return self.transform_data(data, metadata)
