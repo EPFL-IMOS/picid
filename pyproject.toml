@@ -15,8 +15,8 @@ dependencies = [
     "omegaconf>=2.3.0",
     "torchsummary>=1.5.1",
     "pyrootutils>=1.0.4",
-    "lightning>=2.5.2", # "lightning==2.0.0",
-    "hydra-colorlog", # already specified with version above — can remove this line unless intended
+    "lightning>=2.5.2",                                                  # "lightning==2.0.0",
+    "hydra-colorlog",                                                    # already specified with version above — can remove this line unless intended
     "performer-pytorch>=1.1.4",
     "torchinfo>=1.7.1",
     "h5netcdf>=1.1.0",
@@ -32,7 +32,8 @@ dependencies = [
     "pyarrow>=20.0.0",
     "autogluon>=1.3.1",
     "rich>=14.0.0",
-    "phmd",
+    "phmd @ git+https://github.com/EPFL-IMOS/imos_phmd.git@collab_lalr",
+    # "phmd @ ./phmd",   #TODO: Check if this works, we clone it as git submodule.
 ]
 
 [tool.setuptools]
@@ -40,14 +41,7 @@ packages = ["lmetk"]
 
 [project.optional-dependencies]
 
-test = [
-    "pytest",
-    "pytest-cov",
-    "coverage",
-    "jupyter",
-    "mypy",
-    "pytest-mock"
-]
+test = ["pytest", "pytest-cov", "coverage", "jupyter", "mypy", "pytest-mock"]
 
 # [build-system]
 # requires = ["setuptools", "wheel", "hydra-core"]
