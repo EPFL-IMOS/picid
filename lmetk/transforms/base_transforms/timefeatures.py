@@ -1,10 +1,12 @@
-import pandas as pd
+from typing import Any, Dict, List
+
 import numpy as np
-from typing import Any, List, Dict
+import pandas as pd
 
 # Assuming this import path is correct for your project
-from lmetk.data.timefeatures import time_features 
-from lmetk.transforms.base_transform import BaseTransform 
+from lmetk.data.timefeatures import time_features
+from lmetk.transforms.base.base_transform import BaseTransform
+
 
 class TimePFNTimeFeaturesTransform(BaseTransform):
     r"""Extracts time features from the input data.
@@ -83,4 +85,5 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         return self.transform_data(data)
     
     def transform(self, data: Any, mode: str) -> Any:
+        return self(data)    def transform(self, data: Any, mode: str) -> Any:
         return self(data)

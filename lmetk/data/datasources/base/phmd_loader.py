@@ -1,4 +1,5 @@
 import logging
+import pickle
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
@@ -119,11 +120,72 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
             tasks_fold_dict[t] = fold
         return tasks_fold_dict
 
+    def _cache_task_data(self, task_fold_dict):
+        if not self.debug_cache_path:
+            raise ValueError("debug_cache_path must be set when caching task data.")
+
+        filename = self._get_cache_file_name("dataset")
+        cache_path = Path(self.debug_cache_path) / filename
+
+        logger.info(f"Caching task data to {cache_path}")
+
+        with open(cache_path, "wb") as f:
+            pickle.dump(task_fold_dict, f)
+
+        metadata_filename = self._get_cache_file_name("metadata")
+        metadata_path = Path(self.debug_cache_path) / metadata_filename
+
+        logger.info(f"Caching task metadata to {metadata_path}")
+
+        with open(metadata_path, "wb") as f:
+            pickle.dump(self.meta_data, f)
+
+    def _retrieve_cached_task_data(self, path: Path):
+        if not path.exists():
+            raise FileNotFoundError(f"Cache file not found: {path}")
+        else:
+            with open(path, "rb") as f:
+                return pickle.load(f)
+
+    def _get_cache_file_name(self, data_type) -> str:
+        """Generate the cache file name based on the current state."""
+        filename_parts = [
+            f"taskmode_{self.task_mode}",
+            f"fold_{self.fold}",
+            f"aux_{'_'.join(self.auxiliary_tasks) if self.auxiliary_tasks else 'none'}",
+            f"dataset_{self.data_name}",
+            f"type_{data_type}",
+        ]
+        return "_".join(filename_parts) + ".pkl"
+
     def _load_data(self):
 
-        tasks_fold_dict = self._init_phmd_dataset(
-            self.auxiliary_tasks + [self.task_mode]
-        )
+        tasks_fold_dict = None
+        # If we are in debug mode, we try to load the cached data
+        if self.debug_cache_dataset:
+            cache_path = Path(self.debug_cache_path)
+            metadata_file = cache_path / self._get_cache_file_name("metadata")
+            task_file = cache_path / self._get_cache_file_name("dataset")
+
+            if metadata_file.exists() and task_file.exists():
+                tasks_fold_dict = self._retrieve_cached_task_data(task_file)
+                self.meta_data = self._retrieve_cached_task_data(metadata_file)
+                logger.info(f"Loaded cached task data from {task_file}")
+                logger.info(f"Loaded cached metadata from {metadata_file}")
+
+        if tasks_fold_dict is None:
+            tasks_fold_dict = self._init_phmd_dataset(
+                self.auxiliary_tasks + [self.task_mode]
+            )
+            if self.debug_cache_dataset:
+                self._cache_task_data(tasks_fold_dict)
+
+        if self.debug_subset_range is not None:
+            for key in tasks_fold_dict:
+                for subkey in tasks_fold_dict[key]:
+                    tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[
+                        range(*self.debug_subset_range)
+                    ]
 
         main_fold = tasks_fold_dict[self.task_mode]
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
@@ -138,7 +200,26 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         for split in ["train", "val", "test"]:
             df = main_fold[split]
             for unit_name in np.unique(df[unit_col]):
-                df_unit = df[df[unit_col] == unit_name]
+
+                # We change the masking from this because
+                # it looks like in some data frames, df[unit_col] is not of shape
+                # (n, ) but (n, 1), creating a 2d mask without failing, which
+                # masks out the data (since it acts as row filter as well)
+                # df_unit = df[df[unit_col] == unit_name]
+
+                # 1) Are NaNs already present before filtering?
+                pre = df.isna().sum()
+                unit_col_data = df[unit_col].squeeze("columns")
+                m = pd.Series((unit_col_data == unit_name), index=df.index)
+                assert m.dtype == bool and m.ndim == 1 and len(m) == len(df)
+                assert not df.columns.duplicated().any(), "Duplicate columns found"
+                assert not df.index.duplicated().any(), "Duplicate index found"
+                df_unit = df.loc[m]
+
+                # 4) Prove selection itself did not create NaNs
+                post = df_unit.isna().sum()
+                assert (pre == post).all(), "Selection created new NaNs"
+
                 data[split].append(
                     self._process_unit(
                         df_unit=df_unit,

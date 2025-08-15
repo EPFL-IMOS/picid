@@ -10,8 +10,8 @@ from numpy import ndarray
 from omegaconf import DictConfig, OmegaConf
 
 from lmetk.data.datasources import SingleSourceLoader
-from lmetk.transforms.data_transform import DataTransform
-from lmetk.transforms.transform_manager import ConfigTransformManager
+from lmetk.transforms.base.data_transform import DataTransform
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
 
 class PreProcessorInterface(ABC):

@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from collections import OrderedDict
@@ -9,9 +10,8 @@ from numpy import ndarray
 from omegaconf import DictConfig, OmegaConf
 
 from lmetk.data.preprocessing.base import PreProcessorInterface
-from lmetk.transforms.data_transform import DataTransform
+from lmetk.transforms.base.data_transform import DataTransform
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +59,9 @@ class PreProcessor(PreProcessorInterface):
         self._is_preprocessed = False
 
     def get_meta_data_dict(self):
-        if hasattr(self.datasource, "get_meta_data") and callable(getattr(self.datasource, "get_meta_data", None)):
+        if hasattr(self.datasource, "get_meta_data") and callable(
+            getattr(self.datasource, "get_meta_data", None)
+        ):
             meta_data_dict = self.datasource.get_meta_data()
         else:
             meta_data_dict = {}
@@ -119,8 +121,10 @@ class PreProcessor(PreProcessorInterface):
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
-        
-        if hasattr(self.datasource, "get_meta_data") and callable(getattr(self.datasource, "get_meta_data", None)):
+
+        if hasattr(self.datasource, "get_meta_data") and callable(
+            getattr(self.datasource, "get_meta_data", None)
+        ):
             meta_data_lst = self.datasource.get_meta_data()
         else:
             meta_data_lst = [{}]
@@ -154,12 +158,16 @@ class PreProcessor(PreProcessorInterface):
             for transform_name, transform in transforms.items():
                 # Removed detailed print statements for each transform application.
 
-                logger.info(f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})")
+                logger.info(
+                    f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})"
+                )
                 start_time = time.time()
                 current_data = transform.forward(current_data)
                 end_time = time.time()
-                logger.info(f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds.")
-            
+                logger.info(
+                    f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds."
+                )
+
             transformed_data_lst.append(current_data)
         return transformed_data_lst
 

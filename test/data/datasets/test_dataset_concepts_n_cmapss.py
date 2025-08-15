@@ -1,16 +1,17 @@
 from pathlib import Path
-import pytest
-import hydra
-
-from box import Box
-import torch
-
-from lmetk.data.datamodules.datamodule import BaseDataModule
-from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
-from lmetk.transforms.transform_manager import ConfigTransformManager
-
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
+
+import hydra
+import pytest
+import torch
+from box import Box
+
+from lmetk.data.datamodules.datamodule import BaseDataModule
+from lmetk.data.preprocessing.multi_source_preprocessor import \
+    MultiSourcePreProcessor
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
+
 ProjectSearchPathPlugin.register()
 
 
@@ -153,4 +154,5 @@ def test_sample_shapes_from_test_dataset(concepts_n_cmapss_datamodule):
     )
     assert sample[2].shape == torch.Size([2]), (
         f"Tensor 2 shape is incorrect: {sample[2].shape}"
+    )
     )

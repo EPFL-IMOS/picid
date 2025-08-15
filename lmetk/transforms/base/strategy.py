@@ -1,8 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
 import warnings
-import numpy as np # Used for stacking in MultiSourceFitTransformStrategy
-from lmetk.transforms.base_transform import BaseTransform # Import your BaseTransform ABC
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np  # Used for stacking in MultiSourceFitTransformStrategy
+
+from lmetk.transforms.base.base_transform import \
+    BaseTransform  # Import your BaseTransform ABC
+
 
 class TransformStrategy(ABC):
     """
@@ -177,6 +181,9 @@ class UnifiedFitTransformStrategy(TransformStrategy):
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"Split '{split_name}' is None.")
+
+        transformed_data[apply_to_key] = transformed_target_data_splits
+        return transformed_data                warnings.warn(f"Split '{split_name}' is None.")
 
         transformed_data[apply_to_key] = transformed_target_data_splits
         return transformed_data

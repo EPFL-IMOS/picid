@@ -1,0 +1,11 @@
+_target_: lmetk.model.wrappers.autogluon_wrapper.AutoGluonWrapper
+
+# There values will be read from the model parameters similarly to how we deal with data_path.
+seq_len: 168 #168 # 7*24      # window size
+label_len: 0  # overlap size
+
+# Model parameters
+pred_len: 24 #168 #24    # prediction size
+
+# Additional params needed for wrapper to run:
+features_mode: no_feature_mode

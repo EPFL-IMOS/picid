@@ -59,11 +59,11 @@ class ScalingWrapper:
         if len(pred_shape)==3:
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.scaler.inverse_transform(
-                predictions.squeeze(0)
+                predictions.squeeze()
             ).reshape(pred_shape)
             
             targets_transformed = self.scaler.inverse_transform(
-                targets.squeeze(0)
+                targets.squeeze()
             ).reshape(target_shape)
         
         elif len(pred_shape)==2:

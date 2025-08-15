@@ -1,12 +1,13 @@
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
+
 import numpy as np
 import pandas as pd
 import torch
-from abc import ABC, abstractmethod
-from typing import Any, List, Union, Tuple, Type, Optional, Dict
-from lmetk.transforms.utils import _convert_to_numpy, _convert_from_numpy
 from numpy import ndarray
-from lmetk.transforms.base_transform import BaseTransform 
-from abc import ABC
+
+from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
 class BaseMultiSourceTransformMixin(ABC):
@@ -226,4 +227,4 @@ class N_CMAPSSScaler_Features(BaseTransform, BaseMultiSourceTransformMixin): #Ba
             )
             data_segment = 2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1
             #X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-        return data_segment
+        return data_segment        return data_segment

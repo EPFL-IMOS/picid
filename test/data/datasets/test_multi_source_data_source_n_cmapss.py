@@ -1,16 +1,18 @@
 from pathlib import Path
-from omegaconf import OmegaConf
-import pytest
-import hydra
-import lmetk
 
-from box import Box
-import torch
-
-from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
-from lmetk.transforms.transform_manager import ConfigTransformManager
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
+
+import hydra
+import pytest
+import torch
+from box import Box
+from omegaconf import OmegaConf
+
+import lmetk
+from lmetk.data.preprocessing.multi_source_preprocessor import MultiSourcePreProcessor
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
+
 ProjectSearchPathPlugin.register()
 
 
@@ -44,28 +46,30 @@ def multi_source_data_source(path_cfg):
 
     print(OmegaConf.to_yaml(cfg.datasource, resolve=True))
 
-
-
     dataset_source = hydra.utils.instantiate(cfg.datasource)
-    
-    
+
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
 
-    preprocessor = MultiSourcePreProcessor(dataset_source, transforms_manager, logger=log)
+    preprocessor = MultiSourcePreProcessor(
+        dataset_source, transforms_manager, logger=log
+    )
     preprocessor.pipeline()
 
     data_dict = preprocessor.get_processed_data()
 
-    dataset_train = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='train', _recursive_=False)
-    dataset_val = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='val', _recursive_=False)
-    dataset_test = hydra.utils.instantiate(cfg.dataset, data_dict=data_dict, split='test', _recursive_=False)
-
-
+    dataset_train = hydra.utils.instantiate(
+        cfg.dataset, data_dict=data_dict, split="train", _recursive_=False
+    )
+    dataset_val = hydra.utils.instantiate(
+        cfg.dataset, data_dict=data_dict, split="val", _recursive_=False
+    )
+    dataset_test = hydra.utils.instantiate(
+        cfg.dataset, data_dict=data_dict, split="test", _recursive_=False
+    )
 
     # data_source = hydra.utils.instantiate(cfg.datasource)
 
     # data_source._pipeline()
-
 
     # in_box = Box({k: v.train for k, v in data_source.data_dict.items()})
     # ds_train = hydra.utils.instantiate(cfg.dataset, data_split=in_box, _recursive_=False)
@@ -85,19 +89,31 @@ def multi_source_data_source(path_cfg):
 
 
 def test_create_multi_source_data_source(multi_source_data_source):
-    assert isinstance(multi_source_data_source, lmetk.data.datasources.multi_source_pipeline.MultiSource)
-    assert len(multi_source_data_source.data_lst) > 0, "No sources found in the multi-source pipeline"
+    assert isinstance(
+        multi_source_data_source,
+        lmetk.data.datasources.multi_source_pipeline.MultiSource,
+    )
+    assert (
+        len(multi_source_data_source.data_lst) > 0
+    ), "No sources found in the multi-source pipeline"
 
     # Check if data_dict is populated
     assert multi_source_data_source.data_lst[0], "Data dictionary is empty"
-    
+
     # Check if scalers are instantiated
     # assert multi_source_data_source.get_scaler(), "Scalers are not instantiated"
-    
+
     # Check if data is split correctly
-    assert 'train' in multi_source_data_source.data_lst['features'], "Train split not found in features"
+    assert (
+        "train" in multi_source_data_source.data_lst["features"]
+    ), "Train split not found in features"
 
     # TODO: Uncomment when validation split is available, why is it not available?
     # assert 'val' in multi_source_data_source.data_dict['features'], "Validation split not found in features"
-    assert 'test' in multi_source_data_source.data_lst['features'], "Test split not found in features"
+    assert (
+        "test" in multi_source_data_source.data_lst["features"]
+    ), "Test split not found in features"
 
+    assert (
+        "test" in multi_source_data_source.data_lst["features"]
+    ), "Test split not found in features"

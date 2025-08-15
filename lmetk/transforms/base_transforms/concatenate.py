@@ -1,11 +1,12 @@
-import pandas as pd
-import numpy as np
-from typing import Any, List, Dict, Optional, Union
-
-from lmetk.transforms.base_transform import BaseTransform 
-from lmetk.transforms.multisource import BaseMultiSourceTransformMixin
-
 import logging
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import pandas as pd
+
+from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+
 logger = logging.getLogger(__name__) 
 
 class ConcatenateTransform(BaseTransform, BaseMultiSourceTransformMixin):
@@ -89,4 +90,4 @@ class ConcatenateTransform(BaseTransform, BaseMultiSourceTransformMixin):
         return result
 
     def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data,  mode=mode)
+        return self.transform_data(data_segment, auxiliary_data,  mode=mode)        return self.transform_data(data_segment, auxiliary_data,  mode=mode)

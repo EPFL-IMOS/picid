@@ -1,0 +1,15 @@
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.battery.scaler.SklearnStandardScalerAdapter  # Your wrapper class
+    
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.battery.scaler.MinMaxScalerSklearn
+  
+  metadata:
+    apply_to: target
+    fit_on: train
