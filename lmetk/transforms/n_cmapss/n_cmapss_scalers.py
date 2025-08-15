@@ -11,27 +11,27 @@ from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
-
-class N_CMAPSSScaler_Descriptors(BaseTransform, BaseMultiSourceTransformMixin): #BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
-
+class N_CMAPSSDescriptorsScaler(BaseTransform, BaseMultiSourceTransformMixin):
     def __init__(self, scaling="standard"):
 
         super().__init__()
         self.scaling = scaling
 
-
-    def fit_data(self, 
-                data_segment: ndarray, 
-                mode: str,
-                auxiliary_data: Optional[Dict[str, Any]] = None):
+    def fit_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, 
-                       data_segment: ndarray, 
-                       mode: str,
-                       auxiliary_data: Optional[Dict[str, Any]] = None,
-                       ):
+    def transform_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
         scaling = self.scaling
         if scaling == "standard":
             W_mean_1457 = np.array(
@@ -40,9 +40,8 @@ class N_CMAPSSScaler_Descriptors(BaseTransform, BaseMultiSourceTransformMixin): 
             W_std_1457 = np.array(
                 [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
             )
-            data_segment = (data_segment - W_mean_1457) / W_std_1457 
-            #W = (W - W_mean_1457) / W_std_1457
-
+            data_segment = (data_segment - W_mean_1457) / W_std_1457
+            # W = (W - W_mean_1457) / W_std_1457
 
         elif scaling == "min-max":
             # min-max scaling in [-1, 1] range
@@ -52,27 +51,32 @@ class N_CMAPSSScaler_Descriptors(BaseTransform, BaseMultiSourceTransformMixin): 
             W_max_1457 = np.array(
                 [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
             )
-            data_segment = 2 * (data_segment - W_min_1457) / (W_max_1457 - W_min_1457) - 1 
-            #W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+            data_segment = (
+                2 * (data_segment - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+            )
+            # W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
         return data_segment
 
 
-class N_CMAPSSScaler_Features(BaseTransform, BaseMultiSourceTransformMixin): #BaseEstimator, TransformerMixin, MultiSourceTransformMixin):
-
+class N_CMAPSSFeaturesScaler(BaseTransform, BaseMultiSourceTransformMixin):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
-
-    def fit_data(self, 
-                data_segment: ndarray, 
-                mode: str,
-                auxiliary_data: Optional[Dict[str, Any]] = None):
+    def fit_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, data_segment: ndarray, 
-                       mode: str,
-                       auxiliary_data: Optional[Dict[str, Any]] = None):
+    def transform_data(
+        self,
+        data_segment: ndarray,
+        mode: str,
+        auxiliary_data: Optional[Dict[str, Any]] = None,
+    ):
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling
@@ -113,9 +117,7 @@ class N_CMAPSSScaler_Features(BaseTransform, BaseMultiSourceTransformMixin): #Ba
                     7.6335633e-01,
                 ]
             )
-            data_segment = (data_segment - X_mean_1457) / X_std_1457 
-            
-
+            data_segment = (data_segment - X_mean_1457) / X_std_1457
 
         elif scaling == "min-max":
             # min-max scaling in [-1, 1] range
@@ -156,6 +158,8 @@ class N_CMAPSSScaler_Features(BaseTransform, BaseMultiSourceTransformMixin): #Ba
                     5.6173835e00,
                 ]
             )
-            data_segment = 2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-            #X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-        return data_segment        return data_segment
+            data_segment = (
+                2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+            )
+            # X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+        return data_segment
