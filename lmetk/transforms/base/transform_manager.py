@@ -1,10 +1,12 @@
-from collections import OrderedDict
-from typing import Dict, List, Any, Optional, Union
-from omegaconf import DictConfig, OmegaConf
-from hydra.utils import instantiate
-from lmetk.transforms.data_transform import DataTransform
-
 import logging
+from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Union
+
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
+
+from lmetk.transforms.base.data_transform import DataTransform
+
 logger = logging.getLogger(__name__) 
 
 class ConfigTransformManager:
@@ -348,4 +350,4 @@ def create_transform_manager_from_config(config_path: Optional[str] = None,
     return ConfigTransformManager(
         transforms_config=config, 
         lazy_instantiation=lazy_instantiation
-    )
+    )  

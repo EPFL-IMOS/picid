@@ -1,26 +1,29 @@
-import pandas as pd
-import numpy as np
 import logging
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from lmetk.transforms.base_transform import BaseTransform 
-logger = logging.getLogger(__name__) 
+import numpy as np
+import pandas as pd
+
+from lmetk.transforms.base.base_transform import BaseTransform
+
+logger = logging.getLogger(__name__)
+
 
 class SeasonalDummyTransform(BaseTransform):
 
     def __init__(self, shift: int, seq_len: int = 168, **kwargs):
         """
         Initialize the seasonal dummy transform.
-        
+
         Args:
             shift: Number of time steps to shift the target (e.g., 168 for weekly)
             seq_len: Sequence length that defines the seasonal period
             **kwargs: Additional keyword arguments
         """
-        self._init_kwargs = kwargs 
+        self._init_kwargs = kwargs
         self.shift = shift
         self.seq_len = seq_len
-        
+
         # Storage for seasonal history - maps seasonal_pos to list of all historical values
         self.seasonal_history = {i: [] for i in range(self.seq_len)}
 
@@ -32,58 +35,67 @@ class SeasonalDummyTransform(BaseTransform):
         """
         Transform data by adding shifted target values and seasonal statistics.
         All seasonal history management happens here.
-        
+
         Args:
             data_segment: The main data segment (numpy array)
             auxiliary_data: Dictionary containing 'target' and other auxiliary data
             mode: The mode of transformation ('train', 'val', 'test')
-            
+
         Returns:
             Concatenated data with shifted targets and seasonal statistics
         """
         # Validate inputs
-        if 'target' not in auxiliary_data:
+        if "target" not in auxiliary_data:
             raise ValueError("auxiliary_data must contain 'target' key")
-        
-        target = auxiliary_data['target']
+
+        target = auxiliary_data["target"]
         if not isinstance(target, np.ndarray):
             target = np.array(target)
-        
+
         # Ensure target is 2D
         if target.ndim == 1:
             target = target.reshape(-1, 1)
-        
+
         # Ensure data_segment is 2D
         if not isinstance(data_segment, np.ndarray):
             data_segment = np.array(data_segment)
         if data_segment.ndim == 1:
             data_segment = data_segment.reshape(-1, 1)
-        
+
         # Validate dimensions
         if target.shape[0] != data_segment.shape[0]:
-            raise ValueError(f"Target length {target.shape[0]} doesn't match data_segment length {data_segment.shape[0]}")
-        
+            raise ValueError(
+                f"Target length {target.shape[0]} doesn't match data_segment length {data_segment.shape[0]}"
+            )
+
         # Create shifted target (dummy leak)
-        dummy_leak = np.concatenate([np.zeros((self.shift, target.shape[1])), target[:-self.shift]])
-        
+        dummy_leak = np.concatenate(
+            [np.zeros((self.shift, target.shape[1])), target[: -self.shift]]
+        )
+
         # Calculate seasonal statistics and update history
         seasonal_stats = self._calculate_seasonal_stats_vectorized(dummy_leak, mode)
-        
+
         # Concatenate all features
-        result = np.concatenate([
-            data_segment,           # Original features
-            dummy_leak,            # Shifted target values
-            *seasonal_stats        # All seasonal statistics
-        ], axis=1)
-        
+        result = np.concatenate(
+            [
+                data_segment,  # Original features
+                dummy_leak,  # Shifted target values
+                *seasonal_stats,  # All seasonal statistics
+            ],
+            axis=1,
+        )
+
         logger.info(f"Original data shape: {data_segment.shape}")
         logger.info(f"Shifted target shape: {dummy_leak.shape}")
         logger.info(f"Seasonal stats shapes: {[stat.shape for stat in seasonal_stats]}")
         logger.info(f"Final concatenated shape: {result.shape}")
-        
+
         return result
 
-    def _calculate_seasonal_stats_vectorized(self, shifted_target: np.ndarray, mode: str) -> List[np.ndarray]:
+    def _calculate_seasonal_stats_vectorized(
+        self, shifted_target: np.ndarray, mode: str
+    ) -> List[np.ndarray]:
         """
         Highly optimized vectorized version of seasonal statistics calculation.
         """
@@ -92,21 +104,21 @@ class SeasonalDummyTransform(BaseTransform):
         seasonal_std = np.zeros_like(shifted_target)
 
         desired_polynom = 0
-        seasonal_trend = np.zeros((shifted_target.shape[0], desired_polynom+2))
-        
+        seasonal_trend = np.zeros((shifted_target.shape[0], desired_polynom + 2))
+
         # Pre-compute seasonal positions
         seasonal_positions = np.arange(n_samples) % self.seq_len
-        #non_zero_mask = ~np.allclose(shifted_target, 0, axis=1)
-        
+        # non_zero_mask = ~np.allclose(shifted_target, 0, axis=1)
+
         # For each unique seasonal position
         for seasonal_pos in range(self.seq_len):
             # Find all indices with this seasonal position
             pos_indices = np.where(seasonal_positions == seasonal_pos)[0]
-            #pos_indices = pos_indices[non_zero_mask[pos_indices]]  # Only non-zero values
-            
+            # pos_indices = pos_indices[non_zero_mask[pos_indices]]  # Only non-zero values
+
             # Get historical values for this seasonal position
             history = self.seasonal_history[seasonal_pos]
-            
+
             # For each occurrence of this seasonal position
             seen_idxs = []
             for current_idx in pos_indices:
@@ -115,30 +127,30 @@ class SeasonalDummyTransform(BaseTransform):
                 # The ones that we have in split
                 if current_idx >= self.shift:
                     seen_idxs.append(current_idx)
-                
+
                 observations = shifted_target[seen_idxs]
-                
-                # if mode != 'train':     
-                    # # Values from history
-                    # observations = np.concatenate([np.array(history[-168:]).reshape(-1,1), observations], axis=0)
-        
-                
-        
+
+                # if mode != 'train':
+                # # Values from history
+                # observations = np.concatenate([np.array(history[-168:]).reshape(-1,1), observations], axis=0)
 
                 seasonal_mean[current_idx] = np.mean(observations, axis=0)
                 seasonal_std[current_idx] = np.std(observations, axis=0)
 
                 eff_observations = observations[:-1]
                 # Calculate trend (slope of linear regression over time)
-                if len(eff_observations) > desired_polynom+1:
-                    trends = np.zeros(desired_polynom+1)
+                if len(eff_observations) > desired_polynom + 1:
+                    trends = np.zeros(desired_polynom + 1)
                     # Calculate slope using least squares
-                    trends = np.polyfit(np.arange(len(eff_observations)), eff_observations.flatten(), desired_polynom)
+                    trends = np.polyfit(
+                        np.arange(len(eff_observations)),
+                        eff_observations.flatten(),
+                        desired_polynom,
+                    )
                     y_pred = np.poly1d(trends)(len(observations))
                     error = y_pred - observations[-1]
                     seasonal_trend[current_idx] = np.concatenate([trends, error])
 
-        
         # Update seasonal history
         self._update_seasonal_history(shifted_target, mode)
         # seasonal_trend
@@ -147,27 +159,29 @@ class SeasonalDummyTransform(BaseTransform):
     def _update_seasonal_history(self, shifted_target: np.ndarray, mode: str):
         """
         Update the seasonal history with new values from the current data segment.
-        
+
         Args:
             shifted_target: The shifted target values
             mode: The transformation mode ('train', 'val', 'test')
         """
         # Determine which values to add to history
-        if mode == 'train':
+        if mode == "train":
             # In training, add all non-zero values after the shift period
             start_idx = 0  # Skip the initial zeros from shifting
 
             # # In val/test, we might have lookback data that shouldn't be double-counted
             # # This depends on your data pipeline structure
             # start_idx = self.shift
-        
+
             # Pre-compute seasonal positions
             n_samples, n_features = shifted_target[start_idx:].shape
             seasonal_positions = np.arange(n_samples) % self.seq_len
             for seasonal_pos in range(self.seq_len):
-                #if not np.allclose(shifted_target[i], 0):  # Skip zero/missing values
+                # if not np.allclose(shifted_target[i], 0):  # Skip zero/missing values
                 pos_indices = np.where(seasonal_positions == seasonal_pos)[0]
-                self.seasonal_history[seasonal_pos].extend(shifted_target[pos_indices].copy().squeeze().tolist())
+                self.seasonal_history[seasonal_pos].extend(
+                    shifted_target[pos_indices].copy().squeeze().tolist()
+                )
 
     def get_seasonal_history_summary(self):
         """
@@ -176,8 +190,12 @@ class SeasonalDummyTransform(BaseTransform):
         summary = {}
         for pos in range(self.seq_len):
             summary[pos] = {
-                'count': len(self.seasonal_history[pos]),
-                'last_values': self.seasonal_history[pos][-3:] if self.seasonal_history[pos] else []
+                "count": len(self.seasonal_history[pos]),
+                "last_values": (
+                    self.seasonal_history[pos][-3:]
+                    if self.seasonal_history[pos]
+                    else []
+                ),
             }
         return summary
 
@@ -186,6 +204,9 @@ class SeasonalDummyTransform(BaseTransform):
         Reset the seasonal history. Useful for starting fresh with new data.
         """
         self.seasonal_history = {i: [] for i in range(self.seq_len)}
+
+    def __call__(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
+        return self.transform_data(data_segment, auxiliary_data, mode)
 
     def __call__(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
         return self.transform_data(data_segment, auxiliary_data, mode)

@@ -31,7 +31,7 @@ filter_features:
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.battery.scaler.MinMaxScalerSklearn  # Your wrapper class
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  # Your wrapper class
     
   metadata:
     apply_to: features
@@ -48,7 +48,7 @@ FixTimeFeatures:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.battery.scaler.MinMaxScalerSklearn
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
   
   metadata:
     apply_to: target

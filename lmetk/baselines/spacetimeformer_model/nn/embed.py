@@ -1,15 +1,15 @@
 from typing import Optional
+
 import torch
 import torch.nn as nn
 from einops import rearrange, repeat
 
-from lmetk.transforms.time2vec import Time2Vec
-
-
-# import models as stf
+from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 
 # from layers.Embed_iTransformer import DataEmbedding_inverted
 from .extra_layers import ConvBlock, Flatten
+
+# import models as stf
 
 
 class Embedding(nn.Module):
@@ -364,4 +364,5 @@ class Embedding(nn.Module):
 #         space_emb = torch.zeros_like(val_time_emb)
 #         mask = None
 #         var_idx_true = None
+#         return val_time_emb, space_emb, var_idx_true, mask
 #         return val_time_emb, space_emb, var_idx_true, mask

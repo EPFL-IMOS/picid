@@ -1,8 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
 import warnings
-import numpy as np # Used for stacking in MultiSourceFitTransformStrategy
-from lmetk.transforms.base_transform import BaseTransform # Import your BaseTransform ABC
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np  # Used for stacking in MultiSourceFitTransformStrategy
+
+from lmetk.transforms.base.base_transform import \
+    BaseTransform  # Import your BaseTransform ABC
+
 
 class TransformStrategy(ABC):
     """
@@ -93,9 +97,9 @@ class UnifiedDirectTransformStrategy(TransformStrategy):
               auxiliary_keys: Optional[List[str]] = None
               ) -> Dict[str, Any]:
 
-        assert isinstance(data[apply_to_key], dict), f"Expected a dictionary for apply_to_key '{apply_to_key}', but got {type(data[apply_to_key])}"
+        assert isinstance(data[apply_to_key], dict), f"Expected a dictionary of train/val/test for apply_to_key '{apply_to_key}', but got {type(data[apply_to_key])}"
         
-
+        
         transformed_data = data.copy()
         target_data_splits = transformed_data[apply_to_key]
         transformed_target_data_splits = {}
@@ -121,7 +125,7 @@ class UnifiedDirectTransformStrategy(TransformStrategy):
             else:
                 transformed_target_data_splits[split_name] = None
                 warnings.warn(f"Split '{split_name}' is None.")
-
+        
         transformed_data[apply_to_key] = transformed_target_data_splits
         return transformed_data
 
@@ -179,4 +183,4 @@ class UnifiedFitTransformStrategy(TransformStrategy):
                 warnings.warn(f"Split '{split_name}' is None.")
 
         transformed_data[apply_to_key] = transformed_target_data_splits
-        return transformed_data
+        return transformed_data       

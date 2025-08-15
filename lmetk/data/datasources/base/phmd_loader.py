@@ -209,7 +209,11 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
 
                 # 1) Are NaNs already present before filtering?
                 pre = df.isna().sum()
-                unit_col_data = df[unit_col].squeeze("columns")
+
+                # TODO: Check whenever it is a pd.Series or pd.DataFrame
+                unit_col_data = df[unit_col]
+                if isinstance(unit_col_data, pd.DataFrame):
+                    unit_col_data = unit_col_data.squeeze("columns")
                 m = pd.Series((unit_col_data == unit_name), index=df.index)
                 assert m.dtype == bool and m.ndim == 1 and len(m) == len(df)
                 assert not df.columns.duplicated().any(), "Duplicate columns found"

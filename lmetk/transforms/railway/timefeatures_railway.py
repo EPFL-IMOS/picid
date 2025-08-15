@@ -1,18 +1,11 @@
+from typing import Any, Dict, List, Optional, Union
 
-
-
-import pandas as pd
 import numpy as np
-from typing import Optional, Union
-
-
 import pandas as pd
-import numpy as np
-from typing import Any, List, Dict
+
+from lmetk.transforms.base.base_transform import BaseTransform
 
 # Assuming this import path is correct for your project
-
-from lmetk.transforms.base_transform import BaseTransform 
 
 
 class RailwayTimeFeaturesTransform(BaseTransform):
@@ -20,7 +13,7 @@ class RailwayTimeFeaturesTransform(BaseTransform):
 
     This transform processes time-series data to generate additional features
     based on the timestamp, using the `time_features` utility.
-    
+
     Parameters
     ----------
     freq : str
@@ -30,26 +23,28 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         Additional parameters for the base transform.
     """
 
-    def __init__(self, use_features: List[str], normalize_time_features: bool, **kwargs):
-        # Call the BaseTransform constructor. 
+    def __init__(
+        self, use_features: List[str], normalize_time_features: bool, **kwargs
+    ):
+        # Call the BaseTransform constructor.
         # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
         # so just pass any generic kwargs along.
-        super().__init__(**kwargs) 
-        
+        super().__init__(**kwargs)
+
         # Store the frequency, which is specific to this transform
         self.use_features = use_features
         self.normalize_time_features = normalize_time_features
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
-        # (your provided BaseTransform doesn't show _init_kwargs in its __init__, 
+        # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
         # but your original TimePFNTimeFeaturesTransform did, so keeping it consistent for your repr)
-        self._init_kwargs = kwargs 
+        self._init_kwargs = kwargs
 
     def __repr__(self):
         # Ensure 'freq' is included in the representation, along with any other init args
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
+    def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -70,27 +65,34 @@ class RailwayTimeFeaturesTransform(BaseTransform):
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
-        
-        df_stamp_raw = time_features(data_segment, use_features=self.use_features, normalize=self.normalize_time_features)
-        
+
+        df_stamp_raw = time_features(
+            data_segment,
+            use_features=self.use_features,
+            normalize=self.normalize_time_features,
+        )
+
         # Check is there are any nan values
         if df_stamp_raw.isnull().values.any():
             raise ValueError("NaN values found in df_stamp_raw")
-
 
         # Return the values as a NumPy array.
         return df_stamp_raw.values
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
-    def __call__(self, data: Any,  mode: str) -> Any:
-        return self.transform_data(data,  mode=mode)
+    def __call__(self, data: Any, mode: str) -> Any:
+        return self.transform_data(data, mode=mode)
 
-    def transform(self, data: Any,  mode: str) -> Any:
-        return self(data,  mode=mode)
+    def transform(self, data: Any, mode: str) -> Any:
+        return self(data, mode=mode)
+
 
 def time_features(
-    dates: pd.Series, use_features: Optional[list[str]] = None, normalize: bool = True, return_float=True,
+    dates: pd.Series,
+    use_features: Optional[list[str]] = None,
+    normalize: bool = True,
+    return_float=True,
 ) -> tuple[pd.DataFrame, pd.Series]:
     if use_features is None:
         use_features = ["year", "month", "day", "weekday", "hour", "minute"]
@@ -140,7 +142,7 @@ def time_features(
             raise ValueError(f"Column {col} contains NaN values.")
         if (df[col] == 0).all():
             raise ValueError(f"Column {col} is a zero column.")
-    # make all the time features to be float 
+    # make all the time features to be float
     if return_float:
         df = df.astype(float)
 
@@ -160,7 +162,7 @@ def reconstruct_datetime_from_features(
     Returns:
     - pd.Series of datetime64[ns]
     """
-    
+
     # Convert float columns to int if necessary
     if isinstance(data, np.ndarray):
         if np.issubdtype(data.dtype, np.floating):

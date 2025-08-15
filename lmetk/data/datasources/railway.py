@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 from pyparsing import Any, Dict
 
 from lmetk.data.datasources import SingleSourceLoader
-from lmetk.data.utils import time_features
+
 
 warnings.filterwarnings("ignore")
 
@@ -35,6 +35,7 @@ class RailwayLoader(SingleSourceLoader):
             "features": df,
             "target": df_target,
             "timestamps": df_stamp,
+            "time_features": None,
             "initial_dates": df_stamp,
         }
 

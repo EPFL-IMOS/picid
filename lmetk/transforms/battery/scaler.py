@@ -28,7 +28,7 @@ class MinMaxScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
         
     def transform_data(self, data_segment: Any, auxiliary_data: Optional[Dict],  mode: Optional[str]) -> Any:
         """Transforms a single data segment using the internal MinMaxScaler."""
-        np_data, original_type = _convert_to_numpy(data_segment)
+        np_data, _ = _convert_to_numpy(data_segment)
         
         if np_data.ndim == 1:
             np_data = np_data.reshape(-1, 1)
