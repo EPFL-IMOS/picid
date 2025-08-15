@@ -1,20 +1,21 @@
 import os
+from pathlib import Path
+
+import hydra
 import numpy as np
 import pytest
-import hydra
 from omegaconf import OmegaConf
 
-from lmetk.data.datasets import SWDataset, SWBatchDataset
+from lmetk.data.datasets import SWBatchDataset, SWDataset
 from lmetk.data.preprocessing.single_source_preprocessor import PreProcessor
-from pathlib import Path
-from lmetk.transforms.transform_manager import ConfigTransformManager
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
 
 @pytest.fixture(scope="module")
 def dataset_val(path_cfg: str):
-    #GlobalHydra.instance().clear()
-    #base_dir = Path(__file__).resolve().parents[3]
-    #paths_cfg = OmegaConf.load(f"{base_dir}/configs/paths/{path_cfg}.yaml")
+    # GlobalHydra.instance().clear()
+    # base_dir = Path(__file__).resolve().parents[3]
+    # paths_cfg = OmegaConf.load(f"{base_dir}/configs/paths/{path_cfg}.yaml")
 
     cfg = hydra.compose(
         config_name="test.yaml",
@@ -28,22 +29,19 @@ def dataset_val(path_cfg: str):
 
     data_path = Path(f"{paths_cfg.data_dir}/ETT-small/ETTh1.csv").expanduser()
     assert os.path.exists(data_path), f"File not found: {data_path}"
-    
+
     loader_config = OmegaConf.create(
         {
             "_target_": "lmetk.data.datasources.ETThLoader",
-            
-                "data_name": "ETTh1",
-                "data_folder": "ETT-small",
-                "data_path": data_path,
-                "task_mode": "univariate",
-                "target_name": "OT",
-                "timestamp_name": "date",
-                
-                
+            "data_name": "ETTh1",
+            "data_folder": "ETT-small",
+            "data_path": data_path,
+            "task_mode": "univariate",
+            "target_name": "OT",
+            "timestamp_name": "date",
             "data_splitter": {
                 "_target_": "lmetk.data.preprocessing.TimeSplitter",
-                "splitter_type": 'TimeSplitter',
+                "splitter_type": "TimeSplitter",
                 "train": 8640,
                 "val": 2880,
                 "test": 2880,
@@ -54,41 +52,38 @@ def dataset_val(path_cfg: str):
         }
     )
 
-    transforms_configs =  OmegaConf.create({
-                "scaler": {
-                    "transform": {
-                        "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
-                    },
-                    "metadata": {
-                        "apply_to": "features",
-                        "fit_on": "train"
-                    }
+    transforms_configs = OmegaConf.create(
+        {
+            "scaler": {
+                "transform": {
+                    "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
                 },
-                "time_features_transform": {
-                    "transform": {
-                        "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
-                        "freq": "h"
-                    },
-                    "metadata": {
-                        "apply_to": "timestamps"
-                    }
-                }
-            })
+                "metadata": {"apply_to": "features", "fit_on": "train"},
+            },
+            "time_features_transform": {
+                "transform": {
+                    "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
+                    "freq": "h",
+                },
+                "metadata": {"apply_to": "timestamps"},
+            },
+        }
+    )
 
-    
     dataset_source = hydra.utils.instantiate(loader_config)
-    
+
     # Create manager
     transforms_manager = ConfigTransformManager(transforms_config=transforms_configs)
 
-    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
+    preprocessor = PreProcessor(
+        datasource=dataset_source, transforms=transforms_manager
+    )
     preprocessor.pipeline()
 
     data_dict = preprocessor.get_processed_data()
 
-    features = data_dict['features']
-    time_features = data_dict['timestamps']
-    
+    features = data_dict["features"]
+    time_features = data_dict["timestamps"]
 
     ds_val = SWDataset(
         features=features["val"],
@@ -119,8 +114,12 @@ def test_SWDataset_first_sample(dataset_val):
         [[6, 29, 3, 23], [6, 30, 4, 0], [6, 30, 4, 1], [6, 30, 4, 2], [6, 30, 4, 3]]
     )
 
-    np.testing.assert_array_almost_equal(seq_x[-5:], expected_seq_x, err_msg= "expected_seq_x is wrong")
-    np.testing.assert_array_almost_equal(seq_y[-5:], expected_seq_y, err_msg="expected_seq_y is wrong")
+    np.testing.assert_array_almost_equal(
+        seq_x[-5:], expected_seq_x, err_msg="expected_seq_x is wrong"
+    )
+    np.testing.assert_array_almost_equal(
+        seq_y[-5:], expected_seq_y, err_msg="expected_seq_y is wrong"
+    )
     # np.testing.assert_array_equal(seq_x_mark[-5:], expected_seq_x_mark, err_msg= "expected_seq_x_mark is wrong")
     # np.testing.assert_array_equal(seq_y_mark[-5:], expected_seq_y_mark, err_msg="expected_seq_y_mark is wrong")
 
@@ -131,7 +130,6 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
     # base_dir = Path(__file__).resolve().parents[3]
     # data_path = os.path.abspath(f"{base_dir}/datasets/ETT-small/ETTh1.csv")
     # assert os.path.exists(data_path), f"File not found: {data_path}"
-
 
     cfg = hydra.compose(
         config_name="test.yaml",
@@ -149,18 +147,15 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
     loader_config = OmegaConf.create(
         {
             "_target_": "lmetk.data.datasources.ETThLoader",
-            
-                "data_name": "ETTh1",
-                "data_folder": "ETT-small",
-                "data_path": data_path,
-                "task_mode": "univariate",
-                "target_name": "OT",
-                "timestamp_name": "date",
-                
-                
+            "data_name": "ETTh1",
+            "data_folder": "ETT-small",
+            "data_path": data_path,
+            "task_mode": "univariate",
+            "target_name": "OT",
+            "timestamp_name": "date",
             "data_splitter": {
                 "_target_": "lmetk.data.preprocessing.TimeSplitter",
-                "splitter_type": 'TimeSplitter',
+                "splitter_type": "TimeSplitter",
                 "train": 8640,
                 "val": 2880,
                 "test": 2880,
@@ -170,39 +165,38 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
             },
         }
     )
-    transforms_configs =  OmegaConf.create({
-                "scaler": {
-                    "transform": {
-                        "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
-                    },
-                    "metadata": {
-                        "apply_to": "features",
-                        "fit_on": "train"
-                    }
+    transforms_configs = OmegaConf.create(
+        {
+            "scaler": {
+                "transform": {
+                    "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
                 },
-                "time_features_transform": {
-                    "transform": {
-                        "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
-                        "freq": "h"
-                    },
-                    "metadata": {
-                        "apply_to": "timestamps"
-                    }
-                }
-            })
+                "metadata": {"apply_to": "features", "fit_on": "train"},
+            },
+            "time_features_transform": {
+                "transform": {
+                    "_target_": "lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform",
+                    "freq": "h",
+                },
+                "metadata": {"apply_to": "timestamps"},
+            },
+        }
+    )
 
     dataset_source = hydra.utils.instantiate(loader_config)
-    
+
     # Create manager
     transforms_manager = ConfigTransformManager(transforms_config=transforms_configs)
 
-    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
+    preprocessor = PreProcessor(
+        datasource=dataset_source, transforms=transforms_manager
+    )
     preprocessor.pipeline()
 
     data_dict = preprocessor.get_processed_data()
 
-    features = data_dict['features']
-    time_features = data_dict['timestamps']
+    features = data_dict["features"]
+    time_features = data_dict["timestamps"]
 
     batch_dataset = SWBatchDataset(
         features=features["val"],
@@ -213,4 +207,5 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
         stride=1,
     )
 
+    return batch_dataset
     return batch_dataset

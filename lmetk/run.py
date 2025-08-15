@@ -21,7 +21,7 @@ from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.pipeline.base import ConstantLossLightningModule
-from lmetk.transforms.transform_manager import ConfigTransformManager
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
 from lmetk.utils.rich_output import display_targets, print_data_dict_structure
 from lmetk.utils_refactor import (
     RankedLogger,
@@ -114,9 +114,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     aux_transforms = transforms_manager.get_transforms_with_auxiliary_keys()
     log.info("Transforms with auxiliary keys:" + str(list(aux_transforms.keys())))
 
-    if (
-        isinstance(dataset_source, SingleSourceLoader)
-        or isinstance(dataset_source, PHMDMultiSourceLoader)
+    if isinstance(dataset_source, SingleSourceLoader) or isinstance(
+        dataset_source, PHMDMultiSourceLoader
     ):
         preprocessor_mode = "per_unit"
 

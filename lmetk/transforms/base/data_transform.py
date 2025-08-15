@@ -1,25 +1,23 @@
-from typing import Dict, Any, List, Optional, Union
-
-# To allow instantiation of Hydra-configured objects
+import logging
+from typing import Any, Dict, List, Optional, Union
 
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 
 # Import your strategy and base transform classes
-from lmetk.transforms.base_transform import BaseTransform
-from lmetk.transforms.strategy import (
+from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+from lmetk.transforms.base.strategy import (  # DirectTransformStrategy,; FitTransformStrategy,; MultiSourceFitTransformStrategy,; MultiSourceDirectTransformStrategy
     TransformStrategy,
-    # DirectTransformStrategy,
-    # FitTransformStrategy,
-    # MultiSourceFitTransformStrategy,
-    # MultiSourceDirectTransformStrategy
     UnifiedDirectTransformStrategy,
     UnifiedFitTransformStrategy,
 )
-from lmetk.transforms.multisource import BaseMultiSourceTransformMixin
 
-import logging
-logger = logging.getLogger(__name__) 
+# To allow instantiation of Hydra-configured objects
+
+
+logger = logging.getLogger(__name__)
+
 
 class DataTransform:
     """
@@ -28,7 +26,7 @@ class DataTransform:
     and then delegating the actual transformation application. It also handles
     post-transformation validation.
     """
-    
+
     def __init__(self, transform_name: str, transform: dict, metadata: dict):
         """
         Initializes DataTransform with a name, the transform configuration, and metadata.
@@ -52,20 +50,22 @@ class DataTransform:
         """
         self.transform_name = transform_name
         self.metadata = metadata
-        
-        self.apply_to = metadata.get('apply_to', None)
-        self.fit_on = metadata.get('fit_on', None)
-        self.auxiliary_keys = metadata.get('auxiliary_keys', None)
-        self.multi_source_fit = metadata.get('multi_source_fit', False)
+
+        self.apply_to = metadata.get("apply_to", None)
+        self.fit_on = metadata.get("fit_on", None)
+        self.auxiliary_keys = metadata.get("auxiliary_keys", None)
+        self.multi_source_fit = metadata.get("multi_source_fit", False)
 
         if self.apply_to is None:
-            raise ValueError(f"Metadata for transform '{transform_name}' must specify 'apply_to' key.")
-        
-        assert isinstance(transform, BaseTransform), (
-                f"Transform instance for '{transform_name}' (type: {type(transform)}) "
-                "must implement BaseTransform."
+            raise ValueError(
+                f"Metadata for transform '{transform_name}' must specify 'apply_to' key."
             )
-        
+
+        assert isinstance(transform, BaseTransform), (
+            f"Transform instance for '{transform_name}' (type: {type(transform)}) "
+            "must implement BaseTransform."
+        )
+
         if self.fit_on is not None:
             self.strategy = UnifiedFitTransformStrategy()
         else:
@@ -78,7 +78,7 @@ class DataTransform:
         #         self.strategy = MultiSourceFitTransformStrategy()
         #     else:
         #         self.strategy = MultiSourceDirectTransformStrategy()
-        
+
         # else:
         #     assert isinstance(transform, BaseTransform), (
         #         f"Transform instance for '{transform_name}' (type: {type(transform)}) "
@@ -89,7 +89,7 @@ class DataTransform:
         #         self.strategy = FitTransformStrategy()
         #     else:
         #         self.strategy = DirectTransformStrategy()
-            
+
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform
         if isinstance(transform, DictConfig):
@@ -100,15 +100,16 @@ class DataTransform:
                 f"Transform instance for '{transform_name}' (type: {type(self.transform_instance)}) "
                 f"must inherit from 'lmetk.transforms.base_transform.BaseTransform'."
             )
-        
+
         if not isinstance(self.transform_instance, BaseTransform):
             raise TypeError(
                 f"Transform instance for '{transform_name}' (type: {type(self.transform_instance)}) "
                 f"must inherit from 'lmetk.transforms.base_transform.BaseTransform'."
             )
-            
-    
-    def forward(self, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+
+    def forward(
+        self, data: Union[Dict[str, Any], List[Dict[str, Any]]]
+    ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """
         Applies the transformation to the input data using the selected strategy.
         Performs validation checks after the strategy returns the transformed data.
@@ -121,7 +122,7 @@ class DataTransform:
               Expected structure: `{ 'data_key': { 'train': ..., 'val': ..., 'test': ... } }`
             - A list of dictionaries: for multi-source transformations (MultiSourceFitTransformStrategy).
               Expected structure: `[ { 'data_key': { ... } }, { 'data_key': { ... } } ]`
-            
+
         Returns
         -------
         Union[Dict[str, Any], List[Dict[str, Any]]]
@@ -141,30 +142,30 @@ class DataTransform:
         # The strategy is responsible for handling the internal structure of `data`
         # (single dict vs. list of dicts) and using `apply_to` and `fit_on`.
         transformed_data = self.strategy.apply(
-            self.transform_instance, 
-            data, 
-            apply_to_key=self.apply_to, 
+            self.transform_instance,
+            data,
+            apply_to_key=self.apply_to,
             fit_on_split=self.fit_on,
-            auxiliary_keys = self.auxiliary_keys
+            auxiliary_keys=self.auxiliary_keys,
         )
-        
+
         # --- Post-transformation Validation ---
         # This centralizes validation logic, ensuring consistency regardless of strategy.
 
-        if isinstance(data, dict): # Validate for single-source transformations
+        if isinstance(data, dict):  # Validate for single-source transformations
             if not isinstance(transformed_data, dict):
                 raise TypeError(
                     f"Transform '{self.transform_name}': Strategy returned {type(transformed_data)}, "
                     f"expected dict for single source input."
                 )
-            
+
             # Ensure the top-level 'apply_to' key is present in the transformed data
             if self.apply_to not in transformed_data:
-                 raise KeyError(
-                     f"Transform '{self.transform_name}': Transformed data from strategy does not "
-                     f"contain '{self.apply_to}' key at the top level."
-                 )
-            
+                raise KeyError(
+                    f"Transform '{self.transform_name}': Transformed data from strategy does not "
+                    f"contain '{self.apply_to}' key at the top level."
+                )
+
             # Ensure the value at 'apply_to' is still a dict of splits
             if not isinstance(transformed_data[self.apply_to], dict):
                 raise TypeError(
@@ -180,20 +181,26 @@ class DataTransform:
                     f"Transform '{self.transform_name}': Split key mismatch at '{self.apply_to}'. "
                     f"Original splits: {original_splits}, Transformed splits: {transformed_splits}."
                 )
-            
+
             # Additional check for data types (optional but good practice)
             for split_name in original_splits:
-                if not isinstance(data[self.apply_to][split_name], type(transformed_data[self.apply_to][split_name])):
-                    logger.warning(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}.")
+                if not isinstance(
+                    data[self.apply_to][split_name],
+                    type(transformed_data[self.apply_to][split_name]),
+                ):
+                    logger.warning(
+                        f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' from {type(data[self.apply_to][split_name])} to {type(transformed_data[self.apply_to][split_name])}."
+                    )
 
-
-        elif isinstance(data, list): # Validate for multi-source transformations
-            if not isinstance(transformed_data, list) or not all(isinstance(d, dict) for d in transformed_data):
+        elif isinstance(data, list):  # Validate for multi-source transformations
+            if not isinstance(transformed_data, list) or not all(
+                isinstance(d, dict) for d in transformed_data
+            ):
                 raise TypeError(
                     f"Transform '{self.transform_name}': Strategy returned {type(transformed_data)}, "
                     f"expected list of dicts for multi-source input."
                 )
-            
+
             if len(data) != len(transformed_data):
                 raise ValueError(
                     f"Transform '{self.transform_name}': Multi-source transform changed the number of sources. "
@@ -201,7 +208,9 @@ class DataTransform:
                 )
 
             # Iterate through each transformed source to validate internal structure
-            for i, (original_source, transformed_source) in enumerate(zip(data, transformed_data)):
+            for i, (original_source, transformed_source) in enumerate(
+                zip(data, transformed_data)
+            ):
                 if not isinstance(transformed_source, dict):
                     raise TypeError(
                         f"Transform '{self.transform_name}': Transformed source at index {i} "
@@ -213,13 +222,13 @@ class DataTransform:
                         f"Transform '{self.transform_name}': Transformed source at index {i} "
                         f"does not contain '{self.apply_to}' key."
                     )
-                
+
                 if not isinstance(transformed_source[self.apply_to], dict):
                     raise TypeError(
                         f"Transform '{self.transform_name}': Data at '{self.apply_to}' key in transformed "
                         f"source {i} is of type {type(transformed_source[self.apply_to])}, expected dict of splits."
                     )
-                
+
                 original_splits = set(original_source[self.apply_to].keys())
                 transformed_splits = set(transformed_source[self.apply_to].keys())
                 if original_splits != transformed_splits:
@@ -229,8 +238,13 @@ class DataTransform:
                     )
                 # Additional check for data types (optional but good practice)
                 for split_name in original_splits:
-                    if not isinstance(original_source[self.apply_to][split_name], type(transformed_source[self.apply_to][split_name])):
-                        logger.warning(f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}.")
+                    if not isinstance(
+                        original_source[self.apply_to][split_name],
+                        type(transformed_source[self.apply_to][split_name]),
+                    ):
+                        logger.warning(
+                            f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{self.apply_to}' for source {i} from {type(original_source[self.apply_to][split_name])} to {type(transformed_source[self.apply_to][split_name])}."
+                        )
 
         else:
             raise TypeError(
