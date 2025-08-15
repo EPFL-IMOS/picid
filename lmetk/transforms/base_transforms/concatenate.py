@@ -90,4 +90,4 @@ class ConcatenateTransform(BaseTransform, BaseMultiSourceTransformMixin):
         return result
 
     def __call__(self, data_segment: Any, auxiliary_data: Dict,  mode: str) -> Any:
-        return self.transform_data(data_segment, auxiliary_data,  mode=mode)        return self.transform_data(data_segment, auxiliary_data,  mode=mode)
+        return self.transform_data(data_segment, auxiliary_data,  mode=mode) 

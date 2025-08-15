@@ -350,5 +350,4 @@ def create_transform_manager_from_config(config_path: Optional[str] = None,
     return ConfigTransformManager(
         transforms_config=config, 
         lazy_instantiation=lazy_instantiation
-    )        lazy_instantiation=lazy_instantiation
-    )
+    )  

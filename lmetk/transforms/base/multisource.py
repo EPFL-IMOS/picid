@@ -227,4 +227,4 @@ class N_CMAPSSScaler_Features(BaseTransform, BaseMultiSourceTransformMixin): #Ba
             )
             data_segment = 2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1
             #X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-        return data_segment        return data_segment
+        return data_segment    

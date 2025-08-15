@@ -58,5 +58,4 @@ class BaseTransform(ABC):
         exclude_str = f"exclude_keys={self.exclude_keys!r}"
         if args:
             return f"{self.__class__.__name__}({exclude_str}, {args})"
-        return f"{self.__class__.__name__}({exclude_str})"            return f"{self.__class__.__name__}({exclude_str}, {args})"
-        return f"{self.__class__.__name__}({exclude_str})"
+        return f"{self.__class__.__name__}({exclude_str})"   
