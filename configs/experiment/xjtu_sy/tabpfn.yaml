@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: xjtu_sy
-  - override /transforms: battery/bosello_NB_base
+  - override /transforms: bearings/default_rul
   - override /model: tabpfn_refactor
   - override /dataset: battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
@@ -22,9 +22,3 @@ evaluator:
   
   test:
     apply_inverse_scaling: True
-
-transforms:
-  filter_features:
-    transform: 
-      columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var']
-
