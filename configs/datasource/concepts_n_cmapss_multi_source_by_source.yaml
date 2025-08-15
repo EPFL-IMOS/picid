@@ -8,29 +8,29 @@ task_mode: multivariate
 defaults:
   - /datasource@train1: concepts_n_cmapss
   - /datasource@train2: concepts_n_cmapss
-  #- /datasource@train3: concepts_n_cmapss
-  #- /datasource@train4: concepts_n_cmapss
+  - /datasource@train3: concepts_n_cmapss
+  - /datasource@train4: concepts_n_cmapss
 
   - /datasource@test1: concepts_n_cmapss
   - /datasource@test2: concepts_n_cmapss
-  #- /datasource@test3: concepts_n_cmapss
-  #- /datasource@test4: concepts_n_cmapss
+  - /datasource@test3: concepts_n_cmapss
+  - /datasource@test4: concepts_n_cmapss
 
 
 
 source_list:
   train1: ${..train1}
   train2: ${..train2}
-  #train3: ${..train3}
-  #train4: ${..train4}
+  train3: ${..train3}
+  train4: ${..train4}
 
   test1: ${..test1}
   test2: ${..test2}
-  #test3: ${..test3}
-  #test4: ${..test4}
+  test3: ${..test3}
+  test4: ${..test4}
 
 
-# multisource_data_splitter: 
+multisource_data_splitter: null
 #   _target_: lmetk.data.preprocessing.BySourceSplitter
 #   sources_train: [train1, train2] #[train1, train2, train3, train4]
 #   sources_test: [test1, test2] #[test1, test2, test3, test4]
@@ -55,14 +55,14 @@ train2:
   load_arguments:
     n_DS: "04"
     <<: *train_args
-# train3:
-#   load_arguments:
-#     n_DS: "05"
-#     <<: *train_args
-# train4:
-#   load_arguments:
-#     n_DS: "07"
-#     <<: *train_args
+train3:
+  load_arguments:
+    n_DS: "05"
+    <<: *train_args
+train4:
+  load_arguments:
+    n_DS: "07"
+    <<: *train_args
 
 test1:
   load_arguments:
@@ -72,13 +72,13 @@ test2:
   load_arguments:
     n_DS: "04"
     <<: *test_args
-# test3:
-#   load_arguments:
-#     n_DS: "05"
-#     <<: *test_args
-# test4:
-#   load_arguments:
-#     n_DS: "07"
-#     <<: *test_args
+test3:
+  load_arguments:
+    n_DS: "05"
+    <<: *test_args
+test4:
+  load_arguments:
+    n_DS: "07"
+    <<: *test_args
 
 

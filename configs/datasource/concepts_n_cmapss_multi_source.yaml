@@ -1,3 +1,5 @@
+# Setup taken over from https://github.com/EPFL-IMOS/concept-prognostics/tree/main
+
 _target_: lmetk.data.datasources.base.multi_source_loader.MultiSourceLoader
 _recursive_: False
 
@@ -8,26 +10,26 @@ task_mode: multivariate
 defaults:
   - /datasource@train1: concepts_n_cmapss
   - /datasource@train2: concepts_n_cmapss
-  #- /datasource@train3: concepts_n_cmapss
-  #- /datasource@train4: concepts_n_cmapss
+  - /datasource@train3: concepts_n_cmapss
+  - /datasource@train4: concepts_n_cmapss
 
   - /datasource@test1: concepts_n_cmapss
   - /datasource@test2: concepts_n_cmapss
-  #- /datasource@test3: concepts_n_cmapss
-  #- /datasource@test4: concepts_n_cmapss
+  - /datasource@test3: concepts_n_cmapss
+  - /datasource@test4: concepts_n_cmapss
 
 
 
 source_list:
   train1: ${..train1}
   train2: ${..train2}
-  #train3: ${..train3}
-  #train4: ${..train4}
+  train3: ${..train3}
+  train4: ${..train4}
 
   test1: ${..test1}
   test2: ${..test2}
-  #test3: ${..test3}
-  #test4: ${..test4}
+  test3: ${..test3}
+  test4: ${..test4}
 
 
 multisource_data_splitter: 
@@ -36,7 +38,6 @@ multisource_data_splitter:
   sources_test: [test1, test2] #[test1, test2, test3, test4]
   sources_val: [] # TODO: why are there no val test sources in the original setup?
 
-# Setup taken over from https://github.com/EPFL-IMOS/concept-prognostics/tree/main
 
 _train_load_args: &train_args
   units: [1,2,3,4,5,6]
@@ -55,14 +56,14 @@ train2:
   load_arguments:
     n_DS: "04"
     <<: *train_args
-# train3:
-#   load_arguments:
-#     n_DS: "05"
-#     <<: *train_args
-# train4:
-#   load_arguments:
-#     n_DS: "07"
-#     <<: *train_args
+train3:
+  load_arguments:
+    n_DS: "05"
+    <<: *train_args
+train4:
+  load_arguments:
+    n_DS: "07"
+    <<: *train_args
 
 test1:
   load_arguments:
@@ -72,13 +73,13 @@ test2:
   load_arguments:
     n_DS: "04"
     <<: *test_args
-# test3:
-#   load_arguments:
-#     n_DS: "05"
-#     <<: *test_args
-# test4:
-#   load_arguments:
-#     n_DS: "07"
-#     <<: *test_args
+test3:
+  load_arguments:
+    n_DS: "05"
+    <<: *test_args
+test4:
+  load_arguments:
+    n_DS: "07"
+    <<: *test_args
 
 
