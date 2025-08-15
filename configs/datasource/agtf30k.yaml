@@ -1,0 +1,32 @@
+# This was a prototype! Needs work.
+_target_: lmetk.data.datasources.AGTF30KLoader
+
+data_name: AGTF30_rawdata_1_Hz #first
+data_folder: AGTF30K
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
+
+#samples_per_day: 24
+target_name: V # Fault type
+timestamp_name: signaldate
+
+# Need to be discussed
+task_mode: multivariate
+
+include_healthy: true
+window_size: 50
+stride: 1
+scaling: "legacy"
+
+data_splitter:
+  _target_: lmetk.data.preprocessing.TimeSplitter
+  train: 9040 # int or float. In case of float it is a percentage of the dataset
+  val: 578 # int or float. In case of float it is a percentage of the dataset
+  test: 1784 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)
+
+  # # Optional feature: by def. we generate splits for features and timestamps
+  # create_splits_for: [features, timestamps, health_states, rul, concepts, unit, descriptors]
+
+  # There values will be read from the model parameters similarly to how we deal with data_path.
+  seq_len: 384    # window size
+  label_len: 96   # overlap size
+  pred_len: 96    # prediction size
