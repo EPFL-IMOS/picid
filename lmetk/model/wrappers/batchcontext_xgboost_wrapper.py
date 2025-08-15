@@ -7,7 +7,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from lmetk.model.wrappers.base import AbstractWrapper
 
 
-class XGBoostWrapper(AbstractWrapper):
+class BatchContextXGBoostWrapper(AbstractWrapper):
     r"""Wrapper for the XGboost model."""
 
     def __init__(self, **kwargs):

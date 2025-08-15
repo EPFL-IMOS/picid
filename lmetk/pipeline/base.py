@@ -5,12 +5,11 @@ import torch
 from lightning import LightningModule
 
 from lmetk.evaluator.base import AbstractEvaluator
+from lmetk.model.wrappers.base import FitPredictWrapper
 
 
 class CustomEvaluatorInterface(ABC):
-    """Interface for custom evaluators.
-       
-    """
+    """Interface for custom evaluators."""
 
     @abstractmethod
     def _training_step(self, batch, batch_idx: int) -> dict[str, torch.Tensor]:
@@ -69,7 +68,6 @@ class CustomEvaluatorInterface(ABC):
 
 class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
 
-
     def __init__(self, evaluators: dict[str, AbstractEvaluator]) -> None:
 
         super().__init__()
@@ -80,12 +78,12 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         # Make sure effective prediction lenght of the model is greater of equal to evaluator effective prediction lenght
         # Determine the effective prediction length, defaulting to 0 if not set
         for name, evaluator in evaluators.items():
-            self.effective_pred_len = getattr(evaluator, 'effective_pred_len', None)
+            self.effective_pred_len = getattr(evaluator, "effective_pred_len", None)
             if self.effective_pred_len:
-                assert self.backbone.kwargs.pred_len >= self.effective_pred_len, \
-                    f"Not possible to have self.evaluator.effective_pred_len: " + \
-                    f"{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
-        
+                assert self.backbone.kwargs.pred_len >= self.effective_pred_len, (
+                    f"Not possible to have self.evaluator.effective_pred_len: "
+                    + f"{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
+                )
 
     def log_epoch_metrics(self, mode=None):
         """Log metrics.
@@ -104,9 +102,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
                 prog_bar=True,
                 on_step=False,
             )
-        
-        self.evaluators[mode].reset()
 
+        self.evaluators[mode].reset()
 
     def training_step(self, batch, batch_idx: int) -> torch.Tensor:
         """Perform a single training step on a batch of data.
@@ -137,7 +134,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         # Return loss for backpropagation step
         return model_outs["loss"]
 
-
     def validation_step(self, batch, batch_idx: int) -> None:
         """Perform a single validation step on a batch of data.
 
@@ -158,7 +154,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             prog_bar=True,
             batch_size=1,
         )
-
 
     def test_step(self, batch, batch_idx: int) -> None:
         """Perform a single test step on a batch of data.
@@ -181,7 +176,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             batch_size=1,
         )
 
-
     def on_validation_epoch_start(self) -> None:
         """Hook called when a validation epoch begins.
 
@@ -196,14 +190,12 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         # Log train metrics and reset evaluator
         self.evaluators["val"].reset()
 
-
     def on_train_epoch_start(self) -> None:
         """Lightning hook that is called when a train epoch begins.
 
         This hook is used to reset the train metrics.
         """
         self.evaluators["train"].reset()
-
 
     def on_test_epoch_start(self) -> None:
         """Lightning hook that is called when a test epoch begins.
@@ -212,7 +204,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         """
         self.evaluators["test"].reset()
 
-
     def on_train_epoch_end(self) -> None:
         """Lightning hook that is called when a train epoch ends.
 
@@ -220,7 +211,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         """
         # Log train metrics and reset evaluator
         self.log_epoch_metrics(mode="train")
-        
 
     def on_validation_epoch_end(self) -> None:
         """Lightning hook that is called when a validation epoch ends.
@@ -230,14 +220,12 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         # Log validation metrics and reset evaluator
         self.log_epoch_metrics(mode="val")
 
-
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends.
 
         This hook is used to log the test metrics.
         """
         self.log_epoch_metrics(mode="test")
-
 
     def process_outputs(self, model_out: dict, batch) -> dict:
         """Handle model outputs.
@@ -254,10 +242,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         dict
             Dictionary containing the updated model output.
         """
-        model_out['predictions'] = model_out['predictions'].detach().cpu().numpy()
-        model_out['targets'] = model_out['targets'].detach().cpu().numpy()
+        model_out["predictions"] = model_out["predictions"].detach().cpu().numpy()
+        model_out["targets"] = model_out["targets"].detach().cpu().numpy()
         return model_out
-
 
 
 class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
@@ -297,8 +284,7 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         # This line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(
-            logger=False, 
-            ignore=["backbone", "readout", "feature_encoder"]
+            logger=False, ignore=["backbone", "readout", "feature_encoder"]
         )
 
         self.backbone = backbone
@@ -307,7 +293,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone}, loss={self.loss}"
-
 
     def forward(self, batch) -> dict:
         """Perform a forward pass through the model `self.backbone`.
@@ -323,7 +308,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
             Dictionary containing the model output.
         """
         return self.backbone(batch)
-
 
     def model_step(self, batch, stage: str) -> dict:
         """Perform a single model step on a batch of data.
@@ -363,7 +347,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         model_out = self.model_step(batch, stage="train")
         return model_out
 
-
     def _validation_step(self, batch, batch_idx: int) -> None:
         """Perform a single validation step on a batch of data.
 
@@ -377,7 +360,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         model_out = self.model_step(batch, stage="val")
         return model_out
 
-
     def _test_step(self, batch, batch_idx: int) -> None:
         """Perform a single test step on a batch of data.
 
@@ -390,8 +372,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         """
         model_out = self.model_step(batch, stage="test")
         return model_out
-
-
 
     def setup(self, stage: str) -> None:
         """Hook to call torch.compile.
@@ -413,10 +393,156 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         #     self.net = torch.compile(self.net)
 
 
+class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
+    """A `LightningModule` to evaluate fit-predict (sklearn style models).
+
+    Parameters
+    ----------
+    backbone : torch.nn.Module
+        The backbone model to train.
+    backbone_wrapper : torch.nn.Module
+        The backbone wrapper class.
+    readout : torch.nn.Module
+        The readout class.
+    loss : torch.nn.Module
+        The loss class.
+    feature_encoder : torch.nn.Module, optional
+        The feature encoder (default: None).
+    evaluator : Any, optional
+        The evaluator class (default: None).
+    optimizer : Any, optional
+        The optimizer class (default: None).
+    **kwargs : Any
+        Additional keyword arguments.
+    """
+
+    def __init__(
+        self,
+        backbone: FitPredictWrapper,
+        evaluators: dict[str, AbstractEvaluator],
+        **kwargs,
+    ) -> None:
+        super().__init__(evaluators=evaluators)
+
+        # This line allows to access init params with 'self.hparams' attribute
+        # also ensures init params will be stored in ckpt
+        self.save_hyperparameters(logger=False, ignore=["backbone"])
+        self.backbone = backbone
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(backbone={self.backbone})"
+
+    def model_step_fit(self, batch) -> dict:
+        """Perform a single model step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
+        """
+
+        #
+
+        X, y = self.backbone.batch_to_sklearn(batch)
+        self.backbone.fit(X, y)
+        model_out = {}
+        model_out["loss"] = torch.tensor([1])
+        return model_out
+
+    def model_step_predict(self, batch) -> dict:
+        """Perform a single model step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
+        """
+        model_out = {}
+        model_out["loss"] = torch.tensor([1])
+
+        # Update evaluator with current batch
+        n_sequence, n_features = (
+            batch["target"]["y"].shape[1],
+            batch["target"]["y"].shape[2],
+        )
+        model_out = {
+            "predictions": rearrange(
+                torch.Tensor(outputs),
+                inverse_pattern,
+                sequence=n_sequence,
+                features=n_features,
+            ),
+            "targets": batch["target"]["y"],
+        }
+
+        return model_out
+
+    def _training_step(self, batch, batch_idx: int) -> torch.Tensor:
+        """Perform a single training step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+
+        Returns
+        -------
+        torch.Tensor
+            A tensor of losses between model predictions and targets.
+        """
+        model_out = self.model_step_fit(batch)
+        return model_out
+
+    def _validation_step(self, batch, batch_idx: int) -> None:
+        """Perform a single validation step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+        """
+        model_out = self.model_step_predict(batch)
+        return model_out
+
+    def _test_step(self, batch, batch_idx: int) -> None:
+        """Perform a single test step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+        batch_idx : int
+            The index of the current batch.
+        """
+        model_out = self.model_step_predict(batch)
+        return model_out
+
+    def setup(self, stage: str) -> None:
+        pass
+
+    @property
+    def automatic_optimization(self):
+        return False
+
+    def configure_optimizers(self):
+        return None
 
 
 class CustomTimePFNLightningModule(CustomEvaluatorLightningModule):
-
 
     def process_outputs(self, model_out: dict, batch) -> dict:
         """Handle model outputs.
@@ -433,32 +559,31 @@ class CustomTimePFNLightningModule(CustomEvaluatorLightningModule):
         dict
             Dictionary containing the updated model output.
         """
-        
+
         # TODO: (Raffael)  this is a hack to make sure the model outputs are in the right format
         # Determine the effective prediction length, defaulting to 0 if not set
-        effective_pred_len = getattr(self.evaluator, 'effective_pred_len', None)
-        model_out['predictions'] = model_out['predictions'][:, :effective_pred_len, :].detach().cpu().numpy()
-        model_out['targets'] = model_out['targets'][:, :effective_pred_len, :].detach().cpu().numpy()
+        effective_pred_len = getattr(self.evaluator, "effective_pred_len", None)
+        model_out["predictions"] = (
+            model_out["predictions"][:, :effective_pred_len, :].detach().cpu().numpy()
+        )
+        model_out["targets"] = (
+            model_out["targets"][:, :effective_pred_len, :].detach().cpu().numpy()
+        )
         return model_out
 
-    def __init__(self, backbone, loss, evaluators, optimizer = None, **kwargs):
+    def __init__(self, backbone, loss, evaluators, optimizer=None, **kwargs):
         super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
-
-
-    
 
 
 class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
-
-    def __init__(self, backbone, loss, evaluators, optimizer = None, **kwargs):
+    def __init__(self, backbone, loss, evaluators, optimizer=None, **kwargs):
         super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
-
 
     def model_step(self, batch, stage: str) -> dict:
         model_out = super().model_step(batch, stage)
         # TODO: (Raffael)  what is going on here?
-        model_out['loss'] = torch.tensor([1])
+        model_out["loss"] = torch.tensor([1])
         return model_out
 
     @property

@@ -1,19 +1,23 @@
 """Wrapper for the TimePFN model."""
-import torch
-from .base import AbstractWrapper
 
-from lmetk.model.time_pfn.TimePFN import TimePFN
+import torch
 from lightning_fabric.utilities.data import AttributeDict
 
-class TimePFNWrapper(AbstractWrapper):
+from lmetk.model.time_pfn.TimePFN import TimePFN
+
+from .base import AbstractWrapper
+
+
+class BatchContextTimePFNWrapper(AbstractWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """
+
     def __init__(self, **kwargs):
-        backbone=TimePFN(AttributeDict(kwargs))
+        backbone = TimePFN(AttributeDict(kwargs))
         super().__init__(backbone=backbone, **kwargs)
-    
+
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
 
@@ -27,11 +31,11 @@ class TimePFNWrapper(AbstractWrapper):
         dict
             Dictionary containing the updated model output.
         """
-        
-        batch_x = batch['batch_x']
-        batch_y = batch['batch_y']
-        batch_x_mark = batch['batch_x_mark']
-        batch_y_mark = batch['batch_y_mark']
+
+        batch_x = batch["batch_x"]
+        batch_y = batch["batch_y"]
+        batch_x_mark = batch["batch_x_mark"]
+        batch_y_mark = batch["batch_y_mark"]
 
         channel_size = batch_x.size(2)
         max_channel_size = 161
@@ -41,8 +45,12 @@ class TimePFNWrapper(AbstractWrapper):
         true = None
 
         for j in range(number_of_iter):
-            batch_x_subset = batch_x[:, :, j * max_channel_size:(j + 1) * max_channel_size]
-            batch_y_subset = batch_y[:, :, j * max_channel_size:(j + 1) * max_channel_size]
+            batch_x_subset = batch_x[
+                :, :, j * max_channel_size : (j + 1) * max_channel_size
+            ]
+            batch_y_subset = batch_y[
+                :, :, j * max_channel_size : (j + 1) * max_channel_size
+            ]
 
             # if 'PEMS' in cfg.model.data or 'Solar' in cfg.model.data:
             #     batch_x_mark = None
@@ -52,8 +60,7 @@ class TimePFNWrapper(AbstractWrapper):
             # batch_y_mark = batch_y_mark.to(device)
 
             # Decoder input
-            
-            
+
             # ------ Workout this if needed -----
             # encoder - decoder
             # if cfg.model.use_amp:
@@ -70,8 +77,8 @@ class TimePFNWrapper(AbstractWrapper):
             # ------ Workout above if needed -----
 
             outputs = self.backbone(batch_x_subset, batch_x_mark)
-            outputs = outputs[:, -self.kwargs.pred_len:, :]
-            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len:, :]       
+            outputs = outputs[:, -self.kwargs.pred_len :, :]
+            batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len :, :]
 
             if pred is None:
                 pred = outputs
@@ -81,10 +88,6 @@ class TimePFNWrapper(AbstractWrapper):
                 true = torch.concat((true, batch_y_subset), axis=-1)
 
         # Update evaluator with current batch (replaces the accumulation logic)
-        model_out = {
-            'predictions': outputs,
-            'targets': batch_y_subset
-        }
+        model_out = {"predictions": outputs, "targets": batch_y_subset}
 
-        
         return model_out

@@ -6,6 +6,39 @@ import torch
 from lightning_fabric.utilities.data import AttributeDict
 
 
+class FitPredictWrapper(ABC):
+    r"""Abstract class that provides an interface to handle the network output.
+
+    Parameters
+    ----------
+    backbone : Sklearn
+        Backbone model
+    """
+
+    def __init__(self, backbone, **kwargs):
+        super().__init__()
+        self.backbone = backbone
+        self.kwargs = AttributeDict(kwargs)
+
+        # Check if backbone supports fit predict
+        if not hasattr(self.backbone, "fit") or not hasattr(self.backbone, "predict"):
+            raise ValueError("Backbone model must implement fit and predict methods.")
+
+    def fit(self, X, y):
+        self.backbone.fit(X.cpu(), y.cpu())
+
+    def predict(self, X):
+        return self.backbone.predict(X.cpu())
+
+    @abstractmethod
+    def batch_to_sklearn(self, batch) -> tuple[torch.Tensor, torch.Tensor]:
+        raise NotImplementedError("batch_to_sklearn method not implemented.")
+
+    @abstractmethod
+    def sklearn_out_to_batch(self, X, y):
+        raise NotImplementedError("sklearn_to_batch method not implemented.")
+
+
 class AbstractWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.
 
