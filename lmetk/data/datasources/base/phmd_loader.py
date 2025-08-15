@@ -200,7 +200,26 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         for split in ["train", "val", "test"]:
             df = main_fold[split]
             for unit_name in np.unique(df[unit_col]):
-                df_unit = df[df[unit_col] == unit_name]
+
+                # We change the masking from this because
+                # it looks like in some data frames, df[unit_col] is not of shape
+                # (n, ) but (n, 1), creating a 2d mask without failing, which
+                # masks out the data (since it acts as row filter as well)
+                # df_unit = df[df[unit_col] == unit_name]
+
+                # 1) Are NaNs already present before filtering?
+                pre = df.isna().sum()
+                unit_col_data = df[unit_col].squeeze("columns")
+                m = pd.Series((unit_col_data == unit_name), index=df.index)
+                assert m.dtype == bool and m.ndim == 1 and len(m) == len(df)
+                assert not df.columns.duplicated().any(), "Duplicate columns found"
+                assert not df.index.duplicated().any(), "Duplicate index found"
+                df_unit = df.loc[m]
+
+                # 4) Prove selection itself did not create NaNs
+                post = df_unit.isna().sum()
+                assert (pre == post).all(), "Selection created new NaNs"
+
                 data[split].append(
                     self._process_unit(
                         df_unit=df_unit,
