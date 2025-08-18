@@ -20,7 +20,11 @@ from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.pipeline.base import ConstantLossLightningModule
+from lmetk.model.wrappers.base import AbstractWrapper, FitPredictWrapper
+from lmetk.pipeline.base import (
+    ConstantLossLightningModule,
+    FitPredictWrapperLightningModule,
+)
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 from lmetk.utils.rich_output import display_targets, print_data_dict_structure
 from lmetk.utils_refactor import (
@@ -109,7 +113,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # Get transforms that apply to features
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     log.info("Feature transforms:" + str(list(feature_transforms.keys())))
-
 
     if isinstance(dataset_source, SingleSourceLoader) or isinstance(
         dataset_source, PHMDMultiSourceLoader
@@ -202,12 +205,25 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if cfg.model.get("load_path", False):
             backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
 
-        model = ConstantLossLightningModule(
-            backbone=backbone_wrapper,
-            loss=loss,
-            evaluators=evaluators,
-            optimizer=optimizer,
-        )
+        if isinstance(backbone_wrapper, AbstractWrapper):
+            model = ConstantLossLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,
+            )
+        elif isinstance(backbone_wrapper, FitPredictWrapper):
+            model = FitPredictWrapperLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported backbone wrapper type: {type(backbone_wrapper)}"
+            )
+
     else:
         if cfg.model.metadata.get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper

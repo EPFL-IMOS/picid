@@ -23,36 +23,10 @@ class FitPredictTabPFNWrapper(FitPredictWrapper):
         )
         super().__init__(backbone=backbone, **kwargs)
 
-    def forward(self, batch):
-        r"""Forward pass for the Tune wrapper.
+    def get_features(self, batch):
+        context = batch["context"]["x"]
+        return context
 
-        Parameters
-        ----------self.backbone.fit(batch_x, batch_y)
-        batch : dict
-            Batch object containing the batched data.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the updated model output.
-        """
-
-        context_fit = batch["context"]["x"].squeeze(0)
-        target_fit = batch["target"]["x"].squeeze(0)
-
-        context = batch["context"]["y"].squeeze(0)
+    def get_targets(self, batch):
         target = batch["target"]["y"]
-
-        # Extent the context with auxiliary features to give sence of seasonality
-        self.fit(context_fit, target_fit)
-
-        # Extent the context with auxiliary features to give sence of seasonality
-        outputs = self.backbone.predict(context.cpu())
-
-        # Update evaluator with current batch (replaces the accumulation logic)
-        model_out = {
-            "predictions": torch.Tensor(outputs).reshape(batch["target"]["y"].shape),
-            "targets": target,
-        }
-
-        return model_out
+        return target

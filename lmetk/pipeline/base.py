@@ -420,9 +420,11 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         self,
         backbone: FitPredictWrapper,
         evaluators: dict[str, AbstractEvaluator],
+        predict_after_training: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(evaluators=evaluators)
+        self.predict_after_training = predict_after_training
 
         # This line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
@@ -431,6 +433,24 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone})"
+
+    def __batch_to_fit_predict(self, batch):
+        # should. be of shape (d_0, ..., d_k)
+        y = self.backbone.get_targets(batch)
+        y_dims = y.shape
+
+        # should be of shape (d_0, ..., d_k, F) for i Features
+        X = self.backbone.get_features(batch)
+
+        # Assert that the first k dimensions of X and y match
+        assert (
+            X.shape[:-1] == y.shape
+        ), f"Shape mismatch: X.shape[:-1]={X.shape[:-1]} does not match y.shape={y.shape}"
+
+        X = X.reshape(-1, X.shape[-1])
+        y = y.reshape(-1)
+
+        return X, y, y_dims
 
     def model_step_fit(self, batch) -> dict:
         """Perform a single model step on a batch of data.
@@ -446,13 +466,16 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             Dictionary containing the model output and the loss.
         """
 
-        #
-
-        X, y = self.backbone.batch_to_sklearn(batch)
+        X, y, _ = self.__batch_to_fit_predict(batch)
         self.backbone.fit(X, y)
-        model_out = {}
-        model_out["loss"] = torch.tensor([1])
-        return model_out
+
+        if self.predict_after_training:
+            return self.model_step_predict(batch)
+        else:
+            # Add a dummy loss
+            model_out = {}
+            model_out["loss"] = torch.tensor([1])
+            return model_out
 
     def model_step_predict(self, batch) -> dict:
         """Perform a single model step on a batch of data.
@@ -467,24 +490,17 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         dict
             Dictionary containing the model output and the loss.
         """
-        model_out = {}
-        model_out["loss"] = torch.tensor([1])
 
-        # Update evaluator with current batch
-        n_sequence, n_features = (
-            batch["target"]["y"].shape[1],
-            batch["target"]["y"].shape[2],
-        )
+        X, y, y_dims = self.__batch_to_fit_predict(batch)
+        outputs = self.backbone.predict(X)
+
         model_out = {
-            "predictions": rearrange(
-                torch.Tensor(outputs),
-                inverse_pattern,
-                sequence=n_sequence,
-                features=n_features,
-            ),
-            "targets": batch["target"]["y"],
+            "predictions": outputs.reshape(*y_dims),
+            "targets": y,
         }
 
+        # Add a dummy loss
+        model_out["loss"] = torch.tensor([1])
         return model_out
 
     def _training_step(self, batch, batch_idx: int) -> torch.Tensor:

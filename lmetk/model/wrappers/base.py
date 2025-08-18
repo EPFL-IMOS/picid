@@ -31,12 +31,12 @@ class FitPredictWrapper(ABC):
         return self.backbone.predict(X.cpu())
 
     @abstractmethod
-    def batch_to_sklearn(self, batch) -> tuple[torch.Tensor, torch.Tensor]:
-        raise NotImplementedError("batch_to_sklearn method not implemented.")
+    def get_features(self, batch):
+        raise NotImplementedError("get_features method not implemented.")
 
     @abstractmethod
-    def sklearn_out_to_batch(self, X, y):
-        raise NotImplementedError("sklearn_to_batch method not implemented.")
+    def get_targets(self, batch):
+        raise NotImplementedError("get_targets method not implemented.")
 
 
 class AbstractWrapper(ABC, torch.nn.Module):

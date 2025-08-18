@@ -1,0 +1,3 @@
+_target_: lmetk.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper
+ignore_pretraining_limits: True
+device: ${trainer.accelerator}

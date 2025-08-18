@@ -115,6 +115,18 @@
             ]
         },
         {
+            "name": "Railway Traction: Fit-Predict TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/tabpfn_fit_predict",
+                "debug=default"
+            ]
+        },
+        {
             "name": "Concepts N-CMAPSS: TabPFN",
             "type": "debugpy",
             "request": "launch",

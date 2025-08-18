@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - override /datasource: railway
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule_tabpfn
+  - override /model: tabpfn_fit_predict
+  - override /evaluator: railway
+  - override /task_definition: railway_day_ahead
+  - override /transforms: railway/context_paper
+  - override /trainer: one_epoch
+  - override /logger: csv
+  - override /callbacks: gradient_free
+
+task_definition: 
+  requires_training: false
+  
