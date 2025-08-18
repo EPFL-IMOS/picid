@@ -1,15 +1,15 @@
-
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
-  
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+
+    
   metadata:
     apply_to: features
     fit_on: train
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn 
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
   
   metadata:
     apply_to: target
@@ -17,24 +17,26 @@ scaler_target:
 
 time_features_transform:
   transform:
-      _target_: lmetk.transforms.timefeatures.TimePFNTimeFeaturesTransform
+      _target_: lmetk.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
       freq: h 
 
   metadata:
     apply_to: timestamps    
+    assign_to: time_features
   
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transform.SklearnStandardScalerAdapter 
+    _target_: lmetk.transforms.base_transforms.scaler.SklearnStandardScalerAdapter 
   
   metadata:
-    apply_to: timestamps
+    apply_to: time_features
     fit_on: train
 
 concatenate_features:
+  # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.concatenate.ConcatenateTransform
+    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
   
   metadata:
-    apply_to: features
-    auxiliary_keys: ['timestamps', 'target'] 
+    apply_to: ['features', 'time_features']
+    assign_to: features

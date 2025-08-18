@@ -8,31 +8,26 @@ from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 
 
-class NB1_filtering(BaseTransform, BaseMultiSourceTransformMixin):
+class FilterDataFrameColumns(BaseTransform, BaseMultiSourceTransformMixin):
     """
     Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
     """
 
-    def __init__(self, columns_to_keep: str):
+    def __init__(self, columns_to_keep: str, apply_to_key: str = 'features'):
         self.columns_to_keep = columns_to_keep
+        self.apply_to_key = apply_to_key
 
     def fit_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment: Any, metadata: Dict
     ):
         pass
 
     def transform_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment_dict: Any, metadata: Dict
     ) -> Any:
         """Transforms a single data segment using the internal ."""
-        # Indexes
-        # idx = data_segment['mode'].apply(lambda x: x in [0,1,2])
-
-        # Keep mode:  0: charge, 1: discharge
-        # data_segment = data_segment[idx]
-
-        # Keep fetures: voltage (V), current (I), and temperature (T)
-        data_segment = data_segment[self.columns_to_keep]
+        
+        data_segment = data_segment_dict[self.apply_to_key][self.columns_to_keep]
 
         # Reset index
         data_segment.reset_index(drop=True, inplace=True)
@@ -42,54 +37,56 @@ class NB1_filtering(BaseTransform, BaseMultiSourceTransformMixin):
 
 class UpdateTarget(BaseTransform, BaseMultiSourceTransformMixin):
     """
-    Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
+    Update the target column to be the one specified in the config.
+    This update takes a column from the "features" and returns it
     """
 
-    def __init__(self, target_name: str):
+    def __init__(self, target_name: str, apply_to_key: str = None):
         self.target_name = target_name
+        assert apply_to_key is not None, "apply_to_key should be specified under the transform"
+        self.apply_to_key = apply_to_key
 
     def fit_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment_dict: Any, metadata: Dict
     ):
         pass
 
     def transform_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment_dict: Any, metadata: Dict
     ) -> Any:
         """Transforms a single data segment using the internal ."""
-        assert (
-            "features" in auxiliary_data
-        ), "features features are not passed in auxiliary_data"
-        data_segment = (
-            auxiliary_data["features"][self.target_name]
+        assert self.apply_to_key in data_segment_dict, f"{self.apply_to_key}  are not passed in data_segment_dict"
+        
+        out = (
+            data_segment_dict[self.apply_to_key][self.target_name]
             .values.reshape(-1, 1)
             .astype(float)
         )
-        return data_segment
+        return out
 
 
 import numpy as np
 
 
-class FixTimeFeatures(BaseTransform, BaseMultiSourceTransformMixin):
+class AssignNaiveTimefeatures(BaseTransform, BaseMultiSourceTransformMixin):
     """
-    Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
+    Replace the time features with a range from 0 to len(feature)
     """
 
-    def fit_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
-    ):
-        pass
+    # def fit_data(
+    #     self, data_segment_dict: Any, metadata: Dict
+    # ):
+    #     pass
 
     def transform_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment_dict: Any, metadata: Dict
     ) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
-            "features" in auxiliary_data
+            "features" in data_segment_dict
         ), "features features are not passed in auxiliary_data"
         data_segment = (
-            np.arange(auxiliary_data["features"].shape[0]).reshape(-1, 1).astype(float)
+            np.arange(data_segment_dict["features"].shape[0]).reshape(-1, 1).astype(float)
         )
         return data_segment
 
@@ -110,15 +107,18 @@ class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
         self.cycles_col = cycles_identifier
 
     def fit_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment: Any, metadata: Dict,
     ):
 
         pass
 
     def transform_data(
-        self, data_segment: Any, auxiliary_data: Optional[Dict], mode: Optional[str]
+        self, data_segment_dict: Any, metadata: Dict
     ) -> Any:
         """Transforms a single data segment using the internal ."""
+        
+        data_segment = data_segment_dict['features']
+        
         # Based on the rul column extract the stat
         target_col = self.target_name
 
@@ -126,7 +126,7 @@ class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
         boundaries = get_mode_change_right_indices(cycles_column)
 
         # Get the feature columns
-        feature_columns = auxiliary_data["metadata"]["features_columns"].copy()
+        feature_columns = data_segment_dict["metadata"]["features_columns"].copy()
 
         # Prevent mode columns to be in the features_columns
         mode_is_present = False
@@ -177,6 +177,4 @@ class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
         data_segment = pd.DataFrame(stats_list)
 
         return data_segment
-        data_segment = pd.DataFrame(stats_list)
-
-        return data_segment
+        

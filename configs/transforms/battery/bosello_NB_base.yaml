@@ -8,43 +8,47 @@ get_simple_feature_statistics:
     battery_mode_state: mode
   
   metadata:
-    apply_to: features
-    auxiliary_keys: ['metadata']
-  
+    apply_to: ['features', 'metadata']
+    assign_to: features
+    
+# Transfrom which takes a column from the features and assigns it to target
 assign_updated_taget_from_features:
   transform:
     _target_:  lmetk.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
     target_name: ${datasource.task_mode}
+    apply_to_key: features
     
   metadata:
-    apply_to: target
-    auxiliary_keys: ['features']
+    apply_to: ${transforms.assign_updated_taget_from_features.transform.apply_to_key}
+    assign_to: target
+    
     
 filter_features:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.NB1_filtering  # Your wrapper class
+    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
     columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+    apply_to_key: features
 
   metadata:
-    apply_to: features
+    apply_to: ${transforms.filter_features.transform.apply_to_key}
 
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  # Your wrapper class
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     
   metadata:
     apply_to: features
     fit_on: train
 
 
-FixTimeFeatures:
+AssignNaiveTimefeatures:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.FixTimeFeatures  # Your wrapper class
+    _target_:  lmetk.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
     
   metadata:
-    apply_to: time_features
-    auxiliary_keys: ['features']
+    apply_to: features
+    assign_to: time_features
 
 scaler_target:
   transform:

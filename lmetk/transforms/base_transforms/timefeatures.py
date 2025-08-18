@@ -42,7 +42,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
+    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -60,6 +60,7 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         np.ndarray
             A NumPy array containing the extracted time features.
         """
+        data_segment = data_segment["timestamps"]
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
@@ -87,6 +88,3 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
     # They simply delegate to the new transform_data method.
     def __call__(self, data: Any) -> Any:
         return self.transform_data(data)
-
-    def transform(self, data: Any, mode: str) -> Any:
-        return self(data)
