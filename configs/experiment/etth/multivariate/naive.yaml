@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - override /datasource: ETTh1
+  - override /dataset: sliding_window_batch
+  - override /datamodule: base_datamodule
+  - override /model: naive
+  - override /evaluator: default
+  - override /task_definition: etth_timepfn
+  - override /transforms: etth/timepfn_paper
+
+  
+evaluator:
+  train: 
+    task_mode: multivariate
+    target_dim_position: null #${oc.select:datasource.target_dim_position}
+    
+  val:
+    task_mode: multivariate
+    target_dim_position: null #${oc.select:datasource.target_dim_position}
+
+  test:
+    task_mode: multivariate
+    target_dim_position: null #${oc.select:datasource.target_dim_position}
+
+datasource: 
+  task_mode: multivariate
+  mode_mode: other
+
+dataset:
+  stride: 1

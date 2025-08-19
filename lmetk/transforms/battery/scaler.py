@@ -38,7 +38,7 @@ class MinMaxScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
         return transformed_np_data 
 
 
-class SklearnStandardScalerAdapter(BaseTransform, BaseMultiSourceTransformMixin):
+class StandardScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
     """
     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.
     Handles various input data types by converting them to numpy.ndarray internally

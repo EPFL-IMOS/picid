@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 def swap_first_second_level(
     data: dict[str, ndarray | list[ndarray]],
+    populate_metadata: bool = False,
 ) -> dict[str, ndarray | list[ndarray]]:
     """
     Swap the first and second level of a nested dictionary.
@@ -27,6 +28,9 @@ def swap_first_second_level(
     swapped = {}
     for key, value in data.items():
         if isinstance(value, dict):
+            if key == 'metadata': 
+                continue
+            
             # If value is a dict, check if its values are also dicts (deeper than 2 levels)
             for sub_key, sub_value in value.items():
                 if isinstance(sub_value, dict):
@@ -40,7 +44,17 @@ def swap_first_second_level(
             raise ValueError(
                 "Error while swapping dictionary. First level value must be a dict."
             )
-
+    
+    assert set(swapped.keys()) == {"train", "val", "test"}
+    if populate_metadata:
+        for key in swapped.keys():
+            if "metadata" not in swapped[key]:
+                swapped[key]["metadata"] = data['metadata']
+            else:
+                raise ValueError(
+                    "Error while swapping dictionary. Metadata already exists in the second level."
+                )
+            
     return swapped
 
 
@@ -100,7 +114,7 @@ class PreProcessor(PreProcessorInterface):
 
         if isinstance(self.data_lst, list) and len(self.data_lst) == 1:
             if return_splits_on_first_level:
-                return swap_first_second_level(self.data_lst[0])
+                return swap_first_second_level(self.data_lst[0], populate_metadata=True)
             else:
                 return self.data_lst[0]
 

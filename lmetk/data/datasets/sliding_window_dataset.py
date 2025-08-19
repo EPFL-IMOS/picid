@@ -4,11 +4,11 @@ import numpy as np
 import torch
 from numpy import ndarray
 from torch.utils.data import Dataset
-
+from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 
 
-class SlidingWindowDataset(Dataset):
+class SlidingWindowDataset(BaseDataset):
     """Standard 'sliding window' applicable in the 'rolling window' scnetario Time Series Dataset Class."""
 
     def __init__(

@@ -38,10 +38,11 @@ class ETThLoader(SingleSourceLoader):
         return {
             "features": df,
             "timestamps": df_stamp,
-            "mask": mask,
-            "columns": df.columns,
-            "target_name": self.target_name,
-            "metadata": None,
+            "metadata":{
+                "mask": mask,
+                "columns": df.columns,
+                "target_name": self.target_name,
+            }
         }
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
