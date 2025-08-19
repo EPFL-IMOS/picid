@@ -436,6 +436,7 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
     def __batch_to_fit_predict(self, batch):
         # should. be of shape (d_0, ..., d_k)
+        # TODO: isnt it weird that backbone is responsible for getting features and targets? Now I see for example that get_targets will work solely for the context dataset, no? 
         y = self.backbone.get_targets(batch)
         y_dims = y.shape
 
