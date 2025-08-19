@@ -56,7 +56,7 @@ def dataset_val(path_cfg: str):
         {
             "scaler": {
                 "transform": {
-                    "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
+                    "_target_": "lmetk.transforms.base_transforms.scaler.StandardScalerSklearn"
                 },
                 "metadata": {"apply_to": "features", "fit_on": "train"},
             },
@@ -169,7 +169,7 @@ def test_efficient_SWDataset_first_sample(dataset_val, path_cfg: str):
         {
             "scaler": {
                 "transform": {
-                    "_target_": "lmetk.transforms.base_transform.SklearnStandardScalerAdapter"
+                    "_target_": "lmetk.transforms.base_transforms.scaler.StandardScalerSklearn"
                 },
                 "metadata": {"apply_to": "features", "fit_on": "train"},
             },

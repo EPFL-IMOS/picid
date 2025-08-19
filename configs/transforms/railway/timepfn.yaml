@@ -26,7 +26,7 @@ time_features_transform:
   
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.SklearnStandardScalerAdapter 
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
   
   metadata:
     apply_to: time_features
@@ -38,5 +38,5 @@ concatenate_features:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
   
   metadata:
-    apply_to: ['features', 'time_features']
+    apply_to: ['features', 'target']
     assign_to: features

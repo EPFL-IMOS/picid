@@ -13,7 +13,7 @@ source_list:
 multisource_transforms:
   multisource_feature_minmax_scaler:
     transform:
-      _target_: lmetk.transforms.base_transform.MinMaxScalerSklearn # Your wrapper class
+      _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn # Your wrapper class
     metadata:
       apply_to: features # The key within each source's dict (e.g., source1['features'])
       fit_on: train     # The split to fit on (e.g., source1['features']['train'])

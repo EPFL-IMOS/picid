@@ -27,7 +27,7 @@ time_features_transform:
 
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.SklearnStandardScalerAdapter 
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
   
   metadata:
     apply_to: time_features

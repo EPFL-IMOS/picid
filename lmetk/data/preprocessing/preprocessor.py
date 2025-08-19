@@ -12,6 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 from lmetk.data.preprocessing.base import PreProcessorInterface
 from lmetk.transforms.base.data_transform import DataTransform
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,14 +46,15 @@ def swap_first_second_level(
                 "Error while swapping dictionary. First level value must be a dict."
             )
     
-    assert set(swapped.keys()) == {"train", "val", "test"}
-    if populate_metadata:
+    assert set(swapped.keys()) == {"train", "val", "test"}, "Swapped dictionary must contain solely 'train', 'val', and 'test' keys."
+    
+    if populate_metadata and "metadata" in data:
         for key in swapped.keys():
             if "metadata" not in swapped[key]:
                 swapped[key]["metadata"] = data['metadata']
             else:
                 raise ValueError(
-                    "Error while swapping dictionary. Metadata already exists in the second level."
+                    "While swapping dictionary in the preprocessor the error occured: the metadata already exists in the second level."
                 )
             
     return swapped

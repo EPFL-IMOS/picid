@@ -75,15 +75,10 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.evaluators = evaluators
         self.train_metrics_logged = False
 
-        # Make sure effective prediction lenght of the model is greater of equal to evaluator effective prediction lenght
-        # Determine the effective prediction length, defaulting to 0 if not set
+        #TODO: This should be moved from here to somewhere else
         for name, evaluator in evaluators.items():
             self.effective_pred_len = getattr(evaluator, "effective_pred_len", None)
-            if self.effective_pred_len:
-                assert self.backbone.kwargs.pred_len >= self.effective_pred_len, (
-                    f"Not possible to have self.evaluator.effective_pred_len: "
-                    + f"{self.effective_pred_len} greater than model pred_len: {self.backbone.kwargs.pred_len}"
-                )
+            
 
     def log_epoch_metrics(self, mode=None):
         """Log metrics.

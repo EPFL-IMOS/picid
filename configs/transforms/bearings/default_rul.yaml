@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.battery.scaler.SklearnStandardScalerAdapter  # Your wrapper class
+    _target_:  lmetk.transforms.battery.scaler.StandardScalerSklearn  # Your wrapper class
     
   metadata:
     apply_to: features

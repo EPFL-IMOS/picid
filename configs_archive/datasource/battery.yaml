@@ -54,7 +54,7 @@ data_default_transforms:
  
   concatenate_features:
     transform:
-      _target_: lmetk.transforms.concatenate.ConcatenateTransform
+      _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
     
     metadata:
       apply_to: features
