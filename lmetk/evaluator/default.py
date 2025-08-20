@@ -56,9 +56,16 @@ class DefaultEvaluator(AbstractEvaluator):
         model_out : dict
             Dictionary containing 'predictions' and 'targets' keys with numpy arrays
         """
+        # Batch, Seq. Lenght, Feature Dim 
         predictions = model_out['predictions']
         targets = model_out['targets']
         
+        # TODO: R. do you agree with this logic? 
+        if self.effective_pred_len is not None:
+            predictions = predictions[:, -self.effective_pred_len:, :]
+            targets = targets[:, -self.effective_pred_len:, :]
+        
+
         if predictions.shape != targets.shape:
             raise ValueError(f"Shape mismatch: predictions {predictions.shape} vs targets {targets.shape}")
         

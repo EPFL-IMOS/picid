@@ -4,10 +4,12 @@ defaults:
   - override /datasource: xjtu_sy
   - override /transforms: bearings/default_rul
   - override /model: tabpfn_refactor
-  - override /dataset: battery_rul_multiunit_dataset
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
+  - override /logger: csv
+  #- override /debug: default
 
 task_definition: 
   requires_training: false
@@ -22,3 +24,19 @@ evaluator:
   
   test:
     apply_inverse_scaling: True
+
+
+# instead of debug, in run.yaml. I put debug here
+# We aim to shorten the dataset for debugging purposes.
+# We do that by using torch Subset which is configured in the datamodule.
+datamodule:
+  subset_range: [0, 32, 1]  # [start, end, step]
+
+datasource:
+  debug_cache_dataset: true  
+  debug_cache_path: ${paths.data_dir}/debug_cache
+  debug_subset_range: [0, 1000, 1]
+
+trainer:
+  accelerator: cpu
+  devices: 1

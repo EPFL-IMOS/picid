@@ -32,7 +32,15 @@ class HydraConcatDataset(BaseConcatDataset):
         # Checking the inputs
         lenghts = []
         for key, val in data_dict.items():
-            if not isinstance(val, list) and not isinstance(
+            if isinstance(
+                val, omegaconf.dictconfig.DictConfig
+            ):
+                assert key == 'metadata', f"Only 'metadata' key is allowed to be omegaconf.dictconfig.DictConfig but got {key} to be omegaconf.dictconfig.DictConfig."
+
+                val.keys()
+
+
+            elif not isinstance(val, list) and not isinstance(
                 val, omegaconf.listconfig.ListConfig
             ):
                 raise TypeError(f"Data in '{key}' must be a list, got {type(val)}.")

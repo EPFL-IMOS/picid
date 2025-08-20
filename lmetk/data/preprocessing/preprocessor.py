@@ -16,6 +16,7 @@ from lmetk.transforms.base.data_transform import DataTransform
 logger = logging.getLogger(__name__)
 
 
+# TODO: refactor this logic
 def swap_first_second_level(
     data: dict[str, ndarray | list[ndarray]],
     populate_metadata: bool = False,
@@ -29,7 +30,7 @@ def swap_first_second_level(
     swapped = {}
     for key, value in data.items():
         if isinstance(value, dict):
-            if key == 'metadata': 
+            if (key == 'metadata') and (populate_metadata==True): 
                 continue
             
             # If value is a dict, check if its values are also dicts (deeper than 2 levels)
@@ -116,7 +117,16 @@ class PreProcessor(PreProcessorInterface):
 
         if isinstance(self.data_lst, list) and len(self.data_lst) == 1:
             if return_splits_on_first_level:
-                return swap_first_second_level(self.data_lst[0], populate_metadata=True)
+                # TODO: This became very convoluted. 
+                # 1. Case when matadata dict has train/val/test splits
+                metadata_ = self.data_lst[0].get('metadata', {})
+                # Case of XJTU dataset or any other multisource phmd where splits are given and we manually put matadata under each unit and its split.
+                if set(metadata_.keys()) == {"train", "val", "test"}:
+                    return swap_first_second_level(self.data_lst[0], populate_metadata=False)
+                
+                else:
+                    # Otherweise like in the ETTh dataset, we should populate the populate_metadata
+                    return swap_first_second_level(self.data_lst[0], populate_metadata=True)
             else:
                 return self.data_lst[0]
 

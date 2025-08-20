@@ -31,7 +31,7 @@ defaults:
   # - optional local: default
 
   # debugging config (enable through command line, e.g. `python train.py debug=default)
-  - debug: null
+  - debug: null #
 
 # evaluator: ${dataset.parameters.task}
 # callbacks: ${dataset.parameters.task}

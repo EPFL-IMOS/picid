@@ -318,7 +318,7 @@ def main(cfg: DictConfig) -> float | None:
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
     )
 
-    # return optimized metric
+    # return optimized metric 
     return metric_value
 
 
