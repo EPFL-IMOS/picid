@@ -1,3 +1,41 @@
+cut_to_first_zero_target: 
+  transform:
+    _target_: lmetk.transforms.bearings.cut_till_first_zero.CutToFirstZero
+    key: 'target'
+
+  metadata:
+    apply_to: 'target'
+    assign_to: 'target'
+
+cut_to_first_zero_features: 
+  transform:
+    _target_: lmetk.transforms.bearings.cut_till_first_zero.CutToFirstZero
+    key: 'features'
+
+  metadata:
+    apply_to: ['target','features']
+    assign_to: 'features'
+
+stfft:
+  transform:
+    _target_: lmetk.transforms.base_transforms.stfft.STFTTransform
+    win_len: 1024
+    hop: 512
+    
+  metadata:
+    apply_to: 'features'
+    assign_to: 'features'
+
+align_targets: 
+  transform:
+    _target_: lmetk.transforms.bearings.filter_target.FilterTarget
+    win_len: ${transforms.stfft.transform.win_len}
+    hop: ${transforms.stfft.transform.hop}
+
+  metadata:
+    apply_to: ['target','features']
+    assign_to: 'target'
+
 scaler_features:
   transform:
     _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 

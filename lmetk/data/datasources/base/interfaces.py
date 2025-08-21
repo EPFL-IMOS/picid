@@ -18,6 +18,7 @@ class DataSourceLoaderInterface(ABC):
         self.debug_cache_dataset = kwargs.get("debug_cache_dataset", False)
         self.debug_cache_path = kwargs.get("debug_cache_path", None)
         self.debug_subset_range = kwargs.get("debug_subset_range", None)
+        self.debug_subsample_rate = kwargs.get("debug_subsample_rate", None)
 
         if self.debug_cache_dataset:
             if self.debug_cache_path is None:
