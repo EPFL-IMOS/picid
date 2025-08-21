@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -90,13 +90,13 @@ class IndexSequencer:
             Tuple of tensors containing the generated sequences
         """
         x_window = self.i_e_bounds[index_subset]
-        x_mark_window = self.r_p_bounds[index_subset]
+        y_window = self.r_p_bounds[index_subset]
 
-        return self._create_sequences(x_window, x_mark_window)
+        return self._create_sequences(x_window, y_window)
 
     @abstractmethod
     def _create_sequences(
-        self, x_window: List[Tuple[int]], x_mark_window: List[Tuple[int]]
+        self, x_window: List[Tuple[int]], y_window: List[Tuple[int]]
     ) -> Tuple[torch.Tensor]:
         """
         Create sequences from the given window boundaries.
@@ -112,6 +112,58 @@ class IndexSequencer:
             Tuple of tensors containing the sequences
         """
         pass
+
+
+class TrivialSequencer(IndexSequencer):
+    """
+    This trivial sequencer is not autoregressive, but simply returns the present time point t.
+    It is used to have aligned features when used in combination with AutoregressiveSequencer
+
+    Args:
+        features: Time series feature data of shape (time_steps, n_features)
+        seq_len: Length of the input sequence window
+        label_len: Length of the overlap between input and output sequences
+        pred_len: Length of the prediction horizon
+        stride: Step size between consecutive windows
+    """
+
+    def __init__(
+        self,
+        features: torch.Tensor,
+        seq_len: int,  # window size
+        label_len: int,  # overlap size
+        pred_len: int,  # prediction size
+        stride: int,
+    ) -> None:
+        length = features.shape[0]
+        self.features = features
+
+        super().__init__(
+            length=length,
+            seq_len=seq_len,
+            label_len=label_len,
+            pred_len=pred_len,
+            stride=stride,
+        )
+
+    def _create_sequences(self, x_window, y_window):
+        """
+        Create sequences for the given windows.
+
+        Args:
+            x_window: Tensor of shape (batch_size, 2) with (start, end) indices for input sequences
+            x_mark_window: Tensor of shape (batch_size, 2) with (start, end) indices for output sequences
+
+        Returns:
+            tuple: A tuple containing:
+                - seq_x: Encoder input sequence of shape (batch_size, seq_len, n_features)
+                - seq_y: Decoder input sequence of shape (batch_size, label_len + pred_len, n_features)
+                - seq_x_time: Time features for encoder input of shape (batch_size, seq_len, n_time_features)
+                - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
+        """
+        indicies = x_window[1] - 1
+        seq_x = self.features[indicies]
+        return seq_x
 
 
 class AutoregressiveSequencer(IndexSequencer):
@@ -134,7 +186,7 @@ class AutoregressiveSequencer(IndexSequencer):
     def __init__(
         self,
         features: torch.Tensor,
-        time_features: torch.Tensor,
+        time_features: Optional[torch.Tensor],
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
@@ -152,13 +204,17 @@ class AutoregressiveSequencer(IndexSequencer):
         self.features = (
             features.to(self.device) if features.device != self.device else features
         )
-        self.time_features = (
-            time_features.to(self.device)
-            if time_features.device != self.device
-            else time_features
-        )
 
-    def _create_sequences(self, x_window, x_mark_window):
+        if time_features is not None:
+            self.time_features = (
+                time_features.to(self.device)
+                if time_features.device != self.device
+                else time_features
+            )
+        else:
+            self.time_features = None
+
+    def _create_sequences(self, x_window, y_window):
         """
         Create sequences for the given windows.
 
@@ -174,14 +230,16 @@ class AutoregressiveSequencer(IndexSequencer):
                 - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
         """
         x_idx = torch.arange(x_window[0], x_window[1], device=self.device)  # Shape: B
-        y_idx = torch.arange(
-            x_mark_window[0], x_mark_window[1], device=self.device
-        )  # Shape: B
+        y_idx = torch.arange(y_window[0], y_window[1], device=self.device)  # Shape: B
 
         seq_x = self.features[x_idx]
         seq_y = self.features[y_idx]
 
-        seq_x_time = self.time_features[x_idx]
-        seq_y_time = self.time_features[y_idx]
+        seq_x_time = (
+            self.time_features[x_idx] if self.time_features is not None else None
+        )
+        seq_y_time = (
+            self.time_features[y_idx] if self.time_features is not None else None
+        )
 
         return seq_x, seq_y, seq_x_time, seq_y_time
