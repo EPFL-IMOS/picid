@@ -30,14 +30,6 @@ class FitPredictWrapper(ABC):
     def predict(self, X):
         return self.backbone.predict(X.cpu())
 
-    @abstractmethod
-    def get_features(self, batch):
-        raise NotImplementedError("get_features method not implemented.")
-
-    @abstractmethod
-    def get_targets(self, batch):
-        raise NotImplementedError("get_targets method not implemented.")
-
 
 class AbstractWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.

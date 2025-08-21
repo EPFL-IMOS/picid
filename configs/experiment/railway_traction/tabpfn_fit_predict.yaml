@@ -1,8 +1,8 @@
 # @package _global_
 defaults:
   - override /datasource: railway
-  - override /dataset: context_batch
-  - override /datamodule: base_datamodule_tabpfn
+  - override /dataset: fit_predict_task
+  - override /datamodule: base_datamodule_fit_predict
   - override /model: tabpfn_fit_predict
   - override /evaluator: railway
   - override /task_definition: railway_day_ahead

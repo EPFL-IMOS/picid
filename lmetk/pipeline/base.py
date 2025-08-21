@@ -75,10 +75,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.evaluators = evaluators
         self.train_metrics_logged = False
 
-        #TODO: This should be moved from here to somewhere else
+        # TODO: This should be moved from here to somewhere else
         for name, evaluator in evaluators.items():
             self.effective_pred_len = getattr(evaluator, "effective_pred_len", None)
-            
 
     def log_epoch_metrics(self, mode=None):
         """Log metrics.
@@ -429,24 +428,33 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone})"
 
+    # def __batch_to_fit_predict(self, batch):
+    #     # should. be of shape (d_0, ..., d_k)
+    #     # TODO: isnt it weird that backbone is responsible for getting features and targets? Now I see for example that get_targets will work solely for the context dataset, no?
+    #     y = batch["target"]
+    #     y_dims = y.shape
+
+    #     # should be of shape (d_0, ..., d_k, F) for i Features
+    #     X = batch["context"]
+
+    #     # Assert that the first k dimensions of X and y match
+    #     assert (
+    #         X.shape[:-1] == y.shape
+    #     ), f"Shape mismatch: X.shape[:-1]={X.shape[:-1]} does not match y.shape={y.shape}"
+
+    #     X = X.reshape(-1, X.shape[-1])
+    #     y = y.reshape(-1)
+
+    #     return X, y, y_dims
+
     def __batch_to_fit_predict(self, batch):
-        # should. be of shape (d_0, ..., d_k)
-        # TODO: isnt it weird that backbone is responsible for getting features and targets? Now I see for example that get_targets will work solely for the context dataset, no? 
-        y = self.backbone.get_targets(batch)
-        y_dims = y.shape
+        X = batch["context"].squeeze(0)
+        y = batch["target"].squeeze(0)
 
-        # should be of shape (d_0, ..., d_k, F) for i Features
-        X = self.backbone.get_features(batch)
+        assert X.ndim == 2, f"X must be 2-dimensional, got {X.ndim} dimensions"
+        assert y.ndim == 1, f"y must be 1-dimensional, got {y.ndim} dimensions"
 
-        # Assert that the first k dimensions of X and y match
-        assert (
-            X.shape[:-1] == y.shape
-        ), f"Shape mismatch: X.shape[:-1]={X.shape[:-1]} does not match y.shape={y.shape}"
-
-        X = X.reshape(-1, X.shape[-1])
-        y = y.reshape(-1)
-
-        return X, y, y_dims
+        return X, y
 
     def model_step_fit(self, batch) -> dict:
         """Perform a single model step on a batch of data.
@@ -462,7 +470,7 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             Dictionary containing the model output and the loss.
         """
 
-        X, y, _ = self.__batch_to_fit_predict(batch)
+        X, y = self.__batch_to_fit_predict(batch)
         self.backbone.fit(X, y)
 
         if self.predict_after_training:
@@ -487,11 +495,15 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             Dictionary containing the model output and the loss.
         """
 
-        X, y, y_dims = self.__batch_to_fit_predict(batch)
+        X, y = self.__batch_to_fit_predict(batch)
         outputs = self.backbone.predict(X)
 
+        assert (
+            outputs.ndim == 1
+        ), f"outputs must be 1-dimensional, got {outputs.ndim} dimensions"
+
         model_out = {
-            "predictions": outputs.reshape(*y_dims),
+            "predictions": torch.from_numpy(outputs),
             "targets": y,
         }
 

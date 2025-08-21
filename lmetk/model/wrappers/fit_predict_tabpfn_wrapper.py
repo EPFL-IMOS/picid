@@ -22,11 +22,3 @@ class FitPredictTabPFNWrapper(FitPredictWrapper):
             device="cuda" if kwargs["device"] == "gpu" else "cpu",
         )
         super().__init__(backbone=backbone, **kwargs)
-
-    def get_features(self, batch):
-        context = batch["context"]["x"]
-        return context
-
-    def get_targets(self, batch):
-        target = batch["target"]["y"]
-        return target
