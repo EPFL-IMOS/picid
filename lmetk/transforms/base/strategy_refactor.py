@@ -59,12 +59,15 @@ class TransformStrategy():
             fit_data = {}
             fit_data[fit_on_key] = target_data_splits[fit_on_key][fit_on_split]
             
+            # Seems that single_multi_data_flag will not work with when multiunit has just one unit?  
             single_multi_data_flag = isinstance(fit_data[fit_on_key], list)
             if single_multi_data_flag:
                 transform_instance.fit_multi_source(fit_data, metadata={"mode": fit_on_split})
             else:
                 transform_instance.fit_data(fit_data, metadata={"mode": fit_on_split})
         else: 
+            # TODO: Such flag can fail when we have single source but with list data, need to improve the check
+            # In the case of multisource, data is provided as dictionary of lists
             single_multi_data_flag = all(
                 isinstance(v, list)
                 for inner in target_data_splits.values()
@@ -82,20 +85,21 @@ class TransformStrategy():
             #     warnings.warn(f"Split '{split_name}' is None.")
             # In the case of multisource, data is provided as a list of dictionaries
 
-            if single_multi_data_flag:
-                prepared_data = self._prepare_multi_data(target_data_splits, split_name)
-                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_multi_source(
-                    prepared_data,
-                    metadata={"mode": split_name})
-            else:
-                prepared_data = self._prepare_single_data(target_data_splits, split_name)
-                transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_data(
-                    prepared_data,
-                    metadata={"mode": split_name})
+            prepare_fn = self._prepare_multi_data if single_multi_data_flag else self._prepare_single_data
+            transform_fn = transform_instance.transform_multi_source if single_multi_data_flag else transform_instance.transform_data
+
+            prepared_data = prepare_fn(target_data_splits, split_name)
+            transformed_target_data_splits[assign_to_key][split_name] = transform_fn(
+                prepared_data,
+                metadata={"mode": split_name}
+            )
             
 
         transformed_data[assign_to_key] = transformed_target_data_splits[assign_to_key]
-        return transformed_data   
+        return transformed_data  
+
+    
+
 
     def _prepare_single_data(self, data, split_name):
         aux_data = {}
