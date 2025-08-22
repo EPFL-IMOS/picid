@@ -151,7 +151,7 @@ class UnifiedDirectTransformStrategy(TransformStrategy):
             else:
                 prepared_data = self._prepare_single_data(target_data_splits, split_name)
                 transformed_target_data_splits[assign_to_key][split_name] = transform_instance.transform_data(
-                    prepared_data,
+                    prepared_data, 
                     metadata={"mode": split_name},
                 )
             
