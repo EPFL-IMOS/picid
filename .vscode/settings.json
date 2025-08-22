@@ -21,9 +21,8 @@
     "--paths=rt_local"
   ],
   "python-envs.pythonProjects": [],
-
   "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit"
-  }
+  // "editor.codeActionsOnSave": {
+  //   "source.organizeImports": "explicit"
+  // }
 }

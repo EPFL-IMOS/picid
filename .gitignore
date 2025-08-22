@@ -17,3 +17,5 @@ scripts/*.log
 *.egg-info
 build
 /data/*
+
+.model_cache

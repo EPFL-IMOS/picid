@@ -30,6 +30,16 @@ class FitPredictWrapper(ABC):
     def predict(self, X):
         return self.backbone.predict(X.cpu())
 
+    @abstractmethod
+    def serialize_model(self, task_id):
+        """Serialize the model to a file."""
+        pass
+
+    @abstractmethod
+    def load_model(self, task_id):
+        """Load the model from a file."""
+        pass
+
 
 class AbstractWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.

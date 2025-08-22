@@ -124,7 +124,11 @@
                 "paths=rt_local",
                 "experiment=railway_traction/tabpfn_fit_predict",
                 "debug=default"
-            ]
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
         },
         {
             "name": "Concepts N-CMAPSS: TabPFN",
@@ -138,7 +142,8 @@
                 "debug=default"
             ],
             "env": {
-                "HYDRA_FULL_ERROR": "1"
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
             }
         },
         {

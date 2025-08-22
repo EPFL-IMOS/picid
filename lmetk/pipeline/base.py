@@ -7,6 +7,11 @@ from lightning import LightningModule
 from lmetk.evaluator.base import AbstractEvaluator
 from lmetk.model.wrappers.base import FitPredictWrapper
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class CustomEvaluatorInterface(ABC):
     """Interface for custom evaluators."""
@@ -428,28 +433,18 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(backbone={self.backbone})"
 
-    # def __batch_to_fit_predict(self, batch):
-    #     # should. be of shape (d_0, ..., d_k)
-    #     # TODO: isnt it weird that backbone is responsible for getting features and targets? Now I see for example that get_targets will work solely for the context dataset, no?
-    #     y = batch["target"]
-    #     y_dims = y.shape
-
-    #     # should be of shape (d_0, ..., d_k, F) for i Features
-    #     X = batch["context"]
-
-    #     # Assert that the first k dimensions of X and y match
-    #     assert (
-    #         X.shape[:-1] == y.shape
-    #     ), f"Shape mismatch: X.shape[:-1]={X.shape[:-1]} does not match y.shape={y.shape}"
-
-    #     X = X.reshape(-1, X.shape[-1])
-    #     y = y.reshape(-1)
-
-    #     return X, y, y_dims
-
     def __batch_to_fit_predict(self, batch):
-        X = batch["context"].squeeze(0)
-        y = batch["target"].squeeze(0)
+
+        X = batch["context"]
+        y = batch["target"]
+        assert (
+            X.shape[0] == 1
+        ), f"Expected batch size of 1 because we can only process one task per iteration, got {X.shape[0]}"
+        assert (
+            y.shape[0] == 1
+        ), f"Expected batch size of 1 because we can only process one task per iteration, got {y.shape[0]}"
+        X = X.squeeze(0)
+        y = y.squeeze(0)
 
         assert X.ndim == 2, f"X must be 2-dimensional, got {X.ndim} dimensions"
         assert y.ndim == 1, f"y must be 1-dimensional, got {y.ndim} dimensions"
@@ -471,7 +466,15 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
+
+        X = X[:2, :]
+        y = y[:2]
+
+        logging.info(
+            f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
+        )
         self.backbone.fit(X, y)
+        self.backbone.serialize_model(int(batch["task_idx"].item()))
 
         if self.predict_after_training:
             return self.model_step_predict(batch)
@@ -479,6 +482,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             # Add a dummy loss
             model_out = {}
             model_out["loss"] = torch.tensor([1])
+            model_out["predictions"] = y
+            model_out["targets"] = y
             return model_out
 
     def model_step_predict(self, batch) -> dict:
@@ -496,6 +501,7 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
+        self.backbone.load_model(int(batch["task_idx"].item()))
         outputs = self.backbone.predict(X)
 
         assert (

@@ -12,5 +12,5 @@ defaults:
   - override /callbacks: gradient_free
 
 task_definition: 
-  requires_training: false
+  requires_training: true
   

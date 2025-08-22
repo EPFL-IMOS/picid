@@ -17,3 +17,8 @@ datasource:
 trainer:
   accelerator: cpu
   devices: 1
+
+# This will raise the original exception instead of a generic one.
+# Making the debugger stop at the error, instead of the wrapper that we have for WANDB termination.
+debug: 
+  raise_inner_exception: true

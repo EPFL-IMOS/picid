@@ -28,6 +28,8 @@ class FitPredictTaskDataset(BaseDataset):
         self.y = data_dict["y"]
 
         # make sure target is 2 dimensional and context features 3
+        # This is because its a standard fit predict task (2) and 1 dimensional,
+        # and the first dimension is the task dimension
         if self.y.ndim != 2:
             raise ValueError("y must be 2-dimensional")
         if self.X.ndim != 3:
