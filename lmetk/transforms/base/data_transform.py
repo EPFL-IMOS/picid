@@ -12,6 +12,7 @@ from lmetk.transforms.base.strategy import (  # DirectTransformStrategy,; FitTra
     UnifiedDirectTransformStrategy,
     UnifiedFitTransformStrategy,
 )
+from lmetk.transforms.base.strategy_refactor import TransformStrategy
 
 # To allow instantiation of Hydra-configured objects
 
@@ -95,14 +96,16 @@ class DataTransform:
             "must implement BaseTransform."
         )
 
-        if self.fit_on_split is not None:
-            assert self.fit_on_key is not None, (
-                f"Transform '{transform_name}': 'fit_on_split' is specified but 'fit_on_key' is None. "
-                "Please specify 'fit_on_key' in metadata."
-            )
-            self.strategy = UnifiedFitTransformStrategy()
-        else:
-            self.strategy = UnifiedDirectTransformStrategy()
+        # Refactor
+        # if self.fit_on_split is not None:
+        #     assert self.fit_on_key is not None, (
+        #         f"Transform '{transform_name}': 'fit_on_split' is specified but 'fit_on_key' is None. "
+        #         "Please specify 'fit_on_key' in metadata."
+        #     )
+        #     self.strategy = UnifiedFitTransformStrategy()
+        # else:
+        #     self.strategy = UnifiedDirectTransformStrategy()
+        self.strategy = TransformStrategy()
 
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform
