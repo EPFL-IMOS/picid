@@ -161,7 +161,7 @@ class TimeseriesTabularizer(BaseTransform):
             elif selection == "history":
                 feature_data[key] = rearrange(feature_data[key], "b h 1 -> 1 b h")
             elif selection == "horizon":
-                feature_data[key] = rearrange(feature_data[key], "b t 1 -> t b")
+                feature_data[key] = rearrange(feature_data[key], "b t 1 -> t b 1")
 
         n_tasks = set([values.shape[0] for key, values in feature_data.items()])
 

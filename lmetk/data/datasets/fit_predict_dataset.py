@@ -26,12 +26,13 @@ class FitPredictTaskDataset(BaseDataset):
 
         self.X = data_dict["X"]
         self.y = data_dict["y"]
+        self.meta_data_dict = meta_data_dict
 
         # make sure target is 2 dimensional and context features 3
         # This is because its a standard fit predict task (2) and 1 dimensional,
         # and the first dimension is the task dimension
-        if self.y.ndim != 2:
-            raise ValueError("y must be 2-dimensional")
+        if self.y.ndim != 3:
+            raise ValueError("y must be 3-dimensional")
         if self.X.ndim != 3:
             raise ValueError("X must be 3-dimensional")
 
@@ -54,6 +55,8 @@ class FitPredictTaskDataset(BaseDataset):
         d = AttributeDict(
             {
                 "task_idx": task,
+                "task_num": self.n_tasks,
+                "task_desc": f"Task {task + 1} of {self.n_tasks}",
                 "target": self.y[task],
                 "context": self.X[task],
             }

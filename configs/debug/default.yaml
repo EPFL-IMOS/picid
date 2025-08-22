@@ -6,8 +6,8 @@ defaults:
 
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.
-datamodule:
-  subset_range: [0, 32, 1]  # [start, end, step]
+# datamodule:
+#   subset_range: [0, 16, 1]  # [start, end, step]
 
 datasource:
   debug_cache_dataset: true  

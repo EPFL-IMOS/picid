@@ -447,9 +447,15 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         y = y.squeeze(0)
 
         assert X.ndim == 2, f"X must be 2-dimensional, got {X.ndim} dimensions"
-        assert y.ndim == 1, f"y must be 1-dimensional, got {y.ndim} dimensions"
+        assert y.ndim == 2, f"y must be 2-dimensional, got {y.ndim} dimensions"
 
         return X, y
+
+    def get_task_info(self, batch) -> str:
+        task_idx = int(batch["task_idx"].item())
+        task_num = int(batch.get("task_num", -1))
+        task_desc = batch.get("task_desc", f"Task {task_idx + 1} of {task_num}")
+        return f"{task_desc}"
 
     def model_step_fit(self, batch) -> dict:
         """Perform a single model step on a batch of data.
@@ -466,10 +472,7 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-
-        X = X[:2, :]
-        y = y[:2]
-
+        logging.info(f"Fitting: {self.get_task_info(batch)}")
         logging.info(
             f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
         )
@@ -504,12 +507,16 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         self.backbone.load_model(int(batch["task_idx"].item()))
         outputs = self.backbone.predict(X)
 
+        assert isinstance(
+            outputs, torch.Tensor
+        ), f"outputs must be a torch.Tensor, got {type(outputs)}"
+
         assert (
-            outputs.ndim == 1
-        ), f"outputs must be 1-dimensional, got {outputs.ndim} dimensions"
+            outputs.ndim == 2
+        ), f"outputs must be 2-dimensional, got {outputs.ndim} dimensions"
 
         model_out = {
-            "predictions": torch.from_numpy(outputs),
+            "predictions": outputs,
             "targets": y,
         }
 

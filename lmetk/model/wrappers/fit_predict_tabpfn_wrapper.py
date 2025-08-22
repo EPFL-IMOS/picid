@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from einops import rearrange
 import joblib
 import torch
 from lightning_fabric.utilities.data import AttributeDict
