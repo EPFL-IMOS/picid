@@ -23,25 +23,15 @@ class SingleSourceLoader(DataSourceLoaderInterface):
         # Split flag, create before load, as some datasets might have predefined splits,
         # hence then _load_data method has to update self._is_splitted flag
         self._is_splitted = False
-
-        # TODO: Move the data loading to get_data
-        # Load the data
-        self.data_dict.update(self._load_data())
-        self.data_name = kwargs["data_name"]
-        self._is_loaded = True
-
-        # Get already instantiated data splitter
-        self.multisource_data_splitter = kwargs.get("multisource_data_splitter", None)
-        if not self.multisource_data_splitter:
-            self.data_splitter = kwargs["data_splitter"]
-            self.split_data(kwargs)
+        self._is_loaded = False
+        
 
     @abstractmethod
     def _load_data(self) -> Dict[str, np.ndarray]:
         """Load data from the data source."""
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def split_data(self, kwargs):
+    def split_data(self):
         # Check if splits already has been predefined and done during the loading
         if not self._is_splitted:
             # By default create splits for features and timestamps
@@ -54,7 +44,21 @@ class SingleSourceLoader(DataSourceLoaderInterface):
 
     def get_data(self) -> Dict[str, np.ndarray]:
         """Return splitted data dict."""
-        assert self._is_loaded, "Data must be loaded before getting it."
+        if self._is_loaded == False:
+            # Load the data
+            self.data_dict.update(self._load_data())
+            # self.data_name = kwargs["data_name"]
+            self._is_loaded = True
+
+            # Get already instantiated data splitter
+            self.multisource_data_splitter = getattr(self, "multisource_data_splitter", None)
+            if not self.multisource_data_splitter:
+                self.data_splitter = getattr(self,"data_splitter", None)
+                assert self.data_splitter is not None, "Data splitter must be set."
+                self.split_data()
+
+        assert self._is_loaded==True, "Data must be loaded before getting data." 
+        
         return self.data_dict
 
     def get_meta_data(self) -> Dict[str, Any]:
