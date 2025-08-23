@@ -4,29 +4,25 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 
 
-class FilterDataFrameColumns(BaseTransform, BaseMultiSourceTransformMixin):
+class FilterDataFrameColumns(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
     """
 
-    def __init__(self, columns_to_keep: str, apply_to_key: str = 'features'):
+    def __init__(self, columns_to_keep: str, apply_to_key: str = "features"):
         self.columns_to_keep = columns_to_keep
         self.apply_to_key = apply_to_key
 
-    def fit_data(
-        self, data_segment: Any, metadata: Dict
-    ):
+    def fit_data(self, data_segment: Any, metadata: Dict):
         pass
 
-    def transform_data(
-        self, data_segment_dict: Any, metadata: Dict
-    ) -> Any:
+    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
-        
+
         data_segment = data_segment_dict[self.apply_to_key][self.columns_to_keep]
 
         # Reset index
@@ -35,7 +31,7 @@ class FilterDataFrameColumns(BaseTransform, BaseMultiSourceTransformMixin):
         return data_segment
 
 
-class UpdateTarget(BaseTransform, BaseMultiSourceTransformMixin):
+class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Update the target column to be the one specified in the config.
     This update takes a column from the "features" and returns it
@@ -43,20 +39,20 @@ class UpdateTarget(BaseTransform, BaseMultiSourceTransformMixin):
 
     def __init__(self, target_name: str, apply_to_key: str = None):
         self.target_name = target_name
-        assert apply_to_key is not None, "apply_to_key should be specified under the transform"
+        assert (
+            apply_to_key is not None
+        ), "apply_to_key should be specified under the transform"
         self.apply_to_key = apply_to_key
 
-    def fit_data(
-        self, data_segment_dict: Any, metadata: Dict
-    ):
+    def fit_data(self, data_segment_dict: Any, metadata: Dict):
         pass
 
-    def transform_data(
-        self, data_segment_dict: Any, metadata: Dict
-    ) -> Any:
+    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
-        assert self.apply_to_key in data_segment_dict, f"{self.apply_to_key}  are not passed in data_segment_dict"
-        
+        assert (
+            self.apply_to_key in data_segment_dict
+        ), f"{self.apply_to_key}  are not passed in data_segment_dict"
+
         out = (
             data_segment_dict[self.apply_to_key][self.target_name]
             .values.reshape(-1, 1)
@@ -68,7 +64,7 @@ class UpdateTarget(BaseTransform, BaseMultiSourceTransformMixin):
 import numpy as np
 
 
-class AssignNaiveTimefeatures(BaseTransform, BaseMultiSourceTransformMixin):
+class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Replace the time features with a range from 0 to len(feature)
     """
@@ -78,20 +74,20 @@ class AssignNaiveTimefeatures(BaseTransform, BaseMultiSourceTransformMixin):
     # ):
     #     pass
 
-    def transform_data(
-        self, data_segment_dict: Any, metadata: Dict
-    ) -> Any:
+    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
             "features" in data_segment_dict
         ), "features features are not passed in auxiliary_data"
         data_segment = (
-            np.arange(data_segment_dict["features"].shape[0]).reshape(-1, 1).astype(float)
+            np.arange(data_segment_dict["features"].shape[0])
+            .reshape(-1, 1)
+            .astype(float)
         )
         return data_segment
 
 
-class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
+class Cycles2Statistics(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Compress cycles to the mean/std representations of the cycles for NB1 dataset
     """
@@ -107,18 +103,18 @@ class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
         self.cycles_col = cycles_identifier
 
     def fit_data(
-        self, data_segment: Any, metadata: Dict,
+        self,
+        data_segment: Any,
+        metadata: Dict,
     ):
 
         pass
 
-    def transform_data(
-        self, data_segment_dict: Any, metadata: Dict
-    ) -> Any:
+    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
-        
-        data_segment = data_segment_dict['features']
-        
+
+        data_segment = data_segment_dict["features"]
+
         # Based on the rul column extract the stat
         target_col = self.target_name
 
@@ -177,4 +173,3 @@ class Cycles2Statistics(BaseTransform, BaseMultiSourceTransformMixin):
         data_segment = pd.DataFrame(stats_list)
 
         return data_segment
-        

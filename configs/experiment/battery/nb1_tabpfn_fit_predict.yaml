@@ -1,0 +1,7 @@
+#@package _global_
+
+defaults:
+  - battery/nb1_base
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /model: tabpfn_fit_predict
+  - override /transforms:  battery/bosello_fit_predict

@@ -7,11 +7,13 @@ import torch
 from numpy import ndarray
 
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
-class N_CMAPSSDescriptorsScaler(BaseTransform, BaseMultiSourceTransformMixin):
+class N_CMAPSSDescriptorsScaler(
+    BaseTransform, ConcatinatedFitMultiSourceTransformMixin
+):
     def __init__(self, scaling="standard"):
 
         super().__init__()
@@ -58,7 +60,7 @@ class N_CMAPSSDescriptorsScaler(BaseTransform, BaseMultiSourceTransformMixin):
         return data_segment
 
 
-class N_CMAPSSFeaturesScaler(BaseTransform, BaseMultiSourceTransformMixin):
+class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 

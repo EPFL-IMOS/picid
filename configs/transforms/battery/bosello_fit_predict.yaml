@@ -1,0 +1,49 @@
+defaults:
+  - battery/bosello_NB_base@_here_
+
+filter_features:
+  transform:
+    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+    columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+    apply_to_key: features
+
+  metadata:
+    apply_to: ${transforms.filter_features.transform.apply_to_key}
+
+
+tabularize_x:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: 48
+    label_len: 0
+    pred_len: 24
+    stride: 1
+    timestep_dimension: 1
+
+    select_features: 
+      - time_features: t
+      - features: t
+      - target: history
+  
+  metadata:
+    apply_to: ['features', 'time_features', 'target']
+    assign_to: X
+
+
+tabularize_y:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: 48
+    label_len: 0
+    pred_len: 24
+    stride: 1
+    timestep_dimension: 1
+
+    select_features: 
+      - target: horizon
+  
+  metadata:
+    apply_to: ['target']
+    assign_to: y

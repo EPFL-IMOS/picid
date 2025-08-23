@@ -22,12 +22,13 @@ from omegaconf import OmegaConf
 # Assuming this import path is correct for your project
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer, TrivialSequencer
 from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(BaseTransform):
+class TimeseriesTabularizer(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features
@@ -168,6 +169,22 @@ class TimeseriesTabularizer(BaseTransform):
         assert (
             len(n_tasks) == 2 or len(n_tasks) == 1
         ), f"Inconsistent number of task dimensions across features. Can be either one or {max(n_tasks)} tasks, but got {n_tasks}"
+
+        # In mode history, we want to concatenate the history up to the present time point.
+        # The history remains the same for any forecasting timepoint t+h (h=horizon)
+
+        """
+        Current model of the naming convention:
+
+                                        t
+                                        |
+                    --------------------------
+           Target   |  history | p | horizon |
+                    --------------------------
+           Context  |  history | p | horizon |
+                    --------------------------
+                        ---> time axis
+        """
 
         if max(n_tasks) != min(n_tasks) and (
             "history" in self.select_features.values()

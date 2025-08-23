@@ -4,9 +4,10 @@ from typing import Any, Dict, List, Optional, Union
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 import omegaconf
+
 # Import your strategy and base transform classes
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.base.strategy import (  # DirectTransformStrategy,; FitTransformStrategy,; MultiSourceFitTransformStrategy,; MultiSourceDirectTransformStrategy
     TransformStrategy,
     UnifiedDirectTransformStrategy,
@@ -59,7 +60,7 @@ class DataTransform:
         # Ensure apply_to is a list if it is a ListConfig
         if isinstance(self.apply_to, omegaconf.listconfig.ListConfig):
             self.apply_to = list(self.apply_to)
-        
+
         self.assign_to = metadata.get("assign_to", None)
         # Check whenever self.assign_to is None, if so, assign self.apply_to to it
         if self.assign_to is None:
@@ -68,8 +69,8 @@ class DataTransform:
                 raise ValueError(
                     f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'assign_to' is not specified. Please specify 'assign_to' to avoid ambiguity."
                 )
-            self.assign_to = self.apply_to    
-        
+            self.assign_to = self.apply_to
+
         # TODO: is there actually a use case with fitting on validation/test?
         self.fit_on_split = metadata.get("fit_on", None)
         assert self.fit_on_split in (None, "train", "val", "test")
@@ -82,13 +83,10 @@ class DataTransform:
                     f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'fit_on_key' is not specified. Please specify 'fit_on_key' to avoid ambiguity."
                 )
             self.fit_on_key = self.apply_to
-    
 
-        # TODO: Define the logic here similar to self.fit_on_split 
+        # TODO: Define the logic here similar to self.fit_on_split
         self.multi_source_fit = metadata.get("multi_source_fit", False)
 
-
-        
         # Instantiate transform
         assert isinstance(transform, BaseTransform), (
             f"Transform instance for '{transform_name}' (type: {type(transform)}) "
@@ -161,9 +159,9 @@ class DataTransform:
             apply_to_keys=self.apply_to,
             assign_to_key=self.assign_to,
             fit_on_split=self.fit_on_split,
-            fit_on_key=self.fit_on_key
+            fit_on_key=self.fit_on_key,
         )
-        
+
         # --- Post-transformation Validation ---
         # This centralizes validation logic, ensuring consistency regardless of strategy.
 
