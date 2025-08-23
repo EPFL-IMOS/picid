@@ -3,7 +3,6 @@
 import numpy as np
 import torch
 from numpy import ndarray
-from torch.utils.data import Dataset
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
 

@@ -2,8 +2,6 @@
 import torch
 from lmetk.model.wrappers.base import AbstractWrapper
 
-from lightning_fabric.utilities.data import AttributeDict
-from autogluon.tabular import TabularPredictor
 
 import numpy as np
 import pandas as pd

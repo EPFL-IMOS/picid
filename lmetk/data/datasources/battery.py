@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from omegaconf import DictConfig
 
 from lmetk.data.datasources import SingleSourceLoader
 

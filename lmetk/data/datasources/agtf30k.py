@@ -2,9 +2,7 @@
 
 import logging
 import os
-from itertools import combinations
 from pathlib import Path
-from typing import Any, List, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -56,19 +54,19 @@ class AGTF30KDataSource(SingleSourceLoader):
         # )
 
         filename_train = os.path.join(
-            Path(self.path), f"_train_DT.csv"
+            Path(self.path), "_train_DT.csv"
         )
         if not os.path.exists(filename_train):
             raise FileNotFoundError(f"Train file not found: {filename_train}")
 
         filename_test = os.path.join(
-            Path(self.path), f"_test_DT.csv"
+            Path(self.path), "_test_DT.csv"
         )
         if not os.path.exists(filename_test):
             raise FileNotFoundError(f"Test file not found: {filename_test}")
 
         filename_val = os.path.join(
-            Path(self.path), f"_val_DT.csv"
+            Path(self.path), "_val_DT.csv"
         )
         if not os.path.exists(filename_val):
             raise FileNotFoundError(f"Validation file not found: {filename_val}")

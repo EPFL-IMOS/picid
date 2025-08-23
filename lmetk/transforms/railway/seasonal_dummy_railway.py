@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 
 from lmetk.transforms.base.base_transform import BaseTransform
 

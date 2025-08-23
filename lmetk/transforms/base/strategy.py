@@ -1,13 +1,11 @@
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 import copy
-from lmetk.data.data_objects.data import DataChunk
 
 
 class TransformStrategy():
     """
-    Abstract base class for different transformation strategies.
-    Each strategy defines how a transformation instance is applied to data.
+    Abstract that orchestrates how does the transformation is applied to data.
     """
     def __init__(self):
         pass

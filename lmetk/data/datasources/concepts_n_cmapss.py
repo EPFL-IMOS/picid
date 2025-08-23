@@ -2,7 +2,6 @@ import logging
 import os
 from itertools import combinations
 from pathlib import Path
-from typing import Any, List, Tuple, Type, Union
 
 import h5py
 import numpy as np

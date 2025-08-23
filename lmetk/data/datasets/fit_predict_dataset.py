@@ -1,6 +1,4 @@
-from typing import List
 
-import torch
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 from torch.utils.data._utils.collate import default_collate

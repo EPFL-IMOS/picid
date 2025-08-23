@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf

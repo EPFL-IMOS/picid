@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from abc import abstractmethod
+from typing import Tuple
 
 import torch
-import lightning.pytorch as pl
-import numpy as np
 
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator

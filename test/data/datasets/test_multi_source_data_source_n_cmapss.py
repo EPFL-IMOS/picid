@@ -1,12 +1,9 @@
-from pathlib import Path
 
 # This import is necessary to register the plugin
 from test.utils import ProjectSearchPathPlugin
 
 import hydra
 import pytest
-import torch
-from box import Box
 from omegaconf import OmegaConf
 
 import lmetk

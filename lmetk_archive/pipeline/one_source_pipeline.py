@@ -2,7 +2,6 @@
 from typing import Dict
 from box import Box
 import numpy as np
-from omegaconf import DictConfig
 from sklearn.base import TransformerMixin
 from lmetk.data.pipeline.base import TimeSeriesDatasetInterface
 

@@ -1,13 +1,11 @@
 import logging
 from typing import Any, Dict, Optional
 
-import numpy as np
-from numpy import ndarray
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
-from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
+from lmetk.transforms.utils import _convert_to_numpy
 
 logger = logging.getLogger(__name__)
 

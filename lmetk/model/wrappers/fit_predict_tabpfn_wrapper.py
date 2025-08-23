@@ -1,10 +1,7 @@
 """Wrapper for the TimePFN model."""
 
-import torch
-from lightning_fabric.utilities.data import AttributeDict
 from tabpfn import TabPFNRegressor
 
-from lmetk.model.time_pfn.TimePFN import TimePFN
 
 from .base import FitPredictWrapper
 

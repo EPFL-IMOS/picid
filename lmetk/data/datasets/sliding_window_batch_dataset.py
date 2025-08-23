@@ -1,6 +1,5 @@
 from typing import List
 
-import torch
 from numpy import ndarray
 
 from lmetk.data.datasets.base import BaseDataset
