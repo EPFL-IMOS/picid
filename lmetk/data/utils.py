@@ -1,7 +1,7 @@
-import pandas as pd
+
 import numpy as np
 import torch
-from typing import Optional, Union
+
 
 def to_torch_tensor(data, device=None):
     """

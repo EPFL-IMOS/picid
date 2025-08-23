@@ -1,10 +1,8 @@
 import logging
-from pathlib import Path
-from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-
+from lmetk.data.data_objects.data import DatasetChunk
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
@@ -126,7 +124,7 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
                 df_features
             ), "Mismatch after dropping nan/infinity rows"
 
-        return {
+        data_dict = {
             "features": df_features,
             "time_features": np.array(df_features.index),
             "target": df_target,
@@ -138,3 +136,4 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
                 "target_in_the_featurs": True,
             },
         }
+        return DatasetChunk(**data_dict)  # data_dict
