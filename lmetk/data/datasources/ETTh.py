@@ -2,11 +2,11 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from omegaconf import DictConfig
-
 from lmetk.data.datasources import SingleSourceLoader
-from lmetk.data.timefeatures import time_features as timepfn_timefeatures
-from lmetk.data.utils import time_features as railway_timefeatures
+
+from lmetk.data.data.data import DatasetChunk
+import lmetk.data.data
+
 
 warnings.filterwarnings("ignore")
 
@@ -34,8 +34,7 @@ class ETThLoader(SingleSourceLoader):
 
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
         mask = self.extract_mask(df)
-
-        return {
+        data_dict = {
             "features": df,
             "timestamps": df_stamp,
             "metadata":{
@@ -44,6 +43,8 @@ class ETThLoader(SingleSourceLoader):
                 "target_name": self.target_name,
             }
         }
+        data = DatasetChunk(data_dict)
+        return data
 
     def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
         # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
@@ -73,18 +74,3 @@ class ETThLoader(SingleSourceLoader):
     def _init_default_transforms(self):
         default_transforms = getattr(self, "loader_default_transforms", {})
         return default_transforms
-
-        # This has to go default loader transforms
-        # # Extract time features
-        # if self.load_arguments.timeenc == 'railway_timefeatures':
-        #     df_stamp, self.initial_dates = railway_timefeatures(
-        #         dates=df_stamp,
-        #         use_features=self.load_arguments.time_features,
-        #         normalize=self.load_arguments.normalize_time_features,
-        #     )
-        # elif self.load_arguments.timeenc == 'timepfn_timefeatures':
-        #     self.initial_dates = pd.DataFrame(pd.to_datetime(df_stamp))
-        #     df_stamp = timepfn_timefeatures(pd.to_datetime(self.initial_dates['date'].values), freq=self.load_arguments.freq)
-        #     df_stamp = pd.DataFrame(df_stamp.transpose(1, 0))
-        # else:
-        #     raise ValueError(f"Unknown time feature encoding : load_arguments.timeenc={self.load_arguments.timeenc}")

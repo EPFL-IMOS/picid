@@ -5,7 +5,7 @@ import pandas as pd
 from omegaconf import DictConfig
 
 from lmetk.data.datasources import SingleSourceLoader
-from lmetk.data.utils import time_features
+
 
 warnings.filterwarnings("ignore")
 

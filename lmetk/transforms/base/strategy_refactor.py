@@ -31,6 +31,7 @@ class TransformStrategy():
             # Convert str to list for uniform processing
             apply_to_keys = [apply_to_keys]
         
+        # Decouple save copy of our data transformed_data
         transformed_data = copy.deepcopy(data)
         
     

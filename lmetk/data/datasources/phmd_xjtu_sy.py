@@ -41,3 +41,4 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                 "target_in_the_featurs": True,
             },
         }
+
