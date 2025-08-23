@@ -1,8 +1,9 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 import numpy as np
 import pandas as pd
 from lmetk.data.data_objects.base import BaseDataObject # Assuming your BaseDataObject is here
+
 
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -16,6 +17,26 @@ class DataChunk(BaseDataObject):
     as a pandas.DataFrame). Conversion to NumPy and validation are handled
     explicitly through public methods.
     """
+
+    def __init__(self, **kwargs: Any) -> None:
+        """
+        Initializes the chunk. If metadata is provided, it automatically
+        extracts column names from any pandas.DataFrame objects.
+        """
+        # --- CHANGE STARTS HERE ---
+        # Only attempt to extract columns if metadata is already present in the input
+        if 'metadata' in kwargs and isinstance(kwargs.get('metadata'), dict):
+            # Ensure the column_map sub-dictionary exists within the provided metadata
+            kwargs['metadata'].setdefault('column_map', {})
+            
+            # Extract column names for any DataFrames found
+            for key, value in kwargs.items():
+                if isinstance(value, pd.DataFrame):
+                    kwargs['metadata']['column_map'][key] = value.columns.tolist()
+        # --- CHANGE ENDS HERE ---
+
+        # Call the parent's __init__ to handle the actual setting of items
+        super().__init__(**kwargs)
 
     # --- Public API Methods ---
 
@@ -107,22 +128,6 @@ class DataChunk(BaseDataObject):
 
     # --- Dunder Methods ---
 
-    def __init__(self, **kwargs: Any) -> None:
-        """
-        Initializes the chunk and automatically extracts column names from any
-        pandas.DataFrame objects provided.
-        """
-        # Auto-extract column names into a nested metadata map
-        if any(isinstance(v, pd.DataFrame) for v in kwargs.values()):
-            kwargs.setdefault('metadata', {})
-            kwargs['metadata'].setdefault('column_map', {})
-        for key, value in kwargs.items():
-            if isinstance(value, pd.DataFrame):
-                kwargs['metadata']['column_map'][key] = value.columns.tolist()
-
-        # Call the parent's __init__ to handle the actual setting of items
-        super().__init__(**kwargs)
-
     def __setitem__(self, key: str, value: Any) -> None:
         """
         Sets an item, storing it in its original format and intelligently
@@ -130,17 +135,19 @@ class DataChunk(BaseDataObject):
         """
         is_df = isinstance(value, pd.DataFrame)
         
-        # Ensure metadata structure exists if we're adding the first DataFrame
-        if is_df and 'metadata' not in self:
-            self.setdefault('metadata', {})
-            self['metadata'].setdefault('column_map', {})
-
-        # If the new value is a DataFrame, update its column map
-        if is_df:
-            self['metadata']['column_map'][key] = value.columns.tolist()
-        # If the key previously had a column map but the new value is not a DataFrame, remove the stale entry
-        elif self.get('metadata', {}).get('column_map', {}).get(key):
-            del self['metadata']['column_map'][key]
+        # --- CHANGE STARTS HERE ---
+        # Only manage the column_map if the 'metadata' attribute already exists on the object
+        if 'metadata' in self and isinstance(self.metadata, dict):
+            self.metadata.setdefault('column_map', {})
+            
+            if is_df:
+                # If the new value is a DataFrame, update its column map
+                self.metadata['column_map'][key] = value.columns.tolist()
+            elif key in self.metadata.get('column_map', {}):
+                # If the key previously had a column map but is being replaced
+                # by a non-DataFrame, remove the stale entry.
+                del self.metadata['column_map'][key]
+        # --- CHANGE ENDS HERE ---
 
         # Use the grandparent's __setitem__ to store the raw value,
         # bypassing the recursive conversion in BaseDataObject.
@@ -185,12 +192,11 @@ class DataChunk(BaseDataObject):
             if has_nan:
                 raise ValueError(f"NaN values found in object '{key}'.")
 
-import logging
-from typing import Any, List, Optional, Dict
-import numpy as np
-import pandas as pd
 
-class MultiDataChunk(BaseDataObject):
+
+
+
+class DatasetContainer(BaseDataObject):
     """
     A container for a complete dataset composed of multiple splits and units.
 
@@ -201,10 +207,13 @@ class MultiDataChunk(BaseDataObject):
 
     # --- Dunder Methods ---
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, is_multi_unit: bool=True, **kwargs: Any) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
         """
+        # Assume multi-unit by default. If we find any single item, we flip the flag.
+        self.is_multi_unit: bool = is_multi_unit
+
         # Normalize the input data to ensure unit data is always in a list
         for data_key, splits_dict in kwargs.items():
             if isinstance(splits_dict, dict):
@@ -215,6 +224,7 @@ class MultiDataChunk(BaseDataObject):
                             f"Found single item for '{data_key}/{split}'. "
                             "Wrapping it in a list for consistency."
                         )
+                        self.is_multi_unit = False # Found a single-unit entry
                         splits_dict[split] = [data_for_split]
 
         # The base __init__ will now receive the normalized kwargs
