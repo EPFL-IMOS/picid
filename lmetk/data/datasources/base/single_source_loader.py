@@ -5,7 +5,7 @@ import numpy as np
 from box import Box
 
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
-
+from lmetk.data.data_objects.data import MultiDataChunk
 
 class SingleSourceLoader(DataSourceLoaderInterface):
     def __init__(self, **kwargs):
@@ -59,7 +59,8 @@ class SingleSourceLoader(DataSourceLoaderInterface):
 
         assert self._is_loaded==True, "Data must be loaded before getting data." 
         
-        return self.data_dict
+        # We use MultiDataChunk as it will simply wrap values of the self.data_dict into a list
+        return MultiDataChunk(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """

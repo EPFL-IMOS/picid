@@ -11,15 +11,22 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 # =============================================================================
 class BaseDataObject(dict):
     """
-    A base object for data containers in the framework.
-
-    It provides dictionary-like storage with convenient attribute-style access
-    and a structured initialization process.
+    A base object that provides attribute-style access and now supports
+    recursive conversion of nested dictionaries.
     """
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         for key, value in kwargs.items():
-            self[key] = value
+            self[key] = value # This will now trigger the new __setitem__
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """
+        Sets an item, converting nested dictionaries to BaseDataObjects.
+        """
+        if isinstance(value, dict):
+            # Recursively convert dicts to enable chained attribute access
+            value = BaseDataObject(**value)
+        super().__setitem__(key, value)
 
     def __getattr__(self, key: str) -> Any:
         try:
@@ -47,3 +54,7 @@ class BaseDataObject(dict):
                 value_repr = repr(value)
             rows.append(f'"{key}":'.ljust(max_key_length + 4) + value_repr)
         return "\n".join(rows)
+
+
+
+
