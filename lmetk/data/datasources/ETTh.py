@@ -1,12 +1,7 @@
 import warnings
 import pandas as pd
 from lmetk.data.datasources import SingleSourceLoader
-from lmetk.data.data_objects.data import DatasetChunk
-
-
-
 warnings.filterwarnings("ignore")
-
 
 class ETThLoader(SingleSourceLoader):
     def __init__(
@@ -36,8 +31,8 @@ class ETThLoader(SingleSourceLoader):
                 "target_name": self.target_name,
             }
         }
-        data = DatasetChunk(**data_dict)
-        return data
+        
+        return data_dict
 
 
     def read_data(

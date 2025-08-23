@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-from lmetk.data.data_objects.data import DatasetChunk
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
@@ -136,4 +135,4 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
                 "target_in_the_featurs": True,
             },
         }
-        return DatasetChunk(**data_dict)  # data_dict
+        return data_dict

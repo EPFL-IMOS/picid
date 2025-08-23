@@ -12,7 +12,7 @@ from lmetk.transforms.base.strategy import (  # DirectTransformStrategy,; FitTra
     UnifiedDirectTransformStrategy,
     UnifiedFitTransformStrategy,
 )
-from lmetk.transforms.base.strategy_refactor import TransformStrategy
+from lmetk.transforms.base.strategy import TransformStrategy
 
 # To allow instantiation of Hydra-configured objects
 

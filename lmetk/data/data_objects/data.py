@@ -7,7 +7,7 @@ from lmetk.data.data_objects.base import BaseDataObject # Assuming your BaseData
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-class DatasetChunk(BaseDataObject):
+class DataChunk(BaseDataObject):
     """
     A flexible data container that stores data in its original format (Lazy Conversion).
 
