@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -25,7 +24,7 @@ class ConcatenateTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMix
         if not isinstance(value, np.ndarray):
             try:
                 value = np.array(value)
-                logging.info(f"Converted key '{key}' to numpy array")
+                logger.info(f"Converted key '{key}' to numpy array")
             except Exception as e:
                 raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
         return value
@@ -34,7 +33,7 @@ class ConcatenateTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMix
         """Ensure array is 2D for concatenation."""
         if value.ndim == 1:
             value = value.reshape(-1, 1)
-            logging.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
+            logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
         elif value.ndim > 2:
             raise ValueError(
                 f"Key '{key}' has unsupported dimensions: {value.ndim}. "
@@ -91,21 +90,21 @@ class ConcatenateTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMix
 
             arrays.append(value)
             keys.append(key)
-            logging.info(f"Added data '{key}' with shape {value.shape}")
+            logger.info(f"Added data '{key}' with shape {value.shape}")
 
         if not arrays:
             raise ValueError("No arrays to concatenate")
 
         # Check length consistency
         n_rows = self._check_length_consistency(arrays, keys)
-        logging.info(f"All arrays have consistent length: {n_rows}")
+        logger.info(f"All arrays have consistent length: {n_rows}")
 
         # Check for NaN values (will raise error if found)
         self._check_for_nans(arrays, keys)
 
         # Final concatenation
         result = np.concatenate(arrays, axis=1)
-        logging.info(f"Final concatenated shape: {result.shape}")
+        logger.info(f"Final concatenated shape: {result.shape}")
 
         return result
 

@@ -170,7 +170,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=battery/nb1_tabpfn_fit_predict",
+                "experiment=nb1/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
