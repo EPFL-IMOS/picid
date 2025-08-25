@@ -1,4 +1,6 @@
 """Wrapper for the TimePFN model."""
+from typing import Optional
+
 import torch
 from lmetk.model.wrappers.base import AbstractWrapper
 
@@ -18,27 +20,68 @@ class AutoGluonWrapper(AbstractWrapper):
 
     This wrapper defines the forward pass of the TimePFN model.
     """
-    def __init__(self, presets: str = "best", **kwargs):
-        label_names = [f"target_t+{i}" for i in range(1, kwargs["pred_len"]+1)]
-        backbone = MultilabelTabularPredictor(labels=label_names)
+    def __init__(self, presets: str = "best",
+                 problem_type: str = "regression",
+                 holdout_frac: Optional[float] = None,
+                 num_bag_folds: int = 0,
+                 num_stack_levels: int = 0,
+                 hyperparameter_tune_kwargs: dict[str, float] = None,
+                 model_dict: dict[str, dict] = None,
+                 save_space: bool = False,
+                 output_dir: str = "testwdir/autogluon",
+                 **kwargs):
+
+        self.n_targets = kwargs['train_dataloader'].dataset.y.shape[2]
+        self.label_names = [f"target_{i}" for i in range(self.n_targets)]
+        self.problem_type = problem_type
+        self.output_dir = output_dir
+
+        backbone = self.initialize_backbone()
         super().__init__(backbone=backbone, **kwargs)
         self.model_fit_flag = False
         self.lag = 0
 
-        self.label_names = label_names
         self.presets = presets
+
+        self.holdout_frac = holdout_frac  # validation set size
+        self.num_bag_folds = num_bag_folds  # cross-validation ensembling
+        self.num_stack_levels = num_stack_levels  # stacking layers
+        self.hyperparameter_tune_kwargs = hyperparameter_tune_kwargs
+
+        self.model_dict = model_dict
+        self.save_space = save_space
 
         self.aux_context = None
         self.y_aux = None
 
+    def initialize_backbone(self):
+        if self.n_targets > 1:
+            return MultilabelTabularPredictor(labels=self.label_names,
+                                              problem_type=self.problem_type,
+                                              path=self.output_dir)
+        else:
+            return TabularPredictor(label=self.label_names[0],
+                                    problem_type=self.problem_type,
+                                    path=self.output_dir)
+
     def fit(self, x, y):
+        if self.backbone.is_fit:
+                self.backbone = self.initialize_backbone()
+
         df = pd.DataFrame(x)
         df[self.label_names] = y
-        self.backbone.fit(df, presets=self.presets)
+        self.backbone.fit(df,
+                          presets=self.presets,
+                          holdout_frac=self.holdout_frac,
+                          num_bag_folds=self.num_bag_folds,
+                          num_stack_levels=self.num_stack_levels,
+                          hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs,
+                          hyperparameters=self.model_dict,
+                          save_space=self.save_space)
 
     def predict(self, x):
         df = pd.DataFrame(x)
-        return self.backbone.predict(df)
+        return self.backbone.predict(df).to_numpy()
 
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper. Note the following:
