@@ -32,9 +32,7 @@ def extras(cfg: DictConfig) -> None:
 
     # disable python warnings
     if cfg.extras.get("ignore_warnings"):
-        log.info(
-            "Disabling python warnings! <cfg.extras.ignore_warnings=True>"
-        )
+        log.info("Disabling python warnings! <cfg.extras.ignore_warnings=True>")
         warnings.filterwarnings("ignore")
 
     # prompt user to input tags from command line if none are provided in the config
@@ -44,9 +42,7 @@ def extras(cfg: DictConfig) -> None:
 
     # pretty print config tree using Rich library
     if cfg.extras.get("print_config"):
-        log.info(
-            "Printing config tree with Rich! <cfg.extras.print_config=True>"
-        )
+        log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
         rich_utils.print_config_tree(cfg, resolve=True, save_to_file=True)
 
 
@@ -97,12 +93,19 @@ def task_wrapper(task_func: Callable) -> Callable:
         # things to do if exception occurs
         except Exception as ex:
             # save exception to `.log` file
-            log.exception("")
+            log.exception(f"Exception occurred while executing task: {ex}")
 
-            # some hyperparameter combinations might be invalid or cause out-of-memory errors
-            # so when using hparam search plugins like Optuna, you might want to disable
-            # raising the below exception to avoid multirun failure
-            raise ex
+            if (
+                "debug" in cfg
+                and cfg.debug.raise_inner_exception in cfg.debug
+                and cfg.debug.raise_inner_exception
+            ):
+                raise
+            else:
+                # some hyperparameter combinations might be invalid or cause out-of-memory errors
+                # so when using hparam search plugins like Optuna, you might want to disable
+                # raising the below exception to avoid multirun failure
+                raise
 
         # things to always do after either success or exception
         finally:

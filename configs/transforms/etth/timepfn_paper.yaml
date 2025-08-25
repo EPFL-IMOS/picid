@@ -5,10 +5,6 @@ scaler:
   
   metadata:
     apply_to: features
-    
-    assign_to: 
-      scaled_features: features_2
-
     fit_on: train
 
 time_features_transform:

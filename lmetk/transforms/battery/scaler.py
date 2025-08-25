@@ -2,12 +2,12 @@ from typing import Any, Optional, Dict
 from lmetk.transforms.base_transform import BaseTransform 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from lmetk.transforms.utils import _convert_to_numpy
-from lmetk.transforms.multisource import BaseMultiSourceTransformMixin
+from lmetk.transforms.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 import logging
 logger = logging.getLogger(__name__) 
 
-class MinMaxScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
+class MinMaxScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.
     Handles various input data types by converting them to numpy.ndarray internally
@@ -38,7 +38,7 @@ class MinMaxScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
         return transformed_np_data 
 
 
-# class StandardScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
+# class StandardScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 #     """
 #     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.
 #     Handles various input data types by converting them to numpy.ndarray internally

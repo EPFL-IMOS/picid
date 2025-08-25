@@ -105,7 +105,7 @@ class DataChunk(BaseDataObject):
 
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
-class OrderedInput(DataChunk):
+class OrderedInput(BaseDataObject):
     """
     A data object that holds inputs for a transformation and can sanitize them.
     """
@@ -277,6 +277,7 @@ class DatasetContainer(BaseDataObject):
             if isinstance(splits_data, dict):
                 all_splits.update(splits_data.keys())
 
+        collected_types = []
         split_dict = {split: {} for split in all_splits}
         for data_key, splits_data in self.items():
             if isinstance(splits_data, dict):

@@ -49,7 +49,7 @@ class BaseMultiSourceUnitWiseTransformMixin(ABC):
         ]
 
 
-class ConstantScaler(BaseTransform, BaseMultiSourceTransformMixin):
+class ConstantScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, factor=1.0):
         super().__init__()
         self.factor = factor

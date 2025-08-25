@@ -5,7 +5,7 @@ import copy
 from lmetk.data.data_objects.data import DatasetContainer, OrderedInput, SimpleReturnObject
 
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 class TransformStrategy():
     """
@@ -45,8 +45,7 @@ class TransformStrategy():
         # --- 2. FIT TRANSFORMER (with SINGLE/MULTI LOGIC) ---
 
         if fit_on_split and fit_on_key:
-            fit_on_data = {fit_on_key: data[fit_on_key], "metadata": data["metadata"]}
-            fit_chunks = self._prepare_chunks_for_split(fit_on_data, fit_on_split, is_multi_unit)
+            fit_chunks = self._prepare_chunks_for_split({fit_on_key: data[fit_on_key]}, fit_on_split, is_multi_unit)
             metadata={"mode": fit_on_split, "apply_to_keys": fit_on_key, "assign_to_keys":assign_to_keys, "assign_to_map": assign_to_keys_map}
             
             if is_multi_unit:
@@ -69,14 +68,18 @@ class TransformStrategy():
             else:
                 transformed_chunks = [transform_instance.transform_data(chunks_to_transform[0], metadata=metadata)]
             
-            # TODO :(
-            transformed_chunks = self._postprocess_transformed_data(transformed_chunks)
+            transformed_chunks = self._postprocess_transformed_data(transformed_chunks, metadata)
 
             # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
             
             # Mode 1: Assign results to a key defined by assign_to_keys
             for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
-                transformed_results_for_new_key[assign_to_key][split] = [chunk[assign_to_map] for chunk in transformed_chunks]
+                if is_multi_unit:
+                    transformed_results_for_new_key[assign_to_key][split] = [chunk[assign_to_map] for chunk in transformed_chunks]
+                else:
+                    assert len(transformed_chunks) == 1, "Expected single chunk for non-multi-unit data."
+                    transformed_results_for_new_key[assign_to_key][split] = transformed_chunks[0][assign_to_map]
+
 
         
         for assign_to_key, splits in transformed_results_for_new_key.items():
@@ -89,13 +92,14 @@ class TransformStrategy():
 
         return transformed_data
     
-    def _postprocess_transformed_data(self, data, assign_to_map):
+    def _postprocess_transformed_data(self, data, metadata):
         # Check whenever the transformed data is mapping or not
         if len(data) == 1:
-            if isinstance(data, Mapping):
-                # TODO: maybe add some checks here
-                assert len(metadata['assign_to_map'])==1
-                data = SimpleReturnObject(**{metadata['assign_to_map'][0]: data})
+            if not isinstance(data, Mapping):
+                # the case when transform returns np.ndarray
+                assert len(metadata['assign_to_map'])==1, "Expected single assign_to_map for single output."
+                assert len(data)==1, "Expected single output for non-multi-unit data."
+                data = [SimpleReturnObject(**{metadata['assign_to_map'][0]: data[0]})]
         
         return data
             

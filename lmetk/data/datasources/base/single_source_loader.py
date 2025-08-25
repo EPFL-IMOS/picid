@@ -58,7 +58,20 @@ class SingleSourceLoader(DataSourceLoaderInterface):
                 self.split_data()
 
         assert self._is_loaded==True, "Data must be loaded before getting data." 
-        # TODO, ensure matadata has its train val test splits 
+        
+        # Ensure metadata dict has structure as other dicts
+        # {metadata: 'train':value, 'val':value, 'test':value}
+        if "metadata" in self.data_dict and not (
+            isinstance(self.data_dict["metadata"], dict)
+            and all(k in self.data_dict["metadata"] for k in ["train", "val", "test"])
+        ):
+            # Replicate metadata for each split if not already split
+            metadata = self.data_dict["metadata"]
+            self.data_dict["metadata"] = {
+            "train": metadata,
+            "val": metadata,
+            "test": metadata,
+            }
         
         # We use MultiDataChunk as it will simply wrap values of the self.data_dict into a list
         return DatasetContainer(**self.data_dict)

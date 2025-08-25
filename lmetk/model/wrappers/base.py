@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 
+from einops import rearrange
 import torch
 from lightning_fabric.utilities.data import AttributeDict
 
@@ -28,7 +29,30 @@ class FitPredictWrapper(ABC):
         self.backbone.fit(X.cpu(), y.cpu())
 
     def predict(self, X):
-        return self.backbone.predict(X.cpu())
+        y = self.backbone.predict(X.cpu())
+
+        if not isinstance(y, torch.Tensor):
+            if hasattr(y, "__array__"):
+                y = torch.from_numpy(y)
+            else:
+                raise TypeError(
+                    "Predicted output must be a torch.Tensor or numpy.ndarray."
+                )
+
+        if y.ndim == 1:
+            y = rearrange(y, "a -> a 1")
+        assert y.ndim == 2, "Predicted output must be 2-dimensional."
+        return y
+
+    @abstractmethod
+    def serialize_model(self, task_id):
+        """Serialize the model to a file."""
+        pass
+
+    @abstractmethod
+    def load_model(self, task_id):
+        """Load the model from a file."""
+        pass
 
 
 class AbstractWrapper(ABC, torch.nn.Module):

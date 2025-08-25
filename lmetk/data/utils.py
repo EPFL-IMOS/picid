@@ -25,7 +25,7 @@ def to_torch_tensor(data, device=None):
             raise TypeError(f"Unsupported tensor dtype: {data.dtype}")
 
     # Convert to NumPy array without copying if possible
-    arr = np.array(data, copy=False)
+    arr = np.asarray(data)
 
     if np.issubdtype(arr.dtype, np.floating):
         return torch.as_tensor(arr, dtype=torch.float32, device=device)
