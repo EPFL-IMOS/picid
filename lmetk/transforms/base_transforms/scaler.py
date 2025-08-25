@@ -5,6 +5,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import BaseMultiSourceTransformMixin
+from lmetk.data.data_objects.data import SimpleReturnObject
 from lmetk.transforms.utils import _convert_to_numpy
 
 logger = logging.getLogger(__name__)
@@ -91,11 +92,11 @@ class StandardScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
         keys = list(data_segment.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
         
-        np_data, _ = _convert_to_numpy(data_segment[keys[0]])
+        np_data = data_segment[keys[0]]
 
         if np_data.ndim == 1:
             np_data = np_data.reshape(-1, 1)
-            logger.info("Reshaped 1D array to 2D for MinMaxScaler.")
+            logger.info("Reshaped 1D array to 2D for StandardScaler.")
 
         self.scaler.fit(np_data)
 
@@ -105,12 +106,14 @@ class StandardScalerSklearn(BaseTransform, BaseMultiSourceTransformMixin):
         """Transforms a single data segment using the internal StandardScaler."""
         keys = list(data_segment.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
-        
-        np_data, _ = _convert_to_numpy(data_segment[keys[0]])
+
+        np_data = data_segment[keys[0]]
 
         if np_data.ndim == 1:
             np_data = np_data.reshape(-1, 1)
-            logger.info("Reshaped 1D array to 2D for MinMaxScaler.")
+            logger.info("Reshaped 1D array to 2D for StandardScaler.")
+        
+        assert len(metadata['assign_to_map']), "StandardScaler only supports single assign_to_map map."
 
         transformed_np_data = self.scaler.transform(np_data)
         return transformed_np_data

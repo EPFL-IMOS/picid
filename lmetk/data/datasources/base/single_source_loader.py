@@ -58,6 +58,7 @@ class SingleSourceLoader(DataSourceLoaderInterface):
                 self.split_data()
 
         assert self._is_loaded==True, "Data must be loaded before getting data." 
+        # TODO, ensure matadata has its train val test splits 
         
         # We use MultiDataChunk as it will simply wrap values of the self.data_dict into a list
         return DatasetContainer(**self.data_dict)

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from lmetk.data.data_objects.base import BaseDataObject # Assuming your BaseDataObject is here
-from lmetk.data.utils import check_for_nans, check_length_consistency
+from lmetk.data.data_objects.utils import check_for_nans, check_length_consistency, convert_to_numpy
 
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -93,21 +93,21 @@ class DataChunk(BaseDataObject):
             logging.info("No items to validate.")
             return
 
-        # --- CHANGE STARTS HERE ---
         # Perform validation checks by calling the imported utility functions
         values = list(items_to_check.values())
         keys = list(items_to_check.keys())
         
         check_for_nans(values, keys)
         check_length_consistency(values, keys)
-        # --- CHANGE ENDS HERE ---
+        
 
         logging.info("Validation successful for keys: %s", keys)
 
-class OrderedInput(BaseDataObject):
+ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
+
+class OrderedInput(DataChunk):
     """
-    A data object that holds the ordered inputs for a transformation.
-    Includes a method to perform conditional validation and sanitation.
+    A data object that holds inputs for a transformation and can sanitize them.
     """
     def get_sanitized_data(
         self,
@@ -115,10 +115,10 @@ class OrderedInput(BaseDataObject):
         check_lengths: bool = True,
         warn_only: bool = False,
         size_threshold: int = 1_000_000,
-        return_copy: bool = False  # --- NEW PARAMETER ---
+        return_copy: bool = False
     ) -> 'OrderedInput':
         """
-        Performs validation checks, optionally returning a new sanitized object.
+        Performs validation and converts data to NumPy arrays.
 
         Args:
             check_nans (bool): If True, checks for NaN values.
@@ -126,24 +126,21 @@ class OrderedInput(BaseDataObject):
             warn_only (bool): If True, issues warnings instead of raising errors.
             size_threshold (int): If data size exceeds this, length checks are skipped.
             return_copy (bool): If True, returns a deep copy of the data.
-                                If False (default), performs checks in-place
-                                and returns a reference to the original object.
 
         Returns:
-            The sanitized OrderedInput object (either a copy or self).
+            The sanitized OrderedInput object with array-like data as NumPy arrays.
         """
-        # --- CHANGE: Conditional Copying ---
-        # Only perform an expensive deepcopy if the user explicitly requests it.
-        if return_copy:
-            target_obj = copy.deepcopy(self)
-        else:
-            # By default, operate on the original object for performance.
-            target_obj = self
+        target_obj = copy.deepcopy(self) if return_copy else self
         
+        # --- 1. CONVERT ALL ARRAY-LIKE DATA TO NUMPY ---
+        for key, value in list(target_obj.items()):
+            if isinstance(value, ARRAY_LIKE_TYPES):
+                target_obj[key] = convert_to_numpy(value, key)
+        
+        # --- 2. PERFORM CONDITIONAL CHECKS on the converted NumPy arrays ---
         values = list(target_obj.values())
         keys = list(target_obj.keys())
         
-        # --- Perform Conditional Checks on the target object ---
         if check_nans:
             check_for_nans(values, keys, raise_on_error=(not warn_only))
 

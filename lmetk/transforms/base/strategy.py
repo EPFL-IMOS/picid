@@ -1,7 +1,11 @@
+from importlib import metadata
 import warnings
 from typing import Any, Dict, List, Optional
 import copy
-from lmetk.data.data_objects.data import DatasetContainer, DataChunk
+from lmetk.data.data_objects.data import DatasetContainer, OrderedInput, SimpleReturnObject
+
+from collections import defaultdict
+from collections.abc import Mapping
 
 class TransformStrategy():
     """
@@ -13,17 +17,24 @@ class TransformStrategy():
         transform_instance: Any,
         data: 'DatasetContainer',
         apply_to_keys: str | List[str],
-        assign_to_key: Optional[str] = None, # <-- Now optional
+        assign_to_keys: str | List[str],
+        assign_to_keys_map: str | List[str] = None,
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
     ) -> 'DatasetContainer':
         
         if isinstance(apply_to_keys, str):
-            apply_to_keys = [apply_to_keys]
+            apply_to_keys = [apply_to_keys]        
+
+        if isinstance(assign_to_keys, str):
+            assign_to_keys = [assign_to_keys]
+        
+        if isinstance(assign_to_keys_map, str):
+            assign_to_keys_map = [assign_to_keys_map]
         
         # --- 1. EFFICIENT HYBRID COPY ---
         transformed_data = copy.copy(data)
-        keys_to_modify = apply_to_keys + ([assign_to_key] if assign_to_key else [])
+        keys_to_modify = apply_to_keys + (assign_to_keys if assign_to_keys else [])
         for key in keys_to_modify:
             if key in data:
                 transformed_data[key] = copy.deepcopy(data[key])
@@ -32,62 +43,81 @@ class TransformStrategy():
         available_splits = list(data[apply_to_keys[0]].keys())
         
         # --- 2. FIT TRANSFORMER (with SINGLE/MULTI LOGIC) ---
+
         if fit_on_split and fit_on_key:
-            fit_chunks = self._prepare_chunks_for_split({fit_on_key: data[fit_on_key]}, fit_on_split, is_multi_unit)
+            fit_on_data = {fit_on_key: data[fit_on_key], "metadata": data["metadata"]}
+            fit_chunks = self._prepare_chunks_for_split(fit_on_data, fit_on_split, is_multi_unit)
+            metadata={"mode": fit_on_split, "apply_to_keys": fit_on_key, "assign_to_keys":assign_to_keys, "assign_to_map": assign_to_keys_map}
             
             if is_multi_unit:
-                transform_instance.fit_multi_source(fit_chunks, metadata={"mode": fit_on_split})
+                transform_instance.fit_multi_source(fit_chunks, metadata=metadata)
             else:
-                transform_instance.fit_data(fit_chunks[0], metadata={"mode": fit_on_split})
+                transform_instance.fit_data(fit_chunks[0], metadata=metadata)
 
         # --- 3. TRANSFORM ALL SPLITS ---
         target_data_to_transform = {key: data[key] for key in apply_to_keys}
         
         # This block handles both merging strategies
-        transformed_results_for_new_key = {}
+        transformed_results_for_new_key = defaultdict(dict)
         for split in available_splits:
             chunks_to_transform = self._prepare_chunks_for_split(target_data_to_transform, split, is_multi_unit)
             
+            metadata={"mode": split, "apply_to_keys": apply_to_keys, "assign_to_keys":assign_to_keys, "assign_to_map": assign_to_keys_map}
             # Call the appropriate transform method
             if is_multi_unit:
-                transformed_chunks = transform_instance.transform_multi_source(chunks_to_transform, metadata={"mode": split})
+                transformed_chunks = transform_instance.transform_multi_source(chunks_to_transform, metadata=metadata)
             else:
-                transformed_chunks = [transform_instance.transform_data(chunks_to_transform[0], metadata={"mode": split})]
-
-            # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- # Finished here: 23/08 whenever the output of datatransform should be a datachunk as well!?
-            if assign_to_key:
-                # Mode 1: Assign results to a new key
-                if is_multi_unit:
-                    transformed_results_for_new_key[split] = [chunk[assign_to_key] for chunk in transformed_chunks]
-                else:
-                    transformed_results_for_new_key[split] = transformed_chunks[0][assign_to_key]
-            else:
-                # Mode 2: Update original keys in-place
-                if is_multi_unit:
-                    for i, chunk in enumerate(transformed_chunks):
-                        for key, value in chunk.items():
-                            if key in transformed_data:
-                                transformed_data[key][split][i] = value
-                else: # Single unit
-                    for key, value in transformed_chunks[0].items():
-                        if key in transformed_data:
-                            transformed_data[key][split] = value
-        
-        if assign_to_key:
-            transformed_data[assign_to_key] = transformed_results_for_new_key
+                transformed_chunks = [transform_instance.transform_data(chunks_to_transform[0], metadata=metadata)]
             
-        return transformed_data
+            # TODO :(
+            transformed_chunks = self._postprocess_transformed_data(transformed_chunks)
 
-    def _prepare_chunks_for_split(self, data_to_prepare: Dict, split: str, is_multi_unit: bool) -> List['DataChunk']:
+            # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
+            
+            # Mode 1: Assign results to a key defined by assign_to_keys
+            for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
+                transformed_results_for_new_key[assign_to_key][split] = [chunk[assign_to_map] for chunk in transformed_chunks]
+
+        
+        for assign_to_key, splits in transformed_results_for_new_key.items():
+            for split, data in splits.items():
+                # Check whenever assign_to_key exist in transformed_data.keys()
+                if assign_to_key not in transformed_data:
+                    transformed_data[assign_to_key] = {'train':None, 'val':None, 'test':None}
+
+                transformed_data[assign_to_key][split] = transformed_results_for_new_key[assign_to_key][split]
+
+        return transformed_data
+    
+    def _postprocess_transformed_data(self, data, assign_to_map):
+        # Check whenever the transformed data is mapping or not
+        if len(data) == 1:
+            if isinstance(data, Mapping):
+                # TODO: maybe add some checks here
+                assert len(metadata['assign_to_map'])==1
+                data = SimpleReturnObject(**{metadata['assign_to_map'][0]: data})
+        
+        return data
+            
+            
+    def _prepare_chunks_for_split(self, data_to_prepare: Dict, split: str, is_multi_unit: bool) -> List['OrderedInput']:
+        
         keys = list(data_to_prepare.keys())
-        if not is_multi_unit:
-            unit_data = {key: data_to_prepare[key][split][0] for key in keys if split in data_to_prepare[key]}
-            return [DataChunk(**unit_data)]
+    
+        # For multi-unit data, extract each unit for each key
         chunks = []
         num_units = len(data_to_prepare[keys[0]][split])
+        
+        if is_multi_unit == True:
+            assert num_units > 1, "Flag 'is_multi_unit' is true hence expect multiple units."
+
         for i in range(num_units):
-            unit_data = {key: data_to_prepare[key][split][i] for key in keys if split in data_to_prepare[key]}
-            chunks.append(DataChunk(**unit_data))
+            unit_data = {
+            key: data_to_prepare[key][split][i]
+            for key in keys
+            if split in data_to_prepare[key]
+            }
+            chunks.append(OrderedInput(**unit_data).get_sanitized_data())
         return chunks
 
 

@@ -1,12 +1,13 @@
 import logging
 from typing import Any, Dict, List, Union
-
+from collections.abc import Mapping
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 import omegaconf
 # Import your strategy and base transform classes
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.strategy import TransformStrategy
+
 
 # To allow instantiation of Hydra-configured objects
 
@@ -55,15 +56,26 @@ class DataTransform:
         if isinstance(self.apply_to, omegaconf.listconfig.ListConfig):
             self.apply_to = list(self.apply_to)
         
-        self.assign_to = metadata.get("assign_to", None)
+        assign_to = metadata.get("assign_to", None)
+        
         # Check whenever self.assign_to is None, if so, assign self.apply_to to it
-        if self.assign_to is None:
+        if assign_to is None:
             # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
             if isinstance(self.apply_to, list):
                 raise ValueError(
                     f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'assign_to' is not specified. Please specify 'assign_to' to avoid ambiguity."
                 )
-            self.assign_to = self.apply_to    
+            self.assign_to = self.apply_to 
+            self.assign_to_map = self.apply_to 
+
+        elif isinstance(assign_to, Mapping):   
+            self.assign_to_map = list(assign_to.keys())
+            self.assign_to = list(assign_to.values())
+        
+        else: 
+            assert isinstance(assign_to, str), f"Expected 'assign_to' to be a string but got {type(assign_to)}."
+            self.assign_to = assign_to
+            self.assign_to_map = assign_to
         
         # TODO: is there actually a use case with fitting on validation/test?
         self.fit_on_split = metadata.get("fit_on", None)
@@ -90,15 +102,6 @@ class DataTransform:
             "must implement BaseTransform."
         )
 
-        # Refactor
-        # if self.fit_on_split is not None:
-        #     assert self.fit_on_key is not None, (
-        #         f"Transform '{transform_name}': 'fit_on_split' is specified but 'fit_on_key' is None. "
-        #         "Please specify 'fit_on_key' in metadata."
-        #     )
-        #     self.strategy = UnifiedFitTransformStrategy()
-        # else:
-        #     self.strategy = UnifiedDirectTransformStrategy()
         self.strategy = TransformStrategy()
 
         # Initialize the actual transform instance
@@ -156,7 +159,8 @@ class DataTransform:
             transform_instance=self.transform_instance,
             data=data,
             apply_to_keys=self.apply_to,
-            assign_to_key=self.assign_to,
+            assign_to_keys=self.assign_to,
+            assign_to_keys_map=self.assign_to_map,
             fit_on_split=self.fit_on_split,
             fit_on_key=self.fit_on_key
         )

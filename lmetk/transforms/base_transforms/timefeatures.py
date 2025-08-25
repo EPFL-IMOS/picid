@@ -5,6 +5,7 @@ import pandas as pd
 
 # Assuming this import path is correct for your project
 from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.data.data_objects.data import SimpleReturnObject
 
 
 class TimePFNTimeFeaturesTransform(BaseTransform):
@@ -78,10 +79,10 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
             )
 
         # Convert the result to a DataFrame and transpose, as per your original working code.
-        df_stamp_processed = pd.DataFrame(df_stamp_raw.transpose(1, 0))
+        transformed_data = pd.DataFrame(df_stamp_raw.transpose(1, 0))
+        return transformed_data
+        
 
-        # Return the values as a NumPy array.
-        return df_stamp_processed.values
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
