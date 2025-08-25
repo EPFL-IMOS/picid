@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-from lmetk.data.data_objects.data import MultiDataChunk
+from lmetk.data.data_objects.data import DatasetContainer
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
 from phmd import datasets
 
@@ -79,7 +79,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         self._is_loaded = True
         self._is_isplitted = True
 
-        return MultiDataChunk(**self.data_dict)
+        return DatasetContainer(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """

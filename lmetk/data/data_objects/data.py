@@ -1,75 +1,67 @@
+import copy
+import warnings
 import logging
 from typing import Any, List, Optional, Dict
 import numpy as np
 import pandas as pd
-from lmetk.data.data_objects.base import BaseDataObject # Assuming your BaseDataObject is here
 
+from lmetk.data.data_objects.base import BaseDataObject # Assuming your BaseDataObject is here
+from lmetk.data.utils import check_for_nans, check_length_consistency
 
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 class DataChunk(BaseDataObject):
     """
-    A flexible data container that stores an individual data unit (e.g., for one
-    operational cycle) in its original format.
-
-    This class uses a "Lazy Conversion" model. Data is stored as-is (e.g.,
-    as a pandas.DataFrame). Conversion to NumPy and validation are handled
-    explicitly through public methods.
+    A flexible data container that stores an individual data unit in its
+    original format. It uses external utilities for validation.
     """
 
     def __init__(self, **kwargs: Any) -> None:
         """
-        Initializes the chunk. If metadata is provided, it automatically
-        extracts column names from any pandas.DataFrame objects.
+        Initializes the chunk. If a 'metadata' dictionary is provided, it
+        automatically extracts column names from any pandas.DataFrame objects.
         """
-        # --- CHANGE STARTS HERE ---
-        # Only attempt to extract columns if metadata is already present in the input
         if 'metadata' in kwargs and isinstance(kwargs.get('metadata'), dict):
-            # Ensure the column_map sub-dictionary exists within the provided metadata
             kwargs['metadata'].setdefault('column_map', {})
-            
-            # Extract column names for any DataFrames found
             for key, value in kwargs.items():
                 if isinstance(value, pd.DataFrame):
                     kwargs['metadata']['column_map'][key] = value.columns.tolist()
-        # --- CHANGE ENDS HERE ---
-
-        # Call the parent's __init__ to handle the actual setting of items
         super().__init__(**kwargs)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """
+        Sets an item, storing it in its original format. If a 'metadata' attribute
+        exists, it intelligently updates the column_map.
+        """
+        is_df = isinstance(value, pd.DataFrame)
+        if 'metadata' in self and isinstance(self.metadata, dict):
+            self.metadata.setdefault('column_map', {})
+            if is_df:
+                self.metadata['column_map'][key] = value.columns.tolist()
+            elif key in self.metadata.get('column_map', {}):
+                del self.metadata['column_map'][key]
+        super(BaseDataObject, self).__setitem__(key, value)
 
     # --- Public API Methods ---
 
     def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
         """
         Converts the data for a given key to a NumPy array on demand.
-
-        Args:
-            key (str): The key of the item to convert.
-            ensure_2d (bool): If True, ensures the output array is 2-dimensional.
-
-        Returns:
-            A NumPy array representation of the data.
         """
         if key not in self:
             raise KeyError(f"Key '{key}' not found in DataChunk.")
-
         value = self[key]
-
-        # --- Conversion Logic ---
         if isinstance(value, np.ndarray):
             array = value
         elif isinstance(value, (pd.DataFrame, pd.Series)):
-            # Check dtypes to decide if a safe object array or a numeric array should be created
             dtypes = getattr(value, 'dtypes', [getattr(value, 'dtype', None)])
-            if any(dt.kind not in 'biufc' for dt in dtypes): # b:bool, i:int, u:uint, f:float, c:complex
+            if any(dt.kind not in 'biufc' for dt in dtypes):
                 array = value.values
             else:
                 array = value.values.astype(np.float32)
-        else:  # For lists, tuples, etc.
+        else:
             array = np.array(value)
-
-        # --- Dimension Check ---
         if ensure_2d:
             if array.ndim == 1:
                 return array.reshape(-1, 1)
@@ -80,39 +72,19 @@ class DataChunk(BaseDataObject):
     def to_dataframe(self, key: str) -> pd.DataFrame:
         """
         Returns a pandas.DataFrame representation of the data for a given key.
-
-        If the item is already a DataFrame, it is returned directly to preserve it.
-        Otherwise, it is converted using the stored column map if available.
-
-        Args:
-            key (str): The key of the item to retrieve or convert.
-
-        Returns:
-            A pandas.DataFrame.
         """
         if key not in self:
             raise KeyError(f"Key '{key}' not found in DataChunk.")
-        
         value = self[key]
-        # If it's already a DataFrame, return it as-is
         if isinstance(value, pd.DataFrame):
             return value
-
-        # Otherwise, convert it to a DataFrame
         array_data = self.to_numpy(key, ensure_2d=False)
         columns = self.get("metadata", {}).get("column_map", {}).get(key)
         return pd.DataFrame(array_data, columns=columns)
 
     def validate(self, keys_to_validate: Optional[List[str]] = None) -> None:
         """
-        Performs length and NaN consistency checks on the raw data.
-
-        This is an explicit action. It should be called when you need to ensure
-        the consistency of different data arrays within the chunk.
-
-        Args:
-            keys_to_validate (Optional[List[str]]): A specific list of keys to validate.
-                If None, all items in the chunk will be checked.
+        Performs length and NaN consistency checks using external utilities.
         """
         keys = keys_to_validate if keys_to_validate is not None else self.keys()
         items_to_check = {k: self[k] for k in keys if k in self}
@@ -121,76 +93,84 @@ class DataChunk(BaseDataObject):
             logging.info("No items to validate.")
             return
 
-        # Perform the actual validation checks
-        self._check_for_nans(list(items_to_check.values()), list(items_to_check.keys()))
-        self._check_length_consistency(list(items_to_check.values()), list(items_to_check.keys()))
-        logging.info("Validation successful for keys: %s", list(items_to_check.keys()))
-
-    # --- Dunder Methods ---
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        """
-        Sets an item, storing it in its original format and intelligently
-        updating the column_map metadata if a DataFrame is added or replaced.
-        """
-        is_df = isinstance(value, pd.DataFrame)
-        
         # --- CHANGE STARTS HERE ---
-        # Only manage the column_map if the 'metadata' attribute already exists on the object
-        if 'metadata' in self and isinstance(self.metadata, dict):
-            self.metadata.setdefault('column_map', {})
-            
-            if is_df:
-                # If the new value is a DataFrame, update its column map
-                self.metadata['column_map'][key] = value.columns.tolist()
-            elif key in self.metadata.get('column_map', {}):
-                # If the key previously had a column map but is being replaced
-                # by a non-DataFrame, remove the stale entry.
-                del self.metadata['column_map'][key]
+        # Perform validation checks by calling the imported utility functions
+        values = list(items_to_check.values())
+        keys = list(items_to_check.keys())
+        
+        check_for_nans(values, keys)
+        check_length_consistency(values, keys)
         # --- CHANGE ENDS HERE ---
 
-        # Use the grandparent's __setitem__ to store the raw value,
-        # bypassing the recursive conversion in BaseDataObject.
-        super(BaseDataObject, self).__setitem__(key, value)
+        logging.info("Validation successful for keys: %s", keys)
 
-    # --- Internal Validation Helpers ---
+class OrderedInput(BaseDataObject):
+    """
+    A data object that holds the ordered inputs for a transformation.
+    Includes a method to perform conditional validation and sanitation.
+    """
+    def get_sanitized_data(
+        self,
+        check_nans: bool = True,
+        check_lengths: bool = True,
+        warn_only: bool = False,
+        size_threshold: int = 1_000_000,
+        return_copy: bool = False  # --- NEW PARAMETER ---
+    ) -> 'OrderedInput':
+        """
+        Performs validation checks, optionally returning a new sanitized object.
 
-    def _get_length(self, value: Any) -> Optional[int]:
-        """Helper to safely get the length of different array-like types."""
-        if hasattr(value, 'shape') and hasattr(value.shape, '__len__') and value.shape:  # Pandas, Numpy
-            return value.shape[0]
-        if isinstance(value, (list, tuple)):
-            return len(value)
-        return None  # Return None for non-array-like types
+        Args:
+            check_nans (bool): If True, checks for NaN values.
+            check_lengths (bool): If True, checks for length consistency.
+            warn_only (bool): If True, issues warnings instead of raising errors.
+            size_threshold (int): If data size exceeds this, length checks are skipped.
+            return_copy (bool): If True, returns a deep copy of the data.
+                                If False (default), performs checks in-place
+                                and returns a reference to the original object.
 
-    def _check_length_consistency(self, values: List[Any], keys: List[str]) -> None:
-        """Checks that all provided array-like items have the same length."""
-        # Get lengths of all items that have a measurable length
-        lengths = {self._get_length(v) for v in values if self._get_length(v) is not None}
-        if len(lengths) > 1:
-            length_info = {k: self._get_length(v) for k, v in zip(keys, values)}
-            raise ValueError(f"Length mismatch between items: {length_info}")
+        Returns:
+            The sanitized OrderedInput object (either a copy or self).
+        """
+        # --- CHANGE: Conditional Copying ---
+        # Only perform an expensive deepcopy if the user explicitly requests it.
+        if return_copy:
+            target_obj = copy.deepcopy(self)
+        else:
+            # By default, operate on the original object for performance.
+            target_obj = self
+        
+        values = list(target_obj.values())
+        keys = list(target_obj.keys())
+        
+        # --- Perform Conditional Checks on the target object ---
+        if check_nans:
+            check_for_nans(values, keys, raise_on_error=(not warn_only))
 
-    def _check_for_nans(self, values: List[Any], keys: List[str]) -> None:
-        """Checks for NaN values in pandas or numpy objects."""
-        for value, key in zip(values, keys):
-            has_nan = False
-            if isinstance(value, pd.DataFrame):
-                # Check only numeric columns for NaNs
-                numeric_data = value.select_dtypes(include=np.number)
-                if not numeric_data.empty:
-                    has_nan = numeric_data.isnull().values.any()
-            elif isinstance(value, pd.Series):
-                # Check Series only if it's a numeric type
-                if pd.api.types.is_numeric_dtype(value.dtype):
-                    has_nan = value.isnull().any()
-            elif isinstance(value, np.ndarray):
-                # Check array only if it's a numeric type
-                if np.issubdtype(value.dtype, np.number):
-                    has_nan = np.isnan(value).any()
-            
-            if has_nan:
-                raise ValueError(f"NaN values found in object '{key}'.")
+        if check_lengths:
+            total_size = sum(v.size for v in values if hasattr(v, 'size'))
+            if total_size < size_threshold:
+                check_length_consistency(values, keys, raise_on_error=(not warn_only))
+            else:
+                warnings.warn(
+                    f"Data size ({total_size}) exceeds threshold ({size_threshold}). "
+                    "Skipping length consistency check for performance."
+                )
+        
+        return target_obj
+
+class SimpleReturnObject(BaseDataObject):
+    """A data object for simple, single-array returns from a transform."""
+    pass
+
+class NamedDictReturnObject(BaseDataObject):
+    """A data object for dictionary-like returns with named keys."""
+    pass
+
+class ExtendedReturnObject(BaseDataObject):
+    """A data object for complex returns that may include data and metadata."""
+    pass
+
 
 
 
@@ -204,7 +184,7 @@ class DatasetContainer(BaseDataObject):
     normalizes single-unit data into lists, and provides methods for validation
     and transformation.
     """
-
+    
     # --- Dunder Methods ---
 
     def __init__(self, is_multi_unit: bool=True, **kwargs: Any) -> None:

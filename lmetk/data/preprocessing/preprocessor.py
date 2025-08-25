@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from numpy import ndarray
 from lmetk.data.preprocessing.base import PreProcessorInterface
 from lmetk.transforms.base.data_transform import DataTransform
-from lmetk.data.data_objects.data import MultiDataChunk
+from lmetk.data.data_objects.data import DatasetContainer
 
 
 import logging
@@ -83,7 +83,7 @@ class PreProcessor(PreProcessorInterface):
         """Prepare data from the datasource and store as instance variables."""
         data = self.datasource.get_data()
 
-        assert type(data) == MultiDataChunk, f"Expected MultiDataChunk, but got {type(data)}, make sure 'datasource.get_data()' returns MultiDataChunk"
+        assert type(data) == DatasetContainer, f"Expected MultiDataChunk, but got {type(data)}, make sure 'datasource.get_data()' returns MultiDataChunk"
 
         if hasattr(self.datasource, "get_meta_data") and callable(
             getattr(self.datasource, "get_meta_data", None)
@@ -102,7 +102,7 @@ class PreProcessor(PreProcessorInterface):
         self.data = data
         self.meta_data_lst = meta_data_lst
 
-    def apply_transforms(self, data: MultiDataChunk, transforms) -> List[Any]:
+    def apply_transforms(self, data: DatasetContainer, transforms) -> List[Any]:
         """
         Apply a list of transforms to each data item in data.
         Args:
