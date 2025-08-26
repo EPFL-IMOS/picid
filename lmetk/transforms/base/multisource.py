@@ -22,7 +22,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Check if the class is a subclass of TransformerMixin
         if not hasattr(self, "fit_data") or not hasattr(self, "transform_data"):
             raise TypeError(
-                "MultiSourceTransformMixin requires the class to implement fit and transform methods."
+                "ConcatinatedFitMultiSourceTransformMixin requires the class to implement fit and transform methods."
             )
 
     def fit_multi_source(
@@ -47,30 +47,6 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         """
         Transform the data from all sources using the fitted scalers.
         """
-        # TODO: below the case when each of the source of multisource has its own metadata, make it work if needed
-        # # Check that metadata dict is not empty
-        # if len(metadata.keys()) > 0:
-        #     for key in metadata.keys():
-        #         # TODO: check whenever metadata should have the same length as data_segments?
-        #         if len(metadata[key]) != len(data_segments):
-        #             logger.info(f"The length of the auxiliary data is not the same as the length of the data segments. {len(metadata[key])} != {len(data_segments)}")
-
-        #     # Transform the data from all sources using the fitted scalers.
-        #     out = []
-        #     for idx in range(len(data_segments)):
-        #         # TODO: In case we need metadata per each segment
-        #         # aux_data_per_segment = {
-        #         #     key: metadata[key][idx] for key in metadata.keys()
-        #         # }
-        #         out.append(
-        #             self.transform_data(
-        #                 data_segment=data_segments[idx],
-        #                 metadata=metadata,
-        #             )
-        #         )
-
-        # else:
-        # Check that data_segment values of the dict has the same lengths
 
         lengths = [len(val) for val in data_segments.values()]
         if len(set(lengths)) != 1:

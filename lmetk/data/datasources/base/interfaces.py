@@ -6,11 +6,36 @@ import numpy as np
 
 
 class DataSourceLoaderInterface(ABC):
-    def __init__(self, **kwargs):
-        # Store kwargs for repr
-        self._init_kwargs = kwargs
+    """
+    Abstract base class for data source loaders in the TabPHM pipeline.
+    This interface defines the required methods and initialization logic for loading,
+    splitting, and managing datasets from various sources. It supports configuration
+    options for debugging, caching, and data splitting modes.
 
-        # Assign keys needed for the pipeline
+    Notes:
+        - Raises ValueError if debug_cache_dataset is True but debug_cache_path is not set.
+    """
+
+    def __init__(self, **kwargs):
+        """
+        Initializes the object with configuration parameters.
+
+        Args:
+            data_name (str): Name of the dataset.
+            task_mode (str): Mode of the task (e.g., classification, regression).
+            debug_cache_dataset (bool, optional): If True, enables caching
+                of the dataset for debugging. Defaults to False.
+            debug_cache_path (str, optional): Path to store the cached dataset.
+                Required if debug_cache_dataset is True.
+            debug_subset_range (Any, optional): Range of subset for debugging purposes.
+                Defaults to None.
+            debug_subsample_rate (Any, optional): Subsample rate for debugging purposes.
+                Defaults to None.
+        Raises:
+            ValueError: If debug_cache_dataset is True but debug_cache_path is not set.
+        """
+
+        self._init_kwargs = kwargs
         self.data_name = kwargs["data_name"]
         self.task_mode = kwargs["task_mode"]
         self.debug_cache_dataset = kwargs.get("debug_cache_dataset", False)
@@ -23,22 +48,27 @@ class DataSourceLoaderInterface(ABC):
                 raise ValueError(
                     "debug_cache_dataset is True, but debug_cache_path is not set."
                 )
-            else:
-                # make sure cache path exists
-                cache_path = Path(self.debug_cache_path).expanduser()
-                if not cache_path.exists():
-                    cache_path.mkdir(parents=True, exist_ok=True)
-                self.debug_cache_path = str(cache_path)
+
+            # make sure cache path exists
+            cache_path = Path(self.debug_cache_path).expanduser()
+            if not cache_path.exists():
+                cache_path.mkdir(parents=True, exist_ok=True)
+            self.debug_cache_path = str(cache_path)
 
     def get_split_mode(self):
+        """
+        Determines the data split mode based on the presence of a multisource data splitter.
+        Returns:
+            str: The split mode, either "per_unit" if no multisource data splitter is provided,
+            or "cross_unit" if a multisource data splitter is present.
+        """
+
         multisource_data_splitter = self._init_kwargs.get(
             "multisource_data_splitter", None
         )
 
-        # Case 1: If multisource_data_splitter is None, split_mode is by unit
         if not multisource_data_splitter:
             split_mode = "per_unit"
-
         else:
             split_mode = "cross_unit"
 
@@ -49,14 +79,35 @@ class DataSourceLoaderInterface(ABC):
         return f"{self.__class__.__name__}({args})"
 
     @abstractmethod
+    def load_data(self) -> None:
+        """Load the data from the data source."""
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @abstractmethod
     def get_data(self) -> Dict[str, np.ndarray]:
-        pass
+        """Get the data after it is loaded."""
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @abstractmethod
     def get_data_name(self) -> str:
-        pass
+        """Return source data names."""
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @abstractmethod
-    def split_data(self, kwargs: dict) -> None:
-        pass
-        pass
+    def split_data(self, data_lst: list[Dict], source_names: list[str]) -> None:
+        """
+        Splits the provided data list into separate sources using the configured
+        multisource data splitter.
+        Args:
+            data_lst (list[Dict]): A list of data dictionaries to be split by source.
+            source_names (list[str]): A list of source names corresponding to the data.
+        Returns:
+            Tuple[Dict, list[str]]:
+                - data_dict: A dictionary mapping source names to their respective split data.
+                - source_names_tree_view: A list of source names structured
+                    for tree view representation.
+        Raises:
+            AssertionError: If `self.multisource_data_splitter` is not an
+                instance of `BySourceSplitter`.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")

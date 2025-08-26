@@ -7,7 +7,9 @@ from lmetk.data.data_objects.data import DatasetContainer
 
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class PreProcessor(PreProcessorInterface):
     """Preprocessor of data."""
@@ -62,16 +64,15 @@ class PreProcessor(PreProcessorInterface):
             raise RuntimeError(
                 "Data has not been preprocessed. Please run the pipeline() first."
             )
-       
-        if return_splits_on_first_level==True:
+
+        if return_splits_on_first_level == True:
             return self.data.to_split_dict()
-        else: 
+        else:
             return self.data
         # TODO: HAVE NOT TESTED
         # elif isinstance(self.data_lst, list):
         #     # If multiple sources, return as a list
         #     raise ValueError("Not yet implemented, call R.T. to fix.")
-        
 
     # TODO: that is needed at least for evaluator, extend it for multisource maybe
     def get_transform_names(
@@ -81,9 +82,13 @@ class PreProcessor(PreProcessorInterface):
 
     def prepare_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
+
         data = self.datasource.get_data()
 
-        assert type(data) == DatasetContainer, f"Expected MultiDataChunk, but got {type(data)}, make sure 'datasource.get_data()' returns MultiDataChunk"
+        assert type(data) == DatasetContainer, (
+            f"Expected MultiDataChunk, but got {type(data)}, "
+            "make sure 'datasource.get_data()' returns MultiDataChunk"
+        )
 
         if hasattr(self.datasource, "get_meta_data") and callable(
             getattr(self.datasource, "get_meta_data", None)
@@ -120,13 +125,15 @@ class PreProcessor(PreProcessorInterface):
             # Removed detailed print statements for each transform application.
 
             logger.info(
-                f"Applying transform: '{transform_name}' (Strategy: {transform.strategy.__class__.__name__})"
+                f"Applying transform: '{transform_name}' "
+                f"(Strategy: {transform.strategy.__class__.__name__})"
             )
             start_time = time.time()
             data = transform.forward(data)
             end_time = time.time()
             logger.info(
-                f" transform: '{transform.transform_name}' - completed in {end_time - start_time:.4f} seconds."
+                f" transform: '{transform.transform_name}' - "
+                f"completed in {end_time - start_time:.4f} seconds."
             )
 
         return data
@@ -134,14 +141,14 @@ class PreProcessor(PreProcessorInterface):
     def pipeline(self):
         """Run the preprocessing pipeline."""
         # Removed "Starting preprocessing pipeline..." print.
+        self.datasource.load_data()
         self.prepare_data()
         # if multisource_data_splitter do not exist, then we work with separate sources
-        assert (
-            self.datasource.get_split_mode() == self.mode
-        ), f"Expected split mode from preprocessor: '{self.mode}', but got dataset split mode: '{self.datasource.get_split_mode()}'"
-        self.data = self.apply_transforms(
-            self.data, self.transforms.get_transforms()
+        assert self.datasource.get_split_mode() == self.mode, (
+            f"Expected split mode from preprocessor: '{self.mode}', "
+            f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
         )
+        self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
         self._is_preprocessed = True
 
         return self.data

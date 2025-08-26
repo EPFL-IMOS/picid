@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, override
 
 import numpy as np
 from box import Box
@@ -7,24 +7,35 @@ from box import Box
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
 from lmetk.data.data_objects.data import DatasetContainer
 
+
 class SingleSourceLoader(DataSourceLoaderInterface):
-    def __init__(self, **kwargs):
+    """
+    SingleSourceLoader is a data source loader that handles loading data from a single source.
+    A source in the context of PHM is most likely a unit, such as a bearing.
+
+    This class implements the DataSourceLoaderInterface and provides methods to load, preprocess,
+    and manage data from a specified source. It is intended to be subclassed or instantiated
+    with specific source configurations.
+    """
+
+    def __init__(
+        self,
+        is_part_of_multisource: bool = False,
+        data_splitter: Any = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
-        # Auto-assign keyword arguments to instance attributes
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        self.is_part_of_multisource = is_part_of_multisource
+        self.data_splitter = data_splitter
 
-        # Define data source loader storage dict
-        self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = (
-            {}
-        )  # centralized storage
+        # Define data source loader storage dict as centralized storage for the loaded data.
+        self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {}
 
         # Split flag, create before load, as some datasets might have predefined splits,
         # hence then _load_data method has to update self._is_splitted flag
         self._is_splitted = False
         self._is_loaded = False
-        
 
     @abstractmethod
     def _load_data(self) -> Dict[str, np.ndarray]:
@@ -42,23 +53,23 @@ class SingleSourceLoader(DataSourceLoaderInterface):
 
             self._is_splitted = True
 
+    @override
+    def load_data(self):
+
+        self.data_dict.update(self._load_data())
+        self._is_loaded = True
+
+        if not self.is_part_of_multisource:
+            assert self.data_splitter is not None, "Data splitter must be set."
+            self.split_data()
+
     def get_data(self) -> Dict[str, np.ndarray]:
         """Return splitted data dict."""
-        if self._is_loaded == False:
-            # Load the data
-            self.data_dict.update(self._load_data())
-            # self.data_name = kwargs["data_name"]
-            self._is_loaded = True
+        if self._is_loaded is False:
+            self.load_data()
 
-            # Get already instantiated data splitter
-            self.multisource_data_splitter = getattr(self, "multisource_data_splitter", None)
-            if not self.multisource_data_splitter:
-                self.data_splitter = getattr(self,"data_splitter", None)
-                assert self.data_splitter is not None, "Data splitter must be set."
-                self.split_data()
+        assert self._is_loaded is True, "Data must be loaded before getting data."
 
-        assert self._is_loaded==True, "Data must be loaded before getting data." 
-        
         # Ensure metadata dict has structure as other dicts
         # {metadata: 'train':value, 'val':value, 'test':value}
         if "metadata" in self.data_dict and not (
@@ -68,12 +79,13 @@ class SingleSourceLoader(DataSourceLoaderInterface):
             # Replicate metadata for each split if not already split
             metadata = self.data_dict["metadata"]
             self.data_dict["metadata"] = {
-            "train": metadata,
-            "val": metadata,
-            "test": metadata,
+                "train": metadata,
+                "val": metadata,
+                "test": metadata,
             }
-        
-        # We use MultiDataChunk as it will simply wrap values of the self.data_dict into a list
+
+        # We use MultiDataChunk as it will simply wrap values
+        # of the self.data_dict into a list
         return DatasetContainer(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
@@ -96,7 +108,6 @@ class SingleSourceLoader(DataSourceLoaderInterface):
             split_variable=variable,
         )
 
-        # Check
         if not self.data_dict.get("split_masks", None):
             self.data_dict.update(
                 {
@@ -115,7 +126,6 @@ class SingleSourceLoader(DataSourceLoaderInterface):
                     == self.data_dict["split_masks"][key].shape[0]
                 ), f"Mismatch in {key} data and timestamps length"
 
-        # Update the self.data_dict
         self.data_dict.update(
             {
                 variable: {

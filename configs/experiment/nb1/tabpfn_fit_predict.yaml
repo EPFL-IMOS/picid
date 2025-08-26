@@ -2,13 +2,6 @@
 
 defaults:
   - nb1/base
-  - override /dataset: fit_predict_task
-  - override /datamodule: base_datamodule_fit_predict
-  - override /model: tabpfn_fit_predict
+  - /model_configs/prognostics/tabpfn
   - override /transforms:  battery/bosello_fit_predict
-  - override /callbacks: gradient_free
-  - override /trainer: one_epoch
-
-task_definition: 
-  requires_training: true
   

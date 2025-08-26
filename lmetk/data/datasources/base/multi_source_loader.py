@@ -1,37 +1,63 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional, override
 
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 from lmetk.data.preprocessing.splits import BySourceSplitter
 
 
 class MultiSourceLoader(DataSourceLoaderInterface):
-    """This class instantiates each of the soure"""
+    """
+    Loader for multiple data sources, supporting both individual and multisource data splitting.
+    This class manages the instantiation and loading of multiple data sources, optionally applying
+    a multisource data splitter for joint data splitting across sources. It provides methods to
+    retrieve loaded data, metadata, source names, and the splitter instance.
+    Args:
+        **kwargs: Keyword arguments containing configuration for each data source and optional
+            multisource_data_splitter. Expected keys:
+                - source_list: dict mapping source names to their configuration.
+                - multisource_data_splitter: Optional splitter instance for joint splitting.
+                - <source_name>: Configuration for each individual source.
+    Attributes:
+        data_source_dict (dict): Mapping of source names to instantiated data source objects.
+        source_params (list): List of parameter dicts for each source.
+        source_names (list): List of source names.
+        multisource_data_splitter (Optional[BySourceSplitter]): Instance for multisource splitting.
+    Methods:
+        __repr__(): Returns a string representation of the loader.
+        get_data(): Loads and returns data from all sources, applying splitting logic as configured.
+        get_meta_data(): Returns metadata about the loaded data sources.
+        get_data_name(): Returns the list of source data names.
+        get_multisource_data_splitter(): Returns the multisource data splitter instance.
+        split_data(data_lst, source_names): Applies the multisource data splitter to the data.
+    """
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        source_list: Optional[dict] = {},
+        multisource_data_splitter: Optional[dict] = None,
+        **kwargs,
+    ):
+
         super().__init__(**kwargs)
-        self.data_source_dict = {}
-        self.source_params = []
-        # Get source names as list
-        self.source_names = list(kwargs.get("source_list", {}).keys())
+
+        self.data_source_dict: dict[SingleSourceLoader] = {}
+        self.source_params: list[dict] = []
+        self.source_names: list[str] = list(source_list.keys())
 
         # Instantiate multisource_data_splitter if is not none
         self.multisource_data_splitter = (
-            instantiate(kwargs["multisource_data_splitter"])
-            if kwargs.get("multisource_data_splitter", None) is not None
+            instantiate(multisource_data_splitter)
+            if multisource_data_splitter is not None
             else None
         )
 
-        # Load sources
         for key in self.source_names:
-
-            # Store params as dict
             src_params = OmegaConf.to_container(kwargs[key], resolve=True)
             self.source_params.append(src_params)
 
-            # Instantiate datasource
             datasource = instantiate(
                 kwargs[key],
                 multisource_data_splitter=(
@@ -43,15 +69,26 @@ class MultiSourceLoader(DataSourceLoaderInterface):
     def __repr__(self) -> str:
         return f"MultiSource(sources={len(self.data_source_dict)} units)"
 
+    @override
+    def load_data(self):
+        """
+        Loads data from all data sources in the data_source_dict.
+        Iterates over each data source object in the data_source_dict and calls its
+        load_data() method to perform the data loading operation.
+        Returns:
+            None
+        """
+        for ds in self.data_source_dict.values():
+            ds.load_data()
+
+    @override
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
-
         Returns:
-            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
+            dict | list[dict] : either dict in case we use multisource_data_splitter
+            or list of dicts in case we use data_splitter
 
         """
-
-        # Load data from each source
         data_lst = []
         source_names = self.data_source_dict.keys()
         for key in source_names:
@@ -63,7 +100,8 @@ class MultiSourceLoader(DataSourceLoaderInterface):
             if self.multisource_data_splitter:
                 if getattr(datasource, "_is_splitted", False):
                     raise RuntimeError(
-                        f"multisource_data_splitter is provided, but source '{key}' is already split. This configuration is not supported."
+                        f"multisource_data_splitter is provided, but source "
+                        f"'{key}' is already split. This configuration is not supported."
                     )
             else:
                 if not getattr(datasource, "_is_splitted", False):
@@ -73,10 +111,8 @@ class MultiSourceLoader(DataSourceLoaderInterface):
 
             data_lst.append(datasource.get_data())
 
-        # Split data in case of multisouce data splitting
         if self.multisource_data_splitter:
-            # In case we define multisource splitter, we need to split the data and reassign the names accordingly
-            data_dict, source_names_tree_view = self.split_data(data_lst, source_names)
+            data_dict, _ = self.split_data(data_lst, source_names)
             self._is_loaded = True
             return data_dict
 
@@ -91,14 +127,15 @@ class MultiSourceLoader(DataSourceLoaderInterface):
         assert self._is_loaded, "Data must be loaded before getting metadata."
         return {}
 
+    @override
     def get_data_name(self) -> list[str]:
-        """Return source data names."""
         return self.source_names
 
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
 
+    @override
     def split_data(self, data_lst: list[Dict], source_names: list[str]):
         assert isinstance(
             self.multisource_data_splitter, BySourceSplitter

@@ -2,6 +2,7 @@ import logging
 import os
 from itertools import combinations
 from pathlib import Path
+from typing import Any
 
 import h5py
 import numpy as np
@@ -40,18 +41,30 @@ def flatten_RUL(df):
 
 class N_CMAPSSDataSource(SingleSourceLoader):
 
-    def __init__(self, **kwargs):
+    def __init__(self, load_arguments: dict[str, Any], **kwargs):
+
+        assert load_arguments.RUL in (
+            "linear",
+            "flat",
+        ), "RUL type must be 'linear' or 'flat"
+
+        logger.info(f"Using {load_arguments.RUL} RUL.")
+        self.n_DS = load_arguments.n_DS
+        self.mode = load_arguments.mode
+        self.window_size = load_arguments.window_size
+        self.stride = load_arguments.stride
+        self.path = load_arguments.path
+        self.include_healthy = load_arguments.include_healthy
+        self.subsampling_rate = load_arguments.subsampling_rate
+        self.cruise = load_arguments.cruise
+        self.concepts = load_arguments.concepts
+        self.binary_concepts = load_arguments.binary_concepts
+        self.combined_concepts = load_arguments.combined_concepts
 
         super().__init__(**kwargs)
 
     def _load_data(self):
         # Load the data from the specified path
-        assert self.RUL in ("linear", "flat"), "RUL type must be 'linear' or 'flat"
-        logger.info(f"Using {self.RUL} RUL.")
-        self.n_DS = self.n_DS
-        self.mode = self.mode
-        self.window_size = self.window_size
-        self.stride = self.stride
 
         filename = os.path.join(
             Path(self.path).expanduser(), f"N-CMAPSS_DS{self.n_DS}.h5"

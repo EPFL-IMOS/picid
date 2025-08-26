@@ -1,0 +1,10 @@
+#@package _global_
+
+defaults:
+  - override /datasource: concepts_n_cmapss_multi_source
+  - override /datamodule: base_datamodule_tabpfn
+  - override /evaluator: default
+  - override /task_definition: concepts_n_cmapss_rul_prediction
+
+task_definition:
+  requires_training: false
