@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pandas as pd
 
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin, NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 
 
@@ -19,10 +19,10 @@ class FilterDataFrameColumns(BaseTransform, ConcatinatedFitMultiSourceTransformM
     def fit_data(self, data_segment: Any, metadata: Dict):
         pass
 
-    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
+    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
 
-        data_segment = data_segment_dict[self.apply_to_key][self.columns_to_keep]
+        data_segment = data_segment_obj[self.apply_to_key][self.columns_to_keep]
 
         # Reset index
         data_segment.reset_index(drop=True, inplace=True)
@@ -43,17 +43,17 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         ), "apply_to_key should be specified under the transform"
         self.apply_to_key = apply_to_key
 
-    def fit_data(self, data_segment_dict: Any, metadata: Dict):
+    def fit_data(self, data_segment_obj: Any, metadata: Dict):
         pass
 
-    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
+    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
-            self.apply_to_key in data_segment_dict
-        ), f"{self.apply_to_key}  are not passed in data_segment_dict"
+            self.apply_to_key in data_segment_obj
+        ), f"{self.apply_to_key}  are not passed in data_segment_obj"
 
         out = (
-            data_segment_dict[self.apply_to_key][self.target_name]
+            data_segment_obj[self.apply_to_key][self.target_name]
             .values.reshape(-1, 1)
             .astype(float)
         )
@@ -69,24 +69,24 @@ class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransform
     """
 
     # def fit_data(
-    #     self, data_segment_dict: Any, metadata: Dict
+    #     self, data_segment_obj: Any, metadata: Dict
     # ):
     #     pass
 
-    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
+    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
-            "features" in data_segment_dict
+            "features" in data_segment_obj
         ), "features features are not passed in auxiliary_data"
         data_segment = (
-            np.arange(data_segment_dict["features"].shape[0])
+            np.arange(data_segment_obj["features"].shape[0])
             .reshape(-1, 1)
             .astype(float)
         )
         return data_segment
 
 
-class Cycles2Statistics(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class Cycles2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
     """
     Compress cycles to the mean/std representations of the cycles for NB1 dataset
     """
@@ -109,10 +109,10 @@ class Cycles2Statistics(BaseTransform, ConcatinatedFitMultiSourceTransformMixin)
 
         pass
 
-    def transform_data(self, data_segment_dict: Any, metadata: Dict) -> Any:
+    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
 
-        data_segment = data_segment_dict["features"]
+        data_segment = data_segment_obj["features"]
 
         # Based on the rul column extract the stat
         target_col = self.target_name
@@ -121,7 +121,7 @@ class Cycles2Statistics(BaseTransform, ConcatinatedFitMultiSourceTransformMixin)
         boundaries = get_mode_change_right_indices(cycles_column)
 
         # Get the feature columns
-        feature_columns = data_segment_dict["metadata"]["features_columns"].copy()
+        feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
 
         # Prevent mode columns to be in the features_columns
         mode_is_present = False

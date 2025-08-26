@@ -14,34 +14,53 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 class DataChunk(BaseDataObject):
     """
     A flexible data container that stores an individual data unit in its
-    original format. It uses external utilities for validation.
+    original format.
     """
-
     def __init__(self, **kwargs: Any) -> None:
         """
-        Initializes the chunk. If a 'metadata' dictionary is provided, it
-        automatically extracts column names from any pandas.DataFrame objects.
+        Initializes the chunk, handling metadata and column extraction robustly.
         """
-        if 'metadata' in kwargs and isinstance(kwargs.get('metadata'), dict):
-            kwargs['metadata'].setdefault('column_map', {})
-            for key, value in kwargs.items():
-                if isinstance(value, pd.DataFrame):
-                    kwargs['metadata']['column_map'][key] = value.columns.tolist()
+        # --- FIX ---
+        # Pop metadata to handle it separately after other items are initialized.
+        # This avoids order-of-operation bugs.
+        metadata = kwargs.pop('metadata', None)
+        
+        # Initialize all other data first
         super().__init__(**kwargs)
+
+        # Now, if metadata was provided, prepare it and set it.
+        if metadata is not None:
+            # Ensure column_map exists in the user's provided metadata
+            metadata.setdefault('column_map', {})
+            # Now that `self` is populated, find all DataFrames and update the map
+            for key, value in self.items():
+                if isinstance(value, pd.DataFrame):
+                    metadata['column_map'][key] = value.columns.tolist()
+            
+            # Finally, set the fully prepared metadata object
+            self['metadata'] = metadata
 
     def __setitem__(self, key: str, value: Any) -> None:
         """
-        Sets an item, storing it in its original format. If a 'metadata' attribute
-        exists, it intelligently updates the column_map.
+        Sets an item, storing it in its original format and intelligently
+        updating the column_map.
         """
-        is_df = isinstance(value, pd.DataFrame)
+        # --- FIX ---
+        # Call the parent's (BaseDataObject's) setter first.
+        # This handles the recursive logic for non-metadata keys.
+        super().__setitem__(key, value)
+
+        # After setting, manage the column map if metadata exists.
         if 'metadata' in self and isinstance(self.metadata, dict):
+            is_df = isinstance(value, pd.DataFrame)
             self.metadata.setdefault('column_map', {})
+            
             if is_df:
                 self.metadata['column_map'][key] = value.columns.tolist()
             elif key in self.metadata.get('column_map', {}):
+                # If a key that had columns is being replaced by a non-DataFrame,
+                # remove its stale entry from the map.
                 del self.metadata['column_map'][key]
-        super(BaseDataObject, self).__setitem__(key, value)
 
     # --- Public API Methods ---
 
@@ -108,7 +127,10 @@ ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 class OrderedInput(BaseDataObject):
     """
     A data object that holds inputs for a transformation and can sanitize them.
+    It includes methods for converting its contents to NumPy or DataFrame formats.
     """
+    # --- Public API Methods ---
+
     def get_sanitized_data(
         self,
         check_nans: bool = True,
@@ -118,19 +140,21 @@ class OrderedInput(BaseDataObject):
         return_copy: bool = False
     ) -> 'OrderedInput':
         """
-        Performs validation and converts data to NumPy arrays.
-
-        Args:
-            check_nans (bool): If True, checks for NaN values.
-            check_lengths (bool): If True, checks for length consistency.
-            warn_only (bool): If True, issues warnings instead of raising errors.
-            size_threshold (int): If data size exceeds this, length checks are skipped.
-            return_copy (bool): If True, returns a deep copy of the data.
-
-        Returns:
-            The sanitized OrderedInput object with array-like data as NumPy arrays.
+        Performs validation, extracts column metadata, and converts data to NumPy arrays.
         """
         target_obj = copy.deepcopy(self) if return_copy else self
+        
+        
+        # Replace .setdefault() with standard assignment to trigger our custom __setitem__
+        if any(isinstance(v, pd.DataFrame) for v in target_obj.values()) and ('metadata' in target_obj):
+            # Do the same for the nested 'column_map'.
+            if 'column_map' not in target_obj.metadata:
+                target_obj.metadata['column_map'] = {}
+
+            # Populate the column map. This chained access now works correctly.
+            for key, value in target_obj.items():
+                if isinstance(value, pd.DataFrame):
+                    target_obj.metadata.column_map[key] = value.columns.tolist()
         
         # --- 1. CONVERT ALL ARRAY-LIKE DATA TO NUMPY ---
         for key, value in list(target_obj.items()):
@@ -155,6 +179,32 @@ class OrderedInput(BaseDataObject):
                 )
         
         return target_obj
+
+    def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
+        """
+        Converts the data for a given key to a NumPy array on demand.
+        """
+        if key not in self:
+            raise KeyError(f"Key '{key}' not found in OrderedInput.")
+        value = self[key]
+        # This calls the standalone utility function we created earlier
+        return convert_to_numpy(value, key, ensure_2d)
+
+    def to_dataframe(self, key: str) -> pd.DataFrame:
+        """
+        Returns a pandas.DataFrame representation of the data for a given key.
+        """
+        if key not in self:
+            raise KeyError(f"Key '{key}' not found in OrderedInput.")
+        
+        value = self[key]
+        if isinstance(value, pd.DataFrame):
+            return value
+
+        array_data = self.to_numpy(key, ensure_2d=False)
+        # It safely checks for metadata, which may or may not exist on an OrderedInput
+        columns = self.get("metadata", {}).get("column_map", {}).get(key)
+        return pd.DataFrame(array_data, columns=columns)
 
 class SimpleReturnObject(BaseDataObject):
     """A data object for simple, single-array returns from a transform."""
