@@ -1,4 +1,6 @@
 _target_: lmetk.model.wrappers.fit_predict_autogluon_wrapper.FitPredictAutoGluonWrapper
 
+
+# for a list of all tabular models see https://auto.gluon.ai/dev/api/autogluon.tabular.models.html
 model_dict: {'GBM': {'num_boost_round': 200,
                      'early_stopping_rounds': null}} # Use null instead of None
