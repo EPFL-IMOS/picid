@@ -19,7 +19,7 @@ assign_updated_taget_from_features:
     apply_to_key: features
     
   metadata:
-    apply_to: ${transforms.assign_updated_taget_from_features.transform.apply_to_key}
+    apply_to: ['features', 'metadata']
     assign_to: target
     
     
