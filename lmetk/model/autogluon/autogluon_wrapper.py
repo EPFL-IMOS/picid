@@ -1,11 +1,12 @@
 """Wrapper for the TimePFN model."""
-from typing import Optional
+from typing import Optional, Any
 
 import torch
 from lmetk.model.wrappers.base import AbstractWrapper
 
-from lightning_fabric.utilities.data import AttributeDict
+from omegaconf import OmegaConf
 from autogluon.tabular import TabularPredictor
+from autogluon.features.generators import AsTypeFeatureGenerator, IdentityFeatureGenerator, BulkFeatureGenerator
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ class AutoGluonWrapper(AbstractWrapper):
                  num_stack_levels: int = 0,
                  hyperparameter_tune_kwargs: dict[str, float] = None,
                  model_dict: dict[str, dict] = None,
+                 generator_list: Optional[Any] = None,
                  save_space: bool = False,
                  output_dir: str = "testwdir/autogluon",
                  **kwargs):
@@ -36,7 +38,7 @@ class AutoGluonWrapper(AbstractWrapper):
         self.problem_type = problem_type
         self.output_dir = output_dir
 
-        backbone = self.initialize_backbone()
+        backbone = self._initialize_backbone()
         super().__init__(backbone=backbone, **kwargs)
         self.model_fit_flag = False
         self.lag = 0
@@ -48,13 +50,13 @@ class AutoGluonWrapper(AbstractWrapper):
         self.num_stack_levels = num_stack_levels  # stacking layers
         self.hyperparameter_tune_kwargs = hyperparameter_tune_kwargs
 
-        self.model_dict = model_dict
+        self.generator_list = [AsTypeFeatureGenerator(), IdentityFeatureGenerator()] if generator_list is None else generator_list
+        self.feature_generators = self._initialize_feature_generators()
+
+        self.model_dict = OmegaConf.to_container(model_dict, resolve=True)
         self.save_space = save_space
 
-        self.aux_context = None
-        self.y_aux = None
-
-    def initialize_backbone(self):
+    def _initialize_backbone(self):
         if self.n_targets > 1:
             return MultilabelTabularPredictor(labels=self.label_names,
                                               problem_type=self.problem_type,
@@ -64,9 +66,13 @@ class AutoGluonWrapper(AbstractWrapper):
                                     problem_type=self.problem_type,
                                     path=self.output_dir)
 
+    def _initialize_feature_generators(self):
+        return BulkFeatureGenerator(generators=[type(generator)() for generator in self.generator_list])
+
     def fit(self, x, y):
         if self.backbone.is_fit:
-                self.backbone = self.initialize_backbone()
+                self.backbone = self._initialize_backbone()
+                self.feature_generators = self._initialize_feature_generators()
 
         df = pd.DataFrame(x)
         df[self.label_names] = y
@@ -77,6 +83,7 @@ class AutoGluonWrapper(AbstractWrapper):
                           num_stack_levels=self.num_stack_levels,
                           hyperparameter_tune_kwargs=self.hyperparameter_tune_kwargs,
                           hyperparameters=self.model_dict,
+                          feature_generator=self.feature_generators,
                           save_space=self.save_space)
 
     def predict(self, x):
