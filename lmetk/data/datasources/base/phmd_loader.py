@@ -7,11 +7,8 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
-
+from lmetk.data.data_objects.data import DatasetContainer
 from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
-from lmetk.data.preprocessing.splits.by_source_splitter import BySourceSplitter
 from phmd import datasets
 
 logger = logging.getLogger(__name__)
@@ -82,7 +79,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
         self._is_loaded = True
         self._is_isplitted = True
 
-        return self.data_dict
+        return DatasetContainer(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from lightning import LightningModule
@@ -472,8 +472,10 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-        logging.info(f"Fitting: {self.get_task_info(batch)}")
-        logging.info(
+        # X = X[:10, :]
+        # y = y[:10, :]
+        logger.info(f"Fitting: {self.get_task_info(batch)}")
+        logger.info(
             f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
         )
         self.backbone.fit(X, y)
@@ -504,6 +506,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
+        # X = X[:10, :]
+        # y = y[:10, :]
         self.backbone.load_model(int(batch["task_idx"].item()))
         outputs = self.backbone.predict(X)
 

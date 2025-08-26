@@ -8,7 +8,7 @@ defaults:
   - override /datamodule: base_datamodule
   - override /evaluator: default
   - override /task_definition: battery_phmd
-  #- override /trainer: cpu
+  #- override /trainer: cpu 
 
 callbacks:
   early_stopping:

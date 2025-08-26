@@ -2,8 +2,6 @@
 import torch
 from .base import AbstractWrapper
 
-from lmetk.model.time_pfn.TimePFN import TimePFN
-from lightning_fabric.utilities.data import AttributeDict
 from tabpfn import TabPFNRegressor
 
 class TabPFNWrapper(AbstractWrapper):

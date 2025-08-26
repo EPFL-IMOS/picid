@@ -14,13 +14,12 @@
 import logging
 from typing import Any, Dict
 
-import numpy as np
 import torch
 from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer, TrivialSequencer
+from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 

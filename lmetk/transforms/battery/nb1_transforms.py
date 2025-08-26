@@ -1,7 +1,6 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict
 
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin

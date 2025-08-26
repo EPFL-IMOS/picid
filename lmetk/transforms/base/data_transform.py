@@ -1,18 +1,14 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
-
+from typing import Any, Dict, List, Union
+from collections.abc import Mapping
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 import omegaconf
 
 # Import your strategy and base transform classes
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
-from lmetk.transforms.base.strategy import (  # DirectTransformStrategy,; FitTransformStrategy,; MultiSourceFitTransformStrategy,; MultiSourceDirectTransformStrategy
-    TransformStrategy,
-    UnifiedDirectTransformStrategy,
-    UnifiedFitTransformStrategy,
-)
+from lmetk.transforms.base.strategy import TransformStrategy
+
 
 # To allow instantiation of Hydra-configured objects
 
@@ -60,17 +56,28 @@ class DataTransform:
         # Ensure apply_to is a list if it is a ListConfig
         if isinstance(self.apply_to, omegaconf.listconfig.ListConfig):
             self.apply_to = list(self.apply_to)
-
-        self.assign_to = metadata.get("assign_to", None)
+        
+        assign_to = metadata.get("assign_to", None)
+        
         # Check whenever self.assign_to is None, if so, assign self.apply_to to it
-        if self.assign_to is None:
+        if assign_to is None:
             # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
             if isinstance(self.apply_to, list):
                 raise ValueError(
                     f"Metadata for transform '{transform_name}' has 'apply_to' as a list but 'assign_to' is not specified. Please specify 'assign_to' to avoid ambiguity."
                 )
-            self.assign_to = self.apply_to
+            self.assign_to = self.apply_to 
+            self.assign_to_map = self.apply_to 
 
+        elif isinstance(assign_to, Mapping):   
+            self.assign_to_map = list(assign_to.keys())
+            self.assign_to = list(assign_to.values())
+        
+        else: 
+            assert isinstance(assign_to, str), f"Expected 'assign_to' to be a string but got {type(assign_to)}."
+            self.assign_to = assign_to
+            self.assign_to_map = assign_to
+        
         # TODO: is there actually a use case with fitting on validation/test?
         self.fit_on_split = metadata.get("fit_on", None)
         assert self.fit_on_split in (None, "train", "val", "test")
@@ -93,14 +100,7 @@ class DataTransform:
             "must implement BaseTransform."
         )
 
-        if self.fit_on_split is not None:
-            assert self.fit_on_key is not None, (
-                f"Transform '{transform_name}': 'fit_on_split' is specified but 'fit_on_key' is None. "
-                "Please specify 'fit_on_key' in metadata."
-            )
-            self.strategy = UnifiedFitTransformStrategy()
-        else:
-            self.strategy = UnifiedDirectTransformStrategy()
+        self.strategy = TransformStrategy()
 
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform
@@ -157,7 +157,8 @@ class DataTransform:
             transform_instance=self.transform_instance,
             data=data,
             apply_to_keys=self.apply_to,
-            assign_to_key=self.assign_to,
+            assign_to_keys=self.assign_to,
+            assign_to_keys_map=self.assign_to_map,
             fit_on_split=self.fit_on_split,
             fit_on_key=self.fit_on_key,
         )
@@ -173,18 +174,24 @@ class DataTransform:
                 )
 
             # Ensure the top-level 'apply_to' key is present in the transformed data
-            if self.assign_to not in transformed_data:
-                raise KeyError(
-                    f"Transform '{self.transform_name}': Transformed data from strategy does not "
-                    f"contain '{self.assign_to}' key at the top level."
-                )
+            # Support both single key (str) and multiple keys (list) for assign_to
+            assign_to_keys = (
+                [self.assign_to] if isinstance(self.assign_to, str) else self.assign_to
+            )
+            for key in assign_to_keys:
+                if key not in transformed_data:
+                    raise KeyError(
+                        f"Transform '{self.transform_name}': Transformed data from strategy does not "
+                        f"contain '{key}' key at the top level."
+                    )
 
-            # Ensure the value at 'apply_to' is still a dict of splits
-            if not isinstance(transformed_data[self.assign_to], dict):
-                raise TypeError(
-                    f"Transform '{self.transform_name}': Data at '{self.assign_to}' key in transformed data "
-                    f"is of type {type(transformed_data[self.assign_to])}, expected dict of splits."
-                )
+            # Ensure the value(s) at 'assign_to' are still dicts of splits
+            for key in assign_to_keys:
+                if not isinstance(transformed_data[key], dict):
+                    raise TypeError(
+                        f"Transform '{self.transform_name}': Data at '{key}' key in transformed data "
+                        f"is of type {type(transformed_data[key])}, expected dict of splits."
+                    )
 
             # Validate that all sub-keys (splits) within 'apply_to' match
             if self.assign_to == self.apply_to:

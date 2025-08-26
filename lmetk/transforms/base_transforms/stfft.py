@@ -1,7 +1,6 @@
 import logging
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
-import pandas as pd
 from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
 from lmetk.transforms.base.base_transform import BaseTransform

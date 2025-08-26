@@ -1,6 +1,4 @@
 import logging
-from pathlib import Path
-from typing import Any, Dict
 
 import numpy as np
 
@@ -41,3 +39,4 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                 "target_in_the_featurs": True,
             },
         }
+

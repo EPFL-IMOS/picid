@@ -1,6 +1,5 @@
 from typing import List
 
-import torch
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 

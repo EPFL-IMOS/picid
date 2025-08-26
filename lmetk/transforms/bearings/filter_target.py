@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -27,7 +26,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         if not isinstance(value, np.ndarray):
             try:
                 value = np.array(value)
-                logging.info(f"Converted key '{key}' to numpy array")
+                logger.info(f"Converted key '{key}' to numpy array")
             except Exception as e:
                 raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
         return value
@@ -36,7 +35,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         """Ensure array is 2D for concatenation."""
         if value.ndim == 1:
             value = value.reshape(-1, 1)
-            logging.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
+            logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
         elif value.ndim > 2:
             raise ValueError(
                 f"Key '{key}' has unsupported dimensions: {value.ndim}. "
@@ -73,7 +72,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         # Ensure 2D shape
         target = self._ensure_2d(target, key)
-        logging.info(f"Added data '{key}' with shape {target.shape}")
+        logger.info(f"Added data '{key}' with shape {target.shape}")
 
         # Check for NaN values (will raise error if found)
         self._check_for_nans([target], ["target"])
@@ -86,7 +85,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         # Concatenate and reshape (-1,1)
         target = np.array(frame_targets).reshape(-1, 1)
-        logging.info(f"Final target shape: {target.shape}")
+        logger.info(f"Final target shape: {target.shape}")
 
         assert (
             target.shape[0] == features.shape[0]

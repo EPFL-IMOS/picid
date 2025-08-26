@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -26,7 +25,7 @@ class CutToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         if not isinstance(value, np.ndarray):
             try:
                 value = np.array(value)
-                logging.info(f"Converted key '{key}' to numpy array")
+                logger.info(f"Converted key '{key}' to numpy array")
             except Exception as e:
                 raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
         return value
@@ -35,7 +34,7 @@ class CutToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         """Ensure array is 2D for concatenation."""
         if value.ndim == 1:
             value = value.reshape(-1, 1)
-            logging.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
+            logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
         elif value.ndim > 2:
             raise ValueError(
                 f"Key '{key}' has unsupported dimensions: {value.ndim}. "
@@ -68,12 +67,12 @@ class CutToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
             target = self._ensure_2d(target, "target")
 
             num_zeros = np.sum(target == 0)
-            logging.info(f"Number of zeros in target: {num_zeros}")
+            logger.info(f"Number of zeros in target: {num_zeros}")
             # Find the first zero occurance and cut everything after
             first_zero_idx = np.argmax(target == 0)
             assert first_zero_idx > 0, "No zero found in target"
             result = target[: first_zero_idx + 1]
-            logging.info(f"Cut target to first zero occurrence: {target.shape}")
+            logger.info(f"Cut target to first zero occurrence: {target.shape}")
             assert target[-1] == 0, "Last element of target is not zero after cutting"
 
         else:
