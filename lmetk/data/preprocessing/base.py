@@ -44,7 +44,7 @@ class PreProcessorInterface(ABC):
         raise NotImplementedError("get_meta_data_dict method not implemented.")
 
     @abstractmethod
-    def prepare_data(self) -> None:
+    def fetch_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         raise NotImplementedError("prepare_data method not implemented.")
 

@@ -1,14 +1,17 @@
+import logging
 from abc import abstractmethod
 from typing import Any, Dict, override
 
 import numpy as np
 from box import Box
 
-from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
-from lmetk.data.data_objects.data import DatasetContainer
+from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
+
+logger = logging.getLogger(__name__)
 
 
-class SingleSourceLoader(DataSourceLoaderInterface):
+class SingleSourceLoader(AbstractDataSourceLoader):
     """
     SingleSourceLoader is a data source loader that handles loading data from a single source.
     A source in the context of PHM is most likely a unit, such as a bearing.
@@ -27,7 +30,7 @@ class SingleSourceLoader(DataSourceLoaderInterface):
         super().__init__(**kwargs)
 
         self.is_part_of_multisource = is_part_of_multisource
-        self.data_splitter = data_splitter
+        self.data_splitter = data_splitter if not is_part_of_multisource else None
 
         # Define data source loader storage dict as centralized storage for the loaded data.
         self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {}
@@ -43,50 +46,62 @@ class SingleSourceLoader(DataSourceLoaderInterface):
         raise NotImplementedError("Subclasses must implement this method.")
 
     def split_data(self):
-        # Check if splits already has been predefined and done during the loading
-        if not self._is_splitted:
-            # By default create splits for features and timestamps
-            for key in getattr(
-                self.data_splitter, "create_splits_for", ["features", "timestamps"]
-            ):
-                self._split_data(key)
+        """
+        Splits the data into predefined subsets using the configured data splitter.
+        This method checks if the data is part of a multisource dataset and whether it has already been split.
+        If not already split, it asserts that a data splitter is set, then creates splits for the specified keys
+        (defaulting to "features" and "timestamps" if not specified in the data splitter). After splitting, it marks
+        the data as split. If the data has already been split, a warning is logged.
+        Raises:
+            AssertionError: If the data splitter is not set when attempting to split.
+        """
 
-            self._is_splitted = True
+        if not self.is_part_of_multisource:
+            if not self._is_splitted:
+                assert self.data_splitter is not None, "Data splitter must be set."
+
+                # By default create splits for features and timestamps
+                for key in getattr(
+                    self.data_splitter, "create_splits_for", ["features", "timestamps"]
+                ):
+                    self._split_data(key)
+                self._is_splitted = True
+            else:
+                logger.warning("Attempting to split data that has already been split.")
 
     @override
     def load_data(self):
-
         self.data_dict.update(self._load_data())
         self._is_loaded = True
 
-        if not self.is_part_of_multisource:
-            assert self.data_splitter is not None, "Data splitter must be set."
-            self.split_data()
-
-    def get_data(self) -> Dict[str, np.ndarray]:
+    def get_data(self) -> SplitDatasetContainer | DatasetContainer:
         """Return splitted data dict."""
-        if self._is_loaded is False:
-            self.load_data()
 
         assert self._is_loaded is True, "Data must be loaded before getting data."
 
-        # Ensure metadata dict has structure as other dicts
-        # {metadata: 'train':value, 'val':value, 'test':value}
-        if "metadata" in self.data_dict and not (
-            isinstance(self.data_dict["metadata"], dict)
-            and all(k in self.data_dict["metadata"] for k in ["train", "val", "test"])
-        ):
-            # Replicate metadata for each split if not already split
-            metadata = self.data_dict["metadata"]
-            self.data_dict["metadata"] = {
-                "train": metadata,
-                "val": metadata,
-                "test": metadata,
-            }
+        if not self.is_part_of_multisource:
+            assert (
+                self._is_splitted is True
+            ), "Data must be splitted before getting data."
 
-        # We use MultiDataChunk as it will simply wrap values
-        # of the self.data_dict into a list
-        return DatasetContainer(**self.data_dict)
+            # Ensure metadata dict has structure as other dicts
+            # {metadata: 'train':value, 'val':value, 'test':value}
+            if "metadata" in self.data_dict and not (
+                isinstance(self.data_dict["metadata"], dict)
+                and all(
+                    k in self.data_dict["metadata"] for k in ["train", "val", "test"]
+                )
+            ):
+                # Replicate metadata for each split if not already split
+                metadata = self.data_dict["metadata"]
+                self.data_dict["metadata"] = {
+                    "train": metadata,
+                    "val": metadata,
+                    "test": metadata,
+                }
+            return SplitDatasetContainer(**self.data_dict)
+        else:
+            return DatasetContainer(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """

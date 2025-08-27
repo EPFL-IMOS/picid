@@ -26,12 +26,10 @@ class N_CMAPSSDescriptorsScaler(
         """This transform do not require fitting."""
         return self
 
-    def transform_data(
-        self,
-        data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
-    ):
+    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+
+        data_segment = data_segment.descriptors
+
         scaling = self.scaling
         if scaling == "standard":
             W_mean_1457 = np.array(
@@ -71,12 +69,10 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
         """This transform do not require fitting."""
         return self
 
-    def transform_data(
-        self,
-        data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
-    ):
+    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+
+        data_segment = data_segment.features
+
         scaling = self.scaling
         if scaling == "standard":
             # standard scaling

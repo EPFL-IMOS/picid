@@ -41,7 +41,9 @@ class TimeStampSplitter(TimeSeriesSplitter):
         self.apply_lookback = apply_lookback
         self.splits_dict = None
         self.masks = None
-        self.create_splits_for = kwargs.get('create_splits_for', ['features', 'timestamps'])
+        self.create_splits_for = kwargs.get(
+            "create_splits_for", ["features", "timestamps"]
+        )
 
         if not np.isclose(train_ratio + val_ratio, 1.0):
             raise ValueError("train_ratio + val_ratio must equal 1.0")
@@ -59,13 +61,12 @@ class TimeStampSplitter(TimeSeriesSplitter):
     def get_splits(self, data: Any, dates: Any) -> dict:
         if not isinstance(dates, pd.Series):
             raise ValueError("`dates` must be a pandas Series.")
-        
+
         if not isinstance(dates.iloc[0], pd.Timestamp):
-            try: 
+            try:
                 dates = pd.to_datetime(dates)
             except:
                 raise ValueError("`dates` must be a pandas Series of timestamps.")
-
 
         if len(dates) != len(data):
             raise ValueError("Length of `dates` must match length of `data`.")
@@ -102,25 +103,28 @@ class TimeStampSplitter(TimeSeriesSplitter):
         # Create corresponding effective masks
         # Train mask is all ones as no lookback is applied
         train_mask = np.ones(i_train_end - 0, dtype=bool)
-        
+
         # Val is lookback zeros then val_len of ones
-        val_mask = np.concatenate([
-            np.zeros(lookback, dtype=bool),
-            np.ones(i_val_end - (i_val_start + lookback), dtype=bool)
-        ])
-        
+        val_mask = np.concatenate(
+            [
+                np.zeros(lookback, dtype=bool),
+                np.ones(i_val_end - (i_val_start + lookback), dtype=bool),
+            ]
+        )
+
         # Test is lookback zeros then test_len of ones
-        test_mask = np.concatenate([
-            np.zeros(lookback, dtype=bool),
-            np.ones(i_test_end - (i_test_start+ lookback), dtype=bool)
-        ])
+        test_mask = np.concatenate(
+            [
+                np.zeros(lookback, dtype=bool),
+                np.ones(i_test_end - (i_test_start + lookback), dtype=bool),
+            ]
+        )
 
         masks = {
             "train": train_mask,
             "val": val_mask,
             "test": test_mask,
         }
-
 
         splits_dict = {
             "train": (0, i_train_end),
@@ -129,10 +133,12 @@ class TimeStampSplitter(TimeSeriesSplitter):
         }
         return splits_dict, masks
 
-    def split_data(self, data_dict: Dict[str, Any], split_variable: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def split_data(
+        self, data_dict: Dict[str, Any], split_variable: str
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Splitting method.
-        
+
         Inputs
         ------
         data_dict: Dict[str, Any]
@@ -145,10 +151,10 @@ class TimeStampSplitter(TimeSeriesSplitter):
         -------
         splitted_data: Dict[str, np.ndarray]
             Dictionary containing the splitted data.
-        
+
         split_masks: Dict[str, np.ndarray]
             Dictionary containing the mask of the splits
-        
+
         """
         # Extract data that corresponds to the split variable
         data = data_dict[split_variable]
@@ -157,11 +163,11 @@ class TimeStampSplitter(TimeSeriesSplitter):
         timestamps = data_dict["timestamps"]
         if self.splits_dict is None:
             self.splits_dict, self.masks = self.get_splits(data, timestamps)
-        
+
         train = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
         val = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]
         test = data[self.splits_dict["test"][0] : self.splits_dict["test"][1]]
-        
+
         splitted_data = {"train": train, "val": val, "test": test}
 
         return splitted_data, self.masks

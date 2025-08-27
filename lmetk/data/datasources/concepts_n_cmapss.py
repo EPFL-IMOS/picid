@@ -41,25 +41,44 @@ def flatten_RUL(df):
 
 class N_CMAPSSDataSource(SingleSourceLoader):
 
-    def __init__(self, load_arguments: dict[str, Any], **kwargs):
+    def __init__(
+        self,
+        path: str,
+        load_arguments: dict[str, Any],
+        RUL: str = "linear",
+        cruise: bool = False,
+        subsampling_rate: int = 1,
+        concepts: list[str] = ["LPT", "HPT"],
+        combined_concepts: bool = False,
+        binary_concepts: bool = True,
+        include_healthy: bool = True,
+        window_size: int = 50,
+        stride: int = 1,
+        scaling: str = "legacy",
+        **kwargs: Any,
+    ):
 
-        assert load_arguments.RUL in (
+        assert RUL in (
             "linear",
             "flat",
         ), "RUL type must be 'linear' or 'flat"
 
-        logger.info(f"Using {load_arguments.RUL} RUL.")
-        self.n_DS = load_arguments.n_DS
+        logger.info(f"Using {RUL} RUL.")
         self.mode = load_arguments.mode
-        self.window_size = load_arguments.window_size
-        self.stride = load_arguments.stride
-        self.path = load_arguments.path
-        self.include_healthy = load_arguments.include_healthy
-        self.subsampling_rate = load_arguments.subsampling_rate
-        self.cruise = load_arguments.cruise
-        self.concepts = load_arguments.concepts
-        self.binary_concepts = load_arguments.binary_concepts
-        self.combined_concepts = load_arguments.combined_concepts
+        self.n_DS = load_arguments.n_DS
+        self.units = load_arguments.units
+
+        self.RUL = RUL
+        self.path = path
+        self.window_size = window_size
+        self.stride = stride
+        self.include_healthy = include_healthy
+        self.subsampling_rate = subsampling_rate
+        self.cruise = cruise
+        self.concepts = concepts
+        self.binary_concepts = binary_concepts
+        self.combined_concepts = combined_concepts
+        self.scaling = scaling
 
         super().__init__(**kwargs)
 

@@ -10,33 +10,34 @@ task_mode: multivariate
 defaults:
   - /datasource@train1: concepts_n_cmapss
   - /datasource@train2: concepts_n_cmapss
-  - /datasource@train3: concepts_n_cmapss
-  - /datasource@train4: concepts_n_cmapss
+  # - /datasource@train3: concepts_n_cmapss
+  # - /datasource@train4: concepts_n_cmapss
 
   - /datasource@test1: concepts_n_cmapss
   - /datasource@test2: concepts_n_cmapss
-  - /datasource@test3: concepts_n_cmapss
-  - /datasource@test4: concepts_n_cmapss
+  # - /datasource@test3: concepts_n_cmapss
+  # - /datasource@test4: concepts_n_cmapss
 
-
+  - /datasource@val1: concepts_n_cmapss
 
 source_list:
   train1: ${..train1}
   train2: ${..train2}
-  train3: ${..train3}
-  train4: ${..train4}
+  # train3: ${..train3}
+  # train4: ${..train4}
 
   test1: ${..test1}
   test2: ${..test2}
-  test3: ${..test3}
-  test4: ${..test4}
+  # test3: ${..test3}
+  # test4: ${..test4}
 
+  val1: ${..val1}
 
 multisource_data_splitter: 
   _target_: lmetk.data.preprocessing.BySourceSplitter
   sources_train: [train1, train2] #[train1, train2, train3, train4]
   sources_test: [test1, test2] #[test1, test2, test3, test4]
-  sources_val: [] # TODO: why are there no val test sources in the original setup?
+  sources_val: [val1] # TODO: why are there no val test sources in the original setup?
 
 
 _train_load_args: &train_args
@@ -82,4 +83,7 @@ test4:
     n_DS: "07"
     <<: *test_args
 
-
+val1:
+  load_arguments:
+    n_DS: "01"
+    <<: *test_args

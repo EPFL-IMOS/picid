@@ -8,7 +8,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 from lmetk.data.data_objects.data import DatasetContainer
-from lmetk.data.datasources.base.interfaces import DataSourceLoaderInterface
+from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from phmd import datasets
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ def convert_outer_list_to_inner(data_list):
     return stacked
 
 
-class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
+class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
     """This class instantiates each of the soure"""
 
     def __init__(self, **kwargs):
@@ -183,12 +183,13 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
                     tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[
                         range(*self.debug_subset_range)
                     ]
-        
+
         if self.debug_subsample_rate is not None:
             for key in tasks_fold_dict:
                 for subkey in tasks_fold_dict[key]:
-                    tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[::self.debug_subsample_rate, :]
-
+                    tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[
+                        :: self.debug_subsample_rate, :
+                    ]
 
         main_fold = tasks_fold_dict[self.task_mode]
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
@@ -220,7 +221,7 @@ class PHMDMultiSourceLoader(DataSourceLoaderInterface, ABC):
                 m = pd.Series((unit_col_data == unit_name), index=df.index)
                 assert m.dtype == bool and m.ndim == 1 and len(m) == len(df)
                 assert not df.columns.duplicated().any(), "Duplicate columns found"
-                 # TODO: This one breaks the XTJU dataset
+                # TODO: This one breaks the XTJU dataset
                 # assert not df.index.duplicated().any(), "Duplicate index found"
                 df_unit = df.loc[m]
 

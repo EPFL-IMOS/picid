@@ -57,7 +57,7 @@ class MultiSourcePreProcessor(PreProcessorInterface):
     # def get_transform_names(self,):
     #     return self.source_transform_names_lst
 
-    def prepare_data(self) -> None:
+    def fetch_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
 
@@ -103,7 +103,7 @@ class MultiSourcePreProcessor(PreProcessorInterface):
 
     def pipeline(self):
         """Run the preprocessing pipeline."""
-        self.prepare_data()
+        self.fetch_data()
 
         assert (
             self.datasource.get_split_mode() == "cross_unit"

@@ -12,7 +12,40 @@ logger = logging.getLogger(__name__)
 
 
 class PreProcessor(PreProcessorInterface):
-    """Preprocessor of data."""
+    """
+    PreProcessor is a data preprocessing class that orchestrates the loading, splitting,
+    transformation, and management of datasources.
+
+    See also:
+        - `lmetk.data.preprocessing.single_source_loader.SingleSourceLoader`:
+                For preprocessing pipelines that operate on a single data source.
+        - `lmetk.data.preprocessing.multi_source_loader.MultiSourceLoader`:
+                For pipelines that handle multiple data sources simultaneously.
+        - `lmetk.data.preprocessing.phmd_loader.PHMDLoader`:
+                For specialized loading of PHMD-formatted data sources.
+
+    Attributes:
+        mode (str): Specifies the preprocessing mode, either 'per_unit' or 'cross_unit'.
+        datasource: The data source object providing access to raw data and metadata.
+        transforms: A collection of data transformation objects to be applied sequentially.
+        data (Optional[DatasetContainer]): The processed dataset container.
+        meta_data_lst (Optional[list[dict]]): List of metadata dictionaries associated with the data.
+        _is_preprocessed (bool): Indicates whether the data has been preprocessed.
+
+    Methods:
+        __init__(mode, datasource, transforms, **kwargs):
+            Initializes the PreProcessor with the specified mode, datasource, and transforms.
+        get_meta_data_dict():
+            Retrieves metadata from the datasource as a dictionary.
+        get_processed_data_dict(return_splits_on_first_level: bool = False) -> dict:
+            Returns the processed data as a dictionary, optionally splitting data at the first level.
+        fetch_data() -> None:
+            Loads and stores data and metadata from the datasource.
+        apply_transforms(data: DatasetContainer, transforms) -> List[Any]:
+            Applies a sequence of data transformations to the dataset.
+        pipeline() -> DatasetContainer:
+            Executes the full preprocessing pipeline: loads, splits, fetches, transforms, and returns the processed data.
+    """
 
     def __init__(self, mode, datasource, transforms, **kwargs):
         super().__init__(datasource=datasource, transforms=transforms)
@@ -22,8 +55,11 @@ class PreProcessor(PreProcessorInterface):
             "cross_unit",
         ], f"Unsupported mode: {mode}. Supported modes are 'per_unit' and 'cross_unit'."
         self.mode = mode
-        self.data_lst: Optional[Any] = None
         self._is_preprocessed = False
+
+        # initialize attributes used later
+        self.data: Optional[DatasetContainer] = None
+        self.meta_data_lst: Optional[list[dict]] = None
 
     def get_meta_data_dict(self):
         if hasattr(self.datasource, "get_meta_data") and callable(
@@ -69,23 +105,13 @@ class PreProcessor(PreProcessorInterface):
             return self.data.to_split_dict()
         else:
             return self.data
-        # TODO: HAVE NOT TESTED
-        # elif isinstance(self.data_lst, list):
-        #     # If multiple sources, return as a list
-        #     raise ValueError("Not yet implemented, call R.T. to fix.")
 
-    # TODO: that is needed at least for evaluator, extend it for multisource maybe
-    def get_transform_names(
-        self,
-    ):
-        return self.source_transform_names_lst
-
-    def prepare_data(self) -> None:
+    def fetch_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
 
-        data = self.datasource.get_data()
+        data: DatasetContainer | list[DatasetContainer] = self.datasource.get_data()
 
-        assert type(data) == DatasetContainer, (
+        assert isinstance(data, DatasetContainer), (
             f"Expected MultiDataChunk, but got {type(data)}, "
             "make sure 'datasource.get_data()' returns MultiDataChunk"
         )
@@ -93,19 +119,15 @@ class PreProcessor(PreProcessorInterface):
         if hasattr(self.datasource, "get_meta_data") and callable(
             getattr(self.datasource, "get_meta_data", None)
         ):
-            meta_data_lst = self.datasource.get_meta_data()
+            meta_data_lst: list[dict] = self.datasource.get_meta_data()
         else:
-            meta_data_lst = [{}]
-
-        # Ensure all outputs are lists for consistent processing
-        # if not isinstance(data_lst, list):
-        #     data_lst = [data_lst]
+            meta_data_lst: list[dict] = [{}]
 
         if not isinstance(meta_data_lst, list):
             meta_data_lst = [meta_data_lst]
 
-        self.data = data
-        self.meta_data_lst = meta_data_lst
+        self.data: DatasetContainer = data
+        self.meta_data_lst: list[dict] = meta_data_lst
 
     def apply_transforms(self, data: DatasetContainer, transforms) -> List[Any]:
         """
@@ -122,8 +144,6 @@ class PreProcessor(PreProcessorInterface):
             )
 
         for transform_name, transform in transforms.items():
-            # Removed detailed print statements for each transform application.
-
             logger.info(
                 f"Applying transform: '{transform_name}' "
                 f"(Strategy: {transform.strategy.__class__.__name__})"
@@ -138,12 +158,12 @@ class PreProcessor(PreProcessorInterface):
 
         return data
 
-    def pipeline(self):
+    def pipeline(self) -> DatasetContainer:
         """Run the preprocessing pipeline."""
-        # Removed "Starting preprocessing pipeline..." print.
         self.datasource.load_data()
-        self.prepare_data()
-        # if multisource_data_splitter do not exist, then we work with separate sources
+        self.datasource.split_data()
+        self.fetch_data()  # Loads the data into the pipeline
+
         assert self.datasource.get_split_mode() == self.mode, (
             f"Expected split mode from preprocessor: '{self.mode}', "
             f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
@@ -152,25 +172,3 @@ class PreProcessor(PreProcessorInterface):
         self._is_preprocessed = True
 
         return self.data
-
-
-def key_exists_anywhere(data, target_key):
-    # Check if object has dict-like methods
-    if hasattr(data, "keys") and hasattr(data, "values") and hasattr(data, "items"):
-        # First check if the target key exists at this level
-        if target_key in data:
-            return True, data[target_key]
-
-        # Then recursively search in all values
-        for value in data.values():
-            found, val = key_exists_anywhere(value, target_key)
-            if found:
-                return found, val
-
-    elif isinstance(data, (list, tuple)):
-        for item in data:
-            found, val = key_exists_anywhere(item, target_key)
-            if found:
-                return found, val
-
-    return False, None

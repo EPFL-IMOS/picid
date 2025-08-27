@@ -4,8 +4,10 @@ from typing import Dict
 
 import numpy as np
 
+from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 
-class DataSourceLoaderInterface(ABC):
+
+class AbstractDataSourceLoader(ABC):
     """
     Abstract base class for data source loaders in the TabPHM pipeline.
     This interface defines the required methods and initialization logic for loading,
@@ -84,7 +86,7 @@ class DataSourceLoaderInterface(ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     @abstractmethod
-    def get_data(self) -> Dict[str, np.ndarray]:
+    def get_data(self) -> DatasetContainer | SplitDatasetContainer:
         """Get the data after it is loaded."""
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -94,7 +96,7 @@ class DataSourceLoaderInterface(ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     @abstractmethod
-    def split_data(self, data_lst: list[Dict], source_names: list[str]) -> None:
+    def split_data(self) -> None:
         """
         Splits the provided data list into separate sources using the configured
         multisource data splitter.

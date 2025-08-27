@@ -1,11 +1,11 @@
+import logging
 from abc import ABC
 from typing import Any, Dict, Optional
 
 import numpy as np
 from numpy import ndarray
-from lmetk.data.data_objects.data import DatasetContainer, OrderedInput
 
-import logging
+from lmetk.data.data_objects.data import DatasetContainer, OrderedInput
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,8 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Check if the class is a subclass of TransformerMixin
         if not hasattr(self, "fit_data") or not hasattr(self, "transform_data"):
             raise TypeError(
-                "ConcatinatedFitMultiSourceTransformMixin requires the class to implement fit and transform methods."
+                "ConcatinatedFitMultiSourceTransformMixin requires the class "
+                "to implement fit and transform methods."
             )
 
     def fit_multi_source(

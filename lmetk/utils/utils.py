@@ -101,3 +101,25 @@ def string_split(str_for_split):
     value_list = [eval(x) for x in str_split]
 
     return value_list
+
+
+def key_exists_anywhere(data, target_key):
+    # Check if object has dict-like methods
+    if hasattr(data, "keys") and hasattr(data, "values") and hasattr(data, "items"):
+        # First check if the target key exists at this level
+        if target_key in data:
+            return True, data[target_key]
+
+        # Then recursively search in all values
+        for value in data.values():
+            found, val = key_exists_anywhere(value, target_key)
+            if found:
+                return found, val
+
+    elif isinstance(data, (list, tuple)):
+        for item in data:
+            found, val = key_exists_anywhere(item, target_key)
+            if found:
+                return found, val
+
+    return False, None

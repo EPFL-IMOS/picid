@@ -7,21 +7,29 @@ from lmetk.data.preprocessing.base import PreProcessorInterface
 class DummyPreprocessor(PreProcessorInterface):
     def get_processed_data_dict(self):
         return {
-            "features": {"train": np.array([1]), "val": np.array([2]), "test": np.array([3])},
-            "target": {"train": np.array([0]), "val": np.array([0]), "test": np.array([0])},
+            "features": {
+                "train": np.array([1]),
+                "val": np.array([2]),
+                "test": np.array([3]),
+            },
+            "target": {
+                "train": np.array([0]),
+                "val": np.array([0]),
+                "test": np.array([0]),
+            },
         }
 
     def get_meta_data_dict(self):
         return {"meta": "ok"}
 
-    def prepare_data(self) -> None:
+    def fetch_data(self) -> None:
         self._prepared = True
 
     def apply_transforms(self) -> None:
         self._transformed = True
 
     def pipeline(self):
-        self.prepare_data()
+        self.fetch_data()
         self.apply_transforms()
         return self.get_processed_data_dict()
 
@@ -41,7 +49,7 @@ def test_dummy_preprocessor_basic_flow():
     assert not getattr(dp, "_prepared", False)
     assert not getattr(dp, "_transformed", False)
 
-    dp.prepare_data()
+    dp.fetch_data()
     assert dp._prepared is True
 
     dp.apply_transforms()

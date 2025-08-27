@@ -3,11 +3,17 @@ from typing import Optional, Union, Tuple, Dict, Any
 from .base import TimeSeriesSplitter
 
 import warnings
+
+
 class ValueWarning(Warning):
     pass
 
+
 import logging
+
 logger = logging.getLogger(__name__)
+
+
 class TimeSplitter(TimeSeriesSplitter):
     def __init__(
         self,
@@ -26,7 +32,9 @@ class TimeSplitter(TimeSeriesSplitter):
         self.label_len = label_len
         self.pred_len = pred_len
         self.splits_dict = None
-        self.create_splits_for = kwargs.get('create_splits_for', ['features', 'timestamps'])
+        self.create_splits_for = kwargs.get(
+            "create_splits_for", ["features", "timestamps"]
+        )
 
     def get_splits(self, data: np.ndarray) -> dict:
         n = len(data)
@@ -46,23 +54,34 @@ class TimeSplitter(TimeSeriesSplitter):
             val_len = int(n * (self.val or 0))
             test_len = n - train_len - val_len
 
-        elif all(isinstance(x, int) for x in [self.train, self.val, self.test] if x is not None):
+        elif all(
+            isinstance(x, int)
+            for x in [self.train, self.val, self.test]
+            if x is not None
+        ):
             train_len = self.train or 0
             val_len = self.val or 0
             test_len = self.test if self.test is not None else n - train_len - val_len
 
         else:
             raise ValueError("train/val/test must all be float or int (not mixed).")
-        
+
         # Check the splits sizes
         if self.test is None:
-                assert train_len + val_len + test_len == n, "Train + val + test split sizes must sum to total data length."
-            
-        else: 
-            logger.info('Test size is specified and equal to:', self.test)
+            assert (
+                train_len + val_len + test_len == n
+            ), "Train + val + test split sizes must sum to total data length."
+
+        else:
+            logger.info(f"Test size is specified and equal to: {self.test}")
             train_len + val_len + test_len
-            assert n >= (train_len + val_len + test_len), 'The specified test size is not correct as the total num. of points n >= (train_len + val_len + test_len)'
-            warnings.warn(f'Test size is specified and equal to: {self.test}, hence train_len + val_len + test_len = {train_len + val_len + test_len}, implying missing {n - (train_len + val_len + test_len)}', ValueWarning)
+            assert n >= (
+                train_len + val_len + test_len
+            ), "The specified test size is not correct as the total num. of points n >= (train_len + val_len + test_len)"
+            warnings.warn(
+                f"Test size is specified and equal to: {self.test}, hence train_len + val_len + test_len = {train_len + val_len + test_len}, implying missing {n - (train_len + val_len + test_len)}",
+                ValueWarning,
+            )
 
         # Compute overlap between segments
         lookback = self.seq_len  # - self.pred_len
@@ -85,23 +104,23 @@ class TimeSplitter(TimeSeriesSplitter):
             + (val_end - val_start - lookback)
             + (test_end - test_start - lookback)
         )
-        
+
         if self.test is None:
             assert used_samples == n, (
                 f"Not all data used: {used_samples} out of {n} samples. "
                 "Ensure that train/val/test splits are set correctly."
             )
         else:
-            assert all(isinstance(x, int) for x in [self.train, self.val, self.test] if x is not None), (
-                f"Note that self.test is {self.test} and self.train, self.val, self.test should be int."
-            )
+            assert all(
+                isinstance(x, int)
+                for x in [self.train, self.val, self.test]
+                if x is not None
+            ), f"Note that self.test is {self.test} and self.train, self.val, self.test should be int."
 
             assert used_samples == self.train + self.val + self.test, (
                 f"Not all data used: {used_samples} out of {self.train + self.val + self.test} samples. "
                 "Ensure that train/val/test splits are set correctly."
-                
             )
-
 
         # Each split must be long enough for one sample
         min_required = self.seq_len + self.pred_len
@@ -121,18 +140,16 @@ class TimeSplitter(TimeSeriesSplitter):
         # Create corresponding effective masks
         # Train mask is all ones as no lookback is applied
         train_mask = np.ones(train_end - train_start, dtype=bool)
-        
+
         # Val is lookback zeros then val_len of ones
-        val_mask = np.concatenate([
-            np.zeros(lookback, dtype=bool),
-            np.ones(val_len, dtype=bool)
-        ])
-        
+        val_mask = np.concatenate(
+            [np.zeros(lookback, dtype=bool), np.ones(val_len, dtype=bool)]
+        )
+
         # Test is lookback zeros then test_len of ones
-        test_mask = np.concatenate([
-            np.zeros(lookback, dtype=bool),
-            np.ones(test_len, dtype=bool)
-        ])
+        test_mask = np.concatenate(
+            [np.zeros(lookback, dtype=bool), np.ones(test_len, dtype=bool)]
+        )
 
         masks = {
             "train": train_mask,
@@ -147,10 +164,12 @@ class TimeSplitter(TimeSeriesSplitter):
         }
         return splits, masks
 
-    def split_data(self, data_dict: Dict[str, Any], split_variable: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def split_data(
+        self, data_dict: Dict[str, Any], split_variable: str
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Splitting function.
-        
+
         Inputs
         ------
         data_dict: Dict[str, Any]
@@ -163,10 +182,10 @@ class TimeSplitter(TimeSeriesSplitter):
         -------
         splitted_data: Dict[str, np.ndarray]
             Dictionary containing the splitted data.
-        
+
         split_masks: Dict[str, np.ndarray]
             Dictionary containing the mask of the splits
-        
+
         """
         # Extract data that corresponds to the split variable
         data = data_dict[split_variable]
@@ -177,10 +196,10 @@ class TimeSplitter(TimeSeriesSplitter):
         train_data = data[self.splits_dict["train"][0] : self.splits_dict["train"][1]]
         val_data = data[self.splits_dict["val"][0] : self.splits_dict["val"][1]]
         test_data = data[self.splits_dict["test"][0] : self.splits_dict["test"][1]]
-        
+
         splitted_data = {"train": train_data, "val": val_data, "test": test_data}
 
-        return splitted_data, self.split_masks #train_data, val_data, test_data
+        return splitted_data, self.split_masks  # train_data, val_data, test_data
 
     def __repr__(self):
         return f"SimpleSplitter(train={self.train}, val={self.val}, test={self.test})"

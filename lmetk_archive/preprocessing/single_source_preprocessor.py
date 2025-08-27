@@ -54,7 +54,7 @@ class PreProcessor(PreProcessorInterface):
     ):
         return self.source_transform_names_lst
 
-    def prepare_data(self) -> None:
+    def fetch_data(self) -> None:
         """Prepare data from the datasource and store as instance variables."""
         data_lst = self.datasource.get_data()
 
@@ -100,7 +100,7 @@ class PreProcessor(PreProcessorInterface):
     def pipeline(self):
         """Run the preprocessing pipeline."""
         # Removed "Starting preprocessing pipeline..." print.
-        self.prepare_data()
+        self.fetch_data()
         # if multisource_data_splitter do not exist, then we work with separate sources
         assert (
             self.datasource.get_split_mode() == "per_unit"

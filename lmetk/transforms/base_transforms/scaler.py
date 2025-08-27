@@ -31,6 +31,11 @@ class ConstantScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         data_segment: Dict,
         metadata: Optional[Dict] = None,
     ):
+        assert (
+            len(data_segment) == 1
+        ), "ConstantScaler only supports single key data_segment."
+
+        data_segment = list(data_segment.values())[0]
         return data_segment * self.factor
 
 
@@ -94,7 +99,7 @@ class StandardScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMi
         """Fits the internal StandardScaler on a single NumPy array."""
         keys = list(data_segment.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
-        
+
         np_data = data_segment[keys[0]]
 
         if np_data.ndim == 1:
@@ -117,8 +122,10 @@ class StandardScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMi
         if np_data.ndim == 1:
             np_data = np_data.reshape(-1, 1)
             logger.info("Reshaped 1D array to 2D for StandardScaler.")
-        
-        assert len(metadata['assign_to_map']), "StandardScaler only supports single assign_to_map map."
+
+        assert len(
+            metadata["assign_to_map"]
+        ), "StandardScaler only supports single assign_to_map map."
 
         transformed_np_data = self.scaler.transform(np_data)
         return transformed_np_data
