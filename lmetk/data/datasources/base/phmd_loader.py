@@ -3,11 +3,11 @@ import pickle
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, override
 
 import numpy as np
 import pandas as pd
-from lmetk.data.data_objects.data import DatasetContainer
+from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from phmd import datasets
 
@@ -68,6 +68,13 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
             return f"MultiSource(sources={len(self.data_source_dict)} units)"
         return "MultiSource(unloaded)"
 
+    @override
+    def load_data(self):
+        self.data_dict = self._load_data()
+        self._is_loaded = True
+        self._is_isplitted = True
+
+    @override
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
 
@@ -75,11 +82,9 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
             dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
 
         """
-        self.data_dict = self._load_data()
-        self._is_loaded = True
-        self._is_isplitted = True
-
-        return DatasetContainer(**self.data_dict)
+        assert self._is_loaded is True, "Data must be loaded before getting data."
+        assert self._is_isplitted is True, "Data must be splitted before getting data."
+        return SplitDatasetContainer(**self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """
@@ -97,7 +102,8 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
 
-    def split_data(self, data_lst: list[Dict], source_names: list[str]):
+    @override
+    def split_data(self):
         logger.warning(
             "PHMD does not support data splitting. The project relies on predefined splits."
         )
