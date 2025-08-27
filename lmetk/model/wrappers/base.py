@@ -7,7 +7,7 @@ import torch
 from lightning_fabric.utilities.data import AttributeDict
 
 
-class FitPredictWrapper(ABC):
+class AbstractFitPredictWrapper(ABC):
     r"""Abstract class that provides an interface to handle the network output.
 
     Parameters
@@ -55,7 +55,7 @@ class FitPredictWrapper(ABC):
         pass
 
 
-class AbstractWrapper(ABC, torch.nn.Module):
+class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.
 
     Parameters

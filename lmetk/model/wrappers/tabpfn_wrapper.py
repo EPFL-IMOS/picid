@@ -1,33 +1,36 @@
 """Wrapper for the TimePFN model."""
+
 import torch
-from .base import AbstractWrapper
+from .base import AbstractFeedForwardWrapper
 
 from tabpfn import TabPFNRegressor
 
-class TabPFNWrapper(AbstractWrapper):
+
+class TabPFNWrapper(AbstractFeedForwardWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """
+
     def __init__(self, **kwargs):
-        backbone=TabPFNRegressor(
-            ignore_pretraining_limits=kwargs['ignore_pretraining_limits'], 
-            random_state=42, 
-            device='cuda' if kwargs['device']=='gpu' else 'cpu',
-            )
+        backbone = TabPFNRegressor(
+            ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
+            random_state=42,
+            device="cuda" if kwargs["device"] == "gpu" else "cpu",
+        )
         super().__init__(backbone=backbone, **kwargs)
         self.model_fit_flag = False
         self.lag = 0
 
-        #self.train_dataloader = kwargs['train_dataloader']
-        #self.val_dataloader = kwargs['val_dataloader']
-        
+        # self.train_dataloader = kwargs['train_dataloader']
+        # self.val_dataloader = kwargs['val_dataloader']
+
         self.aux_context = None
         self.y_aux = None
-    
+
     def fit(self, x, y):
         self.backbone.fit(x.cpu(), y.cpu())
-    
+
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
 
@@ -42,28 +45,29 @@ class TabPFNWrapper(AbstractWrapper):
             Dictionary containing the updated model output.
         """
 
-        context_fit = batch['context']['x'].squeeze(0)
-        target_fit = batch['target']['x'].squeeze(0)
+        context_fit = batch["context"]["x"].squeeze(0)
+        target_fit = batch["target"]["x"].squeeze(0)
 
-        context = batch['context']['y'].squeeze(0)
-        target = batch['target']['y'].squeeze(0)
-        
+        context = batch["context"]["y"].squeeze(0)
+        target = batch["target"]["y"].squeeze(0)
+
         # Extent the context with auxiliary features to give sence of seasonality
         self.fit(context_fit, target_fit)
 
         # Extent the context with auxiliary features to give sence of seasonality
         outputs = self.backbone.predict(context.cpu())
-            
+
         # Update evaluator with current batch (replaces the accumulation logic)
         model_out = {
-            'predictions': torch.Tensor(outputs).reshape(target.shape),
-            'targets': target
+            "predictions": torch.Tensor(outputs).reshape(target.shape),
+            "targets": target,
         }
-        
+
         return model_out
 
 
 import numpy as np
+
 
 def generate_and_fit_polynomial(
     total_points=1580,
@@ -72,7 +76,7 @@ def generate_and_fit_polynomial(
     noise_std=0.05,
     seed=42,
     num_context=20,
-    skip = 700,
+    skip=700,
 ):
     np.random.seed(seed)
 
@@ -91,7 +95,9 @@ def generate_and_fit_polynomial(
 
     # --- FIX 1: Scale x to [-1, 1] ---
     x_raw = np.linspace(500, 2000, total_points)
-    x_vals = np.linspace(-1, 1, total_points)  # fit over [-1, 1] for numerical stability
+    x_vals = np.linspace(
+        -1, 1, total_points
+    )  # fit over [-1, 1] for numerical stability
 
     # --- FIX 2: Generate target y ---
     y_clean = ground_truth_polynomial(x_vals)
@@ -115,8 +121,7 @@ def generate_and_fit_polynomial(
         coeffs_and_errors.append(np.concatenate([coeffs, [error]]))
         y_true_vals.append(y_true)
 
-    return x_raw, y_vals, np.array(coeffs_and_errors), np.array(y_true_vals)   
-
+    return x_raw, y_vals, np.array(coeffs_and_errors), np.array(y_true_vals)
 
 
 # This forward is very slow, aboyt 1.5 hours for railway dataset
@@ -128,7 +133,7 @@ def generate_and_fit_polynomial(
 # outputs = []
 # for idx in range(target.shape[1]):
 #     # Get the right context and target for the current index
-    
+
 #     self.fit(context_fit[idx::24,:,], target_fit[idx::24,:,])
 #     # if self.aux_context==None:
 #     #     desired_fit_degree = 4
@@ -139,13 +144,11 @@ def generate_and_fit_polynomial(
 #     #     self.aux_context = torch.Tensor(context_aux).to(batch['context']['x'].device)
 #     #     self.y_aux = torch.Tensor(y_aux.reshape(-1,1)).to(batch['context']['x'].device)
 
-    
+
 #     # context_fit = torch.cat([self.aux_context, context_fit], dim=0)
 #     # target_fit = torch.cat([self.y_aux, target_fit], dim=0)
 
-    
 
-    
 #     output = self.backbone.predict(context[idx].unsqueeze(0).cpu())
 #     outputs.append(output.reshape(-1, 1))
 

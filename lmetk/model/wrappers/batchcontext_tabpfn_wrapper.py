@@ -4,10 +4,10 @@ import torch
 from tabpfn import TabPFNRegressor
 
 
-from .base import AbstractWrapper
+from .base import AbstractFeedForwardWrapper
 
 
-class BatchContextTabPFNWrapper(AbstractWrapper):
+class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
@@ -22,9 +22,6 @@ class BatchContextTabPFNWrapper(AbstractWrapper):
         super().__init__(backbone=backbone, **kwargs)
         self.model_fit_flag = False
         self.lag = 0
-
-        # self.train_dataloader = kwargs['train_dataloader']
-        # self.val_dataloader = kwargs['val_dataloader']
 
         self.aux_context = None
         self.y_aux = None

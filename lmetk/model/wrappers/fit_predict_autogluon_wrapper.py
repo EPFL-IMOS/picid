@@ -5,11 +5,11 @@ from pathlib import Path
 import joblib
 from autogluon.tabular import TabularPredictor
 
-from .base import FitPredictWrapper
+from .base import AbstractFitPredictWrapper
 from ..autogluon.autogluon_wrapper import AutoGluonWrapper
 
 
-class FitPredictAutoGluonWrapper(FitPredictWrapper):
+class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.

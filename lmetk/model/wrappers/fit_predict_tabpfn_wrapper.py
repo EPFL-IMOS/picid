@@ -9,10 +9,10 @@ from lightning_fabric.utilities.data import AttributeDict
 from tabpfn import TabPFNRegressor
 
 
-from .base import FitPredictWrapper
+from .base import AbstractFitPredictWrapper
 
 
-class FitPredictTabPFNWrapper(FitPredictWrapper):
+class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.

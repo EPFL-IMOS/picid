@@ -4,10 +4,10 @@ from einops import rearrange
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
-from lmetk.model.wrappers.base import AbstractWrapper
+from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
 
 
-class BatchContextXGBoostWrapper(AbstractWrapper):
+class BatchContextXGBoostWrapper(AbstractFeedForwardWrapper):
     r"""Wrapper for the XGboost model."""
 
     def __init__(self, **kwargs):

@@ -20,7 +20,10 @@ from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.model.wrappers.base import AbstractWrapper, FitPredictWrapper
+from lmetk.model.wrappers.base import (
+    AbstractFeedForwardWrapper,
+    AbstractFitPredictWrapper,
+)
 from lmetk.pipeline.base import (
     ConstantLossLightningModule,
     FitPredictWrapperLightningModule,
@@ -205,14 +208,14 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if cfg.model.get("load_path", False):
             backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
 
-        if isinstance(backbone_wrapper, AbstractWrapper):
+        if isinstance(backbone_wrapper, AbstractFeedForwardWrapper):
             model = ConstantLossLightningModule(
                 backbone=backbone_wrapper,
                 loss=loss,
                 evaluators=evaluators,
                 optimizer=optimizer,
             )
-        elif isinstance(backbone_wrapper, FitPredictWrapper):
+        elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
             model = FitPredictWrapperLightningModule(
                 backbone=backbone_wrapper,
                 loss=loss,

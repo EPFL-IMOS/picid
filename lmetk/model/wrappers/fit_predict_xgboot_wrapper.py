@@ -1,10 +1,10 @@
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
-from lmetk.model.wrappers.base import FitPredictWrapper
+from lmetk.model.wrappers.base import AbstractFitPredictWrapper
 
 
-class FitPredictXGBoostWrapper(FitPredictWrapper):
+class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     r"""Wrapper for the XGboost model."""
 
     def __init__(self, **kwargs):

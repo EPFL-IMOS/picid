@@ -5,10 +5,10 @@ from lightning_fabric.utilities.data import AttributeDict
 
 from lmetk.model.time_pfn.TimePFN import TimePFN
 
-from .base import AbstractWrapper
+from .base import AbstractFeedForwardWrapper
 
 
-class BatchContextTimePFNWrapper(AbstractWrapper):
+class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
     r"""Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.

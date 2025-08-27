@@ -5,7 +5,7 @@ import torch
 from lightning import LightningModule
 
 from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.model.wrappers.base import FitPredictWrapper
+from lmetk.model.wrappers.base import AbstractFitPredictWrapper
 
 import logging
 
@@ -417,7 +417,7 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
     def __init__(
         self,
-        backbone: FitPredictWrapper,
+        backbone: AbstractFitPredictWrapper,
         evaluators: dict[str, AbstractEvaluator],
         predict_after_training: bool = False,
         **kwargs,
