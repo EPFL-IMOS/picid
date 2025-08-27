@@ -138,7 +138,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=concepts_n_cmapss/tabpfn",
+                "experiment=concepts_n_cmapss/rul/tabpfn_batchwise",
                 "debug=default"
             ],
             "env": {

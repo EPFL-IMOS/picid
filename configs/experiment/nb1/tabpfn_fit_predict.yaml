@@ -2,6 +2,6 @@
 
 defaults:
   - nb1/base
-  - /model_configs/prognostics/tabpfn
+  - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms:  battery/bosello_fit_predict
   

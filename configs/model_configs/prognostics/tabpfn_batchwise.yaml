@@ -1,0 +1,8 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
+  - override /model: tabpfn_refactor
+
+task_definition:
+  requires_training: false
