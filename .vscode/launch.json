@@ -170,7 +170,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=battery/nb1_tabpfn",
+                "experiment=nb1/tabpfn",
                 "debug=default"
             ],
             "env": {
@@ -219,6 +219,38 @@
             "args": [
                 "paths=rt_local",
                 "experiment=xjtu_sy/tabpfn",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Pronostia : TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=pronostia/rul/tabpfn",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "PUBD16 : TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=pubd16/rul/tabpfn",
                 "debug=default"
             ],
             "env": {
