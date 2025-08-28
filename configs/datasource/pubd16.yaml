@@ -1,5 +1,5 @@
-_target_: lmetk.data.datasources.phmd_pubd16.PubD16Loader
+_target_: lmetk.data.datasources.phmd_pubd16.Pubd16Loader
 fold: 0
 data_name: PUBD16
-task_mode: rul # rul, fault
+task_mode: fault
 cache_dir: ${paths.data_dir}/phmd_cache

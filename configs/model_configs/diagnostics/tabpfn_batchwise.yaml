@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /datamodule: base_datamodule_tabpfn
+  - override /model: tabpfn_refactor
+
+task_definition:
+  requires_training: false
