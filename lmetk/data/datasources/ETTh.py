@@ -12,6 +12,10 @@ class ETThLoader(SingleSourceLoader):
         target_name: tuple[str, list],
         **kwargs,
     ):
+        self.data_path = data_path
+        self.timestamp_name = timestamp_name
+        self.task_mode = task_mode
+        self.target_name = target_name
         super().__init__(
             data_path=data_path,
             timestamp_name=timestamp_name,

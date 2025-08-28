@@ -231,7 +231,8 @@ class DataTransform:
                         f"Warning: Transform '{self.transform_name}' changed type of split '{split_name}' in '{apply_to_key}' from {type(data[apply_to_key][split_name])} to {type(transformed_data[apply_to_key][split_name])}."
                     )
                 
-                if len(curr_data) != len(curr_transformed_data):
+                #TODO: ETTH will not work if no isinstance(curr_transformed_data,list) as curr_transformed_data is ndarray but not list[ndarray]
+                if isinstance(curr_transformed_data,list) & (len(curr_data) != len(curr_transformed_data)):
                     raise ValueError(
                         f"Transform '{self.transform_name}': Multi-source transform changed the number of sources. "
                         f"Original: {len(data)}, Transformed: {len(transformed_data)}."
