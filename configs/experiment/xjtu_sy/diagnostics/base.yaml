@@ -8,8 +8,10 @@ defaults:
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
-  - override /logger: csv
-  #- override /debug: default
+
+
+datasource:
+   task: battery_diagnostics
 
 task_definition: 
   requires_training: false

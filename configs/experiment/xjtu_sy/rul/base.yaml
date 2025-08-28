@@ -2,18 +2,8 @@
 
 defaults:
   - override /datasource: xjtu_sy
-  - override /transforms: bearings/default_rul
-  - override /model: tabpfn_refactor
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
-  - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
-  - override /logger: csv
-  #- override /debug: default
-
-task_definition: 
-  requires_training: false
-
 
 evaluator:
   train:

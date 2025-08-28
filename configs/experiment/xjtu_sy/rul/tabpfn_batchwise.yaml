@@ -1,0 +1,7 @@
+#@package _global_
+
+defaults:
+  - xjtu_sy/rul/base
+  - /model_configs/prognostics/tabpfn_batchwise
+  - override /transforms: bearings/default_rul
+  - override /dataset: prognostics/battery_rul_multiunit_dataset

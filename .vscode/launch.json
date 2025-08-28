@@ -211,14 +211,30 @@
             }
         },
         {
-            "name": "XJTU_SY : TabPFN",
+            "name": "XJTU_SY : TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/tabpfn",
+                "experiment=xjtu_sy/rul/tabpfn_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "XJTU_SY : TabPFN Batchwise",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/rul/tabpfn_batchwise",
                 "debug=default"
             ],
             "env": {
