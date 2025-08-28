@@ -2,20 +2,8 @@
 
 defaults:
   - override /datasource: xjtu_sy
-  - override /transforms: bearings/default_classsification
-  - override /model: tabpfn_refactor
-  - override /dataset: prognostics/classification_multiunit_dataset
-  - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
-
-
-datasource:
-   task: battery_diagnostics
-
-task_definition: 
-  requires_training: false
-
 
 evaluator:
   train:
@@ -43,7 +31,3 @@ datasource:
 trainer:
   accelerator: cpu
   devices: 1
-
-
-model:
-  mode: classification

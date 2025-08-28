@@ -243,6 +243,38 @@
             }
         },
         {
+            "name": "XJTU_SY diagnostics: TabPFN Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/diagnostics/tabpfn_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "XJTU_SY diagnostics: TabPFN Batchwise",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/diagnostics/tabpfn_batchwise",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Pronostia : TabPFN",
             "type": "debugpy",
             "request": "launch",
