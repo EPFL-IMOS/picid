@@ -2,55 +2,19 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
-
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
-
+from lmetk.data.data_objects.utils import convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class CutToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
-    def __init__(self, key: str, **kwargs):
-        """
-        Initialize the transform.
-
-        Args:
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(**kwargs)
-        self.key: str = key
-
-    def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
-        """Convert value to numpy array if it isn't already."""
-        if not isinstance(value, np.ndarray):
-            try:
-                value = np.array(value)
-                logger.info(f"Converted key '{key}' to numpy array")
-            except Exception as e:
-                raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
-        return value
-
-    def _ensure_2d(self, value: np.ndarray, key: str) -> np.ndarray:
-        """Ensure array is 2D for concatenation."""
-        if value.ndim == 1:
-            value = value.reshape(-1, 1)
-            logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
-        elif value.ndim > 2:
-            raise ValueError(
-                f"Key '{key}' has unsupported dimensions: {value.ndim}. "
-                f"Only 1D and 2D arrays are supported."
-            )
-        return value
-
-    def _check_for_nans(self, arrays: List[np.ndarray], keys: List[str]) -> None:
-        """Check for NaN values and raise error if found."""
-        for arr, key in zip(arrays, keys):
-            if np.any(np.isnan(arr)):
-                raise ValueError(f"NaN values found in array '{key}'")
-
+class RULTaskUpToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
+        
         """
-        Filter targets correponding to the stftt
+        Transforms the input data by truncating all arrays up to and including the first occurrence of zero in the 'target' array.
+        This method searches for the first zero in the 'target' array, then truncates 'target' and all other arrays in the input data dictionary to this length. 
+        It ensures that the last element of the truncated 'target' is zero and that all other arrays are truncated to match the new length of 'target'.
 
         Args:
             data: Dictionary containing numpy arrays to concatenate
@@ -58,36 +22,60 @@ class CutToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         Returns:
             Concatenated numpy array
+        Raises:
+            AssertionError: If 'target' key is missing, no zero is found in 'target', 
+                            the last element after truncation is not zero, 
+                            or if there are no other keys to process.
         """
+        assert "target" in data, "Missing 'target' key in data"
+       
+        # Identify how many zeros in target
+        target = convert_to_numpy(data["target"])
+        
+        # Get number of zeros
+        num_zeros = np.sum(target == 0)
+        logger.info(f"Number of zeros in target: {num_zeros}")
+        
+        # Find the first zero occurance and cut everything after
+        first_zero_idx = np.argmax(target == 0)
+        assert first_zero_idx > 0, "No zero found in target"
+        # Shift idx to include zero
+        first_zero_idx += 1
+        target = target[: first_zero_idx]
+        
 
-        if self.key == "target":
-            # Identify how many zeros in target
-            target = data["target"]
-            target = self._convert_to_numpy(target, "target")
-            target = self._ensure_2d(target, "target")
+        logger.info(f"Cut target to first zero occurrence: {target.shape}")
+        assert target[-1] == 0, "Last element of target is not zero after cutting"
+        # Check the target has exactly one zero
+        assert np.sum(target == 0) == 1, "Target does not contain exactly one zero"
 
-            num_zeros = np.sum(target == 0)
-            logger.info(f"Number of zeros in target: {num_zeros}")
-            # Find the first zero occurance and cut everything after
-            first_zero_idx = np.argmax(target == 0)
-            assert first_zero_idx > 0, "No zero found in target"
-            result = target[: first_zero_idx + 1]
-            logger.info(f"Cut target to first zero occurrence: {target.shape}")
-            assert target[-1] == 0, "Last element of target is not zero after cutting"
+        # Create the output dictinary 
+        out_dict = {'example_output_1': target}
+        metadata['assign_to_map'].remove('example_output_1')
 
-        else:
-            first_zero_idx = data["target"].shape[0]
-
-            value = data[self.key]
-            target = self._convert_to_numpy(value, self.key)
-            target = self._ensure_2d(value, self.key)
-
-            result = data[self.key][:first_zero_idx]
-            assert (
-                data["target"].shape[0] == result.shape[0]
+        keys = list(data.keys())
+        keys.remove('target')
+        
+        assert len(keys) > 0, "No keys to process other than target"
+        logger.info(f"The values of {keys} going to be truncated to satisfy ")
+        
+        assert (len(keys) == 1) and (keys[0] == 'features'), "Currently support solely traget/features pair" 
+        key = keys[0]
+        value = convert_to_numpy(data[key])
+        value = value[:first_zero_idx]
+        assert (
+                target.shape[0] == value.shape[0]
             ), "Shape mismatch after cutting"
+        out_dict['example_output_2'] = value
+        
+        # General case
+        # for key in keys:
+            
+        #     value = convert_to_numpy(data[key])
+        #     value = value[:first_zero_idx]
+        #     assert (
+        #         target.shape[0] == value.shape[0]
+        #     ), "Shape mismatch after cutting"
+        #     out_dict[key] = value
 
-        return result
-
-    def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
-        return self.transform_data(data, metadata)
+        return out_dict

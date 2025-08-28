@@ -1,5 +1,5 @@
 # First create env
-# conda create -n phm2 python=3.11.3
+# conda create -n phm2 python=3.12 #3.11.3
 # conda activate phm2
 
 #!/bin/bash -l
@@ -15,3 +15,5 @@ pip install torch==${TORCH} --extra-index-url https://download.pytorch.org/whl/$
 pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 #pip install -r requirements.txt
 pip install -e '.[all]'
+# Handle phmd
+pip install --no-deps "phmd @ git+https://github.com/EPFL-IMOS/imos_phmd.git@collab_lalr"

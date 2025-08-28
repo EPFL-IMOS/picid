@@ -52,30 +52,6 @@ class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
                 :, :, j * max_channel_size : (j + 1) * max_channel_size
             ]
 
-            # if 'PEMS' in cfg.model.data or 'Solar' in cfg.model.data:
-            #     batch_x_mark = None
-            #     batch_y_mark = None
-            # else:
-            # batch_x_mark = batch_x_mark.to(device)
-            # batch_y_mark = batch_y_mark.to(device)
-
-            # Decoder input
-
-            # ------ Workout this if needed -----
-            # encoder - decoder
-            # if cfg.model.use_amp:
-            #     with torch.cuda.amp.autocast():
-            #         if cfg.model.output_attention:
-            #             outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
-            #         else:
-            #             outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)
-            # else:
-            #     if cfg.model.output_attention:
-            #         outputs = model(batch_x_subset, batch_x_mark, dec_inp, batch_y_mark)[0]
-
-            #     else:
-            # ------ Workout above if needed -----
-
             outputs = self.backbone(batch_x_subset, batch_x_mark)
             outputs = outputs[:, -self.kwargs.pred_len :, :]
             batch_y_subset = batch_y_subset[:, -self.kwargs.pred_len :, :]

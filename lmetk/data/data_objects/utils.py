@@ -63,7 +63,7 @@ def check_for_nans(
             else:
                 warnings.warn(message)
 
-def convert_to_numpy(value: Any, key: str, ensure_2d: bool = True) -> Union[np.ndarray, pd.Series]:
+def convert_to_numpy(value: Any, ensure_2d: bool = True) -> Union[np.ndarray, pd.Series]:
     """
     Converts array-like data into a NumPy array.
 
@@ -81,11 +81,10 @@ def convert_to_numpy(value: Any, key: str, ensure_2d: bool = True) -> Union[np.n
             array = value.values.astype(np.float32)
             
     elif isinstance(value, pd.Series):
-        # --- NEW LOGIC FOR SERIES ---
         # If the Series is non-numeric (e.g., datetime, string/object), keep it as a Series.
         if value.dtype.kind not in 'biufc':
             warnings.warn(
-                f"Key '{key}' has a non-numeric type ({value.dtype}) and will be kept as a pandas Series."
+                f"Has a non-numeric type ({value.dtype}) and will be kept as a pandas Series."
             )
             return value # Return the original Series and exit the function
         # Otherwise, if it's numeric, convert it.
@@ -100,5 +99,5 @@ def convert_to_numpy(value: Any, key: str, ensure_2d: bool = True) -> Union[np.n
         if array.ndim == 1:
             return array.reshape(-1, 1)
         if array.ndim != 2:
-            raise ValueError(f"Key '{key}' has unsupported dimensions: {array.ndim}.")
+            raise ValueError(f"Array has unsupported dimensions: {array.ndim}. Set ensure_2d to False to avoid this check.")
     return array

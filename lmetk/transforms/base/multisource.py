@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from typing import Any, Dict, Optional
-
+import copy
 import numpy as np
 from numpy import ndarray
 
@@ -66,7 +66,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Construct current data segment from each source
         for data_segment in data_segments:
             # Transform the current data segment
-            out.append(self.transform_data(data_segment, metadata=metadata))
+            out.append(self.transform_data(data_segment, metadata=copy.deepcopy(metadata)))
 
         return out
 

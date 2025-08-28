@@ -5,6 +5,7 @@ from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +97,6 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
             f"apply_to_columns={self.apply_to_columns}"
         )
 
-    def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
-        """Convert value to numpy array if it isn't already."""
-        if not isinstance(value, np.ndarray):
-            try:
-                value = np.array(value)
-                logger.info(f"Converted key '{key}' to numpy array")
-            except Exception as e:
-                raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
-        return value
-
     def _validate_input(self, data: np.ndarray, key: str) -> np.ndarray:
         """Validate and prepare input data for STFT."""
         # Check dimensions - expect 2D array (n_rows, n_columns)
@@ -194,15 +185,16 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         key, value = "features", data["features"]
         # Convert to numpy array
-        value = self._convert_to_numpy(value, key)
+        value = convert_to_numpy(value)
 
-        # Validate input (must be 2D)
+        # Validate additional STFFT
         value = self._validate_input(value, key)
 
-        n_rows, n_columns = value.shape
+        _, n_columns = value.shape
 
         # Apply STFT based on chosen axis
         stft_results_for_key = []
+        
         # Apply STFT to each column (each column is a signal)
         for col_idx in range(n_columns):
             signal = value[:, col_idx]  # Extract 1D signal from column
@@ -226,7 +218,34 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         logger.info(f"Final concatenated STFT shape: {final_result.shape}")
 
-        return final_result
+        if 'target' not in data.keys():
+            return final_result
+        
+        # metadata 
+        out_dict = {'features': final_result}
+        
+        target = data["target"]
+        # Convert to numpy array
+        target = convert_to_numpy(target, key)
+
+        logger.info(f"Added data '{key}' with shape {target.shape}")
+
+        # Allign targets
+        n_frames = final_result.shape[0]  
+        centers = np.arange(n_frames) * self.hop  # in samples
+        end_idx = np.clip(centers + self.win_len // 2 - 1, 0, len(target) - 1)
+        frame_targets = target[end_idx]  # aligned targets per time frame
+
+        # Concatenate and reshape (-1,1)
+        target = np.array(frame_targets).reshape(-1, 1)
+        logger.info(f"Final target shape: {target.shape}")
+
+        assert (
+            target.shape[0] == n_frames
+        ), "Target and result shapes do not match"
+
+        out_dict['target'] = target
+        return out_dict
 
     def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
         return self.transform_data(data, metadata)

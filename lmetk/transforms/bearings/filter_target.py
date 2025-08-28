@@ -21,33 +21,6 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         self.win_len = win_len
         self.hop = hop
 
-    def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
-        """Convert value to numpy array if it isn't already."""
-        if not isinstance(value, np.ndarray):
-            try:
-                value = np.array(value)
-                logger.info(f"Converted key '{key}' to numpy array")
-            except Exception as e:
-                raise ValueError(f"Could not convert key '{key}' to numpy array: {e}")
-        return value
-
-    def _ensure_2d(self, value: np.ndarray, key: str) -> np.ndarray:
-        """Ensure array is 2D for concatenation."""
-        if value.ndim == 1:
-            value = value.reshape(-1, 1)
-            logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
-        elif value.ndim > 2:
-            raise ValueError(
-                f"Key '{key}' has unsupported dimensions: {value.ndim}. "
-                f"Only 1D and 2D arrays are supported."
-            )
-        return value
-
-    def _check_for_nans(self, arrays: List[np.ndarray], keys: List[str]) -> None:
-        """Check for NaN values and raise error if found."""
-        for arr, key in zip(arrays, keys):
-            if np.any(np.isnan(arr)):
-                raise ValueError(f"NaN values found in array '{key}'")
 
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """
@@ -60,7 +33,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         Returns:
             Concatenated numpy array
         """
-        features = data["features"]
+        features = data["features"] # N, D --> n, <h1,h2> | subsample N to n for target
         assert "target" in data, "Missing 'target' key in data"
 
         if not data:

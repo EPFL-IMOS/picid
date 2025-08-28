@@ -156,23 +156,23 @@ class OrderedInput(BaseDataObject):
         """
         target_obj = copy.deepcopy(self) if return_copy else self
 
-        # Replace .setdefault() with standard assignment to trigger our custom __setitem__
-        if any(isinstance(v, pd.DataFrame) for v in target_obj.values()) and (
-            "metadata" in target_obj
-        ):
-            # Do the same for the nested 'column_map'.
-            if "column_map" not in target_obj.metadata:
-                target_obj.metadata["column_map"] = {}
+        # # Replace .setdefault() with standard assignment to trigger our custom __setitem__
+        # if any(isinstance(v, pd.DataFrame) for v in target_obj.values()) and (
+        #     "metadata" in target_obj
+        # ):
+        #     # Do the same for the nested 'column_map'.
+        #     if "column_map" not in target_obj.metadata:
+        #         target_obj.metadata["column_map"] = {}
 
-            # Populate the column map. This chained access now works correctly.
-            for key, value in target_obj.items():
-                if isinstance(value, pd.DataFrame):
-                    target_obj.metadata.column_map[key] = value.columns.tolist()
+        #     # Populate the column map. This chained access now works correctly.
+        #     for key, value in target_obj.items():
+        #         if isinstance(value, pd.DataFrame):
+        #             target_obj.metadata.column_map[key] = value.columns.tolist()
 
-        # --- 1. CONVERT ALL ARRAY-LIKE DATA TO NUMPY ---
-        for key, value in list(target_obj.items()):
-            if isinstance(value, ARRAY_LIKE_TYPES):
-                target_obj[key] = convert_to_numpy(value, key)
+        # # --- 1. CONVERT ALL ARRAY-LIKE DATA TO NUMPY ---
+        # for key, value in list(target_obj.items()):
+        #     if isinstance(value, ARRAY_LIKE_TYPES):
+        #         target_obj[key] = convert_to_numpy(value, key)
 
         # --- 2. PERFORM CONDITIONAL CHECKS on the converted NumPy arrays ---
         values = list(target_obj.values())
