@@ -81,11 +81,11 @@ class TransformStrategy():
             
             # Mode 1: Assign results to a key defined by assign_to_keys
             for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
-                if is_multi_unit:
-                    transformed_results_for_new_key[assign_to_key][split] = [chunk[assign_to_map] for chunk in transformed_chunks]
-                else:
-                    assert len(transformed_chunks) == 1, "Expected single chunk for non-multi-unit data."
-                    transformed_results_for_new_key[assign_to_key][split] = transformed_chunks[0][assign_to_map]
+                transformed_results_for_new_key[assign_to_key][split] = [chunk[assign_to_map] for chunk in transformed_chunks]
+                #if is_multi_unit:
+                # else:
+                #     assert len(transformed_chunks) == 1, "Expected single chunk for non-multi-unit data."
+                #     transformed_results_for_new_key[assign_to_key][split] = transformed_chunks[assign_to_map]
 
 
         

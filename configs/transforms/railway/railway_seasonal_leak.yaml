@@ -25,7 +25,6 @@ seasonal_leak:
   metadata:
     apply_to: ['features', 'target']
     assign_to: features
-    
 
 time_features_transform:
   transform:

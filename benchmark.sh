@@ -17,3 +17,6 @@ python lmetk/run.py experiment=etth/multivariate/timepfn_batch_context debug=stf
 python lmetk/run.py experiment=etth/univariate/mean debug=stf
 python lmetk/run.py experiment=etth/univariate/naive debug=stf
 python lmetk/run.py experiment=etth/univariate/timepfn_batch_context debug=stf
+
+# RAILWAY
+python lmetk/run.py experiment=railway_traction/stf

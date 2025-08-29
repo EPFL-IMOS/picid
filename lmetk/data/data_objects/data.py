@@ -366,12 +366,16 @@ class SplitDatasetContainer(DatasetContainer):
             if isinstance(splits_data, dict):
                 all_splits.update(splits_data.keys())
 
-        collected_types = []
         split_dict = {split: {} for split in all_splits}
         for data_key, splits_data in self.items():
             if isinstance(splits_data, dict):
                 for split, unit_list in splits_data.items():
-                    split_dict[split][data_key] = unit_list
+                    if not self.is_multi_unit:
+                        assert len(unit_list) == 1, "The number of units is greater than 1, although the data is set to be not multi_unit"
+                        split_dict[split][data_key] = unit_list[0]
+                    else:    
+                        split_dict[split][data_key] = unit_list
+
 
         return split_dict
 
