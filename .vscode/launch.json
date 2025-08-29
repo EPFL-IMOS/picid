@@ -138,7 +138,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=concepts_n_cmapss/rul/tabpfn_batchwise",
+                "experiment=concepts_n_cmapss/prognostics/tabpfn_batchwise",
                 "debug=default"
             ],
             "env": {
@@ -154,7 +154,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=concepts_n_cmapss/rul/tabpfn_fit_predict",
+                "experiment=concepts_n_cmapss/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -218,7 +218,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/rul/tabpfn_fit_predict",
+                "experiment=xjtu_sy/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -234,7 +234,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/rul/tabpfn_batchwise",
+                "experiment=xjtu_sy/prognostics/tabpfn_batchwise",
                 "debug=default"
             ],
             "env": {
@@ -275,6 +275,22 @@
             }
         },
         {
+            "name": "PHMD N-CMAPSS diagnostics: TabPFN Batchwise",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=n_cmapss/prognostics/tabpfn_batchwise",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Pronostia : TabPFN",
             "type": "debugpy",
             "request": "launch",
@@ -282,7 +298,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=pronostia/rul/tabpfn",
+                "experiment=pronostia/prognostics/tabpfn",
                 "debug=default"
             ],
             "env": {
@@ -298,7 +314,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=pubd16/rul/tabpfn",
+                "experiment=pubd16/prognostics/tabpfn",
                 "debug=default"
             ],
             "env": {
