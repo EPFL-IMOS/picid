@@ -1,9 +1,9 @@
 #@package _global_
 
 defaults:
-  - override /datasource: nb1
+  - override /datasource: nb14
   - override /transforms: battery/bosello_NB_base
-  - override /model: tabpfn_refactor
+  - override /model: tabpfn_batch_context
   - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
@@ -11,6 +11,7 @@ defaults:
 
 task_definition: 
   requires_training: false
+
 
 evaluator:
   train:
@@ -25,5 +26,5 @@ evaluator:
 transforms:
   filter_features:
     transform: 
-      columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var']
+      columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var']
 
