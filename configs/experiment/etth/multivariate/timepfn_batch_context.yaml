@@ -3,7 +3,7 @@ defaults:
   - override /datasource: ETTh1
   - override /dataset: sliding_window_batch
   - override /datamodule: base_datamodule
-  - override /model: timepfn
+  - override /model: timepfn_batch_context
   - override /evaluator: default
   - override /task_definition: etth_timepfn
   - override /transforms: etth/timepfn_paper
