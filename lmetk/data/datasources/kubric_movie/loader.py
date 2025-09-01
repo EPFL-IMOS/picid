@@ -6,15 +6,10 @@ from collections import defaultdict
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from lmetk.data.data_objects.data import SplitDatasetContainer
 from typing import Any, Dict, override
+import torch
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
-
-from pympler import asizeof
-
-def sizeof_gb(obj) -> float:
-    """Return the memory usage of a Python object in GB (deep, recursive)."""
-    return asizeof.asizeof(obj) / (1024 ** 3)
 
 def convert_outer_list_to_inner(data_list):
     if not data_list:
@@ -77,8 +72,7 @@ class MOViLoader(AbstractDataSourceLoader):
         # Read raw CSV
         data = self.read_data()
 
-        size_gb = sizeof_gb(data) / (1024**3)
-        logger.info(f"{size_gb:.6f} GB")
+        
         # Convert to desired format
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
@@ -92,10 +86,10 @@ class MOViLoader(AbstractDataSourceLoader):
                 "test": test[key],
             }
 
-        logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
-        logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
-        logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
-
+        #logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
+        #logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
+        #logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        return out_dict
     def read_data(
         self,
     ):
@@ -106,7 +100,44 @@ class MOViLoader(AbstractDataSourceLoader):
                 normalization_file=self.normalization_file, 
                 nox4=False,
                 split=split)
-            data[split].extend([loader.__getitem__(i) for i in range(loader.__len__())])
+            
+            for i in range(len(loader)):
+                data_i = loader.__getitem__(i)
+                keys_to_pop = []
+                for key in data_i.keys():
+                    
+                    item = data_i[key]
+                    
+                    # Check if the item is a PyTorch Tensor
+                    if isinstance(item, torch.Tensor):
+                        # If so, move to CPU (if on GPU) and convert to numpy
+                        try:
+                            data_i[key] = item.cpu().numpy()
+                        except:
+                            data_i[key] = item.to_dense().cpu().numpy()
+                    
+                    else:
+                        if isinstance(data_i[key], list):
+                            updated_lst = []
+                            for el in data_i[key]:
+                                if isinstance(el, torch.Tensor):
+                                    updated_lst.append(el.to_dense().cpu().numpy())
+                                else:
+                                    updated_lst.append(None)
+                            data_i[key] = updated_lst #[:10]
+                            # keys_to_pop.append(key)
+                        elif isinstance(data_i[key], int):
+                            pass
+                        else:
+                            print(key)
+                
+                # for key in keys_to_pop:
+                #     data_i.pop(key)
+
+                data[split].append(data_i)
+    
+            
+            del loader
 
         
 

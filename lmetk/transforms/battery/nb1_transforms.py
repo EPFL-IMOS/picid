@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 import pandas as pd
-
+import numpy as np
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin, NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
@@ -60,7 +60,7 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         return out
 
 
-import numpy as np
+
 
 
 class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
