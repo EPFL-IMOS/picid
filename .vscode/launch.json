@@ -163,14 +163,14 @@
             }
         },
         {
-            "name": "NB1 Battery: TabPFN",
+            "name": "NB1 Battery: TabPFN Batchwise",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb1/prognostics/tabpfn",
+                "experiment=nb1/prognostics/tabpfn_batchwise",
                 "debug=default"
             ],
             "env": {
@@ -186,7 +186,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb1/tabpfn_fit_predict",
+                "experiment=nb1/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -195,14 +195,30 @@
             }
         },
         {
-            "name": "NB14 Battery: TabPFN",
+            "name": "NB14 Battery: TabPFN Batchwise",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb14/prognostics/tabpfn",
+                "experiment=nb14/prognostics/tabpfn_batchwise",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "NB14 Battery: TabPFN Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=nb14/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
