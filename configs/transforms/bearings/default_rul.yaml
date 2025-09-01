@@ -1,27 +1,27 @@
-cut_to_first_zero_target: 
+cut_to_first_zero_target:
   transform:
     _target_: lmetk.transforms.bearings.cut_till_first_zero.RULTaskUpToFirstZero
 
   metadata:
-    apply_to: ['target', 'features']
-    assign_to: 
-      example_output_1: 'target'
-      example_output_2: 'features'
+    apply_to: ["target", "features"]
+    assign_to:
+      example_output_1: "target"
+      example_output_2: "features"
 
 stfft:
   transform:
     _target_: lmetk.transforms.base_transforms.stfft.STFTTransform
     win_len: 1024
     hop: 512
-    
+
   metadata:
-    apply_to: ['target', 'features']
-    assign_to: ['target', 'features']
+    apply_to: ["target", "features"]
+    assign_to: ["target", "features"]
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
-    
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -29,7 +29,7 @@ scaler_features:
 scaler_target:
   transform:
     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
+
   metadata:
     apply_to: target
     fit_on: train
