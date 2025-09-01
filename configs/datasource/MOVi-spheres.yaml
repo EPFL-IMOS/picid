@@ -1,0 +1,29 @@
+# Dataset loader config
+_target_: lmetk.data.datasources.kubric_movie.loader.MOViLoader
+
+data_name: MOVi-spheres
+data_folder: rigid_body_dynamics
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}
+normalization_file: ${paths.data_dir}/${.data_folder}/normalization-movis.npy
+
+task_mode: multivariate #multivariate # Here it atually not for the task mode but for the data type. Multivariate timeseries but we predict univariate fashion
+
+#mode_mode: other # Ban naming of the variable. This one basically help to identify which are the inputs of the dataset object. context means features and targets, while others means features (where one of the features is actually a target) and timestamps
+#target_name: None
+
+# target_dim_position: null
+# timestamp_name: date
+
+# data_splitter:
+#   _target_: lmetk.data.preprocessing.TimeSplitter
+#   splitter_type: TimeSplitter
+#   train: 5 # int or float. In case of float it is a percentage of the dataset
+#   val: 3 # int or float. In case of float it is a percentage of the dataset
+#   test: 2 # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
+  
+#   # There values will be read from the model parameters similarly to how we deal with data_path.
+#   seq_len: ${oc.select:task_definition.seq_len,null}     # 96   # 384  # window size
+#   label_len: ${oc.select:task_definition.label_len,null} # 48 # 96  # overlap size
+#   pred_len:  ${oc.select:task_definition.pred_len,null}  #96  # prediction size
+#   apply_lookback: True
+

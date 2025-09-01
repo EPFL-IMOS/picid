@@ -19,6 +19,7 @@ from omegaconf import DictConfig, OmegaConf
 from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from lmetk.data.datasources.kubric_movie.loader import MOViLoader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
@@ -117,9 +118,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
-    if isinstance(dataset_source, SingleSourceLoader) or isinstance(
-        dataset_source, PHMDMultiSourceLoader
-    ):
+    single_source_types = (SingleSourceLoader, PHMDMultiSourceLoader, MOViLoader)
+    if isinstance(dataset_source, single_source_types):
         preprocessor_mode = "per_unit"
 
     elif isinstance(dataset_source, MultiSourceLoader):

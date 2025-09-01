@@ -7,7 +7,7 @@ from typing import Any, Dict, override
 
 import numpy as np
 import pandas as pd
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from lmetk.data.data_objects.data import SplitDatasetContainer
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from phmd import datasets
 
