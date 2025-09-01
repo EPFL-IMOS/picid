@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: MOVi-spheres
-  - override /transforms: battery/bosello_NB_base
+  - override /transforms: rigid_body_dynamics/base
   - override /model: stf
   - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule

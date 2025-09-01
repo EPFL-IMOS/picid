@@ -418,3 +418,6 @@ class SplitDatasetContainer(DatasetContainer):
                 if unit_data:
                     grouped_dict[split].append(DataChunk(**unit_data))
         return grouped_dict
+    
+    def __repr__(self):
+        return "None"
