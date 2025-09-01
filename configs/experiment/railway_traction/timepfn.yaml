@@ -3,7 +3,7 @@ defaults:
   - override /datasource: railway
   - override /dataset: sliding_window_batch
   - override /datamodule: base_datamodule
-  - override /model: timepfn
+  - override /model: timepfn_batch_context
   - override /evaluator: railway
   - override /task_definition: railway_day_ahead_timepfn
   - override /transforms: railway/timepfn

@@ -105,6 +105,9 @@ class FitPredictTaskDataset(BaseDataset):
                 )
 
                 return input_data_c
+            
+            else: 
+                return input_data
 
         self.X = handle_multi_units(X, "X")
         self.y = handle_multi_units(y, "y")

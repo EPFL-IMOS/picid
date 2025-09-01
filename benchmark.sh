@@ -20,3 +20,7 @@ python lmetk/run.py experiment=etth/univariate/timepfn_batch_context debug=stf
 
 # RAILWAY
 python lmetk/run.py experiment=railway_traction/stf
+python lmetk/run.py experiment=railway_traction/tabpfn_no_target_context
+python lmetk/run.py experiment=railway_traction/tabpfn_railway_seasonal_context
+python lmetk/run.py experiment=railway_traction/timepfn
+python lmetk/run.py experiment=railway_traction/tabpfn_fit_predict
