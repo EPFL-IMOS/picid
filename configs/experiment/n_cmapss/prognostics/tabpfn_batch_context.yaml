@@ -2,7 +2,7 @@
 
 defaults:
   - n_cmapss/base
-  - /model_configs/prognostics/tabpfn_batchwise
+  - /model_configs/prognostics/tabpfn_batch_context
   - override /transforms: bearings/default_rul
   - override /dataset: prognostics/battery_rul_multiunit_dataset
 

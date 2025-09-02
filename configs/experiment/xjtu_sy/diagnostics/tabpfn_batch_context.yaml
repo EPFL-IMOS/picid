@@ -2,6 +2,6 @@
 
 defaults:
   - xjtu_sy/base
-  - /model_configs/diagnostics/tabpfn_batchwise
+  - /model_configs/diagnostics/tabpfn_batch_context
   - override /transforms: bearings/default_rul
   - override /dataset: prognostics/battery_rul_multiunit_dataset

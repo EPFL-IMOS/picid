@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss/base
-  - /model_configs/prognostics/tabpfn_batchwise
+  - /model_configs/prognostics/tabpfn_batch_context
   - override /transforms: concepts_n_cmapss/concepts_n_cmapss_multisource_extended

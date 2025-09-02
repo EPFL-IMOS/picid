@@ -131,14 +131,14 @@
             }
         },
         {
-            "name": "Concepts N-CMAPSS: TabPFN",
+            "name": "Concepts N-CMAPSS: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=concepts_n_cmapss/prognostics/tabpfn_batchwise",
+                "experiment=concepts_n_cmapss/prognostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -163,14 +163,14 @@
             }
         },
         {
-            "name": "NB1 Battery: TabPFN Batchwise",
+            "name": "NB1 Battery: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb1/prognostics/tabpfn_batchwise",
+                "experiment=nb1/prognostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -195,14 +195,14 @@
             }
         },
         {
-            "name": "NB14 Battery: TabPFN Batchwise",
+            "name": "NB14 Battery: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb14/prognostics/tabpfn_batchwise",
+                "experiment=nb14/prognostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -243,14 +243,14 @@
             }
         },
         {
-            "name": "XJTU_SY : TabPFN Batchwise",
+            "name": "XJTU_SY : TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/prognostics/tabpfn_batchwise",
+                "experiment=xjtu_sy/prognostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -275,14 +275,14 @@
             }
         },
         {
-            "name": "XJTU_SY diagnostics: TabPFN Batchwise",
+            "name": "XJTU_SY diagnostics: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/diagnostics/tabpfn_batchwise",
+                "experiment=xjtu_sy/diagnostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -291,14 +291,14 @@
             }
         },
         {
-            "name": "PHMD N-CMAPSS diagnostics: TabPFN Batchwise",
+            "name": "PHMD N-CMAPSS diagnostics: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=n_cmapss/prognostics/tabpfn_batchwise",
+                "experiment=n_cmapss/prognostics/tabpfn_batch_context",
                 "debug=default"
             ],
             "env": {
@@ -307,14 +307,30 @@
             }
         },
         {
-            "name": "Pronostia : TabPFN",
+            "name": "Pronostia : TabPFN Batch Context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=pronostia/prognostics/tabpfn",
+                "experiment=pronostia/prognostics/tabpfn_batch_context",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Pronostia : TabPFN Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=pronostia/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -332,6 +348,22 @@
                 "paths=rt_local",
                 "experiment=pubd16/prognostics/tabpfn",
                 "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "MOVi Dataset: STF",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=movi_spheres/stf",
+                // "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
