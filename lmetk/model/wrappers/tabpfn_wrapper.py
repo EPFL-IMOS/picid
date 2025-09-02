@@ -122,34 +122,3 @@ def generate_and_fit_polynomial(
         y_true_vals.append(y_true)
 
     return x_raw, y_vals, np.array(coeffs_and_errors), np.array(y_true_vals)
-
-
-# This forward is very slow, aboyt 1.5 hours for railway dataset
-# context_fit = batch['context']['x'].squeeze(0)
-# target_fit = batch['target']['x'].squeeze(0)
-
-# context = batch['context']['y'].squeeze(0)
-# target = batch['target']['y']
-# outputs = []
-# for idx in range(target.shape[1]):
-#     # Get the right context and target for the current index
-
-#     self.fit(context_fit[idx::24,:,], target_fit[idx::24,:,])
-#     # if self.aux_context==None:
-#     #     desired_fit_degree = 4
-#     #     _, _, context_aux, y_aux = generate_and_fit_polynomial(desired_fit_degree=desired_fit_degree)
-
-#     #     # Generate zeros
-#     #     context_aux = np.concatenate([np.zeros((context_aux.shape[0], context_fit.shape[1] - desired_fit_degree - 2)), context_aux], axis=1)
-#     #     self.aux_context = torch.Tensor(context_aux).to(batch['context']['x'].device)
-#     #     self.y_aux = torch.Tensor(y_aux.reshape(-1,1)).to(batch['context']['x'].device)
-
-
-#     # context_fit = torch.cat([self.aux_context, context_fit], dim=0)
-#     # target_fit = torch.cat([self.y_aux, target_fit], dim=0)
-
-
-#     output = self.backbone.predict(context[idx].unsqueeze(0).cpu())
-#     outputs.append(output.reshape(-1, 1))
-
-# outputs = np.concatenate(outputs, axis=0)
