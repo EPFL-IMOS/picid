@@ -41,6 +41,24 @@ multisource_data_splitter:
   sources_test: [test1, test2] #[test1, test2, test3, test4]
   sources_val: [val1] # TODO: why are there no val test sources in the original setup?
 
+# TODO:
+# Model performance depends a lot on the data set splits
+# Many papers use n_DS = 2 which has wierd units. (2,5,7 etc.)
+# most papers use DS 2 4 engines for train a 3 for test 2 for val.
+
+# Chi-ching took 3 datasets ds 1 4 7. Beacause each one has different fault types.
+# N-ds defines the fault type (high-pressure turbine, low-pressure turbine.)
+
+# he did only detection, at which cycle the fault occurs (Arthur has the dataset)
+# because RUL did not work well.
+# he took only the crusing part and does reconstruction error over entire cycle.
+
+# RUL is predicted per cycle
+
+# challenge is to map whole cycle into one value. (of varying length)
+# need to fiugre out cycle id
+
+# roughly several K data points per cycle
 
 _train_load_args: &train_args
   units: [1,2,3,4,5,6]

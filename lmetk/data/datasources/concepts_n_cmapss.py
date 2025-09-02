@@ -66,7 +66,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         logger.info(f"Using {RUL} RUL.")
         self.mode = load_arguments.mode
         self.n_DS = load_arguments.n_DS
-        self.units = load_arguments.units
+        self.selected_units = load_arguments.units
 
         self.RUL = RUL
         self.path = path
@@ -163,13 +163,13 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             self.df_Y = self.df_Y.loc[self.df_A["hs"] == 0]
             self.df_A = self.df_A.loc[self.df_A["hs"] == 0]
 
-        if self.units is not None:
+        if self.selected_units is not None:
             # select only unit data
-            self.df_W = self.df_W.loc[self.df_A["unit"].isin(self.units)]
-            self.df_T = self.df_T.loc[self.df_A["unit"].isin(self.units)]
-            self.df_X = self.df_X.loc[self.df_A["unit"].isin(self.units)]
-            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(self.units)]
-            self.df_A = self.df_A.loc[self.df_A["unit"].isin(self.units)]
+            self.df_W = self.df_W.loc[self.df_A["unit"].isin(self.selected_units)]
+            self.df_T = self.df_T.loc[self.df_A["unit"].isin(self.selected_units)]
+            self.df_X = self.df_X.loc[self.df_A["unit"].isin(self.selected_units)]
+            self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(self.selected_units)]
+            self.df_A = self.df_A.loc[self.df_A["unit"].isin(self.selected_units)]
 
         if self.subsampling_rate > 1:
             # subsample

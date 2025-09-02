@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds02/base
+  - /model_configs/prognostics/tabpfn_batch_context
+  - override /transforms: concepts_n_cmapss_ds02/default
