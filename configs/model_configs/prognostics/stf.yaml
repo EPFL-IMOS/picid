@@ -1,0 +1,23 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
+  - override /datamodule: base_datamodule_tabpfn
+  - override /model: stf
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  d_x: 6
+  d_x_embedding_router:  null
+  base_lr: 0.001
