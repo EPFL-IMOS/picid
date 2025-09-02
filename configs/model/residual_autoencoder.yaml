@@ -1,0 +1,22 @@
+_target_: lmetk.model.autoencoder.wrapper.AutoencoderWrapper
+
+input_channels: 3
+input_seq_len: 256
+latent_dim: 32
+dropout_prob: 0.1
+
+blocks_config:
+  - in: 3
+    out: 16
+    kernel: 7
+    stride: 2
+
+  - in: 16
+    out: 32
+    kernel: 5
+    stride: 2
+
+  - in: 32
+    out: 64
+    kernel: 3
+    stride: 2

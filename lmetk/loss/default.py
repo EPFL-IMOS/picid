@@ -47,7 +47,7 @@ class MSELoss(AbstractLoss):
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
-        targets = batch['targets']
+        targets = model_out['targets']
         
         loss = self.mse_loss(predictions, targets)
         
