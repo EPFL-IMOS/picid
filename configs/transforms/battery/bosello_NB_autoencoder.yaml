@@ -8,7 +8,7 @@ filter_features:
   metadata:
     apply_to: ${transforms.filter_features.transform.apply_to_key}
 
-
+# bug in the main that is requiring to have scaler_target for NB
 scaler_target:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
@@ -16,20 +16,3 @@ scaler_target:
   metadata:
     apply_to: features
     fit_on: train
-
-
-# AssignNaiveTimefeatures:
-#   transform:
-#     _target_:  lmetk.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
-    
-#   metadata:
-#     apply_to: features
-#     assign_to: time_features
-
-# scaler_target:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
-#   metadata:
-#     apply_to: target
-#     fit_on: train

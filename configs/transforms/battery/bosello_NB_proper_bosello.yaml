@@ -1,0 +1,51 @@
+# Keep only those feeatures that matters
+
+# ---Transforms that are identical to the bosello_NB_autoencoder: Start---
+filter_features:
+  transform:
+    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+    columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+    apply_to_key: features
+
+  metadata:
+    apply_to: ${transforms.filter_features.transform.apply_to_key}
+
+
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    
+  metadata:
+    apply_to: features
+    fit_on: train
+# ---Transforms that are identical to the bosello_NB_autoencoder: Finish---
+
+encoder_cycles:
+  transform:
+    _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+    target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
+    cycles_identifier: rul
+    battery_mode_state: mode 
+    checkpoint_path: bla 
+  
+  metadata:
+    apply_to: ['features', 'metadata']
+    assign_to: features
+    
+
+
+AssignNaiveTimefeatures:
+  transform:
+    _target_:  lmetk.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
+    
+  metadata:
+    apply_to: features
+    assign_to: time_features
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  
+  metadata:
+    apply_to: target
+    fit_on: train

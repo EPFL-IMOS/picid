@@ -31,6 +31,7 @@ from lmetk.pipeline.base import (
     FitPredictWrapperLightningModule,
     TrainingLightningModule
 )
+from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 from lmetk.utils.rich_output import display_targets, print_data_dict_structure
 from lmetk.utils_refactor import (
@@ -40,6 +41,7 @@ from lmetk.utils_refactor import (
     instantiate_callbacks,
     instantiate_loggers,
     task_wrapper,
+    log_hyperparameters,
 )
 
 
@@ -194,6 +196,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     log.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
+    # Check if there is ModelCheckpointWithConfig and is so, set the cfg to self.config
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpointWithConfig):
+            callback.config = cfg
+
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
@@ -260,6 +267,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             exp_name = get_hydra_override("experiment")
             cfg_to_wandb["exp_name"] = exp_name
             lgr.experiment.config.update(cfg_to_wandb)
+    
+    if logger:
+        log.info("Logging hyperparameters!")
+        log_hyperparameters({"cfg": cfg,  "trainer": trainer})
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")
