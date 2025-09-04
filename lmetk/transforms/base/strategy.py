@@ -98,12 +98,16 @@ class TransformStrategy:
                     )
                 ]
 
+            # At this point we have a list of transformed chunks that are either:
+            # - list of OrderedInput (if the user writes to the input)
+            # - list of np.ndarray
+            # - Directly an output object if the user initializes one.
+            # We need to standardize this into a list of SimpleReturnObject or NamedDictReturnObject
             transformed_chunks = self._postprocess_transformed_data(
                 transformed_chunks, metadata
             )
 
             # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
-
             # Mode 1: Assign results to a key defined by assign_to_keys
             for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
                 transformed_results_for_new_key[assign_to_key][split] = [
