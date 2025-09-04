@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 from numpy import ndarray
 
+from lmetk.data.data_objects.data import OrderedInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -17,18 +18,13 @@ class N_CMAPSSDescriptorsScaler(
         super().__init__()
         self.scaling = scaling
 
-    def fit_data(
-        self,
-        data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
-    ):
+    def fit_data(self, data: OrderedInput, metadata: Dict):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
 
-        data_segment = data_segment.descriptors
+        descriptors = data.descriptors
 
         scaling = self.scaling
         if scaling == "standard":
@@ -38,7 +34,7 @@ class N_CMAPSSDescriptorsScaler(
             W_std_1457 = np.array(
                 [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
             )
-            data_segment = (data_segment - W_mean_1457) / W_std_1457
+            descriptors = (descriptors - W_mean_1457) / W_std_1457
             # W = (W - W_mean_1457) / W_std_1457
 
         elif scaling == "min-max":
@@ -49,29 +45,22 @@ class N_CMAPSSDescriptorsScaler(
             W_max_1457 = np.array(
                 [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
             )
-            data_segment = (
-                2 * (data_segment - W_min_1457) / (W_max_1457 - W_min_1457) - 1
-            )
+            descriptors = 2 * (descriptors - W_min_1457) / (W_max_1457 - W_min_1457) - 1
             # W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
-        return data_segment
+        return descriptors
 
 
 class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
-    def fit_data(
-        self,
-        data_segment: ndarray,
-        mode: str,
-        auxiliary_data: Optional[Dict[str, Any]] = None,
-    ):
+    def fit_data(self, data: OrderedInput, metadata: Dict):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
 
-        data_segment = data_segment.features
+        features = data.features
 
         scaling = self.scaling
         if scaling == "standard":
@@ -113,7 +102,7 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
                     7.6335633e-01,
                 ]
             )
-            data_segment = (data_segment - X_mean_1457) / X_std_1457
+            features = (features - X_mean_1457) / X_std_1457
 
         elif scaling == "min-max":
             # min-max scaling in [-1, 1] range
@@ -154,8 +143,6 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
                     5.6173835e00,
                 ]
             )
-            data_segment = (
-                2 * (data_segment - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-            )
+            features = 2 * (features - X_min_1457) / (X_max_1457 - X_min_1457) - 1
             # X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-        return data_segment
+        return features

@@ -1,7 +1,7 @@
 import logging
 from typing import Any
-import numpy as np
 
+import numpy as np
 
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

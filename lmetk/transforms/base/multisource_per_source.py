@@ -4,8 +4,6 @@ from typing import Any, Dict, Optional
 import numpy as np
 from numpy import ndarray
 
-from lmetk.transforms.base.base_transform import BaseTransform
-
 
 class BaseMultiSourceUnitWiseTransformMixin(ABC):
     """
@@ -47,24 +45,3 @@ class BaseMultiSourceUnitWiseTransformMixin(ABC):
             self.transform_data(data_segment, metadata=metadata)
             for data_segment in data_segments
         ]
-
-
-class ConstantScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
-    def __init__(self, factor=1.0):
-        super().__init__()
-        self.factor = factor
-
-    def fit_data(
-        self,
-        data_segment: ndarray,
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        """This transform do not require fitting."""
-        return self
-
-    def transform_data(
-        self,
-        data_segment: ndarray,
-        metadata: Optional[Dict[str, Any]] = None,
-    ):
-        return data_segment * self.factor

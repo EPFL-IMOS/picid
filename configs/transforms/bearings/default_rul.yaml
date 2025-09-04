@@ -16,7 +16,6 @@ stfft:
 
   metadata:
     apply_to: ["target", "features"]
-    assign_to: ["target", "features"]
 
 scaler_features:
   transform:
