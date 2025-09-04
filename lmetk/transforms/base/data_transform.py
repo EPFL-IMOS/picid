@@ -106,7 +106,7 @@ class DataTransform:
 
         elif isinstance(assign_to, str):
             assign_to = [assign_to]
-            assign_to_map = [assign_to]
+            assign_to_map = assign_to
 
         elif is_sequence(assign_to):
             assign_to = assign_to
