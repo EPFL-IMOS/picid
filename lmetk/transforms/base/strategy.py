@@ -25,13 +25,13 @@ class TransformStrategy:
     def apply(
         self,
         transform_instance: Any,
-        data: "DatasetContainer",
+        data: DatasetContainer,
         apply_to_keys: str | List[str],
         assign_to_keys: str | List[str],
         assign_to_keys_map: str | List[str] = None,
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
-    ) -> "DatasetContainer":
+    ) -> DatasetContainer:
 
         if isinstance(apply_to_keys, str):
             apply_to_keys = [apply_to_keys]
@@ -109,26 +109,28 @@ class TransformStrategy:
                 transformed_results_for_new_key[assign_to_key][split] = [
                     chunk[assign_to_map] for chunk in transformed_chunks
                 ]
-                # if is_multi_unit:
-                # else:
-                #     assert len(transformed_chunks) == 1, "Expected single chunk for non-multi-unit data."
-                #     transformed_results_for_new_key[assign_to_key][split] = transformed_chunks[assign_to_map]
 
-        for assign_to_key, splits in transformed_results_for_new_key.items():
-            for split, data in splits.items():
+        self._merge_transformed_data(
+            base_data=transformed_data,
+            transformed_results=transformed_results_for_new_key,
+        )
+
+        return transformed_data
+
+    def _merge_transformed_data(self, base_data, transformed_results):
+        for assign_to_key, splits in transformed_results.items():
+            for split, _ in splits.items():
                 # Check whenever assign_to_key exist in transformed_data.keys()
-                if assign_to_key not in transformed_data:
-                    transformed_data[assign_to_key] = {
+                if assign_to_key not in base_data:
+                    base_data[assign_to_key] = {
                         "train": None,
                         "val": None,
                         "test": None,
                     }
 
-                transformed_data[assign_to_key][split] = (
-                    transformed_results_for_new_key[assign_to_key][split]
-                )
-
-        return transformed_data
+                base_data[assign_to_key][split] = transformed_results[assign_to_key][
+                    split
+                ]
 
     def _postprocess_transformed_data(self, data, metadata):
         """
