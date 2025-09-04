@@ -1,0 +1,35 @@
+# Keep only those feeatures that matters
+filter_features:
+  transform:
+    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+    columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+    apply_to_key: features
+
+  metadata:
+    apply_to: ${transforms.filter_features.transform.apply_to_key}
+
+
+scaler_target:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    
+  metadata:
+    apply_to: features
+    fit_on: train
+
+
+# AssignNaiveTimefeatures:
+#   transform:
+#     _target_:  lmetk.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
+    
+#   metadata:
+#     apply_to: features
+#     assign_to: time_features
+
+# scaler_target:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  
+#   metadata:
+#     apply_to: target
+#     fit_on: train

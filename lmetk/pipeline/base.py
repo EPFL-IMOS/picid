@@ -253,8 +253,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
     ----------
     backbone : torch.nn.Module
         The backbone model to train.
-    backbone_wrapper : torch.nn.Module
-        The backbone wrapper class.
     readout : torch.nn.Module
         The readout class.
     loss : torch.nn.Module
@@ -272,7 +270,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
     def __init__(
         self,
         backbone: torch.nn.Module,
-        # backbone_wrapper: torch.nn.Module,
         loss: torch.nn.Module,
         evaluators: dict[str, AbstractEvaluator],
         optimizer: Any = None,
@@ -399,8 +396,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
     ----------
     backbone : torch.nn.Module
         The backbone model to train.
-    backbone_wrapper : torch.nn.Module
-        The backbone wrapper class.
     readout : torch.nn.Module
         The readout class.
     loss : torch.nn.Module
@@ -633,3 +628,52 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
     def configure_optimizers(self):
         return None
+
+
+class TrainingLightningModule(BackboneWrapperLightningModule):
+
+    def __init__(self, backbone, loss, evaluators, optimizer, **kwargs):
+        super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
+    
+    # TODO: I should not rewrite the whole model_step
+    def model_step(self, batch, stage: str) -> dict:
+        """Perform a single model step on a batch of data.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch object containing the batched data.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
+        """
+
+        # Allow batch object to know the phase of the training
+        batch["model_state"] = stage
+        model_out = self.forward(batch)
+        model_out = self.loss(model_out=model_out, batch=batch)
+        model_out = self.process_outputs(model_out=model_out, batch=batch)
+        return model_out
+
+    def configure_optimizers(self) -> dict[str, Any]:
+        r"""Configure optimizers and learning-rate schedulers.
+
+        Choose what optimizers and learning-rate schedulers to use in your
+        optimization. Normally you'd need one. But in the case of GANs or
+        similar you might have multiple.
+
+        Examples:
+            https://lightning.ai/docs/pytorch/latest/common/lightning_module.html#configure-optimizers
+
+        Returns
+        -------
+        dict:
+            A dict containing the configured optimizers and learning-rate schedulers to be used for training.
+        """
+        optimizer_config = self.optimizer.configure_optimizer(
+            list(self.backbone.parameters())
+        )
+
+        return optimizer_config

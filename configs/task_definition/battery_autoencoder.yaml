@@ -1,0 +1,8 @@
+seq_len: 256 #168 # 7*24      # window size
+label_len: 0  # overlap size
+
+# Model parameters
+pred_len: 256 #168 #24    # prediction size
+
+
+requires_training: true

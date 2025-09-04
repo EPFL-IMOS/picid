@@ -24,10 +24,12 @@ from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
     AbstractFitPredictWrapper,
+    AbstractFeedForwardTrainingWrapper,
 )
 from lmetk.pipeline.base import (
     ConstantLossLightningModule,
     FitPredictWrapperLightningModule,
+    TrainingLightningModule
 )
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 from lmetk.utils.rich_output import display_targets, print_data_dict_structure
@@ -215,6 +217,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 evaluators=evaluators,
                 optimizer=optimizer,
             )
+        elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
+            model = TrainingLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,) 
+            
         elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
             model = FitPredictWrapperLightningModule(
                 backbone=backbone_wrapper,

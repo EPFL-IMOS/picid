@@ -59,10 +59,6 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         return out
 
-
-
-
-
 class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Replace the time features with a range from 0 to len(feature)
