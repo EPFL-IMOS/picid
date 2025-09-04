@@ -7,7 +7,7 @@ from typing import Any
 
 from omegaconf import DictConfig
 
-from lmetk.utils_refactor import pylogger, rich_utils
+from lmetk.utils import pylogger, rich_utils
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 

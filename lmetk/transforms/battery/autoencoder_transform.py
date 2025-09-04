@@ -1,95 +1,170 @@
+import logging
+from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Dict
 
-import pandas as pd
-import numpy as np
+import hydra
+import omegaconf
+import torch
 from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin, NoFitMultiSourceTransformMixin
-from lmetk.transforms.battery.utils import get_mode_change_right_indices
+from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from omegaconf import DictConfig
 
+# Set up a logger for better feedback
+logger = logging.getLogger(__name__)
 
 class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
     """
-    Compress cycles to the mean/std representations of the cycles for NB1 dataset
+    Compresses battery cycle data into a mean/std representation using a pre-trained Autoencoder.
     """
 
-    def __init__(
-        self,
-        target_name: str,
-        battery_mode_state: str = None,
-        cycles_identifier: str = None,
-    ):
-        self.target_name = target_name
-        self.mode_col = battery_mode_state
-        self.cycles_col = cycles_identifier
+    def __init__(self, folder_name: str):
+        """
+        Initializes the transform by loading the model configuration and weights.
 
-    def fit_data(
-        self,
-        data_segment: Any,
-        metadata: Dict,
-    ):
+        Args:
+            folder_name: The path to the experiment folder containing the model checkpoint
+                         and configuration file.
+        """
+        super().__init__()
+        experiment_dir = Path(folder_name)
+        if not experiment_dir.is_dir():
+            raise FileNotFoundError(f"Experiment directory not found at: {experiment_dir}")
 
+        self._model = self._load_model(experiment_dir)
+        self._model.eval()  # Set model to evaluation mode
+
+    def _load_model(self, experiment_dir: Path) -> torch.nn.Module:
+        """Loads the model from the specified experiment directory."""
+        config_path = self._find_config_file(experiment_dir)
+        cfg = omegaconf.OmegaConf.load(config_path)
+
+        model = hydra.utils.instantiate(cfg.model)
+
+        checkpoint_path = self._find_checkpoint_file(experiment_dir)
+        state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=False)['state_dict']
+        
+        # Correct the keys in the state_dict if necessary
+        corrected_state_dict = self._correct_state_dict_keys(state_dict)
+        model.load_state_dict(corrected_state_dict)
+        
+        logger.info(f"Successfully loaded model from {checkpoint_path}")
+        return model
+
+    @staticmethod
+    def _find_checkpoint_file(experiment_dir: Path) -> Path:
+        """Finds the unique .ckpt file in the checkpoints subdirectory."""
+        checkpoint_dir = experiment_dir / "checkpoints"
+        if not checkpoint_dir.is_dir():
+            raise FileNotFoundError(f"Checkpoint directory not found in {experiment_dir}")
+
+        try:
+            # Use a generator expression and next() for an efficient single-item search
+            checkpoint_path = next(checkpoint_dir.glob("*.ckpt"))
+        except StopIteration:
+            raise FileNotFoundError(f"No .ckpt files found in {checkpoint_dir}") from None
+
+        # Ensure no other checkpoints exist
+        if list(checkpoint_dir.glob("*.ckpt"))[1:]:
+             logger.warning(f"Multiple checkpoints found in {checkpoint_dir}. Using {checkpoint_path}.")
+
+        return checkpoint_path
+
+    @staticmethod
+    def _find_config_file(experiment_dir: Path) -> Path:
+        """Finds the config.yaml file, excluding .hydra directories."""
+        # This searches for 'config.yaml' in all subdirectories of experiment_dir
+        for config_path in experiment_dir.rglob("config.yaml"):
+            # Ensure the config is inside a .hydra metadata folder
+            if ".hydra" in config_path.parts:
+                return config_path
+        
+        raise FileNotFoundError(f"config.yaml not found in {experiment_dir} (excluding .hydra directories)")
+    
+    @staticmethod
+    def _correct_state_dict_keys(state_dict: Dict[str, Any]) -> OrderedDict:
+        """Removes an extraneous 'backbone.' prefix from state_dict keys."""
+        new_state_dict = OrderedDict()
+        for key, value in state_dict.items():
+            # Use removeprefix for a clean and explicit operation
+            new_key = key.removeprefix('backbone.')
+            new_state_dict[new_key] = value
+        return new_state_dict
+
+    def fit_data(self, data_segment: Any, metadata: Dict):
+        """This transform does not require fitting."""
         pass
 
     def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
-        """Transforms a single data segment using the internal ."""
+        """
+        Transforms a single data segment using the loaded autoencoder model.
+        
+        Note: The implementation for data transformation needs to be added here.
+        """
+        # Example of how you might use the model:
+        # with torch.no_grad():
+        #     tensor_input = self._preprocess(data_segment_obj)
+        #     compressed_representation = self._model.encoder(tensor_input)
+        #     return compressed_representation
+        raise NotImplementedError("The transform_data method has not been implemented yet.")
 
-        data_segment = data_segment_obj["features"]
+        # data_segment = data_segment_obj["features"]
 
-        # Based on the rul column extract the stat
-        target_col = self.target_name
+        # # Based on the rul column extract the stat
+        # target_col = self.target_name
 
-        cycles_column = data_segment[self.cycles_col].values
-        boundaries = get_mode_change_right_indices(cycles_column)
+        # cycles_column = data_segment[self.cycles_col].values
+        # boundaries = get_mode_change_right_indices(cycles_column)
 
-        # Get the feature columns
-        feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
+        # # Get the feature columns
+        # feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
 
-        # Prevent mode columns to be in the features_columns
-        mode_is_present = False
-        if self.mode_col is not None and self.mode_col in feature_columns:
-            feature_columns.remove(self.mode_col)
-            mode_is_present = True
+        # # Prevent mode columns to be in the features_columns
+        # mode_is_present = False
+        # if self.mode_col is not None and self.mode_col in feature_columns:
+        #     feature_columns.remove(self.mode_col)
+        #     mode_is_present = True
 
-        # Prevent cycles columns to be in the features_columns
-        cycles_is_present = False
+        # # Prevent cycles columns to be in the features_columns
+        # cycles_is_present = False
 
-        if self.cycles_col is not None and self.cycles_col in data_segment.columns:
-            if self.cycles_col in feature_columns:
-                feature_columns.remove(self.cycles_col)
-            cycles_is_present = True
+        # if self.cycles_col is not None and self.cycles_col in data_segment.columns:
+        #     if self.cycles_col in feature_columns:
+        #         feature_columns.remove(self.cycles_col)
+        #     cycles_is_present = True
 
-        # Ensure there is no leakage of target data
-        if target_col in feature_columns:
-            feature_columns.remove(target_col)
+        # # Ensure there is no leakage of target data
+        # if target_col in feature_columns:
+        #     feature_columns.remove(target_col)
 
-        stats_list = []
-        for i in range(len(boundaries)):
-            start = 0 if i == 0 else boundaries[i - 1]
-            end = boundaries[i]
-            segment = data_segment.iloc[start:end]
+        # stats_list = []
+        # for i in range(len(boundaries)):
+        #     start = 0 if i == 0 else boundaries[i - 1]
+        #     end = boundaries[i]
+        #     segment = data_segment.iloc[start:end]
 
-            assert (
-                len(segment[target_col].unique()) == 1
-            ), "Rul should be the same within a segment"
-            stats = {target_col: segment[target_col].iloc[0]}
+        #     assert (
+        #         len(segment[target_col].unique()) == 1
+        #     ), "Rul should be the same within a segment"
+        #     stats = {target_col: segment[target_col].iloc[0]}
 
-            if mode_is_present:
-                assert (
-                    len(segment["mode"].unique()) == 1
-                ), "Mode should be the same within a segment"
-                stats["mode"] = segment[self.mode_col].iloc[0]
-            if cycles_is_present:
-                assert (
-                    len(segment[self.cycles_col].unique()) == 1
-                ), "Cycles should be the same within a segment"
-                stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
+        #     if mode_is_present:
+        #         assert (
+        #             len(segment["mode"].unique()) == 1
+        #         ), "Mode should be the same within a segment"
+        #         stats["mode"] = segment[self.mode_col].iloc[0]
+        #     if cycles_is_present:
+        #         assert (
+        #             len(segment[self.cycles_col].unique()) == 1
+        #         ), "Cycles should be the same within a segment"
+        #         stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
 
-            for feature in feature_columns:
-                stats[f"{feature}_mean"] = segment[feature].mean()
-                stats[f"{feature}_var"] = segment[feature].var()
+        #     for feature in feature_columns:
+        #         stats[f"{feature}_mean"] = segment[feature].mean()
+        #         stats[f"{feature}_var"] = segment[feature].var()
 
-            stats_list.append(stats)
+        #     stats_list.append(stats)
 
-        data_segment = pd.DataFrame(stats_list)
+        # data_segment = pd.DataFrame(stats_list)
 
-        return data_segment
+        # return data_segment

@@ -23,10 +23,11 @@ scaler_features:
 encoder_cycles:
   transform:
     _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
-    target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
-    cycles_identifier: rul
-    battery_mode_state: mode 
-    checkpoint_path: bla 
+    folder_name: ${paths.root_dir}/logs/train/runs/2025-09-04_01-58-31
+    # target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
+    # cycles_identifier: rul
+    # battery_mode_state: mode 
+    # checkpoint_path: bla 
   
   metadata:
     apply_to: ['features', 'metadata']

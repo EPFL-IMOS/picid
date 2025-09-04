@@ -4,10 +4,19 @@ from typing import Any
 
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import OmegaConf
-
-from lmetk.utils_refactor import pylogger
+from hydra.core.hydra_config import HydraConfig
+from lmetk.utils import pylogger
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+
+
+def get_hydra_override(key: str):
+    if not HydraConfig.initialized():
+        return None
+    for override in HydraConfig.get().overrides.task:
+        if override.startswith(f"{key}="):
+            return override.split("=", 1)[1]
+    return None
 
 
 @rank_zero_only
@@ -28,7 +37,10 @@ def log_hyperparameters(object_dict: dict[str, Any]) -> None:
     hparams = {}
 
     cfg = OmegaConf.to_container(object_dict["cfg"], resolve=True)
-    #model = object_dict["model"]
+    exp_name = get_hydra_override("experiment")
+    cfg["exp_name"] = exp_name
+    # lgr.experiment.config.update(cfg)
+    # model = object_dict["model"]
     trainer = object_dict["trainer"]
 
     if not trainer.logger:

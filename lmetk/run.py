@@ -10,7 +10,7 @@ import hydra
 import lightning as L
 import numpy as np
 import torch
-from hydra.core.hydra_config import HydraConfig
+
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
@@ -33,8 +33,8 @@ from lmetk.pipeline.base import (
 )
 from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.utils.rich_output import display_targets, print_data_dict_structure
-from lmetk.utils_refactor import (
+#from lmetk.utils.rich_output import display_targets, print_data_dict_structure
+from lmetk.utils import (
     RankedLogger,
     extras,
     get_metric_value,
@@ -42,16 +42,10 @@ from lmetk.utils_refactor import (
     instantiate_loggers,
     task_wrapper,
     log_hyperparameters,
+    display_targets, 
+    print_data_dict_structure
 )
 
-
-def get_hydra_override(key: str):
-    if not HydraConfig.initialized():
-        return None
-    for override in HydraConfig.get().overrides.task:
-        if override.startswith(f"{key}="):
-            return override.split("=", 1)[1]
-    return None
 
 
 def initialize_hydra() -> DictConfig:
@@ -255,18 +249,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
+    # TODO: Do we need this? log_hyperparameters already should be logging cfg to wandb
     # has to happen after trainer is instantiated
-    for lgr in logger:
-        if isinstance(lgr, WandbLogger):
-            cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
-            cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
-                # cannot resolve because not all interpolations are covered by us for now
-                HydraConfig.get(),
-                resolve=False,
-            )
-            exp_name = get_hydra_override("experiment")
-            cfg_to_wandb["exp_name"] = exp_name
-            lgr.experiment.config.update(cfg_to_wandb)
+    # for lgr in logger:
+    #     if isinstance(lgr, WandbLogger):
+    #         cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
+    #         cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+    #             # cannot resolve because not all interpolations are covered by us for now
+    #             HydraConfig.get(),
+    #             resolve=False,
+    #         )
+    #         exp_name = get_hydra_override("experiment")
+    #         cfg_to_wandb["exp_name"] = exp_name
+    #         lgr.experiment.config.update(cfg_to_wandb)
     
     if logger:
         log.info("Logging hyperparameters!")
