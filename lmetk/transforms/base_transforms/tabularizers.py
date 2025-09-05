@@ -160,9 +160,9 @@ class TimeseriesTabularizer(BaseTransform, ConcatinatedFitMultiSourceTransformMi
             if selection == "t":
                 feature_data[key] = rearrange(feature_data[key], "b t ... -> t b ...")
             elif selection == "history":
-                feature_data[key] = rearrange(feature_data[key], "b h 1 -> 1 b h")
+                feature_data[key] = rearrange(feature_data[key], "b h f -> 1 b (h f)")
             elif selection == "horizon":
-                feature_data[key] = rearrange(feature_data[key], "b t 1 -> t b 1")
+                feature_data[key] = rearrange(feature_data[key], "b t f -> t b f")
 
         n_tasks = set([values.shape[0] for key, values in feature_data.items()])
 

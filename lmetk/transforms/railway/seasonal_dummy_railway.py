@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
+from lmetk.data.data_objects.data import OrderedInput
 from lmetk.transforms.base.base_transform import BaseTransform
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class SeasonalDummyTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(shift={self.shift!r}, seq_len={self.seq_len!r}, {args})"
 
-    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
         """
         Transform data by adding shifted target values and seasonal statistics.
         All seasonal history management happens here.
@@ -41,15 +42,20 @@ class SeasonalDummyTransform(BaseTransform):
         Returns:
             Concatenated data with shifted targets and seasonal statistics
         """
+        data_segment = data
+
         # Validate inputs
         if "target" not in data_segment:
-            raise ValueError("data_segment must contain 'target' key to make the hist. features.")
+            raise ValueError(
+                "data_segment must contain 'target' key to make the hist. features."
+            )
         target = data_segment["target"]
-        
+
         if "features" not in data_segment:
-            raise ValueError("data_segment must contain 'features' key to make the hist. features.")    
+            raise ValueError(
+                "data_segment must contain 'features' key to make the hist. features."
+            )
         features = data_segment["features"]
-        
 
         if not isinstance(target, np.ndarray):
             target = np.array(target)
@@ -76,7 +82,9 @@ class SeasonalDummyTransform(BaseTransform):
         )
 
         # Calculate seasonal statistics and update history
-        seasonal_stats = self._calculate_seasonal_stats_vectorized(dummy_leak, metadata['mode'])
+        seasonal_stats = self._calculate_seasonal_stats_vectorized(
+            dummy_leak, metadata["mode"]
+        )
 
         # Concatenate all features
         result = np.concatenate(
@@ -156,14 +164,16 @@ class SeasonalDummyTransform(BaseTransform):
         # Update seasonal history
         self._update_seasonal_history(shifted_target, mode)
         # seasonal_trend
-        
+
         # Check if there are any NaNs in seasonal_mean or seasonal_std, fill with 0 and log a warning
         if np.isnan(seasonal_mean).any() or np.isnan(seasonal_std).any():
 
-            logger.warning(f"NaNs detected in seasonal statistics. Filling NaNs with 0. Num. NaNs {np.isnan(seasonal_mean).sum()} for seasonal_mean")
+            logger.warning(
+                f"NaNs detected in seasonal statistics. Filling NaNs with 0. Num. NaNs {np.isnan(seasonal_mean).sum()} for seasonal_mean"
+            )
             seasonal_mean = np.nan_to_num(seasonal_mean, nan=0.0)
             seasonal_std = np.nan_to_num(seasonal_std, nan=0.0)
-            
+
         return [seasonal_mean, seasonal_std]
 
     def _update_seasonal_history(self, shifted_target: np.ndarray, mode: str):
