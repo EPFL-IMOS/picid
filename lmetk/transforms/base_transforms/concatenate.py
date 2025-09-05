@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
@@ -63,7 +64,7 @@ class ConcatenateTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMix
             if np.any(np.isnan(arr)):
                 raise ValueError(f"NaN values found in array '{key}'")
 
-    def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Concatenate all data arrays horizontally.
 

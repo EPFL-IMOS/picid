@@ -5,7 +5,7 @@ import copy
 import numpy as np
 from numpy import ndarray
 
-from lmetk.data.data_objects.data import DatasetContainer, OrderedInput
+from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
 
     def transform_multi_source(
         self,
-        data_segments: list[OrderedInput],
+        data_segments: list[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> list[ndarray]:
         """
@@ -66,7 +66,9 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Construct current data segment from each source
         for data_segment in data_segments:
             # Transform the current data segment
-            out.append(self.transform_data(data_segment, metadata=copy.deepcopy(metadata)))
+            out.append(
+                self.transform_data(data_segment, metadata=copy.deepcopy(metadata))
+            )
 
         return out
 

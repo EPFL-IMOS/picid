@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import copy
-import warnings
 import logging
-from typing import Any, List, Optional, Dict
+import warnings
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -135,7 +138,7 @@ class DataChunk(BaseDataObject):
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
 
-class OrderedInput(BaseDataObject):
+class NamedTransformInput(BaseDataObject):
     """
     A data object that holds inputs for a transformation and can sanitize them.
     It includes methods for converting its contents to NumPy or DataFrame formats.
@@ -150,7 +153,7 @@ class OrderedInput(BaseDataObject):
         warn_only: bool = False,
         size_threshold: int = 1_000_000,
         return_copy: bool = False,
-    ) -> "OrderedInput":
+    ) -> NamedTransformInput:
         """
         Performs validation, extracts column metadata, and converts data to NumPy arrays.
         """
@@ -218,6 +221,13 @@ class OrderedInput(BaseDataObject):
         # It safely checks for metadata, which may or may not exist on an OrderedInput
         columns = self.get("metadata", {}).get("column_map", {}).get(key)
         return pd.DataFrame(array_data, columns=columns)
+
+
+"""
+# --- Return Object Types ---
+We provide several specialized return object types to standardize outputs from transformations.
+However, we had no time to implement them fully, so they currently do not add functionality beyond BaseDataObject.
+"""
 
 
 class SimpleReturnObject(BaseDataObject):
@@ -371,11 +381,12 @@ class SplitDatasetContainer(DatasetContainer):
             if isinstance(splits_data, dict):
                 for split, unit_list in splits_data.items():
                     if not self.is_multi_unit:
-                        assert len(unit_list) == 1, "The number of units is greater than 1, although the data is set to be not multi_unit"
+                        assert (
+                            len(unit_list) == 1
+                        ), "The number of units is greater than 1, although the data is set to be not multi_unit"
                         split_dict[split][data_key] = unit_list[0]
-                    else:    
+                    else:
                         split_dict[split][data_key] = unit_list
-
 
         return split_dict
 
@@ -418,6 +429,6 @@ class SplitDatasetContainer(DatasetContainer):
                 if unit_data:
                     grouped_dict[split].append(DataChunk(**unit_data))
         return grouped_dict
-    
+
     def __repr__(self):
         return "MOVi dataset bug fix"

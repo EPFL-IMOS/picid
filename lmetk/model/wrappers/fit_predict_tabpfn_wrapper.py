@@ -18,7 +18,13 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
     This wrapper defines the forward pass of the TimePFN model.
     """
 
-    def __init__(self, model_cache_path: str = None, **kwargs):
+    def __init__(
+        self,
+        model_cache_path: str = None,
+        yield_strategy: bool = False,
+        yield_batch_size: int = 128,
+        **kwargs,
+    ):
         backbone = TabPFNRegressor(
             ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
             random_state=42,
@@ -26,7 +32,13 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         )
 
         self.model_cache_path = model_cache_path
-        super().__init__(backbone=backbone, **kwargs)
+
+        super().__init__(
+            backbone=backbone,
+            yield_strategy=yield_strategy,
+            yield_batch_size=yield_batch_size,
+            **kwargs,
+        )
 
     def serialize_model(self, task_id: str | None = None):
         """Serialize the model to a file.

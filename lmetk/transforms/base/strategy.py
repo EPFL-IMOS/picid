@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 import copy
 from lmetk.data.data_objects.data import (
     DatasetContainer,
-    OrderedInput,
+    NamedTransformInput,
     SimpleReturnObject,
     NamedDictReturnObject,
 )
@@ -25,13 +25,13 @@ class TransformStrategy:
     def apply(
         self,
         transform_instance: Any,
-        data: "DatasetContainer",
+        data: DatasetContainer,
         apply_to_keys: str | List[str],
         assign_to_keys: str | List[str],
         assign_to_keys_map: str | List[str] = None,
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
-    ) -> "DatasetContainer":
+    ) -> DatasetContainer:
 
         if isinstance(apply_to_keys, str):
             apply_to_keys = [apply_to_keys]
@@ -98,37 +98,43 @@ class TransformStrategy:
                     )
                 ]
 
+            # At this point we have a list of transformed chunks that are either:
+            # - list of OrderedInput (if the user writes to the input)
+            # - list of np.ndarray
+            # - Directly an output object if the user initializes one.
+            # We need to standardize this into a list of SimpleReturnObject or NamedDictReturnObject
             transformed_chunks = self._postprocess_transformed_data(
                 transformed_chunks, metadata
             )
 
             # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
-
             # Mode 1: Assign results to a key defined by assign_to_keys
             for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
                 transformed_results_for_new_key[assign_to_key][split] = [
                     chunk[assign_to_map] for chunk in transformed_chunks
                 ]
-                # if is_multi_unit:
-                # else:
-                #     assert len(transformed_chunks) == 1, "Expected single chunk for non-multi-unit data."
-                #     transformed_results_for_new_key[assign_to_key][split] = transformed_chunks[assign_to_map]
 
-        for assign_to_key, splits in transformed_results_for_new_key.items():
-            for split, data in splits.items():
+        self._merge_transformed_data(
+            base_data=transformed_data,
+            transformed_results=transformed_results_for_new_key,
+        )
+
+        return transformed_data
+
+    def _merge_transformed_data(self, base_data, transformed_results):
+        for assign_to_key, splits in transformed_results.items():
+            for split, _ in splits.items():
                 # Check whenever assign_to_key exist in transformed_data.keys()
-                if assign_to_key not in transformed_data:
-                    transformed_data[assign_to_key] = {
+                if assign_to_key not in base_data:
+                    base_data[assign_to_key] = {
                         "train": None,
                         "val": None,
                         "test": None,
                     }
 
-                transformed_data[assign_to_key][split] = (
-                    transformed_results_for_new_key[assign_to_key][split]
-                )
-
-        return transformed_data
+                base_data[assign_to_key][split] = transformed_results[assign_to_key][
+                    split
+                ]
 
     def _postprocess_transformed_data(self, data, metadata):
         """
@@ -168,7 +174,7 @@ class TransformStrategy:
 
     def _prepare_chunks_for_split(
         self, data_to_prepare: Dict, split: str, is_multi_unit: bool
-    ) -> List["OrderedInput"]:
+    ) -> List["NamedTransformInput"]:
 
         keys = list(data_to_prepare.keys())
 
@@ -188,5 +194,5 @@ class TransformStrategy:
                 for key in keys
                 if split in data_to_prepare[key]
             }
-            chunks.append(OrderedInput(**unit_data).get_sanitized_data())
+            chunks.append(NamedTransformInput(**unit_data).get_sanitized_data())
         return chunks
