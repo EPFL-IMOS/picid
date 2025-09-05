@@ -1,13 +1,19 @@
 from typing import Any, Dict, Optional
 
+import awkward as ak
 import numpy as np
 from numpy import ndarray
+
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
+
+
+def ak_bc(arr):
+    return ak.Array(arr[np.newaxis, np.newaxis, :])
 
 
 class N_CMAPSSDescriptorsScaler(
@@ -34,7 +40,11 @@ class N_CMAPSSDescriptorsScaler(
             W_std_1457 = np.array(
                 [8.1254497e03, 1.2108228e-01, 1.8272049e01, 1.9934254e01]
             )
-            descriptors = (descriptors - W_mean_1457) / W_std_1457
+
+            if isinstance(descriptors, np.ndarray):
+                descriptors = (descriptors - W_mean_1457) / W_std_1457
+            elif isinstance(descriptors, ak.Array):
+                descriptors = (descriptors - ak_bc(W_mean_1457)) / ak_bc(W_std_1457)
             # W = (W - W_mean_1457) / W_std_1457
 
         elif scaling == "min-max":
@@ -45,7 +55,18 @@ class N_CMAPSSDescriptorsScaler(
             W_max_1457 = np.array(
                 [3.5011000e04, 7.3987198e-01, 8.7362656e01, 5.2488281e02]
             )
-            descriptors = 2 * (descriptors - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+
+            if isinstance(descriptors, np.ndarray):
+                descriptors = (
+                    2 * (descriptors - W_min_1457) / (W_max_1457 - W_min_1457) - 1
+                )
+            elif isinstance(descriptors, ak.Array):
+                descriptors = (
+                    2
+                    * (descriptors - ak_bc(W_min_1457))
+                    / (ak_bc(W_max_1457) - ak_bc(W_min_1457))
+                    - 1
+                )
             # W = 2 * (W - W_min_1457) / (W_max_1457 - W_min_1457) - 1
         return descriptors
 
@@ -102,7 +123,11 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
                     7.6335633e-01,
                 ]
             )
-            features = (features - X_mean_1457) / X_std_1457
+
+            if isinstance(features, np.ndarray):
+                features = (features - X_mean_1457) / X_std_1457
+            elif isinstance(features, ak.Array):
+                features = (features - ak_bc(X_mean_1457)) / ak_bc(X_std_1457)
 
         elif scaling == "min-max":
             # min-max scaling in [-1, 1] range
@@ -143,6 +168,14 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
                     5.6173835e00,
                 ]
             )
-            features = 2 * (features - X_min_1457) / (X_max_1457 - X_min_1457) - 1
-            # X = 2 * (X - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+
+            if isinstance(features, np.ndarray):
+                features = 2 * (features - X_min_1457) / (X_max_1457 - X_min_1457) - 1
+            elif isinstance(features, ak.Array):
+                features = (
+                    2
+                    * (features - ak_bc(X_min_1457))
+                    / (ak_bc(X_max_1457) - ak_bc(X_min_1457))
+                    - 1
+                )
         return features
