@@ -7,8 +7,11 @@ from typing import Any
 import h5py
 import numpy as np
 import pandas as pd
+import awkward as ak
+import pyarrow as pa
 
 from lmetk.data.datasources import SingleSourceLoader
+from lmetk.utils.awkward_utils import ak_unflatten_discontinous_groups
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +58,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         window_size: int = 50,
         stride: int = 1,
         scaling: str = "legacy",
+        group_by_unit: bool = False,
         **kwargs: Any,
     ):
 
@@ -79,6 +83,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         self.binary_concepts = binary_concepts
         self.combined_concepts = combined_concepts
         self.scaling = scaling
+        self.group_by_unit = group_by_unit
 
         super().__init__(**kwargs)
 
@@ -255,7 +260,9 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         logger.info(f"Used concepts: {self.concepts.columns}")
         self.concepts = self.concepts.astype(int)
 
-        return {
+        # ak.from_arrow(pa.Table.from_pandas(self.df_X))
+
+        outs = {
             "features": self.df_X.values,  # sensor data measurements
             "timestamps": self.df_X.index.values.reshape(-1, 1),  # cycle numbers
             "health_states": self.df_A["hs"].values,
@@ -266,3 +273,13 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             # degradation=self.df_T.values, # degradation resp. concepts
             # auxiliary_data=self.df_A.values, # aux data: 'unit', 'cycle', 'Fc', 'hs'
         }
+
+        if self.group_by_unit:
+            outs_ak = {k: ak.from_numpy(v) for k, v in outs.items()}
+            outs_ak = {
+                k: ak_unflatten_discontinous_groups(v, outs["unit"])
+                for k, v in outs_ak.items()
+            }
+            return outs_ak
+        else:
+            return outs
