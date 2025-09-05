@@ -10,7 +10,7 @@ import omegaconf
 # Import your strategy and base transform classes
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.strategy import TransformStrategy
-from lmetk.data.data_objects.data import OrderedInput, SplitDatasetContainer
+from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 
 from collections.abc import Mapping, Sequence
 from collections import OrderedDict
@@ -195,7 +195,7 @@ class DataTransform:
         is_kwargs_apply_to = self.apply_to_map is not None
         # define all acceptable signatures as lists of (param_name, expected_type)
         allowed_param_sets = [
-            [("data", OrderedInput), ("metadata", dict)],
+            [("data", NamedTransformInput), ("metadata", dict)],
             [("data", Any), ("metadata", dict)],
             # add more variants here
         ]

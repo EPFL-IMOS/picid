@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 import copy
 from lmetk.data.data_objects.data import (
     DatasetContainer,
-    OrderedInput,
+    NamedTransformInput,
     SimpleReturnObject,
     NamedDictReturnObject,
 )
@@ -174,7 +174,7 @@ class TransformStrategy:
 
     def _prepare_chunks_for_split(
         self, data_to_prepare: Dict, split: str, is_multi_unit: bool
-    ) -> List["OrderedInput"]:
+    ) -> List["NamedTransformInput"]:
 
         keys = list(data_to_prepare.keys())
 
@@ -194,5 +194,5 @@ class TransformStrategy:
                 for key in keys
                 if split in data_to_prepare[key]
             }
-            chunks.append(OrderedInput(**unit_data).get_sanitized_data())
+            chunks.append(NamedTransformInput(**unit_data).get_sanitized_data())
         return chunks

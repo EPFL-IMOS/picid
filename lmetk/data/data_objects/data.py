@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import copy
-import warnings
 import logging
-from typing import Any, List, Optional, Dict
+import warnings
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -135,7 +138,7 @@ class DataChunk(BaseDataObject):
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
 
-class OrderedInput(BaseDataObject):
+class NamedTransformInput(BaseDataObject):
     """
     A data object that holds inputs for a transformation and can sanitize them.
     It includes methods for converting its contents to NumPy or DataFrame formats.
@@ -150,7 +153,7 @@ class OrderedInput(BaseDataObject):
         warn_only: bool = False,
         size_threshold: int = 1_000_000,
         return_copy: bool = False,
-    ) -> "OrderedInput":
+    ) -> NamedTransformInput:
         """
         Performs validation, extracts column metadata, and converts data to NumPy arrays.
         """

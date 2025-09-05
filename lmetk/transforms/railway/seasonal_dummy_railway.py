@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class SeasonalDummyTransform(BaseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(shift={self.shift!r}, seq_len={self.seq_len!r}, {args})"
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         """
         Transform data by adding shifted target values and seasonal statistics.
         All seasonal history management happens here.

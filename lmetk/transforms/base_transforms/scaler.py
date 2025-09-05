@@ -3,7 +3,7 @@ from typing import Any
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_to_numpy
@@ -16,13 +16,13 @@ class ConstantScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         super().__init__()
         self.factor = factor
 
-    def fit_data(self, data: OrderedInput, metadata: dict):
+    def fit_data(self, data: NamedTransformInput, metadata: dict):
         """This transform do not require fitting."""
         return self
 
     def transform_data(
         self,
-        data: OrderedInput,
+        data: NamedTransformInput,
         metadata: dict,
     ):
         assert len(data) == 1, "ConstantScaler only supports single key data_segment."
@@ -41,7 +41,7 @@ class MinMaxScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMixi
     def __init__(self):
         self.scaler = MinMaxScaler()
 
-    def fit_data(self, data: OrderedInput, metadata: dict):
+    def fit_data(self, data: NamedTransformInput, metadata: dict):
         """Fits the internal MinMaxScaler on a single NumPy array."""
         keys = list(data.keys())
         assert (
@@ -58,7 +58,7 @@ class MinMaxScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMixi
 
     def transform_data(
         self,
-        data: OrderedInput,
+        data: NamedTransformInput,
         metadata: dict,
     ) -> Any:
         """Transforms a single data segment using the internal MinMaxScaler."""
@@ -87,7 +87,7 @@ class StandardScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMi
     def __init__(self):
         self.scaler = StandardScaler()
 
-    def fit_data(self, data: OrderedInput, metadata: dict):
+    def fit_data(self, data: NamedTransformInput, metadata: dict):
         """Fits the internal StandardScaler on a single NumPy array."""
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
@@ -100,7 +100,7 @@ class StandardScalerSklearn(BaseTransform, ConcatinatedFitMultiSourceTransformMi
 
         self.scaler.fit(np_data)
 
-    def transform_data(self, data: OrderedInput, metadata: dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
         """Transforms a single data segment using the internal StandardScaler."""
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."

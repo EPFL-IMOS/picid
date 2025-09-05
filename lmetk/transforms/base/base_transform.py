@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 
 
 class BaseTransform(ABC):
@@ -15,7 +15,9 @@ class BaseTransform(ABC):
         self._init_kwargs = kwargs
 
     @abstractmethod
-    def transform_data(self, data: OrderedInput, metadata: Dict[str, Any]) -> Any:
+    def transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> Any:
         """
         Transform a single data segment.
 
@@ -28,7 +30,7 @@ class BaseTransform(ABC):
         """
         pass
 
-    def fit_data(self, data: OrderedInput, metadata: Dict[str, Any]) -> Any:
+    def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
         """
         Fit the transform on data. Default implementation does nothing (for stateless transforms).
         Override this method for transforms that need fitting.

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 from numpy import ndarray
 
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -18,11 +18,11 @@ class N_CMAPSSDescriptorsScaler(
         super().__init__()
         self.scaling = scaling
 
-    def fit_data(self, data: OrderedInput, metadata: Dict):
+    def fit_data(self, data: NamedTransformInput, metadata: Dict):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
         descriptors = data.descriptors
 
@@ -54,11 +54,11 @@ class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformM
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
-    def fit_data(self, data: OrderedInput, metadata: Dict):
+    def fit_data(self, data: NamedTransformInput, metadata: Dict):
         """This transform do not require fitting."""
         return self
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
         features = data.features
 

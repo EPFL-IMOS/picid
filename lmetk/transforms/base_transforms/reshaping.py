@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from einops import parse_shape, rearrange
 
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
@@ -21,7 +21,7 @@ class ReshapeTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         super().__init__(**kwargs)
         self.pattern = pattern
 
-    def transform_data(self, data: OrderedInput, metadata: dict) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: dict) -> np.ndarray:
         """
         Concatenate all data arrays horizontally.
 
@@ -38,5 +38,5 @@ class ReshapeTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         r_v = rearrange(value, self.pattern)
         return r_v
 
-    def __call__(self, data: OrderedInput, metadata: dict) -> np.ndarray:
+    def __call__(self, data: NamedTransformInput, metadata: dict) -> np.ndarray:
         return self.transform_data(data, metadata)

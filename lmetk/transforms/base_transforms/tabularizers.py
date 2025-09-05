@@ -19,7 +19,7 @@ from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -98,7 +98,7 @@ class TimeseriesTabularizer(BaseTransform, ConcatinatedFitMultiSourceTransformMi
 
         return f"{self.__class__.__name__}({args})"
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         r"""Applies the tabularization to the input data.
 
         Make sure that the input data to this transform is of shape (N, T, ...)

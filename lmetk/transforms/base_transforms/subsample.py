@@ -4,7 +4,7 @@ from typing import Any, Dict
 import numpy as np
 
 # Assuming this import path is correct for your project
-from lmetk.data.data_objects.data import OrderedInput
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
@@ -23,7 +23,7 @@ class SubsampleTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         super().__init__()
         self.step = step
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
         lengths = [len(segment) for segment in data.values()]
         for key, value in data.items():
@@ -78,7 +78,7 @@ class WindowedAggregationTransform(BaseTransform, NoFitMultiSourceTransformMixin
         if self._agg_func is None:
             raise ValueError(f"Unsupported aggregation: {agg}")
 
-    def transform_data(self, data: OrderedInput, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
         lengths = [len(segment) for segment in data.values()]
 
