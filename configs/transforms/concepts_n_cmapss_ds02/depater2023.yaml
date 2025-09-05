@@ -33,7 +33,7 @@ tabularize_y:
     timestep_dimension: 1
 
     select_features: 
-      - target: horizon
+      - rul: horizon
   
   metadata:
     apply_to: ['rul']
