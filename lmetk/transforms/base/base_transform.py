@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from numpy import ndarray
-
+from lmetk.data.data_objects.data import OrderedInput
 
 
 class BaseTransform(ABC):
@@ -11,11 +10,12 @@ class BaseTransform(ABC):
     the core transformation logic, not the fitting strategies.
     """
 
+    def __init__(self, exclude_keys: list[str] = None, **kwargs):
+        self.exclude_keys = exclude_keys if exclude_keys is not None else []
+        self._init_kwargs = kwargs
+
     @abstractmethod
-    def transform_data(self, 
-                      data_segment: ndarray | list[ndarray] , 
-                      metadata: Optional[Dict[str, Any]] = None
-                      ) -> Any:
+    def transform_data(self, data: OrderedInput, metadata: Dict[str, Any]) -> Any:
         """
         Transform a single data segment.
 
@@ -27,23 +27,16 @@ class BaseTransform(ABC):
             Additional data needed for transformation, Transformation mode (e.g., 'train', 'val', 'test')
         """
         pass
-    
-    
-    def fit_data(self, 
-                 data_segment: ndarray | list[ndarray], 
-                 metadata: Optional[Dict[str, Any]] = None) -> 'BaseTransform':
+
+    def fit_data(self, data: OrderedInput, metadata: Dict[str, Any]) -> Any:
         """
         Fit the transform on data. Default implementation does nothing (for stateless transforms).
         Override this method for transforms that need fitting.
         """
-        return self
+        pass
 
-    def supports_multi_source_fit(self) -> bool:
-        """
-        Whether this transform can handle multi-source fitting.
-        Override to return True if the transform can handle aggregated data from multiple sources.
-        """
-        return True  # Most transforms can handle concatenated data
+    def __call__(self, data: Any) -> Any:
+        return self.transform_data(data, None)
 
     def __repr__(self):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())

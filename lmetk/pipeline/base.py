@@ -120,6 +120,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             A tensor of losses between model predictions and targets.
         """
         model_outs = self._training_step(batch, batch_idx)
+        model_outs = self.process_outputs(model_out=model_outs, batch=batch)
         self.evaluators["train"].update(model_outs)
         self.log(
             "train/loss",
@@ -144,6 +145,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             The index of the current batch.
         """
         model_outs = self._validation_step(batch, batch_idx)
+        model_outs = self.process_outputs(model_out=model_outs, batch=batch)
         self.evaluators["val"].update(model_outs)
         self.log(
             "val/loss",
@@ -165,6 +167,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             The index of the current batch.
         """
         model_outs = self._test_step(batch, batch_idx)
+        model_outs = self.process_outputs(model_out=model_outs, batch=batch)
         self.evaluators["test"].update(model_outs)
         self.log(
             "test/loss",
@@ -322,7 +325,6 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         # Allow batch object to know the phase of the training
         batch["model_state"] = stage
         model_out = self.forward(batch)
-        model_out = self.process_outputs(model_out=model_out, batch=batch)
         return model_out
 
     def _training_step(self, batch, batch_idx: int) -> torch.Tensor:
@@ -467,8 +469,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-        # X = X[:10, :]
-        # y = y[:10, :]
+        X = X[:100, :]
+        y = y[:100, :]
         logger.info(f"Fitting: {self.get_task_info(batch)}")
         logger.info(
             f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
@@ -634,7 +636,7 @@ class TrainingLightningModule(BackboneWrapperLightningModule):
 
     def __init__(self, backbone, loss, evaluators, optimizer, **kwargs):
         super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
-    
+
     # TODO: I should not rewrite the whole model_step
     def model_step(self, batch, stage: str) -> dict:
         """Perform a single model step on a batch of data.
@@ -654,7 +656,6 @@ class TrainingLightningModule(BackboneWrapperLightningModule):
         batch["model_state"] = stage
         model_out = self.forward(batch)
         model_out = self.loss(model_out=model_out, batch=batch)
-        model_out = self.process_outputs(model_out=model_out, batch=batch)
         return model_out
 
     def configure_optimizers(self) -> dict[str, Any]:

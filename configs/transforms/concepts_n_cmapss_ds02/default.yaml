@@ -23,10 +23,23 @@ scaler_rul:
   metadata:
     apply_to: rul
 
+# The paper describes:
+#  For each flight 𝑓 ≤ 𝑓 𝑒
+# a performed by engine 𝑒, we consider time-windows with
+# a size of 60, 70, 80, … , 𝑛𝑒,𝑓 − 10, 𝑛𝑒,𝑓 time-steps. These time-windows
+# are rolled over flight 𝑓 of engine 𝑒 with a step size (i.e., stride) of
+# 5 min. In this way, we subtract for each time-window with a size of
+# 60, 70, 80, … , 𝑛𝑒,𝑓 −10, 𝑛𝑒,𝑓 time-steps, several time-series of multi-sensor
+# measurements (i.e., data samples) from flight 𝑓 of engine 𝑒. With this
+# approach, 25433 data samples are obtained to train the LSTM-AE.
+
+
 subsample:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.SubsampleTransform
-    step: 100 # Keep every data point (no subsampling)
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: 60 
+    aggregation: mean
   metadata:
     apply_to: [features, descriptors, rul]
 

@@ -3,8 +3,10 @@
 from abc import ABC, abstractmethod
 
 from einops import rearrange
+import numpy as np
 import torch
 from lightning_fabric.utilities.data import AttributeDict
+from tqdm import tqdm
 
 
 class AbstractFitPredictWrapper(ABC):
@@ -16,10 +18,18 @@ class AbstractFitPredictWrapper(ABC):
         Backbone model
     """
 
-    def __init__(self, backbone, **kwargs):
+    def __init__(
+        self,
+        backbone,
+        yield_strategy: bool = False,
+        yield_batch_size: int = 128,
+        **kwargs,
+    ):
         super().__init__()
         self.backbone = backbone
         self.kwargs = AttributeDict(kwargs)
+        self.yield_strategy = yield_strategy
+        self.yield_batch_size = yield_batch_size
 
         # Check if backbone supports fit predict
         if not hasattr(self.backbone, "fit") or not hasattr(self.backbone, "predict"):
@@ -29,7 +39,24 @@ class AbstractFitPredictWrapper(ABC):
         self.backbone.fit(X.cpu(), y.cpu())
 
     def predict(self, X):
-        y = self.backbone.predict(X.cpu())
+
+        X = X.cpu()
+        if self.yield_strategy:
+            batch_size = self.yield_batch_size
+            n_samples = X.shape[0]
+            outputs_list = []
+            for start in tqdm(
+                range(0, n_samples, batch_size),
+                desc=f"Predicting in batches of size {batch_size}",
+            ):
+                end = min(start + batch_size, n_samples)
+                batch_X = X[start:end]
+                batch_outputs = self.backbone.predict(batch_X)
+                outputs_list.append(batch_outputs)
+            outputs = np.concatenate(outputs_list, axis=0)
+            y = torch.from_numpy(outputs)
+        else:
+            y = self.backbone.predict(X)
 
         if not isinstance(y, torch.Tensor):
             if hasattr(y, "__array__"):
