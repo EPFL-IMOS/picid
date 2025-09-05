@@ -1,125 +1,159 @@
-import torch
-import random
-import numpy as np
-import json
+"""Utility functions for the TopoBenchMark library."""
 
-import logging
-from omegaconf import ListConfig
+import warnings
+from collections.abc import Callable
+from importlib.util import find_spec
+from typing import Any
 
-logger = logging.getLogger(__name__)
+from omegaconf import DictConfig
 
+from lmetk.utils import pylogger, rich_utils
 
-def set_reproducibility(seed=42, deterministic=True):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = deterministic
-    torch.backends.cudnn.benchmark = False
+log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 
-class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0):
-        self.patience = patience
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
-        self.delta = delta
+def extras(cfg: DictConfig) -> None:
+    r"""Apply optional utilities before the task is started.
 
-    def __call__(self, val_loss, model, path):
-        score = -val_loss
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            logger.info(f"EarlyStopping counter: {self.counter} out of {self.patience}")
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
-            self.counter = 0
+    Utilities:
+        - Ignoring python warnings.
+        - Setting tags from command line.
+        - Rich config printing.
 
-    def save_checkpoint(self, val_loss, model, path):
-        if self.verbose:
-            logger.info(
-                f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ..."
-            )
-        torch.save(model.state_dict(), path + "/" + "checkpoint.pth")
-        self.val_loss_min = val_loss
+    Parameters
+    ----------
+    cfg : DictConfig
+        A DictConfig object containing the config tree.
+    """
+    # return if no `extras` config
+    if not cfg.get("extras"):
+        log.warning("Extras config not found! <cfg.extras=null>")
+        return
+
+    # disable python warnings
+    if cfg.extras.get("ignore_warnings"):
+        log.info("Disabling python warnings! <cfg.extras.ignore_warnings=True>")
+        warnings.filterwarnings("ignore")
+
+    # prompt user to input tags from command line if none are provided in the config
+    if cfg.extras.get("enforce_tags"):
+        log.info("Enforcing tags! <cfg.extras.enforce_tags=True>")
+        rich_utils.enforce_tags(cfg, save_to_file=True)
+
+    # pretty print config tree using Rich library
+    if cfg.extras.get("print_config"):
+        log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+        rich_utils.print_config_tree(cfg, resolve=True, save_to_file=True)
 
 
-class StandardScaler:
-    def __init__(self, mean=0.0, std=1.0):
-        self.mean = mean
-        self.std = std
+def task_wrapper(task_func: Callable) -> Callable:
+    r"""Optional decorator that controls the failure behavior when executing the task function.
 
-    def fit(self, data):
-        self.mean = data.mean(0)
-        self.std = data.std(0)
+    This wrapper can be used to:
+    - make sure loggers are closed even if the task function raises an exception (prevents multirun failure).
+    - save the exception to a `.log` file.
+    - mark the run as failed with a dedicated file in the `logs/` folder (so we can find and rerun it later).
+    - etc. (adjust depending on your needs).
 
-    def transform(self, data):
-        mean = (
-            torch.from_numpy(self.mean).type_as(data).to(data.device)
-            if torch.is_tensor(data)
-            else self.mean
+    Example:
+    ```
+    @utils.task_wrapper
+    def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        ...
+        return metric_dict, object_dict
+    ```
+
+    Parameters
+    ----------
+    task_func : Callable
+        The task function to be wrapped.
+
+    Returns
+    -------
+    Callable
+        The wrapped task function.
+    """
+
+    def wrap(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Wrapper function that executes the task function.
+
+        Parameters
+        ----------
+        cfg : DictConfig
+            A DictConfig object containing the config tree.
+
+        Returns
+        -------
+        tuple[dict[str, Any], dict[str, Any]]
+            The metric and object dictionaries returned by the task function.
+        """
+        try:
+            metric_dict, object_dict = task_func(cfg=cfg)
+
+        # things to do if exception occurs
+        except Exception as ex:
+            # save exception to `.log` file
+            log.exception(f"Exception occurred while executing task: {ex}")
+
+            if (
+                "debug" in cfg
+                and cfg.debug.raise_inner_exception in cfg.debug
+                and cfg.debug.raise_inner_exception
+            ):
+                raise
+            else:
+                # some hyperparameter combinations might be invalid or cause out-of-memory errors
+                # so when using hparam search plugins like Optuna, you might want to disable
+                # raising the below exception to avoid multirun failure
+                raise
+
+        # things to always do after either success or exception
+        finally:
+            # display output dir path in terminal
+            log.info(f"Output dir: {cfg.paths.output_dir}")
+
+            # always close wandb run (even if exception occurs so multirun won't fail)
+            if find_spec("wandb"):  # check if wandb is installed
+                import wandb
+
+                if wandb.run:
+                    log.info("Closing wandb!")
+                    wandb.finish()
+
+        return metric_dict, object_dict
+
+    return wrap
+
+
+def get_metric_value(
+    metric_dict: dict[str, Any], metric_name: str | None
+) -> float | None:
+    r"""Safely retrieves value of the metric logged in LightningModule.
+
+    Parameters
+    ----------
+    metric_dict : dict
+        A dict containing metric values.
+    metric_name : str, optional
+        If provided, the name of the metric to retrieve.
+
+    Returns
+    -------
+    float, None
+        If a metric name was provided, the value of the metric.
+    """
+    if not metric_name:
+        log.info("Metric name is None! Skipping metric value retrieval...")
+        return None
+
+    if metric_name not in metric_dict:
+        raise Exception(
+            f"Metric value not found! <metric_name={metric_name}>\n"
+            "Make sure metric name logged in LightningModule is correct!\n"
+            "Make sure `optimized_metric` name in `hparams_search` config is correct!"
         )
-        std = (
-            torch.from_numpy(self.std).type_as(data).to(data.device)
-            if torch.is_tensor(data)
-            else self.std
-        )
-        return (data - mean) / std
 
-    def inverse_transform(self, data):
-        mean = (
-            torch.from_numpy(self.mean).type_as(data).to(data.device)
-            if torch.is_tensor(data)
-            else self.mean
-        )
-        std = (
-            torch.from_numpy(self.std).type_as(data).to(data.device)
-            if torch.is_tensor(data)
-            else self.std
-        )
-        return (data * std) + mean
+    metric_value = metric_dict[metric_name].item()
+    log.info(f"Retrieved metric value! <{metric_name}={metric_value}>")
 
-
-def load_args(filename):
-    with open(filename, "r") as f:
-        args = json.load(f)
-    return args
-
-
-def string_split(str_for_split):
-    str_no_space = str_for_split.replace(" ", "")
-    str_split = str_no_space.split(",")
-    value_list = [eval(x) for x in str_split]
-
-    return value_list
-
-
-def key_exists_anywhere(data, target_key):
-    # Check if object has dict-like methods
-    if hasattr(data, "keys") and hasattr(data, "values") and hasattr(data, "items"):
-        # First check if the target key exists at this level
-        if target_key in data:
-            return True, data[target_key]
-
-        # Then recursively search in all values
-        for value in data.values():
-            found, val = key_exists_anywhere(value, target_key)
-            if found:
-                return found, val
-
-    elif isinstance(data, (list, tuple)):
-        for item in data:
-            found, val = key_exists_anywhere(item, target_key)
-            if found:
-                return found, val
-
-    return False, None
+    return metric_value

@@ -17,8 +17,7 @@ callbacks:
     mode: min
 
   model_checkpoint:
-    dirpath: ${paths.root_dir}/checkpoints/autoencoders/battery
-    save_weights_only: True
+    save_weights_only: False
     monitor: val/loss
     mode: min
 

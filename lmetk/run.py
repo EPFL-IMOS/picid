@@ -10,7 +10,7 @@ import hydra
 import lightning as L
 import numpy as np
 import torch
-from hydra.core.hydra_config import HydraConfig
+
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
@@ -20,6 +20,7 @@ from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.datasources.kubric_movie.loader import MOViLoader
+from lmetk.data.datasources.nb14.loader import NB14Loader
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
@@ -31,25 +32,21 @@ from lmetk.pipeline.base import (
     FitPredictWrapperLightningModule,
     TrainingLightningModule
 )
+from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.utils.rich_output import display_targets, print_data_dict_structure
-from lmetk.utils_refactor import (
+#from lmetk.utils.rich_output import display_targets, print_data_dict_structure
+from lmetk.utils import (
     RankedLogger,
     extras,
     get_metric_value,
     instantiate_callbacks,
     instantiate_loggers,
     task_wrapper,
+    log_hyperparameters,
+    display_targets, 
+    print_data_dict_structure
 )
 
-
-def get_hydra_override(key: str):
-    if not HydraConfig.initialized():
-        return None
-    for override in HydraConfig.get().overrides.task:
-        if override.startswith(f"{key}="):
-            return override.split("=", 1)[1]
-    return None
 
 
 def initialize_hydra() -> DictConfig:
@@ -120,7 +117,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
-    single_source_types = (SingleSourceLoader, PHMDMultiSourceLoader, MOViLoader)
+    single_source_types = (SingleSourceLoader, PHMDMultiSourceLoader, MOViLoader, NB14Loader)
     if isinstance(dataset_source, single_source_types):
         preprocessor_mode = "per_unit"
 
@@ -194,6 +191,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     log.info("Instantiating callbacks...")
     callbacks: list[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
+    # Check if there is ModelCheckpointWithConfig and is so, set the cfg to self.config
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpointWithConfig):
+            callback.config = cfg
+
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
@@ -248,18 +250,23 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
+    # TODO: Do we need this? log_hyperparameters already should be logging cfg to wandb
     # has to happen after trainer is instantiated
-    for lgr in logger:
-        if isinstance(lgr, WandbLogger):
-            cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
-            cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
-                # cannot resolve because not all interpolations are covered by us for now
-                HydraConfig.get(),
-                resolve=False,
-            )
-            exp_name = get_hydra_override("experiment")
-            cfg_to_wandb["exp_name"] = exp_name
-            lgr.experiment.config.update(cfg_to_wandb)
+    # for lgr in logger:
+    #     if isinstance(lgr, WandbLogger):
+    #         cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
+    #         cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+    #             # cannot resolve because not all interpolations are covered by us for now
+    #             HydraConfig.get(),
+    #             resolve=False,
+    #         )
+    #         exp_name = get_hydra_override("experiment")
+    #         cfg_to_wandb["exp_name"] = exp_name
+    #         lgr.experiment.config.update(cfg_to_wandb)
+    
+    if logger:
+        log.info("Logging hyperparameters!")
+        log_hyperparameters({"cfg": cfg,  "trainer": trainer})
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")
