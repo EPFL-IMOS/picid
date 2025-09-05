@@ -8,7 +8,9 @@ import omegaconf
 import torch
 from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
-from omegaconf import DictConfig
+from lmetk.transforms.battery.utils import get_mode_change_right_indices
+import pandas as pd
+
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
@@ -30,16 +32,17 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         experiment_dir = Path(folder_name)
         if not experiment_dir.is_dir():
             raise FileNotFoundError(f"Experiment directory not found at: {experiment_dir}")
-
+        
+        self._cfg = None
         self._model = self._load_model(experiment_dir)
         self._model.eval()  # Set model to evaluation mode
 
     def _load_model(self, experiment_dir: Path) -> torch.nn.Module:
         """Loads the model from the specified experiment directory."""
         config_path = self._find_config_file(experiment_dir)
-        cfg = omegaconf.OmegaConf.load(config_path)
+        self._cfg = omegaconf.OmegaConf.load(config_path)
 
-        model = hydra.utils.instantiate(cfg.model)
+        model = hydra.utils.instantiate(self._cfg.model)
 
         checkpoint_path = self._find_checkpoint_file(experiment_dir)
         state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=False)['state_dict']
@@ -101,70 +104,65 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         
         Note: The implementation for data transformation needs to be added here.
         """
-        # Example of how you might use the model:
-        # with torch.no_grad():
-        #     tensor_input = self._preprocess(data_segment_obj)
-        #     compressed_representation = self._model.encoder(tensor_input)
-        #     return compressed_representation
-        raise NotImplementedError("The transform_data method has not been implemented yet.")
+    
 
-        # data_segment = data_segment_obj["features"]
+        data_segment = data_segment_obj["features"]
 
-        # # Based on the rul column extract the stat
-        # target_col = self.target_name
+        # Based on the rul column extract the stat
+        target_col = self.target_name
 
-        # cycles_column = data_segment[self.cycles_col].values
-        # boundaries = get_mode_change_right_indices(cycles_column)
+        cycles_column = data_segment[self.cycles_col].values
+        boundaries = get_mode_change_right_indices(cycles_column)
 
-        # # Get the feature columns
-        # feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
+        # Get the feature columns
+        feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
 
-        # # Prevent mode columns to be in the features_columns
-        # mode_is_present = False
-        # if self.mode_col is not None and self.mode_col in feature_columns:
-        #     feature_columns.remove(self.mode_col)
-        #     mode_is_present = True
+        # Prevent mode columns to be in the features_columns
+        mode_is_present = False
+        if self.mode_col is not None and self.mode_col in feature_columns:
+            feature_columns.remove(self.mode_col)
+            mode_is_present = True
 
-        # # Prevent cycles columns to be in the features_columns
-        # cycles_is_present = False
+        # Prevent cycles columns to be in the features_columns
+        cycles_is_present = False
 
-        # if self.cycles_col is not None and self.cycles_col in data_segment.columns:
-        #     if self.cycles_col in feature_columns:
-        #         feature_columns.remove(self.cycles_col)
-        #     cycles_is_present = True
+        if self.cycles_col is not None and self.cycles_col in data_segment.columns:
+            if self.cycles_col in feature_columns:
+                feature_columns.remove(self.cycles_col)
+            cycles_is_present = True
 
-        # # Ensure there is no leakage of target data
-        # if target_col in feature_columns:
-        #     feature_columns.remove(target_col)
+        # Ensure there is no leakage of target data
+        if target_col in feature_columns:
+            feature_columns.remove(target_col)
 
-        # stats_list = []
-        # for i in range(len(boundaries)):
-        #     start = 0 if i == 0 else boundaries[i - 1]
-        #     end = boundaries[i]
-        #     segment = data_segment.iloc[start:end]
+        stats_list = []
+        for i in range(len(boundaries)):
+            start = 0 if i == 0 else boundaries[i - 1]
+            end = boundaries[i]
+            segment = data_segment.iloc[start:end]
 
-        #     assert (
-        #         len(segment[target_col].unique()) == 1
-        #     ), "Rul should be the same within a segment"
-        #     stats = {target_col: segment[target_col].iloc[0]}
+            assert (
+                len(segment[target_col].unique()) == 1
+            ), "Rul should be the same within a segment"
+            stats = {target_col: segment[target_col].iloc[0]}
 
-        #     if mode_is_present:
-        #         assert (
-        #             len(segment["mode"].unique()) == 1
-        #         ), "Mode should be the same within a segment"
-        #         stats["mode"] = segment[self.mode_col].iloc[0]
-        #     if cycles_is_present:
-        #         assert (
-        #             len(segment[self.cycles_col].unique()) == 1
-        #         ), "Cycles should be the same within a segment"
-        #         stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
+            if mode_is_present:
+                assert (
+                    len(segment["mode"].unique()) == 1
+                ), "Mode should be the same within a segment"
+                stats["mode"] = segment[self.mode_col].iloc[0]
+            if cycles_is_present:
+                assert (
+                    len(segment[self.cycles_col].unique()) == 1
+                ), "Cycles should be the same within a segment"
+                stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
 
-        #     for feature in feature_columns:
-        #         stats[f"{feature}_mean"] = segment[feature].mean()
-        #         stats[f"{feature}_var"] = segment[feature].var()
+            for feature in feature_columns:
+                stats[f"{feature}_mean"] = segment[feature].mean()
+                stats[f"{feature}_var"] = segment[feature].var()
 
-        #     stats_list.append(stats)
+            stats_list.append(stats)
 
-        # data_segment = pd.DataFrame(stats_list)
+        data_segment = pd.DataFrame(stats_list)
 
-        # return data_segment
+        return data_segment

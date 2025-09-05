@@ -1,24 +1,28 @@
 # Keep only those feeatures that matters
 
-# ---Transforms that are identical to the bosello_NB_autoencoder: Start---
-filter_features:
-  transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
-    columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
-    apply_to_key: features
+defaults:
+  - battery/bosello_NB_autoencoder@_here_
 
-  metadata:
-    apply_to: ${transforms.filter_features.transform.apply_to_key}
+# # ---Transforms that are identical to the bosello_NB_autoencoder: Start---
+# filter_features:
+#   transform:
+#     _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+#     columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+#     apply_to_key: features
+
+#   metadata:
+#     apply_to: ${transforms.filter_features.transform.apply_to_key}
 
 
-scaler_features:
-  transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+# scaler_features:
+#   transform:
+#     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     
-  metadata:
-    apply_to: features
-    fit_on: train
-# ---Transforms that are identical to the bosello_NB_autoencoder: Finish---
+#   metadata:
+#     apply_to: features
+#     fit_on: train
+# # ---Transforms that are identical to the bosello_NB_autoencoder: Finish---
+
 
 encoder_cycles:
   transform:
@@ -30,10 +34,9 @@ encoder_cycles:
     # checkpoint_path: bla 
   
   metadata:
-    apply_to: ['features', 'metadata']
-    assign_to: features
+    apply_to: ['features', 'target','metadata']
+    assign_to: [features, 'target']
     
-
 
 AssignNaiveTimefeatures:
   transform:

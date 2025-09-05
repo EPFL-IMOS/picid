@@ -1,0 +1,41 @@
+#@package _global_
+
+defaults:
+  - override /datasource: nb14_bosello
+  - override /transforms: battery/bosello_NB_base
+  - override /model: stf
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /evaluator: default
+  - override /task_definition: battery_phmd
+  #- override /trainer: cpu
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  d_x: 4 #6
+  d_x_embedding_router:  [0,0,0,0] #[0,0,0,0,0,0]
+  base_lr: 0.001
+
+evaluator:
+  train:
+    apply_inverse_scaling: True
+  
+  val:
+    apply_inverse_scaling: True
+  
+  test:
+    apply_inverse_scaling: True
+
+transforms:
+  filter_features:
+    transform: 
+      columns_to_keep: ['voltage_mean', 'voltage_var', 'current_mean','current_var']
+
