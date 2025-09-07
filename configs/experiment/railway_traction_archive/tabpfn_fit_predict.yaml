@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - /model_configs/forecasting/tabpfn
+  - override /datasource: railway
+  - override /evaluator: railway
+  - override /task_definition: railway_day_ahead
+  - override /transforms: railway/context_paper
+
+  
