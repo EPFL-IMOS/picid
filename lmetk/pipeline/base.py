@@ -469,14 +469,35 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-        X = X[:100, :]
-        y = y[:100, :]
+        # X = X[:100, :]
+        # y = y[:100, :]
         logger.info(f"Fitting: {self.get_task_info(batch)}")
         logger.info(
             f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
         )
-        self.backbone.fit(X, y)
-        self.backbone.serialize_model(int(batch["task_idx"].item()))
+
+        allows_multi_target = self.backbone.allows_multi_target
+        n_targets = y.shape[1]
+
+        if not allows_multi_target and n_targets > 1:
+            # Reshape y to be 1D if the model does not support multi-target
+            # such that we create a "virtual task" for each target dimension.
+
+            logger.warning(
+                f"Model {self.backbone} does not support multi-target, "
+                "but y has {n_targets} target dimensions. "
+                f"Reshaping y to be 1D and creating a "
+                "virtual task for each target dimension."
+            )
+            for target_idx in range(n_targets):
+                logger.info(f"Fitting target dimension {target_idx + 1} of {n_targets}")
+                self.backbone.fit(X, y[:, target_idx].unsqueeze(1))
+                model_id = f"{batch["task_idx"].item()}_{target_idx}"
+                self.backbone.serialize_model(model_id)
+        else:
+            self.backbone.fit(X, y)
+            model_id = str(batch["task_idx"].item())
+            self.backbone.serialize_model(model_id)
 
         if self.predict_after_training:
             return self.model_step_predict(batch)
@@ -505,7 +526,21 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         X, y = self.__batch_to_fit_predict(batch)
         # X = X[:10, :]
         # y = y[:10, :]
-        self.backbone.load_model(int(batch["task_idx"].item()))
+
+        allows_multi_target = self.backbone.allows_multi_target
+        n_targets = y.shape[1]
+
+        if not allows_multi_target and n_targets > 1:
+            # Reshape y to be 1D if the model does not support multi-target
+            # such that we create a "virtual task" for each target dimension.
+            for target_idx in range(n_targets):
+                logger.info(
+                    f"Predicting target dimension {target_idx + 1} of {n_targets}"
+                )
+                self.backbone.load_model(f"{batch["task_idx"].item()}_{target_idx}")
+                outputs = self.backbone.predict(X)
+        else:
+            self.backbone.load_model(int(batch["task_idx"].item()))
         outputs = self.backbone.predict(X)
 
         assert isinstance(

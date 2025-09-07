@@ -81,6 +81,12 @@ class AbstractFitPredictWrapper(ABC):
         """Load the model from a file."""
         pass
 
+    @property
+    @abstractmethod
+    def allows_multi_target(self) -> bool:
+        """Indicates whether the model supports multi-target prediction."""
+        pass
+
 
 class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
     r"""Abstract class that provides an interface to handle the network output.
