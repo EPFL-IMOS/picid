@@ -30,11 +30,12 @@ from lmetk.model.wrappers.base import (
 from lmetk.pipeline.base import (
     ConstantLossLightningModule,
     FitPredictWrapperLightningModule,
-    TrainingLightningModule
+    TrainingLightningModule,
 )
 from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
-#from lmetk.utils.rich_output import display_targets, print_data_dict_structure
+
+# from lmetk.utils.rich_output import display_targets, print_data_dict_structure
 from lmetk.utils import (
     RankedLogger,
     extras,
@@ -43,10 +44,8 @@ from lmetk.utils import (
     instantiate_loggers,
     task_wrapper,
     log_hyperparameters,
-    display_targets, 
-    print_data_dict_structure
+    display_targets,
 )
-
 
 
 def initialize_hydra() -> DictConfig:
@@ -117,7 +116,12 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
-    single_source_types = (SingleSourceLoader, PHMDMultiSourceLoader, MOViLoader, NB14Loader)
+    single_source_types = (
+        SingleSourceLoader,
+        PHMDMultiSourceLoader,
+        MOViLoader,
+        NB14Loader,
+    )
     if isinstance(dataset_source, single_source_types):
         preprocessor_mode = "per_unit"
 
@@ -148,8 +152,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     else:
         scaler = lambda x: x
-
-    print_data_dict_structure(data_dict)
 
     # Extract additional inputs to dataset if needed.
     dataset_train = hydra.utils.instantiate(
@@ -224,8 +226,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 backbone=backbone_wrapper,
                 loss=loss,
                 evaluators=evaluators,
-                optimizer=optimizer,) 
-            
+                optimizer=optimizer,
+            )
+
         elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
             model = FitPredictWrapperLightningModule(
                 backbone=backbone_wrapper,
@@ -263,10 +266,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     #         exp_name = get_hydra_override("experiment")
     #         cfg_to_wandb["exp_name"] = exp_name
     #         lgr.experiment.config.update(cfg_to_wandb)
-    
+
     if logger:
         log.info("Logging hyperparameters!")
-        log_hyperparameters({"cfg": cfg,  "trainer": trainer})
+        log_hyperparameters({"cfg": cfg, "trainer": trainer})
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")

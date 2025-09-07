@@ -8,6 +8,8 @@ from lmetk.data.data_objects.data import DatasetContainer
 
 import logging
 
+from lmetk.utils import print_data_dict_structure
+
 logger = logging.getLogger(__name__)
 
 
@@ -168,7 +170,14 @@ class PreProcessor(PreProcessorInterface):
             f"Expected split mode from preprocessor: '{self.mode}', "
             f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
         )
+
+        logger.info("Data dictionary structure before transforms:")
+        print_data_dict_structure(self.data)
+
         self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
         self._is_preprocessed = True
+
+        logger.info("Data dictionary structure after transforms:")
+        print_data_dict_structure(self.data)
 
         return self.data

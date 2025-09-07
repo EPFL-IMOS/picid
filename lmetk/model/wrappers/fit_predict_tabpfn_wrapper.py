@@ -82,3 +82,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
 
         self.backbone = joblib.load(model_path)
         return model_path
+
+    @property
+    def allows_multi_target(self) -> bool:
+        return False
