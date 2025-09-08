@@ -1,17 +1,7 @@
 
 # @package _global_
 defaults:
-  - override /datasource: railway
-  - override /dataset: fit_predict_task
-  - override /datamodule: base_datamodule_fit_predict
-  - override /model: autogluon_fit_predict
-  - override /evaluator: railway
-  - override /task_definition: railway_day_ahead
+  - railway_traction/base
+  - /model_configs/forecasting/autogluon_fit_predict
   - override /transforms: railway/context_paper
-  - override /trainer: one_epoch
-  - override /logger: csv
-  - override /callbacks: gradient_free
-
-task_definition:
-  requires_training: true
   

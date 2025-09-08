@@ -1,0 +1,12 @@
+#@package _global_
+
+defaults:
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule_full_batch
+  - override /model: xgboost_batch_context
+
+  - override /callbacks: gradient_free
+  - override /trainer: one_epoch
+
+task_definition:
+  requires_training: true

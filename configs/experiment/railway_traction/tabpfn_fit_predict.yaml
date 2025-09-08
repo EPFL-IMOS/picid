@@ -1,9 +1,7 @@
 # @package _global_
 defaults:
-  - /model_configs/forecasting/tabpfn
-  - override /datasource: railway
-  - override /evaluator: railway
-  - override /task_definition: railway_day_ahead
+  - railway_traction/base
+  - /model_configs/forecasting/tabpfn_fit_predict
   - override /transforms: railway/context_paper
 
   

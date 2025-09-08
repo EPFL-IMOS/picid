@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule
+  - override /model: linear_forecaster
+
+task_definition:
+  requires_training: true

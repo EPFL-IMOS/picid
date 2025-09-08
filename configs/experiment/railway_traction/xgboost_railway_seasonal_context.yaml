@@ -1,17 +1,5 @@
-
 # @package _global_
 defaults:
-  - override /datasource: railway
-  - override /dataset: context_batch
-  - override /datamodule: base_datamodule_full_batch
-  - override /model: xgboost_batch_context
-  - override /evaluator: railway
-  - override /task_definition: railway_day_ahead
+  - railway_traction/base
+  - /model_configs/forecasting/xgboost_batch_context
   - override /transforms: railway/railway_seasonal_leak
-  - override /trainer: one_epoch
-  - override /logger: csv
-  - override /callbacks: gradient_free
-
-task_definition:
-  requires_training: true
-  

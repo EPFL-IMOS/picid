@@ -3,7 +3,7 @@ defaults:
 
 
 # Emulate de Pater LSTM-AE preprocessing
-# https://arxiv.org/abs/2306.05203
+
 
 tabularize_x:
   # Concatenate time-features to the feature set
