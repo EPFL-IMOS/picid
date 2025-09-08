@@ -108,7 +108,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         cfg.datasource
     )
     # Create manager
-
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     # Get transform names
     log.info("Transform names:" + str(transforms_manager.get_transform_names()))
