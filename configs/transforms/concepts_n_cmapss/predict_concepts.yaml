@@ -1,0 +1,37 @@
+# These scalers are pre-computed and do not need to be fitted on the data.
+defaults:
+  - concepts_n_cmapss/default@_here_
+
+scaler_concepts:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    
+  metadata:
+    apply_to: concepts
+    fit_on: train
+
+subsample:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: 60 
+    aggregation: mean
+  metadata:
+    apply_to: [features, descriptors, concepts]
+
+# Introduce the task dimension to X, y. We
+reshape_X: 
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: features
+    assign_to: X
+
+reshape_y: 
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: concepts
+    assign_to: y

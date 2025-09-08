@@ -1,6 +1,0 @@
-defaults:
-  - concepts_n_cmapss/concepts_n_cmapss_multisource@_here_
-
-scaler_features:
-  transform:
-    scaling: minmax
