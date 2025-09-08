@@ -4,25 +4,31 @@ from abc import ABC, abstractmethod
 
 from typing import Optional, Any
 from lmetk.evaluator.scaling_wrapper import ScalingWrapper
+from lmetk.transforms.base.multisource import InverseTransformMixin
+
 
 class AbstractEvaluator(ABC):
     """Abstract class for the evaluator class."""
 
     def __init__(
-        self, 
-        scaler: Optional[Any] = None, 
-        apply_inverse: bool = False, 
+        self,
+        paths: dict[str, str],
+        target_dim_position: int,
+        model_seq_len: int,
+        model_label_len: int,
+        inverse_transform: Optional[InverseTransformMixin] = None,
+        apply_inverse_scaling: bool = False,
         effective_pred_len: Optional[int] = None,
         model_pred_len: Optional[int] = None,
         task_mode: Optional[Any] = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize the evaluator.
 
         Parameters
         ----------
-        scaler : Optional[Any]
+        inverse_transform : Optional[InverseTransformMixin]
             The scaler object with inverse_transform method.
         apply_inverse : bool
             Whether to apply inverse scaling before computing metrics.
@@ -37,29 +43,27 @@ class AbstractEvaluator(ABC):
         """
         super().__init__()
         self.scaling_wrapper = ScalingWrapper(
-            scaler=scaler, 
-            apply_inverse_scaling=apply_inverse,
-            task_mode=task_mode
+            inverse_transform=inverse_transform,
+            apply_inverse_scaling=apply_inverse_scaling,
+            task_mode=task_mode,
         )
 
         self.effective_pred_len = effective_pred_len
         self.model_pred_len = model_pred_len
         self.task_mode = task_mode
-
-        # Automatically set all kwargs as instance variables
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        self.paths = paths
 
         if self.model_pred_len is None:
             raise ValueError("Model's pred_len (model_pred_len) must be set.")
 
-        if self.effective_pred_len is not None and self.model_pred_len < self.effective_pred_len:
+        if (
+            self.effective_pred_len is not None
+            and self.model_pred_len < self.effective_pred_len
+        ):
             raise ValueError(
                 f"effective_pred_len ({self.effective_pred_len}) cannot be greater than "
                 f"model_pred_len ({self.model_pred_len})."
             )
-
-
 
     def __repr__(self):
         cls_name = self.__class__.__name__
@@ -80,6 +84,3 @@ class AbstractEvaluator(ABC):
     def reset(self):
         """Reset the metrics."""
         pass
-
-
-

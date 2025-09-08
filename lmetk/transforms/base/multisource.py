@@ -1,5 +1,5 @@
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 import copy
 import numpy as np
@@ -98,4 +98,45 @@ class NoFitMultiSourceTransformMixin(ConcatinatedFitMultiSourceTransformMixin):
     ) -> None:
         raise NotImplementedError(
             "fit_multi_source is not implemented for this transform."
+        )
+
+
+class InverseTransformMixin(ABC):
+    """
+    Mixin for transforms that support inverse transformations.
+    """
+
+    def __init__(self):
+        super().__init__()
+        if not hasattr(self, "inverse_transform_data"):
+            raise TypeError(
+                "InverseTransformMixin requires the class to implement "
+                "inverse_transform_data method."
+            )
+
+    def inverse_transform_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> list[ndarray]:
+        """
+        Inverse transform the data from all sources using the fitted scalers.
+        """
+        out = []
+        for data_segment in data_segments:
+            out.append(
+                self.inverse_transform_data(
+                    data_segment, metadata=copy.deepcopy(metadata)
+                )
+            )
+        return out
+
+    @abstractmethod
+    def inverse_transform(
+        self,
+        data: NamedTransformInput,
+        metadata: dict,
+    ) -> Any:
+        raise NotImplementedError(
+            "inverse_transform_data is not implemented for this transform."
         )

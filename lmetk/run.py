@@ -36,6 +36,7 @@ from lmetk.pipeline.base import (
     TrainingLightningModule,
 )
 from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
+from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
 # from lmetk.utils.rich_output import display_targets, print_data_dict_structure
@@ -144,17 +145,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     features_set = set(data_dict["train"].keys())
     for split in ["val", "test"]:
-        assert (
-            set(data_dict[split].keys()) == features_set
-        ), f"Mismatch in features for split {split}. Expected: {features_set}, Found: {set(data_dict[split].keys())}"
-
-    if cfg.datasource.data_name in ["NB1", "NB14", "UNIBO21", "railway"]:
-        scaler = transforms_manager.get_data_transform(
-            "scaler_target"
-        ).transform_instance.scaler
-
-    else:
-        scaler = lambda x: x
+        assert set(data_dict[split].keys()) == features_set, (
+            f"Mismatch in features for split {split}. "
+            f"Expected: {features_set}, "
+            f"Found: {set(data_dict[split].keys())}"
+        )
 
     # Extract additional inputs to dataset if needed.
     dataset_train = hydra.utils.instantiate(
@@ -181,7 +176,30 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     evaluators = {}
     for s in ["train", "val", "test"]:
-        evaluator = hydra.utils.instantiate(cfg.evaluator[s], scaler=scaler)
+
+        inverse_transform_required = cfg.evaluator[s].get(
+            "apply_inverse_scaling", False
+        )
+        inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
+
+        if inverse_transform_required and inverse_transform_name is None:
+            raise ValueError(
+                f"Evaluator for {s} requires inverse scaling but no "
+                "inverse_transform_name is provided."
+            )
+        if inverse_transform_name is not None:
+            inverse_transform = transforms_manager.get_transform(inverse_transform_name)
+            inverse_transform = inverse_transform.transform_instance
+
+            assert isinstance(inverse_transform, InverseTransformMixin), (
+                f"The transform {inverse_transform_name} does not implement "
+                "InverseTransformMixin but is selected for inverse_transform in evaluator."
+            )
+        else:
+            inverse_transform = None
+        evaluator = hydra.utils.instantiate(
+            cfg.evaluator[s], inverse_transform=inverse_transform
+        )
         log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
         evaluators[s] = evaluator
 

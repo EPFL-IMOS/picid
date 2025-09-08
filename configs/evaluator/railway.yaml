@@ -1,11 +1,12 @@
 _evaluator_defaults: &evaluator_defaults
   _target_: lmetk.evaluator.default.DefaultEvaluator
-  metric_names: ['mae', 'mse', 'mae_railway', 'mse_railway'] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
+  metric_names: ["mae", "mse", "mae_railway", "mse_railway"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
 
   apply_inverse_scaling: True
+  inverse_transform_name: scaler_target
 
   model_seq_len: ${task_definition.seq_len}
-  model_label_leb: ${task_definition.label_len}
+  model_label_len: ${task_definition.label_len}
   model_pred_len: ${task_definition.pred_len}
 
   # Some models predict always a multivariate time-series but then at evaluation we have to evaluate on one particular variable, hence here is a proposition how to tackle such cases

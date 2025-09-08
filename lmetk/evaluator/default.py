@@ -8,6 +8,7 @@ and implements evaluation logic for transformer-based forecasting models.
 from typing import Any, Dict, List, Optional
 
 from lmetk.metrics.metric_factory import MetricFactory
+from lmetk.transforms.base.multisource import InverseTransformMixin
 
 from .base import AbstractEvaluator
 
@@ -19,8 +20,9 @@ class DefaultEvaluator(AbstractEvaluator):
 
     def __init__(
         self,
+        target_dim_position: int,
         metric_names: List[str],
-        scaler: Optional[Any] = None,
+        inverse_transform: Optional[InverseTransformMixin] = None,
         apply_inverse_scaling: bool = False,
         **kwargs,
     ):
@@ -31,14 +33,20 @@ class DefaultEvaluator(AbstractEvaluator):
         ----------
         metric_names : List[str]
             List of metric names to compute.
-        scaler : Optional[Any]
+        inverse_transform : Optional[Any]
             The scaler object with inverse_transform method
         apply_inverse : bool
             Whether to apply inverse scaling before computing metrics
         """
-        super().__init__(scaler, apply_inverse_scaling, **kwargs)
+        super().__init__(
+            inverse_transform=inverse_transform,
+            target_dim_position=target_dim_position,
+            apply_inverse_scaling=apply_inverse_scaling,
+            **kwargs,
+        )
 
         # Validate and create metrics
+        self.target_dim_position = target_dim_position
         self.metrics = {}
         for name in metric_names:
             metric = MetricFactory.create_metric(name, paths=kwargs.get("paths", None))
