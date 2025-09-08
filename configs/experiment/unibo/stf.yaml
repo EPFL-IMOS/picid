@@ -1,7 +1,7 @@
 #@package _global_
 
 defaults:
-  - override /datasource: nb1
+  - override /datasource: unibo21_bosello
   - override /transforms: battery/bosello_unibo
   - override /model: stf
   - override /dataset: prognostics/battery_rul_multiunit_dataset

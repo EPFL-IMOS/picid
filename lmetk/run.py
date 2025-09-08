@@ -21,6 +21,9 @@ from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.datasources.kubric_movie.loader import MOViLoader
 from lmetk.data.datasources.nb14.loader import NB14Loader
+from lmetk.data.datasources.unibo.loader import UNIBO21Loader
+
+
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
@@ -107,7 +110,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         cfg.datasource
     )
     # Create manager
-
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     # Get transform names
     log.info("Transform names:" + str(transforms_manager.get_transform_names()))
@@ -121,6 +123,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         PHMDMultiSourceLoader,
         MOViLoader,
         NB14Loader,
+        UNIBO21Loader,
     )
     if isinstance(dataset_source, single_source_types):
         preprocessor_mode = "per_unit"

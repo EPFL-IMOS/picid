@@ -19,10 +19,10 @@ class FilterDataFrameColumns(BaseTransform, ConcatinatedFitMultiSourceTransformM
     def fit_data(self, data_segment: Any, metadata: Dict):
         pass
 
-    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
 
-        data_segment = data_segment_obj[self.apply_to_key][self.columns_to_keep]
+        data_segment = data[self.apply_to_key][self.columns_to_keep]
 
         # Reset index
         data_segment.reset_index(drop=True, inplace=True)
@@ -43,17 +43,17 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         ), "apply_to_key should be specified under the transform"
         self.apply_to_key = apply_to_key
 
-    def fit_data(self, data_segment_obj: Any, metadata: Dict):
+    def fit_data(self, data: Any, metadata: Dict):
         pass
 
-    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
-            self.apply_to_key in data_segment_obj
-        ), f"{self.apply_to_key}  are not passed in data_segment_obj"
+            self.apply_to_key in data
+        ), f"{self.apply_to_key}  are not passed in data"
 
         out = (
-            data_segment_obj[self.apply_to_key][self.target_name]
+            data[self.apply_to_key][self.target_name]
             .values.reshape(-1, 1)
             .astype(float)
         )
@@ -65,17 +65,17 @@ class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransform
     """
 
     # def fit_data(
-    #     self, data_segment_obj: Any, metadata: Dict
+    #     self, data: Any, metadata: Dict
     # ):
     #     pass
 
-    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
         assert (
-            "features" in data_segment_obj
+            "features" in data
         ), "features features are not passed in auxiliary_data"
         data_segment = (
-            np.arange(data_segment_obj["features"].shape[0])
+            np.arange(data["features"].shape[0])
             .reshape(-1, 1)
             .astype(float)
         )
@@ -105,10 +105,10 @@ class Cycles2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
 
         pass
 
-    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
 
-        data_segment = data_segment_obj["features"]
+        data_segment = data["features"]
 
         # Based on the rul column extract the stat
         target_col = self.target_name
@@ -117,7 +117,7 @@ class Cycles2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
         boundaries = get_mode_change_right_indices(cycles_column)
 
         # Get the feature columns
-        feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
+        feature_columns = data["metadata"]["features_columns"].copy()
 
         # Prevent mode columns to be in the features_columns
         mode_is_present = False

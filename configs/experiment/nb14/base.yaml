@@ -1,7 +1,7 @@
 #@package _global_
 
 defaults:
-  - override /datasource: nb14
+  - override /datasource: nb14_bosello
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: battery_phmd
