@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import override
 from einops import rearrange
 import joblib
 import torch
@@ -40,6 +41,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
             **kwargs,
         )
 
+    @override
     def serialize_model(self, task_id: str | None = None):
         """Serialize the model to a file.
 
@@ -62,6 +64,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         joblib.dump(self.backbone, model_path)
         return model_path
 
+    @override
     def load_model(self, task_id: str | None = None):
         """Load the model from a file.
 
@@ -84,5 +87,6 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         return model_path
 
     @property
+    @override
     def allows_multi_target(self) -> bool:
         return False
