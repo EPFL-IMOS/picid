@@ -5,6 +5,8 @@ import pandas as pd
 import logging
 import plotly.graph_objects as go
 import scipy.io
+from pathlib import Path
+from phmd.download import download
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,8 @@ NOMINAL_CAPACITY = 2.2
 
 
 class NasaRandomizedData():
-    def __init__(self, data_path):
+    def __init__(self, data_path, force_download=False):
+        download('NB14', cache_dir=Path(data_path).parents[1], force=force_download, unzip=True)
         self.path = data_path #base_path + DATA_PATH
         
 
@@ -137,112 +140,3 @@ class NasaRandomizedData():
         for i,j in enumerate(l):
             padded_array[i][0:len(j)] = j
         return padded_array
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    train_names = [
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/data/Matlab/RW1',
-        #'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/data/Matlab/RW2',
-        #'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/data/Matlab/RW7',
-
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/data/Matlab/RW3',
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/data/Matlab/RW4',
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/data/Matlab/RW5',
-
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/data/Matlab/RW9',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/data/Matlab/RW10',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/data/Matlab/RW11',
-
-        #'RW_Skewed_Low_Room_Temp_DataSet_2Post/data/Matlab/RW13',
-        #'RW_Skewed_Low_Room_Temp_DataSet_2Post/data/Matlab/RW14',
-        #'RW_Skewed_Low_Room_Temp_DataSet_2Post/data/Matlab/RW15',
-
-        #'RW_Skewed_High_Room_Temp_DataSet_2Post/data/Matlab/RW17',
-        #'RW_Skewed_High_Room_Temp_DataSet_2Post/data/Matlab/RW18',
-        #'RW_Skewed_High_Room_Temp_DataSet_2Post/data/Matlab/RW19',
-
-        #'RW_Skewed_Low_40C_DataSet_2Post/data/Matlab/RW21',
-        #'RW_Skewed_Low_40C_DataSet_2Post/data/Matlab/RW22',
-        #'RW_Skewed_Low_40C_DataSet_2Post/data/Matlab/RW23',
-
-        #'RW_Skewed_High_40C_DataSet_2Post/data/Matlab/RW25',
-        #'RW_Skewed_High_40C_DataSet_2Post/data/Matlab/RW26',
-        #'RW_Skewed_High_40C_DataSet_2Post/data/Matlab/RW27',
-
-        ]
-    test_names = [
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/data/Matlab/RW8',
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/data/Matlab/RW6',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/data/Matlab/RW12',
-        #'RW_Skewed_Low_Room_Temp_DataSet_2Post/data/Matlab/RW16',
-        #'RW_Skewed_High_Room_Temp_DataSet_2Post/data/Matlab/RW20',
-        #'RW_Skewed_Low_40C_DataSet_2Post/data/Matlab/RW24',
-        #'RW_Skewed_High_40C_DataSet_2Post/data/Matlab/RW28',
-        ]
-
-
-    data = NasaRandomizedData()
-    (train_x, train_y, test_x, test_y,
-     battery_name_cycle_train, battery_name_cycle_test,
-     time_train, time_test,
-     current_train, current_test) = data.get_discharge_whole_cycle_future(train_names, test_names)
-
-
-
-
-
-    VISUALIZATION_START = 0
-    VISUALIZATION_END = 100000
-    display_x = train_x.reshape(train_x.shape[0]*train_x.shape[1], train_x.shape[2])
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=display_x[VISUALIZATION_START:VISUALIZATION_END,0],
-                        mode='lines', name='Voltage'))
-    fig.update_layout(title='Voltage',
-                    xaxis_title='Step',
-                    yaxis_title='Voltage',
-                    width=1400,
-                    height=600)
-    fig.show()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=display_x[VISUALIZATION_START:VISUALIZATION_END,1],
-                        mode='lines', name='Current'))
-    fig.update_layout(title='Current',
-                    xaxis_title='Step',
-                    yaxis_title='Current',
-                    width=1400,
-                    height=600)
-    fig.show()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=display_x[VISUALIZATION_START:VISUALIZATION_END,2],
-                        mode='lines', name='Temperature'))
-    fig.update_layout(title='Temperature',
-                    xaxis_title='Step',
-                    yaxis_title='Temperature',
-                    width=1400,
-                    height=600)
-    fig.show()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=time_train.flatten()[VISUALIZATION_START:VISUALIZATION_END],
-                        mode='lines', name='Time'))
-    fig.update_layout(title='Time',
-                    xaxis_title='Step',
-                    yaxis_title='Time',
-                    width=1400,
-                    height=600)
-    fig.show()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(y=train_y.flatten()[VISUALIZATION_START:VISUALIZATION_END],
-                        mode='lines', name='Capacity'))
-    fig.update_layout(title='Capacity',
-                    xaxis_title='Step',
-                    yaxis_title='Capacity',
-                    width=1400,
-                    height=600)
-    fig.show()

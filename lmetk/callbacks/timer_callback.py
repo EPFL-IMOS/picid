@@ -5,7 +5,6 @@ import time
 import lightning.pytorch as pl
 import numpy as np
 
-
 class PipelineTimer(pl.Callback):
     """Measures and logs average execution times of training, validation, and testing stages."""
 

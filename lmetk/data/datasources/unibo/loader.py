@@ -1,0 +1,268 @@
+import warnings
+import logging
+from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.kubric_movie.movi_dataset import MoviDataset
+from collections import defaultdict
+from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
+from lmetk.data.data_objects.data import SplitDatasetContainer
+from typing import Any, Dict, override
+import torch
+from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler
+from lmetk.data.datasources.unibo.unibo_powertools_data import UniboPowertoolsData, CycleCols
+from lmetk.data.datasources.unibo.model_data_handler import ModelDataHandler
+
+warnings.filterwarnings("ignore")
+logger = logging.getLogger(__name__)
+
+
+def convert_outer_list_to_inner(data_list):
+    if not data_list:
+        return {}
+
+    # Ensure all dictionaries have the same keys
+    keys = data_list[0].keys()
+    for d in data_list:
+        if d.keys() != keys:
+            raise ValueError("Not all dicts have the same keys!")
+
+    # Concatenate values for each key
+    stacked = {}
+    for key in keys:
+        stacked[key] = [d[key] for d in data_list]
+
+    # Check that all keys in the stacked have the same length
+    lengths = [len(stacked[key]) for key in stacked]
+    if len(set(lengths)) != 1:
+        raise ValueError("All keys in the stacked dict must have the same length.")
+
+    return stacked
+
+
+
+train_names = [
+    '000-DM-3.0-4019-S',#minimum capacity 1.48
+    '001-DM-3.0-4019-S',#minimum capacity 1.81
+    # '002-DM-3.0-4019-S',#minimum capacity 2.06
+
+    # '009-DM-3.0-4019-H',#minimum capacity 1.41
+    # '010-DM-3.0-4019-H',#minimum capacity 1.44
+
+    # '014-DM-3.0-4019-P',#minimum capacity 1.7
+    # '015-DM-3.0-4019-P',#minimum capacity 1.76
+    # '016-DM-3.0-4019-P',#minimum capacity 1.56
+    # '017-DM-3.0-4019-P',#minimum capacity 1.29
+    # #'047-DM-3.0-4019-P',#new 1.98
+    # #'049-DM-3.0-4019-P',#new 2.19
+
+
+
+    # '007-EE-2.85-0820-S',#2.5
+    # '008-EE-2.85-0820-S',#2.49
+    # '042-EE-2.85-0820-S',#2.51
+
+    # '043-EE-2.85-0820-H',#2.31
+
+
+
+
+    # '018-DP-2.00-1320-S',#minimum capacity 1.82
+    # #'019-DP-2.00-1320-S',#minimum capacity 1.61
+    # '036-DP-2.00-1720-S',#minimum capacity 1.91
+    # '037-DP-2.00-1720-S',#minimum capacity 1.84
+    # '038-DP-2.00-2420-S',#minimum capacity 1.854 (to 0)
+    # '050-DP-2.00-4020-S',#new 1.81
+    # '051-DP-2.00-4020-S',#new 1.866
+
+
+    
+    # '040-DM-4.00-2320-S',#minimum capacity 3.75, cycles 188
+]
+
+test_names = [
+    '003-DM-3.0-4019-S',#minimum capacity 1.84
+
+    '011-DM-3.0-4019-H',#minimum capacity 1.36
+
+    # '013-DM-3.0-4019-P',#minimum capacity 1.6
+
+
+
+    # '006-EE-2.85-0820-S',# 2.621
+    
+    # '044-EE-2.85-0820-H',# 2.43
+
+
+
+    # '039-DP-2.00-2420-S',#minimum capacity 1.93
+
+
+
+    # '041-DM-4.00-2320-S',#minimum capacity 3.76, cycles 190
+]
+
+class UNIBO21Loader(AbstractDataSourceLoader):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_path = kwargs['cache_dir']
+        
+        
+        self._is_isplitted = False
+        self._is_loaded = False
+        self.data_dict = None
+        self.meta_data = None
+
+        # Instantiate multisource_data_splitter if is not none
+        assert (
+            kwargs.get("multisource_data_splitter") == None
+        ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
+        self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
+    
+    @override
+    def load_data(self):
+        self.data_dict = self._load_data()
+        self._is_loaded = True
+        self._is_isplitted = True
+    
+    @override
+    def get_data(self) -> dict | list[dict]:
+        """Return data sources.
+
+        Returns:
+            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
+
+        """
+        assert self._is_loaded is True, "Data must be loaded before getting data."
+        assert self._is_isplitted is True, "Data must be splitted before getting data."
+        return SplitDatasetContainer(**self.data_dict)
+
+    def _load_data(self) -> dict:
+        # Read raw CSV
+        data = self.read_data()
+
+        
+        # Convert to desired format
+        train = convert_outer_list_to_inner(data["train"])
+        val = convert_outer_list_to_inner(data["val"])
+        test = convert_outer_list_to_inner(data["test"])
+        
+        out_dict = {}
+        for key in train.keys():
+            out_dict[key] = {
+                "train": train[key],
+                "val": val[key],
+                "test": test[key],
+            }
+
+        logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
+        logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
+        logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        return out_dict
+    
+    def read_data(
+        self,
+    ):
+        data = defaultdict(list)
+        dataset = UniboPowertoolsData(
+            test_types=[],
+            chunk_size=1000000,
+            lines=[37, 40],
+            charge_line=37,
+            discharge_line=40,
+            base_path=self.data_path,
+            force_download=False,
+        )
+        
+        rul_handler = RulHandler()
+
+        dataset.prepare_data(train_names, test_names)
+        dataset_handler = ModelDataHandler(dataset, [
+            CycleCols.VOLTAGE,
+            CycleCols.CURRENT,
+            CycleCols.TEMPERATURE
+        ])
+
+
+        
+        CAPACITY_THRESHOLDS = {
+        3.0 : 2.7,#th 90% - min 2.1, 70%
+        2.85 : 2.7,#th 94.7% - min 2.622, 92%
+        2.0 : 1.93,#th 96.5% - min 1.93, 96.5%
+        4.0 : 3.77,#th 94.2% - min 3.77 94.2%
+        4.9 : 4.7,#th 95.9% - min 4.3, 87.7%
+        5.0 : 4.5#th 90% - min 3.63, 72.6%
+        }
+
+        (train_x, train_y_soh, test_x, test_y_soh,
+        train_battery_range, test_battery_range,
+        time_train, time_test, current_train, current_test) = dataset_handler.get_discharge_whole_cycle_future(train_names, test_names)
+
+        train_y = rul_handler.prepare_y_future(train_names, train_battery_range, train_y_soh, current_train, time_train, CAPACITY_THRESHOLDS)
+        del current_train
+        del time_train
+        
+        test_y = rul_handler.prepare_y_future(test_names, test_battery_range, test_y_soh, current_test, time_test, CAPACITY_THRESHOLDS)
+        del current_test
+        del time_test
+            
+        # first one is SOH, we keep only RUL
+        train_y = train_y[:,1]
+        test_y = test_y[:,1]
+
+        # Get train 
+        data = defaultdict(list)
+        left_idx = 0
+        for right_idx, unit_name in zip(train_battery_range, train_names):
+            data['train'].append(
+                {
+                "features": train_x[left_idx:right_idx],
+                "target": train_y[left_idx:right_idx],
+                "metadata": {"unit_name": unit_name}
+                }
+            )
+            left_idx = right_idx
+
+
+        # Get test 
+        left_idx = 0
+        for right_idx, unit_name in zip(test_battery_range, test_names):
+            data['test'].append(
+                {
+                "features": test_x[left_idx:right_idx],
+                "target": test_y[left_idx:right_idx],
+                "metadata": {"unit_name": unit_name}
+                }
+            )
+            # Add also test as val
+            data['val'].append(
+                {
+                "features": test_x[left_idx:right_idx],
+                "target": test_y[left_idx:right_idx],
+                "metadata": {"unit_name": unit_name}
+                }
+            )
+            left_idx = right_idx
+        
+
+        return data
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """
+        Return metadata about the data source.
+        This can include information like data source name, version, etc.
+        """
+        assert self._is_loaded, "Data must be loaded before getting metadata."
+        return self.meta_data
+
+    def get_data_name(self) -> list[str]:
+        """Return source data names."""
+        return self.data_dict["metadata"]
+
+    def get_multisource_data_splitter(self):
+        """Return multisource data splitter."""
+        return self.multisource_data_splitter
+
+    @override
+    def split_data(self):
+        logger.warning(
+            "RigidBodyDynamics does not support data splitting. The project relies on predefined splits."
+        )
