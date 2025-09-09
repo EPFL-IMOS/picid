@@ -32,6 +32,11 @@ class SlidingWindowBatchDataset(BaseDataset):
         features = to_torch_tensor(data_dict["features"])
         time_features = to_torch_tensor(data_dict["time_features"])
 
+        assert to_torch_tensor(data_dict["features"]).shape[0] == to_torch_tensor(
+            data_dict["time_features"]
+        ).shape[0], "Features and time features must have the same length"
+
+
         # TODO: Make sure that the stride covers all the data
         self.feature_sequencer = AutoregressiveSequencer(
             features=features,

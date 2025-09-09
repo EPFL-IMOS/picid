@@ -32,7 +32,7 @@ def flatten_cycles(x, y, valid_lengths=None):
     return np.concatenate(flattened_x), np.concatenate(flattened_y), cycle_indices
 
 
-def unflatten_cycles(flattened_x, flattened_y, cycle_indices, win_len=None, pad_value=0):
+def unflatten_cycles(flattened_x, flattened_y, cycle_indices, win_len, pad_value=0):
     """
     Rebuild cycles from flattened data.
     Optionally split into windows of length win_len (with padding if needed).
@@ -41,7 +41,7 @@ def unflatten_cycles(flattened_x, flattened_y, cycle_indices, win_len=None, pad_
         flattened_x: (total_len, C)
         flattened_y: (total_len, 1)
         cycle_indices: list of (start, end) indices per cycle
-        win_len: int or None, if given will split each cycle into windows
+        win_len: int, split each cycle into windows
         pad_value: value used to pad windows (default=0)
 
     Returns:
@@ -51,23 +51,24 @@ def unflatten_cycles(flattened_x, flattened_y, cycle_indices, win_len=None, pad_
     cycles_x, cycles_y = [], []
     for (start, end) in cycle_indices:
         cx = flattened_x[start:end]
-        cy = flattened_y[start:end][0]  # same per timestep
+        
+        cys = flattened_y[start:end][0]  
+        # assert all of cys are the same per timestep
+        cy = cys[0] # take first element, as all are the same
+        assert np.all(cys == cy), "All target values within a cycle must be the same."
+        
 
-        if win_len is None:
-            # Just return sequence as (1, L, C)
-            cycles_x.append(cx[None, :, :])
-        else:
-            n_windows = int(np.ceil(len(cx) / win_len))
-            padded_len = n_windows * win_len
-            # pad at end if not multiple of win_len
-            pad_amount = padded_len - len(cx)
-            if pad_amount > 0:
-                pad = np.full((pad_amount, cx.shape[1]), pad_value, dtype=cx.dtype)
-                cx = np.vstack([cx, pad])
+        n_windows = int(np.ceil(len(cx) / win_len))
+        padded_len = n_windows * win_len
+        # pad at end if not multiple of win_len
+        pad_amount = padded_len - len(cx)
+        if pad_amount > 0:
+            pad = np.full((pad_amount, cx.shape[1]), pad_value, dtype=cx.dtype)
+            cx = np.vstack([cx, pad])
 
-            # reshape into (n_windows, win_len, C)
-            cx = cx.reshape(n_windows, win_len, cx.shape[1])
-            cycles_x.append(cx)
+        # reshape into (n_windows, win_len, C)
+        cx = cx.reshape(n_windows, win_len, cx.shape[1])
+        cycles_x.append(cx)
 
         cycles_y.append([cy])  # keep as shape (1,)
 

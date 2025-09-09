@@ -14,3 +14,25 @@ scaler_target:
   metadata:
     apply_to: target
     fit_on: train
+
+
+cycles2sequence:
+  transform:
+    _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
+    win_len: 32
+    pad_value: -1
+  
+  metadata:
+    apply_to: ['features', 'target', 'metadata']
+    assign_to: 
+      a: features
+      b: target
+    
+sequence2statistics:
+  transform:
+    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    padding_value: ${transforms.cycles2sequence.transform.pad_value}
+  
+  metadata:
+    apply_to: 'features'
+    
