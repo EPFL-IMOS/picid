@@ -1,39 +1,3 @@
-# These scalers are pre-computed and do not need to be fitted on the data.
-
-
-# get_simple_feature_statistics:
-#   transform:
-#     _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
-#     target_name: rul
-#     cycles_identifier: rul
-#     battery_mode_state: mode
-  
-#   metadata:
-#     apply_to: features
-#     auxiliary_keys: ['metadata']
-  
-
-
-# assign_updated_taget_from_features:
-#   transform:
-#     _target_:  lmetk.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
-#     target_name: rul
-    
-#   metadata:
-#     apply_to: target
-#     auxiliary_keys: ['features']
-    
-filter_features:
-  transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
-    columns_to_keep: ['voltage', 'current', 'temperature'] 
-    apply_to_key: features
-
-  metadata:
-    apply_to: ${transforms.filter_features.transform.apply_to_key}
-
-
-
 scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  

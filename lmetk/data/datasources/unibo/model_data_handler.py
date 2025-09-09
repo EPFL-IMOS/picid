@@ -399,6 +399,8 @@ class ModelDataHandler():
         current_train = train_x[:, :, 1]
         current_test = test_x[:, :, 1]
 
+        initial_cycle_lenghts_train = [len(i) for i in train_raw_x]
+        initial_cycle_lenghts_test = [len(i) for i in test_raw_x]
 
         battery_name_cycle_train = self.train_discharge_cap[:, [CapacityCols.TEST_NAME]]
         battery_range_cycle_train = np.array([np.where(battery_name_cycle_train == x)[0][-1]+1 for x in train_names])
@@ -428,4 +430,4 @@ class ModelDataHandler():
         return (train_x, train_y, test_x, test_y,
                 battery_range_cycle_train, battery_range_cycle_test,
                 time_train, time_test,
-                current_train, current_test)
+                current_train, current_test, initial_cycle_lenghts_train, initial_cycle_lenghts_test)

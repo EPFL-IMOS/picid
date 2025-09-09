@@ -6,9 +6,11 @@ from collections import defaultdict
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from lmetk.data.data_objects.data import SplitDatasetContainer
 from typing import Any, Dict, override
-import torch
+import copy
+import numpy as np
 from lmetk.data.datasources.nb14.nasa_random_data import NasaRandomizedData
-from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler
+from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler #, flatten_cycles
+from lmetk.data.datasources.nb14.utils import flatten_cycles
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
@@ -137,6 +139,7 @@ class NB14Loader(AbstractDataSourceLoader):
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
         logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
         return out_dict
+    
     def read_data(
         self,
     ):
@@ -151,7 +154,8 @@ class NB14Loader(AbstractDataSourceLoader):
 
         (train_x, train_y_soh, test_x, test_y_soh,
         train_battery_range, test_battery_range,
-        time_train, time_test, current_train, current_test) = nasa_data_handler.get_discharge_whole_cycle_future(train_names, test_names)
+        time_train, time_test, current_train, current_test, 
+        initial_cycle_lenghts_train, initial_cycle_lenghts_test) = nasa_data_handler.get_discharge_whole_cycle_future(train_names, test_names)
 
         train_y = rul_handler.prepare_y_future(train_names, train_battery_range, train_y_soh, current_train, time_train, CAPACITY_THRESHOLDS, capacity=NOMINAL_CAPACITY)
         del current_train
@@ -167,40 +171,64 @@ class NB14Loader(AbstractDataSourceLoader):
 
         # Get train 
         data = defaultdict(list)
-        left_idx = 0
-        for right_idx, unit_name in zip(train_battery_range, train_names):
-            data['train'].append(
-                {
-                "features": train_x[left_idx:right_idx],
-                "target": train_y[left_idx:right_idx],
-                "metadata": {"unit_name": unit_name}
-                }
-            )
-            left_idx = right_idx
 
-
-        # Get test 
-        left_idx = 0
-        for right_idx, unit_name in zip(test_battery_range, test_names):
-            data['test'].append(
-                {
-                "features": test_x[left_idx:right_idx],
-                "target": test_y[left_idx:right_idx],
-                "metadata": {"unit_name": unit_name}
-                }
-            )
-            # Add also test as val
-            data['val'].append(
-                {
-                "features": test_x[left_idx:right_idx],
-                "target": test_y[left_idx:right_idx],
-                "metadata": {"unit_name": unit_name}
-                }
-            )
-            left_idx = right_idx
+        data["train"] = self._process_split(x=train_x, y=train_y, battery_range=train_battery_range, names=train_names, valid_lengths=initial_cycle_lenghts_train, flatten=True)
         
-
+        # Get test
+        test_entries = self._process_split(x=test_x, y=test_y, battery_range=test_battery_range, names=test_names, valid_lengths=initial_cycle_lenghts_test, flatten=True)
+        data["test"] = test_entries
+        data["val"] = copy.deepcopy(test_entries)
+        
         return data
+
+    def _process_split(self, x, y, battery_range, names, valid_lengths=None, flatten=False):
+        """
+        Process one split (train/test/val).
+        
+        Args:
+            x: np.ndarray of features (n_samples, ...)
+            y: np.ndarray of labels
+            battery_range: iterable of right indices per unit
+            names: iterable of unit names
+            valid_lengths: list of lists with valid cycle lengths (only for train)
+            flatten: whether to unpad and flatten cycles
+        
+        Returns:
+            list of dicts with keys: features, target, metadata
+        """
+        data_split = []
+        left_idx = 0
+
+        for idx, (right_idx, unit_name) in enumerate(zip(battery_range, names)):
+            curr_x = x[left_idx:right_idx]
+            curr_y = y[left_idx:right_idx]
+
+            if flatten:
+                # Use valid_lengths to unpad and flatten
+                lengths = valid_lengths[left_idx:right_idx]
+                flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
+                entry = {
+                    "features": flattened_x,
+                    "time_features": np.array(flattened_x.shape[0]),
+                    "target": flattened_y,
+                    "metadata": {
+                        "unit_name": unit_name,
+                        "cycle_indices": cycle_indices,
+                        "n_cycles": len(lengths)
+                    }
+                }
+            else:
+                # Keep as is (no flattening)
+                entry = {
+                    "features": curr_x,
+                    "target": curr_y,
+                    "metadata": {"unit_name": unit_name}
+                }
+
+            data_split.append(entry)
+            left_idx = right_idx
+
+        return data_split
 
     def get_meta_data(self) -> Dict[str, Any]:
         """
@@ -223,3 +251,5 @@ class NB14Loader(AbstractDataSourceLoader):
         logger.warning(
             "RigidBodyDynamics does not support data splitting. The project relies on predefined splits."
         )
+
+    

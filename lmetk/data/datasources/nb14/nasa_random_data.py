@@ -23,14 +23,14 @@ class NasaRandomizedData():
     def get_discharge_whole_cycle_future(self, train_names, test_names, validation_names=None):
         logger.info("Loading train data...")
         (train_x, train_y, battery_n_cycle_train,
-            time_train, current_train) = self._get_data(train_names)
+            time_train, current_train, initial_cycle_lenghts_train) = self._get_data(train_names)
         logger.info("Loading test data...")
         (test_x, test_y, battery_n_cycle_test,
-            time_test, current_test) = self._get_data(test_names)
+            time_test, current_test, initial_cycle_lenghts_test) = self._get_data(test_names)
         if validation_names is not None:
             logger.info("Loading validation data...")
             (validation_x, validation_y, battery_n_cycle_validation,
-                time_validation, current_validation) = self._get_data(validation_names)
+                time_validation, current_validation, initial_cycle_lenghts_validation) = self._get_data(validation_names)
 
         logger.info('''Train x: %s, train y soh: %s | Test x: %s, test y soh: %s | 
                             battery n cycle train: %s, battery n cycle test: %s, 
@@ -58,12 +58,15 @@ class NasaRandomizedData():
                     
                     validation_x, validation_y,
                     battery_n_cycle_validation,
-                    time_validation, current_validation)
+                    time_validation, current_validation,
+                    initial_cycle_lenghts_train, initial_cycle_lenghts_test,
+                    initial_cycle_lenghts_validation)
 
         return (train_x, train_y, test_x, test_y,
                 battery_n_cycle_train, battery_n_cycle_test,
                 time_train, time_test,
-                current_train, current_test)
+                current_train, current_test,
+                initial_cycle_lenghts_train, initial_cycle_lenghts_test)
         
     def _get_data(self, names):
         cycle_x = []
@@ -127,16 +130,18 @@ class NasaRandomizedData():
             first_y = True
             battery_n_cycle.append(n_cycles)
 
-        cycle_x = self._to_padded_numpy(cycle_x, [len(cycle_x), max_step, len(cycle_x[0][0])])
+        cycle_x, initial_cycle_lenghts = self._to_padded_numpy(cycle_x, [len(cycle_x), max_step, len(cycle_x[0][0])])
         cycle_y = np.array(cycle_y)
         battery_n_cycle = np.array(battery_n_cycle)
-        time = self._to_padded_numpy(time, [len(time), max_step])
-        current = self._to_padded_numpy(current, [len(current), max_step])
+        time, _ = self._to_padded_numpy(time, [len(time), max_step])
+        current, _ = self._to_padded_numpy(current, [len(current), max_step])
 
-        return cycle_x, cycle_y, battery_n_cycle, time, current
+        return cycle_x, cycle_y, battery_n_cycle, time, current, initial_cycle_lenghts
 
     def _to_padded_numpy(self, l, shape):
         padded_array = np.zeros(shape)
+        initia_lenghts = []
         for i,j in enumerate(l):
             padded_array[i][0:len(j)] = j
-        return padded_array
+            initia_lenghts.append(len(j))
+        return padded_array, initia_lenghts

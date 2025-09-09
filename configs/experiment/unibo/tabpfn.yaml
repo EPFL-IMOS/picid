@@ -1,24 +1,11 @@
 #@package _global_
 
 defaults:
-  - override /datasource: unibo21_battery
+  - unibo/base
   - override /transforms: battery/bosello_unibo
   - override /model: tabpfn_batch_context
   - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
-  - override /evaluator: default
-  - override /task_definition: battery_phmd
 
 task_definition: 
   requires_training: false
-
-evaluator:
-  train:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
-  val:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
-  test:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
