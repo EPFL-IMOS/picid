@@ -4,10 +4,10 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 
 logger = logging.getLogger(__name__)
-class AutocorrFeatureDropTransform(BaseTransform):
+class AutocorrFeatureDropTransform(DenseTransform):
 
     def __init__(self, correlation_threshold: float = 0.95, method: str = 'pearson', 
                  keep_first: bool = True, exclude_columns: Optional[List[int]] = None, **kwargs):

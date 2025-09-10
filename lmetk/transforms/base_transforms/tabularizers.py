@@ -21,14 +21,14 @@ from omegaconf import OmegaConf
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

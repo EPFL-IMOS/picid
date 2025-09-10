@@ -4,13 +4,13 @@ from typing import Any, Dict, List
 import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ConcatenateTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, **kwargs):
         """
         Initialize the transform.

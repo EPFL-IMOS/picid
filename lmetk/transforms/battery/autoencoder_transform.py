@@ -6,7 +6,7 @@ from typing import Any, Dict
 import hydra
 import omegaconf
 import torch
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 import pandas as pd
@@ -15,7 +15,8 @@ import pandas as pd
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
 
-class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
+
+class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Compresses battery cycle data into a mean/std representation using a pre-trained Autoencoder.
     """
@@ -31,8 +32,10 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         super().__init__()
         experiment_dir = Path(folder_name)
         if not experiment_dir.is_dir():
-            raise FileNotFoundError(f"Experiment directory not found at: {experiment_dir}")
-        
+            raise FileNotFoundError(
+                f"Experiment directory not found at: {experiment_dir}"
+            )
+
         self._cfg = None
         self._model = self._load_model(experiment_dir)
         self._model.eval()  # Set model to evaluation mode
@@ -45,12 +48,14 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         model = hydra.utils.instantiate(self._cfg.model)
 
         checkpoint_path = self._find_checkpoint_file(experiment_dir)
-        state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=False)['state_dict']
-        
+        state_dict = torch.load(
+            checkpoint_path, map_location="cpu", weights_only=False
+        )["state_dict"]
+
         # Correct the keys in the state_dict if necessary
         corrected_state_dict = self._correct_state_dict_keys(state_dict)
         model.load_state_dict(corrected_state_dict)
-        
+
         logger.info(f"Successfully loaded model from {checkpoint_path}")
         return model
 
@@ -59,17 +64,23 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         """Finds the unique .ckpt file in the checkpoints subdirectory."""
         checkpoint_dir = experiment_dir / "checkpoints"
         if not checkpoint_dir.is_dir():
-            raise FileNotFoundError(f"Checkpoint directory not found in {experiment_dir}")
+            raise FileNotFoundError(
+                f"Checkpoint directory not found in {experiment_dir}"
+            )
 
         try:
             # Use a generator expression and next() for an efficient single-item search
             checkpoint_path = next(checkpoint_dir.glob("*.ckpt"))
         except StopIteration:
-            raise FileNotFoundError(f"No .ckpt files found in {checkpoint_dir}") from None
+            raise FileNotFoundError(
+                f"No .ckpt files found in {checkpoint_dir}"
+            ) from None
 
         # Ensure no other checkpoints exist
         if list(checkpoint_dir.glob("*.ckpt"))[1:]:
-             logger.warning(f"Multiple checkpoints found in {checkpoint_dir}. Using {checkpoint_path}.")
+            logger.warning(
+                f"Multiple checkpoints found in {checkpoint_dir}. Using {checkpoint_path}."
+            )
 
         return checkpoint_path
 
@@ -81,16 +92,18 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
             # Ensure the config is inside a .hydra metadata folder
             if ".hydra" in config_path.parts:
                 return config_path
-        
-        raise FileNotFoundError(f"config.yaml not found in {experiment_dir} (excluding .hydra directories)")
-    
+
+        raise FileNotFoundError(
+            f"config.yaml not found in {experiment_dir} (excluding .hydra directories)"
+        )
+
     @staticmethod
     def _correct_state_dict_keys(state_dict: Dict[str, Any]) -> OrderedDict:
         """Removes an extraneous 'backbone.' prefix from state_dict keys."""
         new_state_dict = OrderedDict()
         for key, value in state_dict.items():
             # Use removeprefix for a clean and explicit operation
-            new_key = key.removeprefix('backbone.')
+            new_key = key.removeprefix("backbone.")
             new_state_dict[new_key] = value
         return new_state_dict
 
@@ -101,10 +114,9 @@ class AutoencoderTransform(BaseTransform, NoFitMultiSourceTransformMixin):
     def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
         """
         Transforms a single data segment using the loaded autoencoder model.
-        
+
         Note: The implementation for data transformation needs to be added here.
         """
-    
 
         data_segment = data_segment_obj["features"]
 

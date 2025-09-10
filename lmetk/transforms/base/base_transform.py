@@ -4,7 +4,7 @@ from typing import Any, Dict
 from lmetk.data.data_objects.data import NamedTransformInput
 
 
-class BaseTransform(ABC):
+class DenseTransform(ABC):
     """
     Simplified base transform interface. Transforms only need to implement
     the core transformation logic, not the fitting strategies.

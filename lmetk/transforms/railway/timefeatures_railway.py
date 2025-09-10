@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 
 # Assuming this import path is correct for your project
 
 
-class RailwayTimeFeaturesTransform(BaseTransform):
+class RailwayTimeFeaturesTransform(DenseTransform):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

@@ -4,12 +4,12 @@ from typing import Any, Dict, List
 import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 
 logger = logging.getLogger(__name__)
 
 
-class SeasonalDummyTransform(BaseTransform):
+class SeasonalDummyTransform(DenseTransform):
 
     def __init__(self, shift: int, seq_len: int = 168, **kwargs):
         """

@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 
 # Assuming this import path is correct for your project
 
@@ -11,7 +11,7 @@ from lmetk.transforms.base.base_transform import BaseTransform
 logger = logging.getLogger(__name__)
 
 
-class BatteryTransform(BaseTransform):
+class BatteryTransform(DenseTransform):
 
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs

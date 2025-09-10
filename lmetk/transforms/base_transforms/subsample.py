@@ -5,14 +5,14 @@ import numpy as np
 
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class SubsampleTransform(BaseTransform, NoFitMultiSourceTransformMixin):
+class SubsampleTransform(DenseTransform, NoFitMultiSourceTransformMixin):
 
     def __init__(
         self,
@@ -48,7 +48,7 @@ class SubsampleTransform(BaseTransform, NoFitMultiSourceTransformMixin):
         return self.transform_data(data, None)
 
 
-class WindowedAggregationTransform(BaseTransform, NoFitMultiSourceTransformMixin):
+class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Applies a sliding window aggregation to the input data.
     """

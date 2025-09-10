@@ -4,13 +4,13 @@ import numpy as np
 from einops import parse_shape, rearrange
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ReshapeTransform(BaseTransform, NoFitMultiSourceTransformMixin):
+class ReshapeTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     def __init__(self, pattern: str, **kwargs):
         """
         Initialize the transform.

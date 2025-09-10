@@ -6,7 +6,7 @@ from numpy import ndarray
 
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
@@ -17,7 +17,7 @@ def ak_bc(arr):
 
 
 class N_CMAPSSDescriptorsScaler(
-    BaseTransform, ConcatinatedFitMultiSourceTransformMixin
+    DenseTransform, ConcatinatedFitMultiSourceTransformMixin
 ):
     def __init__(self, scaling="standard"):
 
@@ -71,7 +71,7 @@ class N_CMAPSSDescriptorsScaler(
         return descriptors
 
 
-class N_CMAPSSFeaturesScaler(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class N_CMAPSSFeaturesScaler(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 

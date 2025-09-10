@@ -58,7 +58,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         window_size: int = 50,
         stride: int = 1,
         scaling: str = "legacy",
-        group_by_unit: bool = False,
+        group_by_unit: bool = True,
         **kwargs: Any,
     ):
 

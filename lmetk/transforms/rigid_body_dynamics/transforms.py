@@ -3,13 +3,13 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
 
-class First(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class First(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, **kwargs):
         """
         Initialize the transform.
@@ -18,8 +18,6 @@ class First(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
             **kwargs: Additional keyword arguments
         """
         super().__init__(**kwargs)
-
-    
 
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """

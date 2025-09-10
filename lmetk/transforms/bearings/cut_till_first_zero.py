@@ -2,14 +2,14 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class RULTaskUpToFirstZero(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """

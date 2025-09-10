@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional
 import numpy as np
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class Sequence2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
+class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Transforms sequence data by computing the mean and standard deviation
     for each cycle, ignoring a specified padding value and np.nan.
@@ -15,6 +15,7 @@ class Sequence2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
     Input shape: (N_cycles, N_win, win_len, channels)
     Output shape: (N_cycles, channels * 2)
     """
+
     def __init__(self, padding_value: Optional[float] = None):
         """
         Args:
@@ -28,7 +29,7 @@ class Sequence2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
         """
         Transforms a single data segment by calculating statistics.
         """
-        features = data['features']
+        features = data["features"]
         logger.info(f"Original feature shape for statistics: {features.shape}")
 
         # Create a working copy to handle padding, ensuring dtype supports nan
@@ -44,7 +45,7 @@ class Sequence2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
 
         # 2. Calculate standard deviation using the modified data
         std_per_cycle = np.nanstd(working_features, axis=(1, 2))
-        
+
         # 3. Clean up potential NaNs in std output
         std_per_cycle = np.nan_to_num(std_per_cycle, nan=0.0)
 

@@ -4,7 +4,7 @@ from typing import Any
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
     ConcatinatedFitMultiSourceTransformMixin,
     InverseTransformMixin,
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConstantScaler(
-    BaseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
+    DenseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
 ):
     def __init__(self, factor=1.0):
         super().__init__()
@@ -47,7 +47,7 @@ class ConstantScaler(
 
 
 class MinMaxScalerSklearn(
-    BaseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
+    DenseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
 ):
     """
     An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.
@@ -115,7 +115,7 @@ class MinMaxScalerSklearn(
 
 
 class StandardScalerSklearn(
-    BaseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
+    DenseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
 ):
     """
     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.

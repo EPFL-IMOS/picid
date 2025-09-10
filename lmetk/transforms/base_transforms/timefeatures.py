@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 
 # Assuming this import path is correct for your project
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.data.data_objects.data import SimpleReturnObject
 
 
-class TimePFNTimeFeaturesTransform(BaseTransform):
+class TimePFNTimeFeaturesTransform(DenseTransform):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features
@@ -81,15 +81,11 @@ class TimePFNTimeFeaturesTransform(BaseTransform):
         # Convert the result to a DataFrame and transpose, as per your original working code.
         transformed_data = pd.DataFrame(df_stamp_raw.transpose(1, 0))
         return transformed_data
-        
-
 
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
     def __call__(self, data: Any) -> Any:
         return self.transform_data(data)
-
-
 
 
 # From: gluonts/src/gluonts/time_feature/_base.py
@@ -235,5 +231,5 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     raise RuntimeError(supported_freq_msg)
 
 
-def time_features(dates, freq='h'):
+def time_features(dates, freq="h"):
     return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)])

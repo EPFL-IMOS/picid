@@ -3,14 +3,14 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(
         self,
         win_len: int = 256,
@@ -194,7 +194,7 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         # Apply STFT based on chosen axis
         stft_results_for_key = []
-        
+
         # Apply STFT to each column (each column is a signal)
         for col_idx in range(n_columns):
             signal = value[:, col_idx]  # Extract 1D signal from column
@@ -218,12 +218,12 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         logger.info(f"Final concatenated STFT shape: {final_result.shape}")
 
-        if 'target' not in data.keys():
+        if "target" not in data.keys():
             return final_result
-        
-        # metadata 
-        out_dict = {'features': final_result}
-        
+
+        # metadata
+        out_dict = {"features": final_result}
+
         target = data["target"]
         # Convert to numpy array
         target = convert_to_numpy(target, key)
@@ -231,7 +231,7 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         logger.info(f"Added data '{key}' with shape {target.shape}")
 
         # Allign targets
-        n_frames = final_result.shape[0]  
+        n_frames = final_result.shape[0]
         centers = np.arange(n_frames) * self.hop  # in samples
         end_idx = np.clip(centers + self.win_len // 2 - 1, 0, len(target) - 1)
         frame_targets = target[end_idx]  # aligned targets per time frame
@@ -240,11 +240,9 @@ class STFTTransform(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         target = np.array(frame_targets).reshape(-1, 1)
         logger.info(f"Final target shape: {target.shape}")
 
-        assert (
-            target.shape[0] == n_frames
-        ), "Target and result shapes do not match"
+        assert target.shape[0] == n_frames, "Target and result shapes do not match"
 
-        out_dict['target'] = target
+        out_dict["target"] = target
         return out_dict
 
     def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:

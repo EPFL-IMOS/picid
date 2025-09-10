@@ -3,13 +3,13 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
 
-class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class FilterTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(self, win_len: int, hop: int, **kwargs):
         """
         Initialize the transform.
@@ -20,7 +20,6 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         super().__init__(**kwargs)
         self.win_len = win_len
         self.hop = hop
-
 
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """
@@ -33,7 +32,7 @@ class FilterTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         Returns:
             Concatenated numpy array
         """
-        features = data["features"] # N, D --> n, <h1,h2> | subsample N to n for target
+        features = data["features"]  # N, D --> n, <h1,h2> | subsample N to n for target
         assert "target" in data, "Missing 'target' key in data"
 
         if not data:

@@ -2,12 +2,15 @@ from typing import Any, Dict
 
 import pandas as pd
 import numpy as np
-from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin, NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.transforms.base.multisource import (
+    ConcatinatedFitMultiSourceTransformMixin,
+    NoFitMultiSourceTransformMixin,
+)
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 
 
-class FilterDataFrameColumns(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class FilterDataFrameColumns(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
     """
@@ -30,7 +33,7 @@ class FilterDataFrameColumns(BaseTransform, ConcatinatedFitMultiSourceTransformM
         return data_segment
 
 
-class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class UpdateTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Update the target column to be the one specified in the config.
     This update takes a column from the "features" and returns it
@@ -48,9 +51,7 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
-        assert (
-            self.apply_to_key in data
-        ), f"{self.apply_to_key}  are not passed in data"
+        assert self.apply_to_key in data, f"{self.apply_to_key}  are not passed in data"
 
         out = (
             data[self.apply_to_key][self.target_name]
@@ -59,7 +60,8 @@ class UpdateTarget(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         return out
 
-class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransformMixin):
+
+class AssignNaiveTimefeatures(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     """
     Replace the time features with a range from 0 to len(feature)
     """
@@ -71,18 +73,12 @@ class AssignNaiveTimefeatures(BaseTransform, ConcatinatedFitMultiSourceTransform
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:
         """Transforms a single data segment using the internal ."""
-        assert (
-            "features" in data
-        ), "features features are not passed in auxiliary_data"
-        data_segment = (
-            np.arange(data["features"].shape[0])
-            .reshape(-1, 1)
-            .astype(float)
-        )
+        assert "features" in data, "features features are not passed in auxiliary_data"
+        data_segment = np.arange(data["features"].shape[0]).reshape(-1, 1).astype(float)
         return data_segment
 
 
-class Cycles2Statistics(BaseTransform, NoFitMultiSourceTransformMixin):
+class Cycles2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Compress cycles to the mean/std representations of the cycles for NB1 dataset
     """

@@ -246,9 +246,8 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
                     )
                 )
 
-
-        # Modify the splits if needed by source: 
-        if self.dataset_fold is not None: 
+        # Modify the splits if needed by source:
+        if self.dataset_fold is not None:
             data = self._unibo_bosello_split(data)
 
         # The data structure in data is:
@@ -324,79 +323,3 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
     def _get_unit_column(self) -> str:
         """Return the unit column name."""
         raise NotImplementedError("Subclasses must implement _get_unit_column")
-
-    def _unibo_bosello_split(self, data):
-        
-        train_unit_names = [
-            '000-DM-3.0-4019-S',#minimum capacity 1.48
-            '001-DM-3.0-4019-S',#minimum capacity 1.81
-            '002-DM-3.0-4019-S',#minimum capacity 2.06
-
-            '009-DM-3.0-4019-H',#minimum capacity 1.41
-            '010-DM-3.0-4019-H',#minimum capacity 1.44
-
-            '014-DM-3.0-4019-P',#minimum capacity 1.7
-            '015-DM-3.0-4019-P',#minimum capacity 1.76
-            '016-DM-3.0-4019-P',#minimum capacity 1.56
-            '017-DM-3.0-4019-P',#minimum capacity 1.29
-            #'047-DM-3.0-4019-P',#new 1.98
-            #'049-DM-3.0-4019-P',#new 2.19
-            '007-EE-2.85-0820-S',#2.5
-            '008-EE-2.85-0820-S',#2.49
-            '042-EE-2.85-0820-S',#2.51
-            '043-EE-2.85-0820-H',#2.31
-            '018-DP-2.00-1320-S',#minimum capacity 1.82
-            #'019-DP-2.00-1320-S',#minimum capacity 1.61
-            '036-DP-2.00-1720-S',#minimum capacity 1.91
-            '037-DP-2.00-1720-S',#minimum capacity 1.84
-            '038-DP-2.00-2420-S',#minimum capacity 1.854 (to 0)
-            '050-DP-2.00-4020-S',#new 1.81
-            '051-DP-2.00-4020-S',#new 1.866            
-            '040-DM-4.00-2320-S',#minimum capacity 3.75, cycles 188
-        ]
-        test_unit_names = [
-            '003-DM-3.0-4019-S',#minimum capacity 1.84
-            '011-DM-3.0-4019-H',#minimum capacity 1.36
-            '013-DM-3.0-4019-P',#minimum capacity 1.6
-            '006-EE-2.85-0820-S',# 2.621
-            '044-EE-2.85-0820-H',# 2.43
-            '039-DP-2.00-2420-S',#minimum capacity 1.93
-            '041-DM-4.00-2320-S',#minimum capacity 3.76, cycles 190
-        ]
-
-        phmd_unit_names = []
-        for split in ('train', 'val', 'test'):
-            curr_data = data[split]
-            phmd_unit_names.extend([i['metadata']['unit_id'] for i in curr_data])
-        
-
-        # Check the difference between phmd and bosello units
-        phmd_unit_names = set(phmd_unit_names)
-        bosello_unit_names = set(train_unit_names + test_unit_names)
-        
-        print("PHMD units:", len(phmd_unit_names))
-        print("Bosello units:", len(bosello_unit_names))
-        print("Difference: PHMD units - Bosello units", phmd_unit_names - bosello_unit_names)
-        print("Difference: Bosello units - PHMD units", bosello_unit_names - phmd_unit_names)
-        
-        # Create the new data which will follow the bosello split strategy
-        new_data = {
-            "train": [],
-            "val": [], # Val will be empty as per Bosello split
-            "test": []
-        }
-
-        for split in ["train", "val", "test"]:
-            for unit_data in data[split]:
-                unit_id = unit_data["metadata"]["unit_id"]
-                if unit_id in train_unit_names:
-                    new_data["train"].append(unit_data)
-                elif unit_id in test_unit_names:
-                    new_data["test"].append(unit_data)
-                    new_data["val"].append(unit_data)
-                else:
-                    logger.warning(f"Unit {unit_id} from original '{split}' split is not in Bosello train or test sets. Skipping.")
-        
-        logger.info(f"Applying Bosello split: Train units: {len(new_data['train'])}, Test units: {len(new_data['test'])}")
-        return new_data
-        
