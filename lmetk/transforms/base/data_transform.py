@@ -319,7 +319,7 @@ class DataTransform:
 
         # Ensure the value(s) at 'assign_to' are still dicts of splits
         for key in assign_to_keys:
-            if not isinstance(transformed_data[key], Mapping):
+            if not isinstance(transformed_data[key], SplitDatasetContainer):
                 raise TypeError(
                     f"Transform '{self.transform_name}': Data at '{key}' key in transformed data "
                     f"is of type {type(transformed_data[key])}, expected dict of splits."

@@ -55,7 +55,6 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         """
         Transform the data from all sources using the fitted scalers.
         """
-
         lengths = [len(chunk.keys()) for chunk in data_segments]
         if len(set(lengths)) != 1:
             raise ValueError(

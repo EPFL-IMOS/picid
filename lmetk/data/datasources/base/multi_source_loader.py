@@ -150,13 +150,27 @@ class MultiSourceLoader(AbstractDataSourceLoader):
 
         if self.multisource_data_splitter:
 
+            instance_clss = set([data.get_instance_cls() for data in data_lst])
+            if len(instance_clss) != 1:
+                raise TypeError(
+                    f"All data sources must have the same instance_cls, got {instance_clss}"
+                )
+
             assert isinstance(
                 self.multisource_data_splitter, BySourceSplitter
             ), "multisource_data_splitter must be an instance of BySourceSplitter"
             data_dict, _ = self.multisource_data_splitter(data_lst, source_names)
-            self.container = SplitDatasetContainer(**data_dict)
+            self.container = SplitDatasetContainer(
+                instance_cls=instance_clss.pop(), **data_dict
+            )
         else:
-            self.container = SplitDatasetContainer(*self.data_lst)
+
+            raise NotImplementedError(
+                "Not yet completely implemented. Please provide a multisource_data_splitter."
+            )
+            self.container = SplitDatasetContainer(
+                *self.data_lst, instance_cls=instance_clss.pop()
+            )
 
         self._is_loaded = True
 

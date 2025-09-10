@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import copy
 import logging
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 
+import awkward as ak
 import numpy as np
 import pandas as pd
+from torch import Type
 
-from lmetk.data.data_objects.base import (
-    BaseDataObject,
-)  # Assuming your BaseDataObject is here
+from lmetk.data.data_objects.base import BaseDataObject
 from lmetk.data.data_objects.utils import (
     check_for_nans,
     check_length_consistency,
@@ -20,24 +21,65 @@ from lmetk.data.data_objects.utils import (
 # Basic logger configuration
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+T = TypeVar("T", bound=(np.ndarray | ak.Array))
+ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
-class DataChunk(BaseDataObject):
+
+class ToNumpyMixin:
+
+    def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
+        """
+        Converts the data for a given key to a NumPy array on demand.
+        """
+        if key not in self:
+            raise KeyError(f"Key '{key}' not found in OrderedInput.")
+        value = self[key]
+        # This calls the standalone utility function we created earlier
+        return convert_to_numpy(value, ensure_2d)
+
+
+class ToDataFrameMixin:
+
+    def to_dataframe(self, key: str) -> pd.DataFrame:
+        """
+        Returns a pandas.DataFrame representation of the data for a given key.
+        """
+        if key not in self:
+            raise KeyError(f"Key '{key}' not found in DataChunk.")
+
+        value = self[key]
+        if isinstance(value, pd.DataFrame):
+            return value
+
+        array_data = self.to_numpy(key, ensure_2d=False)
+        columns = getattr(self, "metadata", {}).get("column_map", {}).get(key)
+        return pd.DataFrame(array_data, columns=columns)
+
+
+class BaseDataObjectWithMetadata(
+    BaseDataObject[T], ToNumpyMixin, ToDataFrameMixin, Generic[T]
+):
     """
     A flexible data container that stores an individual data unit in its
     original format.
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, instance_cls: Type[T], **kwargs: Any) -> None:
         """
         Initializes the chunk, handling metadata and column extraction robustly.
         """
         # --- FIX ---
         # Pop metadata to handle it separately after other items are initialized.
         # This avoids order-of-operation bugs.
+
+        # We keep Metadata as a private attribute to
+        # keep the data homogeneous
+        self._metadata: Optional[Dict[str, Any]] = None
+
         metadata = kwargs.pop("metadata", None)
 
         # Initialize all other data first
-        super().__init__(**kwargs)
+        super().__init__(instance_cls=instance_cls, **kwargs)
 
         # Now, if metadata was provided, prepare it and set it.
         if metadata is not None:
@@ -49,7 +91,9 @@ class DataChunk(BaseDataObject):
                     metadata["column_map"][key] = value.columns.tolist()
 
             # Finally, set the fully prepared metadata object
-            self["metadata"] = metadata
+            self._metadata = metadata
+        else:
+            self._metadata = {}
 
     def __setitem__(self, key: str, value: Any) -> None:
         """
@@ -62,57 +106,37 @@ class DataChunk(BaseDataObject):
         super().__setitem__(key, value)
 
         # After setting, manage the column map if metadata exists.
-        if "metadata" in self and isinstance(self.metadata, dict):
+        if self._metadata is not None and isinstance(self._metadata, dict):
             is_df = isinstance(value, pd.DataFrame)
-            self.metadata.setdefault("column_map", {})
+            self._metadata.setdefault("column_map", {})
 
             if is_df:
-                self.metadata["column_map"][key] = value.columns.tolist()
-            elif key in self.metadata.get("column_map", {}):
+                self._metadata["column_map"][key] = value.columns.tolist()
+            elif key in self._metadata.get("column_map", {}):
                 # If a key that had columns is being replaced by a non-DataFrame,
                 # remove its stale entry from the map.
-                del self.metadata["column_map"][key]
+                del self._metadata["column_map"][key]
+
+    def copy(
+        self: "BaseDataObjectWithMetadata[T]", deep: bool = True
+    ) -> "BaseDataObjectWithMetadata[T]":
+        new = super().copy(deep=deep)  # this already builds the _data
+        # fix up metadata separately
+        if self._metadata is None:
+            new._metadata = None
+        else:
+            new._metadata = (
+                copy.deepcopy(self._metadata) if deep else self._metadata.copy()
+            )
+        return new
 
     # --- Public API Methods ---
-
-    def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
+    @property
+    def metadata(self) -> Optional[Dict[str, Any]]:
         """
-        Converts the data for a given key to a NumPy array on demand.
+        Returns the metadata dictionary, if it exists.
         """
-        if key not in self:
-            raise KeyError(f"Key '{key}' not found in DataChunk.")
-        value = self[key]
-        if isinstance(value, np.ndarray):
-            array = value
-        elif isinstance(value, (pd.DataFrame, pd.Series)):
-            dtypes = getattr(value, "dtypes", [getattr(value, "dtype", None)])
-            if any(dt.kind not in "biufc" for dt in dtypes):
-                array = value.values
-            else:
-                array = value.values.astype(np.float32)
-        else:
-            array = np.array(value)
-        if ensure_2d:
-            if array.ndim == 1:
-                return array.reshape(-1, 1)
-            if array.ndim != 2:
-                raise ValueError(
-                    f"Key '{key}' has unsupported dimensions: {array.ndim}."
-                )
-        return array
-
-    def to_dataframe(self, key: str) -> pd.DataFrame:
-        """
-        Returns a pandas.DataFrame representation of the data for a given key.
-        """
-        if key not in self:
-            raise KeyError(f"Key '{key}' not found in DataChunk.")
-        value = self[key]
-        if isinstance(value, pd.DataFrame):
-            return value
-        array_data = self.to_numpy(key, ensure_2d=False)
-        columns = self.get("metadata", {}).get("column_map", {}).get(key)
-        return pd.DataFrame(array_data, columns=columns)
+        return self._metadata
 
     def validate(self, keys_to_validate: Optional[List[str]] = None) -> None:
         """
@@ -135,16 +159,33 @@ class DataChunk(BaseDataObject):
         logging.info("Validation successful for keys: %s", keys)
 
 
-ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
+class ImplicitTypeDataObject(BaseDataObject):
+
+    def __init__(self, **kwargs):
+
+        # assume instance_cls from set of kwargs values
+        if not kwargs:
+            raise ValueError(
+                "TransformInput requires at least one value. "
+                "At least one keyword argument is required to infer type."
+            )
+
+        instance_types = {type(v) for v in kwargs.values()}
+        if len(instance_types) != 1:
+            raise ValueError(
+                f"All values must be of the same type to infer instance_cls, got: {instance_types}"
+            )
+        else:
+            instance_cls = instance_types.pop()
+
+        super().__init__(instance_cls, **kwargs)
 
 
-class NamedTransformInput(BaseDataObject):
+class NamedTransformInput(ImplicitTypeDataObject):
     """
     A data object that holds inputs for a transformation and can sanitize them.
     It includes methods for converting its contents to NumPy or DataFrame formats.
     """
-
-    # --- Public API Methods ---
 
     def get_sanitized_data(
         self,
@@ -157,7 +198,7 @@ class NamedTransformInput(BaseDataObject):
         """
         Performs validation, extracts column metadata, and converts data to NumPy arrays.
         """
-        target_obj = copy.deepcopy(self) if return_copy else self
+        target_obj = self.copy() if return_copy else self
 
         # # Replace .setdefault() with standard assignment to trigger our custom __setitem__
         # if any(isinstance(v, pd.DataFrame) for v in target_obj.values()) and (
@@ -196,32 +237,6 @@ class NamedTransformInput(BaseDataObject):
 
         return target_obj
 
-    def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
-        """
-        Converts the data for a given key to a NumPy array on demand.
-        """
-        if key not in self:
-            raise KeyError(f"Key '{key}' not found in OrderedInput.")
-        value = self[key]
-        # This calls the standalone utility function we created earlier
-        return convert_to_numpy(value, key, ensure_2d)
-
-    def to_dataframe(self, key: str) -> pd.DataFrame:
-        """
-        Returns a pandas.DataFrame representation of the data for a given key.
-        """
-        if key not in self:
-            raise KeyError(f"Key '{key}' not found in OrderedInput.")
-
-        value = self[key]
-        if isinstance(value, pd.DataFrame):
-            return value
-
-        array_data = self.to_numpy(key, ensure_2d=False)
-        # It safely checks for metadata, which may or may not exist on an OrderedInput
-        columns = self.get("metadata", {}).get("column_map", {}).get(key)
-        return pd.DataFrame(array_data, columns=columns)
-
 
 """
 # --- Return Object Types ---
@@ -230,25 +245,31 @@ However, we had no time to implement them fully, so they currently do not add fu
 """
 
 
-class SimpleReturnObject(BaseDataObject):
+class ReturnObject(ImplicitTypeDataObject, Generic[T]):
+    """A generic return object for transformations."""
+
+    pass
+
+
+class SimpleReturnObject(ReturnObject, Generic[T]):
     """A data object for simple, single-array returns from a transform."""
 
     pass
 
 
-class NamedDictReturnObject(BaseDataObject):
+class NamedDictReturnObject(ReturnObject, Generic[T]):
     """A data object for dictionary-like returns with named keys."""
 
     pass
 
 
-class ExtendedReturnObject(BaseDataObject):
+class ExtendedReturnObject(ReturnObject, Generic[T]):
     """A data object for complex returns that may include data and metadata."""
 
     pass
 
 
-class DatasetContainer(BaseDataObject):
+class DatasetContainer(BaseDataObject, Generic[T]):
     """
     A container for a complete dataset composed of multiple splits and units.
 
@@ -259,7 +280,9 @@ class DatasetContainer(BaseDataObject):
 
     # --- Dunder Methods ---
 
-    def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any) -> None:
+    def __init__(
+        self, *args, instance_cls: Type[T], is_multi_unit: bool = True, **kwargs: Any
+    ) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
         """
@@ -285,7 +308,7 @@ class DatasetContainer(BaseDataObject):
                         splits_dict[split] = [data_for_split]
 
         # The base __init__ will now receive the normalized kwargs
-        super().__init__(**kwargs)
+        super().__init__(instance_cls=instance_cls, **kwargs)
 
     # --- Public API Methods ---
 
@@ -304,11 +327,23 @@ class DatasetContainer(BaseDataObject):
             logging.info("MultiDatasetChunk is empty. Nothing to validate.")
             return
 
+    def copy(
+        self: "BaseDataObjectWithMetadata[T]", deep: bool = True
+    ) -> "BaseDataObjectWithMetadata[T]":
+        new = super().copy(deep=deep)  # this already builds the _data
+        # fix up metadata separately
+        new.is_multi_unit = (
+            copy.deepcopy(self.is_multi_unit) if deep else self.is_multi_unit
+        )
+        return new
 
-class SplitDatasetContainer(DatasetContainer):
 
-    def __init__(self, *args, is_multi_unit=True, **kwargs):
-        super().__init__(*args, is_multi_unit=is_multi_unit, **kwargs)
+class SplitDatasetContainer(DatasetContainer, Generic[T]):
+
+    def __init__(self, *args, instance_cls: Type[T], is_multi_unit=True, **kwargs: Any):
+        super().__init__(
+            *args, instance_cls=instance_cls, is_multi_unit=is_multi_unit, **kwargs
+        )
 
     def validate(self):
         super().validate()
@@ -350,7 +385,8 @@ class SplitDatasetContainer(DatasetContainer):
                 if not all(s == first_key_set for s in unit_key_sets):
                     raise ValueError(
                         f"Inconsistent feature keys for units in split '{split}'. "
-                        f"All units in a split must have the same set of data keys. Found: {unit_key_sets}"
+                        f"All units in a split must have the same set of data keys. "
+                        f"Found: {unit_key_sets}"
                     )
 
         logging.info(
@@ -373,24 +409,25 @@ class SplitDatasetContainer(DatasetContainer):
 
         all_splits = set()
         for splits_data in self.values():
-            if isinstance(splits_data, dict):
+            if isinstance(splits_data, Mapping):
                 all_splits.update(splits_data.keys())
 
         split_dict = {split: {} for split in all_splits}
         for data_key, splits_data in self.items():
-            if isinstance(splits_data, dict):
+            if isinstance(splits_data, Mapping):
                 for split, unit_list in splits_data.items():
                     if not self.is_multi_unit:
-                        assert (
-                            len(unit_list) == 1
-                        ), "The number of units is greater than 1, although the data is set to be not multi_unit"
+                        assert len(unit_list) == 1, (
+                            "The number of units is greater than 1, although "
+                            "the data is set to be not multi_unit"
+                        )
                         split_dict[split][data_key] = unit_list[0]
                     else:
                         split_dict[split][data_key] = unit_list
 
         return split_dict
 
-    def group_by_split(self) -> Dict[str, List[DataChunk]]:
+    def group_by_split(self) -> Dict[str, List[BaseDataObjectWithMetadata]]:
         """
         Reorganizes the data into a dictionary of DataChunk object lists, grouped by split.
 
@@ -405,29 +442,31 @@ class SplitDatasetContainer(DatasetContainer):
 
         splits, num_units_per_split, data_keys = set(), {}, list(self.keys())
         for key in data_keys:
-            if isinstance(self[key], dict):
+            if isinstance(self[key], Mapping):
                 splits.update(self[key].keys())
 
         for split in splits:
             lengths = {
                 len(self[key][split])
                 for key in data_keys
-                if isinstance(self[key], dict) and split in self[key]
+                if isinstance(self[key], Mapping) and split in self[key]
             }
             if lengths:
                 num_units_per_split[split] = lengths.pop()
 
-        grouped_dict: Dict[str, List["DataChunk"]] = {split: [] for split in splits}
+        grouped_dict: Dict[str, List["BaseDataObjectWithMetadata"]] = {
+            split: [] for split in splits
+        }
         for split in splits:
             num_units = num_units_per_split.get(split, 0)
             for unit_idx in range(num_units):
                 unit_data = {
                     data_key: self[data_key][split][unit_idx]
                     for data_key in data_keys
-                    if isinstance(self[data_key], dict) and split in self[data_key]
+                    if isinstance(self[data_key], Mapping) and split in self[data_key]
                 }
                 if unit_data:
-                    grouped_dict[split].append(DataChunk(**unit_data))
+                    grouped_dict[split].append(BaseDataObjectWithMetadata(**unit_data))
         return grouped_dict
 
     def __repr__(self):

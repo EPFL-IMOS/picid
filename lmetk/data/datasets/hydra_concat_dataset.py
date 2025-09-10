@@ -31,13 +31,14 @@ class HydraConcatDataset(BaseConcatDataset):
         # Checking the inputs
         lenghts = []
         for key, val in data_dict.items():
-            if isinstance(
-                val, omegaconf.dictconfig.DictConfig
-            ):
-                assert key == 'metadata', f"Only 'metadata' key is allowed to be omegaconf.dictconfig.DictConfig but got {key} to be omegaconf.dictconfig.DictConfig."
+            if isinstance(val, omegaconf.dictconfig.DictConfig):
+                assert key == "metadata", (
+                    f"Only 'metadata' key is allowed to"
+                    f" be omegaconf.dictconfig.DictConfig but got {key}"
+                    " to be omegaconf.dictconfig.DictConfig."
+                )
 
                 val.keys()
-
 
             elif not isinstance(val, list) and not isinstance(
                 val, omegaconf.listconfig.ListConfig
