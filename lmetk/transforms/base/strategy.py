@@ -1,12 +1,13 @@
 from typing import Any, Dict, List, Optional
 import copy
 from lmetk.data.data_objects.data import (
-    DatasetContainer,
     NamedTransformInput,
     SimpleReturnObject,
     NamedDictReturnObject,
+    SplitDatasetContainer,
 )
 
+import awkward as ak
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 
@@ -25,13 +26,13 @@ class TransformStrategy:
     def apply(
         self,
         transform_instance: Any,
-        data: DatasetContainer,
+        data: SplitDatasetContainer,
         apply_to_keys: str | List[str],
         assign_to_keys: str | List[str],
         assign_to_keys_map: str | List[str] = None,
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
-    ) -> DatasetContainer:
+    ) -> SplitDatasetContainer:
 
         if isinstance(apply_to_keys, str):
             apply_to_keys = [apply_to_keys]
@@ -43,11 +44,15 @@ class TransformStrategy:
             assign_to_keys_map = [assign_to_keys_map]
 
         # --- 1. EFFICIENT HYBRID COPY ---
-        transformed_data = copy.copy(data)
+        transformed_data = data.copy(deep=False)
         keys_to_modify = apply_to_keys + (assign_to_keys if assign_to_keys else [])
         for key in keys_to_modify:
             if key in data:
-                transformed_data[key] = copy.deepcopy(data[key])
+
+                if data[key].get_instance_cls() is not ak.Array:
+                    transformed_data[key] = data[key].copy(deep=True)
+                else:
+                    transformed_data[key] = data[key].copy(deep=False)
 
         is_multi_unit = data.is_multi_unit
         available_splits = list(data[apply_to_keys[0]].keys())
@@ -122,19 +127,19 @@ class TransformStrategy:
         return transformed_data
 
     def _merge_transformed_data(self, base_data, transformed_results):
-        for assign_to_key, splits in transformed_results.items():
-            for split, _ in splits.items():
-                # Check whenever assign_to_key exist in transformed_data.keys()
-                if assign_to_key not in base_data:
-                    base_data[assign_to_key] = {
-                        "train": None,
-                        "val": None,
-                        "test": None,
-                    }
 
-                base_data[assign_to_key][split] = transformed_results[assign_to_key][
-                    split
-                ]
+        for assign_to_key in transformed_results.keys():
+            if assign_to_key in base_data:
+                for split in transformed_results[assign_to_key].keys():
+                    base_data[assign_to_key][split] = transformed_results[
+                        assign_to_key
+                    ][split]
+            else:
+                base_data[assign_to_key] = {
+                    "train": transformed_results[assign_to_key].get("train"),
+                    "val": transformed_results[assign_to_key].get("val"),
+                    "test": transformed_results[assign_to_key].get("test"),
+                }
 
     def _postprocess_transformed_data(self, data, metadata):
         """
@@ -183,9 +188,9 @@ class TransformStrategy:
         num_units = len(data_to_prepare[keys[0]][split])
 
         if is_multi_unit == True:
-            assert (
-                num_units > 1
-            ), "Flag 'is_multi_unit' is true hence expect multiple units."
+            assert isinstance(
+                data_to_prepare[keys[0]][split], list
+            ), "Flag 'is_multi_unit' is true, so expected a list for each split."
 
         # TODO: why is this ordered input, when we go by key?
         for i in range(num_units):
@@ -194,5 +199,6 @@ class TransformStrategy:
                 for key in keys
                 if split in data_to_prepare[key]
             }
+
             chunks.append(NamedTransformInput(**unit_data).get_sanitized_data())
         return chunks

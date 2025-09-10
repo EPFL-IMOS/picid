@@ -1,34 +1,33 @@
-
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
-  
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
-  
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: target
     fit_on: train
-  
+
 time_features_transform:
   transform:
     _target_: lmetk.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
     use_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: False
-  
+
   metadata:
     apply_to: timestamps
     assign_to: time_features
 
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
-  
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: time_features
     fit_on: train
@@ -37,11 +36,10 @@ concatenate_features:
   # Concatenate time-features to the feature set
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
-  
-  metadata:
-    apply_to: ['features', 'time_features']
-    assign_to: features
 
+  metadata:
+    apply_to: ["features", "time_features"]
+    assign_to: features
 
 tabularize_x:
   # Concatenate time-features to the feature set
@@ -53,15 +51,18 @@ tabularize_x:
     stride: 1
     timestep_dimension: 1
 
-    select_features: 
+    # "Say what you want and when"
+    # t is the prediction time index
+    #  history: all time steps up to and including present
+    #  horizon: all time steps to predict
+    select_features:
       - time_features: t
       - features: t
       - target: history
-  
-  metadata:
-    apply_to: ['features', 'time_features', 'target']
-    assign_to: X
 
+  metadata:
+    apply_to: ["features", "time_features", "target"]
+    assign_to: X
 
 tabularize_y:
   # Concatenate time-features to the feature set
@@ -73,9 +74,9 @@ tabularize_y:
     stride: 1
     timestep_dimension: 1
 
-    select_features: 
+    select_features:
       - target: horizon
-  
+
   metadata:
-    apply_to: ['target']
+    apply_to: ["target"]
     assign_to: y

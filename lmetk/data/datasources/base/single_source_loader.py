@@ -4,7 +4,10 @@ from typing import Any, Dict, override
 
 import numpy as np
 from box import Box
+import pandas as pd
+import awkward as ak
 
+from pandas.core.generic import NDFrame
 from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 
@@ -39,6 +42,7 @@ class SingleSourceLoader(AbstractDataSourceLoader):
         # hence then _load_data method has to update self._is_splitted flag
         self._is_splitted = False
         self._is_loaded = False
+        self.instance_cls = None
 
     @abstractmethod
     def _load_data(self) -> Dict[str, np.ndarray]:
@@ -73,6 +77,33 @@ class SingleSourceLoader(AbstractDataSourceLoader):
     def load_data(self):
         self.data_dict.update(self._load_data())
         self._is_loaded = True
+        # Create a set of class types of the keys of the data
+        types = set([type(value) for key, value in self.data_dict.items()])
+
+        is_pandas = lambda x: x in [pd.DataFrame, pd.Series]
+        is_awkward = lambda x: x is ak.Array
+        is_numpy = lambda x: x is np.ndarray
+
+        # check if all values are of the same type
+        if all(is_pandas(t) for t in types):
+            logger.info(
+                f"All data chunks in {self.__class__.__name__} are pandas objects."
+            )
+            self.instance_cls = NDFrame
+        elif all(is_awkward(t) for t in types):
+            logger.info(
+                f"All data chunks in {self.__class__.__name__} are awkward arrays."
+            )
+            self.instance_cls = ak.Array
+        elif all(is_numpy(t) for t in types):
+            logger.info(
+                f"All data chunks in {self.__class__.__name__} are numpy arrays."
+            )
+            self.instance_cls = np.ndarray
+        else:
+            raise TypeError(
+                f"All values in data_dict must be of the same type, got {types}."
+            )
 
     def get_data(self) -> SplitDatasetContainer | DatasetContainer:
         """Return splitted data dict."""
@@ -99,9 +130,11 @@ class SingleSourceLoader(AbstractDataSourceLoader):
                     "val": metadata,
                     "test": metadata,
                 }
-            return SplitDatasetContainer(**self.data_dict)
+            return SplitDatasetContainer(
+                instance_cls=self.instance_cls, **self.data_dict
+            )
         else:
-            return DatasetContainer(**self.data_dict)
+            return DatasetContainer(instance_cls=self.instance_cls, **self.data_dict)
 
     def get_meta_data(self) -> Dict[str, Any]:
         """

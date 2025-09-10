@@ -1,9 +1,9 @@
 #!/bin/bash
 
-runai delete job prod-tstopo-1
+runai delete job <jobname>
 
 runai submit \
-  --name prod-tsttopo-1 \
+  --name <jobname> \
   --image "registry.rcp.epfl.ch/imos-<user>/<container_name>:1.0.0" \
   --gpu 1 \
   --cpu 32 \
