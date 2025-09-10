@@ -15,7 +15,6 @@ scaler_target:
     apply_to: target
     fit_on: train
 
-
 cycles2sequence:
   transform:
     _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
@@ -24,9 +23,7 @@ cycles2sequence:
   
   metadata:
     apply_to: ['features', 'target', 'metadata']
-    assign_to: 
-      a: features
-      b: target
+    assign_to: ['features', 'target']
     
 sequence2statistics:
   transform:
@@ -36,3 +33,23 @@ sequence2statistics:
   metadata:
     apply_to: 'features'
     
+
+# cycles2sequence:
+#   transform:
+#     _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
+#     win_len: 32
+#     pad_value: -1
+#     key: 'time_features'
+  
+#   metadata:
+#     apply_to: ['time_features','metadata']
+#     assign_to: time_features
+
+
+# cycles2sequence:
+#   transform:
+#     _target_: lmetk.transforms.time_transforms.sequence2table.ExtractSequenceStartTime
+    
+#   metadata:
+#     apply_to: 'time_features'
+#     assign_to: time_features

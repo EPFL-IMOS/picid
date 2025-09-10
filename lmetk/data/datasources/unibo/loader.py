@@ -9,10 +9,10 @@ from typing import Any, Dict, override
 import copy
 import numpy as np
 from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler
-from lmetk.data.datasources.nb14.utils import flatten_cycles
+from lmetk.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
 from lmetk.data.datasources.unibo.unibo_powertools_data import UniboPowertoolsData, CycleCols
 from lmetk.data.datasources.unibo.model_data_handler import ModelDataHandler
-
+import awkward as ak
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
@@ -250,14 +250,15 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             if flatten:
                 # Use valid_lengths to unpad and flatten
                 lengths = valid_lengths[left_idx:right_idx]
-                flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
+                flattened_x = table_to_ak_array(curr_x, lengths)
+                #flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
                 entry = {
                     "features": flattened_x,
-                    "time_features": np.array(flattened_x.shape[0]),
-                    "target": flattened_y,
+                    "time_features": ak.from_numpy(np.array(curr_y.reshape(-1,1) )),
+                    "target": ak.from_numpy(curr_y.reshape(-1,1)), # flattened_y
                     "metadata": {
                         "unit_name": unit_name,
-                        "cycle_indices": cycle_indices,
+                        #"cycle_indices": cycle_indices,
                         "n_cycles": len(lengths)
                     }
                 }
