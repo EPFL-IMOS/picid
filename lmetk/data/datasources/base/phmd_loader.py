@@ -72,6 +72,15 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
 
     @override
     def load_data(self):
+        # Try loading from cache first
+        if self.use_cache:
+            cached = self._load_from_cache()
+            if cached is not None:
+                self.data_dict.update(cached)
+                self._is_loaded = True
+                self._is_isplitted = True
+                return
+            
         self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
@@ -125,25 +134,25 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
             tasks_fold_dict[t] = fold
         return tasks_fold_dict
 
-    def _cache_task_data(self, task_fold_dict):
-        if not self.debug_cache_path:
-            raise ValueError("debug_cache_path must be set when caching task data.")
+    # def _cache_task_data(self, task_fold_dict):
+    #     if not self.debug_cache_path:
+    #         raise ValueError("debug_cache_path must be set when caching task data.")
 
-        filename = self._get_cache_file_name("dataset")
-        cache_path = Path(self.debug_cache_path) / filename
+    #     filename = self._get_cache_file_name("dataset")
+    #     cache_path = Path(self.debug_cache_path) / filename
 
-        logger.info(f"Caching task data to {cache_path}")
+    #     logger.info(f"Caching task data to {cache_path}")
 
-        with open(cache_path, "wb") as f:
-            pickle.dump(task_fold_dict, f)
+    #     with open(cache_path, "wb") as f:
+    #         pickle.dump(task_fold_dict, f)
 
-        metadata_filename = self._get_cache_file_name("metadata")
-        metadata_path = Path(self.debug_cache_path) / metadata_filename
+    #     metadata_filename = self._get_cache_file_name("metadata")
+    #     metadata_path = Path(self.debug_cache_path) / metadata_filename
 
-        logger.info(f"Caching task metadata to {metadata_path}")
+    #     logger.info(f"Caching task metadata to {metadata_path}")
 
-        with open(metadata_path, "wb") as f:
-            pickle.dump(self.meta_data, f)
+    #     with open(metadata_path, "wb") as f:
+    #         pickle.dump(self.meta_data, f)
 
     def _retrieve_cached_task_data(self, path: Path):
         if not path.exists():
@@ -167,23 +176,23 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
 
         tasks_fold_dict = None
         # If we are in debug mode, we try to load the cached data
-        if self.debug_cache_dataset:
-            cache_path = Path(self.debug_cache_path)
-            metadata_file = cache_path / self._get_cache_file_name("metadata")
-            task_file = cache_path / self._get_cache_file_name("dataset")
+        # if self.debug_cache_dataset:
+        #     cache_path = Path(self.debug_cache_path)
+        #     metadata_file = cache_path / self._get_cache_file_name("metadata")
+        #     task_file = cache_path / self._get_cache_file_name("dataset")
 
-            if metadata_file.exists() and task_file.exists():
-                tasks_fold_dict = self._retrieve_cached_task_data(task_file)
-                self.meta_data = self._retrieve_cached_task_data(metadata_file)
-                logger.info(f"Loaded cached task data from {task_file}")
-                logger.info(f"Loaded cached metadata from {metadata_file}")
+        #     if metadata_file.exists() and task_file.exists():
+        #         tasks_fold_dict = self._retrieve_cached_task_data(task_file)
+        #         self.meta_data = self._retrieve_cached_task_data(metadata_file)
+        #         logger.info(f"Loaded cached task data from {task_file}")
+        #         logger.info(f"Loaded cached metadata from {metadata_file}")
 
         if tasks_fold_dict is None:
             tasks_fold_dict = self._init_phmd_dataset(
                 self.auxiliary_tasks + [self.task_mode]
             )
-            if self.debug_cache_dataset:
-                self._cache_task_data(tasks_fold_dict)
+            # if self.debug_cache_dataset:
+            #     self._cache_task_data(tasks_fold_dict)
 
         if self.debug_subset_range is not None:
             for key in tasks_fold_dict:

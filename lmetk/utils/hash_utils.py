@@ -25,9 +25,11 @@ def generate_zero_sparse_connectivity(m, n):
 
 
 def ensure_serializable(obj):
-    """Recursively convert config objects to JSON-serializable types."""
+    """Recursively convert config objects to JSON-serializable types.
 
-    # Let OmegaConf flatten DictConfig / ListConfig
+    Ensures full resolution of interpolations and safe JSON encoding.
+    """
+    # Flatten Hydra configs first
     if isinstance(obj, (DictConfig, ListConfig)):
         obj = OmegaConf.to_container(obj, resolve=True)
 
@@ -36,12 +38,12 @@ def ensure_serializable(obj):
     elif isinstance(obj, (list, tuple)):
         return [ensure_serializable(item) for item in obj]
     elif isinstance(obj, set):
-        # sets are not JSON-serializable, turn into sorted list
+        # Sort to guarantee deterministic order
         return sorted(ensure_serializable(item) for item in obj)
     elif isinstance(obj, (str, int, float, bool)) or obj is None:
         return obj
     else:
-        # As a last resort, stringify
+        # Fallback: force string conversion
         return str(obj)
 
 

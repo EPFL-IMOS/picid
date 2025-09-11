@@ -105,7 +105,7 @@ test_names = [
 class UNIBO21Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_path = kwargs['cache_dir']
+        self.data_path = kwargs['cache_path']
         
         
         self._is_isplitted = False
@@ -121,9 +121,12 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     
     @override
     def load_data(self):
-        self.data_dict = self._load_data()
+        
+        self.data_dict = self.handle_cache(self._load_data)
+        #self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
+        
     
     @override
     def get_data(self) -> dict | list[dict]:
