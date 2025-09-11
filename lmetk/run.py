@@ -51,7 +51,6 @@ from lmetk.utils import (
     display_targets,
 )
 
-
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
 
