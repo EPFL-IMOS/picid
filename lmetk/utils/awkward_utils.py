@@ -20,3 +20,18 @@ def ak_unflatten_discontinous_groups(
     counts = ak.run_lengths(g_sorted)
     batched = ak.unflatten(v_sorted, counts)
     return batched
+
+
+def ak_find_var_dim(arr):
+    """Find variable-length dimensions in an Awkward Array."""
+    t = ak.type(arr)  # full type tree
+    dims = []
+    depth = 0
+
+    while hasattr(t, "content"):
+        if getattr(t, "length", None) is None:  # None means var-length
+            dims.append(depth)
+        t = t.content
+        depth += 1
+
+    return dims

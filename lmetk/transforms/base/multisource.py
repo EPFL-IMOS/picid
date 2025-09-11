@@ -4,8 +4,13 @@ from typing import Any, Dict, Optional
 import copy
 import numpy as np
 from numpy import ndarray
+import awkward as ak
+import pandas as pd
 
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
+from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
+from lmetk.transforms.utils import _convert_to_numpy
+from lmetk.utils.awkward_utils import ak_find_var_dim
 
 logger = logging.getLogger(__name__)
 
@@ -27,25 +32,140 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                 "to implement fit and transform methods."
             )
 
-    def fit_multi_source(
-        self,
-        data_segments: list[ndarray],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """
-        Get all train sources and fit the scalers to them.
-        """
+    def fit_function_to_data_segments(self, data_segments, fit_func, metadata):
+
         apply_to_keys = metadata["apply_to_keys"]
         # Check whenever keys list, if not make a list
         if not isinstance(apply_to_keys, list):
             apply_to_keys = [apply_to_keys]
 
-        # Go over all data segments dict keys and concatenate the data from all sources
-        train = {}
-        for key in apply_to_keys:
-            train[key] = np.concatenate([chunk[key] for chunk in data_segments], axis=0)
+        cls = self.__class__
+        transform_supports_ragged = issubclass(cls, RaggedTransform)
+        transform_supports_dense = issubclass(cls, DenseTransform)
 
-        self.fit_data(train, metadata=metadata)
+        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
+        if len(data_types) != 1:
+            raise ValueError(
+                f"All data segments must have the same data type. Found: {data_types}"
+            )
+        data_is_ragged = data_types.pop() is ak.Array
+
+        # Handle different cases based on data type and transform capabilities
+        # --------------------------------------------------------------------
+
+        if (not data_is_ragged) and transform_supports_dense:
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            for key in apply_to_keys:
+                train[key] = np.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=0
+                )
+            fit_func(train, metadata=metadata)
+
+        elif data_is_ragged and (not transform_supports_ragged):
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            var_dims = [ak_find_var_dim(chunk) for chunk in data_segments]
+            var_dims = set([x for row in var_dims for x in row])
+            assert (
+                len(var_dims) == 1
+            ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
+
+            for key in apply_to_keys:
+                train[key] = ak.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=var_dims.pop()
+                )
+
+            train = {k: v.to_numpy() for k, v in train.items()}
+            fit_func(train, metadata=metadata)
+
+        elif data_is_ragged and transform_supports_ragged:
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            var_dims = [ak_find_var_dim(chunk) for chunk in data_segments]
+            var_dims = set([x for row in var_dims for x in row])
+            assert (
+                len(var_dims) == 1
+            ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
+
+            for key in apply_to_keys:
+                train[key] = ak.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=var_dims.pop()
+                )
+            fit_func(train, metadata=metadata)
+
+        else:
+            raise ValueError(
+                f"Transform {self.__class__.__name__} does not support the data type {data_types}"
+            )
+
+    def tranform_function_to_data_segments(
+        self, data_segments, transform_func, metadata
+    ):
+        apply_to_keys = metadata["apply_to_keys"]
+        # Check whenever keys list, if not make a list
+        if not isinstance(apply_to_keys, list):
+            apply_to_keys = [apply_to_keys]
+
+        cls = self.__class__
+        transform_supports_ragged = issubclass(cls, RaggedTransform)
+        transform_supports_dense = issubclass(cls, DenseTransform)
+
+        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
+        if len(data_types) != 1:
+            raise ValueError(
+                f"All data segments must have the same data type. Found: {data_types}"
+            )
+        data_is_ragged = data_types.pop() is ak.Array
+
+        # Handle different cases based on data type and transform capabilities
+        # --------------------------------------------------------------------
+
+        if (not data_is_ragged) and transform_supports_dense:
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            for key in apply_to_keys:
+                train[key] = np.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=0
+                )
+            transformed = transform_func(train, metadata=metadata)
+
+        elif data_is_ragged and (not transform_supports_ragged):
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            for key in apply_to_keys:
+                train[key] = ak.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=0
+                )
+            transformed = transform_func(train, metadata=metadata)
+
+        elif data_is_ragged and transform_supports_ragged:
+            # Go over all data segments dict keys and concatenate the data from all sources
+            train = {}
+            for key in apply_to_keys:
+                train[key] = ak.concatenate(
+                    [chunk[key] for chunk in data_segments], axis=0
+                )
+            transformed = transform_func(train, metadata=metadata)
+
+        else:
+            raise ValueError(
+                f"Transform {self.__class__.__name__} does not support the data type {data_types}"
+            )
+
+        return transformed
+
+    def fit_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """
+        Get all train sources and fit the scalers to them.
+        """
+        self.fit_function_to_data_segments(
+            data_segments, self.fit_data, copy.deepcopy(metadata)
+        )
 
     def transform_multi_source(
         self,
@@ -68,6 +188,10 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             out.append(
                 self.transform_data(data_segment, metadata=copy.deepcopy(metadata))
             )
+
+        out = self.tranform_function_to_data_segments(
+            data_segments, self.transform_data, copy.deepcopy(metadata)
+        )
 
         return out
 
