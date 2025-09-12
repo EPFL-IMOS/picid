@@ -10,7 +10,7 @@ import pandas as pd
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.utils import _convert_to_numpy
-from lmetk.utils.awkward_utils import ak_find_var_dim
+from lmetk.utils.awkward_utils import ak_find_var_dim, ragged_index_tuples
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,13 @@ def find_singular_ragged_dim(arr: ak.Array):
         len(var_dims) == 1
     ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
     return var_dims.pop()
+
+
+# recursively turn dicts into lists
+def tolist(d):
+    if isinstance(d, dict):
+        return [tolist(d[i]) for i in sorted(d)]
+    return d  # already a numpy array
 
 
 class ConcatinatedFitMultiSourceTransformMixin(ABC):
@@ -138,36 +145,26 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             out = []
             for data_segment in data_segments:
                 var_dim = find_singular_ragged_dim(data_segment)
+                multi_index = ragged_index_tuples(
+                    next(iter(data_segment.values())), var_dim + 1
+                )
 
-                ds = {k: ak.flatten(v, axis=var_dim) for k, v in data_segment.items()}
-
-                # check if all first dimensions match in datasegment keys
-                first_dims = set([ak.num(v, axis=0).item() for v in ds.values()])
-                if len(first_dims) != 1:
-                    raise ValueError(
-                        f"All keys in the data segment must have the same first dimension. Found: {first_dims}"
-                    )
-
-                # we need to supply all subarray keys to the transform function
-                # therefore we reasseble the dict
-
-                n_subarrays = first_dims.pop()
-                out_builder = {}
-                for n in range(n_subarrays):
-                    ds_sub = {k: v[n].to_numpy() for k, v in ds.items()}
-                    ds_sub = transform_func(ds_sub, metadata=metadata)
-                    for k in ds_sub.keys():
-                        item = ds_sub[k]
-                        if not isinstance(item, np.ndarray):
-                            raise ValueError(
-                                f"Transform function must return numpy arrays for key {k}. Found: {type(item)}"
-                            )
-                        if k not in out_builder:
-                            out_builder[k] = []
-                        out_builder[k].append(item)
-
-                out.append({k: ak.Array(np.stack(v)) for k, v in out_builder.items()})
-
+                out_segment = {}
+                for coord in multi_index:
+                    subsegment = {}
+                    for k in data_segment.keys():
+                        np_data = data_segment[k][coord].to_numpy()
+                        subsegment[k] = np_data
+                    out_subsegment = transform_func(subsegment, metadata=metadata)
+                    for k, block in out_subsegment.items():
+                        d = out_segment
+                        for i in coord[:-1]:
+                            d = d.setdefault(i, {})
+                        d[coord[-1]] = block  # keep as np.ndarray
+                aka = ak.Array(tolist(out_segment))
+                for i in range(var_dim + 1, aka.ndim):
+                    aka = ak.to_regular(aka, axis=i)
+                out.append(aka)
         elif data_is_ragged and transform_supports_ragged:
             out = []
             for data_segment in data_segments:

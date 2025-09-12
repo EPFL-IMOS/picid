@@ -1,6 +1,7 @@
 """Utils for awkward arrays."""
 
 import awkward as ak
+import numpy as np
 
 
 def ak_unflatten_discontinous_groups(
@@ -38,3 +39,42 @@ def ak_find_var_dim(arr):
         t = t.content
         axis += 1
     return axes
+
+
+def ragged_index_tuples(arr, ragged_dims) -> list[tuple]:
+    """
+    Return index tuples for the first `ragged_dims` axes of `arr`.
+    Each tuple corresponds to one selection into the regular tail.
+    """
+    # get local indices at each ragged axis
+    indices = [ak.local_index(arr, axis=ax) for ax in range(ragged_dims)]
+    multi_index = ak.zip(indices)
+    for i in range(ragged_dims - 1):
+        multi_index = ak.flatten(multi_index)
+    return ak.to_list(multi_index)
+
+
+def iterate_ragged_sub_blocks(arr: ak.Array, ragged_dims: int):
+    """Iterate over sub-blocks of a ragged array."""
+    idx_tuples = ragged_index_tuples(arr, ragged_dims)
+    for idx in idx_tuples:
+        yield idx, arr[idx]
+
+
+def blocks_to_ragged_array(coords: list[tuple], blocks: np.ndarray) -> ak.Array:
+    # build nested dict
+    root = {}
+    for coord, block in zip(coords, blocks):
+        d = root
+        for i in coord[:-1]:
+            d = d.setdefault(i, {})
+        d[coord[-1]] = block  # keep as np.ndarray
+
+    # recursively turn dicts into lists
+    def tolist(d):
+        if isinstance(d, dict):
+            return [tolist(d[i]) for i in sorted(d)]
+        return d  # already a numpy array
+
+    nested = tolist(root)
+    return ak.Array(nested)
