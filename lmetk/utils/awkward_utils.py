@@ -24,14 +24,17 @@ def ak_unflatten_discontinous_groups(
 
 def ak_find_var_dim(arr):
     """Find variable-length dimensions in an Awkward Array."""
-    t = ak.type(arr)  # full type tree
-    dims = []
-    depth = 0
+    assert isinstance(arr, ak.Array)
 
+    t = ak.type(arr)
+    axes, axis = [], 0
     while hasattr(t, "content"):
-        if getattr(t, "length", None) is None:  # None means var-length
-            dims.append(depth)
+        # unwrap OptionType without advancing axis
+        while isinstance(t, ak.types.OptionType):
+            t = t.content
+        if isinstance(t, ak.types.ListType):
+            axes.append(axis)
+        # RegularType is fixed-size, do nothing
         t = t.content
-        depth += 1
-
-    return dims
+        axis += 1
+    return axes

@@ -35,6 +35,10 @@ class DummyRaggedTransform(ConcatinatedFitMultiSourceTransformMixin, RaggedTrans
         self.last_fit_metadata = metadata
 
     def transform_data(self, data, metadata=None):
+        assert isinstance(data, dict)
+        for k, v in data.items():
+            assert isinstance(v, ak.Array)
+            data[k] = v + 1
         self.transform_called = True
         self.last_transform_data = data
         self.last_transform_metadata = metadata
@@ -73,10 +77,13 @@ def test_transform_multi_source_dense():
     metadata = {"apply_to_keys": ["a", "b"]}
     transform = DummyDenseTransform()
     out = transform.transform_multi_source(data_segments, metadata)
-    # Should return transformed dict with +1 for each value
-    assert isinstance(out, dict)
-    np.testing.assert_array_equal(out["a"], np.array([2, 3, 6, 7]))
-    np.testing.assert_array_equal(out["b"], np.array([4, 5, 8, 9]))
+    # Should return a list of transformed DummyChunks, each with +1 for each value
+    assert isinstance(out, list)
+    assert len(out) == 2
+    np.testing.assert_array_equal(out[0]["a"], np.array([2, 3]))
+    np.testing.assert_array_equal(out[0]["b"], np.array([4, 5]))
+    np.testing.assert_array_equal(out[1]["a"], np.array([6, 7]))
+    np.testing.assert_array_equal(out[1]["b"], np.array([8, 9]))
 
 
 def test_fit_multi_source_ragged(monkeypatch):
@@ -126,6 +133,35 @@ def test_fit_multi_source_ragged_to_dense(monkeypatch):
     np.testing.assert_array_equal(arr_cc, np.array([[1, 2, 4], [3, 5, 6]]))
 
 
+def test_transform_multi_source_ragged_to_dense(monkeypatch):
+    arr1 = ak.Array(
+        [
+            [  # first element of a
+                [[1, 2, 3], [4, 5, 6]],  # var = 2
+                [[7, 8, 9], [10, 11, 12]],  # var = 2
+            ],
+            [  # second element of a
+                [[13, 14, 15], [16, 17, 18]],  # var = 2
+            ],
+        ]
+    )
+    arr1 = ak.to_regular(arr1, axis=-1)
+    arr1 = ak.to_regular(arr1, axis=-2)
+    arr2 = arr1 + 1
+    data_segments = [
+        DummyChunk({"a": arr1}, ak.Array),
+        DummyChunk({"a": arr2}, ak.Array),
+    ]
+    metadata = {"apply_to_keys": ["a"]}
+    monkeypatch.setattr(
+        "lmetk.transforms.base.multisource.ak_find_var_dim", lambda x: [1]
+    )
+    transform = DummyDenseTransform()
+    out = transform.transform_multi_source(data_segments, metadata)
+    # Should be a list of lists after transform_data
+    print(out)
+
+
 def test_transform_multi_source_ragged(monkeypatch):
     arr1 = ak.Array([[1, 2], [3]])
     arr2 = ak.Array([[4], [5, 6]])
@@ -139,8 +175,9 @@ def test_transform_multi_source_ragged(monkeypatch):
     )
     transform = DummyRaggedTransform()
     out = transform.transform_multi_source(data_segments, metadata)
-    assert isinstance(out, dict)
-    assert isinstance(out["a"], list)
+    assert isinstance(out, list)
+    assert isinstance(out[0]["a"], list)
+    assert isinstance(out[1]["a"], list)
     # Should be a list of lists after transform_data
 
 

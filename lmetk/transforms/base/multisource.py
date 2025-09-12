@@ -15,6 +15,15 @@ from lmetk.utils.awkward_utils import ak_find_var_dim
 logger = logging.getLogger(__name__)
 
 
+def find_singular_ragged_dim(arr: ak.Array):
+    var_dims = [ak_find_var_dim(chunk) for chunk in arr]
+    var_dims = set([x for row in var_dims for x in row])
+    assert (
+        len(var_dims) == 1
+    ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
+    return var_dims.pop()
+
+
 class ConcatinatedFitMultiSourceTransformMixin(ABC):
     """
     Stateless mixin for transforming data from multiple sources.
@@ -60,20 +69,17 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                 train[key] = np.concatenate(
                     [chunk[key] for chunk in data_segments], axis=0
                 )
+
             fit_func(train, metadata=metadata)
 
         elif data_is_ragged and (not transform_supports_ragged):
             # Go over all data segments dict keys and concatenate the data from all sources
             train = {}
-            var_dims = [ak_find_var_dim(chunk) for chunk in data_segments]
-            var_dims = set([x for row in var_dims for x in row])
-            assert (
-                len(var_dims) == 1
-            ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
+            var_dim = find_singular_ragged_dim(data_segments)
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dims.pop()
+                    [chunk[key] for chunk in data_segments], axis=var_dim
                 )
 
             train = {k: v.to_numpy() for k, v in train.items()}
@@ -82,16 +88,13 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         elif data_is_ragged and transform_supports_ragged:
             # Go over all data segments dict keys and concatenate the data from all sources
             train = {}
-            var_dims = [ak_find_var_dim(chunk) for chunk in data_segments]
-            var_dims = set([x for row in var_dims for x in row])
-            assert (
-                len(var_dims) == 1
-            ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
+            var_dim = find_singular_ragged_dim(data_segments)
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dims.pop()
+                    [chunk[key] for chunk in data_segments], axis=var_dim
                 )
+
             fit_func(train, metadata=metadata)
 
         else:
@@ -120,40 +123,62 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
 
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
-
+        # Construct current data segment from each source
         if (not data_is_ragged) and transform_supports_dense:
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-            for key in apply_to_keys:
-                train[key] = np.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=0
-                )
-            transformed = transform_func(train, metadata=metadata)
+            out = []
+            for data_segment in data_segments:
+                out.append(transform_func(data_segment, metadata=metadata))
 
         elif data_is_ragged and (not transform_supports_ragged):
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-            for key in apply_to_keys:
-                train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=0
-                )
-            transformed = transform_func(train, metadata=metadata)
+            # The logic is that we find the rugged dimension, ensure that there is only one,
+            # flatten along that dimension, convert to numpy, apply the transform function,
+            # and then reassemble the original structure.
+            # Many loops, therefore I assume quite slow.
+
+            out = []
+            for data_segment in data_segments:
+                var_dim = find_singular_ragged_dim(data_segment)
+
+                ds = {k: ak.flatten(v, axis=var_dim) for k, v in data_segment.items()}
+
+                # check if all first dimensions match in datasegment keys
+                first_dims = set([ak.num(v, axis=0).item() for v in ds.values()])
+                if len(first_dims) != 1:
+                    raise ValueError(
+                        f"All keys in the data segment must have the same first dimension. Found: {first_dims}"
+                    )
+
+                # we need to supply all subarray keys to the transform function
+                # therefore we reasseble the dict
+
+                n_subarrays = first_dims.pop()
+                out_builder = {}
+                for n in range(n_subarrays):
+                    ds_sub = {k: v[n].to_numpy() for k, v in ds.items()}
+                    ds_sub = transform_func(ds_sub, metadata=metadata)
+                    for k in ds_sub.keys():
+                        item = ds_sub[k]
+                        if not isinstance(item, np.ndarray):
+                            raise ValueError(
+                                f"Transform function must return numpy arrays for key {k}. Found: {type(item)}"
+                            )
+                        if k not in out_builder:
+                            out_builder[k] = []
+                        out_builder[k].append(item)
+
+                out.append({k: ak.Array(np.stack(v)) for k, v in out_builder.items()})
 
         elif data_is_ragged and transform_supports_ragged:
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-            for key in apply_to_keys:
-                train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=0
-                )
-            transformed = transform_func(train, metadata=metadata)
+            out = []
+            for data_segment in data_segments:
+                out.append(transform_func(data_segment, metadata=metadata))
 
         else:
             raise ValueError(
                 f"Transform {self.__class__.__name__} does not support the data type {data_types}"
             )
 
-        return transformed
+        return out
 
     def fit_multi_source(
         self,
@@ -179,14 +204,6 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         if len(set(lengths)) != 1:
             raise ValueError(
                 f"The lengths of the data segments are not the same. Lengths: {lengths}"
-            )
-
-        out = []
-        # Construct current data segment from each source
-        for data_segment in data_segments:
-            # Transform the current data segment
-            out.append(
-                self.transform_data(data_segment, metadata=copy.deepcopy(metadata))
             )
 
         out = self.tranform_function_to_data_segments(
