@@ -136,7 +136,21 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     
 
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
-    preprocessor.pipeline()
+
+
+    # Get cache dirs:
+    splitted_data_cache_path = cfg.paths.splitted_data_cache_path
+    preprocessed_data_cache_path = cfg.paths.preprocessed_data_cache_path
+    data_library_part_path = cfg.paths.data_library_part_path
+    transform_library_part_path = cfg.paths.transform_library_part_path
+
+    # Run the preprocessing pipeline
+    preprocessor.pipeline(
+        splitted_data_cache_path=splitted_data_cache_path,
+        preprocessed_data_cache_path=preprocessed_data_cache_path,
+        data_library_part_path=data_library_part_path,
+        transform_library_part_path=transform_library_part_path
+    )
 
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
     meta_data_dict = preprocessor.get_meta_data_dict()

@@ -11,41 +11,45 @@ from lmetk.utils.hash_utils import (
 
 class FileSystemCache:
     """
-    File-based cache with hash validation.
+    Stage-aware file-based cache with hash validation.
     Uses joblib for serialization and stores metadata in JSON.
+
+    Each stage (e.g., "loaded_and_splitted_data", "preprocessed_data") has its own subfolder.
     """
 
-    def __init__(self, cache_dir: str):
-        self.cache_dir = Path(cache_dir).expanduser()
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self):
+        # No global cache_dir or library_dir
+        pass
 
-    def _paths(self, name: str):
+    def _paths(self, cache_dir: str, dataset_name: str, stage: str):
         """
-        Return paths for cache artifacts.
-        - data.pkl   : cached data
-        - meta.json  : metadata (config + hash)
+        Return paths for cache artifacts for a given dataset and stage.
+        Example layout:
+            {cache_dir}/{dataset_name}/{stage}/data.pkl
+            {cache_dir}/{dataset_name}/{stage}/meta.json
         """
-        pkl_file = self.cache_dir / f"{name}.pkl"
-        meta_file = self.cache_dir / f"{name}.json"
+        stage_dir = Path(cache_dir).expanduser() / dataset_name / stage
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        pkl_file = stage_dir / "data.pkl"
+        meta_file = stage_dir / "meta.json"
         return pkl_file, meta_file
 
-    def load(self, name: str):
+    def load(self, cache_dir: str, dataset_name: str, stage: str):
         """Load cached data and metadata if available."""
-        pkl_file, meta_file = self._paths(name)
+        pkl_file, meta_file = self._paths(cache_dir, dataset_name, stage)
         if not pkl_file.exists() or not meta_file.exists():
             return None
 
-        # Load metadata
         with open(meta_file, "r") as f:
             metadata = json.load(f)
 
-        # Load cached data
         data = joblib.load(pkl_file)
         return data, metadata
 
-    def save(self, name: str, data, config: dict, library_dir: str = None, extensions=None):
+    def save(self, cache_dir: str, dataset_name: str, stage: str, data, config: dict, library_dir: str = None, extensions=None):
         """Save data and metadata with hash validation."""
-        pkl_file, meta_file = self._paths(name)
+        pkl_file, meta_file = self._paths(cache_dir, dataset_name, stage)
         joblib.dump(data, pkl_file)
 
         if library_dir:
@@ -60,7 +64,7 @@ class FileSystemCache:
         with open(meta_file, "w") as f:
             json.dump(metadata, f, indent=2)
 
-    def handle(self, name: str, build_fn, config: dict, library_dir: str = None, extensions=None):
+    def handle(self, cache_dir: str, dataset_name: str, stage: str, build_fn, config: dict, library_dir: str = None, extensions=None):
         """
         Load cached data if valid, otherwise rebuild via build_fn and save.
         """
@@ -70,7 +74,7 @@ class FileSystemCache:
             else hash_config(config)
         )
 
-        cached = self.load(name)
+        cached = self.load(cache_dir, dataset_name, stage)
         if cached:
             data, metadata = cached
             if metadata["hash"] == expected_key:
@@ -78,5 +82,5 @@ class FileSystemCache:
 
         # cache invalid → rebuild
         data = build_fn()
-        self.save(name, data, config, library_dir, extensions)
+        self.save(cache_dir, dataset_name, stage, data, config, library_dir, extensions)
         return data

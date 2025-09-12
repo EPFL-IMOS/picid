@@ -7,7 +7,7 @@ from lmetk.data.data_objects.data import DatasetContainer
 
 
 import logging
-
+from lmetk.data.cache.offline import FileSystemCache
 from lmetk.utils import print_data_dict_structure
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,9 @@ class PreProcessor(PreProcessorInterface):
         # initialize attributes used later
         self.data: Optional[DatasetContainer] = None
         self.meta_data_lst: Optional[list[dict]] = None
+
+        self.cache = FileSystemCache()
+
 
     def get_meta_data_dict(self):
         if hasattr(self.datasource, "get_meta_data") and callable(
@@ -160,12 +163,59 @@ class PreProcessor(PreProcessorInterface):
 
         return data
 
-    def pipeline(self) -> DatasetContainer:
-        """Run the preprocessing pipeline."""
-        self.datasource.load_data()
-        self.datasource.split_data()
-        self.fetch_data()  # Loads the data into the pipeline
+    def pipeline(
+        self,
+        splitted_data_cache_path: str = None,
+        preprocessed_data_cache_path: str = None,
+        data_library_part_path: str = None,
+        transform_library_part_path: str = None,
+    ) -> DatasetContainer:
+        """
+        Run the preprocessing pipeline with optional caching.
 
+        Parameters
+        ----------
+        splitted_data_cache_path : str | None
+            Root cache directory for loaded & split data stage.
+        preprocessed_data_cache_path : str | None
+            Root cache directory for preprocessed data stage.
+        data_library_part_path : str | None
+            Path to the library part (e.g. code) that defines dataset loading.
+            Must be provided if splitted_data_cache_path is set.
+        transform_library_part_path : str | None
+            Path to the library part (e.g. code) that defines transforms.
+            Must be provided if preprocessed_data_cache_path is set.
+        """
+        dataset_name = getattr(self.datasource, "name", "unknown_dataset")
+
+        # -----------------
+        # Stage 1: Load + Split + Fetch
+        # -----------------
+        if splitted_data_cache_path:
+            if not data_library_part_path:
+                raise ValueError("data_library_part_path must be provided if splitted_data_cache_path is set")
+
+            def build_data_stage():
+                self.datasource.load_data()
+                self.datasource.split_data()
+                self.fetch_data()
+                return self.data
+
+            self.data = self.cache.handle(
+                cache_dir=splitted_data_cache_path,
+                dataset_name=dataset_name,
+                stage="loaded_and_splitted_data",
+                build_fn=build_data_stage,
+                config=self.datasource._init_kwargs,   # dataset config
+                library_dir=data_library_part_path,
+                extensions=[".py"],
+            )
+        else:
+            self.datasource.load_data()
+            self.datasource.split_data()
+            self.fetch_data()
+
+        # Validate split mode
         assert self.datasource.get_split_mode() == self.mode, (
             f"Expected split mode from preprocessor: '{self.mode}', "
             f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
@@ -174,7 +224,28 @@ class PreProcessor(PreProcessorInterface):
         logger.info("Data dictionary structure before transforms:")
         print_data_dict_structure(self.data)
 
-        self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
+        # -----------------
+        # Stage 2: Transforms
+        # -----------------
+        if preprocessed_data_cache_path:
+            if not transform_library_part_path:
+                raise ValueError("transform_library_part_path must be provided if preprocessed_data_cache_path is set")
+
+            def build_preprocess_stage():
+                return self.apply_transforms(self.data, self.transforms.get_transforms())
+
+            self.data = self.cache.handle(
+                cache_dir=preprocessed_data_cache_path,
+                dataset_name=dataset_name,
+                stage="preprocessed_data",
+                build_fn=build_preprocess_stage,
+                config=self.transforms.config,   # transform config
+                library_dir=transform_library_part_path,
+                extensions=[".py"],
+            )
+        else:
+            self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
+
         self._is_preprocessed = True
 
         logger.info("Data dictionary structure after transforms:")
