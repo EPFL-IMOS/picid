@@ -75,7 +75,7 @@ class SingleSourceLoader(AbstractDataSourceLoader):
 
     @override
     def load_data(self):
-        self.data_dict.update(self.handle_cache(self._load_data))
+        self.data_dict.update(self._load_data())
         self._is_loaded = True
         # Create a set of class types of the keys of the data
         types = set([type(value) for key, value in self.data_dict.items()])

@@ -48,11 +48,6 @@ class PreProcessorInterface(ABC):
         """Prepare data from the datasource and store as instance variables."""
         raise NotImplementedError("prepare_data method not implemented.")
 
-    # @abstractmethod
-    # def prepare_transforms(self) -> None:
-    #     """Prepare and store transforms required to be applied to the datasource."""
-    #     raise NotImplementedError("prepare_transforms method not implemented.")
-
     @abstractmethod
     def apply_transforms(self) -> None:
         """Apply the transforms to the datasource."""

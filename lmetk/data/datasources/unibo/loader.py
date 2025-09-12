@@ -116,13 +116,13 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         # Instantiate multisource_data_splitter if is not none
         assert (
             kwargs.get("multisource_data_splitter") == None
-        ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
-        self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
+        ), "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
+        self.multisource_data_splitter = "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
     
     @override
     def load_data(self):
         """Load data from the data source.""" 
-        self.data_dict = self.handle_cache(self._load_data)
+        self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
         
