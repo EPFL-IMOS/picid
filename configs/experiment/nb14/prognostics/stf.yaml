@@ -1,11 +1,11 @@
 #@package _global_
 
 defaults:
-  - override /datasource: nb14_bosello
-  - override /transforms: battery/bosello_NB_base
-  - override /model: stf
+  - nb14/base
+  - /model_configs/prognostics/stf
+  - override /transforms: battery/bosello_NB_base  
   - override /dataset: prognostics/battery_rul_multiunit_dataset
-  - override /datamodule: base_datamodule
+
 
 callbacks:
   early_stopping:
@@ -17,7 +17,7 @@ callbacks:
     mode: min
 
 model:
-  d_x: 4 #6
+  d_x: 4 
   d_x_embedding_router:  [0,0,0,0] #[0,0,0,0,0,0]
   base_lr: 0.001
 

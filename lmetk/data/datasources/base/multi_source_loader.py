@@ -168,9 +168,9 @@ class MultiSourceLoader(AbstractDataSourceLoader):
             raise NotImplementedError(
                 "Not yet completely implemented. Please provide a multisource_data_splitter."
             )
-            self.container = SplitDatasetContainer(
-                *self.data_lst, instance_cls=instance_clss.pop()
-            )
+            # self.container = SplitDatasetContainer(
+            #     *self.data_lst, instance_cls=instance_clss.pop()
+            # )
 
         self._is_loaded = True
 

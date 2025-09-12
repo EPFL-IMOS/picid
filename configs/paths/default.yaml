@@ -17,4 +17,4 @@ output_dir: ${hydra:runtime.output_dir}
 # path to working directory
 work_dir: ${hydra:runtime.cwd}
 
-cache_path: ${paths.data_dir}/debug_cache
+cache_path: ${paths.data_dir}/cache/${datasource.data_name}

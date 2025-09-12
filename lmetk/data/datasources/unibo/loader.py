@@ -121,9 +121,8 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     
     @override
     def load_data(self):
-        
+        """Load data from the data source.""" 
         self.data_dict = self.handle_cache(self._load_data)
-        #self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
         

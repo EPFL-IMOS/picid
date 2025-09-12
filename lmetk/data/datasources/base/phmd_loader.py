@@ -72,16 +72,8 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
 
     @override
     def load_data(self):
-        # Try loading from cache first
-        if self.use_cache:
-            cached = self._load_from_cache()
-            if cached is not None:
-                self.data_dict.update(cached)
-                self._is_loaded = True
-                self._is_isplitted = True
-                return
-            
-        self.data_dict = self._load_data()
+        """Load data from the data source."""
+        self.data_dict = self.handle_cache(self._load_data)
         self._is_loaded = True
         self._is_isplitted = True
 

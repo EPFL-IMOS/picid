@@ -2,5 +2,5 @@ _target_: lmetk.data.datasources.unibo.loader.UNIBO21Loader
 
 data_name: UNIBO21
 task_mode: SOC #ahRul, rul
-cache_path: ${paths.cache_path}/datasets/${datasource.data_name}
 use_cache: True
+cache_path: ${paths.cache_path}
