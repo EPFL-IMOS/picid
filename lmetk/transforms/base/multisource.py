@@ -8,7 +8,11 @@ import awkward as ak
 import pandas as pd
 
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
+from lmetk.transforms.base.base_transform import (
+    DenseTransform,
+    RaggedOrDenseTransform,
+    RaggedTransform,
+)
 from lmetk.transforms.utils import _convert_to_numpy
 from lmetk.utils.awkward_utils import ak_find_var_dim, ragged_index_tuples
 
@@ -118,8 +122,12 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             apply_to_keys = [apply_to_keys]
 
         cls = self.__class__
-        transform_supports_ragged = issubclass(cls, RaggedTransform)
-        transform_supports_dense = issubclass(cls, DenseTransform)
+        transform_supports_ragged = issubclass(cls, RaggedTransform) or issubclass(
+            cls, RaggedOrDenseTransform
+        )
+        transform_supports_dense = issubclass(cls, DenseTransform) or issubclass(
+            cls, RaggedOrDenseTransform
+        )
 
         data_types = set([chunk.get_instance_cls() for chunk in data_segments])
         if len(data_types) != 1:
@@ -143,8 +151,8 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             # Many loops, therefore I assume quite slow.
 
             out = []
+            var_dim = find_singular_ragged_dim(data_segments)
             for data_segment in data_segments:
-                var_dim = find_singular_ragged_dim(data_segment)
                 multi_index = ragged_index_tuples(
                     next(iter(data_segment.values())), var_dim + 1
                 )
