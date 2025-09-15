@@ -2,10 +2,12 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
+import awkward as ak
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
 
@@ -111,3 +113,31 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
 
     def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
         return self.transform_data(data, metadata)
+
+
+class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransformMixin):
+    def __init__(self, **kwargs):
+        """
+        Initialize the transform.
+
+        Args:
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(**kwargs)
+
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+        """
+        Concatenate ragged arrays along a single ragged dimension
+        """
+        for key, value in data.items():
+            assert isinstance(value, ak.Array), f"Key '{key}' is not an awkward array."
+            dims = ak_find_var_dims(value)
+            if len(dims) != 1:
+                raise ValueError(
+                    f"Key '{key}' has {len(dims)} ragged dimensions, expected exactly one."
+                )
+            else:
+                var_dim = dims[0]
+                data[key] = ak.concatenate(value, axis=var_dim - 1).to_numpy()
+
+        return data

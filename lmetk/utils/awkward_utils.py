@@ -23,7 +23,7 @@ def ak_unflatten_discontinous_groups(
     return batched
 
 
-def ak_find_var_dim(arr):
+def ak_find_var_dims(arr: ak.Array):
     """Find variable-length dimensions in an Awkward Array."""
     assert isinstance(arr, ak.Array)
 
@@ -41,7 +41,7 @@ def ak_find_var_dim(arr):
     return axes
 
 
-def ragged_index_tuples(arr, ragged_dims) -> list[tuple]:
+def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
     """
     Return index tuples for the first `ragged_dims` axes of `arr`.
     Each tuple corresponds to one selection into the regular tail.
@@ -78,3 +78,23 @@ def blocks_to_ragged_array(coords: list[tuple], blocks: np.ndarray) -> ak.Array:
 
     nested = tolist(root)
     return ak.Array(nested)
+
+
+def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
+    """
+    Convert all regular axes in an Awkward Array to regular.
+    This is useful after constructing an Awkward Array from nested lists/dicts,
+    where some axes may be irregular even if they are actually regular.
+    Note:
+        - Assume that innermost dimensions are regular (usually feature dim)
+    """
+
+    # Dims that are currently flagged as variable, but may are not.
+    arr = ak.to_regular(arr, axis=-1)
+
+    var_dims = ak_find_var_dims(arr)
+    for d in var_dims:
+        lengths = ak.ravel(ak.num(arr, axis=d))
+        if ak.all(lengths == lengths[0]):
+            arr = ak.to_regular(arr, axis=d)
+    return arr

@@ -28,15 +28,18 @@ train1:
     n_DS: "02"
     units: [2,5,10,16,18,20]
     mode: "train"
+  group_by_unit: True
 
 test1:
   load_arguments:
     n_DS: "02"
     units: [11,14,15]
     mode: "test"
+  group_by_unit: True
 
 val1:
   load_arguments:
     n_DS: "02"
     units: [11,14,15]
     mode: "test"
+  group_by_unit: True
