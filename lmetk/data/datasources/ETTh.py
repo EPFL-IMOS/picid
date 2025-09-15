@@ -1,7 +1,9 @@
 import warnings
 import pandas as pd
 from lmetk.data.datasources import SingleSourceLoader
+
 warnings.filterwarnings("ignore")
+
 
 class ETThLoader(SingleSourceLoader):
     def __init__(
@@ -31,13 +33,17 @@ class ETThLoader(SingleSourceLoader):
         data_dict = {
             "features": df,
             "timestamps": df_stamp,
-            "metadata":{
-                "target_name": self.target_name,
-            }
         }
-        
+
         return data_dict
 
+    def get_meta_data(self) -> dict[str, any]:
+        meta_data = super().get_meta_data()
+
+        return {
+            **meta_data,
+            "target_name": self.target_name,
+        }
 
     def read_data(
         self,

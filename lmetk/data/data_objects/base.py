@@ -9,6 +9,7 @@ import numpy as np
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 T = TypeVar("T")
+logger = logging.getLogger(__name__)
 
 
 class BaseDataObject(Generic[T], MutableMapping[str, T]):
@@ -34,11 +35,11 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
             if len(type_set) != 1 or not all(
                 issubclass(t, self._instance_cls) for t in type_set
             ):
-                raise TypeError(
+                logger.warning(
                     f"All items in the list must be of type {self._instance_cls.__name__}, got {type_set}"
                 )
         elif not isinstance(value, (self._instance_cls, self.__class__)):
-            raise TypeError(
+            logger.warning(
                 f"Expected dict, {self._instance_cls.__name__}, "
                 f"or {self.__class__.__name__}, got {type(value).__name__}"
             )

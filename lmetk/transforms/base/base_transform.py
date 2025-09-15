@@ -4,7 +4,7 @@ from typing import Any, Dict
 from lmetk.data.data_objects.data import NamedTransformInput
 
 
-class DenseTransform(ABC):
+class BaseTransform(ABC):
     """
     Simplified base transform interface. Transforms only need to implement
     the core transformation logic, not the fitting strategies.
@@ -46,3 +46,21 @@ class DenseTransform(ABC):
         if args:
             return f"{self.__class__.__name__}({exclude_str}, {args})"
         return f"{self.__class__.__name__}({exclude_str})"
+
+
+class RaggedTransform(BaseTransform):
+    """Marker base class for transforms that support ragged (awkward) arrays."""
+
+    pass
+
+
+class DenseTransform(BaseTransform):
+    """Marker base class for transforms that support only dense (NumPy) arrays."""
+
+    pass
+
+
+class RaggedOrDenseTransform(BaseTransform):
+    """Marker base class for transforms that support both ragged and dense arrays."""
+
+    pass

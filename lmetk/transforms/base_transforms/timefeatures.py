@@ -5,7 +5,7 @@ import pandas as pd
 
 # Assuming this import path is correct for your project
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.data.data_objects.data import SimpleReturnObject
+from lmetk.data.data_objects.data import NamedTransformInput
 
 
 class TimePFNTimeFeaturesTransform(DenseTransform):
@@ -42,7 +42,7 @@ class TimePFNTimeFeaturesTransform(DenseTransform):
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
-    def transform_data(self, data_segment: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         r"""Applies the time features extraction to the input data.
 
         This method takes the input data segment (expected to contain timestamps),
@@ -51,7 +51,7 @@ class TimePFNTimeFeaturesTransform(DenseTransform):
 
         Parameters
         ----------
-        data_segment : Any
+        data : NamedTransformInput
             The input data, expected to be a sequence of timestamps or a structure
             from which timestamps can be extracted (e.g., a DataFrame).
 
@@ -60,7 +60,7 @@ class TimePFNTimeFeaturesTransform(DenseTransform):
         np.ndarray
             A NumPy array containing the extracted time features.
         """
-        data_segment = data_segment["timestamps"]
+        data_segment = data["timestamps"]
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.

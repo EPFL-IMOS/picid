@@ -9,6 +9,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
+from lmetk.data.data_objects.base import BaseDataObject
+
 
 def extract_targets(cfg, prefix=""):
     targets = []
@@ -51,7 +53,7 @@ def display_targets(cfg):
 def print_data_dict_structure(data_dict):
 
     def describe(obj):
-        if isinstance(obj, dict):
+        if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
             return "{...}"
         elif isinstance(obj, np.ndarray):
             return f"np.ndarray{obj.shape}"
@@ -65,9 +67,9 @@ def print_data_dict_structure(data_dict):
             return str(type(obj).__name__)
 
     def add_to_tree(tree, d):
-        if isinstance(d, dict):
+        if isinstance(d, dict) or isinstance(d, BaseDataObject):
             for k, v in d.items():
-                if isinstance(v, dict):
+                if isinstance(v, dict) or isinstance(v, BaseDataObject):
                     branch = tree.add(f"[bold]{k}[/bold] {describe(v)}")
                     add_to_tree(branch, v)
                 else:

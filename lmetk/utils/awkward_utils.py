@@ -1,6 +1,7 @@
 """Utils for awkward arrays."""
 
 import awkward as ak
+import numpy as np
 
 
 def ak_unflatten_discontinous_groups(
@@ -9,6 +10,11 @@ def ak_unflatten_discontinous_groups(
     """
     Reshape `values` into a nested array based on `groups`,
     where `groups` may be discontinous.
+
+    This adds one dimension to values where
+    groups_index indicates the group membership of each value
+    which is the rugged axis.
+
     """
     assert len(values) == len(
         groups_index
@@ -20,3 +26,101 @@ def ak_unflatten_discontinous_groups(
     counts = ak.run_lengths(g_sorted)
     batched = ak.unflatten(v_sorted, counts)
     return batched
+
+
+def ak_find_var_dims(arr: ak.Array):
+    """
+    Find variable-length dimensions in an Awkward Array.
+    in 4 * var * var * 3 it would return [1, 2]
+
+    """
+    assert isinstance(arr, ak.Array)
+
+    t = ak.type(arr)
+    axes, axis = [], 0
+    while hasattr(t, "content"):
+        # unwrap OptionType without advancing axis
+        while isinstance(t, ak.types.OptionType):
+            t = t.content
+        if isinstance(t, ak.types.ListType):
+            axes.append(axis)
+        # RegularType is fixed-size, do nothing
+        t = t.content
+        axis += 1
+    return axes
+
+
+def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
+    """
+    This is for indexing regular subarrays of a ragged array.
+    it gives index touples
+
+    (e.g. (0,1), (0,2), (1,0) for a 4D ragged array)
+    where the last 2d are the regular tail.
+
+    Return index tuples for the first `ragged_dims` axes of `arr`.
+    Each tuple corresponds to one selection into the regular tail.
+    """
+    # get local indices at each ragged axis
+    indices = [ak.local_index(arr, axis=ax) for ax in range(ragged_dims)]
+    multi_index = ak.zip(indices)
+    for i in range(ragged_dims - 1):
+        multi_index = ak.flatten(multi_index)
+    return ak.to_list(multi_index)
+
+
+def iterate_ragged_sub_blocks(arr: ak.Array, ragged_dims: int):
+    """Iterate over sub-blocks of a ragged array."""
+    idx_tuples = ragged_index_tuples(arr, ragged_dims)
+    for idx in idx_tuples:
+        yield idx, arr[idx]
+
+
+def blocks_to_ragged_array(coords: list[tuple], blocks: np.ndarray) -> ak.Array:
+    """
+    Construct a ragged Awkward Array from blocks of regular arrays
+    and their coordinates.
+    """
+
+    root = {}
+    for coord, block in zip(coords, blocks):
+        d = root
+        for i in coord[:-1]:
+            d = d.setdefault(i, {})
+        d[coord[-1]] = block  # keep as np.ndarray
+
+    # recursively turn dicts into lists
+    def tolist(d):
+        if isinstance(d, dict):
+            return [tolist(d[i]) for i in sorted(d)]
+        return d  # already a numpy array
+
+    nested = tolist(root)
+    return ak.Array(nested)
+
+
+def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
+    """
+    Convert all regular axes in an Awkward Array to regular.
+    This is useful after constructing an Awkward Array from nested lists/dicts,
+    where some axes may be irregular even if they are actually regular.
+    Note:
+        - Assume that innermost dimensions are regular (usually feature dim)
+
+        Because:
+        var dim
+            can be rugged or not rugged
+        int dim
+            is always not rugged
+
+    """
+    # Dims that are currently flagged as variable, but may are not.
+    # TODO: check if last dim is in fact not rugged
+    arr = ak.to_regular(arr, axis=-1)
+
+    var_dims = ak_find_var_dims(arr)
+    for d in var_dims:
+        lengths = ak.ravel(ak.num(arr, axis=d))
+        if ak.all(lengths == lengths[0]):
+            arr = ak.to_regular(arr, axis=d)
+    return arr

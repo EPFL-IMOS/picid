@@ -8,7 +8,7 @@ import omegaconf
 
 
 # Import your strategy and base transform classes
-from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.transforms.base.base_transform import BaseTransform
 from lmetk.transforms.base.strategy import TransformStrategy
 from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 
@@ -168,7 +168,7 @@ class DataTransform:
         self.multi_source_fit = metadata.get("multi_source_fit", False)
 
         # Instantiate transform
-        assert isinstance(transform, DenseTransform), (
+        assert isinstance(transform, BaseTransform), (
             f"Transform instance for '{transform_name}' (type: {type(transform)}) "
             "must implement BaseTransform."
         )
@@ -178,15 +178,15 @@ class DataTransform:
         # Initialize the actual transform instance
         # Ensure the instantiated object implements BaseTransform
         if isinstance(transform, DictConfig):
-            self.transform_instance: DenseTransform = instantiate(transform)
+            self.transform_instance: BaseTransform = instantiate(transform)
         else:
             self.transform_instance = transform
-            assert isinstance(self.transform_instance, DenseTransform), (
+            assert isinstance(self.transform_instance, BaseTransform), (
                 f"Transform instance for '{transform_name}' (type: {type(self.transform_instance)}) "
                 f"must inherit from 'lmetk.transforms.base_transform.BaseTransform'."
             )
 
-        if not isinstance(self.transform_instance, DenseTransform):
+        if not isinstance(self.transform_instance, BaseTransform):
             raise TypeError(
                 f"Transform instance for '{transform_name}' (type: {type(self.transform_instance)}) "
                 f"must inherit from 'lmetk.transforms.base_transform.BaseTransform'."
