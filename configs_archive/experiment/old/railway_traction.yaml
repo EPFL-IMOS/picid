@@ -1,5 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /datamodule: railway_traction.yaml
-  - override /training_strategy: railway_traction.yaml

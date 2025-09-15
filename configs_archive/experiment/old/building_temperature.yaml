@@ -1,5 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /datamodule: building_temperature.yaml
-  - override /training_strategy: building_temperature.yaml

@@ -1,4 +1,0 @@
-_target_: lmetk.training_strategy.railway_traction.RailwayTractionStrategy
-feature_mode: exogen
-# N_samples: 100
-lags: 24

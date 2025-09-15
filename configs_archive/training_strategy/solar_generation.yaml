@@ -1,4 +1,0 @@
-_target_: lmetk.training_strategy.solar_generation.SolarGenerationStrategy
-feature_mode: exogen
-# N_samples: 100
-lags: 24

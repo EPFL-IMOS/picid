@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /datamodule: etth1.yaml
-  - override /model: catboost.yaml
-  - override /training_strategy: multi_model_univariate.yaml
