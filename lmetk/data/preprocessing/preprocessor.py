@@ -163,6 +163,19 @@ class PreProcessor(PreProcessorInterface):
 
         return data
 
+# configs of the dataset
+# configs of the transforms
+
+
+# 1) cache after the loading -- do not need to load long time 
+# 2) cache after the preprocessing -- do not need to preprocess
+# 3) configs of the dataset + but different transforms then laod from the 1) and overwrite 2)
+
+
+ 
+
+
+
     def pipeline(
         self,
         splitted_data_cache_path: str = None,

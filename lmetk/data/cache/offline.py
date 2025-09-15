@@ -12,75 +12,113 @@ from lmetk.utils.hash_utils import (
 class FileSystemCache:
     """
     Stage-aware file-based cache with hash validation.
-    Uses joblib for serialization and stores metadata in JSON.
+    Uses joblib for serialization, JSON for config, and plain text for hash.
 
-    Each stage (e.g., "loaded_and_splitted_data", "preprocessed_data") has its own subfolder.
+    Layout:
+        {cache_dir}/{dataset_name}/{stage}/data.pkl
+        {cache_dir}/{dataset_name}/{stage}/meta.json
+        {cache_dir}/{dataset_name}/{stage}/hash.txt
+
+    Special case:
+        "preprocessed" stage → nested by hash:
+        {cache_dir}/{dataset_name}/preprocessed/{hash}/data.pkl
+        {cache_dir}/{dataset_name}/preprocessed/{hash}/meta.json
+        {cache_dir}/{dataset_name}/preprocessed/{hash}/hash.txt
     """
 
     def __init__(self):
-        # No global cache_dir or library_dir
         pass
 
-    def _paths(self, cache_dir: str, dataset_name: str, stage: str):
+    def _paths(self, cache_dir: str, stage: str, cache_key: str = None):
         """
         Return paths for cache artifacts for a given dataset and stage.
-        Example layout:
-            {cache_dir}/{dataset_name}/{stage}/data.pkl
-            {cache_dir}/{dataset_name}/{stage}/meta.json
+        If stage == "preprocessed", requires cache_key and nests under it.
         """
-        stage_dir = Path(cache_dir).expanduser() / dataset_name / stage
+        base_dir = Path(cache_dir).expanduser() 
+
+        if stage == "preprocessed":
+            if cache_key is None:
+                raise ValueError("cache_key required for 'preprocessed' stage")
+            stage_dir = base_dir / stage / cache_key
+        else:
+            stage_dir = base_dir / stage
+
         stage_dir.mkdir(parents=True, exist_ok=True)
 
-        pkl_file = stage_dir / "data.pkl"
-        meta_file = stage_dir / "meta.json"
-        return pkl_file, meta_file
+        return (
+            stage_dir / "data.pkl",
+            stage_dir / "meta.json",
+            stage_dir / "hash.txt",
+        )
 
-    def load(self, cache_dir: str, dataset_name: str, stage: str):
-        """Load cached data and metadata if available."""
-        pkl_file, meta_file = self._paths(cache_dir, dataset_name, stage)
-        if not pkl_file.exists() or not meta_file.exists():
+    def load_metadata(self, cache_dir: str, stage: str, cache_key: str = None):
+        """
+        Load only the config + hash, without loading the data.
+        Returns (config, stored_hash) or None if missing.
+        """
+        _, meta_file, hash_file = self._paths(cache_dir, stage, cache_key)
+        if not meta_file.exists() or not hash_file.exists():
             return None
 
         with open(meta_file, "r") as f:
-            metadata = json.load(f)
+            config = json.load(f)
 
-        data = joblib.load(pkl_file)
-        return data, metadata
+        with open(hash_file, "r") as f:
+            stored_hash = f.read().strip()
 
-    def save(self, cache_dir: str, dataset_name: str, stage: str, data, config: dict, library_dir: str = None, extensions=None):
-        """Save data and metadata with hash validation."""
-        pkl_file, meta_file = self._paths(cache_dir, dataset_name, stage)
-        joblib.dump(data, pkl_file)
+        return config, stored_hash
 
+    def load_data(self, cache_dir: str, stage: str, cache_key: str = None):
+        """
+        Load only the data.pkl (assumes hash was already validated).
+        """
+        pkl_file, _, _ = self._paths(cache_dir, stage, cache_key)
+        if not pkl_file.exists():
+            return None
+        return joblib.load(pkl_file)
+
+    
+
+    def save(self, cache_dir: str, stage: str, data, config: dict,
+             library_dir: str = None, extensions=None, cache_key: str = None):
+        """Save data, config, and hash separately."""
         if library_dir:
             cache_key = compute_cache_key(config, library_dir, extensions)
-        else:
+        elif cache_key is None:
             cache_key = hash_config(config)
 
-        metadata = {
-            "hash": cache_key,
-            "config": ensure_serializable(config),
-        }
-        with open(meta_file, "w") as f:
-            json.dump(metadata, f, indent=2)
+        pkl_file, meta_file, hash_file = self._paths(cache_dir, stage, cache_key)
+        joblib.dump(data, pkl_file)
 
-    def handle(self, cache_dir: str, dataset_name: str, stage: str, build_fn, config: dict, library_dir: str = None, extensions=None):
+        # save config
+        with open(meta_file, "w") as f:
+            json.dump(ensure_serializable(config), f, indent=2)
+
+        # save hash
+        with open(hash_file, "w") as f:
+            f.write(cache_key)
+
+    def handle(self, cache_dir: str, stage: str, build_fn, config: dict,
+            library_dir: str = None, extensions=None):
         """
-        Load cached data if valid, otherwise rebuild via build_fn and save.
+        Load cached data if hash is valid, otherwise rebuild and save.
         """
-        expected_key = (
+        cache_key = (
             compute_cache_key(config, library_dir, extensions)
             if library_dir
             else hash_config(config)
         )
 
-        cached = self.load(cache_dir, dataset_name, stage)
-        if cached:
-            data, metadata = cached
-            if metadata["hash"] == expected_key:
-                return data  # ✅ cache is valid
+        meta = self.load_metadata(cache_dir, stage, cache_key if stage == "preprocessed" else None)
+        if meta:
+            _, stored_hash = meta
+            if stored_hash == cache_key:
+                # ✅ hash matches → load the data now
+                return self.load_data(cache_dir, stage, cache_key if stage == "preprocessed" else None)
 
-        # cache invalid → rebuild
+        # ❌ no cache or invalid hash → rebuild
         data = build_fn()
-        self.save(cache_dir, dataset_name, stage, data, config, library_dir, extensions)
+        self.save(cache_dir, stage, data, config,
+                library_dir, extensions, cache_key)
         return data
+
