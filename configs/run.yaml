@@ -39,6 +39,8 @@ defaults:
 # task name, determines output directory path
 task_name: "train"
 
+# Cache data or not
+use_cache: True
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
 # overwrite from command line with `python train.py tags="[first_tag, second_tag]"`

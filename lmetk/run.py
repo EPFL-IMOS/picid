@@ -139,15 +139,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
     # Get cache dirs:
-    splitted_data_cache_path = cfg.paths.splitted_data_cache_path
-    preprocessed_data_cache_path = cfg.paths.preprocessed_data_cache_path
-    data_library_part_path = cfg.paths.data_library_part_path
-    transform_library_part_path = cfg.paths.transform_library_part_path
+    data_cache_path = cfg.paths.cache_path
+    data_library_part_path = Path(cfg.paths.root_dir)/"lmetk/data"
+    transform_library_part_path = Path(cfg.paths.root_dir)/"lmetk/transforms"
 
     # Run the preprocessing pipeline
     preprocessor.pipeline(
-        splitted_data_cache_path=splitted_data_cache_path,
-        preprocessed_data_cache_path=preprocessed_data_cache_path,
+        data_cache_path=data_cache_path,
         data_library_part_path=data_library_part_path,
         transform_library_part_path=transform_library_part_path
     )

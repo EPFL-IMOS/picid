@@ -69,17 +69,16 @@ class UniboPowertoolsData():
                  base_path=None,
                  force_download=False):
 
-        
         self.test_types = test_types if test_types is not None else []
         self.chunksize = chunk_size
         self.lines = lines if lines is not None else []
         self.charge_line = charge_line
         self.discharge_line = discharge_line
         
-        
-        download('UNIBO21', cache_dir=Path(base_path).parents[1], force=force_download, unzip=True)
-        self.cyc_path = base_path + '/data/test_result.csv'
-        self.cap_path = base_path + '/data/test_result_trial_end.csv'
+        # check if self.data_path exist
+        download('UNIBO21', cache_dir=base_path, force=force_download, unzip=True)
+        self.cyc_path = base_path + '/UNIBO21/data/test_result.csv'
+        self.cap_path = base_path + '/UNIBO21/data/test_result_trial_end.csv'
 
         self.__load_raw_data()
 

@@ -85,7 +85,7 @@ test_names = [
 class NB14Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_path = kwargs['cache_dir']
+        self.data_path = kwargs['data_dir']
         
         
         self._is_isplitted = False

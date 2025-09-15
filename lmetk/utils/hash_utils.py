@@ -6,22 +6,22 @@ import omegaconf
 import json
 from pathlib import Path
 from omegaconf import OmegaConf, DictConfig, ListConfig
-def generate_zero_sparse_connectivity(m, n):
-    """Generate a zero sparse connectivity matrix.
+# def generate_zero_sparse_connectivity(m, n):
+#     """Generate a zero sparse connectivity matrix.
 
-    Parameters
-    ----------
-    m : int
-        Number of rows.
-    n : int
-        Number of columns.
+#     Parameters
+#     ----------
+#     m : int
+#         Number of rows.
+#     n : int
+#         Number of columns.
 
-    Returns
-    -------
-    torch.sparse_coo_tensor
-        Zero sparse connectivity matrix.
-    """
-    return torch.sparse_coo_tensor((m, n)).coalesce()
+#     Returns
+#     -------
+#     torch.sparse_coo_tensor
+#         Zero sparse connectivity matrix.
+#     """
+#     return torch.sparse_coo_tensor((m, n)).coalesce()
 
 
 def ensure_serializable(obj):

@@ -16,7 +16,7 @@ NOMINAL_CAPACITY = 2.2
 
 class NasaRandomizedData():
     def __init__(self, data_path, force_download=False):
-        download('NB14', cache_dir=Path(data_path).parents[1], force=force_download, unzip=True)
+        download('NB14', cache_dir=data_path, force=force_download, unzip=True)
         self.path = data_path #base_path + DATA_PATH
         
 

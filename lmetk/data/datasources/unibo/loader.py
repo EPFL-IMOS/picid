@@ -105,7 +105,7 @@ test_names = [
 class UNIBO21Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_path = kwargs['cache_path']
+        self.data_path = kwargs['data_dir']
         
         
         self._is_isplitted = False

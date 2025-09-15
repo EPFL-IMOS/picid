@@ -9,6 +9,9 @@ from lmetk.data.data_objects.data import DatasetContainer
 import logging
 from lmetk.data.cache.offline import FileSystemCache
 from lmetk.utils import print_data_dict_structure
+from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -178,8 +181,7 @@ class PreProcessor(PreProcessorInterface):
 
     def pipeline(
         self,
-        splitted_data_cache_path: str = None,
-        preprocessed_data_cache_path: str = None,
+        data_cache_path: str = None,
         data_library_part_path: str = None,
         transform_library_part_path: str = None,
     ) -> DatasetContainer:
@@ -188,75 +190,109 @@ class PreProcessor(PreProcessorInterface):
 
         Parameters
         ----------
-        splitted_data_cache_path : str | None
-            Root cache directory for loaded & split data stage.
-        preprocessed_data_cache_path : str | None
-            Root cache directory for preprocessed data stage.
+        data_cache_path : str | None
+            Root cache directory for dataset and preprocessed stages.
         data_library_part_path : str | None
-            Path to the library part (e.g. code) that defines dataset loading.
-            Must be provided if splitted_data_cache_path is set.
+            Path to the library part (e.g. code) defining dataset loading.
+            Required if caching loaded data.
         transform_library_part_path : str | None
-            Path to the library part (e.g. code) that defines transforms.
-            Must be provided if preprocessed_data_cache_path is set.
+            Path to the library part (e.g. code) defining transforms.
+            Required if caching preprocessed data.
         """
-        dataset_name = getattr(self.datasource, "name", "unknown_dataset")
+
+        # -----------------
+        # Stage 2: Preprocessed cache check first (skip stage 1 if exists)
+        # -----------------
+
+        datasource_config = ensure_serializable(self.datasource._init_kwargs)
+        datasource_transforms_cfg = {
+            "datasource": datasource_config,
+            "transforms": ensure_serializable(self.transforms.config),
+        }
+
+
+        preprocessed_data = None
+        if data_cache_path and transform_library_part_path:
+
+            # Compute expected hash first
+            expected_hash = compute_cache_key(
+                config=datasource_transforms_cfg,
+                library_dir=transform_library_part_path,
+                extensions=[".py"]
+            )
+            
+            preprocessed_meta = self.cache.load_metadata(
+                data_cache_path, stage="preprocessed",
+                cache_key=expected_hash  # handle will compute key internally
+            )
+
+            if preprocessed_meta:
+                pre_config, stored_hash = preprocessed_meta
+
+                # Check if the expected_hash is the same as stored one
+                if stored_hash == expected_hash:
+                    # Cache hit → load preprocessed data and skip stage 1
+                    preprocessed_data = self.cache.load_data(
+                        data_cache_path, stage="preprocessed",
+                        cache_key=expected_hash
+                    )
+                    self.data = preprocessed_data
 
         # -----------------
         # Stage 1: Load + Split + Fetch
         # -----------------
-        if splitted_data_cache_path:
-            if not data_library_part_path:
-                raise ValueError("data_library_part_path must be provided if splitted_data_cache_path is set")
+        if preprocessed_data is None:
+            if data_cache_path:
+                if not data_library_part_path:
+                    raise ValueError("data_library_part_path must be provided if caching loaded data")
 
-            def build_data_stage():
+                def build_data_stage():
+                    self.datasource.load_data()
+                    self.datasource.split_data()
+                    self.fetch_data()
+                    return self.data
+
+                self.data = self.cache.handle(
+                    cache_dir=data_cache_path,
+                    stage="loaded_and_splitted_data",
+                    build_fn=build_data_stage,
+                    config=datasource_config,   # datasource config
+                    library_dir=data_library_part_path,
+                    extensions=[".py"],
+                )
+            else:
+                # no cache → always rebuild
                 self.datasource.load_data()
                 self.datasource.split_data()
                 self.fetch_data()
-                return self.data
 
-            self.data = self.cache.handle(
-                cache_dir=splitted_data_cache_path,
-                dataset_name=dataset_name,
-                stage="loaded_and_splitted_data",
-                build_fn=build_data_stage,
-                config=self.datasource._init_kwargs,   # dataset config
-                library_dir=data_library_part_path,
-                extensions=[".py"],
+
+            # Validate split mode
+            assert self.datasource.get_split_mode() == self.mode, (
+                f"Expected split mode from preprocessor: '{self.mode}', "
+                f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
             )
-        else:
-            self.datasource.load_data()
-            self.datasource.split_data()
-            self.fetch_data()
 
-        # Validate split mode
-        assert self.datasource.get_split_mode() == self.mode, (
-            f"Expected split mode from preprocessor: '{self.mode}', "
-            f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
-        )
-
-        logger.info("Data dictionary structure before transforms:")
-        print_data_dict_structure(self.data)
+            logger.info("Data dictionary structure before transforms:")
+            print_data_dict_structure(self.data)
 
         # -----------------
         # Stage 2: Transforms
         # -----------------
-        if preprocessed_data_cache_path:
-            if not transform_library_part_path:
-                raise ValueError("transform_library_part_path must be provided if preprocessed_data_cache_path is set")
-
+        if data_cache_path and transform_library_part_path:
             def build_preprocess_stage():
                 return self.apply_transforms(self.data, self.transforms.get_transforms())
 
             self.data = self.cache.handle(
-                cache_dir=preprocessed_data_cache_path,
-                dataset_name=dataset_name,
-                stage="preprocessed_data",
+                cache_dir=data_cache_path,
+                stage="preprocessed",
                 build_fn=build_preprocess_stage,
-                config=self.transforms.config,   # transform config
+                config=datasource_transforms_cfg,  # transform config
                 library_dir=transform_library_part_path,
                 extensions=[".py"],
             )
         else:
+            # no cache → always apply transforms
             self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
 
         self._is_preprocessed = True
