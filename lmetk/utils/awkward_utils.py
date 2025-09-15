@@ -10,6 +10,11 @@ def ak_unflatten_discontinous_groups(
     """
     Reshape `values` into a nested array based on `groups`,
     where `groups` may be discontinous.
+
+    This adds one dimension to values where
+    groups_index indicates the group membership of each value
+    which is the rugged axis.
+
     """
     assert len(values) == len(
         groups_index
@@ -24,7 +29,11 @@ def ak_unflatten_discontinous_groups(
 
 
 def ak_find_var_dims(arr: ak.Array):
-    """Find variable-length dimensions in an Awkward Array."""
+    """
+    Find variable-length dimensions in an Awkward Array.
+    in 4 * var * var * 3 it would return [1, 2]
+
+    """
     assert isinstance(arr, ak.Array)
 
     t = ak.type(arr)
@@ -43,6 +52,12 @@ def ak_find_var_dims(arr: ak.Array):
 
 def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
     """
+    This is for indexing regular subarrays of a ragged array.
+    it gives index touples
+
+    (e.g. (0,1), (0,2), (1,0) for a 4D ragged array)
+    where the last 2d are the regular tail.
+
     Return index tuples for the first `ragged_dims` axes of `arr`.
     Each tuple corresponds to one selection into the regular tail.
     """
@@ -62,7 +77,11 @@ def iterate_ragged_sub_blocks(arr: ak.Array, ragged_dims: int):
 
 
 def blocks_to_ragged_array(coords: list[tuple], blocks: np.ndarray) -> ak.Array:
-    # build nested dict
+    """
+    Construct a ragged Awkward Array from blocks of regular arrays
+    and their coordinates.
+    """
+
     root = {}
     for coord, block in zip(coords, blocks):
         d = root
@@ -87,9 +106,16 @@ def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
     where some axes may be irregular even if they are actually regular.
     Note:
         - Assume that innermost dimensions are regular (usually feature dim)
-    """
 
+        Because:
+        var dim
+            can be rugged or not rugged
+        int dim
+            is always not rugged
+
+    """
     # Dims that are currently flagged as variable, but may are not.
+    # TODO: check if last dim is in fact not rugged
     arr = ak.to_regular(arr, axis=-1)
 
     var_dims = ak_find_var_dims(arr)
