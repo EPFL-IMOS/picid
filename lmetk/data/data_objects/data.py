@@ -344,6 +344,9 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         super().__init__(
             *args, instance_cls=instance_cls, is_multi_unit=is_multi_unit, **kwargs
         )
+        """
+        TODO: Why there is is_multi_unit=True but default? 
+        """
 
     def validate(self):
         super().validate()
@@ -470,4 +473,5 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         return grouped_dict
 
     def __repr__(self):
+        # TODO: solve it somehow else
         return "MOVi dataset bug fix"

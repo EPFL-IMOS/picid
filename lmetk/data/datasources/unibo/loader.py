@@ -137,7 +137,18 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         """
         assert self._is_loaded is True, "Data must be loaded before getting data."
         assert self._is_isplitted is True, "Data must be splitted before getting data."
-        return SplitDatasetContainer(**self.data_dict)
+        
+        instance_clss = []
+        for key in self.data_dict.keys():
+            if key =='features':
+                for inner_key, split_lst in self.data_dict[key].items():
+                    instance_clss.extend([type(val) for val in split_lst])
+    
+        if len(set(instance_clss)) != 1:
+            raise TypeError(
+                f"All data sources must have the same instance_cls, got {set(instance_clss)}"
+            )
+        return SplitDatasetContainer(instance_cls=instance_clss.pop(), **self.data_dict)
 
     def _load_data(self) -> dict:
         # Read raw CSV
@@ -297,5 +308,5 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     @override
     def split_data(self):
         logger.warning(
-            "RigidBodyDynamics does not support data splitting. The project relies on predefined splits."
+            "UNIBO21 does not support data splitting. The project relies on predefined splits."
         )

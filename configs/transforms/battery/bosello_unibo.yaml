@@ -1,3 +1,14 @@
+
+cycles2sequence:
+  transform:
+    _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
+    win_len: 32
+    pad_value: -1
+  
+  metadata:
+    apply_to: ['features', 'target',] # 'metadata'
+    assign_to: ['features', 'target']
+
 scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
@@ -15,15 +26,15 @@ scaler_target:
     apply_to: target
     fit_on: train
 
-cycles2sequence:
-  transform:
-    _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
-    win_len: 32
-    pad_value: -1
+# cycles2sequence:
+#   transform:
+#     _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
+#     win_len: 32
+#     pad_value: -1
   
-  metadata:
-    apply_to: ['features', 'target', 'metadata']
-    assign_to: ['features', 'target']
+#   metadata:
+#     apply_to: ['features', 'target',] # 'metadata'
+#     assign_to: ['features', 'target']
     
 sequence2statistics:
   transform:

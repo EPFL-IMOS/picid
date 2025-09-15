@@ -7,7 +7,9 @@ from lmetk.utils.hash_utils import (
     ensure_serializable,
     compute_cache_key,
 )
+import logging
 
+logger = logging.getLogger(__name__)
 
 class FileSystemCache:
     """
@@ -113,7 +115,7 @@ class FileSystemCache:
         if meta:
             _, stored_hash = meta
             if stored_hash == cache_key:
-                # ✅ hash matches → load the data now
+                logger.info(f"✅ hash matches → load the data now, stage={stage}")
                 return self.load_data(cache_dir, stage, cache_key if stage == "preprocessed" else None)
 
         # ❌ no cache or invalid hash → rebuild
