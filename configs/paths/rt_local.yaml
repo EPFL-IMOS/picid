@@ -16,3 +16,5 @@ output_dir: ${hydra:runtime.output_dir}
 
 # path to working directory
 work_dir: ${hydra:runtime.cwd}
+
+cache_path: ${paths.data_dir}/tabphm_cache/${datasource.data_name}
