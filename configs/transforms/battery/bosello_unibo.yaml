@@ -6,7 +6,7 @@ cycles2sequence:
     pad_value: -1
   
   metadata:
-    apply_to: ['features', 'target',] # 'metadata'
+    apply_to: ['features', 'target'] # 'metadata'
     assign_to: ['features', 'target']
 
 scaler_features:
