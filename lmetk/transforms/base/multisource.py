@@ -195,6 +195,14 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         data_is_ragged = data_types.pop() is ak.Array
 
 
+        # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
+        # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
+        ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
+        # The data is regular if the only "ragged dimension" found is None.
+        data_is_ragged_but_regular = ragged_dims == {None}
+        if data_is_ragged_but_regular:
+            data_is_ragged = False
+
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
 
@@ -338,16 +346,22 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
         # Construct current data segment from each source
-        if (not data_is_ragged) and transform_supports_dense:
-
-            if data_is_ragged_but_regular:
-                data_segments = [s.to_numpy() for s in data_segments]
-
+        if (not data_is_ragged) and transform_supports_dense:            
             out = []
             for data_segment in data_segments:
-                out.append(transform_func(data_segment, metadata=metadata))
+                # Handle the case when the data is ragged but structurally regular
+                if data_is_ragged_but_regular:
+                    for key,val in data_segment.items():
+                        data_segment[key] = val.to_numpy()
+                
+                out_segment = transform_func(data_segment, metadata=metadata)
 
-            data_segment = [ak.Array(d) for d in data_segments]
+                if data_is_ragged_but_regular:
+                    out_segment = ak.Array(out_segment)
+                
+                out.append(out_segment)
+
+            
 
         elif data_is_ragged and (not transform_supports_ragged):
             # The logic is that we find the rugged dimension, ensure that there is only one,
