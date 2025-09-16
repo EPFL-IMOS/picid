@@ -1,0 +1,4 @@
+site_name: TabPHM
+site_url: https://github.com/EPFL-IMOS
+theme:
+  name: material
