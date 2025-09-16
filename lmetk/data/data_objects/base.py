@@ -176,6 +176,13 @@ class BaseDataObjectWithMetadata(
         else:
             self._metadata = {}
 
+    # --- dict-like interface ---
+    def __getitem__(self, key: str) -> T:
+        if key == "metadata":
+            return self.metadata  # type: ignore[return-value]
+        else:
+            return self._data[key]
+
     def __setitem__(self, key: str, value: Any) -> None:
         """
         Sets an item, storing it in its original format and intelligently
