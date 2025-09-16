@@ -11,6 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class FileSystemCache:
     """
     Stage-aware file-based cache with hash validation.
@@ -36,7 +37,7 @@ class FileSystemCache:
         Return paths for cache artifacts for a given dataset and stage.
         If stage == "preprocessed", requires cache_key and nests under it.
         """
-        base_dir = Path(cache_dir).expanduser() 
+        base_dir = Path(cache_dir).expanduser()
 
         if stage == "preprocessed":
             if cache_key is None:
@@ -79,10 +80,16 @@ class FileSystemCache:
             return None
         return joblib.load(pkl_file)
 
-    
-
-    def save(self, cache_dir: str, stage: str, data, config: dict,
-             library_dir: str = None, extensions=None, cache_key: str = None):
+    def save(
+        self,
+        cache_dir: str,
+        stage: str,
+        data,
+        config: dict,
+        library_dir: str = None,
+        extensions=None,
+        cache_key: str = None,
+    ):
         """Save data, config, and hash separately."""
         if library_dir:
             cache_key = compute_cache_key(config, library_dir, extensions)
@@ -100,8 +107,15 @@ class FileSystemCache:
         with open(hash_file, "w") as f:
             f.write(cache_key)
 
-    def handle(self, cache_dir: str, stage: str, build_fn, config: dict,
-            library_dir: str = None, extensions=None):
+    def handle(
+        self,
+        cache_dir: str,
+        stage: str,
+        build_fn,
+        config: dict,
+        library_dir: str = None,
+        extensions=None,
+    ):
         """
         Load cached data if hash is valid, otherwise rebuild and save.
         """
@@ -111,16 +125,18 @@ class FileSystemCache:
             else hash_config(config)
         )
 
-        meta = self.load_metadata(cache_dir, stage, cache_key if stage == "preprocessed" else None)
+        meta = self.load_metadata(
+            cache_dir, stage, cache_key if stage == "preprocessed" else None
+        )
         if meta:
             _, stored_hash = meta
             if stored_hash == cache_key:
                 logger.info(f"✅ hash matches → load the data now, stage={stage}")
-                return self.load_data(cache_dir, stage, cache_key if stage == "preprocessed" else None)
+                return self.load_data(
+                    cache_dir, stage, cache_key if stage == "preprocessed" else None
+                )
 
         # ❌ no cache or invalid hash → rebuild
         data = build_fn()
-        self.save(cache_dir, stage, data, config,
-                library_dir, extensions, cache_key)
+        self.save(cache_dir, stage, data, config, library_dir, extensions, cache_key)
         return data
-
