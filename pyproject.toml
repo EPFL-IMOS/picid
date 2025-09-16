@@ -15,8 +15,8 @@ dependencies = [
     "omegaconf>=2.3.0",
     "torchsummary>=1.5.1",
     "pyrootutils>=1.0.4",
-    "lightning>=2.5.2", # "lightning==2.0.0",
-    "hydra-colorlog", # already specified with version above — can remove this line unless intended
+    "lightning>=2.5.2",             # "lightning==2.0.0",
+    "hydra-colorlog",               # already specified with version above — can remove this line unless intended
     "performer-pytorch>=1.1.4",
     "torchinfo>=1.7.1",
     "h5netcdf>=1.1.0",
@@ -34,6 +34,7 @@ dependencies = [
     "rich>=14.0.0",
     "awkward>=2.8.7",
     "mkdocs-material>=9.6.20",
+    "mkdocstrings[python]>=0.30.0",
 ]
 #"phmd @ git+https://github.com/EPFL-IMOS/imos_phmd.git@collab_lalr",
 

@@ -14,7 +14,7 @@ from .base import AbstractFitPredictWrapper
 
 
 class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
-    r"""Wrapper for the TimePFN model.
+    """Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """

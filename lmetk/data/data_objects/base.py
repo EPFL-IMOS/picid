@@ -53,7 +53,54 @@ class ToDataFrameMixin:
 
 class BaseDataObject(Generic[T], MutableMapping[str, T]):
     """
-    A lean base class for managing key–value data with both dict-style and attribute-style access.
+    BaseDataObject is a generic, dict-like container for storing and managing data objects of a specified type.
+    This class provides both dictionary-style and attribute-style access to its items, and supports mutable mapping operations.
+    It can recursively construct nested BaseDataObject instances from dictionaries, and validates types for list values.
+    Parameters
+    ----------
+    instance_cls : Type[T]
+        The class type of the data objects to be stored.
+    **kwargs : Any
+        Initial key-value pairs to populate the object.
+    Attributes
+    ----------
+    _instance_cls : Type[T]
+        The class type of the data objects.
+    _data : Dict[str, T]
+        Internal storage for the data objects.
+    Methods
+    -------
+    __getitem__(key: str) -> T
+        Retrieve the value associated with the given key.
+    __setitem__(key: str, value: Any) -> None
+        Set the value for the given key, with type validation and recursive construction for dicts.
+    __delitem__(key: str) -> None
+        Remove the item associated with the given key.
+    __contains__(key: str) -> bool
+        Check if the key exists in the object.
+    __len__() -> int
+        Return the number of items.
+    __iter__()
+        Return an iterator over the keys.
+    items()
+        Return a view of the object's items.
+    keys()
+        Return a view of the object's keys.
+    values()
+        Return a view of the object's values.
+    get_instance_cls() -> Type[T]
+        Return the class type of the stored data objects.
+    __getattr__(key: str) -> T
+        Provide attribute-style access to items (read-only).
+    __repr__() -> str
+        Return a string representation of the object.
+    copy(deep: bool = True) -> "BaseDataObject[T]"
+        Return a copy of the object, optionally deep copying its contents.
+    Notes
+    -----
+    - When setting a value as a dict, it is recursively converted into a BaseDataObject.
+    - When setting a value as a list, all items must be of the specified instance class type.
+    - Attribute-style access is read-only and raises AttributeError for missing keys.
     """
 
     def __init__(self, instance_cls: Type[T], **kwargs: Any) -> None:

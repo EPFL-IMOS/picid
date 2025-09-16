@@ -6,7 +6,7 @@ from lmetk.model.methods.linear_regression_model import LinearRegressionModelBas
 
 
 class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the LinearRegressionModel baseline.
+    """Wrapper for the LinearRegressionModel baseline.
 
     This wrapper defines the forward pass of the LinearRegressionModel baseline.
     """
@@ -16,7 +16,7 @@ class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        r"""Forward pass for the LinearRegression wrapper.
+        """Forward pass for the LinearRegression wrapper.
 
         Parameters
         ----------

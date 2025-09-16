@@ -1,6 +1,7 @@
 """Wrapper for the TimePFN model."""
 
 from pathlib import Path
+from typing import override
 
 import joblib
 from autogluon.tabular import TabularPredictor
@@ -10,7 +11,7 @@ from ..autogluon.autogluon_wrapper import AutoGluonWrapper
 
 
 class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
-    r"""Wrapper for the TimePFN model.
+    """Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """
@@ -63,3 +64,8 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
 
         self.backbone = joblib.load(model_path)
         return model_path
+
+    @property
+    @override
+    def allows_multi_target(self) -> bool:
+        return True

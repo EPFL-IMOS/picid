@@ -8,7 +8,7 @@ from lmetk.model.wrappers.base import AbstractFitPredictWrapper
 
 
 class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
-    r"""Wrapper for the XGboost model."""
+    """Wrapper for the XGboost model."""
 
     def __init__(self, model_cache_path: str = None, **kwargs):
         backbone = MultiOutputRegressor(

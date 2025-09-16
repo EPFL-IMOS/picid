@@ -22,9 +22,9 @@ from lmetk.model.autogluon.multi_label_predictor import MultilabelTabularPredict
 
 
 class AutoGluonWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the TimePFN model.
+    """Wrapper for the AutoGluon model.
 
-    This wrapper defines the forward pass of the TimePFN model.
+    This wrapper defines the forward pass of the Aut model.
     """
 
     def __init__(
@@ -112,7 +112,7 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         return self.backbone.predict(df).to_numpy()
 
     def forward(self, batch):
-        r"""Forward pass for the Tune wrapper. Note the following:
+        """Forward pass for the Tune wrapper. Note the following:
         future_context_timestamps := batch['context']['y_mark'] is not used due to possible noise,
         historical_target_timestamps := batch['target']['x_mark']  is redundant with historical_context_timestamps,
         future_target_timestamps := batch['target']['y_mark']  is redundant with future_context_timestamps.

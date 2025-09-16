@@ -5,7 +5,7 @@ from lmetk.model.methods.naive_model import NaiveModelBaseline
 
 
 class NaiveModelWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the NaiveModel model.
+    """Wrapper for the NaiveModel model.
 
     This wrapper defines the forward pass of the NaiveModel model.
     """
@@ -15,7 +15,7 @@ class NaiveModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        r"""Forward pass for the Tune wrapper.
+        """Forward pass for the Tune wrapper.
 
         Parameters
         ----------
