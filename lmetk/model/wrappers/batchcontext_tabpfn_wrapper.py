@@ -8,7 +8,7 @@ from .base import AbstractFeedForwardWrapper
 
 
 class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the TimePFN model.
+    """Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """
@@ -30,7 +30,7 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
         self.backbone.fit(x.cpu(), y.cpu())
 
     def forward(self, batch):
-        r"""Forward pass for the Tune wrapper.
+        """Forward pass for the Tune wrapper.
 
         Parameters
         ----------self.backbone.fit(batch_x, batch_y)

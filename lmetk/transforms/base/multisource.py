@@ -190,7 +190,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
             )
-        
+
         # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
         data_is_ragged = data_types.pop() is ak.Array
 
@@ -212,14 +212,24 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             train = {}
 
             # Extract variable dimention
-            var_dim = set([find_singular_ragged_dim(data_segment) for data_segment in data_segments])
-            assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+            var_dim = set(
+                [
+                    find_singular_ragged_dim(data_segment)
+                    for data_segment in data_segments
+                ]
+            )
+            assert (
+                len(var_dim) == 1
+            ), f"Expected exactly one variable-length dimension, found {var_dim}"
             var_dim = var_dim.pop()
-                
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [ak.concatenate(chunk[key], axis=var_dim-1) for chunk in data_segments], axis=0
+                    [
+                        ak.concatenate(chunk[key], axis=var_dim - 1)
+                        for chunk in data_segments
+                    ],
+                    axis=0,
                 )
 
             train = {k: v.to_numpy() for k, v in train.items()}
@@ -230,13 +240,20 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             train = {}
 
             # Extract variable dimention
-            var_dim = set([find_singular_ragged_dim(data_segment) for data_segment in data_segments])
-            assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+            var_dim = set(
+                [
+                    find_singular_ragged_dim(data_segment)
+                    for data_segment in data_segments
+                ]
+            )
+            assert (
+                len(var_dim) == 1
+            ), f"Expected exactly one variable-length dimension, found {var_dim}"
             var_dim = var_dim.pop()
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dim-1
+                    [chunk[key] for chunk in data_segments], axis=var_dim - 1
                 )
 
             fit_func(train, metadata=metadata)
@@ -301,13 +318,30 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             )
         data_is_ragged = data_types.pop() is ak.Array
 
+        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
+        if len(data_types) != 1:
+            raise ValueError(
+                f"All data segments must have the same data type. Found: {data_types}"
+            )
+
+        data_is_ragged_but_regular = ...
+
+        if data_is_ragged_but_regular:
+            data_is_ragged = False
+
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
         # Construct current data segment from each source
         if (not data_is_ragged) and transform_supports_dense:
+
+            if data_is_ragged_but_regular:
+                data_segments = [s.to_numpy() for s in data_segments]
+
             out = []
             for data_segment in data_segments:
                 out.append(transform_func(data_segment, metadata=metadata))
+
+            data_segment = [ak.Array(d) for d in data_segments]
 
         elif data_is_ragged and (not transform_supports_ragged):
             # The logic is that we find the rugged dimension, ensure that there is only one,
@@ -319,17 +353,17 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                 "This might be slow for large datasets."
             )
             out = []
-            
+
             for data_segment in data_segments:
                 var_dim = find_singular_ragged_dim(data_segment)
                 multi_index = ragged_index_tuples(
                     next(iter(data_segment.values())), var_dim
                 )
-                
+
                 # Merge metadata from the segment with the overall metadata
                 data_segment_metadata = copy.deepcopy(metadata)
                 data_segment_metadata.update(data_segment.metadata or {})
-                
+
                 out_segment = {}
                 use_tqdm = len(multi_index) > 100
                 iterator = multi_index

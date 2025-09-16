@@ -12,7 +12,6 @@ from lmetk.utils import print_data_dict_structure
 from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
 
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +66,6 @@ class PreProcessor(PreProcessorInterface):
         self.meta_data_lst: Optional[list[dict]] = None
 
         self.cache = FileSystemCache()
-
 
     def get_meta_data_dict(self):
         if hasattr(self.datasource, "get_meta_data") and callable(
@@ -166,18 +164,12 @@ class PreProcessor(PreProcessorInterface):
 
         return data
 
-# configs of the dataset
-# configs of the transforms
+    # configs of the dataset
+    # configs of the transforms
 
-
-# 1) cache after the loading -- do not need to load long time 
-# 2) cache after the preprocessing -- do not need to preprocess
-# 3) configs of the dataset + but different transforms then laod from the 1) and overwrite 2)
-
-
- 
-
-
+    # 1) cache after the loading -- do not need to load long time
+    # 2) cache after the preprocessing -- do not need to preprocess
+    # 3) configs of the dataset + but different transforms then laod from the 1) and overwrite 2)
 
     def pipeline(
         self,
@@ -210,7 +202,6 @@ class PreProcessor(PreProcessorInterface):
             "transforms": ensure_serializable(self.transforms.config),
         }
 
-
         preprocessed_data = None
         if data_cache_path and transform_library_part_path:
 
@@ -218,12 +209,13 @@ class PreProcessor(PreProcessorInterface):
             expected_hash = compute_cache_key(
                 config=datasource_transforms_cfg,
                 library_dir=transform_library_part_path,
-                extensions=[".py"]
+                extensions=[".py"],
             )
-            
+
             preprocessed_meta = self.cache.load_metadata(
-                data_cache_path, stage="preprocessed",
-                cache_key=expected_hash  # handle will compute key internally
+                data_cache_path,
+                stage="preprocessed",
+                cache_key=expected_hash,  # handle will compute key internally
             )
 
             if preprocessed_meta:
@@ -233,8 +225,7 @@ class PreProcessor(PreProcessorInterface):
                 if stored_hash == expected_hash:
                     # Cache hit → load preprocessed data and skip stage 1
                     preprocessed_data = self.cache.load_data(
-                        data_cache_path, stage="preprocessed",
-                        cache_key=expected_hash
+                        data_cache_path, stage="preprocessed", cache_key=expected_hash
                     )
                     self.data = preprocessed_data
 
@@ -244,19 +235,20 @@ class PreProcessor(PreProcessorInterface):
         if preprocessed_data is None:
             if data_cache_path:
                 if not data_library_part_path:
-                    raise ValueError("data_library_part_path must be provided if caching loaded data")
+                    raise ValueError(
+                        "data_library_part_path must be provided if caching loaded data"
+                    )
 
                 def build_data_stage():
                     self.datasource.load_data()
                     self.datasource.split_data()
-                    self.fetch_data()
-                    return self.data
+                    return self.datasource
 
-                self.data = self.cache.handle(
+                self.cache.handle(
                     cache_dir=data_cache_path,
                     stage="loaded_and_splitted_data",
                     build_fn=build_data_stage,
-                    config=datasource_config,   # datasource config
+                    config=datasource_config,  # datasource config
                     library_dir=data_library_part_path,
                     extensions=[".py"],
                 )
@@ -264,8 +256,8 @@ class PreProcessor(PreProcessorInterface):
                 # no cache → always rebuild
                 self.datasource.load_data()
                 self.datasource.split_data()
-                self.fetch_data()
 
+            self.fetch_data()
 
             # Validate split mode
             assert self.datasource.get_split_mode() == self.mode, (
@@ -280,8 +272,11 @@ class PreProcessor(PreProcessorInterface):
         # Stage 2: Transforms
         # -----------------
         if data_cache_path and transform_library_part_path:
+
             def build_preprocess_stage():
-                return self.apply_transforms(self.data, self.transforms.get_transforms())
+                return self.apply_transforms(
+                    self.data, self.transforms.get_transforms()
+                )
 
             self.data = self.cache.handle(
                 cache_dir=data_cache_path,
@@ -293,7 +288,9 @@ class PreProcessor(PreProcessorInterface):
             )
         else:
             # no cache → always apply transforms
-            self.data = self.apply_transforms(self.data, self.transforms.get_transforms())
+            self.data = self.apply_transforms(
+                self.data, self.transforms.get_transforms()
+            )
 
         self._is_preprocessed = True
 

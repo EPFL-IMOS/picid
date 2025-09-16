@@ -12,7 +12,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
 
     def __init__(self, model_cache_path: str = None, **kwargs):
         backbone = MultiOutputRegressor(
-            GradientBoostingRegressor(random_state=42, verbose=3)
+            GradientBoostingRegressor(random_state=42, verbose=2)
         )
 
         self.model_cache_path = model_cache_path
