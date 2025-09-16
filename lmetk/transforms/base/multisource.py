@@ -194,6 +194,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
         data_is_ragged = data_types.pop() is ak.Array
 
+
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
 
@@ -324,7 +325,12 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                 f"All data segments must have the same data type. Found: {data_types}"
             )
 
-        data_is_ragged_but_regular = ...
+
+        # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
+        # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
+        ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
+        # The data is regular if the only "ragged dimension" found is None.
+        data_is_ragged_but_regular = ragged_dims == {None}
 
         if data_is_ragged_but_regular:
             data_is_ragged = False

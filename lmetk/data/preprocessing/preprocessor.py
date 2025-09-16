@@ -244,7 +244,8 @@ class PreProcessor(PreProcessorInterface):
                     self.datasource.split_data()
                     return self.datasource
 
-                self.cache.handle(
+                # Override datasource from the cached
+                self.datasource = self.cache.handle(
                     cache_dir=data_cache_path,
                     stage="loaded_and_splitted_data",
                     build_fn=build_data_stage,
