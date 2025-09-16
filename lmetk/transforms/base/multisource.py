@@ -26,6 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 def find_singular_ragged_dim(nti: NamedTransformInput):
+    """
+    Find the single variable-length (ragged) dimension in a NamedTransformInput.
+
+    This function iterates through all Awkward arrays in the input and identifies
+    their variable-length dimensions. It then asserts that there is exactly one
+    unique variable-length dimension across all arrays.
+
+    Parameters
+    ----------
+    nti : NamedTransformInput
+        A dictionary-like object containing Awkward arrays.
+
+    Returns
+    -------
+    int
+        The singular variable-length dimension found.
+
+    Raises
+    ------
+    AssertionError
+        If zero or more than one unique variable-length dimension is found.
+    """
     var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
     var_dims = set([x for row in var_dims for x in row])
     assert (
@@ -36,6 +58,24 @@ def find_singular_ragged_dim(nti: NamedTransformInput):
 
 # recursively turn dicts into lists
 def tolist(d):
+    """
+    Recursively convert a nested dictionary to a nested list.
+
+    The conversion is done by sorting the dictionary keys at each level
+    to ensure a consistent order.
+
+    Parameters
+    ----------
+    d : dict or any
+        The dictionary to convert. If not a dictionary, the object is
+        returned as is.
+
+    Returns
+    -------
+    list or any
+        The nested list representation of the dictionary, or the original
+        object if it was not a dictionary.
+    """
     if isinstance(d, dict):
         return [tolist(d[i]) for i in sorted(d)]
     return d  # already a numpy array
@@ -43,7 +83,42 @@ def tolist(d):
 
 class ConcatinatedFitMultiSourceTransformMixin(ABC):
     """
-    Stateless mixin for transforming data from multiple sources.
+    A mixin for transforms that fit on data concatenated from multiple sources.
+
+    This mixin provides a `fit_multi_source` method that standardizes the fitting
+    process for transforms that operate on data from multiple units or sources.
+    It handles different data formats (dense NumPy arrays and ragged Awkward arrays)
+    and transform capabilities.
+
+    The core logic is in `fit_function_to_data_segments`, which prepares the data
+    by concatenating it from all sources before passing it to the user-defined
+    `fit_data` method of the transform.
+
+    The transformation logic is handled by `tranform_function_to_data_segments`,
+    which applies the `transform_data` method to each data segment individually.
+
+    Case-specific behaviors for fitting:
+    1.  **Dense Data (NumPy) & Dense-supporting Transform**:
+        - Data from all sources for each key is concatenated along `axis=0`.
+        - The resulting single large NumPy array is passed to `fit_data`.
+
+    2.  **Ragged Data (Awkward) & Dense-only Transform**:
+        - The single variable-length dimension across all sources is identified.
+        - Data is first concatenated along the variable dimension within each source,
+          then across sources, effectively flattening the ragged structure.
+        - The result is converted to a dense NumPy array and passed to `fit_data`.
+
+    3.  **Ragged Data (Awkward) & Ragged-supporting Transform**:
+        - The single variable-length dimension is identified.
+        - Data from all sources is concatenated along this variable dimension.
+        - The resulting single large Awkward array is passed to `fit_data`.
+
+    Attributes
+    ----------
+    fit_data : callable
+        A method that must be implemented by the consuming class to fit the transform.
+    transform_data : callable
+        A method that must be implemented by the consuming class to apply the transform.
     """
 
     def __init__(self):
@@ -64,6 +139,31 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         fit_func: Callable,
         metadata: Dict[str, Any],
     ):
+        """
+        Prepare data segments and apply a fitting function.
+
+        This method orchestrates the fitting process by handling different
+        data types (dense vs. ragged) and transform capabilities. It
+        concatenates data from multiple sources before passing it to the
+        provided `fit_func`.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            A list of data chunks from multiple sources.
+        fit_func : Callable
+            The fitting function (e.g., `self.fit_data`) to be called with the
+            prepared data.
+        metadata : Dict[str, Any]
+            A dictionary containing metadata for the transformation, including
+            `apply_to_keys`.
+
+        Raises
+        ------
+        ValueError
+            If data segments have inconsistent data types or if the transform
+            does not support the given data type.
+        """
 
         apply_to_keys = metadata["apply_to_keys"]
         # Check whenever keys list, if not make a list
@@ -109,7 +209,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dim
+                    [ak.concatenate(chunk[key], axis=var_dim-1) for chunk in data_segments], axis=0
                 )
 
             train = {k: v.to_numpy() for k, v in train.items()}
@@ -118,7 +218,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         elif data_is_ragged and transform_supports_ragged:
             # Go over all data segments dict keys and concatenate the data from all sources
             train = {}
-            
+
             # Extract variable dimention
             var_dim = set([find_singular_ragged_dim(data_segment) for data_segment in data_segments])
             assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
@@ -126,7 +226,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dim
+                    [chunk[key] for chunk in data_segments], axis=var_dim-1
                 )
 
             fit_func(train, metadata=metadata)
@@ -142,6 +242,34 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         transform_func: Callable,
         metadata: Dict[str, Any],
     ):
+        """
+        Apply a transformation function to a list of data segments.
+
+        This method handles the logic for applying a `transform_func` to each
+        data segment, considering whether the data is dense or ragged and
+        whether the transform supports ragged arrays.
+
+        For dense data, it applies the function to each segment.
+        For ragged data with a dense-only transform, it iterates through
+        each sub-segment of the ragged array, converts it to NumPy, transforms
+        it, and reassembles the ragged structure. This can be slow.
+        For ragged data with a ragged-supporting transform, it applies the
+        function directly to each ragged segment.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            A list of data chunks from multiple sources.
+        transform_func : Callable
+            The transformation function (e.g., `self.transform_data`) to apply.
+        metadata : Dict[str, Any]
+            A dictionary containing metadata for the transformation.
+
+        Returns
+        -------
+        list
+            A list of transformed data segments.
+        """
 
         apply_to_keys = metadata["apply_to_keys"]
         # Check whenever keys list, if not make a list
@@ -246,6 +374,19 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
+        Fit the transform on data concatenated from multiple sources.
+
+        This method takes a list of data segments, prepares them by
+        concatenating them according to the logic in
+        `fit_function_to_data_segments`, and then calls the transform's
+        `fit_data` method.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            A list of data chunks, where each chunk comes from a different source.
+        metadata : Optional[Dict[str, Any]], optional
+            Metadata to guide the fitting process, by default None.
         Get all train sources and fit the scalers to them.
         """
         self.fit_function_to_data_segments(
@@ -258,6 +399,23 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> list[ndarray]:
         """
+        Transform data from multiple sources individually.
+
+        This method applies the fitted transformation to a list of data segments,
+        processing each segment from each source separately.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            A list of data chunks to be transformed.
+        metadata : Optional[Dict[str, Any]], optional
+            Metadata to guide the transformation process, by default None.
+
+        Returns
+        -------
+        list[ndarray]
+            A list containing the transformed data for each source.
+
         Transform the data from all sources using the fitted scalers.
         """
         lengths = [len(chunk.keys()) for chunk in data_segments]
