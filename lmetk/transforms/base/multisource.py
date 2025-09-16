@@ -70,6 +70,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         if not isinstance(apply_to_keys, list):
             apply_to_keys = [apply_to_keys]
 
+        # Check if the incomming transform supports ragged arrays or numpy arrays
         cls = self.__class__
         transform_supports_ragged = issubclass(cls, RaggedTransform)
         transform_supports_dense = issubclass(cls, DenseTransform)
@@ -79,6 +80,8 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
             )
+        
+        # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
         data_is_ragged = data_types.pop() is ak.Array
 
         # Handle different cases based on data type and transform capabilities
@@ -97,7 +100,12 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         elif data_is_ragged and (not transform_supports_ragged):
             # Go over all data segments dict keys and concatenate the data from all sources
             train = {}
-            var_dim = find_singular_ragged_dim(data_segments)
+
+            # Extract variable dimention
+            var_dim = set([find_singular_ragged_dim(data_segment) for data_segment in data_segments])
+            assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+            var_dim = var_dim.pop()
+                
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
@@ -110,7 +118,11 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         elif data_is_ragged and transform_supports_ragged:
             # Go over all data segments dict keys and concatenate the data from all sources
             train = {}
-            var_dim = find_singular_ragged_dim(data_segments)
+            
+            # Extract variable dimention
+            var_dim = set([find_singular_ragged_dim(data_segment) for data_segment in data_segments])
+            assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+            var_dim = var_dim.pop()
 
             for key in apply_to_keys:
                 train[key] = ak.concatenate(
