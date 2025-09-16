@@ -5,8 +5,10 @@ from collections.abc import MutableMapping
 
 import numpy as np
 import pandas as pd
+import awkward as ak
 
-from lmetk.data.data_objects import data
+from pandas.core.generic import NDFrame
+
 from lmetk.data.data_objects.utils import (
     check_for_nans,
     check_length_consistency,
@@ -58,13 +60,11 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
     It can recursively construct nested BaseDataObject instances from dictionaries, and validates types for list values.
     Parameters
     ----------
-    instance_cls : Type[T]
-        The class type of the data objects to be stored.
     **kwargs : Any
         Initial key-value pairs to populate the object.
     Attributes
     ----------
-    _instance_cls : Type[T]
+    _instance_cls : Dict[str, Type[T]]
         The class type of the data objects.
     _data : Dict[str, T]
         Internal storage for the data objects.
@@ -88,7 +88,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
         Return a view of the object's keys.
     values()
         Return a view of the object's values.
-    get_instance_cls() -> Type[T]
+    get_instance_cls() -> Dict[str, Type[T]]
         Return the class type of the stored data objects.
     __getattr__(key: str) -> T
         Provide attribute-style access to items (read-only).
@@ -103,8 +103,8 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
     - Attribute-style access is read-only and raises AttributeError for missing keys.
     """
 
-    def __init__(self, instance_cls: Type[T], **kwargs: Any) -> None:
-        self._instance_cls: Type[T] = instance_cls
+    def __init__(self, **kwargs: Any) -> None:
+        self._instance_cls: Dict[str, Type[T]] = {}
         self._data: Dict[str, T] = {}
         for key, value in kwargs.items():
             self[key] = value  # go through __setitem__
@@ -115,21 +115,55 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
 
     def __setitem__(self, key: str, value: Any) -> None:
         if isinstance(value, dict):
-            value = self.__class__(instance_cls=self._instance_cls, **value)
+            value = self.__class__(**value)
+
+        # Enforce allowed types: pandas (DataFrame/Series), numpy (ndarray), or awkward (Array).
+        allowed_single_types = (pd.DataFrame, pd.Series, np.ndarray, ak.Array)
+
         if isinstance(value, list):
-            type_set = set([type(data) for data in value])
-            if len(type_set) != 1 or not all(
-                issubclass(t, self._instance_cls) for t in type_set
-            ):
-                logger.warning(
-                    f"All items in the list must be of type {self._instance_cls.__name__}, got {type_set}"
-                )
-        elif not isinstance(value, (self._instance_cls, self.__class__)):
-            logger.warning(
-                f"Expected dict, {self._instance_cls.__name__}, "
-                f"or {self.__class__.__name__}, got {type(value).__name__}"
+            if len(value) > 0:
+                type_set = {type(v) for v in value}
+                if len(type_set) != 1:
+                    logger.warning(
+                        f"All items in the list must have the same type, got {type_set}"
+                    )
+                elem_type = next(iter(type_set))
+                if not issubclass(elem_type, allowed_single_types):
+                    logger.warning(
+                        f"List items must be pandas (DataFrame/Series), "
+                        f"numpy (ndarray), or awkward (Array), got {elem_type.__name__}"
+                    )
+
+                if not key in self._instance_cls:
+                    self._instance_cls[key] = elem_type
+                else:
+                    if self._instance_cls[key] != elem_type:
+                        logger.warning(
+                            f"Expected list items of type {self._instance_cls[key].__name__}, "
+                            f"got {elem_type.__name__}"
+                        )
+                self._data[key] = value
+            else:
+                logger.warning("Received an empty list; type cannot be validated.")
+
+        elif isinstance(value, allowed_single_types):
+            if not key in self._instance_cls:
+                self._instance_cls[key] = type(value)
+            else:
+                if self._instance_cls[key] != type(value):
+                    logger.warning(
+                        f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}"
+                    )
+            self._data[key] = value
+        elif isinstance(value, BaseDataObject):
+            self._instance_cls[key] = type(value)
+            self._data[key] = value
+        else:
+            raise TypeError(
+                f"Value must be a dict, list of allowed types, or single allowed type. "
+                f"Allowed types: {', '.join(t.__name__ for t in allowed_single_types)}. "
+                f"Got {type(value).__name__} for key '{key}'."
             )
-        self._data[key] = value
 
     def __delitem__(self, key: str) -> None:
         del self._data[key]
@@ -152,7 +186,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
     def values(self):
         return self._data.values()
 
-    def get_instance_cls(self) -> Type[T]:
+    def get_instance_cls(self) -> Dict[str, Type[T]]:
         return self._instance_cls
 
     # --- attribute-style access (read-only for convenience) ---
@@ -174,12 +208,14 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
 
     def copy(self: "BaseDataObject[T]", deep: bool = True) -> "BaseDataObject[T]":
         cls: Type[BaseDataObject[T]] = self.__class__
-        new = cls(instance_cls=self._instance_cls)
+        new = cls()
         if deep:
             # recursively deep copy the dict
+            new._instance_cls = copy.deepcopy(self._instance_cls)
             new._data = copy.deepcopy(self._data)
         else:
             # shallow copy of the dict
+            new._instance_cls = self._instance_cls.copy()
             new._data = self._data.copy()
         return new
 
@@ -192,7 +228,7 @@ class BaseDataObjectWithMetadata(
     original format.
     """
 
-    def __init__(self, instance_cls: Type[T], **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """
         Initializes the chunk, handling metadata and column extraction robustly.
         """
@@ -207,7 +243,7 @@ class BaseDataObjectWithMetadata(
         metadata = kwargs.pop("metadata", None)
 
         # Initialize all other data first
-        super().__init__(instance_cls=instance_cls, **kwargs)
+        super().__init__(**kwargs)
 
         # Now, if metadata was provided, prepare it and set it.
         if metadata is not None:

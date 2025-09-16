@@ -185,7 +185,9 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         transform_supports_ragged = issubclass(cls, RaggedTransform)
         transform_supports_dense = issubclass(cls, DenseTransform)
 
-        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
+        data_types = {
+            v for chunk in data_segments for k, v in chunk.get_instance_cls().items()
+        }
         if len(data_types) != 1:
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
@@ -193,7 +195,6 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
 
         # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
         data_is_ragged = data_types.pop() is ak.Array
-
 
         # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
         # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
@@ -320,48 +321,42 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             cls, RaggedOrDenseTransform
         )
 
-        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
+        data_types = set(
+            [v for chunk in data_segments for v in chunk.get_instance_cls().values()]
+        )
         if len(data_types) != 1:
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
             )
         data_is_ragged = data_types.pop() is ak.Array
 
-        data_types = set([chunk.get_instance_cls() for chunk in data_segments])
-        if len(data_types) != 1:
-            raise ValueError(
-                f"All data segments must have the same data type. Found: {data_types}"
-            )
-
-
         # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
         # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
-        ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
-        # The data is regular if the only "ragged dimension" found is None.
-        data_is_ragged_but_regular = ragged_dims == {None}
-
-        if data_is_ragged_but_regular:
-            data_is_ragged = False
+        if data_is_ragged:
+            ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
+            # The data is regular if the only "ragged dimension" found is None.
+            data_is_ragged_but_regular = ragged_dims == {None}
+            data_is_ragged = not data_is_ragged_but_regular
+        else:
+            data_is_ragged_but_regular = False
 
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
         # Construct current data segment from each source
-        if (not data_is_ragged) and transform_supports_dense:            
+        if (not data_is_ragged) and transform_supports_dense:
             out = []
             for data_segment in data_segments:
                 # Handle the case when the data is ragged but structurally regular
                 if data_is_ragged_but_regular:
-                    for key,val in data_segment.items():
+                    for key, val in data_segment.items():
                         data_segment[key] = val.to_numpy()
-                
+
                 out_segment = transform_func(data_segment, metadata=metadata)
 
                 if data_is_ragged_but_regular:
                     out_segment = ak.Array(out_segment)
-                
-                out.append(out_segment)
 
-            
+                out.append(out_segment)
 
         elif data_is_ragged and (not transform_supports_ragged):
             # The logic is that we find the rugged dimension, ensure that there is only one,

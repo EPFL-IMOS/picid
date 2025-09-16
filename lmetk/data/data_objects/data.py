@@ -24,36 +24,36 @@ T = TypeVar("T", bound=(np.ndarray | ak.Array))
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
 
-class ImplicitTypeDataObject(BaseDataObjectWithMetadata):
+# class ImplicitTypeDataObject(BaseDataObjectWithMetadata):
 
-    def __init__(self, **kwargs):
+#     def __init__(self, **kwargs):
 
-        # assume instance_cls from set of kwargs values
-        if not kwargs:
-            raise ValueError(
-                "TransformInput requires at least one value. "
-                "At least one keyword argument is required to infer type."
-            )
-        
-        # Exclude "metadata" key to allow for passing metadata into transform explicitly
-        if "metadata" in kwargs:
-            # If metadata is present, it's not part of the data values for type inference
-            temp_kwargs = {k: v for k, v in kwargs.items() if k != "metadata"}
-            instance_types = {type(v) for v in temp_kwargs.values()}
-        else:
-            instance_types = {type(v) for v in kwargs.values()}
+#         # assume instance_cls from set of kwargs values
+#         if not kwargs:
+#             raise ValueError(
+#                 "TransformInput requires at least one value. "
+#                 "At least one keyword argument is required to infer type."
+#             )
 
-        if len(instance_types) != 1:
-            raise ValueError(
-                f"All values must be of the same type to infer instance_cls, got: {instance_types}"
-            )
-        else:
-            instance_cls = instance_types.pop()
+#         # Exclude "metadata" key to allow for passing metadata into transform explicitly
+#         if "metadata" in kwargs:
+#             # If metadata is present, it's not part of the data values for type inference
+#             temp_kwargs = {k: v for k, v in kwargs.items() if k != "metadata"}
+#             instance_types = {type(v) for v in temp_kwargs.values()}
+#         else:
+#             instance_types = {type(v) for v in kwargs.values()}
 
-        super().__init__(instance_cls, **kwargs)
+#         if len(instance_types) != 1:
+#             raise ValueError(
+#                 f"All values must be of the same type to infer instance_cls, got: {instance_types}"
+#             )
+#         else:
+#             instance_cls = instance_types.pop()
+
+#         super().__init__(instance_cls, **kwargs)
 
 
-class NamedTransformInput(ImplicitTypeDataObject):
+class NamedTransformInput(BaseDataObjectWithMetadata):
     """
     A data object that holds inputs for a transformation and can sanitize them.
     It includes methods for converting its contents to NumPy or DataFrame formats.
@@ -117,7 +117,7 @@ However, we had no time to implement them fully, so they currently do not add fu
 """
 
 
-class ReturnObject(ImplicitTypeDataObject, Generic[T]):
+class ReturnObject(BaseDataObjectWithMetadata, Generic[T]):
     """A generic return object for transformations."""
 
     pass
@@ -152,9 +152,7 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     # --- Dunder Methods ---
 
-    def __init__(
-        self, *args, instance_cls: Type[T], is_multi_unit: bool = True, **kwargs: Any
-    ) -> None:
+    def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
         """
@@ -180,7 +178,7 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
                         splits_dict[split] = [data_for_split]
 
         # The base __init__ will now receive the normalized kwargs
-        super().__init__(instance_cls=instance_cls, **kwargs)
+        super().__init__(**kwargs)
 
     # --- Public API Methods ---
 
@@ -212,10 +210,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
 class SplitDatasetContainer(DatasetContainer, Generic[T]):
 
-    def __init__(self, *args, instance_cls: Type[T], is_multi_unit=True, **kwargs: Any):
-        super().__init__(
-            *args, instance_cls=instance_cls, is_multi_unit=is_multi_unit, **kwargs
-        )
+    def __init__(self, *args, is_multi_unit=True, **kwargs: Any):
+        super().__init__(*args, is_multi_unit=is_multi_unit, **kwargs)
         """
         TODO: Why there is is_multi_unit=True but default? 
         """
