@@ -169,12 +169,17 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                 "This might be slow for large datasets."
             )
             out = []
+            
             for data_segment in data_segments:
                 var_dim = find_singular_ragged_dim(data_segment)
                 multi_index = ragged_index_tuples(
                     next(iter(data_segment.values())), var_dim
                 )
-
+                
+                # Merge metadata from the segment with the overall metadata
+                data_segment_metadata = copy.deepcopy(metadata)
+                data_segment_metadata.update(data_segment.metadata or {})
+                
                 out_segment = {}
                 use_tqdm = len(multi_index) > 100
                 iterator = multi_index
