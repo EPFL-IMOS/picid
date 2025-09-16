@@ -21,17 +21,18 @@ from lmetk.utils.awkward_utils import (
     ragged_index_tuples,
 )
 from tqdm import tqdm
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-def find_singular_ragged_dim(nti: NamedTransformInput):
+def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
     """
     Find the single variable-length (ragged) dimension in a NamedTransformInput.
 
     This function iterates through all Awkward arrays in the input and identifies
-    their variable-length dimensions. It then asserts that there is exactly one
-    unique variable-length dimension across all arrays.
+    their variable-length dimensions. It expects to find at most one unique
+    variable-length dimension across all arrays.
 
     Parameters
     ----------
@@ -40,20 +41,29 @@ def find_singular_ragged_dim(nti: NamedTransformInput):
 
     Returns
     -------
-    int
-        The singular variable-length dimension found.
+    Optional[int]
+        The singular variable-length dimension if found, otherwise None if all
+        arrays are regular.
 
     Raises
     ------
-    AssertionError
-        If zero or more than one unique variable-length dimension is found.
+    ValueError
+        If more than one unique variable-length dimension is found.
     """
     var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
-    var_dims = set([x for row in var_dims for x in row])
-    assert (
-        len(var_dims) == 1
-    ), f"Expected exactly one variable-length dimension, found {len(var_dims)}: {var_dims}"
-    return var_dims.pop()
+    unique_var_dims = set([x for row in var_dims for x in row])
+
+    if len(unique_var_dims) == 0:
+        # No ragged dimensions found; the data is regular in structure.
+        return None
+    elif len(unique_var_dims) == 1:
+        # Exactly one ragged dimension found, as expected.
+        return unique_var_dims.pop()
+    else:
+        # More than one ragged dimension makes the concatenation axis ambiguous.
+        raise ValueError(
+            f"Expected at most one variable-length dimension, found {len(unique_var_dims)}: {unique_var_dims}"
+        )
 
 
 # recursively turn dicts into lists
