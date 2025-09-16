@@ -10,12 +10,45 @@ from tqdm import tqdm
 
 
 class AbstractFitPredictWrapper(ABC):
-    r"""Abstract class that provides an interface to handle the network output.
+    """
+    AbstractFitPredictWrapper(ABC)
+    An abstract base class that provides a unified interface for
+    handling models that follow the scikit-learn API.
+    This wrapper ensures that the backbone model
+    implements both `fit` and `predict` methods, and provides batch
+    prediction capabilities with optional yield strategy.
 
-    Parameters
-    ----------
-    backbone : Sklearn
-        Backbone model
+    backbone : object
+        The backbone model, expected to implement `fit` and `predict`
+        methods (e.g., a scikit-learn estimator).
+    yield_strategy : bool, optional (default=False)
+        If True, enables batch-wise prediction to handle large datasets efficiently.
+    yield_batch_size : int, optional (default=128)
+        The batch size to use when `yield_strategy` is enabled.
+    **kwargs : dict
+        Additional keyword arguments to be stored in an AttributeDict.
+    Methods
+    -------
+    fit(X, y)
+        Fits the backbone model to the provided data.
+    predict(X)
+        Predicts outputs for the given input data, optionally in batches
+        if `yield_strategy` is enabled. Ensures output is a 2D torch.Tensor.
+    serialize_model(task_id)
+        Abstract method to serialize the model to a file, to be implemented by subclasses.
+    load_model(task_id)
+        Abstract method to load the model from a file, to be implemented by subclasses.
+    Properties
+    allows_multi_target : bool
+        Abstract property indicating whether the model supports multi-target prediction.
+    Raises
+    ------
+    ValueError
+        If the backbone model does not implement both `fit` and `predict` methods.
+    TypeError
+        If the predicted output is not convertible to a torch.Tensor or numpy.ndarray.
+    AssertionError
+        If the predicted output is not 2-dimensional.
     """
 
     def __init__(
@@ -89,7 +122,7 @@ class AbstractFitPredictWrapper(ABC):
 
 
 class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
-    r"""Abstract class that provides an interface to handle the network output.
+    """Abstract class that provides an interface to handle the network output.
 
     Parameters
     ----------
@@ -110,7 +143,7 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
         return f"{self.__class__.__name__}(backbone={self.backbone}, out_channels={self.backbone.out_channels}, dimensions={self.dimensions}, residual_connections={self.residual_connections})"
 
     def __call__(self, batch):
-        r"""Forward pass for the model.
+        """Forward pass for the model.
 
         This method calls the forward method and adds the residual connection.
 
@@ -130,7 +163,7 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
 
     @abstractmethod
     def forward(self, batch):
-        r"""Forward pass for the model.
+        """Forward pass for the model.
 
         Parameters
         ----------
@@ -140,7 +173,7 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
 
 
 class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
-    r"""Abstract class that provides an interface to handle the network output.
+    """Abstract class that provides an interface to handle the network output.
 
     Parameters
     ----------
@@ -161,7 +194,7 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
         return f"{self.__class__.__name__}(backbone={self.backbone}, out_channels={self.backbone.out_channels}, dimensions={self.dimensions}, residual_connections={self.residual_connections})"
 
     def __call__(self, batch):
-        r"""Forward pass for the model.
+        """Forward pass for the model.
 
         This method calls the forward method and adds the residual connection.
 
@@ -181,7 +214,7 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
 
     @abstractmethod
     def forward(self, batch):
-        r"""Forward pass for the model.
+        """Forward pass for the model.
 
         Parameters
         ----------

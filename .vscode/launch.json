@@ -131,6 +131,22 @@
             }
         },
         {
+            "name": "Railway Traction: Fit-Predict Autogluon",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/autogluon_railway_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "ETTh: TimePFN Batch-Context",
             "type": "debugpy",
             "request": "launch",

@@ -1,0 +1,15 @@
+site_name: TabPHM
+site_url: https://github.com/EPFL-IMOS
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: true
+            docstring_style: numpy
+            show_docstring_examples: true

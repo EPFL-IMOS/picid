@@ -9,7 +9,7 @@ from .base import AbstractFeedForwardWrapper
 
 
 class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the TimePFN model.
+    """Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
     """
@@ -19,7 +19,7 @@ class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        r"""Forward pass for the Tune wrapper.
+        """Forward pass for the Tune wrapper.
 
         Parameters
         ----------

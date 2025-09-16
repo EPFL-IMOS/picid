@@ -6,7 +6,7 @@ from lmetk.model.methods.ses_model import SESModelBaseline
 
 
 class SESModelWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the SESModel baseline.
+    """Wrapper for the SESModel baseline.
 
     This wrapper defines the forward pass of the SESModel baseline.
     """
@@ -16,7 +16,7 @@ class SESModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        r"""Forward pass for the SES wrapper.
+        """Forward pass for the SES wrapper.
 
         Parameters
         ----------

@@ -8,7 +8,7 @@ from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
 
 
 class BatchContextXGBoostWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the XGboost model."""
+    """Wrapper for the XGboost model."""
 
     def __init__(self, **kwargs):
         backbone = MultiOutputRegressor(
@@ -30,7 +30,7 @@ class BatchContextXGBoostWrapper(AbstractFeedForwardWrapper):
         self,
         batch,
     ):
-        r"""Forward pass for the Tune wrapper. Note the following:
+        """Forward pass for the Tune wrapper. Note the following:
         future_context_timestamps := batch['context']['y_mark'] is not used due to possible noise,
         historical_target_timestamps := batch['target']['x_mark']  is redundant with historical_context_timestamps,
         future_target_timestamps := batch['target']['y_mark']  is redundant with future_context_timestamps.

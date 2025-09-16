@@ -6,7 +6,7 @@ from lmetk.model.methods.drift_model import DriftModelBaseline
 
 
 class DriftModelWrapper(AbstractFeedForwardWrapper):
-    r"""Wrapper for the DriftModel baseline.
+    """Wrapper for the DriftModel baseline.
 
     This wrapper defines the forward pass of the DriftModel baseline.
     """
@@ -16,7 +16,7 @@ class DriftModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        r"""Forward pass for the Drift wrapper.
+        """Forward pass for the Drift wrapper.
 
         Parameters
         ----------
