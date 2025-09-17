@@ -13,13 +13,8 @@ class AbstractEvaluator(ABC):
     def __init__(
         self,
         paths: dict[str, str],
-        target_dim_position: int,
-        model_seq_len: int,
-        model_label_len: int,
         inverse_transform: Optional[InverseTransformMixin] = None,
         apply_inverse_scaling: bool = False,
-        effective_pred_len: Optional[int] = None,
-        model_pred_len: Optional[int] = None,
         task_mode: Optional[Any] = False,
         **kwargs,
     ):
@@ -48,22 +43,13 @@ class AbstractEvaluator(ABC):
             task_mode=task_mode,
         )
 
-        self.effective_pred_len = effective_pred_len
-        self.model_pred_len = model_pred_len
         self.task_mode = task_mode
         self.paths = paths
 
-        if self.model_pred_len is None:
-            raise ValueError("Model's pred_len (model_pred_len) must be set.")
-
-        if (
-            self.effective_pred_len is not None
-            and self.model_pred_len < self.effective_pred_len
-        ):
-            raise ValueError(
-                f"effective_pred_len ({self.effective_pred_len}) cannot be greater than "
-                f"model_pred_len ({self.model_pred_len})."
-            )
+        # Check if kwargs is empty and raise exception if not empty
+        for k, v in kwargs.items():
+            if k not in ["inverse_transform_name"]:
+                raise ValueError(f"Unexpected keyword argument: {k}")
 
     def __repr__(self):
         cls_name = self.__class__.__name__

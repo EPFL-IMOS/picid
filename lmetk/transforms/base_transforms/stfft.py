@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, override
 import numpy as np
 from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
@@ -169,6 +169,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         return reshaped
 
+    @override
     def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
         """Apply STFT to signals and concatenate results.
 
