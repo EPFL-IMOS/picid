@@ -1,6 +1,8 @@
 # How to install TabPHM
 
 Please install `uv` first.
+Furthermore make sure that your git key is setup on github as this
+is required to clone submodules in the first step.
 
 ```
 git submodule update --init --recursive
@@ -11,6 +13,13 @@ uv pip install -e ".[dev]"
 Now you can try to fit your first model:
 
 either by using VSCode run config in `.vscode/launch.json`
+
+# Setup Local Paths
+To run the project, you have to adjust your system paths.
+For this step you can create a new file in `configs/paths`.
+You can copy the [default](configs/paths/default.yaml).
+
+## How to Run an Experiment
 
 ```json
 {
