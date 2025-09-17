@@ -20,6 +20,7 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
+from hydra.core.hydra_config import HydraConfig
 from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
@@ -54,6 +55,7 @@ from lmetk.utils import (
     log_hyperparameters,
     display_targets,
 )
+from lmetk.utils.logging_utils import get_hydra_override
 
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
 
@@ -276,6 +278,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 loss=loss,
                 evaluators=evaluators,
                 optimizer=optimizer,
+                debug=cfg.get("debug", False),
             )
         else:
             raise ValueError(
@@ -296,17 +299,33 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # TODO: Do we need this? log_hyperparameters already should be logging cfg to wandb
     # has to happen after trainer is instantiated
-    # for lgr in logger:
-    #     if isinstance(lgr, WandbLogger):
-    #         cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
-    #         cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
-    #             # cannot resolve because not all interpolations are covered by us for now
-    #             HydraConfig.get(),
-    #             resolve=False,
-    #         )
-    #         exp_name = get_hydra_override("experiment")
-    #         cfg_to_wandb["exp_name"] = exp_name
-    #         lgr.experiment.config.update(cfg_to_wandb)
+    cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
+    cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+        # cannot resolve because not all interpolations are covered by us for now
+        HydraConfig.get(),
+        resolve=False,
+    )
+
+    # # Persist resolved config (same content pushed to wandb) to filesystem
+    # try:
+    #     output_dir = Path(cfg.paths.output_dir).expanduser().resolve()
+    #     output_dir.mkdir(parents=True, exist_ok=True)
+    #     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    #     resolved_cfg = OmegaConf.create(cfg_to_wandb)
+    #     time_stamped_path = output_dir / f"config_wandb_{timestamp}.yaml"
+    #     latest_path = output_dir / "config_wandb_latest.yaml"
+    #     OmegaConf.save(resolved_cfg, time_stamped_path)
+    #     OmegaConf.save(resolved_cfg, latest_path)
+    #     log.info(f"Saved resolved config to: {time_stamped_path.as_uri()}")
+    # except Exception as e:
+    #     log.warning(f"Could not save cfg_to_wandb: {e}")
+
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+
+            exp_name = get_hydra_override("experiment")
+            cfg_to_wandb["exp_name"] = exp_name
+            lgr.experiment.config.update(cfg_to_wandb)
 
     if logger:
         log.info("Logging hyperparameters!")
