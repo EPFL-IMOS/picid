@@ -33,8 +33,6 @@ class PreProcessor(PreProcessorInterface):
         datasource: The data source object providing access to raw data and metadata.
         transforms: A collection of data transformation objects to be applied sequentially.
         data (Optional[DatasetContainer]): The processed dataset container.
-        meta_data_lst (Optional[list[dict]]): List of metadata dictionaries associated with the data.
-        _is_preprocessed (bool): Indicates whether the data has been preprocessed.
 
     Methods:
         __init__(mode, datasource, transforms, **kwargs):
@@ -48,7 +46,8 @@ class PreProcessor(PreProcessorInterface):
         apply_transforms(data: DatasetContainer, transforms) -> List[Any]:
             Applies a sequence of data transformations to the dataset.
         pipeline() -> DatasetContainer:
-            Executes the full preprocessing pipeline: loads, splits, fetches, transforms, and returns the processed data.
+            Executes the full preprocessing pipeline: loads, splits, fetches,
+            transforms, and returns the processed data.
     """
 
     def __init__(self, mode, datasource, transforms, **kwargs):
@@ -57,24 +56,19 @@ class PreProcessor(PreProcessorInterface):
         assert mode in [
             "per_unit",
             "cross_unit",
-        ], f"Unsupported mode: {mode}. Supported modes are 'per_unit' and 'cross_unit'."
+        ], (
+            f"Unsupported mode: {mode}. Supported modes are 'per_unit'"
+            " and 'cross_unit'."
+        )
+
         self.mode = mode
         self._is_preprocessed = False
-
-        # initialize attributes used later
         self.data: Optional[DatasetContainer] = None
-        self.meta_data_lst: Optional[list[dict]] = None
-
+        self.meta_data: dict = {}
         self.cache = FileSystemCache()
 
     def get_meta_data_dict(self):
-        if hasattr(self.datasource, "get_meta_data") and callable(
-            getattr(self.datasource, "get_meta_data", None)
-        ):
-            meta_data_dict = self.datasource.get_meta_data()
-        else:
-            meta_data_dict = {}
-        return meta_data_dict
+        return self.meta_data
 
     def get_processed_data_dict(
         self, return_splits_on_first_level: bool = False
@@ -122,18 +116,7 @@ class PreProcessor(PreProcessorInterface):
             "make sure 'datasource.get_data()' returns MultiDataChunk"
         )
 
-        if hasattr(self.datasource, "get_meta_data") and callable(
-            getattr(self.datasource, "get_meta_data", None)
-        ):
-            meta_data_lst: list[dict] = self.datasource.get_meta_data()
-        else:
-            meta_data_lst: list[dict] = [{}]
-
-        if not isinstance(meta_data_lst, list):
-            meta_data_lst = [meta_data_lst]
-
         self.data: DatasetContainer = data
-        self.meta_data_lst: list[dict] = meta_data_lst
 
     def apply_transforms(self, data: DatasetContainer, transforms) -> List[Any]:
         """
@@ -242,10 +225,10 @@ class PreProcessor(PreProcessorInterface):
                 def build_data_stage():
                     self.datasource.load_data()
                     self.datasource.split_data()
-                    return self.datasource
+                    return self.datasource, self.datasource.get_meta_data()
 
                 # Override datasource from the cached
-                self.datasource = self.cache.handle(
+                self.datasource, self.meta_data = self.cache.handle(
                     cache_dir=data_cache_path,
                     stage="loaded_and_splitted_data",
                     build_fn=build_data_stage,
@@ -275,11 +258,12 @@ class PreProcessor(PreProcessorInterface):
         if data_cache_path and transform_library_part_path:
 
             def build_preprocess_stage():
-                return self.apply_transforms(
-                    self.data, self.transforms.get_transforms()
+                return (
+                    self.apply_transforms(self.data, self.transforms.get_transforms()),
+                    self.meta_data,
                 )
 
-            self.data = self.cache.handle(
+            self.data, self.meta_data = self.cache.handle(
                 cache_dir=data_cache_path,
                 stage="preprocessed",
                 build_fn=build_preprocess_stage,

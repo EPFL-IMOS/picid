@@ -6,13 +6,18 @@ root_dir: ${oc.env:PROJECT_ROOT}
 # path to data directory
 data_dir: ${paths.root_dir}/datasets
 
-# path to logging directory
-log_dir: ${paths.root_dir}/logs
+# All the outputs are stored in the artifacts directory
+# like model checkpoints, logs, plots, etc.
+artifacts_dir: ${paths.root_dir}/artifacts
 
 # path to output directory, created dynamically by hydra
 # path generation pattern is specified in `configs/hydra/default.yaml`
 # use it to store all files generated during the run, like ckpts and metrics
 output_dir: ${hydra:runtime.output_dir}
+ckpt_dir: ${paths.output_dir}/checkpoints
+log_dir: ${paths.output_dir}/logs
+plot_dir: ${paths.output_dir}/plots
+eval_details: ${paths.output_dir}/eval_details
 
 # path to working directory
 work_dir: ${hydra:runtime.cwd}

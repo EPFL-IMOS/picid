@@ -52,6 +52,7 @@ class FileSystemCache:
             stage_dir / "data.pkl",
             stage_dir / "meta.json",
             stage_dir / "hash.txt",
+            stage_dir / "metadata.pkl",
         )
 
     def load_metadata(self, cache_dir: str, stage: str, cache_key: str = None):
@@ -59,7 +60,7 @@ class FileSystemCache:
         Load only the config + hash, without loading the data.
         Returns (config, stored_hash) or None if missing.
         """
-        _, meta_file, hash_file = self._paths(cache_dir, stage, cache_key)
+        _, meta_file, hash_file, _ = self._paths(cache_dir, stage, cache_key)
         if not meta_file.exists() or not hash_file.exists():
             return None
 
@@ -75,16 +76,17 @@ class FileSystemCache:
         """
         Load only the data.pkl (assumes hash was already validated).
         """
-        pkl_file, _, _ = self._paths(cache_dir, stage, cache_key)
-        if not pkl_file.exists():
+        pkl_file, _, _, metadata_file = self._paths(cache_dir, stage, cache_key)
+        if not pkl_file.exists() and not metadata_file.exists():
             return None
-        return joblib.load(pkl_file)
+        return joblib.load(pkl_file), joblib.load(metadata_file)
 
     def save(
         self,
         cache_dir: str,
         stage: str,
         data,
+        metadata,
         config: dict,
         library_dir: str = None,
         extensions=None,
@@ -96,8 +98,11 @@ class FileSystemCache:
         elif cache_key is None:
             cache_key = hash_config(config)
 
-        pkl_file, meta_file, hash_file = self._paths(cache_dir, stage, cache_key)
+        pkl_file, meta_file, hash_file, metadata_file = self._paths(
+            cache_dir, stage, cache_key
+        )
         joblib.dump(data, pkl_file)
+        joblib.dump(metadata, metadata_file)
 
         # save config
         with open(meta_file, "w") as f:
@@ -137,6 +142,8 @@ class FileSystemCache:
                 )
 
         # ❌ no cache or invalid hash → rebuild
-        data = build_fn()
-        self.save(cache_dir, stage, data, config, library_dir, extensions, cache_key)
-        return data
+        data, metadata = build_fn()
+        self.save(
+            cache_dir, stage, data, metadata, config, library_dir, extensions, cache_key
+        )
+        return data, metadata

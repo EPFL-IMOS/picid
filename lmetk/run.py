@@ -1,5 +1,8 @@
 """Main entry point for training and testing models."""
 
+import datetime
+import hashlib
+import os
 import random
 from pathlib import Path
 
@@ -11,11 +14,13 @@ import lightning as L
 import numpy as np
 import torch
 
+
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
+from hydra.core.hydra_config import HydraConfig
 from lmetk.data.datasources import SingleSourceLoader
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
@@ -50,6 +55,10 @@ from lmetk.utils import (
     log_hyperparameters,
     display_targets,
 )
+from lmetk.utils.logging_utils import get_hydra_override
+
+OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
+
 
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
@@ -98,7 +107,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     random.seed(cfg.seed)
 
     for k, d in cfg.paths.items():
-        log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
+        path = Path(d).expanduser().resolve()
+        if not path.exists():
+            os.makedirs(path, exist_ok=True)
+        log.info(f"Directory for {k} is: {path.as_uri()}")
 
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
@@ -133,21 +145,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     else:
         raise ValueError("Invalid dataset source type")
-    
 
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
 
-
     # Get cache dirs:
     data_cache_path = cfg.paths.cache_path
-    data_library_part_path = Path(cfg.paths.root_dir)/"lmetk/data"
-    transform_library_part_path = Path(cfg.paths.root_dir)/"lmetk/transforms"
+    data_library_part_path = Path(cfg.paths.root_dir) / "lmetk/data"
+    transform_library_part_path = Path(cfg.paths.root_dir) / "lmetk/transforms"
 
     # Run the preprocessing pipeline
     preprocessor.pipeline(
         data_cache_path=data_cache_path,
         data_library_part_path=data_library_part_path,
-        transform_library_part_path=transform_library_part_path
+        transform_library_part_path=transform_library_part_path,
     )
 
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
@@ -268,6 +278,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 loss=loss,
                 evaluators=evaluators,
                 optimizer=optimizer,
+                debug=cfg.get("debug", False),
             )
         else:
             raise ValueError(
@@ -288,17 +299,33 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # TODO: Do we need this? log_hyperparameters already should be logging cfg to wandb
     # has to happen after trainer is instantiated
-    # for lgr in logger:
-    #     if isinstance(lgr, WandbLogger):
-    #         cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
-    #         cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
-    #             # cannot resolve because not all interpolations are covered by us for now
-    #             HydraConfig.get(),
-    #             resolve=False,
-    #         )
-    #         exp_name = get_hydra_override("experiment")
-    #         cfg_to_wandb["exp_name"] = exp_name
-    #         lgr.experiment.config.update(cfg_to_wandb)
+    cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
+    cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+        # cannot resolve because not all interpolations are covered by us for now
+        HydraConfig.get(),
+        resolve=False,
+    )
+
+    # # Persist resolved config (same content pushed to wandb) to filesystem
+    # try:
+    #     output_dir = Path(cfg.paths.output_dir).expanduser().resolve()
+    #     output_dir.mkdir(parents=True, exist_ok=True)
+    #     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    #     resolved_cfg = OmegaConf.create(cfg_to_wandb)
+    #     time_stamped_path = output_dir / f"config_wandb_{timestamp}.yaml"
+    #     latest_path = output_dir / "config_wandb_latest.yaml"
+    #     OmegaConf.save(resolved_cfg, time_stamped_path)
+    #     OmegaConf.save(resolved_cfg, latest_path)
+    #     log.info(f"Saved resolved config to: {time_stamped_path.as_uri()}")
+    # except Exception as e:
+    #     log.warning(f"Could not save cfg_to_wandb: {e}")
+
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+
+            exp_name = get_hydra_override("experiment")
+            cfg_to_wandb["exp_name"] = exp_name
+            lgr.experiment.config.update(cfg_to_wandb)
 
     if logger:
         log.info("Logging hyperparameters!")
