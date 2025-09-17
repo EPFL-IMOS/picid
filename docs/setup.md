@@ -3,8 +3,9 @@
 Please install `uv` first.
 
 ```
+git submodule update --init --recursive
 uv sync
-uv pip install -e .[dev]
+uv pip install -e ".[dev]"
 ```
 
 Now you can try to fit your first model:
