@@ -37,7 +37,7 @@ defaults:
 # callbacks: ${dataset.parameters.task}
 
 # task name, determines output directory path
-task_name: "train"
+experiment_group: "debug"
 
 # Cache data or not
 use_cache: True
@@ -58,3 +58,8 @@ ckpt_path: null
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: 42
+
+hydra:
+  job:
+    # get the selected option from the experiment group, then flatten it
+    name: ${flat:${hydra:runtime.choices.experiment}}

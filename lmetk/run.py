@@ -1,5 +1,8 @@
 """Main entry point for training and testing models."""
 
+import datetime
+import hashlib
+import os
 import random
 from pathlib import Path
 
@@ -10,6 +13,7 @@ import hydra
 import lightning as L
 import numpy as np
 import torch
+
 
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
@@ -50,6 +54,9 @@ from lmetk.utils import (
     log_hyperparameters,
     display_targets,
 )
+
+OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
+
 
 def initialize_hydra() -> DictConfig:
     """Initialize Hydra when main is not an option (e.g. tests).
@@ -98,7 +105,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     random.seed(cfg.seed)
 
     for k, d in cfg.paths.items():
-        log.info(f"Directory for {k} is: {Path(d).expanduser().resolve().as_uri()}")
+        path = Path(d).expanduser().resolve()
+        if not path.exists():
+            os.makedirs(path, exist_ok=True)
+        log.info(f"Directory for {k} is: {path.as_uri()}")
 
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
@@ -133,21 +143,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     else:
         raise ValueError("Invalid dataset source type")
-    
 
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
 
-
     # Get cache dirs:
     data_cache_path = cfg.paths.cache_path
-    data_library_part_path = Path(cfg.paths.root_dir)/"lmetk/data"
-    transform_library_part_path = Path(cfg.paths.root_dir)/"lmetk/transforms"
+    data_library_part_path = Path(cfg.paths.root_dir) / "lmetk/data"
+    transform_library_part_path = Path(cfg.paths.root_dir) / "lmetk/transforms"
 
     # Run the preprocessing pipeline
     preprocessor.pipeline(
         data_cache_path=data_cache_path,
         data_library_part_path=data_library_part_path,
-        transform_library_part_path=transform_library_part_path
+        transform_library_part_path=transform_library_part_path,
     )
 
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
