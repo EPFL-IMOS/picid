@@ -38,7 +38,7 @@ class ConstantScaler(
     def inverse_transform(
         self,
         data: NamedTransformInput,
-        metadata: dict,
+        metadata: dict = None,
     ):
         assert len(data) == 1, "ConstantScaler only supports single key data_segment."
 
@@ -96,7 +96,7 @@ class MinMaxScalerSklearn(
     def inverse_transform(
         self,
         data: NamedTransformInput,
-        metadata: dict,
+        metadata: dict = None,
     ) -> Any:
         """Inverse transforms a single data segment using the internal MinMaxScaler."""
         keys = list(data.keys())
@@ -157,7 +157,9 @@ class StandardScalerSklearn(
         transformed_np_data = self.scaler.transform(np_data)
         return transformed_np_data
 
-    def inverse_transform(self, data: NamedTransformInput, metadata: dict) -> Any:
+    def inverse_transform(
+        self, data: NamedTransformInput, metadata: dict = None
+    ) -> Any:
         """Inverse transforms a single data segment using the internal StandardScaler."""
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."

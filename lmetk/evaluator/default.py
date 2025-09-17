@@ -5,10 +5,11 @@ This module provides an evaluator class that inherits from AbstractEvaluator
 and implements evaluation logic for transformer-based forecasting models.
 """
 
+from pathlib import Path
 from typing import Any, Dict, List, Optional, override
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
@@ -53,6 +54,7 @@ class DefaultEvaluator(AbstractEvaluator):
         self.metrics = {}
         self.paths = paths
         self.save_predictions = save_predictions
+        self.out_path = None
 
         if save_predictions:
             self.preds = []
@@ -123,23 +125,42 @@ class DefaultEvaluator(AbstractEvaluator):
         dict_to_save = {}
 
         if self.save_predictions:
+            preds = np.concatenate(self.preds, axis=0)
+            targets = np.concatenate(self.targets, axis=0)
+            d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
             dict_to_save.update(
                 {
-                    "pred": np.concatenate(self.scaled_preds),
-                    "target": np.concatenate(self.scaled_targets),
+                    "preds": (d_names, preds),
+                    "targets": (d_names, targets),
                 }
             )
         elif self.save_predictions and self.scaling_wrapper.apply_inverse:
             dict_to_save.update(
                 {
-                    "pred_denormalized": np.concatenate(self.scaled_preds, axis=0),
-                    "target_denormalized": np.concatenate(self.scaled_targets),
+                    "preds_denormalized": (
+                        d_names,
+                        np.concatenate(self.scaled_preds, axis=0),
+                    ),
+                    "targets_denormalized": (
+                        d_names,
+                        np.concatenate(self.scaled_targets, axis=0),
+                    ),
                 }
             )
 
+        if self.out_path is None:
+            if self.paths and getattr(self.paths, "eval_details", None):
+                self.out_path = Path(self.paths.eval_details) / mode
+                self.out_path.mkdir(parents=True, exist_ok=True)
+
+            assert (
+                self.out_path is not None
+            ), "Output path must be specified to save predictions."
+
         if len(dict_to_save) > 0:
-            df = pd.DataFrame(dict_to_save)
-            df.to_csv("predictions.csv", index=False)
+            df = xr.Dataset(dict_to_save)
+            df.to_netcdf(self.out_path / "predictions.nc")
 
         results = {}
         for name, metric in self.metrics.items():
