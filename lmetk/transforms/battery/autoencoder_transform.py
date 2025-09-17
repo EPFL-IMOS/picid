@@ -10,7 +10,7 @@ from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 import pandas as pd
-
+import hydra
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
@@ -20,54 +20,12 @@ import torch
 from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 from lmetk.data.data_objects.data import NamedTransformInput
 
-
-class Cycles2SequenceRagged(DenseTransform, NoFitMultiSourceTransformMixin):
-    def __init__(self, win_len: int, key="features", pad_value=0):
-
-        super().__init__()
-        self.seq_len = win_len
-        self.label_len = 0
-        self.pred_len = win_len
-        self.stride = win_len
-        self.key = key
-
-        if pad_value == "np.nan":
-            pad_value = np.nan
-
-        self.pad_value = pad_value
-
-    def fit_data(self, data: NamedTransformInput, metadata: Dict):
-        """This transform do not require fitting."""
-        return self
-
-    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
-        features = data[self.key]
-        seq = AutoregressiveSequencer(
-            features=torch.from_numpy(features),
-            time_features=None,
-            seq_len=self.seq_len,
-            label_len=self.label_len,
-            pred_len=self.pred_len,
-            stride=self.stride,
-        )
-
-        def collect_sequences(collect_idx):
-            seqs = []
-            for i in range(len(seq)):
-                results = seq.sequences_batch(i)
-                seqs.append(results[collect_idx])
-            return torch.stack(seqs, dim=0)
-
-        return data
-
-
 class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Compresses battery cycle data into a mean/std representation using a pre-trained Autoencoder.
     """
 
-    def __init__(self, folder_name: str):
+    def __init__(self, folder_name: str, key: str="features"):
         """
         Initializes the transform by loading the model configuration and weights.
 
@@ -76,6 +34,7 @@ class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
                          and configuration file.
         """
         super().__init__()
+        self.key = key
         experiment_dir = Path(folder_name)
         if not experiment_dir.is_dir():
             raise FileNotFoundError(
@@ -85,6 +44,12 @@ class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         self._cfg = None
         self._model = self._load_model(experiment_dir)
         self._model.eval()  # Set model to evaluation mode
+
+        
+        self.seq_len = self._cfg.task_definition.seq_len
+        self.label_len = self._cfg.task_definition.label_len
+        self.pred_len = self._cfg.task_definition.pred_len
+        self.stride = self.pred_len 
 
     def _load_model(self, experiment_dir: Path) -> torch.nn.Module:
         """Loads the model from the specified experiment directory."""
@@ -172,8 +137,16 @@ class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             pred_len=self.pred_len,
             stride=self.stride,
         )
-
-        data_segment = data_segment_obj["features"]
+        def collect_sequences(collect_idx):
+            seqs = []
+            for i in range(len(seq)):
+                results = seq.sequences_batch(i)
+                seqs.append(results[collect_idx])
+            return torch.stack(seqs, dim=0)
+        
+        seqs = collect_sequences(0) # Collect seq_x
+        
+        seqs
 
         # # Based on the rul column extract the stat
         # target_col = self.target_name

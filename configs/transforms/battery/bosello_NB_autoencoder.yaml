@@ -1,12 +1,12 @@
-# Keep only those feeatures that matters
-filter_features:
-  transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
-    columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
-    apply_to_key: features
+# # Keep only those feeatures that matters
+# filter_features:
+#   transform:
+#     _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+#     columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
+#     apply_to_key: features
 
-  metadata:
-    apply_to: ${transforms.filter_features.transform.apply_to_key}
+#   metadata:
+#     apply_to: ${transforms.filter_features.transform.apply_to_key}
 
 # bug in the main that is requiring to have scaler_target for NB
 scaler_target:
@@ -16,3 +16,9 @@ scaler_target:
   metadata:
     apply_to: features
     fit_on: train
+
+ragged_dataset_to_units:
+  transform:
+    _target_:  lmetk.transforms.battery.special.SpecialOneTransform
+  metadata:
+    apply_to: ['features', 'target', 'time_features']

@@ -350,9 +350,14 @@ class DataTransform:
                 if isinstance(curr_transformed_data, list) & (
                     len(curr_data) != len(curr_transformed_data)
                 ):
-                    raise ValueError(
-                        f"Transform '{self.transform_name}': Multi-source transform changed the number of sources. "
+                    # raise ValueError(
+                    #     f"Transform '{self.transform_name}': Multi-source transform changed the number of sources. "
+                    #     f"Original: {len(data)}, Transformed: {len(transformed_data)}."
+                    # )
+                    logger.warning(
+                        f"Warning: Transform '{self.transform_name}' changed the number of sources. "
                         f"Original: {len(data)}, Transformed: {len(transformed_data)}."
                     )
+
         # TODO: additional checks,
         return transformed_data

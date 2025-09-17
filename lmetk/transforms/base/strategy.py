@@ -125,10 +125,6 @@ class TransformStrategy:
             chunks_to_transform = self._prepare_chunks_for_split(
                 target_data_to_transform, split, is_multi_unit
             )
-            
-            
-            
-
 
             metadata = {
                 "mode": split,

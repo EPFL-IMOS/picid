@@ -1,0 +1,37 @@
+#@package _global_
+
+defaults:
+  - unibo/base
+  - override /transforms: battery/bosello_NB_autoencoder
+  - override /model: residual_autoencoder
+  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /task_definition: battery_autoencoder
+ 
+
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    save_weights_only: False
+    monitor: val/loss
+    mode: min
+
+# evaluator:
+#   train:
+#     apply_inverse_scaling: True
+  
+#   val:
+#     apply_inverse_scaling: True
+  
+#   test:
+#     apply_inverse_scaling: True
+
+# transforms:
+#   filter_features:
+#     transform: 
+#       columns_to_keep: ['voltage', 'current', 'temperature']
+
