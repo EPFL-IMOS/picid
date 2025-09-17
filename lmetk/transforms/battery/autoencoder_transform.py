@@ -16,6 +16,52 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+import torch
+from lmetk.data.optimization.sequencer import AutoregressiveSequencer
+from lmetk.data.data_objects.data import NamedTransformInput
+
+
+class Cycles2SequenceRagged(DenseTransform, NoFitMultiSourceTransformMixin):
+    def __init__(self, win_len: int, key="features", pad_value=0):
+
+        super().__init__()
+        self.seq_len = win_len
+        self.label_len = 0
+        self.pred_len = win_len
+        self.stride = win_len
+        self.key = key
+
+        if pad_value == "np.nan":
+            pad_value = np.nan
+
+        self.pad_value = pad_value
+
+    def fit_data(self, data: NamedTransformInput, metadata: Dict):
+        """This transform do not require fitting."""
+        return self
+
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
+
+        features = data[self.key]
+        seq = AutoregressiveSequencer(
+            features=torch.from_numpy(features),
+            time_features=None,
+            seq_len=self.seq_len,
+            label_len=self.label_len,
+            pred_len=self.pred_len,
+            stride=self.stride,
+        )
+
+        def collect_sequences(collect_idx):
+            seqs = []
+            for i in range(len(seq)):
+                results = seq.sequences_batch(i)
+                seqs.append(results[collect_idx])
+            return torch.stack(seqs, dim=0)
+
+        return data
+
+
 class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Compresses battery cycle data into a mean/std representation using a pre-trained Autoencoder.
@@ -107,74 +153,83 @@ class AutoencoderTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             new_state_dict[new_key] = value
         return new_state_dict
 
-    def fit_data(self, data_segment: Any, metadata: Dict):
+    def fit_data(self, data: Any, metadata: Dict):
         """This transform does not require fitting."""
         pass
 
-    def transform_data(self, data_segment_obj: Any, metadata: Dict) -> Any:
+    def transform_data(self, data: Any, metadata: Dict) -> Any:
         """
         Transforms a single data segment using the loaded autoencoder model.
 
         Note: The implementation for data transformation needs to be added here.
         """
+        features = data[self.key]
+        seq = AutoregressiveSequencer(
+            features=torch.from_numpy(features),
+            time_features=None,
+            seq_len=self.seq_len,
+            label_len=self.label_len,
+            pred_len=self.pred_len,
+            stride=self.stride,
+        )
 
         data_segment = data_segment_obj["features"]
 
-        # Based on the rul column extract the stat
-        target_col = self.target_name
+        # # Based on the rul column extract the stat
+        # target_col = self.target_name
 
-        cycles_column = data_segment[self.cycles_col].values
-        boundaries = get_mode_change_right_indices(cycles_column)
+        # cycles_column = data_segment[self.cycles_col].values
+        # boundaries = get_mode_change_right_indices(cycles_column)
 
-        # Get the feature columns
-        feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
+        # # Get the feature columns
+        # feature_columns = data_segment_obj["metadata"]["features_columns"].copy()
 
-        # Prevent mode columns to be in the features_columns
-        mode_is_present = False
-        if self.mode_col is not None and self.mode_col in feature_columns:
-            feature_columns.remove(self.mode_col)
-            mode_is_present = True
+        # # Prevent mode columns to be in the features_columns
+        # mode_is_present = False
+        # if self.mode_col is not None and self.mode_col in feature_columns:
+        #     feature_columns.remove(self.mode_col)
+        #     mode_is_present = True
 
-        # Prevent cycles columns to be in the features_columns
-        cycles_is_present = False
+        # # Prevent cycles columns to be in the features_columns
+        # cycles_is_present = False
 
-        if self.cycles_col is not None and self.cycles_col in data_segment.columns:
-            if self.cycles_col in feature_columns:
-                feature_columns.remove(self.cycles_col)
-            cycles_is_present = True
+        # if self.cycles_col is not None and self.cycles_col in data_segment.columns:
+        #     if self.cycles_col in feature_columns:
+        #         feature_columns.remove(self.cycles_col)
+        #     cycles_is_present = True
 
-        # Ensure there is no leakage of target data
-        if target_col in feature_columns:
-            feature_columns.remove(target_col)
+        # # Ensure there is no leakage of target data
+        # if target_col in feature_columns:
+        #     feature_columns.remove(target_col)
 
-        stats_list = []
-        for i in range(len(boundaries)):
-            start = 0 if i == 0 else boundaries[i - 1]
-            end = boundaries[i]
-            segment = data_segment.iloc[start:end]
+        # stats_list = []
+        # for i in range(len(boundaries)):
+        #     start = 0 if i == 0 else boundaries[i - 1]
+        #     end = boundaries[i]
+        #     segment = data_segment.iloc[start:end]
 
-            assert (
-                len(segment[target_col].unique()) == 1
-            ), "Rul should be the same within a segment"
-            stats = {target_col: segment[target_col].iloc[0]}
+        #     assert (
+        #         len(segment[target_col].unique()) == 1
+        #     ), "Rul should be the same within a segment"
+        #     stats = {target_col: segment[target_col].iloc[0]}
 
-            if mode_is_present:
-                assert (
-                    len(segment["mode"].unique()) == 1
-                ), "Mode should be the same within a segment"
-                stats["mode"] = segment[self.mode_col].iloc[0]
-            if cycles_is_present:
-                assert (
-                    len(segment[self.cycles_col].unique()) == 1
-                ), "Cycles should be the same within a segment"
-                stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
+        #     if mode_is_present:
+        #         assert (
+        #             len(segment["mode"].unique()) == 1
+        #         ), "Mode should be the same within a segment"
+        #         stats["mode"] = segment[self.mode_col].iloc[0]
+        #     if cycles_is_present:
+        #         assert (
+        #             len(segment[self.cycles_col].unique()) == 1
+        #         ), "Cycles should be the same within a segment"
+        #         stats[self.cycles_col] = segment[self.cycles_col].iloc[0]
 
-            for feature in feature_columns:
-                stats[f"{feature}_mean"] = segment[feature].mean()
-                stats[f"{feature}_var"] = segment[feature].var()
+        #     for feature in feature_columns:
+        #         stats[f"{feature}_mean"] = segment[feature].mean()
+        #         stats[f"{feature}_var"] = segment[feature].var()
 
-            stats_list.append(stats)
+        #     stats_list.append(stats)
 
-        data_segment = pd.DataFrame(stats_list)
+        # data_segment = pd.DataFrame(stats_list)
 
         return data_segment

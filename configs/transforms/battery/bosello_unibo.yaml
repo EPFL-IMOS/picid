@@ -17,12 +17,11 @@ scaler_target:
 
 cycles2sequence:
   transform:
-    _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
-    win_len: 32
-    pad_value: -1
+    _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+    folder_name: ${paths.root_dir}/logs/train/runs/2025-09-04_01-58-31
   
   metadata:
-    apply_to: ['features', 'target',] # 'metadata'
+    apply_to: ['features', 'target']
     assign_to: ['features', 'target']
     
 sequence2statistics:

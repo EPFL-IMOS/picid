@@ -51,7 +51,15 @@ def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
         If more than one unique variable-length dimension is found.
     """
     var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
+
+    if any([len(dim) == 0 for dim in var_dims]):
+        idx = [len(dim) == 0 for dim in var_dims].index(True)
+        logger.warning(
+            f"One of the values of the {type(nti)} object has no ragge dim, key: {list(nti.keys())[idx]}, val: {list(nti.values())[idx].type}"
+        )
     unique_var_dims = set([x for row in var_dims for x in row])
+
+    # TODO checks to warn
 
     if len(unique_var_dims) == 0:
         # No ragged dimensions found; the data is regular in structure.
@@ -196,13 +204,14 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
         # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
         data_is_ragged = data_types.pop() is ak.Array
 
-        # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
-        # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
-        ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
-        # The data is regular if the only "ragged dimension" found is None.
-        data_is_ragged_but_regular = ragged_dims == {None}
-        if data_is_ragged_but_regular:
-            data_is_ragged = False
+        if data_is_ragged:
+            # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
+            # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
+            ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
+            # The data is regular if the only "ragged dimension" found is None.
+            data_is_ragged_but_regular = ragged_dims == {None}
+            if data_is_ragged_but_regular:
+                data_is_ragged = False
 
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
@@ -370,6 +379,15 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
             out = []
 
             for data_segment in data_segments:
+                # TODO the logic here still do not support the case when one feature is ragged and another one is array
+                # in the apply to keys ['features','target'] and 'target' is an array then there is not check or logic that takes it into consideration for now.
+
+                # Ensure that all the keys have same dim 0
+                assert len(set([len(val) for val in data_segment.values()])) == 1, (
+                    f"All keys in data_segment must have the same length at the first dimension. "
+                    f"Found lengths: {[len(val) for val in data_segment.values()]}"
+                )
+
                 var_dim = find_singular_ragged_dim(data_segment)
                 multi_index = ragged_index_tuples(
                     next(iter(data_segment.values())), var_dim
@@ -393,6 +411,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                         np_data = data_segment[k][coord].to_numpy()
                         subsegment[k] = np_data
                     out_subsegment = [transform_func(subsegment, metadata=metadata)]
+
                     out_subsegment = postprocess_transformed_data(
                         out_subsegment, metadata
                     )
@@ -415,6 +434,7 @@ class ConcatinatedFitMultiSourceTransformMixin(ABC):
                     out_segment[k] = ak_regularize_regular_axes(aka)
 
                 out.append(out_segment)
+
         elif data_is_ragged and transform_supports_ragged:
             out = []
             for data_segment in data_segments:

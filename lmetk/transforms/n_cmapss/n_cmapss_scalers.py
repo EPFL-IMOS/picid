@@ -10,7 +10,6 @@ from lmetk.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
