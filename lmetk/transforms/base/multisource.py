@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, override
 import copy
 import numpy as np
 from numpy import ndarray
@@ -9,6 +9,7 @@ import pandas as pd
 
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 from lmetk.transforms.base.base_transform import (
+    BaseTransform,
     DenseTransform,
     RaggedOrDenseTransform,
     RaggedTransform,
@@ -99,7 +100,51 @@ def tolist(d):
     return d  # already a numpy array
 
 
-class ConcatinatedFitMultiSourceTransformMixin(ABC):
+class MultiSourceTransformInterface(ABC):
+
+    @abstractmethod
+    def fit_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def transform_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> list[ndarray]:
+        pass
+
+
+class UnflattenUnitsTransform(MultiSourceTransformInterface, BaseTransform):
+
+    @override
+    def fit_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        pass
+
+    @override
+    def transform_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> list[ndarray]:
+        pass
+
+    @override
+    def transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> Any:
+        pass
+
+
+class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
     """
     A mixin for transforms that fit on data concatenated from multiple sources.
 

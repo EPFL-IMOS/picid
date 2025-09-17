@@ -92,7 +92,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         mode : str, optional
             The mode of the model, either "train", "val", or "test" (default: None).
         """
-        metrics_dict = self.evaluators[mode].compute()
+        metrics_dict = self.evaluators[mode].compute(mode=mode)
 
         for key in metrics_dict:
             self.log(
@@ -417,10 +417,16 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         backbone: AbstractFitPredictWrapper,
         evaluators: dict[str, AbstractEvaluator],
         predict_after_training: bool = False,
+        debug: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(evaluators=evaluators)
         self.predict_after_training = predict_after_training
+        self.debug = debug
+        if self.debug:
+            logger.warning(f"---------------------------------------------------")
+            logger.warning(f"Debug mode is ON. Using only small subsets of data.")
+            logger.warning(f"---------------------------------------------------")
 
         # This line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
@@ -469,8 +475,11 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-        # X = X[:100, :]
-        # y = y[:100, :]
+
+        if self.debug:
+            X = X[:100, :]
+            y = y[:100, :]
+
         logger.info(f"Fitting: {self.get_task_info(batch)}")
         logger.info(
             f"Fitting model {self.backbone} on data with shapes X: {X.shape}, y: {y.shape}"
@@ -524,8 +533,9 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         """
 
         X, y = self.__batch_to_fit_predict(batch)
-        # X = X[:10, :]
-        # y = y[:10, :]
+        if self.debug:
+            X = X[:10, :]
+            y = y[:10, :]
 
         allows_multi_target = self.backbone.allows_multi_target
         n_targets = y.shape[1]
