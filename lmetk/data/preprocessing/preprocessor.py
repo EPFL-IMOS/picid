@@ -159,6 +159,7 @@ class PreProcessor(PreProcessorInterface):
         data_cache_path: str = None,
         data_library_part_path: str = None,
         transform_library_part_path: str = None,
+        cache_preprocessed: bool = False,
     ) -> DatasetContainer:
         """
         Run the preprocessing pipeline with optional caching.
@@ -186,7 +187,7 @@ class PreProcessor(PreProcessorInterface):
         }
 
         preprocessed_data = None
-        if data_cache_path and transform_library_part_path:
+        if data_cache_path and transform_library_part_path and cache_preprocessed:
 
             # Compute expected hash first
             expected_hash = compute_cache_key(
@@ -252,10 +253,10 @@ class PreProcessor(PreProcessorInterface):
             logger.info("Data dictionary structure before transforms:")
             print_data_dict_structure(self.data)
 
-        # -----------------
-        # Stage 2: Transforms
-        # -----------------
-        if data_cache_path and transform_library_part_path:
+        # # -----------------
+        # # Stage 2: Transforms
+        # # -----------------
+        if data_cache_path and transform_library_part_path and cache_preprocessed:
 
             def build_preprocess_stage():
                 return (
@@ -272,6 +273,7 @@ class PreProcessor(PreProcessorInterface):
                 extensions=[".py"],
             )
         else:
+
             # no cache → always apply transforms
             self.data = self.apply_transforms(
                 self.data, self.transforms.get_transforms()

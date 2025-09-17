@@ -23,15 +23,24 @@ cycles2sequence:
   metadata:
     apply_to: ['features', 'target']
     assign_to: ['features', 'target']
-    
-sequence2statistics:
-  transform:
-    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
-    padding_value: ${transforms.cycles2sequence.transform.pad_value}
   
-  metadata:
-    apply_to: 'features'
+
+
     
+
+
+# TRANSFORM TO EXTRACT MEAN and STD
+# sequence2statistics:
+#   transform:
+#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+#     padding_value: ${transforms.cycles2sequence.transform.pad_value}
+  
+#   metadata:
+#     apply_to: 'features'
+    
+
+
+
 
 # cycles2sequence:
 #   transform:
