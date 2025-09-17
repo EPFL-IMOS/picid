@@ -27,6 +27,8 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
             model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+        else:
+            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
@@ -46,6 +48,8 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
             model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+        else:
+            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
