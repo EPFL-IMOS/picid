@@ -30,10 +30,10 @@ class AdaptiveTimeSeriesSequencer:
     def __init__(
         self,
         features: ak.Array,
-        seq_len: int = 12,
-        label_len: int = 6,
-        pred_len: int = 1,
-        pad: bool = True,
+        seq_len: int,
+        label_len: int,
+        pred_len: int,
+        pad: bool = False,
         pad_value: float = 0.0,
     ):
 
@@ -48,6 +48,13 @@ class AdaptiveTimeSeriesSequencer:
         if self.ragged_dim is None:
             raise ValueError("No ragged dimension found in the input array.")
 
+        if pad:
+            raise NotImplementedError(
+                "Padding functionality is not checked yet."
+                "Please verify correctness before using in production."
+                "The masking functionality is not implemented yet."
+            )
+
         example_index = (0,) * (self.ragged_dim + 1)
         example_element = self.features[example_index]
         if isinstance(example_element, (int, float, np.number)):
@@ -60,6 +67,13 @@ class AdaptiveTimeSeriesSequencer:
     def _build_indices(self) -> list[tuple]:
         """Builds a master list of indices, filtering for complete windows if padding is off."""
         num_indexing_dims = self.ragged_dim + 1
+
+        # mask = find dims that are too short
+        # padding_left we get from doing math on seq_len
+        # padding_right we get from math on pred_len
+        # cut_array = arr[mask,padding_left:padding_right , :, :]
+        # all_possible_indices = ragged_index_tuples(cat_array, num_indexing_dims)
+
         all_possible_indices = ragged_index_tuples(self.features, num_indexing_dims)
         if self.pad:
             return all_possible_indices
