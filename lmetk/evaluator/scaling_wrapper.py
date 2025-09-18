@@ -65,15 +65,24 @@ class ScalingWrapper:
         pred_shape = predictions.shape
         target_shape = targets.shape
 
-        # IT IS A PATCH: we should define the correct shate of input of the metrics! TABFPM produces [N_pred:NUM VAR TO PREDICT], TIMEPFN prodcuces: [1, N_pred, NUM VAR TO PREDICT]
+        # TODO: IT IS A PATCH: we should define the correct shate of input of the metrics!
+        # TABFPM produces [1 , N_pred, N_vars_to_pred],
+        # TIMEPFN prodcuces: [1, N_pred, N_vars_to_pred]
+
         if len(pred_shape) == 3:
+
+            assert (
+                pred_shape[0] == 1 or self.task_mode
+            ), f"Expected batch size of 1 for 3D predictions, got {pred_shape[0]}"
+
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
-                predictions.squeeze()
+                NamedTransformInput(**dict(predictions=predictions.squeeze(0))),
+                metadata={},
             ).reshape(pred_shape)
 
             targets_transformed = self.inverse_transform.inverse_transform(
-                targets.squeeze()
+                NamedTransformInput(**dict(targets=targets.squeeze(0))), metadata={}
             ).reshape(target_shape)
 
         elif len(pred_shape) == 2:

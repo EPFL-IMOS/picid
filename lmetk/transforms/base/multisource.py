@@ -592,7 +592,7 @@ class InverseTransformMixin(ABC):
     def inverse_transform(
         self,
         data: NamedTransformInput,
-        metadata: dict,
+        metadata: dict = None,
     ) -> Any:
         raise NotImplementedError(
             "inverse_transform_data is not implemented for this transform."

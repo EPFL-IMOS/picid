@@ -514,8 +514,9 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             # Add a dummy loss
             model_out = {}
             model_out["loss"] = torch.tensor([1])
-            model_out["predictions"] = y
-            model_out["targets"] = y
+            # Add task dimension back to predictions and targets
+            model_out["predictions"] = y.unsqueeze(0)
+            model_out["targets"] = y.unsqueeze(0)
             return model_out
 
     def model_step_predict(self, batch) -> dict:
@@ -562,8 +563,9 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         ), f"outputs must be 2-dimensional, got {outputs.ndim} dimensions"
 
         model_out = {
-            "predictions": outputs,
-            "targets": y,
+            # Add task dimension back to predictions and targets
+            "predictions": outputs.unsqueeze(0),
+            "targets": y.unsqueeze(0),
         }
 
         # Add a dummy loss
