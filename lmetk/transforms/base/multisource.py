@@ -119,31 +119,6 @@ class MultiSourceTransformInterface(ABC):
         pass
 
 
-class UnflattenUnitsTransform(MultiSourceTransformInterface, BaseTransform):
-
-    @override
-    def fit_multi_source(
-        self,
-        data_segments: list[NamedTransformInput],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        pass
-
-    @override
-    def transform_multi_source(
-        self,
-        data_segments: list[NamedTransformInput],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> list[ndarray]:
-        pass
-
-    @override
-    def transform_data(
-        self, data: NamedTransformInput, metadata: Dict[str, Any]
-    ) -> Any:
-        pass
-
-
 class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
     """
     A mixin for transforms that fit on data concatenated from multiple sources.
@@ -551,92 +526,6 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         out = self.tranform_function_to_data_segments(
             data_segments, self.transform_data, copy.deepcopy(metadata)
         )
-
-        return out
-
-
-class NoFitMultiSourceSpecialTransformMixin(ConcatinatedFitMultiSourceTransformMixin):
-    """
-    A stateless mixin for transforming data from multiple sources without fitting.
-    This mixin is intended for use with transforms that do not require or support
-    fitting on multiple data sources. Any attempt to fit the transform using
-    `fit_multi_source` will raise a `NotImplementedError`.
-    Inheritance:
-        ConcatinatedFitMultiSourceTransformMixin
-    Methods:
-        fit_multi_source(data_segments, metadata=None):
-            Raises NotImplementedError to indicate fitting is not supported.
-    Attributes:
-        None
-    Usage:
-        Use this mixin when implementing transforms that operate on multiple sources
-        but do not require a fitting step.
-    """
-
-    def fit_multi_source(
-        self,
-        data_segments: list[ndarray],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        raise NotImplementedError(
-            "fit_multi_source is not implemented for this transform."
-        )
-
-    def transform_multi_source(
-        self,
-        data_segments: list[NamedTransformInput],
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> list[ndarray]:
-        """
-        Transform data from multiple sources individually.
-
-        This method applies the fitted transformation to a list of data segments,
-        processing each segment from each source separately.
-
-        Parameters
-        ----------
-        data_segments : list[NamedTransformInput]
-            A list of data chunks to be transformed.
-        metadata : Optional[Dict[str, Any]], optional
-            Metadata to guide the transformation process, by default None.
-
-        Returns
-        -------
-        list[ndarray]
-            A list containing the transformed data for each source.
-
-        Transform the data from all sources using the fitted scalers.
-        """
-        lengths = [len(chunk.keys()) for chunk in data_segments]
-        if len(set(lengths)) != 1:
-            raise ValueError(
-                f"The lengths of the data segments are not the same. Lengths: {lengths}"
-            )
-
-        out = self.tranform_function_to_data_segments(
-            data_segments, self.transform_data, copy.deepcopy(metadata)
-        )
-
-        # Move from out=[[unti,unit,unit], [unti,unit]] to out=[[unti],[unit],[unit],[unti],[unit]]
-
-        processed_out = []
-
-        # 2. Loop through each dictionary in the original list
-        for item in out:
-            # 3. Get the list of keys from the current dictionary
-            keys = item.keys()
-
-            # 4. Unpack all the value lists and zip them together 💡
-            #    zip(*[[d1, d2], [l1, l2], [id1, id2]]) becomes zip([d1, d2], [l1, l2], [id1, id2])
-            for value_tuple in zip(*item.values()):
-
-                # 5. Create a new dictionary by pairing the keys with the unzipped values
-                #    dict(zip(['data', 'label', 'id'], (d1, l1, id1)))
-                new_dict = dict(zip(keys, value_tuple))
-                processed_out.append(new_dict)
-
-        # Overwrite the original 'out' variable
-        out = processed_out
 
         return out
 

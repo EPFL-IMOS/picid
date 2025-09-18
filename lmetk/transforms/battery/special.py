@@ -28,20 +28,49 @@ from lmetk.transforms.base.multisource import find_singular_ragged_dim
 import copy
 from collections import defaultdict
 
+from collections import defaultdict
 
-class SpecialOneTransform(RaggedTransform, NoFitMultiSourceSpecialTransformMixin):
-    """
-    An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.
-    Handles various input data types by converting them to numpy.ndarray internally
-    and converting back to the original type.
-    """
 
-    def fit_data(self, data: Any, metadata: Dict):
-        """This transform does not require fitting."""
+class UnflattenUnitsTransform(MultiSourceTransformInterface, BaseTransform):
+
+    @override
+    def fit_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         pass
 
-    def transform_data(self, data: Any, metadata: Dict) -> Any:
+    @override
+    def transform_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> list[ndarray]:
 
+        out = [self.ragged2numpy(data) for data in data_segments]
+        # Move from out=[[unti,unit,unit], [unti,unit]] to out=[[unti],[unit],[unit],[unti],[unit]]
+        processed_out = []
+
+        # 2. Loop through each dictionary in the original list
+        for item in out:
+            # 3. Get the list of keys from the current dictionary
+            keys = item.keys()
+
+            # 4. Unpack all the value lists and zip them together 💡
+            #    zip(*[[d1, d2], [l1, l2], [id1, id2]]) becomes zip([d1, d2], [l1, l2], [id1, id2])
+            for value_tuple in zip(*item.values()):
+
+                # 5. Create a new dictionary by pairing the keys with the unzipped values
+                #    dict(zip(['data', 'label', 'id'], (d1, l1, id1)))
+                new_dict = dict(zip(keys, value_tuple))
+                processed_out.append(new_dict)
+
+        # Overwrite the original 'out' variable
+        out = processed_out
+        return out
+
+    def ragged2numpy(self, data):
         # Ensure that all the keys have same dim 0
         assert len(set([len(val) for val in data.values()])) == 1, (
             f"All keys in data must have the same length at the first dimension. "
@@ -51,10 +80,6 @@ class SpecialOneTransform(RaggedTransform, NoFitMultiSourceSpecialTransformMixin
         var_dim = find_singular_ragged_dim(data)
         multi_index = ragged_index_tuples(next(iter(data.values())), var_dim)
 
-        # Merge metadata from the segment with the overall metadata
-        data_metadata = copy.deepcopy(metadata)
-        data_metadata.update(data.metadata or {})
-
         out_segment = defaultdict(list)
         iterator = multi_index
 
@@ -62,5 +87,10 @@ class SpecialOneTransform(RaggedTransform, NoFitMultiSourceSpecialTransformMixin
             for k in data.keys():
                 np_data = data[k][coord].to_numpy()
                 out_segment[k].append(np_data)
-
         return out_segment
+
+    @override
+    def transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> Any:
+        pass
