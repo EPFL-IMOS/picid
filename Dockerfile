@@ -62,7 +62,7 @@ RUN ln -s /mnt/imos-students/${LDAP_USERNAME}/experiments /workspace && \
 
 WORKDIR /workspace/setup
 
-COPY pyproject.toml uv.lock ./
+COPY --chown=${LDAP_UID}:${LDAP_GID} pyproject.toml uv.lock ./
 
 # It is challenging to pull from github in container due to
 # authentication issues. Therefore, we copy the repos directly.
