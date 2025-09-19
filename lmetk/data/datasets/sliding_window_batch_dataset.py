@@ -20,22 +20,24 @@ class SlidingWindowBatchDataset(BaseDataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int,
-        **kwargs
-    ):  
+        **kwargs,
+    ):
         # Make sure that the data_dict contains the required keys
         required_keys = ["features", "time_features"]
         for key in required_keys:
             if key not in data_dict:
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
-            
+
         # Convert the data_dict["features"] and data_dict["time_features"] to torch.Tensor
         features = to_torch_tensor(data_dict["features"])
         time_features = to_torch_tensor(data_dict["time_features"])
 
-        assert to_torch_tensor(data_dict["features"]).shape[0] == to_torch_tensor(
-            data_dict["time_features"]
-        ).shape[0], "Features and time features must have the same length"
+        assert (
+            to_torch_tensor(data_dict["features"]).shape[0]
+            == to_torch_tensor(data_dict["time_features"]).shape[0]
+        ), "Features and time features must have the same length"
 
+        # Add here the JaggedSequenceDataset
 
         # TODO: Make sure that the stride covers all the data
         self.feature_sequencer = AutoregressiveSequencer(
