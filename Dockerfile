@@ -28,12 +28,6 @@ RUN set -eux; \
 COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /usr/local/bin/
 
 
-COPY pyproject.toml .
-RUN uv pip install -r pyproject.toml --system
-# COPY . .
-# RUN uv pip install -e .
-
-
 #####################################
 # RCP CaaS requirement (Storage)
 #####################################
@@ -48,14 +42,13 @@ ARG LDAP_GROUPNAME
 ARG LDAP_GID
 RUN groupadd ${LDAP_GROUPNAME} --gid ${LDAP_GID}
 RUN useradd -m -s /bin/bash -g ${LDAP_GROUPNAME} -u ${LDAP_UID} ${LDAP_USERNAME}
+#####################################
 
+# Copy your code inside the container and set your user as owner
+RUN mkdir -p /home/${LDAP_USERNAME} \
+    && chown -R ${LDAP_USERNAME}:${LDAP_GROUPNAME} /home/${LDAP_USERNAME}
 
-WORKDIR /home/${LDAP_USERNAME}
-
-# Copy your code inside the container
-RUN chown -R ${LDAP_USERNAME}:${LDAP_GROUPNAME} /home/${LDAP_USERNAME}
-
-# Create workspace directory
+# Create workspace directory and set your user as owner
 RUN mkdir -p /workspace \
     && chown -R ${LDAP_USERNAME}:${LDAP_GROUPNAME} /workspace \
     && chmod -R 775 /workspace
@@ -64,7 +57,16 @@ USER ${LDAP_USERNAME}
 
 RUN ln -s /mnt/imos-students/${LDAP_USERNAME}/experiments /workspace && \
     ln -s /mnt/imos-students/${LDAP_USERNAME}/datasets /workspace && \
-    ln -s /mnt/imos-students/${LDAP_USERNAME}/projects /workspace
+    ln -s /mnt/imos-students/${LDAP_USERNAME}/projects /workspace && \
+    mkdir -p /workspace/setup
 
-WORKDIR /workspace
+WORKDIR /workspace/setup
 
+COPY pyproject.toml uv.lock ./
+
+# It is challenging to pull from github in container due to
+# authentication issues. Therefore, we copy the repos directly.
+ADD --chown=${LDAP_UID}:${LDAP_GID} phmd phmd
+ADD --chown=${LDAP_UID}:${LDAP_GID} TabPFN TabPFN
+
+RUN uv sync --no-install-project --extra dev

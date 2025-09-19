@@ -21,9 +21,10 @@ from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
 from hydra.core.hydra_config import HydraConfig
-from lmetk.data.datasources import SingleSourceLoader
+
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 from lmetk.data.datasources.kubric_movie.loader import MOViLoader
 from lmetk.data.datasources.nb14.loader import NB14Loader
 from lmetk.data.datasources.unibo.loader import UNIBO21Loader

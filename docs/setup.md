@@ -1,6 +1,8 @@
 # How to install TabPHM
 
 Please install `uv` first.
+On Windows, you need to have [build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) installed (dependency of numpoly).
+
 Furthermore make sure that your git key is setup on github as this
 is required to clone submodules in the first step.
 
