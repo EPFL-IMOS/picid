@@ -1,4 +1,8 @@
 # https://hydra.cc/docs/configure_hydra/intro/
+# WARNING, this is a special config. To acess it from your code, use:
+# from hydra.core.hydra_config import HydraConfig
+# hydra_cfg = HydraConfig.get()
+# to access it from yaml use ${hydra:...}
 
 # enable color logging
 defaults:
@@ -17,3 +21,7 @@ job_logging:
     file:
       # Incorporates fix from https://github.com/facebookresearch/hydra/pull/2242
       filename: ${hydra.runtime.output_dir}/${experiment_group}.log
+
+job:
+  # get the selected option from the experiment group, then flatten it
+  name: ${flat:${hydra:runtime.choices.experiment}}

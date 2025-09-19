@@ -8,6 +8,7 @@ from pathlib import Path
 
 # shutil
 from typing import Any
+import uuid
 
 import hydra
 import lightning as L
@@ -58,7 +59,18 @@ from lmetk.utils import (
 )
 from lmetk.utils.logging_utils import get_hydra_override
 
+# register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
+OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
+
+
+def _uuid(kind: str) -> str:
+    u = uuid.uuid4()
+    if kind == "hex":
+        return u.hex
+    if kind == "short":
+        return u.hex[:8]
+    raise ValueError(f"Unknown uuid kind: {kind}")
 
 
 def initialize_hydra() -> DictConfig:
