@@ -20,6 +20,8 @@ plot_dir: ${paths.output_dir}/plots
 eval_details: ${paths.output_dir}/eval_details
 # Some models (e.g. Prophet) need a working directory to store temp files
 model_workdir: ${paths.output_dir}/model_workdir
+# For fit-predict tasks, we require a directory to store the fitted model for each task
+model_cache_dir: ${paths.output_dir}/model_cache_dir
 
 # path to working directory
 work_dir: ${hydra:runtime.cwd}
