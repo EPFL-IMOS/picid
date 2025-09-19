@@ -21,3 +21,5 @@ build
 
 .model_cache
 container/rt_*
+
+.coverage
