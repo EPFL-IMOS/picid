@@ -110,6 +110,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     for k, d in cfg.paths.items():
         path = Path(d).expanduser().resolve()
         if not path.exists():
+            log.warning(f"Directory {k} created at: {path.as_uri()}")
             os.makedirs(path, exist_ok=True)
         log.info(f"Directory for {k} is: {path.as_uri()}")
 
