@@ -1,15 +1,14 @@
 from typing import Optional, Tuple
 
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import torchmetrics
 
-import pkg_resources
-
-from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
-from .nn import Spacetimeformer
-
 from lmetk.baselines.forecaster import Forecaster
+from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
+
+from .nn import Spacetimeformer
 
 
 def find_ckpt(path):
@@ -96,7 +95,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         recon_mask_drop_full: float = 0.05,
         verbose=True,
         target_mask=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -238,7 +237,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         stats = {
             "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
             "targets": y_t.squeeze(2).detach().cpu().numpy(),
-            "mask": forecast_mask.squeeze(2)
+            "mask": forecast_mask.squeeze(2),
         }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
@@ -252,7 +251,6 @@ class Spacetimeformer_Forecaster(Forecaster):
         )
         stats["acc"] = loss_dict["acc"]
         return stats
-
 
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
@@ -282,7 +280,6 @@ class Spacetimeformer_Forecaster(Forecaster):
                     num_classes=d_y.item(),
                 )
         return class_loss, acc
-
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
         x_c, y_c, x_t, y_t = batch
@@ -383,7 +380,6 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.validation_step_outputs.append(outs)
         return outs
 
-
     def on_validation_epoch_end(self):
         super().on_validation_epoch_end()
         outs = self.validation_step_outputs
@@ -397,12 +393,10 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.scheduler.step(avg_val_loss, is_end_epoch=True)
         self.validation_step_outputs.clear()
 
-
     def training_step(self, batch, batch_idx):
         outs = super().training_step(batch, batch_idx)
         self.scheduler.step()
         return outs
-
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.AdamW(
@@ -419,8 +413,4 @@ class Spacetimeformer_Forecaster(Forecaster):
             factor=self.decay_factor,
         )
         # return [self.optimizer], [self.scheduler]
-        return dict(
-            optimizer=self.optimizer,
-            scheduler=self.scheduler,
-            monitor="loss"
-        )
+        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")
