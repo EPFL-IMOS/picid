@@ -1,33 +1,52 @@
 #!/bin/bash
 # run_and_monitor.sh
-# Usage: ./run_and_monitor.sh myscript.py [args...]
+# Usage: ./runai.sh [args...]
 
-SCRIPT=$1
-shift
 ARGS="$@"
 
-LOGFILE="run_$(basename $SCRIPT)_$(date +%Y%m%d_%H%M%S).log"
-
-if [[ -z "$SCRIPT" ]]; then
-  echo "Usage: $0 script.py [args...]"
+if [[ -z "$ARGS" ]]; then
+  echo "Usage: $0 experiment=..."
   exit 1
 fi
 
-echo "[INFO] Running $SCRIPT with args: $ARGS"
-echo "[INFO] Logs: $LOGFILE"
+# Prepare environment
+source /workspace/setup/.venv/bin/activate
+cd /workspace/projects/TabPHM || exit 1
+uv pip install -e ".[dev]"
 
-# Run python script in background, capture output
-python -u "$SCRIPT" $ARGS 2>&1 | tee "$LOGFILE" &
+mkdir -p logs
+LOGFILE="logs/run_experiment_$(date +%Y%m%d_%H%M%S).log"
+ln -sf "$(basename $LOGFILE)" logs/latest.log
+
+echo -e "\033[1;34m[INFO]\033[0m Running experiment with args: $ARGS"
+echo -e "\033[1;34m[INFO]\033[0m Logs: $LOGFILE"
+
+# Launch experiment
+python -u lmetk/run.py paths=runai $ARGS 2>&1 | tee "$LOGFILE" &
 PID=$!
 
-# Simple monitor loop
+# Also kill child process on Ctrl+C
+trap "kill $PID 2>/dev/null" INT
+
+# Monitor loop With signal 0, no signal is actually delivered.
+# The call can be used to check for the existence of a process ID.
 while kill -0 $PID 2>/dev/null; do
   clear
-  echo "==== Monitoring $SCRIPT (PID $PID) ===="
+  echo "==== Monitoring experiment (PID $PID) ===="
   tail -n 20 "$LOGFILE"
-  echo "---------------------------------------"
+  echo "------------------------------------------"
+  ps -o %cpu,%mem,etime -p $PID | tail -n 1
   echo "Press Ctrl+C to stop monitoring"
   sleep 2
 done
 
-echo "[INFO] Process finished. Full log in $LOGFILE"
+wait $PID
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+  echo -e "\033[1;32m[INFO]\033[0m Process finished successfully."
+else
+  echo -e "\033[1;31m[ERROR]\033[0m Process exited with code $EXIT_CODE."
+fi
+
+echo "Full log in $LOGFILE"
