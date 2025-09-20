@@ -3,10 +3,18 @@
 defaults:
   - override /dataset: context_batch
   - override /datamodule: base_datamodule
-  - override /model: lstm
+  - override /model: patchtst
 
 task_definition:
   requires_training: true
+
+model: 
+  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
+  ts_in:  ${task_definition.seq_len}
+  ts_out: ${task_definition.pred_len}
+  d_yc:  ${infer_data_dim:target,-1} 
+  d_yt:  ${infer_data_dim:target,-1}
+  d_x:   ${infer_data_dim:features,-1}
 
 callbacks:
   early_stopping:

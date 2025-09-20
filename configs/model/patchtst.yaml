@@ -1,14 +1,14 @@
-_target_: lmetk.baselines.spacetimeformer_model.Spacetimeformer_Forecaster
+_target_: lmetk.baselines.patchtst_model.PatchTST_Forecaster
 
 metadata:
   lightning_model: true
 
-max_seq_len: 72 # 192 # 120
-ts_in: 48
-ts_out: 24
-d_yc:  1
-d_yt:  1
-d_x: 56 # 14 + 1 since its concatenated
+max_seq_len: null # must be set by the model_config
+ts_in: null # must be set by the model_config
+ts_out: null # must be set by the model_config
+d_yc:  null # must be set by the model_config
+d_yt:  null # must be set by the model_config
+d_x: null # must be set by the model_config
 d_model: 256 # 256
 d_ff: 128 # 512
 e_layers: 3
