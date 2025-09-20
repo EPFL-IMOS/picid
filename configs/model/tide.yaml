@@ -1,0 +1,28 @@
+_target_: lmetk.baselines.tide_model.TiDE_Forecaster
+
+metadata:
+  lightning_model: true
+  
+  max_seq_len: 48
+  ts_in: 672
+  ts_out: 24
+  d_yc:  1
+  d_yt:  1
+  d_x: 56
+  d_model: 256
+  d_ff: 512
+  e_layers: 3
+  d_layers: 3
+  dropout: 0.1
+  freq: null
+  time_emb_dim: 64
+  use_x_dim: true
+  
+  use_revin: false
+  use_seasonal_decomp: false
+
+  warmup_steps: 10000
+  decay_factor: 0.9
+  init_lr: 1.0e-10
+  base_lr: 5.0e-4
+  patience: 5

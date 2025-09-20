@@ -80,7 +80,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/stf",
+                "experiment=railway_traction/forecasting/stf",
                 "debug=default"
             ],
             "env": {
@@ -95,7 +95,22 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/linear_forecaster",
+                "experiment=railway_traction/forecasting/linear",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: LSTM Model (LSTM_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/lstm",
                 "debug=default"
             ],
             "env": {
@@ -110,7 +125,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/tabpfn_railway_seasonal_context",
+                "experiment=railway_traction/forecasting/tabpfn_railway_seasonal_context",
                 "debug=default"
             ]
         },
@@ -122,7 +137,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/tabpfn_fit_predict",
+                "experiment=railway_traction/forecasting/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -138,7 +153,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/autogluon_railway_fit_predict",
+                "experiment=railway_traction/forecasting/autogluon_railway_fit_predict",
                 "debug=default"
             ],
             "env": {

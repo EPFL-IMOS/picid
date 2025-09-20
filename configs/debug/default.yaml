@@ -2,7 +2,7 @@
 
 defaults:
 # Disable wandb logger to avoid unnecessary network calls during debugging.
-  - override /logger: wandb
+  - override /logger: csv
 
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.

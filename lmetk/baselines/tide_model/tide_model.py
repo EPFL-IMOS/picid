@@ -8,6 +8,7 @@ from omegaconf import OmegaConf
 from torch import nn
 
 from lmetk.baselines.forecaster import Forecaster
+from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
 
 from .tide import Model as TiDE
 
@@ -90,7 +91,7 @@ class TiDE_Forecaster(Forecaster):
         # self.teacher_forcing_prob = teacher_forcing_prob
 
         if d_x_mask is not None:
-            assert self.include_x_t == True
+            assert self.include_x_t is True
             self.mask_tt = torch.tensor(d_x_mask) == 0
             self.mask_t = torch.tensor(d_x_mask) == 1
             self.d_x_mask = d_x_mask
@@ -178,7 +179,7 @@ class TiDE_Forecaster(Forecaster):
             lr=self.base_lr,
             weight_decay=self.l2_coeff,
         )
-        self.scheduler = stf.lr_scheduler.WarmupReduceLROnPlateau(
+        self.scheduler = WarmupReduceLROnPlateauScheduler(
             self.optimizer,
             init_lr=self.init_lr,
             peak_lr=self.base_lr,
@@ -187,7 +188,3 @@ class TiDE_Forecaster(Forecaster):
             factor=self.decay_factor,
         )
         return [self.optimizer], [self.scheduler]
-
-    @classmethod
-    def add_cli(self, parser):
-        super().add_cli(parser)

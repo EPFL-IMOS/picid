@@ -6,6 +6,10 @@ from torch import nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
+from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
+    WarmupReduceLROnPlateauScheduler,
+)
+
 from .cross_former import Crossformer
 from lmetk.baselines.forecaster import Forecaster
 
@@ -192,7 +196,7 @@ class Crossformer_Forecaster(Forecaster):
             lr=self.base_lr,
             # weight_decay=self.l2_coeff,
         )
-        self.scheduler = stf.lr_scheduler.WarmupReduceLROnPlateau(
+        self.scheduler = WarmupReduceLROnPlateauScheduler(
             self.optimizer,
             init_lr=self.init_lr,
             peak_lr=self.base_lr,
@@ -201,7 +205,3 @@ class Crossformer_Forecaster(Forecaster):
             factor=self.decay_factor,
         )
         return [self.optimizer], [self.scheduler]
-
-    @classmethod
-    def add_cli(self, parser):
-        super().add_cli(parser)

@@ -1,8 +1,0 @@
-seq_len: 98 #168 # 7*24      # window size
-label_len: 48  # overlap size
-
-# Model parameters
-pred_len: 96 # Note that here we have 96, but in the evaluatior we specify the effective prediction lenght 24
-
-
-requires_training: false

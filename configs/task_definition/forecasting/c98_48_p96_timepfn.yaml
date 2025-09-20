@@ -1,0 +1,7 @@
+seq_len: 98   # window size
+label_len: 48  # overlap size
+
+# TODO: harmonize and remove this config
+# Note that here we have 96, but in the evaluatior 
+# we specify the effective prediction lenght 24
+pred_len: 96 

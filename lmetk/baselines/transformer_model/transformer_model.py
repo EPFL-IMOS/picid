@@ -1,15 +1,21 @@
 import random
 from typing import Tuple
 
-import torch
-from torch import nn
-import torch.nn.functional as F
 import pytorch_lightning as pl
+import torch
+import torch.nn.functional as F
+from torch import nn
 
-from models.Transformer import Model as Transformer
+from lmetk.baselines.forecaster import Forecaster
+from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
+from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
+    WarmupReduceLROnPlateauScheduler,
+)
+
+from .transformer import Model as Transformer
 
 
-class Transformer_Forecaster(stf.Forecaster):
+class Transformer_Forecaster(Forecaster):
     def __init__(
         self,
         d_x: int = 6,
@@ -45,7 +51,7 @@ class Transformer_Forecaster(stf.Forecaster):
             linear_shared_weights=linear_shared_weights,
         )
 
-        self.t2v = stf.Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+        self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
 
         if "d_x_embedding_router" in transformer_args:
@@ -167,7 +173,7 @@ class Transformer_Forecaster(stf.Forecaster):
             lr=self.base_lr,
             weight_decay=self.l2_coeff,
         )
-        self.scheduler = stf.lr_scheduler.WarmupReduceLROnPlateau(
+        self.scheduler = WarmupReduceLROnPlateauScheduler(
             self.optimizer,
             init_lr=self.init_lr,
             peak_lr=self.base_lr,
@@ -176,7 +182,3 @@ class Transformer_Forecaster(stf.Forecaster):
             factor=self.decay_factor,
         )
         return [self.optimizer], [self.scheduler]
-
-    @classmethod
-    def add_cli(self, parser):
-        super().add_cli(parser)

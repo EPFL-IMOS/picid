@@ -1,6 +1,6 @@
 #@package _global_
 
 defaults:
-  - railway_traction/base
-  - /model_configs/forecasting/stf
+  - railway_traction/forecasting/base
+  - /model_configs/forecasting/crossformer
   - override /transforms: railway/railway_seasonal_leak

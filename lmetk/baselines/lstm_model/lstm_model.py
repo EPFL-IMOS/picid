@@ -1,4 +1,5 @@
 import random
+from typing import Tuple
 
 import torch
 from torch import nn
@@ -118,6 +119,7 @@ class LSTM_Forecaster(Forecaster):
         linear_shared_weights: bool = False,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -130,6 +132,7 @@ class LSTM_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            **kwargs,
         )
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
 
@@ -170,7 +173,7 @@ class LSTM_Forecaster(Forecaster):
         preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)
         return (preds,)
 
-    def step(self, batch: torch.Tuple[torch.Tensor], train: bool = False):
+    def step(self, batch: Tuple[torch.Tensor], train: bool = False):
         stats = super().step(batch, train)
         stats["forecast_loss"] = stats["loss"]
         return stats

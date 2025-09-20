@@ -24,8 +24,16 @@ class Forecaster(CustomEvaluatorLightningModule):
         use_seasonal_decomp: bool = False,
         verbose: int = True,
         evaluators: dict[str, AbstractEvaluator] = {},
+        metadata: dict = {},
+        **kwargs,
     ):
         super().__init__(evaluators=evaluators)
+
+        assert (
+            metadata.get("lightning_model", False) is True
+        ), f"Forecaster must be enabled with a Lightning DataModule"
+
+        assert len(kwargs) == 0, f"Unrecognized kwargs: {kwargs.keys()}"
 
         self._inv_scaler = lambda x: x
         self.l2_coeff = l2_coeff
@@ -59,7 +67,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         self.d_yt = d_yt
         self.save_hyperparameters()
 
-
     def set_null_value(self, val: float) -> None:
         self.null_value = val
 
@@ -69,20 +76,17 @@ class Forecaster(CustomEvaluatorLightningModule):
     def set_scaler(self, scaler) -> None:
         self._scaler = scaler
 
-
     @property
     @abstractmethod
     def train_step_forward_kwargs(self):
         # can just return an empty dict if no kwargs are needed
         pass
 
-
     @property
     @abstractmethod
     def eval_step_forward_kwargs(self):
         # can just return an empty dict if no kwargs are needed
         pass
-
 
     def loss_fn(
         self, true: torch.Tensor, preds: torch.Tensor, mask: torch.Tensor
@@ -100,7 +104,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         else:
             raise ValueError(f"Unrecognized Loss Function : {self.loss}")
         return loss
-
 
     def forecasting_loss(
         self, outputs: torch.Tensor, y_t: torch.Tensor, time_mask: int, feat_mask=None
@@ -126,7 +129,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         forecasting_loss = self.loss_fn(y_t, outputs, full_mask)
         return forecasting_loss, full_mask
 
-
     def compute_loss(
         self,
         batch: Tuple[torch.Tensor],
@@ -141,7 +143,6 @@ class Forecaster(CustomEvaluatorLightningModule):
             outputs=outputs, y_t=y_t, time_mask=time_mask
         )
         return loss, outputs, mask
-
 
     def predict(
         self,
@@ -175,7 +176,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         )
         return preds
 
-
     @abstractmethod
     def forward_model_pass(
         self,
@@ -187,10 +187,8 @@ class Forecaster(CustomEvaluatorLightningModule):
     ) -> Tuple[torch.Tensor]:
         return NotImplemented
 
-
     def nan_to_num(self, *inps):
         return (torch.nan_to_num(i) for i in inps)
-
 
     def forward(
         self,
@@ -221,8 +219,9 @@ class Forecaster(CustomEvaluatorLightningModule):
             return (output,) + tuple(extra)
         return (output,)
 
-
-    def step(self, batch: Tuple[torch.Tensor], train: bool = False) -> dict[str, torch.Tensor]:
+    def step(
+        self, batch: Tuple[torch.Tensor], train: bool = False
+    ) -> dict[str, torch.Tensor]:
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
@@ -243,52 +242,47 @@ class Forecaster(CustomEvaluatorLightningModule):
             "targets": y_t.squeeze(2),
         }
 
-
     def _training_step(self, batch, batch_idx):
 
-        # x_c, y_c, x_t, y_t, 
+        # x_c, y_c, x_t, y_t,
         batch = (
             batch["context"]["x"],
             batch["target"]["x"],
             batch["context"]["y"],
-            batch["target"]["y"]
+            batch["target"]["y"],
         )
 
         outs = self.step(batch, train=True)
         return outs
 
-
     def _validation_step(self, batch, batch_idx):
 
-        # x_c, y_c, x_t, y_t, 
+        # x_c, y_c, x_t, y_t,
         batch = (
             batch["context"]["x"],
             batch["target"]["x"],
             batch["context"]["y"],
-            batch["target"]["y"]
+            batch["target"]["y"],
         )
 
         outs = self.step(batch, train=False)
         return outs
-
 
     def _test_step(self, batch, batch_idx):
 
-        # x_c, y_c, x_t, y_t, 
+        # x_c, y_c, x_t, y_t,
         batch = (
             batch["context"]["x"],
             batch["target"]["x"],
             batch["context"]["y"],
-            batch["target"]["y"]
+            batch["target"]["y"],
         )
 
         outs = self.step(batch, train=False)
         return outs
-    
 
     def predict_step(self, batch, batch_idx):
         return self(*batch, **self.eval_step_forward_kwargs)
-
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
