@@ -412,5 +412,4 @@ class Spacetimeformer_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        # return [self.optimizer], [self.scheduler]
         return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

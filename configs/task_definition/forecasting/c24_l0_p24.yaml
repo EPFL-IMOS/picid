@@ -1,0 +1,3 @@
+seq_len: 24  # window size
+label_len: 0  # overlap size
+pred_len: 24 # prediction size

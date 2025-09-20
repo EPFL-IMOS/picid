@@ -1,17 +1,17 @@
 import random
 from typing import Tuple
 
-import torch
-from torch import nn
-import torch.nn.functional as F
 import pytorch_lightning as pl
+import torch
+import torch.nn.functional as F
+from torch import nn
 
+from lmetk.baselines.forecaster import Forecaster
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
 )
 
 from .cross_former import Crossformer
-from lmetk.baselines.forecaster import Forecaster
 
 
 class Crossformer_Forecaster(Forecaster):
@@ -46,6 +46,7 @@ class Crossformer_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask=None,
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -57,6 +58,7 @@ class Crossformer_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            evaluators=kwargs.get("evaluators", None),
         )
 
         configs = {
@@ -167,7 +169,11 @@ class Crossformer_Forecaster(Forecaster):
         *_, y_t = batch
 
         # compute prediction accuracy stats for logging
-        stats = self._compute_stats(forecast_out, y_t, forecast_mask)
+        stats = {
+            "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
+            "targets": y_t.squeeze(2).detach().cpu().numpy(),
+            "mask": forecast_mask.squeeze(2),
+        }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
         stats["loss"] = loss_dict["forecast_loss"]
@@ -204,4 +210,4 @@ class Crossformer_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        return [self.optimizer], [self.scheduler]
+        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

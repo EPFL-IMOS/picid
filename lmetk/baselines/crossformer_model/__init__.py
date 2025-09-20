@@ -1,3 +1,3 @@
-from .crossformer_model import CrossFormer_Forecaster
+from .crossformer_model import Crossformer_Forecaster
 
-__all__ = ["CrossFormer_Forecaster"]
+__all__ = ["Crossformer_Forecaster"]

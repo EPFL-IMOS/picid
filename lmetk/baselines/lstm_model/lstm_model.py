@@ -103,9 +103,9 @@ class LSTM_Seq2Seq(nn.Module):
 class LSTM_Forecaster(Forecaster):
     def __init__(
         self,
-        d_x: int = 6,
-        d_yc: int = 1,
-        d_yt: int = 1,
+        d_x: int,
+        d_yc: int,
+        d_yt: int,
         time_emb_dim: int = 0,
         n_layers: int = 2,
         hidden_dim: int = 32,

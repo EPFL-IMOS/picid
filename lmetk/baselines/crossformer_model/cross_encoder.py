@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from models.cross_attn import FullAttention, AttentionLayer, TwoStageAttentionLayer
+from .cross_attn import FullAttention, AttentionLayer, TwoStageAttentionLayer
 from math import ceil
 
 
