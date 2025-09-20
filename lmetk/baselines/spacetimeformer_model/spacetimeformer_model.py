@@ -24,9 +24,13 @@ def find_ckpt(path):
 class Spacetimeformer_Forecaster(Forecaster):
     def __init__(
         self,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        d_x: int = 4,
+        d_yc: int,
+        d_yt: int,
+        d_x: int,
+        # d_x contains timefeatures if n_timefeatures > 0
+        # these can be rerouted via d_x_embedding_router
+        # to a seperate additive embedding.
+        n_timefeatures: int = 0,
         max_seq_len: int = None,
         start_token_len: int = 64,
         attn_factor: int = 5,
@@ -54,7 +58,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         performer_kernel: str = "relu",
         embed_method: str = "spatio-temporal",
         attention_method: str = "non-causual",
-        d_x_embedding_router: Optional[torch.Tensor] = None,
+        # d_x_embedding_router: Optional[torch.Tensor] = None,
         performer_relu: bool = True,
         performer_redraw_interval: int = 1000,
         attn_time_windows: int = 1,
@@ -121,6 +125,15 @@ class Spacetimeformer_Forecaster(Forecaster):
             timetable_emb_enc_type = timetable_emb_type
             timetable_emb_dec_type = timetable_emb_type
 
+        self.n_timefeatures = n_timefeatures
+        if self.n_timefeatures > 0:
+            dxr = torch.tensor([0] * (d_x - n_timefeatures) + [1] * n_timefeatures).to(
+                self.device
+            )
+            self.d_x_embedding_router = dxr
+        else:
+            self.d_x_embedding_router = None
+
         self.spacetimeformer = Spacetimeformer(
             d_yc=d_yc,
             d_yt=d_yt,
@@ -157,7 +170,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             use_final_norm=use_final_norm,
             embed_method=embed_method,
             attention_method=attention_method,
-            d_x_embedding_router=d_x_embedding_router,
+            d_x_embedding_router=self.d_x_embedding_router,
             performer_attn_kernel=performer_kernel,
             performer_redraw_interval=performer_redraw_interval,
             attn_time_windows=attn_time_windows,
@@ -193,11 +206,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.recon_loss_imp = recon_loss_imp
         self.set_null_value(null_value)
         self.pad_value = pad_value
-        self.d_x_embedding_router = (
-            torch.tensor(d_x_embedding_router).to(self.device)
-            if d_x_embedding_router is not None
-            else None
-        )
+
         self.save_hyperparameters()
 
         self.validation_step_outputs = []

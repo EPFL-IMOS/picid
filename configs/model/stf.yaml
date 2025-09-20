@@ -35,4 +35,3 @@ dropout_ff: 0.2
 pos_emb_type: abs
 timetable_emb_type: linear
 time_emb_type: linear
-d_x_embedding_router:  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1]

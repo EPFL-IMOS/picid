@@ -1,33 +1,47 @@
-_target_: lmetk.baselines.transformer_model.Transformer_Forecaster
+_target_: lmetk.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster
 
 metadata:
   lightning_model: true
 
-features: M 
-seq_len: 24
-label_len: 0
-pred_len: 24
-e_layers: 2
-d_layers: 2 
-factor: 3
-enc_in: 1
-dec_in: 1
-enc_context_in: 52
-dec_context_in: 52
-c_out: 1
-des: Exp
-embed_type: 5 
-output_attention: false
-embed: true
-freq: h
-dropout: 0.0  
-n_heads: 2
 
-d_ff: 256
-activation: gelu
+d_yc:  null # must be set by the model_config
+d_yt:  null # must be set by the model_config
+d_x: null # must be set by the model_config
 
-d_model: 128
-patience: 10
-train_epochs: 200
-test_flop: false
-d_x_embedding_router:  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1]
+decay_factor: 0.9
+warmup_steps: 10000
+patience: 5
+init_lr: 1.0e-10
+base_lr: 5.0e-4
+
+use_revin: false
+use_seasonal_decomp: false
+
+transformer_args:
+  features: M 
+  seq_len: null # must be set by the model_config
+  label_len: 0
+  pred_len: null # must be set by the model_config
+  e_layers: 2
+  d_layers: 2 
+  factor: 3
+  enc_in: 1
+  dec_in: 1
+  enc_context_in: null # must be set by the model_config
+  dec_context_in: null # must be set by the model_config
+  c_out: 1
+  des: Exp
+  embed_type: 5 
+  output_attention: false
+  embed: timeF # true
+  freq: t #h
+  dropout: 0.0  
+  n_heads: 2
+
+  d_ff: 256
+  activation: gelu
+
+  d_model: 128
+  patience: 10
+  train_epochs: 200
+  test_flop: false

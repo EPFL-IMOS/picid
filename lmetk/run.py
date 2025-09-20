@@ -63,6 +63,16 @@ OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
 OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
 
 
+# safe diff that returns a if a or b are strings
+def diff_if_not_string(a, b):
+    if isinstance(a, str) or isinstance(b, str):
+        return a
+    return a - b
+
+
+OmegaConf.register_new_resolver("diff", lambda a, b: diff_if_not_string(a, b))
+
+
 OmegaConf.register_new_resolver(
     "infer_data_dim", lambda key, dim: "not yet initialized"
 )

@@ -12,16 +12,19 @@ from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
 )
 
-from .transformer import Model as Transformer
+from .timeseries_transformer import Model as Transformer
 
 
-class Transformer_Forecaster(Forecaster):
+class Timeseries_Transformer_Forecaster(Forecaster):
     def __init__(
         self,
-        d_x: int = 6,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        # training
+        d_x: int,
+        d_yc: int,
+        d_yt: int,
+        # d_x contains timefeatures if n_timefeatures > 0
+        # these can be rerouted via d_x_embedding_router
+        # to a seperate additive embedding.
+        n_timefeatures: int = 0,
         l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
@@ -38,6 +41,7 @@ class Transformer_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask: list[int] = None,
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -49,14 +53,16 @@ class Transformer_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            evaluators=kwargs.get("evaluators", None),
         )
 
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
 
-        if "d_x_embedding_router" in transformer_args:
+        self.n_timefeatures = n_timefeatures
+        if self.n_timefeatures > 0:
             transformer_args["d_x_embedding_router"] = torch.tensor(
-                transformer_args["d_x_embedding_router"]
+                [0] * (d_x - n_timefeatures) + [1] * n_timefeatures
             )
 
         self.transformer = Transformer(transformer_args)
@@ -111,6 +117,7 @@ class Transformer_Forecaster(Forecaster):
         dec_inp = torch.zeros_like(
             batch_y[:, -self.transformer_args.pred_len :, :]
         ).float()
+
         dec_inp = (
             torch.cat(
                 [batch_y[:, : self.transformer_args.label_len, :], dec_inp], dim=1
@@ -143,8 +150,11 @@ class Transformer_Forecaster(Forecaster):
         forecast_mask = loss_dict["forecast_mask"]
         *_, y_t = batch
 
-        # compute prediction accuracy stats for logging
-        stats = self._compute_stats(forecast_out, y_t, forecast_mask)
+        stats = {
+            "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
+            "targets": y_t.squeeze(2).detach().cpu().numpy(),
+            "mask": forecast_mask.squeeze(2),
+        }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
         stats["loss"] = loss_dict["forecast_loss"]
@@ -181,4 +191,4 @@ class Transformer_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        return [self.optimizer], [self.scheduler]
+        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

@@ -13,6 +13,8 @@ model:
   d_yc:  ${infer_data_dim:target,-1} 
   d_yt:  ${infer_data_dim:target,-1}
   d_x:   ${infer_data_dim:features,-1}
+  # TODO: replace with actual timefeatures when available
+  n_timefeatures: ${infer_data_dim:time_features,-1}
 
 callbacks:
   early_stopping:

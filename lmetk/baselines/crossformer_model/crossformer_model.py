@@ -168,7 +168,6 @@ class Crossformer_Forecaster(Forecaster):
         forecast_mask = loss_dict["forecast_mask"]
         *_, y_t = batch
 
-        # compute prediction accuracy stats for logging
         stats = {
             "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
             "targets": y_t.squeeze(2).detach().cpu().numpy(),

@@ -163,6 +163,21 @@
             }
         },
         {
+            "name": "Railway Traction: Timeseries Transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/timeseries_transformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
             "name": "Railway Traction: TabPFN",
             "type": "debugpy",
             "request": "launch",
