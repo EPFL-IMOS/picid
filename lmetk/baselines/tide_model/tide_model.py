@@ -47,6 +47,7 @@ class TiDE_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask: list[int] = None,
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -58,6 +59,7 @@ class TiDE_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            evaluators=kwargs.get("evaluators", None),
         )
 
         configs = OmegaConf.create(
@@ -149,8 +151,11 @@ class TiDE_Forecaster(Forecaster):
         forecast_mask = loss_dict["forecast_mask"]
         *_, y_t = batch
 
-        # compute prediction accuracy stats for logging
-        stats = self._compute_stats(forecast_out, y_t, forecast_mask)
+        stats = {
+            "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
+            "targets": y_t.squeeze(2).detach().cpu().numpy(),
+            "mask": forecast_mask.squeeze(2),
+        }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
         stats["loss"] = loss_dict["forecast_loss"]
@@ -187,4 +192,4 @@ class TiDE_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        return [self.optimizer], [self.scheduler]
+        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")
