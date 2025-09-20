@@ -60,6 +60,8 @@ from lmetk.utils.logging_utils import get_hydra_override
 # register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
 OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
+
+
 OmegaConf.register_new_resolver(
     "infer_data_dim", lambda key, dim: "not yet initialized"
 )
