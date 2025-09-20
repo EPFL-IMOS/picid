@@ -1,14 +1,14 @@
 import torch
 from torch import nn
-from lmetk.baselines.transformer_model.layers.Transformer_EncDec import (
+from lmetk.baselines.shared_layers.Transformer_EncDec import (
     Encoder,
     EncoderLayer,
 )
-from lmetk.baselines.transformer_model.layers.SelfAttention_Family import (
+from lmetk.baselines.shared_layers.SelfAttention_Family import (
     FullAttention,
     AttentionLayer,
 )
-from lmetk.baselines.transformer_model.layer.Embed_PatchTST import (
+from lmetk.baselines.shared_layers.Embed_PatchTST import (
     PatchEmbedding,
 )
 
