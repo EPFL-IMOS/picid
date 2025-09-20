@@ -39,12 +39,12 @@ def display_targets(cfg):
     table = Table(title="Hydra _target_ Classes")
     table.add_column("Config Path", style="cyan", no_wrap=True)
     table.add_column("_target_", style="magenta")
-    table.add_column(
-        "Resolved Module Path", style="green", overflow="fold", no_wrap=False
-    )
+    # table.add_column(
+    #     "Resolved Module Path", style="green", overflow="fold", no_wrap=False
+    # )
 
     for path, target, resolved in extract_targets(cfg):
-        table.add_row(path, target, resolved)
+        table.add_row(path, target)
 
     Console().print(table)
 
