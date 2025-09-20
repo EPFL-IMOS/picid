@@ -360,4 +360,4 @@ class DataTransform:
                     )
 
         # TODO: additional checks,
-        return transformed_data
+        return transformed_data, "transform_log"

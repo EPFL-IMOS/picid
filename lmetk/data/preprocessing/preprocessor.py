@@ -10,6 +10,7 @@ import logging
 from lmetk.data.cache.offline import FileSystemCache
 from lmetk.utils import print_data_dict_structure
 from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
+from lmetk.utils.rich_output import print_transforms_summary
 
 
 logger = logging.getLogger(__name__)
@@ -132,19 +133,36 @@ class PreProcessor(PreProcessorInterface):
                 "Every element of transforms_lst must be a DataTransform object."
             )
 
+        summary = []
         for transform_name, transform in transforms.items():
             logger.info(
                 f"Applying transform: '{transform_name}' "
                 f"(Strategy: {transform.strategy.__class__.__name__})"
             )
+
+            keys_pre = list(data.keys())
+
             start_time = time.time()
-            data = transform.forward(data)
+            data, details = transform.forward(data)
+
             end_time = time.time()
             logger.info(
                 f" transform: '{transform.transform_name}' - "
                 f"completed in {end_time - start_time:.4f} seconds."
             )
 
+            summary.append(
+                {
+                    "transform_name": transform_name,
+                    "time": f" {end_time - start_time:.4f}",
+                    "status": "Success",
+                    "details": details,
+                    "keys_pre": str(keys_pre),
+                    "keys_post": str(list(data.keys())),
+                }
+            )
+
+        print_transforms_summary(summary)
         return data
 
     # configs of the dataset

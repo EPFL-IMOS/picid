@@ -138,3 +138,25 @@ def display_config_sources(cfg):
         table.add_row(*row)
 
     Console(width=180).print(table)
+
+
+def print_transforms_summary(summary: dict[str, str]):
+    table = Table(title="Data Transforms Summary")
+    table.add_column("Transform Name", style="cyan", no_wrap=True)
+    table.add_column("Time (s)", style="magenta")
+    table.add_column("Status", style="magenta")
+    table.add_column("Details", style="green", overflow="fold")
+    table.add_column("Keys Pre", style="yellow", overflow="fold")
+    table.add_column("Keys Post", style="yellow", overflow="fold")
+
+    for summary_dict in summary:
+        table.add_row(
+            summary_dict["transform_name"],
+            summary_dict["time"],
+            summary_dict["status"],
+            summary_dict["details"],
+            summary_dict.get("keys_pre", ""),
+            summary_dict.get("keys_post", ""),
+        )
+
+    Console(width=180).print(table)
