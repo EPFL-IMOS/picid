@@ -25,16 +25,8 @@ class Forecaster(CustomEvaluatorLightningModule):
         verbose: int = True,
         evaluators: dict[str, AbstractEvaluator] = {},
         metadata: dict = {},
-        **kwargs,
     ):
         super().__init__(evaluators=evaluators)
-
-        assert (
-            metadata.get("lightning_model", False) is True
-        ), f"Forecaster must be enabled with a Lightning DataModule"
-
-        assert len(kwargs) == 0, f"Unrecognized kwargs: {kwargs.keys()}"
-
         self._inv_scaler = lambda x: x
         self.l2_coeff = l2_coeff
         self.learning_rate = learning_rate

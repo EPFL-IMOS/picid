@@ -5,9 +5,9 @@ metadata:
 
 max_seq_len: 198
 start_token_len: 6
-d_yc:  1
-d_yt:  1
-d_x: 60 # 56
+d_yc:  null # must be set by the model_config
+d_yt:  null # must be set by the model_config
+d_x: null # must be set by the model_config
 d_ff: 128
 n_heads: 7
 d_model: 128

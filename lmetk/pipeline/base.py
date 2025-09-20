@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+import numpy as np
 import torch
 from lightning import LightningModule
 
@@ -244,8 +245,27 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         dict
             Dictionary containing the updated model output.
         """
-        model_out["predictions"] = model_out["predictions"].detach().cpu().numpy()
-        model_out["targets"] = model_out["targets"].detach().cpu().numpy()
+        preds = model_out["predictions"]
+        targets = model_out["targets"]
+
+        if isinstance(preds, torch.Tensor):
+            model_out["predictions"] = preds.detach().cpu().numpy()
+        elif isinstance(preds, np.ndarray):
+            model_out["predictions"] = preds
+        else:
+            raise ValueError(
+                f"predictions must be either torch.Tensor or np.ndarray, got {type(preds)}"
+            )
+
+        if isinstance(targets, torch.Tensor):
+            model_out["targets"] = targets.detach().cpu().numpy()
+        elif isinstance(targets, np.ndarray):
+            model_out["targets"] = targets
+        else:
+            raise ValueError(
+                f"targets must be either torch.Tensor or np.ndarray, got {type(targets)}"
+            )
+
         return model_out
 
 
