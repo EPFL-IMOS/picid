@@ -107,7 +107,7 @@ def descriptive_dict_differences_str(old, new, mode="added"):
             if val1 != val2:
                 differences.append(f"{key}: {val1} -> {val2}")
 
-    return ", ".join(differences)
+    return "\n".join(differences)
 
 
 # Plot the data_dict structure with tensor dimensions
