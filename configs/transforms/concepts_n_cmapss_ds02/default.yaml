@@ -34,18 +34,27 @@ scaler_rul:
 # approach, 25433 data samples are obtained to train the LSTM-AE.
 
 
-subsample:
+subsample_features_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
     window_size: 60 
     aggregation: mean
   metadata:
-    apply_to: [features, descriptors, rul]
+    apply_to: [features, descriptors, rul, concepts]
+
+subsample_others:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: 60 
+    aggregation: last
+  metadata:
+    apply_to: [ unit, timestamps, health_states]
 
 
 concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
   metadata:
-    apply_to: [features, descriptors, rul]
+    apply_to: [features, descriptors, rul, unit, concepts, timestamps, health_states]

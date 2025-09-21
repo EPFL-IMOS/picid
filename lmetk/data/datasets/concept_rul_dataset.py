@@ -20,6 +20,12 @@ class ConceptRULDataset(BaseDataset):
         **kwargs,
     ):
 
+        for k, v in data_dict.items():
+            assert isinstance(v, (np.ndarray)), (
+                f"All entries in data_dict must be numpy arrays "
+                f"or lists of numpy arrays. Found {type(v)} for key {k}."
+            )
+
         self.window_size = window_size
         self.stride = stride
 
