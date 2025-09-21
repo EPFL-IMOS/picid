@@ -116,7 +116,8 @@ def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
     """
     # Dims that are currently flagged as variable, but may are not.
     # TODO: check if last dim is in fact not rugged
-    arr = ak.to_regular(arr, axis=-1)
+    if arr.ndim > 2:
+        arr = ak.to_regular(arr, axis=-1)
 
     var_dims = ak_find_var_dims(arr)
     for d in var_dims:
