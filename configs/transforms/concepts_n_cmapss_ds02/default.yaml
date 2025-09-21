@@ -53,6 +53,16 @@ subsample_others:
     apply_to: [ unit, timestamps, health_states]
 
 
+concatenate_features:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+  
+  metadata:
+    apply_to: ['features', 'descriptors']
+    assign_to: features
+
+
 concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform

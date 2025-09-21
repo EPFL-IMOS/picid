@@ -83,8 +83,13 @@ def register_data_dim_resolver(
 ) -> None:
 
     def infer_data_dim(obj: Union[np.array, ak.Array, torch.Tensor], dim: int) -> int:
-
-        if isinstance(obj, np.ndarray):
+        if isinstance(obj, list):
+            dims = {infer_data_dim(o, dim) for o in obj}
+            if len(dims) > 1:
+                raise ValueError(f"Inconsistent dims found in list: {dims}")
+            else:
+                return dims.pop()
+        elif isinstance(obj, np.ndarray):
             return obj.shape[dim]
         elif torch.is_tensor(obj):
             return tuple(obj.size())[dim]
@@ -96,7 +101,8 @@ def register_data_dim_resolver(
     def get_key(data, key):
         if key not in data:
             raise KeyError(
-                f"Resolver issue: {key} not found in data dictionary ({data.keys()})."
+                f"Resolver issue: key: '{key}' "
+                f"not found in data dictionary ({data.keys()})."
             )
         return data[key]
 
@@ -252,6 +258,23 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         dataset_val=dataset_val,
         dataset_test=dataset_test,
     )
+
+    # Log the sizes of one batch for each data loader
+    for split, loader in zip(
+        ["train", "val", "test"],
+        [
+            datamodule.train_dataloader(),
+            datamodule.val_dataloader(),
+            datamodule.test_dataloader(),
+        ],
+    ):
+        batch = next(iter(loader))
+        log.info(f"Batch shapes for {split}:")
+        for key, value in batch.items():
+            if isinstance(value, torch.Tensor):
+                log.info(f"  {key}: {value.shape}")
+            else:
+                log.info(f"  {key}: Non-tensor value of type {type(value)}")
 
     evaluators = {}
     for s in ["train", "val", "test"]:
