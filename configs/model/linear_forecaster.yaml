@@ -3,10 +3,10 @@ _target_: lmetk.baselines.linear_model.linear_model.Linear_Forecaster
 metadata:
   lightning_model: true
 
-d_yc:  1
-d_yt:  1
-d_x: 60
-context_points: 24
+d_yc:  null # must be set by the model_config
+d_yt:  null # must be set by the model_config
+d_x: null # must be set by the model_config
+context_points: null # must be set by the model_config
 
 linear_window: 0
 linear_shared_weights: false
