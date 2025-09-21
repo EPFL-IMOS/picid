@@ -6,7 +6,7 @@ defaults:
   - override /model: residual_autoencoder
   - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule
-  - override /task_definition: battery_autoencoder
+  - override /task_definition: reconstruction/battery_autoencoder
  
 
 

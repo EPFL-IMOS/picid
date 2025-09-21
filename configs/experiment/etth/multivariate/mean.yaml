@@ -5,7 +5,7 @@ defaults:
   - override /datamodule: base_datamodule
   - override /model: mean
   - override /evaluator: default
-  - override /task_definition: etth_timepfn
+  - override /task_definition: forecasting/etth_timepfn
   - override /transforms: etth/timepfn_paper
 
 evaluator:
