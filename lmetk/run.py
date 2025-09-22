@@ -1,19 +1,18 @@
 """Main entry point for training and testing models."""
 
-import datetime
-import hashlib
 import os
 import random
 from pathlib import Path
 
 # shutil
-from typing import Any
+from typing import Any, Tuple, Union
+import uuid
 
 import hydra
 import lightning as L
 import numpy as np
 import torch
-
+import awkward as ak
 
 from lightning import Callback, Trainer
 from lightning.pytorch.loggers import Logger
@@ -58,7 +57,69 @@ from lmetk.utils import (
 )
 from lmetk.utils.logging_utils import get_hydra_override
 
+# register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
+OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
+OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
+
+
+# safe diff that returns a if a or b are strings
+def diff_if_not_string(a, b):
+    if isinstance(a, str) or isinstance(b, str):
+        return a
+    return a - b
+
+
+OmegaConf.register_new_resolver("diff", lambda a, b: diff_if_not_string(a, b))
+
+
+OmegaConf.register_new_resolver(
+    "infer_data_dim", lambda key, dim: "not yet initialized"
+)
+
+
+def register_data_dim_resolver(
+    data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
+) -> None:
+
+    def infer_data_dim(obj: Union[np.array, ak.Array, torch.Tensor], dim: int) -> int:
+        if isinstance(obj, list):
+            dims = {infer_data_dim(o, dim) for o in obj}
+            if len(dims) > 1:
+                raise ValueError(f"Inconsistent dims found in list: {dims}")
+            else:
+                return dims.pop()
+        elif isinstance(obj, np.ndarray):
+            return obj.shape[dim]
+        elif torch.is_tensor(obj):
+            return tuple(obj.size())[dim]
+        # elif ak.is_awkward(data):
+        #     return data.shape[dim]
+        else:
+            raise ValueError(f"Cannot infer data dim for type {type(obj)}")
+
+    def get_key(data, key):
+        if key not in data:
+            raise KeyError(
+                f"Resolver issue: key: '{key}' "
+                f"not found in data dictionary ({data.keys()})."
+            )
+        return data[key]
+
+    OmegaConf.register_new_resolver(
+        "infer_data_dim",
+        lambda key, dim: infer_data_dim(get_key(data, key), dim),
+        replace=True,
+    )
+
+
+def _uuid(kind: str) -> str:
+    u = uuid.uuid4()
+    if kind == "hex":
+        return u.hex
+    if kind == "short":
+        return u.hex[:8]
+    raise ValueError(f"Unknown uuid kind: {kind}")
 
 
 def initialize_hydra() -> DictConfig:
@@ -198,6 +259,23 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         dataset_test=dataset_test,
     )
 
+    # Log the sizes of one batch for each data loader
+    for split, loader in zip(
+        ["train", "val", "test"],
+        [
+            datamodule.train_dataloader(),
+            datamodule.val_dataloader(),
+            datamodule.test_dataloader(),
+        ],
+    ):
+        batch = next(iter(loader))
+        log.info(f"Batch shapes for {split}:")
+        for key, value in batch.items():
+            if isinstance(value, torch.Tensor):
+                log.info(f"  {key}: {value.shape}")
+            else:
+                log.info(f"  {key}: Non-tensor value of type {type(value)}")
+
     evaluators = {}
     for s in ["train", "val", "test"]:
 
@@ -245,6 +323,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
+
+    # This allows configs to infer data dims from data
+    # by using a resolver like ${infer_data_dim:input_key,dim}
+    register_data_dim_resolver(data=data_dict["train"])
 
     if not cfg.model.get("metadata", False):
         add_backbone_args = {}
@@ -299,8 +381,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
-    # TODO: Do we need this? log_hyperparameters already should be logging cfg to wandb
-    # has to happen after trainer is instantiated
+    # This is needed because wandb otherwise only tracks part of the config
     cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
     cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
         # cannot resolve because not all interpolations are covered by us for now
@@ -308,7 +389,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         resolve=False,
     )
 
-    # # Persist resolved config (same content pushed to wandb) to filesystem
+    # # TODO: Persist resolved config (same content pushed to wandb) to filesystem
     # try:
     #     output_dir = Path(cfg.paths.output_dir).expanduser().resolve()
     #     output_dir.mkdir(parents=True, exist_ok=True)

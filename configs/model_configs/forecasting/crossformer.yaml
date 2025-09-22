@@ -1,0 +1,25 @@
+#@package _global_
+
+defaults:
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule
+  - override /model: crossformer
+
+task_definition:
+  requires_training: true
+
+model: 
+  ts_in:  ${task_definition.seq_len}
+  ts_out: ${task_definition.pred_len}
+  d_yc:  ${infer_data_dim:target,-1} 
+  d_yt:  ${infer_data_dim:target,-1}
+  d_x:   ${infer_data_dim:features,-1}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min

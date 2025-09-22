@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /datasource: railway
-  - override /evaluator: railway
-  - override /task_definition: railway_day_ahead

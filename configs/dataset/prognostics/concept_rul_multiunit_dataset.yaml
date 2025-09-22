@@ -3,5 +3,5 @@ _recursive_: False
 
 dataset_cfg:
   _target_: lmetk.data.datasets.concept_rul_dataset.ConceptRULDataset
-  window_size: 1
+  window_size: ${task_definition.seq_len}
   stride: 1

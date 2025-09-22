@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import numpy as np
+import awkward as ak
+import pandas as pd
 import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
@@ -39,43 +41,88 @@ def display_targets(cfg):
     table = Table(title="Hydra _target_ Classes")
     table.add_column("Config Path", style="cyan", no_wrap=True)
     table.add_column("_target_", style="magenta")
-    table.add_column(
-        "Resolved Module Path", style="green", overflow="fold", no_wrap=False
-    )
+    # table.add_column(
+    #     "Resolved Module Path", style="green", overflow="fold", no_wrap=False
+    # )
 
     for path, target, resolved in extract_targets(cfg):
-        table.add_row(path, target, resolved)
+        table.add_row(path, target)
 
     Console().print(table)
+
+
+def describe_data_type(obj):
+    if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
+        return "{...}"
+    elif isinstance(obj, np.ndarray):
+        return f"np.ndarray{obj.shape}"
+    elif torch.is_tensor(obj):
+        return f"torch.Tensor{tuple(obj.shape)}"
+    elif isinstance(obj, pd.DataFrame):
+        return f"pd.DataFrame{obj.shape}"
+    elif isinstance(obj, pd.Series):
+        return f"pd.Series{obj.shape}"
+    elif isinstance(obj, ak.Array):
+        return f"ak.Array {str(obj.type)}"
+    elif isinstance(obj, list):
+        if obj and (
+            torch.is_tensor(obj[0])
+            or isinstance(obj[0], np.ndarray)
+            or isinstance(obj[0], pd.DataFrame)
+            or isinstance(obj[0], pd.Series)
+            or isinstance(obj[0], ak.Array)
+        ):
+            descr = describe_data_type(obj[0])
+        else:
+            descr = type(obj[0]).__name__ if obj else "empty"
+        return f"list<{descr}> x {len(obj)}"
+    else:
+        return str(type(obj).__name__)
+
+
+def to_descriptive_dict(d):
+    """Convert a (possibly nested) dictionary to a descriptive dictionary showing data types and shapes."""
+    if isinstance(d, dict) or isinstance(d, BaseDataObject):
+        return {k: to_descriptive_dict(v) for k, v in d.items()}
+    else:
+        return describe_data_type(d)
+
+
+def descriptive_dict_differences_str(old, new, mode="added"):
+
+    assert mode in ("added", "removed", "changed"), "Invalid mode"
+
+    """Print the differences in a flat, non-nested dictionary based on the specified mode."""
+    differences = []
+    all_keys = old.keys() | new.keys()
+
+    for key in all_keys:
+        if mode == "added" and key not in old:
+            differences.append(f"{key}: {new[key]}")
+        elif mode == "removed" and key not in new:
+            differences.append(f"{key}: {old[key]}")
+        elif mode == "changed" and key in old and key in new:
+            val1 = old[key]
+            val2 = new[key]
+            if val1 != val2:
+                differences.append(f"{key}: {val1} -> {val2}")
+
+    return "\n".join(differences)
 
 
 # Plot the data_dict structure with tensor dimensions
 def print_data_dict_structure(data_dict):
 
-    def describe(obj):
-        if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
-            return "{...}"
-        elif isinstance(obj, np.ndarray):
-            return f"np.ndarray{obj.shape}"
-        elif torch.is_tensor(obj):
-            return f"torch.Tensor{tuple(obj.shape)}"
-        elif isinstance(obj, list):
-            if obj and (torch.is_tensor(obj[0]) or isinstance(obj[0], np.ndarray)):
-                return f"list\\[{describe(obj[0])}\\] x {len(obj)}"
-            return f"list\\[{type(obj[0]).__name__ if obj else 'empty'}\\] x {len(obj)}"
-        else:
-            return str(type(obj).__name__)
-
     def add_to_tree(tree, d):
         if isinstance(d, dict) or isinstance(d, BaseDataObject):
             for k, v in d.items():
                 if isinstance(v, dict) or isinstance(v, BaseDataObject):
-                    branch = tree.add(f"[bold]{k}[/bold] {describe(v)}")
+                    branch = tree.add(f"[bold]{k}[/bold] {describe_data_type(v)}")
                     add_to_tree(branch, v)
                 else:
-                    tree.add(f"[bold]{k}[/bold]: {describe(v)}")
+                    tree.add(f"[bold]{k}[/bold]: {describe_data_type(v)}")
         else:
-            tree.add(describe(d))
+            tree.add(describe_data_type(d))
 
     tree = Tree("[bold]data_dict[/bold]")
     add_to_tree(tree, data_dict)
@@ -136,5 +183,29 @@ def display_config_sources(cfg):
 
     for row in data:
         table.add_row(*row)
+
+    Console(width=180).print(table)
+
+
+def print_transforms_summary(summary: dict[str, str]):
+    table = Table(title="Data Transforms Summary")
+    table.add_column("Transform Name", style="cyan", no_wrap=True)
+    table.add_column("Time (s)", style="magenta")
+    table.add_column("Status", style="magenta")
+    table.add_column("Details", style="green", overflow="fold")
+    table.add_column("Changes", style="yellow", overflow="fold")
+    table.add_column("Added", style="yellow", overflow="fold")
+    table.add_column("Removed", style="yellow", overflow="fold")
+
+    for summary_dict in summary:
+        table.add_row(
+            summary_dict["transform_name"],
+            summary_dict["time"],
+            summary_dict["status"],
+            summary_dict["details"],
+            summary_dict.get("changes", ""),
+            summary_dict.get("added", ""),
+            summary_dict.get("removed", ""),
+        )
 
     Console(width=180).print(table)

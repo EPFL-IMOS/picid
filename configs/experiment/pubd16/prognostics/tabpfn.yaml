@@ -7,7 +7,7 @@ defaults:
   - override /dataset: prognostics/battery_rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
-  - override /task_definition: battery_phmd
+  - override /task_definition: prognostics/battery_phmd
   - override /logger: csv
   #- override /debug: default
 

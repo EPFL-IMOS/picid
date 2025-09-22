@@ -1,15 +1,14 @@
 from typing import Optional, Tuple
 
+import pkg_resources
 import torch
 import torch.nn.functional as F
 import torchmetrics
 
-import pkg_resources
-
-from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
-from .nn import Spacetimeformer
-
 from lmetk.baselines.forecaster import Forecaster
+from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
+
+from .nn import Spacetimeformer
 
 
 def find_ckpt(path):
@@ -25,9 +24,13 @@ def find_ckpt(path):
 class Spacetimeformer_Forecaster(Forecaster):
     def __init__(
         self,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        d_x: int = 4,
+        d_yc: int,
+        d_yt: int,
+        d_x: int,
+        # d_x contains timefeatures if n_timefeatures > 0
+        # these can be rerouted via d_x_embedding_router
+        # to a seperate additive embedding.
+        n_timefeatures: int = 0,
         max_seq_len: int = None,
         start_token_len: int = 64,
         attn_factor: int = 5,
@@ -55,7 +58,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         performer_kernel: str = "relu",
         embed_method: str = "spatio-temporal",
         attention_method: str = "non-causual",
-        d_x_embedding_router: Optional[torch.Tensor] = None,
+        # d_x_embedding_router: Optional[torch.Tensor] = None,
         performer_relu: bool = True,
         performer_redraw_interval: int = 1000,
         attn_time_windows: int = 1,
@@ -96,7 +99,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         recon_mask_drop_full: float = 0.05,
         verbose=True,
         target_mask=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -121,6 +124,15 @@ class Spacetimeformer_Forecaster(Forecaster):
         else:
             timetable_emb_enc_type = timetable_emb_type
             timetable_emb_dec_type = timetable_emb_type
+
+        self.n_timefeatures = n_timefeatures
+        if self.n_timefeatures > 0:
+            dxr = torch.tensor([0] * (d_x - n_timefeatures) + [1] * n_timefeatures).to(
+                self.device
+            )
+            self.d_x_embedding_router = dxr
+        else:
+            self.d_x_embedding_router = None
 
         self.spacetimeformer = Spacetimeformer(
             d_yc=d_yc,
@@ -158,7 +170,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             use_final_norm=use_final_norm,
             embed_method=embed_method,
             attention_method=attention_method,
-            d_x_embedding_router=d_x_embedding_router,
+            d_x_embedding_router=self.d_x_embedding_router,
             performer_attn_kernel=performer_kernel,
             performer_redraw_interval=performer_redraw_interval,
             attn_time_windows=attn_time_windows,
@@ -194,11 +206,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.recon_loss_imp = recon_loss_imp
         self.set_null_value(null_value)
         self.pad_value = pad_value
-        self.d_x_embedding_router = (
-            torch.tensor(d_x_embedding_router).to(self.device)
-            if d_x_embedding_router is not None
-            else None
-        )
+
         self.save_hyperparameters()
 
         self.validation_step_outputs = []
@@ -238,7 +246,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         stats = {
             "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
             "targets": y_t.squeeze(2).detach().cpu().numpy(),
-            "mask": forecast_mask.squeeze(2)
+            "mask": forecast_mask.squeeze(2),
         }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]
@@ -252,7 +260,6 @@ class Spacetimeformer_Forecaster(Forecaster):
         )
         stats["acc"] = loss_dict["acc"]
         return stats
-
 
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
@@ -282,7 +289,6 @@ class Spacetimeformer_Forecaster(Forecaster):
                     num_classes=d_y.item(),
                 )
         return class_loss, acc
-
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
         x_c, y_c, x_t, y_t = batch
@@ -383,7 +389,6 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.validation_step_outputs.append(outs)
         return outs
 
-
     def on_validation_epoch_end(self):
         super().on_validation_epoch_end()
         outs = self.validation_step_outputs
@@ -397,12 +402,10 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.scheduler.step(avg_val_loss, is_end_epoch=True)
         self.validation_step_outputs.clear()
 
-
     def training_step(self, batch, batch_idx):
         outs = super().training_step(batch, batch_idx)
         self.scheduler.step()
         return outs
-
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.AdamW(
@@ -418,9 +421,4 @@ class Spacetimeformer_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        # return [self.optimizer], [self.scheduler]
-        return dict(
-            optimizer=self.optimizer,
-            scheduler=self.scheduler,
-            monitor="loss"
-        )
+        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

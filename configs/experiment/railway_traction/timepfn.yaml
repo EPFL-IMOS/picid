@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - railway_traction/base
-  - /model_configs/forecasting/timepfn
-  - override /task_definition: railway_day_ahead_timepfn
-  - override /transforms: railway/timepfn
-

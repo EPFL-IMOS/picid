@@ -20,6 +20,12 @@ class ConceptRULDataset(BaseDataset):
         **kwargs,
     ):
 
+        for k, v in data_dict.items():
+            assert isinstance(v, (np.ndarray)), (
+                f"All entries in data_dict must be numpy arrays "
+                f"or lists of numpy arrays. Found {type(v)} for key {k}."
+            )
+
         self.window_size = window_size
         self.stride = stride
 
@@ -28,15 +34,16 @@ class ConceptRULDataset(BaseDataset):
 
         self.timestamps = data_dict.timestamps
         self.health_states = data_dict.health_states
-        self.descriptors = data_dict.descriptors
+        # self.descriptors = data_dict.descriptors
         self.concepts = data_dict.concepts
         self.unit = data_dict.unit
 
-        if getattr(self, "descriptors", None) is not None:
-            logger.info(
-                "The dataset contains descriptors, concatenating them to the features."
-            )
-            self.X = np.concatenate((self.X, data_dict["descriptors"]), axis=1)
+        # INFO: We have moved this to the preprocessing transforms
+        # if getattr(self, "descriptors", None) is not None:
+        #     logger.info(
+        #         "The dataset contains descriptors, concatenating them to the features."
+        #     )
+        #     self.X = np.concatenate((self.X, data_dict["descriptors"]), axis=1)
 
         super().__init__(data_dict, **kwargs)
 

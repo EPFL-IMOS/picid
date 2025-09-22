@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - railway_traction/base
-  - /model_configs/forecasting/tabpfn_fit_predict
-  - override /transforms: railway/context_paper
-
-  

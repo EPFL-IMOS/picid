@@ -3,8 +3,6 @@ ignore_pretraining_limits: True
 device: ${trainer.accelerator}
 
 features_mode: no_feature_mode
-seq_len: 168 #168 # 7*24      # window size
-label_len: 0  # overlap size
-
-# Model parameters
-pred_len: 24 #168 #24    # prediction size
+seq_len: ${task_definition.seq_len}      # window size
+label_len: ${task_definition.label_len}  # overlap size
+pred_len: ${task_definition.pred_len}    # prediction size

@@ -1,5 +1,0 @@
-# @package _global_
-defaults:
-  - railway_traction/base
-  - /model_configs/forecasting/tabpfn_batch_context
-  - override /transforms: railway/railway_seasonal_leak

@@ -18,6 +18,9 @@ callbacks:
     mode: min
 
 model:
-  d_x: 6
-  d_x_embedding_router:  null
+  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
+  d_yc:  0
+  d_yt:  ${infer_data_dim:rul,-1}
+  d_x:   ${infer_data_dim:features,-1}
+  n_timefeatures: 0
   base_lr: 0.001

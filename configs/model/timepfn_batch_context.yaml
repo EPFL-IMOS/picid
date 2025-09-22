@@ -1,10 +1,8 @@
 _target_: lmetk.model.wrappers.batchcontext_timepfn_wrapper.BatchContextTimePFNWrapper 
-#lmetk.model.time_pfn.TimePFN.TimePFN
 
-# There values will be read from the model parameters similarly to how we deal with data_path.
-seq_len: 96 #${datasource.loader.data_splitter.seq_len}    # window size
-label_len: 48 #${datasource.loader.data_splitter.label_len}  # overlap size
-pred_len: 96 #${datasource.loader.data_splitter.pred_len}   # prediction size
+seq_len: ${task_definition.seq_len}      # window size
+label_len: ${task_definition.label_len}  # overlap size
+pred_len: ${task_definition.pred_len}    # prediction size
 
 # Fixed in the TimePFN model
 embed_type: 'fixed'

@@ -1,0 +1,10 @@
+_target_: lmetk.baselines.lstm_model.LSTM_Forecaster
+
+metadata:
+  lightning_model: true
+
+d_x: null # must be set by the model_config
+d_yt: null # must be set by the model_config
+d_yc: null # must be set by the model_config
+
+hidden_dim: 32

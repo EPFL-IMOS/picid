@@ -1,0 +1,31 @@
+#@package _global_
+
+defaults:
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule
+  - override /model: timeseries_transformer
+
+task_definition:
+  requires_training: true
+
+model:
+  d_yc:  ${infer_data_dim:target,-1} 
+  d_yt:  ${infer_data_dim:target,-1}
+  d_x:   ${infer_data_dim:features,-1}
+  # TODO: replace with actual timefeatures when available
+  n_timefeatures: ${infer_data_dim:time_features,-1}
+
+  transformer_args:
+    seq_len:  ${task_definition.seq_len}
+    pred_len: ${task_definition.pred_len}
+    enc_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
+    dec_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min

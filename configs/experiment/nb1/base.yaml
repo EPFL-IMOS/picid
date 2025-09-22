@@ -3,7 +3,7 @@
 defaults:
   - override /datasource: nb1
   - override /evaluator: default
-  - override /task_definition: battery_phmd
+  - override /task_definition: prognostics/battery_phmd
 
 evaluator:
   train:

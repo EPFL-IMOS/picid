@@ -22,11 +22,12 @@ combined_concepts: false
 binary_concepts: true
 RUL: "linear"
 include_healthy: true
-window_size: 50
+window_size: ${task_definition.seq_len}
 stride: 1
 scaling: "legacy"
 
-
+# TODO: this splitter needs to be reworked, however it is rarely used due to by_source
+# splitting in the multi-source variant.
 data_splitter:
   _target_: lmetk.data.preprocessing.TimeSplitter
   train: 8640 # int or float. In case of float it is a percentage of the dataset

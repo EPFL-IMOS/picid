@@ -1,0 +1,23 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
+  - override /datamodule: base_datamodule_tabpfn
+  - override /model: cnn_1d
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  seq_len: ${task_definition.seq_len}
+  in_channels: ${infer_data_dim:features,-1} 
+  base_lr: 0.001

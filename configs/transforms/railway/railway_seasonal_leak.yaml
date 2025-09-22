@@ -17,10 +17,14 @@ scaler_target:
     fit_on: train
 
 seasonal_leak:
-# Note that shift is infered from the seq_len of the model. Dummy shift supports only 168, otherwise the shift breaks the week symmetry. 
+  # Note that shift is infered from the seq_len of the model. 
+  # Dummy shift supports only 168, otherwise the 
+  # shift breaks the week symmetry. 
   transform:
     _target_: lmetk.transforms.railway.seasonal_dummy_railway.SeasonalDummyTransform 
-    shift: ${oc.select:task_definition.seq_len} # we have to ensure that context from target do not have any future information!
+    # we have to ensure that context from target 
+    # do not have any future information!
+    shift: ${oc.select:task_definition.seq_len} 
   
   metadata:
     apply_to: ['features', 'target']

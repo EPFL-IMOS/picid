@@ -73,6 +73,8 @@ class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixi
             "max": np.max,
             "median": np.median,
             "std": np.std,
+            "first": lambda x: x,  # Handled separately
+            "last": lambda x: x,  # Handled separately
         }.get(agg)
 
         if self._agg_func is None:
@@ -88,11 +90,17 @@ class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixi
             if n_windows <= 0:
                 data[key] = np.array([])
                 continue
-            windows = [
-                arr[i * self.step : i * self.step + self.window_size]
-                for i in range(n_windows)
-            ]
-            data[key] = self._agg_func(np.stack(windows), axis=1)
+
+            if self.agg not in ["first", "last"]:
+                windows = [
+                    arr[i * self.step : i * self.step + self.window_size]
+                    for i in range(n_windows)
+                ]
+                data[key] = self._agg_func(np.stack(windows), axis=1)
+            elif self.agg == "first":
+                data[key] = arr[:: self.step][:n_windows]
+            elif self.agg == "last":
+                data[key] = arr[self.window_size - 1 :: self.step][:n_windows]
 
         if len(set(lengths)) > 1:
             logger.warning(

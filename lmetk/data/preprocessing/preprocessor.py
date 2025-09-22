@@ -10,6 +10,11 @@ import logging
 from lmetk.data.cache.offline import FileSystemCache
 from lmetk.utils import print_data_dict_structure
 from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
+from lmetk.utils.rich_output import (
+    descriptive_dict_differences_str,
+    print_transforms_summary,
+    to_descriptive_dict,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -132,19 +137,45 @@ class PreProcessor(PreProcessorInterface):
                 "Every element of transforms_lst must be a DataTransform object."
             )
 
+        summary = []
         for transform_name, transform in transforms.items():
             logger.info(
                 f"Applying transform: '{transform_name}' "
                 f"(Strategy: {transform.strategy.__class__.__name__})"
             )
+            pre_descr_dict = to_descriptive_dict(data.to_split_dict()["train"])
             start_time = time.time()
-            data = transform.forward(data)
+            data, details = transform.forward(data)
+
             end_time = time.time()
             logger.info(
                 f" transform: '{transform.transform_name}' - "
                 f"completed in {end_time - start_time:.4f} seconds."
             )
+            post_descr_dict = to_descriptive_dict(data.to_split_dict()["train"])
 
+            changes = descriptive_dict_differences_str(
+                pre_descr_dict, post_descr_dict, mode="changed"
+            )
+            added = descriptive_dict_differences_str(
+                pre_descr_dict, post_descr_dict, mode="added"
+            )
+            removed = descriptive_dict_differences_str(
+                pre_descr_dict, post_descr_dict, mode="removed"
+            )
+            summary.append(
+                {
+                    "transform_name": transform_name,
+                    "time": f" {end_time - start_time:.4f}",
+                    "status": "Success",
+                    "details": details,
+                    "changes": str(changes),
+                    "added": str(added),
+                    "removed": str(removed),
+                }
+            )
+
+        print_transforms_summary(summary)
         return data
 
     # configs of the dataset

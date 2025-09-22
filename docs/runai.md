@@ -4,10 +4,10 @@ To run on RunAI (or a general Kubernetes cluster), we provide a [Dockerfile](Doc
 scripts to setup in [container](../container/).
 
 Steps:
-    - Customize the scripts with your setup / credentials.
-    - `build_container.sh` - create the image
-    - `push_container.sh` - push to registry
-    - `create_container_runai.sh` - run the container on the cluster
+- Customize the scripts with your setup / credentials.
+- `build_container.sh` - create the image
+- `push_container.sh` - push to registry
+- `create_container_runai.sh` - run the container on the cluster
 
 
 

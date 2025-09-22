@@ -80,7 +80,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/stf",
+                "experiment=railway_traction/forecasting/stf",
                 "debug=default"
             ],
             "env": {
@@ -95,7 +95,82 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/linear_forecaster",
+                "experiment=railway_traction/forecasting/linear",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: LSTM Model (LSTM_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/lstm",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: Crossformer Model (Crossformer_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/crossformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: Tide Model (Tide_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/tide",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: PatchTST Model (PatchTST_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/patchtst",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: Timeseries Transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/timeseries_transformer",
                 "debug=default"
             ],
             "env": {
@@ -110,7 +185,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/tabpfn_railway_seasonal_context",
+                "experiment=railway_traction/forecasting/tabpfn_railway_seasonal_context",
                 "debug=default"
             ]
         },
@@ -122,7 +197,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/tabpfn_fit_predict",
+                "experiment=railway_traction/forecasting/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -138,7 +213,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=railway_traction/autogluon_railway_fit_predict",
+                "experiment=railway_traction/forecasting/autogluon_railway_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -251,6 +326,54 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): TabPFN Batch-Context",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_batch_context",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): STF",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/stf",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): CNN-1D",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/cnn_1d",
                 "debug=default"
             ],
             "env": {

@@ -1,80 +1,96 @@
 # Datasets
 
-This repository provides unified access to a wide collection of datasets for prognostics, health management, forecasting, and anomaly detection.  
-Each dataset is accessible through dedicated loaders that standardize preprocessing and enable reproducible experiments.
+In this project, we keep the notation of a dataset from Pytorch.
+A PyTorch Dataset is an abstract class that provides a way to represent and load data for machine learning tasks. It allows you to define how data is accessed and transformed, enabling efficient iteration and preprocessing for training models.
 
----
+> Therefore, in this project, a datasource is data-centric, a dataset is therefore task-centric.
 
-## Summary Table
+We provide several datasets for different tasks
 
-| Dataset            | Domain / Type                         | Tasks Supported                                                        | Key Features                                                                 |
-|--------------------|----------------------------------------|------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| **agtf30k**        | Industrial time-series                 | Forecasting, anomaly detection                                          | Large-scale equipment sensor data; multiple channels and operating conditions |
-| **battery**        | Electrochemical / Energy storage       | SOH estimation, RUL prediction, degradation modeling                    | Diverse battery chemistries, cycling protocols, current/voltage/temperature   |
-| **concepts_n_cmapss**| Turbofan engine prognostics           | Degradation prediction, feature engineering, predictive maintenance     | N-CMAPSS with domain concepts and extended feature representations            |
-| **ETTh**           | Energy / Transformer temperature       | Time-series forecasting, trend and seasonal analysis                    | Hourly and minute-level variants; widely used in long-horizon forecasting     |
-| **phmd_battery**   | Battery PHM                            | Failure prediction, lifecycle modeling                                  | Benchmark datasets from PHM community for battery degradation and RUL studies |
-| **phmd_n_cmapss**  | Turbofan engine diagnostics            | Fault detection, diagnostics, prognostics                               | Extended CMAPSS with additional sensors and failure modes                     |
-| **phmd_pronostia** | Bearings / Rotating machinery          | Fault diagnosis, RUL estimation, early fault detection                  | Rolling bearing experiments with varied loads, speeds, and degradation paths  |
-| **phmd_pubd16**    | Battery PHM                            | Degradation and failure analysis, SOH and RUL prediction                | Battery experiments focused on end-of-life and degradation patterns           |
-| **phmd_xjtu_sy**   | Bearings / Rotating machinery          | Fault detection, prognostics                                            | Bearing vibration and speed signals from XJTU-SY test rig                     |
-| **railway**        | Railway equipment and infrastructure   | Predictive maintenance, anomaly detection, reliability analysis         | Multisensor monitoring across railway subsystems and components               |
+## ContextBatchDataset
 
----
+`ContextBatchDataset` is a dataset class designed for time series and sequence forecasting tasks where both target and context features are needed. It wraps two `SlidingWindowBatchDataset` instances—one for the target and one for the context—using shared time features and windowing parameters (sequence length, label length, prediction length, stride).
 
-## Datasources
 
-### agtf30k
-Large-scale industrial time-series dataset for forecasting and anomaly detection.  
-Captures diverse equipment and sensor types, enabling benchmarking of predictive models.
+### Batch Contents
 
-### battery
-Collection of battery datasets covering multiple chemistries and experimental protocols.  
-Includes measurements such as voltage, current, temperature, and internal resistance.  
-Supports research on State-of-Health (SOH), Remaining Useful Life (RUL), and degradation modeling.
+Each batch from `ContextBatchDataset` is returned as an `AttributeDict` with the following structure:
 
-### concepts_n_cmapss
-An augmented version of the **N-CMAPSS** dataset for turbofan engine prognostics.  
-Enriches the original dataset with domain concepts, improving feature engineering  
-and enabling concept-based modeling for predictive maintenance.
+```
+{
+	'batch_idx': [indices],
+	'target': {
+		'x': <target input sequence>,
+		'y': <target output sequence>,
+		'x_mark': <target input time features>,
+		'y_mark': <target output time features>
+	},
+	'context': {
+		'x': <context input sequence>,
+		'y': <context output sequence>,
+		'x_mark': <context input time features>,
+		'y_mark': <context output time features>
+	}
+}
+```
 
-### ETTh
-**Electricity Transformer Temperature (ETT)** dataset containing oil temperature and load data  
-collected over two years. Provides hourly (ETTh1, ETTh2) and 15-minute (ETTm1, ETTm2) variants.  
-Widely used as a benchmark for long-horizon time-series forecasting.
+- `batch_idx`: List of indices for the batch.
+- `target`: Contains input/output sequences and time features for the target.
+- `context`: Contains input/output sequences and time features for the context.
 
-### phmd_battery
-Battery datasets from the Prognostics and Health Management (PHM) community.  
-Designed for experiments on degradation modeling, lifecycle analysis, and early failure detection.
 
-### phmd_n_cmapss
-Extended version of the **CMAPSS** dataset with additional sensors and fault modes.  
-Supports advanced diagnostics and prognostics tasks in turbofan engine health management.
+## FitPredictDataset
 
-### phmd_pronostia
-Bearing dataset collected on the Pronostia test rig.  
-Includes vibration data under different loads and speeds, capturing fault progression  
-and supporting remaining useful life estimation and fault classification.
+`FitPredictTaskDataset` is designed for Sklearn-like fit-predict tasks involving multiple tasks, each represented by 3D arrays of context features and targets. 
+Handles multi-task datasets with context (`X`) and target (`y`) arrays, each shaped as (n_tasks, n_samples, n_features/targets). For example, in multi-step forecasting, each task could correspond to predicting future values for a separate time horizon.
 
-### phmd_pubd16
-Battery dataset focused on degradation and failure analysis.  
-Provides cycling data under varied operating conditions, enabling battery health assessment  
-and predictive modeling of SOH and RUL.
+### Batch Contents
 
-### phmd_xjtu_sy
-Bearing dataset from the **XJTU-SY** test rig.  
-Contains vibration signals and rotational speed measurements for rotating machinery.  
-Supports fault detection, early fault prediction, and prognostics.
+Each batch from `FitPredictTaskDataset` is returned as an `AttributeDict` with the following structure:
 
-### railway
-Railway equipment dataset for predictive maintenance and anomaly detection.  
-Covers multiple subsystems and sensor modalities, supporting comprehensive reliability analysis.
+```
+{
+	'task_idx': <index of the task>,
+	'task_num': <total number of tasks>,
+	'task_desc': <description string>,
+	'target': <target array for the task>,
+	'context': <context array for the task>
+}
+```
 
----
+- `task_idx`: Index of the current task in the batch.
+- `task_num`: Total number of tasks in the dataset.
+- `task_desc`: Description string for the task (e.g., "Task 1 of 5").
+- `target`: Target values for the task, shape (n_samples, n_targets).
+- `context`: Context features for the task, shape (n_samples, n_features).
 
-## References
+This structure allows models to access both the context and target data for each task, supporting multi-task learning and fit-predict workflows.
 
-- Zhou et al., *Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting*, AAAI 2021. [ETT dataset repository](https://github.com/zhouhaoyi/ETDataset)  
-- IEEE PHM Society Data Challenge archives (battery, turbofan, and bearing datasets)  
-- Nectoux et al., *PRONOSTIA: An experimental platform for bearings accelerated degradation tests*, PHM 2012  
-- XJTU-SY Bearing dataset: Xi’an Jiaotong University test rig benchmark for rotating machinery  
+
+## ConceptRULDataset
+
+`ConceptRULDataset` is designed for Remaining Useful Life (RUL) prediction tasks, where each sample represents a time window of features and associated concepts. It supports windowed access to time series data, with options for stride and backward/forward filling to handle sequence boundaries.
+
+- Handles time series data for RUL prediction, with windowing and stride.
+- Supports additional descriptors, concepts, health states, and timestamps.
+- Concatenates descriptors to features if present.
+
+This class is useful for predictive maintenance and prognostics, where the goal is to estimate the remaining life of an asset based on sensor data and domain concepts.
+
+### Batch Contents
+
+Each batch from `ConceptRULDataset` is returned as an `AttributeDict` with the following structure:
+
+```
+{
+	'features': <windowed feature array, shape (n_features, window_size)>,
+	'rul': <remaining useful life value for the window>,
+	'concepts': <concept vector for the window>
+}
+```
+
+- `features`: Windowed feature data, transposed to (n_features, window_size).
+- `rul`: Remaining useful life value for the current window.
+- `concepts`: Concept vector associated with the current window.
+
+This structure enables models to learn from both raw features and high-level concepts for each time window, supporting robust RUL prediction.
