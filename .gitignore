@@ -11,7 +11,9 @@ results/
 logs/
 artifacts/
 scripts/*.log
-
+phmd/
+results/
+artifacts/
 
 .DS_Store
 .venv
