@@ -237,6 +237,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         transform_library_part_path=transform_library_part_path,
     )
 
+    # TODO: return_splits_on_first_level is not clea..
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
     meta_data_dict = preprocessor.get_meta_data_dict()
 
@@ -338,6 +339,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
+    # TODO: why here? why not at the top of the file?
     # This allows configs to infer data dims from data
     # by using a resolver like ${infer_data_dim:input_key,dim}
     register_data_dim_resolver(data=data_dict["train"])

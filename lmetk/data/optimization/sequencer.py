@@ -114,58 +114,6 @@ class IndexSequencer:
         pass
 
 
-class TrivialSequencer(IndexSequencer):
-    """
-    This trivial sequencer is not autoregressive, but simply returns the present time point t.
-    It is used to have aligned features when used in combination with AutoregressiveSequencer
-
-    Args:
-        features: Time series feature data of shape (time_steps, n_features)
-        seq_len: Length of the input sequence window
-        label_len: Length of the overlap between input and output sequences
-        pred_len: Length of the prediction horizon
-        stride: Step size between consecutive windows
-    """
-
-    def __init__(
-        self,
-        features: torch.Tensor,
-        seq_len: int,  # window size
-        label_len: int,  # overlap size
-        pred_len: int,  # prediction size
-        stride: int,
-    ) -> None:
-        length = features.shape[0]
-        self.features = features
-
-        super().__init__(
-            length=length,
-            seq_len=seq_len,
-            label_len=label_len,
-            pred_len=pred_len,
-            stride=stride,
-        )
-
-    def _create_sequences(self, x_window, y_window):
-        """
-        Create sequences for the given windows.
-
-        Args:
-            x_window: Tensor of shape (batch_size, 2) with (start, end) indices for input sequences
-            x_mark_window: Tensor of shape (batch_size, 2) with (start, end) indices for output sequences
-
-        Returns:
-            tuple: A tuple containing:
-                - seq_x: Encoder input sequence of shape (batch_size, seq_len, n_features)
-                - seq_y: Decoder input sequence of shape (batch_size, label_len + pred_len, n_features)
-                - seq_x_time: Time features for encoder input of shape (batch_size, seq_len, n_time_features)
-                - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
-        """
-        indicies = x_window[1] - 1
-        seq_x = self.features[indicies]
-        return seq_x
-
-
 class AutoregressiveSequencer(IndexSequencer):
     """
     Concrete implementation of IndexSequencer for autoregressive sequence generation.
@@ -243,3 +191,56 @@ class AutoregressiveSequencer(IndexSequencer):
         )
 
         return seq_x, seq_y, seq_x_time, seq_y_time
+
+
+# TODO: we do not use it anywhere
+class TrivialSequencer(IndexSequencer):
+    """
+    This trivial sequencer is not autoregressive, but simply returns the present time point t.
+    It is used to have aligned features when used in combination with AutoregressiveSequencer
+
+    Args:
+        features: Time series feature data of shape (time_steps, n_features)
+        seq_len: Length of the input sequence window
+        label_len: Length of the overlap between input and output sequences
+        pred_len: Length of the prediction horizon
+        stride: Step size between consecutive windows
+    """
+
+    def __init__(
+        self,
+        features: torch.Tensor,
+        seq_len: int,  # window size
+        label_len: int,  # overlap size
+        pred_len: int,  # prediction size
+        stride: int,
+    ) -> None:
+        length = features.shape[0]
+        self.features = features
+
+        super().__init__(
+            length=length,
+            seq_len=seq_len,
+            label_len=label_len,
+            pred_len=pred_len,
+            stride=stride,
+        )
+
+    def _create_sequences(self, x_window, y_window):
+        """
+        Create sequences for the given windows.
+
+        Args:
+            x_window: Tensor of shape (batch_size, 2) with (start, end) indices for input sequences
+            x_mark_window: Tensor of shape (batch_size, 2) with (start, end) indices for output sequences
+
+        Returns:
+            tuple: A tuple containing:
+                - seq_x: Encoder input sequence of shape (batch_size, seq_len, n_features)
+                - seq_y: Decoder input sequence of shape (batch_size, label_len + pred_len, n_features)
+                - seq_x_time: Time features for encoder input of shape (batch_size, seq_len, n_time_features)
+                - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
+        """
+        indicies = x_window[1] - 1
+        seq_x = self.features[indicies]
+        return seq_x

@@ -27,7 +27,7 @@ class ContextBatchDataset(BaseDataset):
         for key in required_keys:
             if key not in data_dict:
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
-            
+
         self.target_feature = data_dict["target"]
         self.context_features = data_dict["features"]
         self.time_features = data_dict["time_features"]

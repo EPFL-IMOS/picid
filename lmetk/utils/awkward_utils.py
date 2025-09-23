@@ -2,6 +2,7 @@
 
 import awkward as ak
 import numpy as np
+from typing import List, Union
 
 
 def ak_unflatten_discontinous_groups(
@@ -125,3 +126,40 @@ def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
         if ak.all(lengths == lengths[0]):
             arr = ak.to_regular(arr, axis=d)
     return arr
+
+
+def get_ak_shape(arr: ak.Array) -> List[Union[int, str]]:
+    """
+    Gets the shape of an Awkward Array, representing ragged dimensions with 'var'.
+
+    This function traverses the array's type structure to determine the
+    shape. Regular (fixed-size) dimensions are represented by their integer
+    length, while ragged (variable-size) dimensions are represented by the
+    string 'var'.
+    """
+    t = ak.type(arr)
+    shape = []
+
+    # FIX: Handle the top-level ArrayType, which gives the first dimension's length.
+    if isinstance(t, ak.types.ArrayType):
+        shape.append(t.length)
+        # Move to the inner type before starting the loop
+        t = t.content
+
+    while hasattr(t, "content"):
+        # Handle optional types (missing values) by unwrapping them
+        while isinstance(t, ak.types.OptionType):
+            t = t.content
+
+        if isinstance(t, ak.types.RegularType):
+            shape.append(t.size)
+        elif isinstance(t, ak.types.ListType):
+            shape.append("var")
+
+        # Move to the next inner dimension
+        t = t.content
+
+    if hasattr(t, "shape") and len(t.shape) > 0:
+        shape.extend(t.shape)
+
+    return shape
