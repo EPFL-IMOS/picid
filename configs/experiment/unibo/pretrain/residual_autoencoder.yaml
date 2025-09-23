@@ -4,7 +4,7 @@ defaults:
   - unibo/base
   - override /transforms: battery/bosello_NB_autoencoder
   - override /model: residual_autoencoder
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: reconstruction/autoencoder
   - override /datamodule: base_datamodule
   - override /task_definition: reconstruction/battery_autoencoder
  

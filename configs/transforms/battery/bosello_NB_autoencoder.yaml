@@ -17,8 +17,8 @@ scaler_target:
     apply_to: features
     fit_on: train
 
-ragged_dataset_to_units:
-  transform:
-    _target_:  lmetk.transforms.battery.special.SpecialOneTransform
-  metadata:
-    apply_to: ['features', 'target', 'time_features']
+# ragged_dataset_to_units:
+#   transform:
+#     _target_:  lmetk.transforms.battery.special.SpecialOneTransform
+#   metadata:
+#     apply_to: ['features', 'target', 'time_features']
