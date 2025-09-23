@@ -1,29 +1,172 @@
-import torch 
+import torch
+from collections import defaultdict
+from typing import List, Dict, Tuple, Any, Optional
+from types import SimpleNamespace
 
-def forecasting_collate_fn(batch):
-    batch_x = torch.stack([item[0] for item in batch], dim=0)
-    batch_y = torch.stack([item[1] for item in batch], dim=0)
-    batch_x_mark = torch.stack([item[2] for item in batch], dim=0)
-    batch_y_mark = torch.stack([item[3] for item in batch], dim=0)
+# Define a type hint for a single sample from your dataset for clarity.
+# It's a dictionary where keys are strings and values are tuples.
+SampleType = Dict[str, Tuple[Optional[torch.Tensor], ...]]
 
+
+def forecasting_collate_fn(batch: List[SampleType]) -> Dict[str, torch.Tensor]:
+    """
+    Custom collate function to process a batch of data samples.
+
+    This function takes a list of dictionaries (the batch), where each dictionary
+    represents a sample from the dataset. It unnests the data, creating a single
+    flat dictionary where tensors from across the batch are concatenated.
+
+    Args:
+        batch: A list of samples. Each sample is a dictionary like:
+               {'features': (tensor_x, tensor_y, None, ...), ...}
+
+    Returns:
+        A single dictionary with flattened keys and concatenated tensors.
+        Example: {'features_seq_x': batched_tensor_x, 'features_seq_y': batched_tensor_y}
+    """
+    # Use defaultdict(list) to easily append tensors for the same key.
+    # If a key is accessed for the first time, it's initialized with an empty list.
+    collated_lists = defaultdict(list)
+
+    # Define the suffixes for your new keys. This makes it easy to manage naming.
+    # The first tensor in a tuple gets '_seq_x', the second gets '_seq_y', etc.
+    suffixes = ["_seq_x", "_seq_y", "_seq_z"]  # You can extend this list if needed
+
+    # 1. Iterate through each sample dictionary in the batch.
+    for sample in batch:
+        # 2. Iterate through the items (e.g., 'features': (tensor, ...)) in the sample.
+        for key, value_tuple in sample.items():
+            # 3. Iterate through each element within the tuple.
+            for idx, item in enumerate(value_tuple):
+                # 4. We only process the item if it's actually a tensor (ignoring Nones).
+                if torch.is_tensor(item):
+                    # 5. Create the new, flattened key (e.g., 'features' + '_seq_x').
+                    # This logic handles cases where you might have more tensors than defined suffixes.
+                    suffix = suffixes[idx] if idx < len(suffixes) else f"_{idx}"
+                    new_key = f"{key}{suffix}"
+
+                    # 6. Append the tensor to the list for that new key.
+                    collated_lists[new_key].append(item)
+
+    # 7. Now, concatenate the lists of tensors into final batched tensors.
+    final_batch = {}
+    for key, tensor_list in collated_lists.items():
+        if tensor_list:
+            # Use torch.cat to stack the tensors along the batch dimension (dim=0).
+            final_batch[key] = torch.cat(tensor_list, dim=0)
+
+    return final_batch
+
+
+def context_collate_fn(batch: List[Any]) -> Dict[str, Dict[str, torch.Tensor]]:
+    """
+    Collate function for context/target tasks where each sample is a nested object.
+    This version creates a nested dictionary as output by processing the 'target'
+    and 'context' attributes of each sample separately.
+
+    - Input sample: An object `item` where `item.target` is a dictionary like
+      {'features': (tensor, ...)} that can be processed by `forecasting_collate_fn`.
+    - Operation: Applies `forecasting_collate_fn` to the target and context data.
+    - Output: {
+                'target': {'features_seq_x': ..., 'features_seq_y': ...},
+                'context': {'features_seq_x': ..., 'features_seq_y': ...}
+              }
+    """
+    # 1. Extract the list of 'target' and 'context' dictionaries from the batch.
+    # Each of these lists is now a valid batch for `forecasting_collate_fn`.
+    target_batch = [sample.target for sample in batch]
+    context_batch = [sample.context for sample in batch]
+
+    # 2. Collate each sub-batch independently using the forecasting function.
+    collated_target = forecasting_collate_fn(target_batch)
+    collated_context = forecasting_collate_fn(context_batch)
+
+    # 3. Assemble the final nested dictionary.
     return {
-        'batch_x': batch_x,           # (B, L, D)
-        'batch_y': batch_y,           # (B, L, D)
-        'batch_x_mark': batch_x_mark, # (B, L, D)
-        'batch_y_mark': batch_y_mark  # (B, L, D)
+        "target": collated_target,
+        "context": collated_context,
     }
 
-def context_collate_fn(batch):
-    target_x = torch.stack([item.target.x for item in batch], dim=0) # (B, L, D)
-    target_y = torch.stack([item.target.y for item in batch], dim=0)
-    target_x_mark = torch.stack([item.target.x_mark for item in batch], dim=0) # (B, L, D)
-    target_y_mark = torch.stack([item.target.y_mark for item in batch], dim=0)
-    target = {'x': target_x, 'y': target_y, 'x_mark': target_x_mark, 'y_mark': target_y_mark}
 
-    context_x = torch.stack([item.context.x for item in batch], dim=0) # (B, L, D)
-    context_y = torch.stack([item.context.y for item in batch], dim=0)
-    context_x_mark = torch.stack([item.context.x_mark for item in batch], dim=0) # (B, L, D)
-    context_y_mark = torch.stack([item.context.y_mark for item in batch], dim=0)
-    context = {'x': context_x, 'y': context_y, 'x_mark': context_x_mark, 'y_mark': context_y_mark}
+# def forecasting_collate_fn(batch):
+#     batch_x = torch.stack([item[0] for item in batch], dim=0)
+#     batch_y = torch.stack([item[1] for item in batch], dim=0)
+#     batch_x_mark = torch.stack([item[2] for item in batch], dim=0)
+#     batch_y_mark = torch.stack([item[3] for item in batch], dim=0)
 
-    return {'target': target, 'context': context} 
+#     return {
+#         "batch_x": batch_x,  # (B, L, D)
+#         "batch_y": batch_y,  # (B, L, D)
+#         "batch_x_mark": batch_x_mark,  # (B, L, D)
+#         "batch_y_mark": batch_y_mark,  # (B, L, D)
+#     }
+
+
+# def context_collate_fn(batch):
+#     target_x = torch.stack([item.target.x for item in batch], dim=0)  # (B, L, D)
+#     target_y = torch.stack([item.target.y for item in batch], dim=0)
+#     target_x_mark = torch.stack(
+#         [item.target.x_mark for item in batch], dim=0
+#     )  # (B, L, D)
+#     target_y_mark = torch.stack([item.target.y_mark for item in batch], dim=0)
+#     target = {
+#         "x": target_x,
+#         "y": target_y,
+#         "x_mark": target_x_mark,
+#         "y_mark": target_y_mark,
+#     }
+
+#     context_x = torch.stack([item.context.x for item in batch], dim=0)  # (B, L, D)
+#     context_y = torch.stack([item.context.y for item in batch], dim=0)
+#     context_x_mark = torch.stack(
+#         [item.context.x_mark for item in batch], dim=0
+#     )  # (B, L, D)
+#     context_y_mark = torch.stack([item.context.y_mark for item in batch], dim=0)
+#     context = {
+#         "x": context_x,
+#         "y": context_y,
+#         "x_mark": context_x_mark,
+#         "y_mark": context_y_mark,
+#     }
+
+#     return {"target": target, "context": context}
+
+# TODO: for the feature test.
+if __name__ == "__main__":
+    BATCH_SIZE = 4
+
+    # --- 1. Test `forecasting_collate_fn` ---
+    print("--- 1. Testing `forecasting_collate_fn` (with torch.cat) ---")
+    forecasting_batch_data = [
+        {"features": (torch.randn(10, 1, 3), torch.randn(1, 1, 3), None)},
+        {"features": (torch.randn(12, 1, 3), torch.randn(1, 1, 3), None)},
+        {"features": (torch.randn(8, 1, 3), torch.randn(1, 1, 3), None)},
+        {"features": (torch.randn(15, 1, 3), torch.randn(1, 1, 3), None)},
+    ]
+    collated_output = forecasting_collate_fn(forecasting_batch_data)
+    print("Output shapes:")
+    for key, tensor in collated_output.items():
+        print(f"  '{key}': {tensor.shape}")
+    print("-" * 40 + "\n")
+
+    # --- 2. Test `context_collate_fn` ---
+    print("--- 2. Testing `context_collate_fn` (with nested output) ---")
+
+    # Helper to create a mock data object for the context example.
+    # The `target` and `context` attributes must be dictionaries that
+    # `forecasting_collate_fn` can process.
+    def create_mock_context_item():
+        target_data = {"features": (torch.randn(10, 1, 3), torch.randn(1, 1, 3), None)}
+        context_data = {
+            "features": (torch.randn(12, 1, 3), torch.randn(1, 1, 3), None),
+            "time_features": (torch.randn(12, 4), torch.randn(1, 4)),
+        }
+        return SimpleNamespace(target=target_data, context=context_data)
+
+    context_batch_data = [create_mock_context_item() for _ in range(BATCH_SIZE)]
+    collated_output = context_collate_fn(context_batch_data)
+    print("Output shapes (nested dictionary):")
+    for main_key, sub_dict in collated_output.items():
+        print(f"  '{main_key}':")
+        for sub_key, tensor in sub_dict.items():
+            print(f"    '{sub_key}': {tensor.shape}")
