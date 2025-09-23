@@ -5,7 +5,6 @@ from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
 from lmetk.model.autoencoder.residual_1d import SymmetricalAutoencoder
 
 
-
 class AutoencoderWrapper(AbstractFeedForwardTrainingWrapper):
     r"""Wrapper for the TimePFN model.
 
@@ -15,7 +14,6 @@ class AutoencoderWrapper(AbstractFeedForwardTrainingWrapper):
     def __init__(self, **kwargs):
         backbone = SymmetricalAutoencoder(kwargs)
         super().__init__(backbone=backbone, **kwargs)
-
 
     def forward(self, batch):
         r"""Forward pass for the Tune wrapper.
@@ -31,13 +29,7 @@ class AutoencoderWrapper(AbstractFeedForwardTrainingWrapper):
             Dictionary containing the updated model output.
         """
 
-        x = batch["context"]["x"]
-        #target_fit = batch["target"]["x"]
-
-        # context = batch["context"]["y"]
-        # target = batch["target"]["y"].squeeze(0)
-
-       
+        x = batch["features_seq_x"]
 
         # Extent the context with auxiliary features to give sence of seasonality
         reconstructed_output = self.backbone(x)

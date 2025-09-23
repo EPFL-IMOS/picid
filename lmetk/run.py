@@ -250,21 +250,27 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             f"Expected: {features_set}, "
             f"Found: {set(data_dict[split].keys())}"
         )
+    input_data_task_keys = cfg.model.data_requirements.input_tensors
 
-    # Extract additional inputs to dataset if needed.
-    dataset_train = hydra.utils.instantiate(
-        cfg.dataset, data_dict=data_dict["train"], meta_data_dict=meta_data_dict
-    )
-    dataset_val = hydra.utils.instantiate(
-        cfg.dataset, data_dict=data_dict["test"], meta_data_dict=meta_data_dict
-    )
-    dataset_test = hydra.utils.instantiate(
-        cfg.dataset, data_dict=data_dict["test"], meta_data_dict=meta_data_dict
-    )
+    # 1. Create the datasets and store them in a dictionary
+    datasets = {}
+    for split in ["train", "val", "test"]:
+        key = f"dataset_{split}"
+        datasets[key] = hydra.utils.instantiate(
+            cfg.dataset,
+            data_dict={key: data_dict[split][key] for key in input_data_task_keys},
+            meta_data_dict=meta_data_dict,
+        )
 
-    log.info(f"Train dataset size: {dataset_train.__len__()}")
-    log.info(f"Validation dataset size: {dataset_val.__len__()}")
-    log.info(f"Test dataset size: {dataset_test.__len__()}")
+    # 2. Unpack the dictionary into the variables your code expects
+    dataset_train = datasets["dataset_train"]
+    dataset_val = datasets["dataset_val"]
+    dataset_test = datasets["dataset_test"]
+
+    # 3. Now, the rest of your original code works perfectly
+    log.info(f"Train dataset size: {len(dataset_train)}")
+    log.info(f"Validation dataset size: {len(dataset_val)}")
+    log.info(f"Test dataset size: {len(dataset_test)}")
 
     # Instantiate dataloader
     datamodule = hydra.utils.instantiate(

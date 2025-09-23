@@ -1,22 +1,26 @@
 _target_: lmetk.model.autoencoder.wrapper.AutoencoderWrapper
 
-input_channels: 3
-input_seq_len: 256
-latent_dim: 32
-dropout_prob: 0.1
+input_channels: null # currently defined in the experiment
+input_seq_len: ${task_definition.seq_len}
+latent_dim: null # currently defined in the experiment
+dropout_prob: null # currently defined in the experiment
 
 blocks_config:
-  - in: 3
-    out: 16
-    kernel: 7
-    stride: 2
+  - in: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    out: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    kernel: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    stride: null # to be defined in model_configs (if task specific) and experiment is dataset specific
 
-  - in: 16
-    out: 32
-    kernel: 5
-    stride: 2
+  - in: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    out: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    kernel: null # to be defined in model_configs (if task specific) and experiment is dataset specific
+    stride: null
 
-  - in: 32
-    out: 64
-    kernel: 3
-    stride: 2
+  - in: null
+    out: null
+    kernel: null
+    stride: null
+
+data_requirements:
+  input_tensors:  null
+  output_tensors: null

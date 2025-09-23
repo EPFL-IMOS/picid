@@ -1,5 +1,4 @@
-from typing import List
-
+from typing import List, Dict
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
@@ -67,29 +66,11 @@ class ContextBatchDataset(BaseDataset):
                 "batch_idx": batch_idx,
             }
         )
-        seq_x, seq_y, seq_x_mark, seq_y_mark = self.target_dataset.__getitem__(
-            batch_idx
-        )
-        d["target"] = AttributeDict(
-            {
-                "x": seq_x,
-                "y": seq_y,
-                "x_mark": seq_x_mark,
-                "y_mark": seq_y_mark,
-            }
-        )
+        target: Dict = self.target_dataset.__getitem__(batch_idx)
+        d["target"] = AttributeDict(target)
 
-        seq_x, seq_y, seq_x_mark, seq_y_mark = self.context_dataset.__getitem__(
-            batch_idx
-        )
-        d["context"] = AttributeDict(
-            {
-                "x": seq_x,
-                "y": seq_y,
-                "x_mark": seq_x_mark,
-                "y_mark": seq_y_mark,
-            }
-        )
+        context: Dict = self.context_dataset.__getitem__(batch_idx)
+        d["context"] = AttributeDict({context})
         return AttributeDict(d)
 
     def get_collate_fn(self):

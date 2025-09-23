@@ -1,0 +1,23 @@
+#@package _global_
+
+defaults:
+  - override /dataset: reconstruction/autoencoder
+  - override /datamodule: base_datamodule
+  - override /model: residual_autoencoder
+  
+
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+
+  
