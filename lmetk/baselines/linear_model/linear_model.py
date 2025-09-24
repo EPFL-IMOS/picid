@@ -1,4 +1,3 @@
-
 from lmetk.baselines.forecaster import Forecaster
 
 from .linear_ar import LinearModel
@@ -11,6 +10,7 @@ class Linear_Forecaster(Forecaster):
         d_yc: int,
         d_yt: int,
         context_points: int,
+        task_type: str,
         learning_rate: float = 1e-3,
         l2_coeff: float = 0,
         loss: str = "mse",
@@ -18,7 +18,7 @@ class Linear_Forecaster(Forecaster):
         linear_shared_weights: bool = False,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             d_x=d_x,
@@ -32,6 +32,7 @@ class Linear_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         self.model = LinearModel(

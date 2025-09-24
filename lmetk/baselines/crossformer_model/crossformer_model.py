@@ -17,11 +17,12 @@ from .cross_former import Crossformer
 class Crossformer_Forecaster(Forecaster):
     def __init__(
         self,
-        d_x: int = 6,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        ts_in: int = 1,
-        ts_out: int = 1,
+        d_x: int,
+        d_yc: int,
+        d_yt: int,
+        ts_in: int,
+        ts_out: int,
+        task_type: str,
         dropout: float = 0.1,
         e_layers: int = 3,
         d_ff: int = 64,
@@ -46,6 +47,7 @@ class Crossformer_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask=None,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -59,6 +61,7 @@ class Crossformer_Forecaster(Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         configs = {
@@ -94,6 +97,7 @@ class Crossformer_Forecaster(Forecaster):
         self.target_mask = None
         self.decoder_embedding = decoder_embedding
         self.out_data_dim = d_yt
+        self.mask_y_c = mask_y_c
 
         if d_x_mask is not None:
             assert self.decoder_embedding == "DSW"
@@ -122,6 +126,9 @@ class Crossformer_Forecaster(Forecaster):
             y_c = y_c.unsqueeze(-1)
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
+
+        if self.mask_y_c:
+            y_c = torch.zeros_like(y_c)
 
         # best we can do is zero out the target y and put the full sequence as context to encoder.
         # enc_y = torch.concat((y_c, torch.zeros_like(y_t)), dim=1)

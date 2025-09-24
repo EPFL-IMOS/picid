@@ -18,12 +18,12 @@ from .thuml_patchtst import Model as PatchTST
 class PatchTST_Forecaster(Forecaster):
     def __init__(
         self,
-        max_seq_len: int = None,
-        d_x: int = 6,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        ts_in: int = 1,
-        ts_out: int = 1,
+        d_x: int,
+        d_yc: int,
+        d_yt: int,
+        ts_in: int,
+        ts_out: int,
+        task_type: str,
         dropout: float = 0.1,
         e_layers: int = 3,
         d_layers: int = 3,
@@ -62,6 +62,7 @@ class PatchTST_Forecaster(Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         configs = OmegaConf.create(

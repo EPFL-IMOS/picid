@@ -106,6 +106,7 @@ class LSTM_Forecaster(Forecaster):
         d_x: int,
         d_yc: int,
         d_yt: int,
+        task_type: str,
         time_emb_dim: int = 0,
         n_layers: int = 2,
         hidden_dim: int = 32,
@@ -119,6 +120,7 @@ class LSTM_Forecaster(Forecaster):
         linear_shared_weights: bool = False,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -132,6 +134,7 @@ class LSTM_Forecaster(Forecaster):
             use_revin=use_revin,
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
+            task_type=task_type,
             **kwargs,
         )
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
@@ -154,6 +157,7 @@ class LSTM_Forecaster(Forecaster):
         self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(self.device)
 
         self.teacher_forcing_prob = teacher_forcing_prob
+        self.mask_y_c = mask_y_c
 
     @property
     def train_step_forward_kwargs(self):
@@ -164,6 +168,10 @@ class LSTM_Forecaster(Forecaster):
         return {"force": 0.0}
 
     def forward_model_pass(self, x_c, y_c, x_t, y_t, force=None):
+
+        if self.mask_y_c:
+            y_c = torch.zeros_like(y_c)
+
         assert force is not None
         with torch.no_grad():
             # need to normalize y_t in LSTM because it is sometimes used

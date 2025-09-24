@@ -27,6 +27,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         d_yc: int,
         d_yt: int,
         d_x: int,
+        task_type: str,
         # d_x contains timefeatures if n_timefeatures > 0
         # these can be rerouted via d_x_embedding_router
         # to a seperate additive embedding.
@@ -99,6 +100,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         recon_mask_drop_full: float = 0.05,
         verbose=True,
         target_mask=None,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -112,6 +114,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         self.torchmetrics_version = pkg_resources.get_distribution(
@@ -206,6 +209,7 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.recon_loss_imp = recon_loss_imp
         self.set_null_value(null_value)
         self.pad_value = pad_value
+        self.mask_y_c = mask_y_c
 
         self.save_hyperparameters()
 
@@ -339,6 +343,9 @@ class Spacetimeformer_Forecaster(Forecaster):
             y_c = y_c.unsqueeze(-1)
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
+
+        if self.mask_y_c:
+            y_c = torch.zeros_like(y_c)
 
         enc_x = x_c
         enc_y = y_c
