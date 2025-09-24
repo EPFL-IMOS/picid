@@ -90,6 +90,9 @@ class ConceptRULDataset(BaseDataset):
             x = self.X[0 : i * self.stride + 1, :].T
             x = np.concatenate((padding, x), 1)
 
+        # We change x back to (time, features) format in this project
+        x = x.T
+
         return AttributeDict(
             {
                 "features": torch.Tensor(x).squeeze(),
