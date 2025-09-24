@@ -2,7 +2,8 @@ _target_: lmetk.baselines.tide_model.TiDE_Forecaster
 
 metadata:
   lightning_model: true
-  
+
+task_type: ${task_definition.task_type}
 max_seq_len: null # must be set by the model_config
 ts_in: null # must be set by the model_config
 ts_out: null # must be set by the model_config
