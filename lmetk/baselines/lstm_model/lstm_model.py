@@ -100,6 +100,46 @@ class LSTM_Seq2Seq(nn.Module):
         return outputs
 
 
+class LSTM_Regression(nn.Module):
+    def __init__(self, t2v: Time2Vec, encoder: LSTM_Encoder, decoder: LSTM_Decoder):
+        super().__init__()
+        self.t2v = t2v
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def _merge(self, x, y):
+        return torch.cat((x, y), dim=-1)
+
+    def forward(
+        self,
+        x_target,
+        y_target,
+        teacher_forcing_prob,
+    ):
+        if self.t2v is not None:
+            x_target = self.t2v(x_target)
+
+        pred_len = y_target.shape[1]
+        batch_size = y_target.shape[0]
+        y_dim = y_target.shape[2]
+        outputs = -torch.ones(batch_size, pred_len, y_dim).to(y_target.device)
+        hidden, cell = self.encoder(x_target)
+
+        decoder_input = x_target[:, -1].unsqueeze(1).to(x_target.device)
+
+        for t in range(0, pred_len):
+            output, hidden, cell = self.decoder(decoder_input, hidden, cell)
+            outputs[:, t] = output.squeeze(1)
+
+            decoder_y = (
+                y_target[:, t].unsqueeze(1)
+                if random.random() < teacher_forcing_prob
+                else output
+            )
+            decoder_input = self._merge(x_target[:, t].unsqueeze(1), decoder_y)
+        return outputs
+
+
 class LSTM_Forecaster(Forecaster):
     def __init__(
         self,
@@ -140,21 +180,32 @@ class LSTM_Forecaster(Forecaster):
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
 
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
+        no_y_as_input = task_type in ["rul", "ahrul", "soc"]
 
         self.encoder = LSTM_Encoder(
-            input_dim=time_dim + d_yc,
+            input_dim=time_dim + (d_yc if not no_y_as_input else 0),
             hidden_dim=hidden_dim,
             n_layers=n_layers,
             dropout=dropout_p,
         )
         self.decoder = LSTM_Decoder(
             output_dim=d_yt,
-            input_dim=time_dim + d_yt,
+            input_dim=time_dim + (d_yt if not no_y_as_input else 0),
             hidden_dim=hidden_dim,
             n_layers=n_layers,
             dropout=dropout_p,
         )
-        self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(self.device)
+
+        if self.task_type in ["rul", "ahrul", "soc"]:
+            self.model = LSTM_Regression(self.t2v, self.encoder, self.decoder).to(
+                self.device
+            )
+        elif self.task_type in ["forecasting"]:
+            self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(
+                self.device
+            )
+        else:
+            raise ValueError(f"Unknown task type {self.task_type}")
 
         self.teacher_forcing_prob = teacher_forcing_prob
         self.mask_y_c = mask_y_c
@@ -178,7 +229,11 @@ class LSTM_Forecaster(Forecaster):
             # as input (teacher forcing). important to not leak the target
             # stats (update_stats = False).
             y_t = self.revin(y_t, mode="norm", update_stats=False)
-        preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)
+
+        if self.task_type in ["rul", "ahrul", "soc"]:
+            preds = self.model.forward(x_t, y_t, teacher_forcing_prob=force)
+        elif self.task_type in ["forecasting"]:
+            preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)
         return (preds,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool = False):
