@@ -1,11 +1,10 @@
-# scaler_features:
-#   transform:
-#     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     
-#   metadata:
-#     apply_to: features
-#     fit_on: train
-
+  metadata:
+    apply_to: features
+    fit_on: train
 
 scaler_target:
   transform:
@@ -15,11 +14,12 @@ scaler_target:
     apply_to: target
     fit_on: train
 
+
 cycles2sequence:
   transform:
     _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
-    folder_name: ${paths.root_dir}/logs/train/runs/2025-09-04_01-58-31
-  
+    folder_name: ${paths.root_dir}/artifacts/debug/runs/unibo+reconstruction+residual_autoencoder/2025-09-24_03-48-04
+
   metadata:
     apply_to: ['features', 'target']
     assign_to: ['features', 'target']

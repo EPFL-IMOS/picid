@@ -1,11 +1,11 @@
 #@package _global_
 
 defaults:
-  - unibo/base
-  - override /transforms: battery/bosello_unibo
-  - override /model: stf
+  - unibo/prognostics/base
+  - /model_configs/prognostics/stf
+  
   - override /dataset: prognostics/battery_rul_multiunit_dataset
-  - override /datamodule: base_datamodule
+  - override /transforms: battery/unibo_compression_by_autoencoder
 
 callbacks:
   early_stopping:
@@ -16,6 +16,7 @@ callbacks:
     monitor: val/loss
     mode: min
 
+# Need to correct it
 model:
   d_x: 6
   d_x_embedding_router:  [0,0,0,0,0,0]

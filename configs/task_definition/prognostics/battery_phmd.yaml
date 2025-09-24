@@ -1,4 +1,5 @@
-seq_len: 30  # window size
+seq_len: 16  # window size
 label_len: 0  # overlap size
 pred_len: 24 # prediction size
+stride: 24
 task_type: rul

@@ -61,18 +61,18 @@ class AkwardJaggedAutoregressiveSequencer:
         assert features.ndim < 4, "Features dim greater than 3 has not been tested"
         # Determine which axis is ragged
         self.ragged_dim = find_singular_ragged_dim({"features": self.features})
+        self.is_ragged = True
 
         # Case when regular ndarray wrapped into awkward array is passed
         if self.ragged_dim is None:
-            # This is the case
-            assert (
-                get_ak_shape(self.features)[-1] == 1
-            ), "Ensuring we are working with targets"
-            self.ragged_dim = 0
-            # raise ValueError("No ragged dimension found in the input array.")
+            # # This is the case
+            # assert (
+            #     get_ak_shape(self.features)[-1] == 1
+            # ), "Ensuring we are working with targets"
+            self.is_ragged = False
 
         # Count feature dimension
-        example_index = (0,) * (self.ragged_dim + 1)
+        example_index = (0,) * (self.ragged_dim or 0 + 1)
         example_element = self.features[example_index]
         if isinstance(example_element, (int, float, np.number)):
             self.num_features = 1
@@ -80,18 +80,18 @@ class AkwardJaggedAutoregressiveSequencer:
             self.num_features = len(example_element)
 
         # Precompute valid window bounds
-        self._indices = self._build_indices()
+        self._indices = self._build_indices_efficient()  # TODO: old self._build_indices
 
     def _build_indices(self) -> List[tuple]:
-        num_indexing_dims = self.ragged_dim + 1
+        num_indexing_dims = self.ragged_dim + 1 if self.is_ragged else 1
         all_possible = ragged_index_tuples(self.features, num_indexing_dims)
 
         # TODO: huge room for improvement here, vactorize operations
         valid = []
         for index_tuple in all_possible:
             # index_tuple = (...sample dims..., t)
-            sample_idx = index_tuple[: self.ragged_dim]
-            t = index_tuple[self.ragged_dim]
+            sample_idx = index_tuple[: self.ragged_dim or 0]
+            t = index_tuple[self.ragged_dim or 0]
             sample_len = len(self.features[sample_idx])
             # The total length required for one sequence starting at t
             required_len = self.seq_len + self.pred_len
@@ -99,6 +99,58 @@ class AkwardJaggedAutoregressiveSequencer:
                 # Enforce stride: only keep starts that respect the stride
                 if (t % self.stride) == 0:
                     valid.append(index_tuple)
+        return valid
+
+    def _build_indices_efficient(self) -> List[tuple]:
+        """
+        Much faster computation of valid (...prefix..., t) tuples.
+
+        Key change:
+            • iterate over parent prefixes only
+            • compute valid t directly from the stored length
+        """
+        required_len = self.seq_len + self.pred_len
+        stride = int(self.stride)
+
+        # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
+        # This block handles your Test Case 3 correctly.
+        if not self.is_ragged:
+            # For a dense array, we treat it as a single time series.
+            total_len = len(self.features)
+            if total_len < required_len:
+                return []
+
+            # Directly calculate the valid start times.
+            starts = range(0, total_len - required_len + 1, self.stride)
+
+            # For a single series, the sample index is always 0.
+            # This returns a list of (sample_idx, time_idx) tuples, e.g., [(0, 0), (0, 2), ...].
+            return [(t,) for t in starts]
+
+        # 1. Get all parent prefixes (no t) for the ragged dimension
+        prefixes = ragged_index_tuples(self.features, self.ragged_dim)
+
+        # 2. Precompute segment lengths
+        lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
+
+        # 3. Helper to read length given a prefix tuple
+        def get_length(prefix):
+            if self.ragged_dim == 0:
+                return lengths[prefix[0]] if prefix else lengths
+            out = lengths
+            for p in prefix:
+                out = out[p]
+            return out
+
+        # 4. Build valid tuples without generating every candidate
+        valid: List[tuple] = []
+        for prefix in prefixes:
+            seg_len = get_length(prefix)
+            if seg_len >= required_len:
+                # generate only valid starts respecting stride
+                starts = range(0, seg_len - required_len + 1, stride)
+                valid.extend([(*prefix, t) for t in starts])
+
         return valid
 
     def __len__(self) -> int:
@@ -147,8 +199,8 @@ class AkwardJaggedAutoregressiveSequencer:
             seq_x_time : optional time features
             seq_y_time : optional time features
         """
-        sample_idx = index_tuple[: self.ragged_dim]
-        t = index_tuple[self.ragged_dim]
+        sample_idx = index_tuple[: self.ragged_dim or 0]
+        t = index_tuple[self.ragged_dim or 0]
         sample = self.features[sample_idx]
 
         x_start, x_end = t, t + self.seq_len
@@ -241,9 +293,7 @@ if __name__ == "__main__":
         print("seq_y_mark:\n", seq_y_mark)
 
     print("========================================")
-
-    print("\n" + "=" * 50 + "\n")
-
+    print("### --- Test Case 2: Three dim Ragged Data --- ###")
     features = ak_regularize_regular_axes(
         ak.Array(
             [
@@ -267,7 +317,67 @@ if __name__ == "__main__":
     for i in range(seq.__len__()):
         seq_x, seq_y, seq_x_mark, seq_y_mark = seq.sequences_batch([i])
 
-        print("\n## Complex Data (N * var * C)")
+        print("\n## Complex Data (N * 1)")
+        print("seq_x:\n", seq_x)
+        print("seq_x_mark:\n", seq_x_mark)
+        print("seq_y:\n", seq_y)
+        print("seq_y_mark:\n", seq_y_mark)
+
+    print("========================================")
+
+    print("### --- Test Case 3: No ragged dim --- ###")
+    features = ak_regularize_regular_axes(ak.Array([[0], [1], [3], [4], [5], [6], [7]]))
+    time_feats = None
+
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=features,
+        time_features=time_feats,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=2,
+    )
+
+    for i in range(seq.__len__()):
+        seq_x, seq_y, seq_x_mark, seq_y_mark = seq.sequences_batch([i])
+
+        print("\n## Complex Data (N * var)")
+        print("seq_x:\n", seq_x)
+        print("seq_x_mark:\n", seq_x_mark)
+        print("seq_y:\n", seq_y)
+        print("seq_y_mark:\n", seq_y_mark)
+
+    print("========================================")
+
+    print("### --- Test Case 4: No ragged dim --- ###")
+    features = ak_regularize_regular_axes(
+        ak.Array(
+            [
+                [0, 2, 3],
+                [1, 3, 4],
+                [2, 4, 5],
+                [3, 5, 6],
+                [4, 6, 7],
+                [5, 7, 8],
+                [6, 8, 9],
+            ]
+        )
+    )
+    time_feats = None
+
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=features,
+        time_features=time_feats,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=2,
+    )
+
+    for i in range(seq.__len__()):
+        seq_x, seq_y, seq_x_mark, seq_y_mark = seq.sequences_batch([i])
+
+        print("\n## Complex Data (N * var)")
         print("seq_x:\n", seq_x)
         print("seq_x_mark:\n", seq_x_mark)
         print("seq_y:\n", seq_y)
