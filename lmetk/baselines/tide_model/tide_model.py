@@ -136,9 +136,10 @@ class TiDE_Forecaster(Forecaster):
         #   batch_y_mark = torch.concat(
         #         [x_mark_enc, batch_y_mark[:, -self.pred_len :, :]], dim=1
         #     )
-        if x_c is None:
+        if self.task_type in ["rul", "ahrul", "soc"]:
             # We only support this case so far
-            assert y_c is None, "if x_c is None, y_c must be None"
+            assert x_c is None, "x_c should be None for regression tasks"
+            assert y_c is None, "y_c should be None for regression tasks"
             x_c = x_t
             y_c = torch.zeros(
                 (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device

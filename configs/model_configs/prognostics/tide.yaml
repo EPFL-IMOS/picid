@@ -18,7 +18,6 @@ callbacks:
     mode: min
 
 model: 
-  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
   ts_in:  ${task_definition.seq_len}
   ts_out: ${task_definition.pred_len}
   d_yc:  ${infer_data_dim:${task_definition.task_type},-1} 

@@ -9,7 +9,6 @@ task_definition:
   requires_training: true
 
 model: 
-  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
   ts_in:  ${task_definition.seq_len}
   ts_out: ${task_definition.pred_len}
   d_yc:  ${infer_data_dim:target,-1} 

@@ -49,6 +49,7 @@ class PatchTST_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask: list[int] = None,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -99,12 +100,19 @@ class PatchTST_Forecaster(Forecaster):
         self.include_x_t = include_x_t
         # self.teacher_forcing_prob = teacher_forcing_prob
         if d_x_mask is not None:
-            assert self.include_x_t == True
+            assert self.include_x_t is True
             self.mask_tt = torch.tensor(d_x_mask) == 0
             self.mask_t = torch.tensor(d_x_mask) == 1
             self.d_x_mask = d_x_mask
         else:
             self.d_x_mask = None
+        self.mask_y_c = mask_y_c
+
+        if self.task_type in ["rul", "ahrul", "soc"]:
+            # We only support this case so far
+            assert (
+                self.include_x_t is False
+            ), "include_x_t must be False for regression tasks"
 
     @property
     def train_step_forward_kwargs(self):
@@ -118,13 +126,25 @@ class PatchTST_Forecaster(Forecaster):
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
         # set data to [batch, length, dim] format
-        if len(y_c.shape) == 2:
-            y_c = y_c.unsqueeze(-1)
-        if len(y_t.shape) == 2:
-            y_t = y_t.unsqueeze(-1)
+        if y_c is not None:
+            if len(y_c.shape) == 2:
+                y_c = y_c.unsqueeze(-1)
+            if self.mask_y_c:
+                y_c = torch.zeros_like(y_c)
 
         if not self.include_x_t:
             x_t = torch.zeros_like(x_t, device=self.device)
+
+        # In the regresssion case, we show x_t as additional features
+        # to the encoder.
+        if self.task_type in ["rul", "ahrul", "soc"]:
+            # We only support this case so far
+            assert x_c is None, "x_c should be None for regression tasks"
+            assert y_c is None, "y_c should be None for regression tasks"
+            x_c = x_t
+            y_c = torch.zeros(
+                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
+            )
 
         if self.include_x_t:
 

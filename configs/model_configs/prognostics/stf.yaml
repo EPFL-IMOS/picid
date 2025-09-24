@@ -2,7 +2,7 @@
 
 defaults:
   - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
-  - override /datamodule: base_datamodule_tabpfn
+  - override /datamodule: base_datamodule
   - override /model: stf
 
 task_definition:
@@ -19,8 +19,10 @@ callbacks:
 
 model:
   max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
-  d_yc:  0
+  d_yc:  ${infer_data_dim:rul,-1}
   d_yt:  ${infer_data_dim:rul,-1}
   d_x:   ${infer_data_dim:features,-1}
   n_timefeatures: 0
   base_lr: 0.001
+  # Important: we do not have access to past RUL
+  mask_y_c: true 
