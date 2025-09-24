@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Tuple
-
+from einops import rearrange
 import torch
 
 from lmetk.baselines.linear_model.linear_ar import LinearModel
@@ -15,6 +15,7 @@ class Forecaster(CustomEvaluatorLightningModule):
         d_x: int,
         d_yc: int,
         d_yt: int,
+        task_type: str,
         learning_rate: float = 1e-3,
         l2_coeff: float = 0,
         loss: str = "mse",
@@ -33,6 +34,14 @@ class Forecaster(CustomEvaluatorLightningModule):
         self.time_masked_idx = None
         self.null_value = None
         self.loss = loss
+        self.task_type = task_type
+
+        assert task_type in [
+            "forecasting",
+            "rul",
+            "ahrul",
+            "soc",
+        ], f"Unrecognized task type: {task_type}"
 
         if linear_window:
             self.linear_model = LinearModel(
@@ -190,22 +199,34 @@ class Forecaster(CustomEvaluatorLightningModule):
         y_t: torch.Tensor,
         **forward_kwargs,
     ) -> Tuple[torch.Tensor]:
-        x_c, y_c, x_t, y_t = self.nan_to_num(x_c, y_c, x_t, y_t)
-        _, pred_len, d_yt = y_t.shape
 
-        y_c = self.revin(y_c, mode="norm")  # does nothing if use_revin = False
+        x_t, y_t = self.nan_to_num(x_t, y_t)
 
-        seasonal_yc, trend_yc = self.seasonal_decomp(
-            y_c
-        )  # both are the original if use_seasonal_decomp = False
+        if x_c is not None:
+            x_c = self.nan_to_num(x_c)
+
+        if y_c is not None:
+            y_c = self.nan_to_num(y_c)
+
+        if y_c is not None:
+            _, pred_len, d_yt = y_t.shape
+            # does nothing if use_revin = False
+            y_c = self.revin(y_c, mode="norm")
+            # both are the original if use_seasonal_decomp = False
+            seasonal_yc, trend_yc = self.seasonal_decomp(y_c)
+        else:
+            seasonal_yc, trend_yc = None, 0
 
         preds, *extra = self.forward_model_pass(
             x_c, seasonal_yc, x_t, y_t, **forward_kwargs
         )
         assert preds.shape == y_t.shape, f"{preds.shape} != {y_t.shape}"
-        baseline = self.linear_model(trend_yc, pred_len=pred_len, d_yt=d_yt)
 
-        output = self.revin(preds + baseline, mode="denorm")
+        if y_c is not None:
+            baseline = self.linear_model(trend_yc, pred_len=pred_len, d_yt=d_yt)
+            output = self.revin(preds + baseline, mode="denorm")
+        else:
+            output = preds
 
         if extra:
             return (output,) + tuple(extra)
@@ -234,42 +255,48 @@ class Forecaster(CustomEvaluatorLightningModule):
             "targets": y_t.squeeze(2),
         }
 
-    def _training_step(self, batch, batch_idx):
-
+    def _map_batch_to_task(self, batch):
         # x_c, y_c, x_t, y_t,
-        batch = (
-            batch["context"]["x"],
-            batch["target"]["x"],
-            batch["context"]["y"],
-            batch["target"]["y"],
-        )
+        if self.task_type == "forecasting":
+            batch = (
+                batch["context"]["x"],
+                batch["target"]["x"],
+                batch["context"]["y"],
+                batch["target"]["y"],
+            )
+        elif self.task_type in ["rul", "ahrul", "soc"]:
 
+            f = batch["features"]
+            assert f.dim() == 3, "features must be 3D (B, T, D)"
+            t = batch[self.task_type]
+            if t.dim() == 2:
+                t = rearrange(t, "b f -> b 1 f")
+            if t.dim() == 1:
+                t = rearrange(t, "b -> b 1 1")
+
+            batch = (
+                None,
+                None,
+                f,
+                t,
+            )
+        else:
+            raise ValueError(f"Unrecognized task type: {self.task_type}")
+
+        return batch
+
+    def _training_step(self, batch, batch_idx):
+        batch = self._map_batch_to_task(batch)
         outs = self.step(batch, train=True)
         return outs
 
     def _validation_step(self, batch, batch_idx):
-
-        # x_c, y_c, x_t, y_t,
-        batch = (
-            batch["context"]["x"],
-            batch["target"]["x"],
-            batch["context"]["y"],
-            batch["target"]["y"],
-        )
-
+        batch = self._map_batch_to_task(batch)
         outs = self.step(batch, train=False)
         return outs
 
     def _test_step(self, batch, batch_idx):
-
-        # x_c, y_c, x_t, y_t,
-        batch = (
-            batch["context"]["x"],
-            batch["target"]["x"],
-            batch["context"]["y"],
-            batch["target"]["y"],
-        )
-
+        batch = self._map_batch_to_task(batch)
         outs = self.step(batch, train=False)
         return outs
 
