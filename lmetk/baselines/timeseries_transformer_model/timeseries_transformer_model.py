@@ -21,6 +21,7 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         d_x: int,
         d_yc: int,
         d_yt: int,
+        task_type: str,
         # d_x contains timefeatures if n_timefeatures > 0
         # these can be rerouted via d_x_embedding_router
         # to a seperate additive embedding.
@@ -41,6 +42,7 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask: list[int] = None,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -54,6 +56,7 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
@@ -73,6 +76,7 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         self.decay_factor = decay_factor
         self.target_mask = None
         self.transformer_args = transformer_args
+        self.mask_y_c = mask_y_c
         # self.teacher_forcing_prob = teacher_forcing_prob
 
         if d_x_mask is not None:
@@ -98,6 +102,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             y_c = y_c.unsqueeze(-1)
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
+
+        if self.mask_y_c:
+            y_c = torch.zeros_like(y_c)
 
         # best we can do is zero out the target y and put the full sequence as context to encoder.
         # enc_y = torch.concat((y_c, torch.zeros_like(y_t)), dim=1)
