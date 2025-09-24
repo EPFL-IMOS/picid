@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
-    def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Transforms the input data by truncating all arrays up to and including the first occurrence of zero in the 'target' array.
         This method searches for the first zero in the 'target' array, then truncates 'target' and all other arrays in the input data dictionary to this length.

@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
@@ -21,7 +22,7 @@ class FilterTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         self.win_len = win_len
         self.hop = hop
 
-    def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Filter targets correponding to the stftt
 

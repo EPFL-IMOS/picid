@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, override
 import numpy as np
 from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
+from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
@@ -170,7 +171,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         return reshaped
 
     @override
-    def transform_data(self, data: Dict, metadata: Dict) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """Apply STFT to signals and concatenate results.
 
         Args:
