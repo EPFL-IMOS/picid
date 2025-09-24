@@ -16,12 +16,12 @@ from .tide import Model as TiDE
 class TiDE_Forecaster(Forecaster):
     def __init__(
         self,
-        max_seq_len: int = None,
-        d_x: int = 6,
-        d_yc: int = 1,
-        d_yt: int = 1,
-        ts_in: int = 1,
-        ts_out: int = 1,
+        d_x: int,
+        d_yc: int,
+        d_yt: int,
+        ts_in: int,
+        ts_out: int,
+        task_type: str,
         dropout: float = 0.1,
         e_layers: int = 3,
         d_layers: int = 3,
@@ -47,6 +47,7 @@ class TiDE_Forecaster(Forecaster):
         base_lr: float = 5e-4,
         patience: int = 3,
         d_x_mask: list[int] = None,
+        mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -60,6 +61,7 @@ class TiDE_Forecaster(Forecaster):
             use_seasonal_decomp=use_seasonal_decomp,
             linear_shared_weights=linear_shared_weights,
             evaluators=kwargs.get("evaluators", None),
+            task_type=task_type,
         )
 
         configs = OmegaConf.create(
@@ -90,6 +92,7 @@ class TiDE_Forecaster(Forecaster):
         self.target_mask = None
         self.transformer_args = transformer_args
         self.include_x_t = include_x_t
+        self.mask_y_c = mask_y_c
         # self.teacher_forcing_prob = teacher_forcing_prob
 
         if d_x_mask is not None:
@@ -112,8 +115,12 @@ class TiDE_Forecaster(Forecaster):
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
         # set data to [batch, length, dim] format
-        if len(y_c.shape) == 2:
-            y_c = y_c.unsqueeze(-1)
+        if y_c is not None:
+            if len(y_c.shape) == 2:
+                y_c = y_c.unsqueeze(-1)
+            if self.mask_y_c:
+                y_c = torch.zeros_like(y_c)
+
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
 
@@ -122,6 +129,20 @@ class TiDE_Forecaster(Forecaster):
 
         if self.d_x_mask is not None:
             x_t[:, :, self.mask_tt] = 0
+
+        # In the regresssion case, we show x_t as additional features
+        # to the encoder TODO: now we show a small slice or regression targets
+        # twice. Maybe we should remove this. segment (in tide forward):
+        #   batch_y_mark = torch.concat(
+        #         [x_mark_enc, batch_y_mark[:, -self.pred_len :, :]], dim=1
+        #     )
+        if x_c is None:
+            # We only support this case so far
+            assert y_c is None, "if x_c is None, y_c must be None"
+            x_c = x_t
+            y_c = torch.zeros(
+                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
+            )
 
         # x_t = torch.rand_like(x_t)
         # y_c = y_c + 0.1 * torch.rand_like(y_c)
