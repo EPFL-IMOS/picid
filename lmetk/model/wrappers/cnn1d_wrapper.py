@@ -1,13 +1,17 @@
 from lmetk.model.methods.cnn1d import CNN
-from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
+from lmetk.model.wrappers.base import (
+    AbstractFeedForwardTrainingWrapper,
+    AbstractFeedForwardWrapper,
+)
 
 
-class CNN1D_Wrapper(AbstractFeedForwardWrapper):
+class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
     """Wrapper for the CNN1D model."""
 
     def __init__(self, task_type: str, seq_len: int, **kwargs):
 
-        if task_type not in ["rul"]:
+        self.supported_types = ["rul", "ahrul"]
+        if task_type not in self.supported_types:
             raise ValueError(f"Task {task_type} not supported for CNN1D_Wrapper.")
 
         self.task_type = task_type
@@ -41,9 +45,9 @@ class CNN1D_Wrapper(AbstractFeedForwardWrapper):
                     (batch_size, pred_len, target_features).
         """
 
-        if self.task_type == "rul":
+        if self.task_type in self.supported_types:
             batch_x = batch["features"]
-            batch_y = batch["rul"]
+            batch_y = batch[self.task_type]
             outputs = self.backbone(batch_x)
             model_out = {
                 "predictions": outputs.unsqueeze(1),
