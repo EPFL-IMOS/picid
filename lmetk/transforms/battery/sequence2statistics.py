@@ -12,7 +12,7 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
     Transforms sequence data by computing the mean and standard deviation
     for each cycle, ignoring a specified padding value and np.nan.
 
-    Input shape: (N_cycles, N_win, win_len, channels)
+    Input shape: (N_cycles, win_len, channels)
     Output shape: (N_cycles, channels * 2)
     """
 
@@ -29,7 +29,18 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         """
         Transforms a single data segment by calculating statistics.
         """
+        # (N, win_len, channels)
         features = data["features"]
+
+        # Check how many dim in just 3 them unsqueeze 1st dim
+        if features.ndim == 2:
+            logger.info(f"Input features shape: {features.shape}")
+            # unsqueeze 0 dim to have (sw, win_len, channels). For example (sw of single cycle, win len, channels)
+            features = features[np.newaxis, np.newaxis, :, :]
+            logger.info(
+                f"Reshaped features to: {features.shape}, unsqueezed two dim to have (N_cycles=1, N_win=1, win_len, channels)"
+            )
+
         logger.info(f"Original feature shape for statistics: {features.shape}")
 
         # Create a working copy to handle padding, ensuring dtype supports nan
@@ -50,10 +61,14 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         std_per_cycle = np.nan_to_num(std_per_cycle, nan=0.0)
 
         # 4. Concatenate mean and std to form the new feature vector
-        statistical_features = np.concatenate([mean_per_cycle, std_per_cycle], axis=1)
+        # statistical_features = np.concatenate([mean_per_cycle, std_per_cycle], axis=1)
+        statistical_features = np.concatenate(
+            [mean_per_cycle.T, std_per_cycle.T], axis=0
+        ).squeeze(1)
 
         logger.info(f"New statistical feature shape: {statistical_features.shape}")
 
+        assert statistical_features.ndim == 1, "Output should be 1D array per cycle."
         # 5. Return the calculated features
         return statistical_features
 

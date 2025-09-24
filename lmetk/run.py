@@ -28,7 +28,6 @@ from lmetk.data.datasources.kubric_movie.loader import MOViLoader
 from lmetk.data.datasources.nb14.loader import NB14Loader
 from lmetk.data.datasources.unibo.loader import UNIBO21Loader
 
-
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
@@ -56,6 +55,7 @@ from lmetk.utils import (
     display_targets,
 )
 from lmetk.utils.logging_utils import get_hydra_override
+from lmetk.utils.awkward_utils import get_ak_shape
 
 # register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
@@ -109,6 +109,8 @@ def register_data_dim_resolver(
             return tuple(obj.size())[dim]
         # elif ak.is_awkward(data):
         #     return data.shape[dim]
+        elif isinstance(obj, ak.Array):
+            return get_ak_shape(obj)[dim]
         else:
             raise ValueError(f"Cannot infer data dim for type {type(obj)}")
 

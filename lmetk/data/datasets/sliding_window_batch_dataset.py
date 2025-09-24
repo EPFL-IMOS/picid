@@ -74,13 +74,14 @@ class SlidingWindowBatchDataset(BaseDataset):
 
     def __getitem__(self, idx: Union[int, List[int]]) -> Dict[str, tuple]:
         """
-        Returns a dict of {key: (x, y, x_time, y_time)}.
+        Returns a dict of {key: (x, y)}.
         For drivers without time features the last two entries are None.
         """
         out = {}
         for k, drv in self.sequencers.items():
-            x, y, x_time, y_time = drv.sequences_batch(idx)
-            out[k] = (x, y, x_time, y_time)
+            x, y = drv.sequences_batch(idx)
+            # x: (B, seq_len, C), y: (B, label_len + pred_len, C); note that y can be empty tensor
+            out[k] = (x, y)
         return out
 
     def get_collate_fn(self):

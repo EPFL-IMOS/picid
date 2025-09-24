@@ -6,46 +6,44 @@ from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import context_collate_fn
 from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
+import awkward as ak
+
 
 class ContextBatchDataset(BaseDataset):
     def __init__(
         self,
-        # context: torch.Tensor,
-        # target: torch.Tensor,
-        # time_features: torch.Tensor,
         data_dict: dict[str, ndarray | list[ndarray]],
-        meta_data_dict: dict[str, any],
+        task_type: str,
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
         **kwargs,
     ):
+
         # Make sure that the data_dict contains the required keys
-        required_keys = ["features", "time_features"]
+        if task_type in ["rul", "ahrul", "soc"]:
+            required_keys = ["features", "rul"]  # "time_features", "target"
+
+            context_key = "features"
+            target_key = "rul"
+
         for key in required_keys:
             if key not in data_dict:
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
 
-        self.target_feature = data_dict["target"]
-        self.context_features = data_dict["features"]
-        self.time_features = data_dict["time_features"]
+        self.target_feature = data_dict[target_key]
+        self.context_features = data_dict[context_key]
 
         self.target_dataset = SlidingWindowBatchDataset(
-            data_dict=dict(
-                features=self.target_feature,
-                time_features=self.time_features,
-            ),
+            data_dict={target_key: self.target_feature},
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
         )
         self.context_dataset = SlidingWindowBatchDataset(
-            data_dict=dict(
-                features=self.context_features,
-                time_features=self.time_features,
-            ),
+            data_dict={context_key: self.context_features},
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
@@ -70,7 +68,7 @@ class ContextBatchDataset(BaseDataset):
         d["target"] = AttributeDict(target)
 
         context: Dict = self.context_dataset.__getitem__(batch_idx)
-        d["context"] = AttributeDict({context})
+        d["context"] = AttributeDict(context)
         return AttributeDict(d)
 
     def get_collate_fn(self):

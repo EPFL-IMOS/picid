@@ -55,13 +55,13 @@ def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
 
     if any([len(dim) == 0 for dim in var_dims]):
         idx = [len(dim) == 0 for dim in var_dims].index(True)
-        logger.warning(
-            f"One of the values of the {type(nti)} object has no ragge dim, key: {list(nti.keys())[idx]}, val: {list(nti.values())[idx].type}"
-        )
+        # TODO: this warning polutes a lot the outputs
+        # logger.warning(
+        #     f"One of the values of the {type(nti)} object has no ragge dim, key: {list(nti.keys())[idx]}, val: {list(nti.values())[idx].type}"
+        # )
     unique_var_dims = set([x for row in var_dims for x in row])
 
     # TODO checks to warn
-
     if len(unique_var_dims) == 0:
         # No ragged dimensions found; the data is regular in structure.
         return None

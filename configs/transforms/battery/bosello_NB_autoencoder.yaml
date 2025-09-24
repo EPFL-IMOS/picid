@@ -8,8 +8,8 @@
 #   metadata:
 #     apply_to: ${transforms.filter_features.transform.apply_to_key}
 
-# bug in the main that is requiring to have scaler_target for NB
-scaler_target:
+# scaler_target:
+scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     

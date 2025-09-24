@@ -18,7 +18,11 @@ callbacks:
 
 # Need to correct it
 model:
-  d_x: 6
-  d_x_embedding_router:  [0,0,0,0,0,0]
+  d_x: 64
   base_lr: 0.001
+
+  data_requirements:
+    input_tensors:
+      - features
+      - rul
 

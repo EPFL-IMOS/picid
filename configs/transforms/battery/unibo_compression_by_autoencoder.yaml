@@ -1,3 +1,4 @@
+
 scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
@@ -5,6 +6,9 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+
+# defaults:
+#   - bosello_NB_autoencoder
 
 scaler_target:
   transform:
@@ -22,11 +26,19 @@ cycles2sequence:
 
   metadata:
     apply_to: ['features', 'target']
-    assign_to: ['features', 'target']
+    assign_to: 
+      features: features
+      target: rul
   
 
+sequence2statistics:
+  transform:
+    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    padding_value: null
 
-    
+  metadata:
+    apply_to: 'features'
+      
 
 
 # TRANSFORM TO EXTRACT MEAN and STD

@@ -2,7 +2,8 @@ import logging
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict
-
+import numpy as np
+import awkward as ak
 import hydra
 import omegaconf
 import torch
@@ -11,6 +12,7 @@ from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 import pandas as pd
 import hydra
+from lmetk.utils.awkward_utils import ak_regularize_regular_axes
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
@@ -44,7 +46,15 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
 
         self._cfg = None
         self._model = self._load_model(experiment_dir)
+        # Getr the device:
+        if self._cfg.trainer.accelerator == "cpu":
+            self.device = "cpu"
+        else:
+            self.device = self._cfg.trainer.devices[-1]
+
+        self._model.to(self.device)
         self._model.eval()  # Set model to evaluation mode
+        self._model.backbone.eval()
 
         self.seq_len = self._cfg.task_definition.seq_len
         self.label_len = self._cfg.task_definition.label_len
@@ -130,7 +140,8 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
 
         Note: The implementation for data transformation needs to be added here.
         """
-        features = data[self.key]
+        assert "features" in data, "Features key is not in data"
+        assert "target" in data, "Target is not in data"
 
         concat_dataset_over_cycles = hydra.utils.instantiate(
             self._cfg.dataset,
@@ -145,17 +156,23 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
             for i in range(len(dataset)):
                 results = dataset[i]
                 seqs.append(results[self.key][collect_idx])
-            return torch.cat(seqs, dim=0)
+            return torch.cat(seqs, dim=0).to(self.device)
+
+        data["target"]
 
         res = []
-        for dataset in datasets_cycles:
-            assert (
-                dataset.__len__() != 0
-            ), "Dataset is empty. Meaning we will loose some cycle"
+        idx_valid = []
+        for idx, dataset in enumerate(datasets_cycles):
             if dataset.__len__() > 0:
+                # collect idx that has successfully passed the transformations
+                idx_valid.append(idx)
+
+                # full seq. window, seq_x_len
                 cycle_seqs = collect_sequences(0)  # Collect seq_x
-                res.append(self._model.backbone.encode(cycle_seqs))
+                with torch.no_grad():
+                    res.append(self._model.backbone.encode(cycle_seqs).cpu().numpy())
 
-        print()
-
-        return
+        return {
+            "features": ak_regularize_regular_axes(ak.Array(res)),
+            "target": data["target"][idx_valid],
+        }

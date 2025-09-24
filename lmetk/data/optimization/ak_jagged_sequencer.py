@@ -196,8 +196,6 @@ class AkwardJaggedAutoregressiveSequencer:
         Returns:
             seq_x : (seq_len, D) tensor
             seq_y : (label_len + pred_len, D) tensor
-            seq_x_time : optional time features
-            seq_y_time : optional time features
         """
         sample_idx = index_tuple[: self.ragged_dim or 0]
         t = index_tuple[self.ragged_dim or 0]
@@ -217,15 +215,23 @@ class AkwardJaggedAutoregressiveSequencer:
         seq_x = self._ak_to_tensor(seq_x_ak)
         seq_y = self._ak_to_tensor(seq_y_ak)
 
-        if self.time_features is not None:
-            tf_sample = self.time_features[sample_idx]
-            seq_x_time = self._ak_to_tensor(tf_sample[x_start:x_end])
-            seq_y_time = self._ak_to_tensor(tf_sample[y_start:y_end])
-        else:
-            seq_x_time = None
-            seq_y_time = None
+        # Ensure the output shapes are correct (check it only once), n dim is correct as well
+        if not hasattr(self, "_checked_output_shapes"):
+            assert (
+                seq_x.shape[0] == self.seq_len
+            ), f"seq_x length mismatch: expected {self.seq_len}, got {seq_x.shape[0]}"
+            assert (
+                seq_y.shape[0] == self.label_len + self.pred_len
+            ), f"seq_y length mismatch: expected {self.label_len + self.pred_len}, got {seq_y.shape[0]}"
+            assert (
+                seq_x.shape[1] == self.num_features
+            ), f"seq_x feature dim mismatch: expected {self.num_features}, got {seq_x.shape[1]}"
+            assert (
+                seq_y.shape[1] == self.num_features
+            ), f"seq_y feature dim mismatch: expected {self.num_features}, got {seq_y.shape[1]}"
+            self._checked_output_shapes = True
 
-        return seq_x, seq_y, seq_x_time, seq_y_time
+        return seq_x, seq_y
 
     def sequences_batch(
         self, batch_idx: List[int]
@@ -240,33 +246,29 @@ class AkwardJaggedAutoregressiveSequencer:
 
         Returns:
             A tuple of tensors containing the batched sequences:
-            (seq_x_batch, seq_y_batch, seq_x_time_batch, seq_y_time_batch)
+            (seq_x_batch, seq_y_batch)
         """
         if isinstance(batch_idx, int):
             batch_idx = [batch_idx]
 
         batch_items = []
         for i in batch_idx:
+            # index_tuple
             index_tuple = self._indices[i]
             item = self.get_window_for_index(index_tuple)
             batch_items.append(item)
 
         # Separate the components of the batch using zip
-        seq_x_list, seq_y_list, seq_x_time_list, seq_y_time_list = zip(*batch_items)
 
-        # Stack the individual tensors to create the batch dimension
+        # Move from list of tuple to the tuple of lists
+        # e.g. [(x1, y1), (x2, y2), (x3, y3)] -> (list[x1, x2, x3], list[y1, y2, y3])
+        seq_x_list, seq_y_list = zip(*batch_items)
+
+        # Stack the individual tensors to create the batch dimension: list[(seq_len, C),(seq_len, C),...] -> Tensor[B, seq_len, C]
         seq_x_batch = torch.stack(seq_x_list, dim=0)
         seq_y_batch = torch.stack(seq_y_list, dim=0)
 
-        # Handle optional time features
-        if seq_x_time_list and seq_x_time_list[0] is not None:
-            seq_x_time_batch = torch.stack(seq_x_time_list, dim=0)
-            seq_y_time_batch = torch.stack(seq_y_time_list, dim=0)
-        else:
-            seq_x_time_batch = None
-            seq_y_time_batch = None
-
-        return seq_x_batch, seq_y_batch, seq_x_time_batch, seq_y_time_batch
+        return seq_x_batch, seq_y_batch
 
 
 if __name__ == "__main__":

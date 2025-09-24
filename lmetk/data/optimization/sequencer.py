@@ -174,8 +174,6 @@ class AutoregressiveSequencer(IndexSequencer):
             tuple: A tuple containing:
                 - seq_x: Encoder input sequence of shape (batch_size, seq_len, n_features)
                 - seq_y: Decoder input sequence of shape (batch_size, label_len + pred_len, n_features)
-                - seq_x_time: Time features for encoder input of shape (batch_size, seq_len, n_time_features)
-                - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
         """
         x_idx = torch.arange(x_window[0], x_window[1], device=self.device)  # Shape: B
         y_idx = torch.arange(y_window[0], y_window[1], device=self.device)  # Shape: B
@@ -183,14 +181,7 @@ class AutoregressiveSequencer(IndexSequencer):
         seq_x = self.features[x_idx]
         seq_y = self.features[y_idx]
 
-        seq_x_time = (
-            self.time_features[x_idx] if self.time_features is not None else None
-        )
-        seq_y_time = (
-            self.time_features[y_idx] if self.time_features is not None else None
-        )
-
-        return seq_x, seq_y, seq_x_time, seq_y_time
+        return seq_x, seq_y
 
 
 # TODO: we do not use it anywhere
@@ -238,8 +229,6 @@ class TrivialSequencer(IndexSequencer):
             tuple: A tuple containing:
                 - seq_x: Encoder input sequence of shape (batch_size, seq_len, n_features)
                 - seq_y: Decoder input sequence of shape (batch_size, label_len + pred_len, n_features)
-                - seq_x_time: Time features for encoder input of shape (batch_size, seq_len, n_time_features)
-                - seq_y_time: Time features for decoder output of shape (batch_size, label_len + pred_len, n_time_features)
         """
         indicies = x_window[1] - 1
         seq_x = self.features[indicies]
