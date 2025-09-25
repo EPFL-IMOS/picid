@@ -223,6 +223,10 @@ class Spacetimeformer(nn.Module):
                 emb_dropout=dropout_emb,
             )
 
+        if self.decoder_only:
+            local_cross_attn = "none"
+            global_cross_attn = "none"
+
         self.decoder = Decoder(
             layers=[
                 DecoderLayer(
@@ -296,9 +300,17 @@ class Spacetimeformer(nn.Module):
                 self_mask_seq=enc_mask_seq,
                 output_attn=output_attention,
             )
+
+            if enc_mask_seq is not None:
+                enc_dec_mask_seq = enc_mask_seq.clone()
+            else:
+                enc_dec_mask_seq = enc_mask_seq
+
         else:
             enc_var_idxs = None
             enc_out = None
+            enc_dec_mask_seq = None
+            enc_self_attns = None
 
         dec_vt_emb, dec_s_emb, _, dec_mask_seq = self.dec_embedding(y=dec_y, x=dec_x)
 
@@ -307,11 +319,6 @@ class Spacetimeformer(nn.Module):
             dec_mask_seq = TriangularCausalMask(b, l, device=dec_y.device).mask.squeeze(
                 1
             )
-
-        if enc_mask_seq is not None:
-            enc_dec_mask_seq = enc_mask_seq.clone()
-        else:
-            enc_dec_mask_seq = enc_mask_seq
 
         dec_out, dec_cross_attns = self.decoder(
             val_time_emb=dec_vt_emb,
@@ -323,11 +330,16 @@ class Spacetimeformer(nn.Module):
         )
 
         forecast_out = self.forecaster(dec_out)
-        recon_out = self.reconstructor(enc_out)
+
+        if not self.decoder_only:
+            recon_out = self.reconstructor(enc_out)
+        else:
+            recon_out = None
 
         if self.embed_method == "spatio-temporal":
             forecast_out = FoldForPred(forecast_out, dy=self.d_yt)
-            recon_out = FoldForPred(recon_out, dy=self.d_yc)
+            if not self.decoder_only:
+                recon_out = FoldForPred(recon_out, dy=self.d_yc)
         forecast_out = forecast_out[:, self.start_token_len :, :]
 
         if enc_var_idxs is not None:

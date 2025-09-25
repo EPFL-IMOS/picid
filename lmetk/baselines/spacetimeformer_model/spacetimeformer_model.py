@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import torchmetrics
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
 
@@ -117,6 +118,10 @@ class Spacetimeformer_Forecaster(Forecaster):
             task_type=task_type,
         )
 
+        decoder_only = self.task_type in REGRESSION_TASKS
+        if decoder_only:
+            start_token_len = 0
+
         self.torchmetrics_version = pkg_resources.get_distribution(
             "torchmetrics"
         ).version
@@ -195,6 +200,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             recon_mask_drop_seq=recon_mask_drop_seq,
             recon_mask_drop_standard=recon_mask_drop_standard,
             recon_mask_drop_full=recon_mask_drop_full,
+            decoder_only=decoder_only,
         )
 
         self.target_mask = target_mask
@@ -205,11 +211,12 @@ class Spacetimeformer_Forecaster(Forecaster):
         self.warmup_steps = warmup_steps
         self.decay_factor = decay_factor
         self.embed_method = embed_method
-        self.class_loss_imp = class_loss_imp
+        self.class_loss_imp = class_loss_imp if not decoder_only else 0.0
         self.recon_loss_imp = recon_loss_imp
         self.set_null_value(null_value)
         self.pad_value = pad_value
         self.mask_y_c = mask_y_c
+        self.decoder_only = decoder_only
 
         self.save_hyperparameters()
 
@@ -339,23 +346,40 @@ class Spacetimeformer_Forecaster(Forecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
-        if len(y_c.shape) == 2:
-            y_c = y_c.unsqueeze(-1)
+        # set data to [batch, length, dim] format
+        if y_c is not None:
+            if len(y_c.shape) == 2:
+                y_c = y_c.unsqueeze(-1)
+            if self.mask_y_c:
+                y_c = torch.zeros_like(y_c)
+
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
-
-        if self.mask_y_c:
-            y_c = torch.zeros_like(y_c)
 
         enc_x = x_c
         enc_y = y_c
         dec_x = x_t
 
         if target_mask is not None:
+            if self.decoder_only:
+                assert (
+                    x_t.shape[1] == y_t.shape[1]
+                ), "in decoder only mode, x_t and y_t must have the same time dimension"
             dec_y = y_t.clone()
             dec_y[:, :, target_mask] = 0.0
         else:
-            dec_y = torch.zeros_like(y_t).to(self.device)
+            if self.decoder_only:
+                assert (
+                    y_t.shape[1] <= x_t.shape[1]
+                ), "in decoder only mode, y_t must have a smaller or equal time dimension than x_t"
+
+                # in this case we do not have an encoder, therefore
+                # time dimensions of x_t and y_t need to match
+                dec_y = torch.zeros(
+                    (x_t.shape[0], x_t.shape[1], self.d_yt), device=x_t.device
+                )
+            else:
+                dec_y = torch.zeros_like(y_t).to(self.device)
 
         if self.start_token_len > 0:
             dec_y = torch.cat((y_c[:, -self.start_token_len :, :], dec_y), dim=1).to(
@@ -383,6 +407,9 @@ class Spacetimeformer_Forecaster(Forecaster):
             dec_y=dec_y,
             output_attention=output_attn,
         )
+
+        if self.decoder_only:
+            forecast_output = forecast_output[:, -y_t.shape[1] :, :]
 
         if target_mask is not None:
             forecast_output = forecast_output[:, :, target_mask]
