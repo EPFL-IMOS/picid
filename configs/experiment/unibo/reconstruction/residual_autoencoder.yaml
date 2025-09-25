@@ -5,7 +5,6 @@ defaults:
   - /model_configs/reconstruction/residual_autoencoder
   - override /transforms: battery/bosello_NB_autoencoder
 
-<<<<<<< HEAD
 task_definition:
   seq_len: 16
 
@@ -14,8 +13,6 @@ datamodule:
   val_batch_size: 1024
   test_batch_size: 1024
 
-=======
->>>>>>> main
 # it has to go to model_configs when I know how to infere input_channels with ${infere_dim: features, -1}
 model: 
   input_channels: 3
