@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
@@ -68,7 +69,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
                 [0] * (d_x - n_timefeatures) + [1] * n_timefeatures
             )
 
-        self.transformer = Transformer(transformer_args)
+        is_regression = self.task_type in REGRESSION_TASKS
+
+        self.transformer = Transformer(transformer_args, decoder_only=is_regression)
         self.init_lr = init_lr
         self.base_lr = base_lr
         self.patience = patience
@@ -98,8 +101,11 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
         # set data to [batch, length, dim] format
-        if len(y_c.shape) == 2:
-            y_c = y_c.unsqueeze(-1)
+        if y_c is not None:
+            if len(y_c.shape) == 2:
+                y_c = y_c.unsqueeze(-1)
+            if self.mask_y_c:
+                y_c = torch.zeros_like(y_c)
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
 
@@ -113,27 +119,43 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         if self.d_x_mask is not None:
             x_t[:, :, self.mask_tt] = 0
 
-        batch_x, batch_y, batch_x_mark, batch_y_mark = (
-            y_c.to(self.device),
-            y_t.to(self.device),
-            x_c.to(self.device),
-            x_t.to(self.device),
-        )
-
-        # decoder input (taken from dlinear https://github.com/vivva/DLinear/blob/main/exp/exp_main.py)
-        dec_inp = torch.zeros_like(
-            batch_y[:, -self.transformer_args.pred_len :, :]
-        ).float()
-
-        dec_inp = (
-            torch.cat(
-                [batch_y[:, : self.transformer_args.label_len, :], dec_inp], dim=1
+        if self.task_type in REGRESSION_TASKS:
+            # We only support this case so far
+            assert x_c is None, "x_c should be None for regression tasks"
+            assert y_c is None, "y_c should be None for regression tasks"
+            x_c = x_t
+            y_c = torch.zeros(
+                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
             )
-            .float()
-            .to(self.device)
-        )
 
-        output = self.transformer(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            batch_y, batch_y_mark = (
+                y_c.to(self.device),
+                x_c.to(self.device),
+            )
+            output = self.transformer(None, None, batch_y, batch_y_mark)
+
+        else:
+            batch_x, batch_y, batch_x_mark, batch_y_mark = (
+                y_c.to(self.device),
+                y_t.to(self.device),
+                x_c.to(self.device),
+                x_t.to(self.device),
+            )
+
+            # decoder input (taken from dlinear https://github.com/vivva/DLinear/blob/main/exp/exp_main.py)
+            dec_inp = torch.zeros_like(
+                batch_y[:, -self.transformer_args.pred_len :, :]
+            ).float()
+
+            dec_inp = (
+                torch.cat(
+                    [batch_y[:, : self.transformer_args.label_len, :], dec_inp], dim=1
+                )
+                .float()
+                .to(self.device)
+            )
+
+            output = self.transformer(batch_x, batch_x_mark, dec_inp, batch_y_mark)
         return (output,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):

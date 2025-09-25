@@ -28,10 +28,12 @@ class Model(nn.Module):
     Vanilla Transformer with O(L^2) complexity
     """
 
-    def __init__(self, configs):
+    def __init__(self, configs, decoder_only: bool = False):
         super(Model, self).__init__()
         self.pred_len = configs.pred_len
         self.output_attention = configs.output_attention
+        self.decoder_only = decoder_only
+        self.d_model = configs.d_model
 
         # Embedding
         if configs.embed_type == 0:
@@ -148,29 +150,34 @@ class Model(nn.Module):
                 configs.dropout,
                 configs.d_x_embedding_router,
             )
-        # Encoder
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(
-                            False,
-                            configs.factor,
-                            attention_dropout=configs.dropout,
-                            output_attention=configs.output_attention,
+
+        if not decoder_only:
+            # Encoder
+            self.encoder = Encoder(
+                [
+                    EncoderLayer(
+                        AttentionLayer(
+                            FullAttention(
+                                False,
+                                configs.factor,
+                                attention_dropout=configs.dropout,
+                                output_attention=configs.output_attention,
+                            ),
+                            configs.d_model,
+                            configs.n_heads,
                         ),
                         configs.d_model,
-                        configs.n_heads,
-                    ),
-                    configs.d_model,
-                    configs.d_ff,
-                    dropout=configs.dropout,
-                    activation=configs.activation,
-                )
-                for l in range(configs.e_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(configs.d_model),
-        )
+                        configs.d_ff,
+                        dropout=configs.dropout,
+                        activation=configs.activation,
+                    )
+                    for l in range(configs.e_layers)
+                ],
+                norm_layer=torch.nn.LayerNorm(configs.d_model),
+            )
+        else:
+            self.enc_embedding = None
+
         # Decoder
         self.decoder = Decoder(
             [
@@ -216,16 +223,20 @@ class Model(nn.Module):
         dec_self_mask=None,
         dec_enc_mask=None,
     ):
-
-        enc_out = self.enc_embedding(x_enc, x_mark_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+        if not self.decoder_only:
+            enc_out = self.enc_embedding(x_enc, x_mark_enc)
+            enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+        else:
+            enc_out = torch.zeros((x_dec.shape[0], x_dec.shape[1], self.d_model)).to(
+                x_dec.device
+            )
 
         dec_out = self.dec_embedding(x_dec, x_mark_dec)
         dec_out = self.decoder(
             dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask
         )
 
-        if self.output_attention:
+        if self.output_attention and not self.decoder_only:
             return dec_out[:, -self.pred_len :, :], attns
         else:
             return dec_out[:, -self.pred_len :, :]  # [B, L, D]
