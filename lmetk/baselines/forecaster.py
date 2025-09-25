@@ -3,6 +3,7 @@ from typing import Tuple
 from einops import rearrange
 import torch
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
 from lmetk.model.utils.revin import RevIN, SeriesDecomposition
@@ -189,7 +190,7 @@ class Forecaster(CustomEvaluatorLightningModule):
         return NotImplemented
 
     def nan_to_num(self, *inps):
-        return (torch.nan_to_num(i) for i in inps)
+        return tuple(torch.nan_to_num(i) for i in inps)
 
     def forward(
         self,
@@ -203,10 +204,10 @@ class Forecaster(CustomEvaluatorLightningModule):
         x_t, y_t = self.nan_to_num(x_t, y_t)
 
         if x_c is not None:
-            x_c = self.nan_to_num(x_c)
+            (x_c,) = self.nan_to_num(x_c)
 
         if y_c is not None:
-            y_c = self.nan_to_num(y_c)
+            (y_c,) = self.nan_to_num(y_c)
 
         if y_c is not None:
             _, pred_len, d_yt = y_t.shape
@@ -264,7 +265,7 @@ class Forecaster(CustomEvaluatorLightningModule):
                 batch["context"]["y"],
                 batch["target"]["y"],
             )
-        elif self.task_type in ["rul", "ahrul", "soc"]:
+        elif self.task_type in REGRESSION_TASKS:
 
             f = batch["features"]
             assert f.dim() == 3, "features must be 3D (B, T, D)"
