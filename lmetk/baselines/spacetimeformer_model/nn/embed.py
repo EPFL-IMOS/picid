@@ -70,7 +70,7 @@ class Embedding(nn.Module):
                 timetable_dim = time_emb_dim * d_x_tt
 
                 if timetable_emb == "t2v":
-                    self.timetable_emb = stf.Time2Vec(d_x_tt, embed_dim=timetable_dim)
+                    self.timetable_emb = Time2Vec(d_x_tt, embed_dim=timetable_dim)
                 elif timetable_emb == "linear":
                     self.timetable_emb = nn.Linear(
                         in_features=d_x_tt, out_features=timetable_dim
