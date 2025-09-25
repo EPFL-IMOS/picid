@@ -20,9 +20,3 @@ callbacks:
 model:
   d_x: 64
   base_lr: 0.001
-
-  data_requirements:
-    input_tensors:
-      - features
-      - rul
-

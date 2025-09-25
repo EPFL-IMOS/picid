@@ -35,8 +35,6 @@ class SlidingWindowBatchDataset(BaseDataset):
         label_len: int,
         pred_len: int,
         stride: int,
-        pad: bool = False,
-        pad_value: float = 0.0,
         **kwargs,
     ):
 
@@ -48,10 +46,21 @@ class SlidingWindowBatchDataset(BaseDataset):
                 continue
 
             if isinstance(arr, (np.ndarray, torch.Tensor)):
-                driver = DenseDriver(arr, seq_len, label_len, pred_len, stride)
+                driver = DenseDriver(
+                    array=arr,
+                    seq_len=seq_len,
+                    label_len=label_len,
+                    pred_len=pred_len,
+                    stride=stride,
+                )
+
             elif isinstance(arr, ak.Array):
                 driver = RaggedDriver(
-                    arr, seq_len, label_len, pred_len, stride, pad, pad_value
+                    array=arr,
+                    seq_len=seq_len,
+                    label_len=label_len,
+                    pred_len=pred_len,
+                    stride=stride,
                 )
             else:
                 raise NotImplementedError(
@@ -80,7 +89,7 @@ class SlidingWindowBatchDataset(BaseDataset):
         out = {}
         for k, drv in self.sequencers.items():
             x, y = drv.sequences_batch(idx)
-            # x: (B, seq_len, C), y: (B, label_len + pred_len, C); note that y can be empty tensor
+            # seq_x: (B, seq_len, C), seq_y: (B, label_len + pred_len, C); note that y can be empty tensor; (B,T,C)
             out[k] = (x, y)
         return out
 

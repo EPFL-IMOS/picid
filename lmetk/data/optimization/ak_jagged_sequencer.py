@@ -13,10 +13,12 @@ import logging
 
 logger = logging.getLogger()
 
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes, get_ak_shape
-
 from lmetk.transforms.base.multisource import find_singular_ragged_dim
-from lmetk.utils.awkward_utils import ragged_index_tuples
+from lmetk.utils.awkward_utils import (
+    ragged_index_tuples,
+    ak_regularize_regular_axes,
+    get_ak_shape,
+)
 
 
 class AkwardJaggedAutoregressiveSequencer:
@@ -45,8 +47,6 @@ class AkwardJaggedAutoregressiveSequencer:
         label_len: int,
         pred_len: int,
         stride: int = 1,
-        pad: bool = False,
-        pad_value: float = 0.0,
     ):
         self.features = features
         self.time_features = time_features
@@ -54,8 +54,6 @@ class AkwardJaggedAutoregressiveSequencer:
         self.label_len = label_len
         self.pred_len = pred_len
         self.stride = stride
-        self.pad = pad
-        self.pad_value = pad_value
         self.device = torch.device("cpu")
 
         assert features.ndim < 4, "Features dim greater than 3 has not been tested"
@@ -65,22 +63,13 @@ class AkwardJaggedAutoregressiveSequencer:
 
         # Case when regular ndarray wrapped into awkward array is passed
         if self.ragged_dim is None:
-            # # This is the case
-            # assert (
-            #     get_ak_shape(self.features)[-1] == 1
-            # ), "Ensuring we are working with targets"
             self.is_ragged = False
 
-        # Count feature dimension
-        example_index = (0,) * (self.ragged_dim or 0 + 1)
-        example_element = self.features[example_index]
-        if isinstance(example_element, (int, float, np.number)):
-            self.num_features = 1
-        else:
-            self.num_features = len(example_element)
+        # Get feature dimension
+        self.num_features = get_ak_shape(features)[-1]
 
         # Precompute valid window bounds
-        self._indices = self._build_indices_efficient()  # TODO: old self._build_indices
+        self._indices = self._build_indices_efficient()
 
     def _build_indices(self) -> List[tuple]:
         num_indexing_dims = self.ragged_dim + 1 if self.is_ragged else 1
@@ -165,23 +154,6 @@ class AkwardJaggedAutoregressiveSequencer:
             np_arr = np_arr.reshape(-1, 1)
         return torch.from_numpy(np_arr).to(torch.float32)
 
-    def _pad_and_fill(self, array: ak.Array, target_len: int) -> ak.Array:
-        if len(array) == 0:
-            shape = (target_len, self.num_features)
-            return ak.from_numpy(np.full(shape, self.pad_value, dtype=np.float32))
-
-        padded = ak.pad_none(array, target_len, axis=0)
-        builder = ak.ArrayBuilder()
-        pad_record = np.full(self.num_features, self.pad_value, dtype=np.float32)
-        for record in padded:
-            if record is None:
-                builder.append(pad_record)
-            elif self.num_features == 1 and isinstance(record, (int, float, np.number)):
-                builder.append(np.array([record], dtype=np.float32))
-            else:
-                builder.append(record)
-        return builder.snapshot()
-
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -208,14 +180,10 @@ class AkwardJaggedAutoregressiveSequencer:
         seq_x_ak = sample[x_start:x_end]
         seq_y_ak = sample[y_start:y_end]
 
-        if self.pad:
-            seq_x_ak = self._pad_and_fill(seq_x_ak, self.seq_len)
-            seq_y_ak = self._pad_and_fill(seq_y_ak, self.label_len + self.pred_len)
-
         seq_x = self._ak_to_tensor(seq_x_ak)
         seq_y = self._ak_to_tensor(seq_y_ak)
 
-        # Ensure the output shapes are correct (check it only once), n dim is correct as well
+        # Ensure the output shapes are correct (check it only once), n dim is correct as well, shape is (T,C) meaning timestamps, features
         if not hasattr(self, "_checked_output_shapes"):
             assert (
                 seq_x.shape[0] == self.seq_len

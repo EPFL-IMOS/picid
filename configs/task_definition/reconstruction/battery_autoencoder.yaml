@@ -3,3 +3,9 @@ label_len: 0  # overlap size
 pred_len: 0 # prediction size
 stride: 1
 task_type: reconstruction
+
+
+model:
+  data_requirements:
+    input_tensors:
+      - features

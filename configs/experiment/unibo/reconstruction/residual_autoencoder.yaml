@@ -34,12 +34,6 @@ model:
       out: 64
       kernel: 3
       stride: 2
-  
-  data_requirements:
-    input_tensors:  
-      - features
-    output_tensors: 
-      - reconstructed_features
 
 
 

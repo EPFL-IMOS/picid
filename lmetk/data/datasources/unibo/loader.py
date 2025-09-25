@@ -269,7 +269,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                 # flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
                 entry = {
                     "features": flattened_x,
-                    "time_features": ak.from_numpy(np.array(curr_y.reshape(-1, 1))),
+                    # "time_features": ak.from_numpy(np.array(curr_y.reshape(-1, 1))),
                     "target": ak.from_numpy(curr_y.reshape(-1, 1)),  # flattened_y
                     "metadata": {
                         "unit_name": unit_name,

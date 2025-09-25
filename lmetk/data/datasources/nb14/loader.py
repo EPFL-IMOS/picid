@@ -9,8 +9,9 @@ from typing import Any, Dict, override
 import copy
 import numpy as np
 from lmetk.data.datasources.nb14.nasa_random_data import NasaRandomizedData
-from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler #, flatten_cycles
-from lmetk.data.datasources.nb14.utils import flatten_cycles
+from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler
+from lmetk.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
+import awkward as ak
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
@@ -39,55 +40,46 @@ def convert_outer_list_to_inner(data_list):
     return stacked
 
 
-
 train_names = [
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW1',
-        
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW2',
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7',
-
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW3',
-        
-        'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW4',
-        'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5',
-
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW9',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW10',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW11',
-
-       'RW_Skewed_Low_Room_Temp_DataSet_2Post/RW13',
-        'RW_Skewed_Low_Room_Temp_DataSet_2Post/RW14',
-        'RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15',
-
-       'RW_Skewed_High_Room_Temp_DataSet_2Post/RW17',
-        'RW_Skewed_High_Room_Temp_DataSet_2Post/RW18',
-        'RW_Skewed_High_Room_Temp_DataSet_2Post/RW19',
-
-       'RW_Skewed_Low_40C_DataSet_2Post/RW21',
-        'RW_Skewed_Low_40C_DataSet_2Post/RW22',
-        'RW_Skewed_Low_40C_DataSet_2Post/RW23',
-
-       'RW_Skewed_High_40C_DataSet_2Post/RW25',
-        'RW_Skewed_High_40C_DataSet_2Post/RW26',
-        'RW_Skewed_High_40C_DataSet_2Post/RW27',
+    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW1",
+    # "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW2",
+    # "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7",
+    # #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW3',
+    # "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW4",
+    # "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5",
+    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW9',
+    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW10',
+    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW11',
+    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW13",
+    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW14",
+    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW17",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW18",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
+    # "RW_Skewed_Low_40C_DataSet_2Post/RW21",
+    # "RW_Skewed_Low_40C_DataSet_2Post/RW22",
+    # "RW_Skewed_Low_40C_DataSet_2Post/RW23",
+    # "RW_Skewed_High_40C_DataSet_2Post/RW25",
+    # "RW_Skewed_High_40C_DataSet_2Post/RW26",
+    # "RW_Skewed_High_40C_DataSet_2Post/RW27",
 ]
 
 test_names = [
-        'Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW8',
-        #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6',
-        #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12',
-        'RW_Skewed_Low_Room_Temp_DataSet_2Post/RW16',
-        'RW_Skewed_High_Room_Temp_DataSet_2Post/RW20',
-        'RW_Skewed_Low_40C_DataSet_2Post/RW24',
-        'RW_Skewed_High_40C_DataSet_2Post/RW28',
+    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW8",
+    # #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6',
+    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12',
+    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW16",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW20",
+    # "RW_Skewed_Low_40C_DataSet_2Post/RW24",
+    # "RW_Skewed_High_40C_DataSet_2Post/RW28",
 ]
+
 
 class NB14Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_path = kwargs['data_dir']
-        
-        
+        self.data_path = kwargs["data_dir"]
+
         self._is_isplitted = False
         self._is_loaded = False
         self.data_dict = None
@@ -98,13 +90,13 @@ class NB14Loader(AbstractDataSourceLoader):
             kwargs.get("multisource_data_splitter") == None
         ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
         self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
-    
+
     @override
     def load_data(self):
         self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
-    
+
     @override
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
@@ -121,12 +113,11 @@ class NB14Loader(AbstractDataSourceLoader):
         # Read raw CSV
         data = self.read_data()
 
-        
         # Convert to desired format
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
         test = convert_outer_list_to_inner(data["test"])
-        
+
         out_dict = {}
         for key in train.keys():
             out_dict[key] = {
@@ -139,7 +130,7 @@ class NB14Loader(AbstractDataSourceLoader):
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
         logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
         return out_dict
-    
+
     def read_data(
         self,
     ):
@@ -147,44 +138,86 @@ class NB14Loader(AbstractDataSourceLoader):
 
         nasa_data_handler = NasaRandomizedData(self.data_path)
         rul_handler = RulHandler()
-        
+
         # These parameters are taken from Bosello
         CAPACITY_THRESHOLDS = None
         NOMINAL_CAPACITY = 2.2
 
-        (train_x, train_y_soh, test_x, test_y_soh,
-        train_battery_range, test_battery_range,
-        time_train, time_test, current_train, current_test, 
-        initial_cycle_lenghts_train, initial_cycle_lenghts_test) = nasa_data_handler.get_discharge_whole_cycle_future(train_names, test_names)
+        (
+            train_x,
+            train_y_soh,
+            test_x,
+            test_y_soh,
+            train_battery_range,
+            test_battery_range,
+            time_train,
+            time_test,
+            current_train,
+            current_test,
+            initial_cycle_lenghts_train,
+            initial_cycle_lenghts_test,
+        ) = nasa_data_handler.get_discharge_whole_cycle_future(train_names, test_names)
 
-        train_y = rul_handler.prepare_y_future(train_names, train_battery_range, train_y_soh, current_train, time_train, CAPACITY_THRESHOLDS, capacity=NOMINAL_CAPACITY)
+        train_y = rul_handler.prepare_y_future(
+            train_names,
+            train_battery_range,
+            train_y_soh,
+            current_train,
+            time_train,
+            CAPACITY_THRESHOLDS,
+            capacity=NOMINAL_CAPACITY,
+        )
         del current_train
         del time_train
 
-        test_y = rul_handler.prepare_y_future(test_names, test_battery_range, test_y_soh, current_test, time_test, CAPACITY_THRESHOLDS, capacity=NOMINAL_CAPACITY)
+        test_y = rul_handler.prepare_y_future(
+            test_names,
+            test_battery_range,
+            test_y_soh,
+            current_test,
+            time_test,
+            CAPACITY_THRESHOLDS,
+            capacity=NOMINAL_CAPACITY,
+        )
         del current_test
         del time_test
-            
-        # first one is SOH, we keep only RUL
-        train_y = train_y[:,1]
-        test_y = test_y[:,1]
 
-        # Get train 
+        # first one is SOH, we keep only RUL
+        train_y = train_y[:, 1]
+        test_y = test_y[:, 1]
+
+        # Get train
         data = defaultdict(list)
 
-        data["train"] = self._process_split(x=train_x, y=train_y, battery_range=train_battery_range, names=train_names, valid_lengths=initial_cycle_lenghts_train, flatten=True)
-        
+        data["train"] = self._process_split(
+            x=train_x,
+            y=train_y,
+            battery_range=train_battery_range,
+            names=train_names,
+            valid_lengths=initial_cycle_lenghts_train,
+            flatten=True,
+        )
+
         # Get test
-        test_entries = self._process_split(x=test_x, y=test_y, battery_range=test_battery_range, names=test_names, valid_lengths=initial_cycle_lenghts_test, flatten=True)
+        test_entries = self._process_split(
+            x=test_x,
+            y=test_y,
+            battery_range=test_battery_range,
+            names=test_names,
+            valid_lengths=initial_cycle_lenghts_test,
+            flatten=True,
+        )
         data["test"] = test_entries
         data["val"] = copy.deepcopy(test_entries)
-        
+
         return data
 
-    def _process_split(self, x, y, battery_range, names, valid_lengths=None, flatten=False):
+    def _process_split(
+        self, x, y, battery_range, names, valid_lengths=None, flatten=False
+    ):
         """
         Process one split (train/test/val).
-        
+
         Args:
             x: np.ndarray of features (n_samples, ...)
             y: np.ndarray of labels
@@ -192,7 +225,7 @@ class NB14Loader(AbstractDataSourceLoader):
             names: iterable of unit names
             valid_lengths: list of lists with valid cycle lengths (only for train)
             flatten: whether to unpad and flatten cycles
-        
+
         Returns:
             list of dicts with keys: features, target, metadata
         """
@@ -206,23 +239,26 @@ class NB14Loader(AbstractDataSourceLoader):
             if flatten:
                 # Use valid_lengths to unpad and flatten
                 lengths = valid_lengths[left_idx:right_idx]
-                flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
+                flattened_x = table_to_ak_array(curr_x, lengths)
+                # flattened_x, flattened_y, cycle_indices = flatten_cycles(
+                #     curr_x, curr_y, lengths
+                # )
                 entry = {
                     "features": flattened_x,
-                    "time_features": np.array(flattened_x.shape[0]),
-                    "target": flattened_y,
+                    # "time_features": ak.from_numpy(np.array(flattened_x.shape[0])),
+                    "target": ak.from_numpy(curr_y.reshape(-1, 1)),
                     "metadata": {
                         "unit_name": unit_name,
-                        "cycle_indices": cycle_indices,
-                        "n_cycles": len(lengths)
-                    }
+                        # "cycle_indices": cycle_indices,
+                        "n_cycles": len(lengths),
+                    },
                 }
             else:
                 # Keep as is (no flattening)
                 entry = {
                     "features": curr_x,
                     "target": curr_y,
-                    "metadata": {"unit_name": unit_name}
+                    "metadata": {"unit_name": unit_name},
                 }
 
             data_split.append(entry)
@@ -251,5 +287,3 @@ class NB14Loader(AbstractDataSourceLoader):
         logger.warning(
             "RigidBodyDynamics does not support data splitting. The project relies on predefined splits."
         )
-
-    

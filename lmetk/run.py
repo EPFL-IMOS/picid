@@ -252,7 +252,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             f"Expected: {features_set}, "
             f"Found: {set(data_dict[split].keys())}"
         )
-    input_data_task_keys = cfg.model.data_requirements.input_tensors
+    input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
 
     # 1. Create the datasets and store them in a dictionary
     datasets = {}
@@ -305,7 +305,12 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         inverse_transform_required = cfg.evaluator[s].get(
             "apply_inverse_scaling", False
         )
-        inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
+        if inverse_transform_required:
+            inverse_transform_name = cfg.evaluator[s].get(
+                "inverse_transform_name", None
+            )
+        else:
+            inverse_transform_name = None
 
         if inverse_transform_required and inverse_transform_name is None:
             raise ValueError(

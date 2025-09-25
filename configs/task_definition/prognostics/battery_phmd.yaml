@@ -1,5 +1,11 @@
 seq_len: 16  # window size
 label_len: 0  # overlap size
-pred_len: 24 # prediction size
-stride: 24
+pred_len: 1 # prediction size
+stride: 1
 task_type: rul
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - rul # infere from somewhere

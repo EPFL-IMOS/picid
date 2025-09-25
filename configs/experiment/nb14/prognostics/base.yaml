@@ -1,0 +1,20 @@
+#@package _global_
+
+defaults:
+  - nb14/base
+  - override /evaluator: default
+  - override /task_definition: prognostics/battery_phmd
+
+task_definition:
+  task_type: ahrul
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: False
+  val:
+    inverse_transform_name: scaler_target 
+    apply_inverse_scaling: False
+  test:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: False

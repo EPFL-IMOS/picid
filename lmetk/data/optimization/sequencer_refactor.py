@@ -54,8 +54,6 @@ class RaggedDriver(BaseSequencer):
         label_len: int,
         pred_len: int,
         stride: int,
-        pad: bool = False,
-        pad_value: float = 0.0,
     ):
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
@@ -64,8 +62,6 @@ class RaggedDriver(BaseSequencer):
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
-            pad=pad,
-            pad_value=pad_value,
         )
 
     def __len__(self):

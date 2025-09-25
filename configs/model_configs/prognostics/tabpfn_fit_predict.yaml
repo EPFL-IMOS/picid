@@ -10,3 +10,4 @@ defaults:
 
 task_definition:
   requires_training: true
+

@@ -30,23 +30,32 @@ def forecasting_collate_fn(batch: List[SampleType]) -> Dict[str, torch.Tensor]:
 
     # Define the suffixes for your new keys. This makes it easy to manage naming.
     # The first tensor in a tuple gets '_seq_x', the second gets '_seq_y', etc.
-    suffixes = ["_seq_x", "_seq_y", "_seq_z"]  # You can extend this list if needed
+    suffixes = ["_seq_x", "_seq_y"]  # You can extend this list if needed
 
     # 1. Iterate through each sample dictionary in the batch.
     for sample in batch:
         # 2. Iterate through the items (e.g., 'features': (tensor, ...)) in the sample.
-        for key, value_tuple in sample.items():
-            # 3. Iterate through each element within the tuple.
-            for idx, item in enumerate(value_tuple):
-                # 4. We only process the item if it's actually a tensor (ignoring Nones).
-                if torch.is_tensor(item):
-                    # 5. Create the new, flattened key (e.g., 'features' + '_seq_x').
-                    # This logic handles cases where you might have more tensors than defined suffixes.
-                    suffix = suffixes[idx] if idx < len(suffixes) else f"_{idx}"
-                    new_key = f"{key}{suffix}"
+        for key, value in sample.items():
 
-                    # 6. Append the tensor to the list for that new key.
-                    collated_lists[new_key].append(item)
+            if type(value) is tuple:
+                # 3. Iterate through each element within the tuple.
+                for idx, item in enumerate(value):
+                    # 4. We only process the item if it's actually a tensor (ignoring Nones).
+                    if torch.is_tensor(item):
+                        # 5. Create the new, flattened key (e.g., 'features' + '_seq_x').
+                        # This logic handles cases where you might have more tensors than defined suffixes.
+                        suffix = suffixes[idx] if idx < len(suffixes) else f"_{idx}"
+                        new_key = f"{key}{suffix}"
+
+                        # 6. Append the tensor to the list for that new key.
+                        collated_lists[new_key].append(item)
+
+            # Case 2: The value is a single tensor (like a static feature)
+            elif torch.is_tensor(value):
+                # Use the original key directly, without adding a suffix
+                collated_lists[key].append(value)
+            else:
+                raise ValueError(f"Unsupported value type in sample: {type(value)}")
 
     # 7. Now, concatenate the lists of tensors into final batched tensors.
     final_batch = {}
