@@ -18,11 +18,9 @@ callbacks:
     mode: min
 
 model:
-  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
-  d_yc:  ${infer_data_dim:rul,-1}
-  d_yt:  ${infer_data_dim:rul,-1}
+  max_seq_len: ${task_definition.seq_len}
+  d_yc:  ${infer_data_dim:${task_definition.task_type},-1} 
+  d_yt:  ${infer_data_dim:${task_definition.task_type},-1}
   d_x:   ${infer_data_dim:features,-1}
   n_timefeatures: 0
   base_lr: 0.001
-  # Important: we do not have access to past RUL
-  mask_y_c: true 
