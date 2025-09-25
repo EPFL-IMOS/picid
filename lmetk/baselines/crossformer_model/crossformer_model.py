@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
@@ -64,8 +65,14 @@ class Crossformer_Forecaster(Forecaster):
             task_type=task_type,
         )
 
+        no_y_as_input = task_type in REGRESSION_TASKS
+
         configs = {
-            "data_dim": d_yc + d_x if decoder_embedding == "DSW" else d_yc,
+            "data_dim": (
+                d_yc + d_x
+                if (decoder_embedding == "DSW" and not no_y_as_input)
+                else (d_x if no_y_as_input else d_yc)
+            ),
             "in_len": ts_in,
             "out_len": ts_out,
             "seg_len": seg_len,
@@ -110,6 +117,13 @@ class Crossformer_Forecaster(Forecaster):
 
         assert d_yt <= d_yc, "d_yt should be less than or equal to d_yc"
 
+        if self.decoder_embedding == "DSW":
+            assert not self.task_type in [
+                "rul",
+                "ahrul",
+                "soc",
+            ], "DSW decoder embedding not supported for task_type in ['rul', 'ahrul', 'soc']"
+
     @property
     def train_step_forward_kwargs(self):
         return {"output_attn": False}
@@ -122,13 +136,14 @@ class Crossformer_Forecaster(Forecaster):
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
         # set data to [batch, length, dim] format
-        if len(y_c.shape) == 2:
-            y_c = y_c.unsqueeze(-1)
+        if y_c is not None:
+            if len(y_c.shape) == 2:
+                y_c = y_c.unsqueeze(-1)
+            if self.mask_y_c:
+                y_c = torch.zeros_like(y_c)
+
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
-
-        if self.mask_y_c:
-            y_c = torch.zeros_like(y_c)
 
         # best we can do is zero out the target y and put the full sequence as context to encoder.
         # enc_y = torch.concat((y_c, torch.zeros_like(y_t)), dim=1)
@@ -148,9 +163,14 @@ class Crossformer_Forecaster(Forecaster):
             outputs = self.crossformer(x_seq=batch_x, y_seq=batch_y)
             forecast_out = outputs[..., -self.out_data_dim :]
         elif self.decoder_embedding == "random":
-            forecast_out = self.crossformer(x_seq=y_c)
 
-        # needed for what?
+            if self.task_type in REGRESSION_TASKS:
+                x_seq = x_t
+                outputs = self.crossformer(x_seq=x_seq)
+                forecast_out = outputs[..., -self.out_data_dim :]
+            else:
+                x_seq = y_c
+                forecast_out = self.crossformer(x_seq=x_seq)
 
         return (forecast_out,)
 
