@@ -1,20 +1,25 @@
 #@package _global_
 
 defaults:
-  - nb14/base
   - override /evaluator: default
-  - override /task_definition: prognostics/battery_phmd
+  - override /task_definition: prognostics/rul
 
-task_definition:
-  task_type: ahrul
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
 
 evaluator:
   train:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: False
+    apply_inverse_scaling: True
+  
   val:
-    inverse_transform_name: scaler_target 
-    apply_inverse_scaling: False
+    apply_inverse_scaling: True
+  
   test:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: False
+    apply_inverse_scaling: True

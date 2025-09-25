@@ -5,7 +5,7 @@ defaults:
   - /model_configs/prognostics/stf
   
   - override /dataset: prognostics/battery_rul_multiunit_dataset
-  - override /transforms: battery/unibo_compression_by_autoencoder
+  - override /transforms: battery/compression_by_autoencoder
 
 callbacks:
   early_stopping:

@@ -1,0 +1,11 @@
+seq_len: 16  # window size
+label_len: 0  # overlap size
+pred_len: 1 # prediction size
+stride: 1
+task_type: ahrul
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - ahrul # infere from somewhere

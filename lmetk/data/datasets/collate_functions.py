@@ -20,9 +20,12 @@ def forecasting_collate_fn(batch: List[SampleType]) -> Dict[str, torch.Tensor]:
         batch: A list of samples. Each sample is a dictionary like:
                {'features': (tensor_x, tensor_y, None, ...), ...}
 
+               if {'features': tensor_x, ...} then it is treated as a static feature.
+
     Returns:
         A single dictionary with flattened keys and concatenated tensors.
         Example: {'features_seq_x': batched_tensor_x, 'features_seq_y': batched_tensor_y}
+        Static features remain as 'features': batched_tensor.
     """
     # Use defaultdict(list) to easily append tensors for the same key.
     # If a key is accessed for the first time, it's initialized with an empty list.
@@ -65,6 +68,27 @@ def forecasting_collate_fn(batch: List[SampleType]) -> Dict[str, torch.Tensor]:
             final_batch[key] = torch.cat(tensor_list, dim=0)
 
     return final_batch
+
+
+def rul_context_collate_fn(batch: List[Any]) -> Dict[str, Dict[str, torch.Tensor]]:
+    """
+
+
+    - Input sample: batch {'batch_idx': int, 'features': tensor, 'rul': tensor,...}
+     ll tensors are static features can be procesed with forecasting_collate_fn, case 2.
+    - Operation: Applies `forecasting_collate_fn` to batch
+    - Output: {
+                'batch_idx': torch.Tensor,
+                'rul': torch.Tensor,
+                'features': torch.Tensor
+                ...
+              }
+    """
+
+    batch_idxs = torch.tensor([sample.pop("batch_idx") for sample in batch])
+    out = forecasting_collate_fn(batch)
+    out["batch_idx"] = batch_idxs
+    return out
 
 
 def context_collate_fn(batch: List[Any]) -> Dict[str, Dict[str, torch.Tensor]]:
