@@ -16,6 +16,7 @@ from .attn import (
 from .embed import Embedding
 from .data_dropout import ReconstructionDropout
 from ..utils.masking import TriangularCausalMask
+
 # from models.spacetimeformer_model.utils.masking import TriangularCausalMask
 
 
@@ -79,18 +80,19 @@ class Spacetimeformer(nn.Module):
         recon_mask_drop_seq: float = 0.1,
         recon_mask_drop_standard: float = 0.2,
         recon_mask_drop_full: float = 0.05,
+        decoder_only: bool = False,
         verbose: bool = True,
     ):
         super().__init__()
         if e_layers:
             assert intermediate_downsample_convs <= e_layers - 1
         if embed_method == "temporal":
-            assert local_self_attn == "none", (
-                "local attention not compatible with Temporal-only embedding"
-            )
-            assert local_cross_attn == "none", (
-                "Local Attention not compatible with Temporal-only embedding"
-            )
+            assert (
+                local_self_attn == "none"
+            ), "local attention not compatible with Temporal-only embedding"
+            assert (
+                local_cross_attn == "none"
+            ), "Local Attention not compatible with Temporal-only embedding"
             split_length_into = 1
         else:
             split_length_into = d_yc
@@ -101,6 +103,8 @@ class Spacetimeformer(nn.Module):
         self.d_yc = d_yc
         self.start_token_len = start_token_len
         self.attention_method = attention_method
+        self.decoder_only = decoder_only
+        self.inverted_encoder = inverted_encoder
 
         recon_dropout = ReconstructionDropout(
             drop_full_timesteps=recon_mask_drop_full,
@@ -111,40 +115,41 @@ class Spacetimeformer(nn.Module):
         )
 
         if d_x_embedding_router is not None:
-            assert len(d_x_embedding_router) == d_x, (
-                "Embedding router must have same length as d_x"
-            )
+            assert (
+                len(d_x_embedding_router) == d_x
+            ), "Embedding router must have same length as d_x"
 
-        self.inverted_encoder = inverted_encoder
-        if inverted_encoder:
-            self.enc_embedding = IEmbedding(
-                c_in=max_seq_len, d_model=d_model, dropout=dropout_emb
-            )
-        else:
-            self.enc_embedding = Embedding(
-                d_y=d_yc,
-                d_x=d_x,
-                d_model=d_model,
-                time_emb_dim=time_emb_dim,
-                downsample_convs=initial_downsample_convs,
-                method=embed_method,
-                null_value=null_value,
-                pad_value=pad_value,
-                start_token_len=start_token_len,
-                is_encoder=True,
-                position_emb=pos_emb_type,
-                time_emb=time_emb_type,
-                timetable_emb=timetable_emb_enc_type,
-                variable_emb=variable_emb_type,
-                embedding_router=d_x_embedding_router,
-                max_seq_len=max_seq_len,
-                data_dropout=recon_dropout,
-                use_val=use_val_enc,
-                use_timetable=use_tt_enc,
-                use_time=use_time,
-                use_space=use_space,
-                use_given=use_given,
-            )
+        if not self.decoder_only:
+            if inverted_encoder:
+                self.enc_embedding = IEmbedding(
+                    c_in=max_seq_len, d_model=d_model, dropout=dropout_emb
+                )
+            else:
+                self.enc_embedding = Embedding(
+                    d_y=d_yc,
+                    d_x=d_x,
+                    d_model=d_model,
+                    time_emb_dim=time_emb_dim,
+                    downsample_convs=initial_downsample_convs,
+                    method=embed_method,
+                    null_value=null_value,
+                    pad_value=pad_value,
+                    start_token_len=start_token_len,
+                    is_encoder=True,
+                    position_emb=pos_emb_type,
+                    time_emb=time_emb_type,
+                    timetable_emb=timetable_emb_enc_type,
+                    variable_emb=variable_emb_type,
+                    embedding_router=d_x_embedding_router,
+                    max_seq_len=max_seq_len,
+                    data_dropout=recon_dropout,
+                    use_val=use_val_enc,
+                    use_timetable=use_tt_enc,
+                    use_time=use_time,
+                    use_space=use_space,
+                    use_given=use_given,
+                )
+
         self.dec_embedding = Embedding(
             d_y=d_yt,
             d_x=d_x,
@@ -182,38 +187,41 @@ class Spacetimeformer(nn.Module):
             "performer_redraw_interval": performer_redraw_interval,
         }
 
-        self.encoder = Encoder(
-            attn_layers=[
-                EncoderLayer(
-                    global_attention=self._attn_switch(
-                        global_self_attn,
-                        **attn_kwargs,
-                    ),
-                    local_attention=self._attn_switch(
-                        local_self_attn,
-                        **attn_kwargs,
-                    ),
-                    d_model=d_model,
-                    d_yc=d_yc if embed_method == "spatio-temporal" else 1,
-                    time_windows=attn_time_windows,
-                    time_window_offset=2
-                    if use_shifted_time_windows and (l % 2 == 1)
-                    else 0,
-                    d_ff=d_ff,
-                    dropout_ff=dropout_ff,
-                    dropout_attn_out=dropout_attn_out,
-                    activation=activation,
-                    norm=norm,
-                )
-                for l in range(e_layers)
-            ],
-            conv_layers=[
-                ConvBlock(split_length_into=split_length_into, d_model=d_model)
-                for l in range(intermediate_downsample_convs)
-            ],
-            norm_layer=Normalization(norm, d_model=d_model) if use_final_norm else None,
-            emb_dropout=dropout_emb,
-        )
+        if not self.decoder_only:
+            self.encoder = Encoder(
+                attn_layers=[
+                    EncoderLayer(
+                        global_attention=self._attn_switch(
+                            global_self_attn,
+                            **attn_kwargs,
+                        ),
+                        local_attention=self._attn_switch(
+                            local_self_attn,
+                            **attn_kwargs,
+                        ),
+                        d_model=d_model,
+                        d_yc=d_yc if embed_method == "spatio-temporal" else 1,
+                        time_windows=attn_time_windows,
+                        time_window_offset=(
+                            2 if use_shifted_time_windows and (l % 2 == 1) else 0
+                        ),
+                        d_ff=d_ff,
+                        dropout_ff=dropout_ff,
+                        dropout_attn_out=dropout_attn_out,
+                        activation=activation,
+                        norm=norm,
+                    )
+                    for l in range(e_layers)
+                ],
+                conv_layers=[
+                    ConvBlock(split_length_into=split_length_into, d_model=d_model)
+                    for l in range(intermediate_downsample_convs)
+                ],
+                norm_layer=(
+                    Normalization(norm, d_model=d_model) if use_final_norm else None
+                ),
+                emb_dropout=dropout_emb,
+            )
 
         self.decoder = Decoder(
             layers=[
@@ -236,9 +244,9 @@ class Spacetimeformer(nn.Module):
                     ),
                     d_model=d_model,
                     time_windows=attn_time_windows,
-                    time_window_offset=2
-                    if use_shifted_time_windows and (l % 2 == 1)
-                    else 0,
+                    time_window_offset=(
+                        2 if use_shifted_time_windows and (l % 2 == 1) else 0
+                    ),
                     d_ff=d_ff,
                     d_yt=d_yt if embed_method == "spatio-temporal" else 1,
                     d_yc=d_yc if embed_method == "spatio-temporal" else 1,
@@ -277,16 +285,20 @@ class Spacetimeformer(nn.Module):
             enc_y = torch.cat([enc_y, dec_y], dim=1)
             enc_x = torch.cat([enc_x, dec_x], dim=1)
 
-        enc_vt_emb, enc_s_emb, enc_var_idxs, enc_mask_seq = self.enc_embedding(
-            y=enc_y, x=enc_x
-        )
+        if not self.decoder_only:
+            enc_vt_emb, enc_s_emb, enc_var_idxs, enc_mask_seq = self.enc_embedding(
+                y=enc_y, x=enc_x
+            )
 
-        enc_out, enc_self_attns = self.encoder(
-            val_time_emb=enc_vt_emb,
-            space_emb=enc_s_emb,
-            self_mask_seq=enc_mask_seq,
-            output_attn=output_attention,
-        )
+            enc_out, enc_self_attns = self.encoder(
+                val_time_emb=enc_vt_emb,
+                space_emb=enc_s_emb,
+                self_mask_seq=enc_mask_seq,
+                output_attn=output_attention,
+            )
+        else:
+            enc_var_idxs = None
+            enc_out = None
 
         dec_vt_emb, dec_s_emb, _, dec_mask_seq = self.dec_embedding(y=dec_y, x=dec_x)
 
@@ -327,7 +339,11 @@ class Spacetimeformer(nn.Module):
             forecast_out,
             recon_out,
             (classifier_enc_out, enc_var_idxs),
-            (enc_self_attns, dec_cross_attns),
+            (
+                (enc_self_attns, dec_cross_attns)
+                if not self.decoder_only
+                else (dec_cross_attns)
+            ),
             (enc_out, dec_out),
         )
 
