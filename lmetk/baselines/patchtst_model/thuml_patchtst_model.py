@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch import nn
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
@@ -108,7 +109,7 @@ class PatchTST_Forecaster(Forecaster):
             self.d_x_mask = None
         self.mask_y_c = mask_y_c
 
-        if self.task_type in ["rul", "ahrul", "soc"]:
+        if self.task_type in REGRESSION_TASKS:
             # We only support this case so far
             assert (
                 self.include_x_t is False
@@ -137,7 +138,7 @@ class PatchTST_Forecaster(Forecaster):
 
         # In the regresssion case, we show x_t as additional features
         # to the encoder.
-        if self.task_type in ["rul", "ahrul", "soc"]:
+        if self.task_type in REGRESSION_TASKS:
             # We only support this case so far
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"

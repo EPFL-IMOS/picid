@@ -3,6 +3,7 @@ from typing import Tuple
 
 import torch
 from torch import nn
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 
 from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
@@ -180,7 +181,7 @@ class LSTM_Forecaster(Forecaster):
         self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
 
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
-        no_y_as_input = task_type in ["rul", "ahrul", "soc"]
+        no_y_as_input = task_type in REGRESSION_TASKS
 
         self.encoder = LSTM_Encoder(
             input_dim=time_dim + (d_yc if not no_y_as_input else 0),
@@ -196,7 +197,7 @@ class LSTM_Forecaster(Forecaster):
             dropout=dropout_p,
         )
 
-        if self.task_type in ["rul", "ahrul", "soc"]:
+        if self.task_type in REGRESSION_TASKS:
             self.model = LSTM_Regression(self.t2v, self.encoder, self.decoder).to(
                 self.device
             )
@@ -230,7 +231,7 @@ class LSTM_Forecaster(Forecaster):
             # stats (update_stats = False).
             y_t = self.revin(y_t, mode="norm", update_stats=False)
 
-        if self.task_type in ["rul", "ahrul", "soc"]:
+        if self.task_type in REGRESSION_TASKS:
             preds = self.model.forward(x_t, y_t, teacher_forcing_prob=force)
         elif self.task_type in ["forecasting"]:
             preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)

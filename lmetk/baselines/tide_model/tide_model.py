@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch import nn
 
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
 
@@ -136,7 +137,7 @@ class TiDE_Forecaster(Forecaster):
         #   batch_y_mark = torch.concat(
         #         [x_mark_enc, batch_y_mark[:, -self.pred_len :, :]], dim=1
         #     )
-        if self.task_type in ["rul", "ahrul", "soc"]:
+        if self.task_type in REGRESSION_TASKS:
             # We only support this case so far
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
