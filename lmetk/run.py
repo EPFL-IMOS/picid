@@ -63,6 +63,20 @@ OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
 OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
 
 
+OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
+
+
+def safe_div(a, b):
+    if b == 0:
+        raise ZeroDivisionError("division by zero")
+    if a % b != 0:
+        raise ValueError(f"{a} is not divisible by {b}")
+    return a // b
+
+
+OmegaConf.register_new_resolver("quot", lambda a, b: safe_div(a, b))
+
+
 # safe diff that returns a if a or b are strings
 def diff_if_not_string(a, b):
     if isinstance(a, str) or isinstance(b, str):
