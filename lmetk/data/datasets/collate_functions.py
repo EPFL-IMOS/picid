@@ -121,6 +121,18 @@ def context_collate_fn(batch: List[Any]) -> Dict[str, Dict[str, torch.Tensor]]:
     }
 
 
+def collate_identity(batch):
+    """
+    Collate function that returns the batch as is.
+    Useful when each item in the batch is already a complete batch.
+    E.g., when using a BatchSampler that groups indices.
+    """
+    # batch is a list of batch-returns
+    # each element is already the full batch from dataset
+    # just return the first (since BatchSampler groups them)
+    return batch[0]
+
+
 # def forecasting_collate_fn(batch):
 #     batch_x = torch.stack([item[0] for item in batch], dim=0)
 #     batch_y = torch.stack([item[1] for item in batch], dim=0)

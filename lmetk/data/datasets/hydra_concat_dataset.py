@@ -3,12 +3,13 @@ from typing import Any
 import omegaconf
 from hydra.utils import instantiate
 from numpy import ndarray
+from typing import Callable
 from torch.utils.data._utils.collate import default_collate
 
-from lmetk.data.datasets.base import BaseConcatDataset
+from lmetk.data.datasets.base import BaseVectorizedConcatDataset
 
 
-class HydraConcatDataset(BaseConcatDataset):
+class HydraConcatDataset(BaseVectorizedConcatDataset):
     def __init__(
         self,
         dataset_cfg,
@@ -82,5 +83,5 @@ class HydraConcatDataset(BaseConcatDataset):
 
         super().__init__(datasets)
 
-    def get_collate_fn(self):
+    def get_collate_fn(self) -> Callable:
         return self.collate_fn

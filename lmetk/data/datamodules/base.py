@@ -1,14 +1,25 @@
-from typing import Dict, List, Optional, Tuple, Any
-
 import inspect
+import logging
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import (
+    BatchSampler,
+    DataLoader,
+    RandomSampler,
+    SequentialSampler,
+    Subset,
+)
 
-from lmetk.data.datasets.base import BaseConcatDataset, BaseDataset
+from lmetk.data.datasets.base import (
+    BaseConcatDataset,
+    BaseDataset,
+    BaseVectorizedConcatDataset,
+)
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class BaseDataModule(LightningDataModule):
     """
@@ -30,7 +41,13 @@ class BaseDataModule(LightningDataModule):
         shuffle_train: bool = True,
         shuffle_val: bool = False,
         shuffle_test: bool = False,
-        subset_range: Optional[Tuple[int, int, int]] = None, # Used for debugging purposes
+        num_workers: int = 0,
+        pin_memory: bool = True,
+        use_batch_sampler: bool = True,
+        subset_range: Optional[
+            Tuple[int, int, int]
+        ] = None,  # Used for debugging purposes
+        profiler_cfg=None,
     ):
         # for ds in ["train", "val", "test"]:
         #     if ds not in datasets:
@@ -44,7 +61,9 @@ class BaseDataModule(LightningDataModule):
             if isinstance(size, str):
                 assert size in ["full"], f"Batch size must be  'full', got {size}"
             else:
-                assert isinstance(size, int) and size > 0, f"Batch size must be a positive integer, got {size}"
+                assert (
+                    isinstance(size, int) and size > 0
+                ), f"Batch size must be a positive integer, got {size}"
 
         for shuffle in [shuffle_val, shuffle_test]:
             if shuffle:
@@ -61,25 +80,69 @@ class BaseDataModule(LightningDataModule):
         # Automatically collect all init args
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
-        
-        # Remove 'self' and 'datasets' from the list
-        hparams = {arg: values[arg] for arg in args if arg not in ['self', 'datasets', 'dataset_train', 'dataset_val', 'dataset_test']}
 
+        # Remove 'self' and 'datasets' from the list
+        hparams = {
+            arg: values[arg]
+            for arg in args
+            if arg
+            not in ["self", "datasets", "dataset_train", "dataset_val", "dataset_test"]
+        }
+
+        self.profiler_cfg = profiler_cfg
+        self.profiler = None
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        self.use_batch_sampler = use_batch_sampler
 
         # We need them because the debug subset does not have this function.
-        self.collate_fn_train = dataset_train.get_collate_fn() if hasattr(dataset_train, "get_collate_fn") else None
-        self.collate_fn_val = dataset_val.get_collate_fn() if getattr(dataset_val, "get_collate_fn", None) else None
-        self.collate_fn_test = dataset_test.get_collate_fn() if getattr(dataset_test, "get_collate_fn", None) else None
+        self.collate_fn_train = (
+            dataset_train.get_collate_fn()
+            if (hasattr(dataset_train, "get_collate_fn") and not use_batch_sampler)
+            else None
+        )
+        self.collate_fn_val = (
+            dataset_val.get_collate_fn()
+            if (hasattr(dataset_val, "get_collate_fn") and not use_batch_sampler)
+            else None
+        )
+        self.collate_fn_test = (
+            dataset_test.get_collate_fn()
+            if (hasattr(dataset_test, "get_collate_fn") and not use_batch_sampler)
+            else None
+        )
 
-        self.dataset_train = dataset_train if subset_range is None else Subset(dataset_train, range(*subset_range))
-        self.dataset_val = dataset_val if  subset_range is None else Subset(dataset_val, range(*subset_range))
-        self.dataset_test = dataset_test if subset_range is None else Subset(dataset_test, range(*subset_range))
-        
-        self.save_hyperparameters(hparams, ignore=["datasets",  'dataset_train', 'dataset_val', 'dataset_test'])
+        self.dataset_train = (
+            dataset_train
+            if subset_range is None
+            else Subset(dataset_train, range(*subset_range))
+        )
+        self.dataset_val = (
+            dataset_val
+            if subset_range is None
+            else Subset(dataset_val, range(*subset_range))
+        )
+        self.dataset_test = (
+            dataset_test
+            if subset_range is None
+            else Subset(dataset_test, range(*subset_range))
+        )
 
-        for ds_name, ds in [("dataset_train", dataset_train), ("dataset_val", dataset_val), ("dataset_test", dataset_test)]:
-            if not isinstance(ds, (BaseDataset, BaseConcatDataset)):
-                raise TypeError(f"{ds_name} must be a subclass of BaseDataset or BaseConcatDataset, got {type(ds)}")
+        self.save_hyperparameters(
+            hparams, ignore=["datasets", "dataset_train", "dataset_val", "dataset_test"]
+        )
+
+        for ds_name, ds in [
+            ("dataset_train", dataset_train),
+            ("dataset_val", dataset_val),
+            ("dataset_test", dataset_test),
+        ]:
+            if not isinstance(
+                ds, (BaseDataset, BaseConcatDataset, BaseVectorizedConcatDataset)
+            ):
+                raise TypeError(
+                    f"{ds_name} must be a subclass of BaseDataset or BaseConcatDataset, got {type(ds)}"
+                )
 
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -114,6 +177,45 @@ class BaseDataModule(LightningDataModule):
         """
         pass
 
+    def _create_dataloader(
+        self, ds, batch_size, shuffle=True, drop_last=False, collate_fn=None
+    ):
+
+        loader_args = dict(
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+        )
+
+        if self.use_batch_sampler:
+            assert collate_fn is None, "collate_fn not supported with use_batch_sampler"
+
+            sampler = BatchSampler(
+                RandomSampler(ds) if shuffle else SequentialSampler(ds),
+                batch_size=batch_size,
+                drop_last=drop_last,
+            )
+
+            loader_args["sampler"] = sampler
+            # otherwise it adds a dimension with size 1 x ...
+            loader_args["batch_size"] = None
+
+        else:
+            assert (
+                collate_fn is not None
+            ), "collate_fn must be provided if not using batch_sampler"
+
+            loader_args["batch_size"] = batch_size
+            loader_args["shuffle"] = shuffle
+            loader_args["drop_last"] = drop_last
+            loader_args["collate_fn"] = collate_fn
+
+        loader = DataLoader(ds, **loader_args)
+
+        if self.profiler_cfg is not None:
+            return self.profiled_loader(loader)
+        else:
+            return loader
+
     def train_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
         Create a [data loader][torch.utils.data.DataLoader] for the training split.
@@ -140,12 +242,12 @@ class BaseDataModule(LightningDataModule):
             batch_size = self.hparams.train_batch_size
 
         drop_last = len(self.dataset_train) % batch_size == 1
-        loader = DataLoader(
+
+        loader = self._create_dataloader(
             self.dataset_train,
             batch_size=batch_size,
             shuffle=self.hparams.shuffle_train,
             drop_last=drop_last,
-            pin_memory=True,
             collate_fn=self.collate_fn_train,
         )
 
@@ -174,13 +276,14 @@ class BaseDataModule(LightningDataModule):
         else:
             batch_size = self.hparams.val_batch_size
 
-        return DataLoader(
+        loader = self._create_dataloader(
             self.dataset_val,
             batch_size=batch_size,
             shuffle=self.hparams.shuffle_val,
-            pin_memory=True,
             collate_fn=self.collate_fn_val,
         )
+
+        return loader
 
     def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
@@ -204,10 +307,49 @@ class BaseDataModule(LightningDataModule):
         else:
             batch_size = self.hparams.test_batch_size
 
-        return DataLoader(
-            self.dataset_test,
+        loader = self._create_dataloader(
+            self.dataset_val,
             batch_size=batch_size,
-            shuffle=self.hparams.shuffle_test,
-            pin_memory=True,
-            collate_fn=self.collate_fn_test,
+            shuffle=self.hparams.shuffle_val,
+            collate_fn=self.collate_fn_val,
         )
+
+        return loader
+
+    def profiled_loader(self, dl):
+
+        from torch.profiler import ProfilerActivity, profile, record_function, schedule
+
+        def profiled_loader():
+            acts = [getattr(ProfilerActivity, a) for a in self.profiler_cfg.activities]
+            self.profiler = profile(
+                activities=acts,
+                schedule=schedule(
+                    wait=self.profiler_cfg.wait,
+                    warmup=self.profiler_cfg.warmup,
+                    active=self.profiler_cfg.active,
+                    repeat=self.profiler_cfg.repeat,
+                ),
+                record_shapes=True,
+                with_stack=True,
+                profile_memory=True,
+            )
+            self.profiler.start()
+
+            try:
+                for batch in dl:
+                    with record_function("dataloader_iteration"):
+                        yield batch
+                    self.profiler.step()
+            finally:
+                # Ensures profiler is always stopped, even if experiment is cancelled
+                self.profiler.stop()
+                print(
+                    self.profiler.key_averages().table(
+                        sort_by="self_cpu_time_total", row_limit=10
+                    )
+                )
+                self.profiler.export_chrome_trace(self.profiler_cfg.trace_path)
+                print(f"Profiler trace written to {self.profiler_cfg.trace_path}")
+
+        return profiled_loader()
