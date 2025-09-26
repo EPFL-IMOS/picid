@@ -45,6 +45,7 @@ dev = [
     "mkdocstrings[python]>=0.30.0",
     "phmd",
     "TabPFN",
+    "viztracer>=1.0.4",
 ]
 
 [tool.setuptools]
