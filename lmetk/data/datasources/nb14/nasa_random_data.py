@@ -17,7 +17,7 @@ NOMINAL_CAPACITY = 2.2
 class NasaRandomizedData:
     def __init__(self, data_path, force_download=False):
         download("NB14", cache_dir=data_path, force=force_download, unzip=True)
-        self.path = data_path + "/datasets/NB14"
+        self.path = Path(data_path).expanduser() / "datasets/NB14"
 
     def get_discharge_whole_cycle_future(
         self, train_names, test_names, validation_names=None
@@ -133,7 +133,8 @@ class NasaRandomizedData:
         max_step = 0
         for name in names:
             logger.info("Processing file %s" % name)
-            raw_data = scipy.io.loadmat(self.path + "/" + name)["data"][0][0][0][0]
+            path_str = str(self.path / name)
+            raw_data = scipy.io.loadmat(path_str)["data"][0][0][0][0]
             cycle = pd.DataFrame(raw_data)
 
             cycle_num = 0
