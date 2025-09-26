@@ -18,7 +18,8 @@
   "python.testing.pytestArgs": [
     "test",
     "--tb=short",
-    "--paths=rt_local"
+    "--paths=rt_local",
+    "-s"
   ],
   "python-envs.pythonProjects": [],
   "editor.formatOnSave": true,
