@@ -24,9 +24,15 @@ class ContextBatchDataset(BaseDataset):
         # Make sure that the data_dict contains the required keys
         if task_type in ["rul", "ahrul", "soc"]:
             required_keys = ["features", "rul"]  # "time_features", "target"
-
             context_key = "features"
             target_key = "rul"
+
+        elif task_type in ["forecasting"]:
+            required_keys = ["features", "target"]  # "time_features", "target"
+            context_key = "features"
+            target_key = "target"
+        else:
+            raise ValueError(f"Unknown task_type: {task_type}")
 
         for key in required_keys:
             if key not in data_dict:
