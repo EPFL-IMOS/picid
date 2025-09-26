@@ -260,10 +260,10 @@ class Forecaster(CustomEvaluatorLightningModule):
         # x_c, y_c, x_t, y_t,
         if self.task_type == "forecasting":
             batch = (
-                batch["context"]["x"],
-                batch["target"]["x"],
-                batch["context"]["y"],
-                batch["target"]["y"],
+                batch["context"]["features_seq_x"],
+                batch["target"]["target_seq_x"],
+                batch["context"]["features_seq_y"],
+                batch["target"]["target_seq_y"],
             )
         elif self.task_type in REGRESSION_TASKS:
 
