@@ -2,3 +2,11 @@ seq_len: 48  # window size
 label_len: 0  # overlap size
 pred_len: 24 # prediction size
 task_type: forecasting
+
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - time_features
+      - target

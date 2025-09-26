@@ -6,3 +6,12 @@ label_len: 48  # overlap size
 # we specify the effective prediction lenght 24
 pred_len: 96 
 task_type: forecasting
+
+
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - time_features
+      - target
