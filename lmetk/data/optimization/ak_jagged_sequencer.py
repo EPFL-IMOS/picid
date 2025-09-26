@@ -69,7 +69,7 @@ class AkwardJaggedAutoregressiveSequencer:
         self.num_features = get_ak_shape(features)[-1]
 
         # Precompute valid window bounds
-        self._indices = self._build_indices_efficient()
+        self._indices = np.array(self._build_indices_efficient())
 
     def _build_indices(self) -> List[tuple]:
         num_indexing_dims = self.ragged_dim + 1 if self.is_ragged else 1
@@ -201,6 +201,33 @@ class AkwardJaggedAutoregressiveSequencer:
 
         return seq_x, seq_y
 
+    def get_window_for_index_efficient(self, batch_idx):
+        idx_sel = self._indices[batch_idx]
+        b_dim = idx_sel.shape[0]
+
+        idx_sel_t = tuple(idx_sel.T)
+        sel_dims = idx_sel_t[:-1]
+
+        # Now point is defined as the coordinate where the sequence starts
+        # in the last dimension of the tuple
+        now_point = idx_sel_t[-1]
+        trunk_data = ak.values_astype(self.features[sel_dims], np.float32)
+
+        x_range = np.arange(0, self.seq_len)[None, :].repeat(b_dim, axis=0)
+        y_range = np.arange(0, self.label_len + self.pred_len)[None, :].repeat(
+            b_dim, axis=0
+        )
+
+        x_range = ak.Array(x_range + now_point[:, None])
+        y_range = ak.Array(y_range + now_point[:, None] + self.seq_len - self.label_len)
+
+        x_range = ak.from_regular(x_range, axis=-1)
+        y_range = ak.from_regular(y_range, axis=-1)
+        seq_x_batch = torch.from_numpy(trunk_data[x_range].to_numpy())
+        seq_y_batch = torch.from_numpy(trunk_data[y_range].to_numpy())
+
+        return seq_x_batch, seq_y_batch
+
     def sequences_batch(
         self, batch_idx: List[int]
     ) -> Tuple[
@@ -216,27 +243,28 @@ class AkwardJaggedAutoregressiveSequencer:
             A tuple of tensors containing the batched sequences:
             (seq_x_batch, seq_y_batch)
         """
-        if isinstance(batch_idx, int):
-            batch_idx = [batch_idx]
+        return self.get_window_for_index_efficient(batch_idx)
+        # if isinstance(batch_idx, int):
+        #     batch_idx = [batch_idx]
 
-        batch_items = []
-        for i in batch_idx:
-            # index_tuple
-            index_tuple = self._indices[i]
-            item = self.get_window_for_index(index_tuple)
-            batch_items.append(item)
+        # batch_items = []
+        # for i in batch_idx:
+        #     # index_tuple
+        #     index_tuple = self._indices[i]
+        #     item = self.get_window_for_index(index_tuple)
+        #     batch_items.append(item)
 
-        # Separate the components of the batch using zip
+        # # Separate the components of the batch using zip
 
-        # Move from list of tuple to the tuple of lists
-        # e.g. [(x1, y1), (x2, y2), (x3, y3)] -> (list[x1, x2, x3], list[y1, y2, y3])
-        seq_x_list, seq_y_list = zip(*batch_items)
+        # # Move from list of tuple to the tuple of lists
+        # # e.g. [(x1, y1), (x2, y2), (x3, y3)] -> (list[x1, x2, x3], list[y1, y2, y3])
+        # seq_x_list, seq_y_list = zip(*batch_items)
 
-        # Stack the individual tensors to create the batch dimension: list[(seq_len, C),(seq_len, C),...] -> Tensor[B, seq_len, C]
-        seq_x_batch = torch.stack(seq_x_list, dim=0)
-        seq_y_batch = torch.stack(seq_y_list, dim=0)
+        # # Stack the individual tensors to create the batch dimension: list[(seq_len, C),(seq_len, C),...] -> Tensor[B, seq_len, C]
+        # seq_x_batch = torch.stack(seq_x_list, dim=0)
+        # seq_y_batch = torch.stack(seq_y_list, dim=0)
 
-        return seq_x_batch, seq_y_batch
+        # return seq_x_batch, seq_y_batch
 
 
 if __name__ == "__main__":
