@@ -1,23 +1,24 @@
-from typing import List, Dict, Union, Optional
-from torch.utils.data import Dataset
+from typing import Dict, List, Optional, Union
+
+import awkward as ak
 import numpy as np
 import torch
-
 from numpy import ndarray
-import awkward as ak
+from torch.utils.data import Dataset
+
+from lmetk.data.data_objects.data import DatasetContainer
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import forecasting_collate_fn
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 from lmetk.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
-from lmetk.data.utils import to_torch_tensor
-from lmetk.data.data_objects.data import DatasetContainer
+from lmetk.data.optimization.sequencer import AutoregressiveSequencer
 from lmetk.data.optimization.sequencer_refactor import (
     BaseSequencer,
     DenseDriver,
     RaggedDriver,
 )
+from lmetk.data.utils import to_torch_tensor
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
 
@@ -94,8 +95,6 @@ class SlidingWindowBatchDataset(BaseDataset):
         return out
 
     def get_collate_fn(self):
-        from lmetk.data.datasets.collate_functions import forecasting_collate_fn
-
         return forecasting_collate_fn
 
 
