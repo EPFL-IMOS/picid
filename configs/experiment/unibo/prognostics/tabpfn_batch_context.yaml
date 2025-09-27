@@ -4,6 +4,6 @@ defaults:
   - unibo/prognostics/base
   - /model_configs/prognostics/tabpfn_batch_context
   
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: battery/unibo_compression_by_autoencoder
 

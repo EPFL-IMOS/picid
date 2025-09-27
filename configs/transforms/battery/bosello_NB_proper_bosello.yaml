@@ -1,7 +1,7 @@
 # Keep only those feeatures that matters
 
 defaults:
-  - battery/bosello_NB_autoencoder@_here_
+  - battery/autoencoder@_here_
 
 # # ---Transforms that are identical to the bosello_NB_autoencoder: Start---
 # filter_features:

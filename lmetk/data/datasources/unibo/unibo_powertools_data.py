@@ -81,11 +81,14 @@ class UniboPowertoolsData:
         self.lines = lines if lines is not None else []
         self.charge_line = charge_line
         self.discharge_line = discharge_line
+        self.base_path = Path(base_path).expanduser()
 
         # check if self.data_path exist
-        download("UNIBO21", cache_dir=base_path, force=force_download, unzip=True)
-        self.cyc_path = base_path + "/datasets/UNIBO21/data/test_result.csv"
-        self.cap_path = base_path + "/datasets/UNIBO21/data/test_result_trial_end.csv"
+        download("UNIBO21", cache_dir=self.base_path, force=force_download, unzip=True)
+        self.cyc_path = self.base_path / "datasets/UNIBO21/data/test_result.csv"
+        self.cap_path = (
+            self.base_path / "datasets/UNIBO21/data/test_result_trial_end.csv"
+        )
 
         self.__load_raw_data()
 

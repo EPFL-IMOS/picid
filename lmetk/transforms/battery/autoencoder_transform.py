@@ -12,6 +12,8 @@ from lmetk.transforms.base.base_transform import RaggedTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+import numpy as np
+from lmetk.data.datasets.hydra_concat_dataset import HydraConcatDataset
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
     Compresses battery cycle data into a mean/std representation using a pre-trained Autoencoder.
     """
 
-    def __init__(self, folder_name: str, key: str = "features"):
+    def __init__(self, folder_name: str, key: str = "features", batch_size: int = 2048):
         """
         Initializes the transform by loading the model configuration and weights.
 
@@ -32,6 +34,7 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
         """
         super().__init__()
         self.key = key
+        self.batch_size = batch_size
         experiment_dir = Path(folder_name)
         if not experiment_dir.is_dir():
             raise FileNotFoundError(
@@ -137,34 +140,42 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
         assert "features" in data, "Features key is not in data"
         assert "target" in data, "Target is not in data"
 
-        concat_dataset_over_cycles = hydra.utils.instantiate(
-            self._cfg.dataset,
+        # TODO: Later we will need to better now to workout this
+        concat_dataset_over_cycles = HydraConcatDataset(
+            dataset_cfg=self._cfg.dataset.dataset_cfg,
             data_dict={self.key: [i for i in data[self.key]]},
             meta_data_dict=None,
         )
 
         datasets_cycles = concat_dataset_over_cycles.datasets
 
-        def collect_sequences(collect_idx):
-            seqs = []
-            for i in range(len(dataset)):
-                results = dataset[i]
-                seqs.append(results[self.key][collect_idx])
-            return torch.cat(seqs, dim=0).to(self.device)
-
-        data["target"]
-
-        res = []
-        idx_valid = []
+        res, idx_valid = [], []
         for idx, dataset in enumerate(datasets_cycles):
-            if dataset.__len__() > 0:
-                # collect idx that has successfully passed the transformations
-                idx_valid.append(idx)
+            dataset_length = dataset.__len__()
+            if dataset_length > 0:
+                batch_idx = np.arange(dataset_length)
+                all_data = dataset.__getitem__(batch_idx)[f"{self.key}_seq_x"]
+                # Go over the all_data in the batch and extract cycles
 
-                # full seq. window, seq_x_len
-                cycle_seqs = collect_sequences(0)  # Collect seq_x
-                with torch.no_grad():
-                    res.append(self._model.backbone.encode(cycle_seqs).cpu().numpy())
+                dataset_cycles_embeds = []
+                for start in range(0, all_data.shape[0], self.batch_size):
+                    end = min(start + self.batch_size, all_data.shape[0])
+                    cycle_seqs = all_data[start:end].to(self.device)
+                    # Encode the cycle sequences
+                    with torch.no_grad():
+                        dataset_cycles_embeds.append(
+                            self._model.backbone.encode(cycle_seqs).cpu().numpy()
+                        )
+
+                # Collect embeddings for all cycles in this dataset
+                compressed_data = np.concatenate(dataset_cycles_embeds, axis=0)
+                res.append(torch.tensor(compressed_data))
+                assert (
+                    all_data.shape[0] == compressed_data.shape[0]
+                ), "Length mismatch after compression"
+
+                # Collect idx that has successfully passed the transformations
+                idx_valid.append(idx)
 
         return {
             "features": ak_regularize_regular_axes(ak.Array(res)),

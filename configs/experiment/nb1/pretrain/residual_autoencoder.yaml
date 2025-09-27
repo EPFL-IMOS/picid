@@ -2,11 +2,11 @@
 
 defaults:
   - override /datasource: nb1
-  - override /transforms: battery/bosello_NB_autoencoder
+  - override /transforms: battery/autoencoder
   - override /model: residual_autoencoder
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /evaluator: default
-  - override /task_definition: reconstruction/battery_autoencoder
+  - override /task_definition: reconstruction/autoencoder
   #- override /trainer: cpu 
 
 

@@ -2,7 +2,7 @@
 
 defaults:
   - override /evaluator: default
-  - override /task_definition: reconstruction/battery_autoencoder
+  - override /task_definition: reconstruction/autoencoder
 
 evaluator:
   train:

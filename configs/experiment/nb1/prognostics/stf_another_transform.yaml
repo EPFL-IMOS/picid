@@ -4,7 +4,7 @@ defaults:
   - override /datasource: nb1
   - override /transforms: battery/bosello_NB_proper_bosello
   - override /model: stf
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /datamodule: base_datamodule
   - override /evaluator: default
   - override /task_definition: prognostics/battery_phmd

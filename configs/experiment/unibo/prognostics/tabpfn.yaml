@@ -4,7 +4,7 @@ defaults:
   - unibo/base
   - override /transforms: battery/bosello_unibo
   - override /model: tabpfn_batch_context
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
 
 task_definition: 

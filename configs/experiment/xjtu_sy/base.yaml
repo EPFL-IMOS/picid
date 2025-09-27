@@ -2,19 +2,6 @@
 
 defaults:
   - override /datasource: xjtu_sy
-  - override /evaluator: default
-  - override /task_definition: prognostics/battery_phmd
-
-evaluator:
-  train:
-    apply_inverse_scaling: True
-  
-  val:
-    apply_inverse_scaling: True
-  
-  test:
-    apply_inverse_scaling: True
-
 
 # instead of debug, in run.yaml. I put debug here
 # We aim to shorten the dataset for debugging purposes.

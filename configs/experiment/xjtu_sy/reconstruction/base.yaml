@@ -1,0 +1,25 @@
+#@package _global_
+
+defaults:
+  - override /evaluator: default
+  - override /task_definition: reconstruction/autoencoder
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min  
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: False
+  val:
+    inverse_transform_name: scaler_target 
+    apply_inverse_scaling: False
+  test:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: False

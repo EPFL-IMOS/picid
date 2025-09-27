@@ -2,5 +2,6 @@
 
 defaults:
   - xjtu_sy/base
+  - xjtu_sy/diagnostics/base
   - /model_configs/diagnostics/tabpfn_fit_predict
   - override /transforms: bearings/default_rul
