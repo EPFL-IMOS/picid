@@ -14,13 +14,14 @@
 import logging
 from typing import Any, Dict
 
+import numpy as np
 import torch
 from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer
+from lmetk.data.optimization.sequencer import DenseArraySequencer
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
@@ -127,21 +128,17 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
                     N_samples == data.shape[0]
                 ), f"Inconsistent number of features across segments: {N_samples} != {data.shape[0]}"
 
-            seq = AutoregressiveSequencer(
-                features=torch.from_numpy(data),
-                time_features=None,
-                seq_len=self.seq_len,
-                label_len=self.label_len,
-                pred_len=self.pred_len,
-                stride=self.stride,
-            )
-
             def collect_sequences(collect_idx):
-                seqs = []
-                for i in range(len(seq)):
-                    results = seq.sequences_batch(i)
-                    seqs.append(results[collect_idx])
-                return torch.stack(seqs, dim=0)
+                seq = DenseArraySequencer(
+                    array=data,
+                    seq_len=self.seq_len,
+                    label_len=self.label_len,
+                    pred_len=self.pred_len,
+                    stride=self.stride,
+                )
+                batch_idx = np.arange(len(seq))
+                results = seq.sequences_batch(batch_idx)
+                return results[collect_idx]
 
             if selection == "t":
                 seqs = collect_sequences(1)  # Collect seq_y

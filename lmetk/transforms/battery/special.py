@@ -1,34 +1,19 @@
 import logging
-from collections import OrderedDict
-from pathlib import Path
-from typing import Any, Dict
+from collections import defaultdict
+from typing import Any, Dict, Optional, override
 
-import hydra
-import omegaconf
-import torch
-from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceSpecialTransformMixin
-from lmetk.transforms.battery.utils import get_mode_change_right_indices
-import pandas as pd
-import hydra
+from numpy import ndarray
+
+from lmetk.data.data_objects.data import NamedTransformInput
+from lmetk.transforms.base.base_transform import BaseTransform
+from lmetk.transforms.base.multisource import (
+    MultiSourceTransformInterface,
+    find_singular_ragged_dim,
+)
+from lmetk.utils.awkward_utils import ragged_index_tuples
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
-
-
-import torch
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.utils.awkward_utils import (
-    ak_find_var_dims,
-    ak_regularize_regular_axes,
-    ragged_index_tuples,
-)
-from lmetk.transforms.base.multisource import find_singular_ragged_dim
-import copy
-from collections import defaultdict
-
-from collections import defaultdict
 
 
 class UnflattenUnitsTransform(MultiSourceTransformInterface, BaseTransform):

@@ -2,25 +2,19 @@ import logging
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict
-import numpy as np
+
 import awkward as ak
 import hydra
 import omegaconf
 import torch
-from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
+
+from lmetk.transforms.base.base_transform import RaggedTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
-import pandas as pd
-import hydra
 from lmetk.utils.awkward_utils import ak_regularize_regular_axes
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
-
-
-import torch
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer
-from lmetk.data.data_objects.data import NamedTransformInput
 
 
 class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):

@@ -6,10 +6,10 @@ import torch
 
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import collate_key_value_batch
-from lmetk.data.optimization.sequencer_refactor import (
+from lmetk.data.optimization.sequencer import (
     BaseSequencer,
-    DenseDriver,
-    RaggedDriver,
+    DenseArraySequencer,
+    RaggedArraySequencer,
 )
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
@@ -41,7 +41,7 @@ class SlidingWindowBatchDataset(BaseDataset):
                 continue
 
             if isinstance(arr, (np.ndarray, torch.Tensor)):
-                driver = DenseDriver(
+                driver = DenseArraySequencer(
                     array=arr,
                     seq_len=seq_len,
                     label_len=label_len,
@@ -50,7 +50,7 @@ class SlidingWindowBatchDataset(BaseDataset):
                 )
 
             elif isinstance(arr, ak.Array):
-                driver = RaggedDriver(
+                driver = RaggedArraySequencer(
                     array=arr,
                     seq_len=seq_len,
                     label_len=label_len,
