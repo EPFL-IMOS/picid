@@ -27,7 +27,7 @@ class BaseVectorizedConcatDataset(ConcatDataset):
             dataset_ids = np.searchsorted(self.cumulative_sizes, idx_np, side="right")
             local_idx = idx_np.copy()
             local_idx[dataset_ids > 0] -= np.asarray(self.cumulative_sizes)[
-                dataset_ids - 1
+                dataset_ids[dataset_ids > 0] - 1
             ]
 
             # group indices per sub-dataset
@@ -35,7 +35,7 @@ class BaseVectorizedConcatDataset(ConcatDataset):
             for ds_id in np.unique(dataset_ids):
                 mask = dataset_ids == ds_id
                 sub_idx = local_idx[mask].tolist()
-                out.extend(
+                out.append(
                     self.datasets[ds_id][sub_idx]
                 )  # assumes sub-datasets handle list[int]
 
