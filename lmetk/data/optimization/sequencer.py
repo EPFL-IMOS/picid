@@ -40,7 +40,6 @@ class DenseArraySequencer(BaseSequencer):
         array = ak.from_regular(array, axis=0)  # ensure regularity
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
-            time_features=None,  # no time features by default
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
@@ -66,7 +65,6 @@ class RaggedArraySequencer(BaseSequencer):
         array = ak.values_astype(array, np.float32)
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
-            time_features=None,  # no time features by default
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,

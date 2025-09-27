@@ -19,6 +19,12 @@ class AkwardJaggedAutoregressiveSequencer:
     Creates overlapping input/output pairs from a single ragged Awkward Array,
     analogous to AutoregressiveSequencer but operating on jagged segments.
 
+    Currently we support (D = regular dim, var = ragged dim):
+    D D
+    D var D D
+    var D
+    var D D
+
     Args:
         features: Awkward Array of shape (N, variable_length, D) or deeper
         time_features: optional Awkward Array with the same ragged structure
@@ -33,14 +39,12 @@ class AkwardJaggedAutoregressiveSequencer:
     def __init__(
         self,
         features: ak.Array,
-        time_features: Optional[ak.Array],
         seq_len: int,
         label_len: int,
         pred_len: int,
         stride: int = 1,
     ):
         self.features = features
-        self.time_features = time_features
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
@@ -118,16 +122,9 @@ class AkwardJaggedAutoregressiveSequencer:
     def __len__(self) -> int:
         return len(self._indices)
 
-    # ------------------------------------------------------------------
-    # Core helpers
-    # ------------------------------------------------------------------
-    def _ak_to_tensor(self, array: ak.Array) -> torch.Tensor:
-        np_arr = ak.to_numpy(array)
-        if self.num_features == 1 and np_arr.ndim == 1:
-            np_arr = np_arr.reshape(-1, 1)
-        return torch.from_numpy(np_arr).to(torch.float32)
-
-    def _get_window_for_index(self, batch_idx):
+    def _get_window_for_index(
+        self, batch_idx: List[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         idx_sel = self._indices[batch_idx]
         b_dim = idx_sel.shape[0]
@@ -156,10 +153,10 @@ class AkwardJaggedAutoregressiveSequencer:
         if select_in_d0:
             # In this case we want to introduce a new batch dimension, therefore,
             # we keep all dimensions regular (see next comment below)
-            trunk_data = self.features
+            leaf_data = self.features
         else:
             sel_dims = idx_sel_t[:-1]
-            trunk_data = self.features[sel_dims]
+            leaf_data = self.features[sel_dims]
             # ak_from regular transforms the regular dim -1 into a ragged dim (of the selection index).
             # This way, it selects properly the segments in the var dim of trunk data
             # if the dim remains singular, a new dimension is created
@@ -167,8 +164,8 @@ class AkwardJaggedAutoregressiveSequencer:
             x_range = ak.from_regular(x_range, axis=-1)
             y_range = ak.from_regular(y_range, axis=-1)
 
-        seq_x = torch.from_numpy(trunk_data[x_range].to_numpy())
-        seq_y = torch.from_numpy(trunk_data[y_range].to_numpy())
+        seq_x = torch.from_numpy(leaf_data[x_range].to_numpy())
+        seq_y = torch.from_numpy(leaf_data[y_range].to_numpy())
 
         # Ensure the output shapes are correct (check it only once), n dim is correct as well, shape is (T,C) meaning timestamps, features
         if not self._checked_output_shapes:

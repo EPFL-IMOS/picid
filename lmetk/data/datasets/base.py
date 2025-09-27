@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, List
 
 import numpy as np
 from numpy import ndarray
@@ -15,7 +15,7 @@ class BaseVectorizedConcatDataset(ConcatDataset):
     This class extends the PyTorch ConcatDataset to allow for list indexing,
     enabling the retrieval of multiple samples at once."""
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: List[int] | np.ndarray) -> dict:
         if isinstance(idx, list) or isinstance(idx, np.ndarray):
 
             idx_np = np.asarray(idx)
