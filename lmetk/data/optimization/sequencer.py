@@ -70,7 +70,8 @@ class RaggedArraySequencer(BaseSequencer):
         ragged_dim = find_singular_ragged_dim({"array": array})  # validate ragged dim
         if ragged_dim is None:
             array = ak.from_regular(array, axis=0)  # ensure regularity
-            logger.warning("Input array do not have ragged dim.")
+            # Creates a lot of noise in the logs, some way to reduce it?
+            # logger.warning("Input array do not have ragged dim.")
 
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
