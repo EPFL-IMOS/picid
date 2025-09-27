@@ -23,12 +23,12 @@ debug:
   raise_inner_exception: true
 
   # Profiler configuration for debugging
-datamodule:
-  profiler_cfg:
-    enable: true
-    wait: 1
-    warmup: 3
-    active: 1
-    repeat: 1
-    activities: ["CPU", "CUDA"]
-    trace_path: "trace.json"
+# datamodule:
+#   profiler_cfg:
+#     enable: true
+#     wait: 1
+#     warmup: 3
+#     active: 1
+#     repeat: 1
+#     activities: ["CPU", "CUDA"]
+#     trace_path: "trace.json"
