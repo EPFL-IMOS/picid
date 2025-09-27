@@ -1,5 +1,6 @@
 import inspect
 import logging
+import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -318,18 +319,27 @@ class BaseDataModule(LightningDataModule):
 
     def profiled_loader(self, dl):
 
-        from torch.profiler import ProfilerActivity, profile, record_function, schedule
+        from torch.profiler import (
+            ProfilerActivity,
+            profile,
+            record_function,
+            schedule,
+            ProfilerAction,
+        )
 
         def profiled_loader():
+
+            sched = schedule(
+                wait=self.profiler_cfg.wait,
+                warmup=self.profiler_cfg.warmup,
+                active=self.profiler_cfg.active,
+                repeat=self.profiler_cfg.repeat,
+            )
+
             acts = [getattr(ProfilerActivity, a) for a in self.profiler_cfg.activities]
             self.profiler = profile(
                 activities=acts,
-                schedule=schedule(
-                    wait=self.profiler_cfg.wait,
-                    warmup=self.profiler_cfg.warmup,
-                    active=self.profiler_cfg.active,
-                    repeat=self.profiler_cfg.repeat,
-                ),
+                schedule=sched,
                 record_shapes=True,
                 with_stack=True,
                 profile_memory=True,
@@ -341,15 +351,28 @@ class BaseDataModule(LightningDataModule):
                     with record_function("dataloader_iteration"):
                         yield batch
                     self.profiler.step()
+
+                    # ask the schedule where we are
+                    state = sched(self.profiler.step_num)
+                    if state == ProfilerAction.NONE:
+                        self.profiler.stop()
+                        logger.warning(
+                            "Profiler has finished, terminating program. Printing results..."
+                        )
+                        logger.warning(
+                            "\n%s",
+                            self.profiler.key_averages().table(
+                                sort_by="self_cpu_time_total", row_limit=10
+                            ),
+                        )
+                        self.profiler.export_chrome_trace(self.profiler_cfg.trace_path)
+                        logger.warning(
+                            f"Profiler trace written to {self.profiler_cfg.trace_path}"
+                        )
+                        sys.exit(0)  # terminate program after profiler is done
             finally:
-                # Ensures profiler is always stopped, even if experiment is cancelled
-                self.profiler.stop()
-                print(
-                    self.profiler.key_averages().table(
-                        sort_by="self_cpu_time_total", row_limit=10
-                    )
-                )
-                self.profiler.export_chrome_trace(self.profiler_cfg.trace_path)
-                print(f"Profiler trace written to {self.profiler_cfg.trace_path}")
+                # ensures clean shutdown if interrupted
+                if self.profiler is not None:
+                    self.profiler.stop()
 
         return profiled_loader()
