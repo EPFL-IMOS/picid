@@ -4,7 +4,7 @@ defaults:
   - override /datasource: pubd16
   - override /transforms: bearings/default_rul
   - override /model: tabpfn_refactor
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /datamodule: base_datamodule_tabpfn
   - override /evaluator: default
   - override /task_definition: prognostics/battery_phmd

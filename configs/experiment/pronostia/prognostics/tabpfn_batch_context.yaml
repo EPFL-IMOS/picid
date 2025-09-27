@@ -4,4 +4,4 @@ defaults:
   - pronostia/base
   - /model_configs/prognostics/tabpfn_batch_context
   - override /transforms: bearings/default_rul
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset

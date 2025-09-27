@@ -3,7 +3,7 @@
 defaults:
   - unibo/reconstruction/base
   - /model_configs/reconstruction/residual_autoencoder
-  - override /transforms: battery/bosello_NB_autoencoder
+  - override /transforms: battery/autoencoder
 
 task_definition:
   seq_len: 16

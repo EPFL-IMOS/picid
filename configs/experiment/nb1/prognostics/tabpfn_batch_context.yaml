@@ -4,7 +4,7 @@ defaults:
   - nb1/base
   - /model_configs/prognostics/tabpfn_batch_context
   - override /transforms: battery/bosello_NB_base
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
 
 evaluator:
   train:

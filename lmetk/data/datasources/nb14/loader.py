@@ -261,6 +261,11 @@ class NB14Loader(AbstractDataSourceLoader):
                     "metadata": {"unit_name": unit_name},
                 }
 
+            if self.debug_subsample_rate is not None:
+                # subsample the data
+                entry["features"] = entry["features"][:: self.debug_subsample_rate]
+                entry["target"] = entry["target"][:: self.debug_subsample_rate]
+
             data_split.append(entry)
             left_idx = right_idx
 

@@ -4,7 +4,7 @@ defaults:
   - unibo/prognostics/base
   - /model_configs/prognostics/stf
   
-  - override /dataset: prognostics/battery_rul_multiunit_dataset
+  - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: battery/compression_by_autoencoder
 
 callbacks:

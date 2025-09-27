@@ -13,6 +13,7 @@ datasource:
   debug_cache_dataset: true
   debug_cache_path: ${paths.data_dir}/debug_cache
   # debug_subset_range: [0, 1000, 1]
+  debug_subsample_rate: 110
 
 trainer:
   max_epochs: 5

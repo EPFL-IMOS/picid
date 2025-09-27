@@ -7,8 +7,12 @@ import torch
 from lmetk.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
+from lmetk.transforms.base.multisource import find_singular_ragged_dim
+import logging
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
+# Set up a logger for better feedback
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------
@@ -63,6 +67,12 @@ class RaggedArraySequencer(BaseSequencer):
         stride: int,
     ):
         array = ak.values_astype(array, np.float32)
+        ragged_dim = find_singular_ragged_dim({"array": array})  # validate ragged dim
+        if ragged_dim is None:
+            array = ak.from_regular(array, axis=0)  # ensure regularity
+            # Creates a lot of noise in the logs, some way to reduce it?
+            # logger.warning("Input array do not have ragged dim.")
+
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
             seq_len=seq_len,
