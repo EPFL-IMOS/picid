@@ -3,7 +3,9 @@ from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
 from lmetk.data.datasets.base import BaseDataset
-from lmetk.data.datasets.collate_functions import context_collate_fn
+from lmetk.data.datasets.collate_functions import (
+    collate_key_value_batch,
+)
 from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
 import awkward as ak
@@ -78,4 +80,4 @@ class ContextBatchDataset(BaseDataset):
         return AttributeDict(d)
 
     def get_collate_fn(self):
-        return context_collate_fn
+        return collate_key_value_batch

@@ -206,13 +206,14 @@ class AkwardJaggedAutoregressiveSequencer:
         b_dim = idx_sel.shape[0]
 
         idx_sel_t = tuple(idx_sel.T)
-        sel_dims = idx_sel_t[:-1]
+
+        # In this case, we have no trunk data, only one long time series
+        # so we do need to select in the first dimension
+        select_in_d0 = len(idx_sel_t) == 1
 
         # Now point is defined as the coordinate where the sequence starts
         # in the last dimension of the tuple
         now_point = idx_sel_t[-1]
-        trunk_data = ak.values_astype(self.features[sel_dims], np.float32)
-
         x_range = np.arange(0, self.seq_len)[None, :].repeat(b_dim, axis=0)
         y_range = np.arange(0, self.label_len + self.pred_len)[None, :].repeat(
             b_dim, axis=0
@@ -221,8 +222,22 @@ class AkwardJaggedAutoregressiveSequencer:
         x_range = ak.Array(x_range + now_point[:, None])
         y_range = ak.Array(y_range + now_point[:, None] + self.seq_len - self.label_len)
 
-        x_range = ak.from_regular(x_range, axis=-1)
-        y_range = ak.from_regular(y_range, axis=-1)
+        # if there is no trunk, we need to select in the
+        # first dimension and introduce the batch dimension
+        if select_in_d0:
+            # In this case we want to introduce a new batch dimension, therefore,
+            # we keep all dimensions regular (see next comment below)
+            trunk_data = ak.values_astype(self.features, np.float32)
+        else:
+            sel_dims = idx_sel_t[:-1]
+            trunk_data = ak.values_astype(self.features[sel_dims], np.float32)
+            # ak_from regular transforms the regular dim -1 into a ragged dim (of the selection index).
+            # This way, it selects properly the segments in the var dim of trunk data
+            # if the dim remains singular, a new dimension is created
+            # e.g. (var, 1) -> (B, var, 1)
+            x_range = ak.from_regular(x_range, axis=-1)
+            y_range = ak.from_regular(y_range, axis=-1)
+
         seq_x_batch = torch.from_numpy(trunk_data[x_range].to_numpy())
         seq_y_batch = torch.from_numpy(trunk_data[y_range].to_numpy())
 

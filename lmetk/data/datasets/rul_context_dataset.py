@@ -1,20 +1,10 @@
-from typing import List, Dict
-from lightning_fabric.utilities.data import AttributeDict
-import torch
-
-from lmetk.data.datasets.base import BaseDataset
-from lmetk.data.datasets.context_dataset import ContextBatchDataset
-from lmetk.data.datasets.collate_functions import (
-    context_collate_fn,
-    forecasting_collate_fn,
-    rul_context_collate_fn,
-)
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
-
-import awkward as ak
-
 # @override decorator
-from typing import override
+from typing import Dict, List, override
+
+from lightning_fabric.utilities.data import AttributeDict
+
+from lmetk.data.datasets.collate_functions import collate_key_value_batch
+from lmetk.data.datasets.context_dataset import ContextBatchDataset
 
 
 class RULContextBatchDataset(ContextBatchDataset):
@@ -33,7 +23,9 @@ class RULContextBatchDataset(ContextBatchDataset):
         d = AttributeDict(
             {
                 "batch_idx": batch_idx,
-                # (B=1, seq_len, C) -> (B=1, C), take the last time step, collate fn will concatenate over the batch dim
+                # (B=1, seq_len, C) -> (B=1, C),
+                # take the last time step,
+                # collate fn will concatenate over the batch dim
                 "rul": target_seq_x[:, -1],
                 # (B, seq_len, C)
                 "features": context_seq_x,
@@ -43,4 +35,4 @@ class RULContextBatchDataset(ContextBatchDataset):
         return AttributeDict(d)
 
     def get_collate_fn(self):
-        return rul_context_collate_fn
+        return collate_key_value_batch

@@ -1,9 +1,9 @@
-from typing import Optional, List, Dict, Union
+from typing import Union
+
+import awkward as ak
 import numpy as np
 import torch
-import awkward as ak
-from torch.utils.data import Dataset
-from lmetk.data.optimization.sequencer import AutoregressiveSequencer
+
 from lmetk.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
@@ -29,8 +29,16 @@ class DenseDriver(BaseSequencer):
         stride: int,
     ):
         if isinstance(array, np.ndarray):
-            array = torch.from_numpy(array).float()
-        self.driver = AutoregressiveSequencer(
+            array = ak.Array(array)
+        elif isinstance(array, torch.Tensor):
+            array = ak.Array(array.numpy())
+        else:
+            raise TypeError(
+                f"array must be np.ndarray or torch.Tensor but got {type(array)}."
+            )
+
+        array = ak.from_regular(array, axis=0)  # ensure regularity
+        self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
             time_features=None,  # no time features by default
             seq_len=seq_len,

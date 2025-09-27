@@ -9,17 +9,6 @@ from torch.utils.data import ConcatDataset, Dataset
 logger = logging.getLogger(__name__)
 
 
-"""
-IMPORTANT: 
-
-Maybe later on we need a collate function factory to create different collate functions
-depending on the dataset type and task type.
-
-We have omitted this so far to keep the code simple and focused on the task at hand.
-
-"""
-
-
 class BaseVectorizedConcatDataset(ConcatDataset):
     """
     A dataset that concatenates multiple datasets and supports list indexing.
@@ -56,7 +45,6 @@ class BaseVectorizedConcatDataset(ConcatDataset):
                 "Your Sequencer does not support list indexing, but you are using BaseVectorizedConcatDataset. "
                 "Please implement list indexing in your Sequencer or switch to BaseConcatDataset."
             )
-        return super().__getitem__(idx_np)
 
     @abstractmethod
     def get_collate_fn(self) -> Callable:
