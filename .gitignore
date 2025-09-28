@@ -25,3 +25,6 @@ build
 container/rt_*
 
 .coverage
+
+trace.json
+scratch.ipynb
