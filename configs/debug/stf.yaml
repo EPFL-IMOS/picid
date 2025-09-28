@@ -13,7 +13,7 @@ datasource:
   debug_cache_dataset: true
   debug_cache_path: ${paths.data_dir}/debug_cache
   # debug_subset_range: [0, 1000, 1]
-  debug_subsample_rate: 50
+  debug_subsample_rate: 25
 
 trainer:
   max_epochs: 5
@@ -23,13 +23,13 @@ trainer:
 debug:
   raise_inner_exception: true
 
-  # Profiler configuration for debugging
-datamodule:
-  profiler_cfg:
-    enable: true
-    wait: 1
-    warmup: 3
-    active: 1
-    repeat: 1
-    activities: ["CPU", "CUDA"]
-    trace_path: "trace.json"
+#   # Profiler configuration for debugging
+# datamodule:
+#   profiler_cfg:
+#     enable: true
+#     wait: 1
+#     warmup: 3
+#     active: 1
+#     repeat: 1
+#     activities: ["CPU", "CUDA"]
+#     trace_path: "trace.json"
