@@ -1,1 +1,2 @@
 _target_: lmetk.data.datasets.fit_predict_dataset.FitPredictTaskDataset
+task_type: ${task_definition.task_type}

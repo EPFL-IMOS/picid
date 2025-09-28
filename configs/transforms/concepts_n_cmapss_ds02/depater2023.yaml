@@ -1,9 +1,7 @@
 defaults:
   - concepts_n_cmapss_ds02/default@_here_
 
-
 # Emulate de Pater LSTM-AE preprocessing
-
 
 tabularize_x:
   # Concatenate time-features to the feature set
@@ -15,13 +13,12 @@ tabularize_x:
     stride: 5
     timestep_dimension: 1
 
-    select_features: 
+    select_features:
       - features: history
-  
-  metadata:
-    apply_to: ['features']
-    assign_to: X
 
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
 
 tabularize_y:
   # Concatenate time-features to the feature set
@@ -33,9 +30,9 @@ tabularize_y:
     stride: 5
     timestep_dimension: 1
 
-    select_features: 
+    select_features:
       - rul: horizon
-  
+
   metadata:
-    apply_to: ['rul']
-    assign_to: y
+    apply_to: ["rul"]
+    assign_to: rul
