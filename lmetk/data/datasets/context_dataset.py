@@ -27,7 +27,7 @@ class ContextBatchDataset(BaseDataset):
         if task_type in ["rul", "ahrul", "soc"]:
             required_keys = ["features", "rul"]  # "time_features", "target"
             context_key = "features"
-            target_key = "rul"
+            target_key = task_type
 
         elif task_type in ["forecasting"]:
             required_keys = ["features", "target"]  # "time_features", "target"
