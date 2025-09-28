@@ -237,6 +237,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         data_cache_path=data_cache_path,
         data_library_part_path=data_library_part_path,
         transform_library_part_path=transform_library_part_path,
+        cache_preprocessed=False,
     )
 
     # TODO: return_splits_on_first_level is not clea..
