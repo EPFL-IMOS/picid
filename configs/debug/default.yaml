@@ -4,6 +4,9 @@ defaults:
   # Disable wandb logger to avoid unnecessary network calls during debugging.
   - override /logger: csv
 
+datamodule:
+  num_workers: 0 
+
 datasource:
   cache_path: ${paths.cache_path}
 

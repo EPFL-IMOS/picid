@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from lmetk.data.data_objects.base import BaseDataObject
+from lmetk.utils.awkward_utils import get_ak_shape, ak_find_var_dims
 
 
 def extract_targets(cfg, prefix=""):
@@ -51,33 +52,124 @@ def display_targets(cfg):
     Console().print(table)
 
 
-def describe_data_type(obj):
-    if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
+import numpy as np
+import torch
+import pandas as pd
+import awkward as ak
+from typing import List, Union
+
+# Assume your provided utility functions are in this file or imported
+# ak_find_var_dims, get_ak_shape, etc.
+
+
+def _describe_list_of_ak_arrays(obj: list[ak.Array]) -> str:
+    """
+    Analyzes a list of awkward arrays and formats the stats in a compact,
+    single-line-per-dimension tree.
+    """
+    if not obj:
+        return "list<ak.Array> x 0"
+
+    try:
+        # --- (Data calculation part is unchanged) ---
+        first_arr = obj[0]
+        num_dims = first_arr.ndim
+        var_dims = ak_find_var_dims(first_arr)
+        min_vals, max_vals, mean_vals = ([0.0] * num_dims for _ in range(3))
+        dim_labels = [str(i) for i in range(num_dims)]
+
+        for i in range(num_dims):
+            if i in var_dims:
+                all_lengths = np.concatenate(
+                    [ak.to_numpy(ak.num(arr, axis=i)) for arr in obj]
+                )
+                if all_lengths.size > 0:
+                    min_vals[i] = np.min(all_lengths)
+                    max_vals[i] = np.max(all_lengths)
+                    mean_vals[i] = np.mean(all_lengths)
+                dim_labels[i] = f"{i} (var)"
+            else:
+                lengths = [get_ak_shape(arr)[i] for arr in obj]
+                min_vals[i] = np.min(lengths)
+                max_vals[i] = np.max(lengths)
+                mean_vals[i] = np.mean(lengths)
+
+        # --- (NEW compact formatting logic) ---
+        output_lines = [f"list<ak.Array> x {len(obj)}"]
+
+        for i in range(num_dims):
+            is_last_dim = i == num_dims - 1
+            dim_prefix = "└── " if is_last_dim else "├── "
+            stat_prefix = "    " if is_last_dim else "│   "
+
+            # Add the line for the dimension
+            output_lines.append(f"\n{dim_prefix}dim {dim_labels[i]}:")
+
+            # Add the new, single, compact line for the statistics
+            stats_str = f"{min_vals[i]:.0f} / {max_vals[i]:.0f} / {mean_vals[i]:.1f}"
+            output_lines.append(f"\n{stat_prefix}└── min/max/mean: {stats_str}")
+
+        return "".join(output_lines)
+
+    except Exception as e:
+        return f"list<ak.Array> x {len(obj)} (stats failed: {e})"
+
+
+def describe_data_type(obj) -> str:
+    """Describes a single data object."""
+    if isinstance(obj, dict):
         return "{...}"
     elif isinstance(obj, np.ndarray):
         return f"np.ndarray{obj.shape}"
     elif torch.is_tensor(obj):
         return f"torch.Tensor{tuple(obj.shape)}"
-    elif isinstance(obj, pd.DataFrame):
-        return f"pd.DataFrame{obj.shape}"
-    elif isinstance(obj, pd.Series):
-        return f"pd.Series{obj.shape}"
-    elif isinstance(obj, ak.Array):
-        return f"ak.Array {str(obj.type)}"
+    elif isinstance(obj, (pd.DataFrame, pd.Series)):
+        return f"{type(obj).__name__}{obj.shape}"
+
     elif isinstance(obj, list):
-        if obj and (
-            torch.is_tensor(obj[0])
-            or isinstance(obj[0], np.ndarray)
-            or isinstance(obj[0], pd.DataFrame)
-            or isinstance(obj[0], pd.Series)
-            or isinstance(obj[0], ak.Array)
-        ):
-            descr = describe_data_type(obj[0])
+        if not obj:
+            return "list<empty> x 0"
+
+        first = obj[0]
+        if isinstance(first, ak.Array):
+            # Route to the simplified helper for awkward arrays
+            return _describe_list_of_ak_arrays(obj)
         else:
-            descr = type(obj[0]).__name__ if obj else "empty"
-        return f"list<{descr}> x {len(obj)}"
+            # Fallback for other list types
+            descr = type(first).__name__
+            return f"list<{descr}> x {len(obj)}"
+
     else:
         return str(type(obj).__name__)
+
+
+# def describe_data_type(obj):
+#     if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
+#         return "{...}"
+#     elif isinstance(obj, np.ndarray):
+#         return f"np.ndarray{obj.shape}"
+#     elif torch.is_tensor(obj):
+#         return f"torch.Tensor{tuple(obj.shape)}"
+#     elif isinstance(obj, pd.DataFrame):
+#         return f"pd.DataFrame{obj.shape}"
+#     elif isinstance(obj, pd.Series):
+#         return f"pd.Series{obj.shape}"
+#     elif isinstance(obj, ak.Array):
+#         return f"ak.Array {get_ak_shape(obj)}"
+#     elif isinstance(obj, list):
+#         if obj and (
+#             torch.is_tensor(obj[0])
+#             or isinstance(obj[0], np.ndarray)
+#             or isinstance(obj[0], pd.DataFrame)
+#             or isinstance(obj[0], pd.Series)
+#             or isinstance(obj[0], ak.Array)
+#         ):
+#             descr = describe_data_type(obj[0])
+#         else:
+#             descr = type(obj[0]).__name__ if obj else "empty"
+#         return f"list<{descr}> x {len(obj)}"
+#     else:
+#         return str(type(obj).__name__)
 
 
 def to_descriptive_dict(d):
