@@ -1,8 +1,6 @@
-_target_: lmetk.data.datamodules.base.BaseDataModule
+defaults:
+  - base_datamodule_default
+
 train_batch_size: 16
 val_batch_size: 1
 test_batch_size: 1
-
-shuffle_train: True
-shuffle_val: False
-shuffle_test: False

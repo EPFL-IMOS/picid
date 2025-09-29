@@ -44,6 +44,7 @@ class BaseDataModule(LightningDataModule):
         shuffle_val: bool = False,
         shuffle_test: bool = False,
         num_workers: int = 0,
+        prefetch_factor: int = 2,
         pin_memory: bool = True,
         use_batch_sampler: bool = True,
         subset_range: Optional[
@@ -94,6 +95,7 @@ class BaseDataModule(LightningDataModule):
         self.profiler_cfg = profiler_cfg
         self.profiler = None
         self.num_workers = num_workers
+        self.prefetch_factor = prefetch_factor
         self.pin_memory = pin_memory
         self.use_batch_sampler = use_batch_sampler
 
