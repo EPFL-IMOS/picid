@@ -26,18 +26,6 @@ window_size: ${task_definition.seq_len}
 stride: 1
 scaling: "legacy"
 
-# TODO: this splitter needs to be reworked, however it is rarely used due to by_source
-# splitting in the multi-source variant.
-data_splitter:
-  _target_: lmetk.data.preprocessing.TimeSplitter
-  train: 8640 # int or float. In case of float it is a percentage of the dataset
-  val: 2880 # int or float. In case of float it is a percentage of the dataset
-  test: 2880 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)
-  
-  # Optional feature: by def. we generate splits for features and timestamps
-  create_splits_for: [features, timestamps, health_states, rul, concepts, unit, descriptors]
-
-  # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: 96 #384    # window size
-  label_len: 48  # overlap size
-  pred_len: 96   # prediction size
+# TODO: We currently have no data splitter implemented
+# for this dataset to split within an unit.
+data_splitter: null
