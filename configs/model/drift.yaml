@@ -1,9 +1,9 @@
 _target_: lmetk.model.wrappers.drift_model_wrapper.DriftModelWrapper
 
-seq_len: ${task_definition.seq_len}      # window size
-label_len: ${task_definition.label_len}  # overlap size
-pred_len: ${task_definition.pred_len}    # prediction size
+seq_len: ${task_definition.seq_len} # window size
+label_len: ${task_definition.label_len} # overlap size
+pred_len: ${task_definition.pred_len} # prediction size
 
 # Additional params needed for wrapper to run:
 features_mode: ${datasource.load_arguments.features_mode}
-device: 'cuda:0'
+device: "${trainer.accelerator}"

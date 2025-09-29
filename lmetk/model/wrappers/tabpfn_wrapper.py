@@ -15,7 +15,7 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
     def __init__(self, **kwargs):
         backbone = TabPFNRegressor(
             ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
-            random_state=42,
+            random_state=kwargs["random_state"],
             device="cuda" if kwargs["device"] == "gpu" else "cpu",
         )
         super().__init__(backbone=backbone, **kwargs)
