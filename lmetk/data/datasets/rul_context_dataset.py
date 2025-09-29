@@ -14,6 +14,11 @@ class RULContextBatchDataset(ContextBatchDataset):
     Combines target RUL sequences with context feature sequences.
     """
 
+    def __init__(self, **kwargs):
+        # Ensure the pred_length is zero
+        kwargs["pred_len"] = 0
+        super().__init__(**kwargs)
+
     @override
     def __getitem__(self, batch_idx: List[int]):
         target: Dict = self.target_dataset.__getitem__(batch_idx)

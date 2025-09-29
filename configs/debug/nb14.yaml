@@ -2,7 +2,7 @@
 
 defaults:
   # Disable wandb logger to avoid unnecessary network calls during debugging.
-  - debug/default
+  - default
   - override /logger: csv
 
 trainer:
@@ -10,19 +10,19 @@ trainer:
 
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.
-# datasource:
-#   debug_cache_dataset: true
-#   debug_cache_path: ${paths.data_dir}/debug_cache
-#   debug_subsample_rate: 25 # debug_subset_range: [0,10000000,100] #[0, 1000000, 1], These new params allow us to actually have some vriability among different units [0,10000000,100]
-#   debug_subset_range: True # Takes 2 train batteries and 1 test val
+datasource:
+  debug_cache_dataset: true
+  debug_cache_path: ${paths.data_dir}/debug_cache
+  debug_subsample_rate: 25 # debug_subset_range: [0,10000000,100] #[0, 1000000, 1], These new params allow us to actually have some vriability among different units [0,10000000,100]
+  debug_subset_range: True # Takes 2 train batteries and 1 test val
 
 # Profiler configuration for debugging
-datamodule:
-  profiler_cfg:
-    enable: true
-    wait: 1
-    warmup: 3
-    active: 1
-    repeat: 1
-    activities: ["CPU", "CUDA"]
-    trace_path: "trace.json"
+# datamodule:
+#   profiler_cfg:
+#     enable: true
+#     wait: 1
+#     warmup: 3
+#     active: 1
+#     repeat: 1
+#     activities: ["CPU", "CUDA"]
+#     trace_path: "trace.json"

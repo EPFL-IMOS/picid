@@ -1,0 +1,26 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /model: stf
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
+  d_yc: ${infer_data_dim:rul,-1}
+  d_yt: ${infer_data_dim:rul,-1}
+  d_x: ${infer_data_dim:features,-1}
+  n_timefeatures: 0
+  base_lr: 0.001

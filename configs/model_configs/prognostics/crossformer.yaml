@@ -1,0 +1,28 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /model: crossformer
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  ts_in: ${task_definition.seq_len}
+  ts_out: ${task_definition.pred_len}
+  d_yc: ${infer_data_dim:${task_definition.task_type},-1}
+  d_yt: ${infer_data_dim:${task_definition.task_type},-1}
+  d_x: ${infer_data_dim:features,-1}
+  seg_len: ${quot:${task_definition.seq_len},10}
+  # can only use time features if no future context available
+  decoder_embedding: random
