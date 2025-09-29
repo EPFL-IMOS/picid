@@ -366,6 +366,38 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (DS02): Crossformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/crossformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): Timeseries Transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/timeseries_transformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Concepts N-CMAPSS (DS02): TiDE",
             "type": "debugpy",
             "request": "launch",
@@ -390,6 +422,22 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/patchtst",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/lstm",
                 "debug=default"
             ],
             "env": {
@@ -631,6 +679,54 @@
                 "paths=rt_local",
                 "experiment=movi_spheres/stf",
                 // "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "NB14: autoencoder",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=nb14/reconstruction/residual_autoencoder",
+                "debug=stf"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "UNIBO pretrain",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=unibo/reconstruction/stf",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "UNIBO prognostics",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=unibo/prognostics/stf",
+                "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",

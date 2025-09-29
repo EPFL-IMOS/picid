@@ -1,7 +1,6 @@
 # Setup taken over from https://github.com/EPFL-IMOS/concept-prognostics/tree/main
 # TODO: make
 
-
 _target_: lmetk.data.datasources.base.multi_source_loader.MultiSourceLoader
 _recursive_: False
 
@@ -35,7 +34,7 @@ source_list:
 
   val1: ${..val1}
 
-multisource_data_splitter: 
+multisource_data_splitter:
   _target_: lmetk.data.preprocessing.BySourceSplitter
   sources_train: [train1, train2] #[train1, train2, train3, train4]
   sources_test: [test1, test2] #[test1, test2, test3, test4]
@@ -61,49 +60,63 @@ multisource_data_splitter:
 # roughly several K data points per cycle
 
 _train_load_args: &train_args
-  units: [1,2,3,4,5,6]
+  units: [1, 2, 3, 4, 5, 6]
   mode: "train"
 
 _test_load_args: &test_args
-  units: [7,8,9,10]
+  units: [7, 8, 9, 10]
   mode: "test"
 
 train1:
   load_arguments:
     n_DS: "01"
     <<: *train_args
-    
+  group_by_unit: True
+
 train2:
   load_arguments:
     n_DS: "04"
     <<: *train_args
+  group_by_unit: True
+
 train3:
   load_arguments:
     n_DS: "05"
     <<: *train_args
+  group_by_unit: True
+
 train4:
   load_arguments:
     n_DS: "07"
     <<: *train_args
+  group_by_unit: True
 
 test1:
   load_arguments:
     n_DS: "01"
     <<: *test_args
+  group_by_unit: True
+
 test2:
   load_arguments:
     n_DS: "04"
     <<: *test_args
+  group_by_unit: True
+
 test3:
   load_arguments:
     n_DS: "05"
     <<: *test_args
+  group_by_unit: True
+
 test4:
   load_arguments:
     n_DS: "07"
     <<: *test_args
+  group_by_unit: True
 
 val1:
   load_arguments:
     n_DS: "01"
     <<: *test_args
+  group_by_unit: True
