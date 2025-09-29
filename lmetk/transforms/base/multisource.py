@@ -302,7 +302,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 f"Transform {self.__class__.__name__} does not support the data type {data_types}"
             )
 
-    def tranform_function_to_data_segments(
+    def transform_function_to_data_segments(
         self,
         data_segments: list[NamedTransformInput],
         transform_func: Callable,
@@ -523,7 +523,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 f"The lengths of the data segments are not the same. Lengths: {lengths}"
             )
 
-        out = self.tranform_function_to_data_segments(
+        out = self.transform_function_to_data_segments(
             data_segments, self.transform_data, copy.deepcopy(metadata)
         )
 
