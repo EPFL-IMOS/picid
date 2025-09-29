@@ -7,6 +7,6 @@ dataset_cfg:
   label_len: ${task_definition.label_len} 
   pred_len: ${task_definition.pred_len} 
 
-  stride: ${oc.select:task_definition.stride}
+  stride: ${task_definition.stride}
   
   

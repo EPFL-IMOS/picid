@@ -1,14 +1,5 @@
-
-scaler_features:
-  transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
-    
-  metadata:
-    apply_to: features
-    fit_on: train
-
-# defaults:
-#   - bosello_NB_autoencoder
+defaults:
+  - battery/autoencoder@_here_
 
 scaler_target:
   transform:
@@ -17,7 +8,6 @@ scaler_target:
   metadata:
     apply_to: target
     fit_on: train
-
 
 autoencoder:
   transform:
@@ -38,38 +28,3 @@ sequence2statistics:
 
   metadata:
     apply_to: 'features'
-      
-
-
-# TRANSFORM TO EXTRACT MEAN and STD
-# sequence2statistics:
-#   transform:
-#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
-#     padding_value: ${transforms.cycles2sequence.transform.pad_value}
-  
-#   metadata:
-#     apply_to: 'features'
-    
-
-
-
-
-# cycles2sequence:
-#   transform:
-#     _target_: lmetk.transforms.battery.cycles2sequence.Cycles2Sequence
-#     win_len: 32
-#     pad_value: -1
-#     key: 'time_features'
-  
-#   metadata:
-#     apply_to: ['time_features','metadata']
-#     assign_to: time_features
-
-
-# cycles2sequence:
-#   transform:
-#     _target_: lmetk.transforms.time_transforms.sequence2table.ExtractSequenceStartTime
-    
-#   metadata:
-#     apply_to: 'time_features'
-#     assign_to: time_features
