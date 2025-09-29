@@ -5,3 +5,13 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+
+pad_cycles_to_desired_length:
+  transform:
+    _target_: lmetk.transforms.base_transforms.padding2length.PadToLength 
+    target_length: 128 # ${task_definition.seq_len}
+    axis: 0 # Confusion here: axis is 0 because battery data is ragged data and PadToLength is dense transform. When ragged data is processed with Dense transform to make it compatible ragged data is iterated ove one dim hence within transform it losses one dim (the first) when is processed with dense transform
+    pad_value: 0
+
+  metadata:
+    apply_to: features

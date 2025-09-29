@@ -206,8 +206,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     log.info("Transform names:" + str(transforms_manager.get_transform_names()))
 
     # Get transforms that apply to features
-    feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
-    log.info("Feature transforms:" + str(list(feature_transforms.keys())))
+    # feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
+    # log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
     single_source_types = (
         SingleSourceLoader,
@@ -234,7 +234,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         else None
     )
     data_library_part_path = (
-        Path(cfg.paths.root_dir) / "lmetk/data"
+        Path(cfg.paths.root_dir) / "lmetk/data/datasources"
         if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
         else None
     )

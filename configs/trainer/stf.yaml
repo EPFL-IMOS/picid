@@ -4,7 +4,7 @@ default_root_dir: ${paths.output_dir}
 
 min_epochs: 1 # prevents early stopping
 max_epochs: 300
-#accumulate_grad_batches: 1 #${dataset.parameters.batch_size}
+
 
 accelerator: cpu
 # devices: [0]

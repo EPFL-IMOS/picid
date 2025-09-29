@@ -14,5 +14,5 @@ trainer:
 datasource:
   debug_cache_dataset: true  
   debug_cache_path: ${paths.data_dir}/debug_cache
-  debug_subsample_rate: 10 # debug_subset_range: [0,10000000,100] #[0, 1000000, 1], These new params allow us to actually have some vriability among different units [0,10000000,100]
+  #debug_subsample_rate: 10 # debug_subset_range: [0,10000000,100] #[0, 1000000, 1], These new params allow us to actually have some vriability among different units [0,10000000,100]
   debug_subset_range: True # Takes 2 train batteries and 1 test val

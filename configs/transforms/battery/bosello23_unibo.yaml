@@ -1,0 +1,23 @@
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  
+  metadata:
+    apply_to: target
+    fit_on: train
+
+sequence2statistics:
+  transform:
+    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    padding_value: null
+
+  metadata:
+    apply_to: 'features'

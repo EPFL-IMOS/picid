@@ -34,9 +34,6 @@ defaults:
   # debugging config (enable through command line, e.g. `python train.py debug=default)
   - debug: null #
 
-# evaluator: ${dataset.parameters.task}
-# callbacks: ${dataset.parameters.task}
-
 # task name, determines output directory path
 experiment_group: "debug"
 
