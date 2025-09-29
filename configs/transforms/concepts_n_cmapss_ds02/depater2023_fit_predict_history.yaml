@@ -1,0 +1,38 @@
+defaults:
+  - concepts_n_cmapss_ds02/depater2023_default@_here_
+
+# Emulate de Pater LSTM-AE preprocessing
+
+tabularize_x:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: 50
+    label_len: 0
+    pred_len: 1
+    stride: 5
+    timestep_dimension: 1
+
+    select_features:
+      - features: history
+
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+
+tabularize_y:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: 50
+    label_len: 0
+    pred_len: 1
+    stride: 5
+    timestep_dimension: 1
+
+    select_features:
+      - rul: horizon
+
+  metadata:
+    apply_to: ["rul"]
+    assign_to: rul
