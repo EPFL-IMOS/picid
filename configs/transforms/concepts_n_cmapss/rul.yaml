@@ -6,13 +6,13 @@ subsample:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
-    window_size: 60 
+    window_size: 60
     aggregation: mean
   metadata:
     apply_to: [features, descriptors, rul]
 
 # Introduce the task dimension to X, y. We
-reshape_X: 
+reshape_X:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
@@ -20,7 +20,7 @@ reshape_X:
     apply_to: features
     assign_to: X
 
-reshape_y: 
+reshape_y:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"

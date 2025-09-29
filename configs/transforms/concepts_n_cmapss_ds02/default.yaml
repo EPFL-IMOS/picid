@@ -33,12 +33,11 @@ scaler_rul:
 # measurements (i.e., data samples) from flight 𝑓 of engine 𝑒. With this
 # approach, 25433 data samples are obtained to train the LSTM-AE.
 
-
 subsample_features_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
-    window_size: 60 
+    window_size: 60
     aggregation: mean
   metadata:
     apply_to: [features, descriptors, rul, concepts]
@@ -47,24 +46,23 @@ subsample_others:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
-    window_size: 60 
+    window_size: 60
     aggregation: last
   metadata:
-    apply_to: [ unit, timestamps, health_states]
-
+    apply_to: [unit, timestamps, health_states]
 
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
-  
-  metadata:
-    apply_to: ['features', 'descriptors']
-    assign_to: features
 
+  metadata:
+    apply_to: ["features", "descriptors"]
+    assign_to: features
 
 concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
   metadata:
-    apply_to: [features, descriptors, rul, unit, concepts, timestamps, health_states]
+    apply_to:
+      [features, descriptors, rul, unit, concepts, timestamps, health_states]
