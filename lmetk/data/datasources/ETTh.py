@@ -1,6 +1,6 @@
 import warnings
 import pandas as pd
-from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 
 warnings.filterwarnings("ignore")
 

@@ -3,7 +3,8 @@ from typing import Union
 
 from numpy import ndarray
 
-from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
 
@@ -12,7 +13,7 @@ class PreProcessorInterface(ABC):
 
     def __init__(
         self,
-        datasource: Union[SingleSourceLoader, SingleSourceLoader],
+        datasource: Union[SingleSourceLoader, MultiSourceLoader],
         transforms: ConfigTransformManager,
         **kwargs,
     ):

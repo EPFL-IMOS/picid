@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 
 
 warnings.filterwarnings("ignore")
@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 
 class RailwayLoader(SingleSourceLoader):
     def __init__(self, data_path, timestamp_name, target_name, **kwargs):
-        
+
         self.data_path = data_path
         self.timestamp_name = timestamp_name
         self.target_name = target_name

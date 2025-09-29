@@ -8,9 +8,8 @@ import h5py
 import numpy as np
 import pandas as pd
 import awkward as ak
-import pyarrow as pa
 
-from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 from lmetk.utils.awkward_utils import ak_unflatten_discontinous_groups
 
 logger = logging.getLogger(__name__)
