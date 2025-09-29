@@ -2,7 +2,7 @@
 
 defaults:
   - override /dataset: context_batch
-  - override /datamodule: base_datamodule_tabpfn
+  - override /datamodule: base_datamodule_tabpfn_batch_context
   - override /model: tabpfn_batch_context
 
   - override /callbacks: gradient_free
