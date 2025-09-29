@@ -2,21 +2,21 @@
 
 defaults:
   - override /dataset: prognostics/concept_rul_multiunit_dataset
-  - override /datamodule: base_datamodule
+  - override /datamodule: base_datamodule_no_batch_sampler
   - override /model: timeseries_transformer
 
 task_definition:
   requires_training: true
 
 model:
-  d_yc:  ${infer_data_dim:${task_definition.task_type},-1} 
-  d_yt:  ${infer_data_dim:${task_definition.task_type},-1}
-  d_x:   ${infer_data_dim:features,-1}
+  d_yc: ${infer_data_dim:${task_definition.task_type},-1}
+  d_yt: ${infer_data_dim:${task_definition.task_type},-1}
+  d_x: ${infer_data_dim:features,-1}
   # TODO: replace with actual timefeatures when available
   n_timefeatures: 0
 
   transformer_args:
-    seq_len:  ${task_definition.seq_len}
+    seq_len: ${task_definition.seq_len}
     pred_len: ${task_definition.pred_len}
     enc_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
     dec_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}

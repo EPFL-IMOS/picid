@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasets.hydra_concat_dataset.HydraConcatDataset
+_target_: lmetk.data.datasets.hydra_concat_dataset.NonVectorizedHydraConcatDataset
 _recursive_: False
 
 dataset_cfg:
