@@ -2,6 +2,7 @@
 
 defaults:
   # Disable wandb logger to avoid unnecessary network calls during debugging.
+  - debug/default
   - override /logger: csv
 
 datasource:
