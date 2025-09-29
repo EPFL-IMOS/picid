@@ -122,6 +122,9 @@ class AkwardJaggedAutoregressiveSequencer:
     def __len__(self) -> int:
         return len(self._indices)
 
+    def get_index_array(self) -> np.ndarray:
+        return self._indices
+
     def _get_window_for_index(
         self, batch_idx: List[int]
     ) -> Tuple[torch.Tensor, torch.Tensor]:

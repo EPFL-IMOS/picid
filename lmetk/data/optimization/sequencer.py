@@ -53,6 +53,9 @@ class DenseArraySequencer(BaseSequencer):
     def __len__(self):
         return len(self.driver)
 
+    def get_index_array(self):
+        return self.driver.get_index_array()
+
     def sequences_batch(self, idx):
         return self.driver.sequences_batch(idx)
 
@@ -83,6 +86,9 @@ class RaggedArraySequencer(BaseSequencer):
 
     def __len__(self):
         return len(self.driver)
+
+    def get_index_array(self):
+        return self.driver.get_index_array()
 
     def sequences_batch(self, idx):
         return self.driver.sequences_batch(idx)
