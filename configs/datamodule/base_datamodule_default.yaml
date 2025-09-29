@@ -1,0 +1,11 @@
+_target_: lmetk.data.datamodules.base.BaseDataModule
+train_batch_size: null
+val_batch_size: null
+test_batch_size: null
+
+num_workers: 4
+
+# --Fixed ones--
+shuffle_train: True
+shuffle_val: False
+shuffle_test: False

@@ -4,16 +4,8 @@ defaults:
   # Disable wandb logger to avoid unnecessary network calls during debugging.
   - override /logger: csv
 
-# We aim to shorten the dataset for debugging purposes.
-# We do that by using torch Subset which is configured in the datamodule.
-# datamodule:
-#   subset_range: [0, 16, 1]  # [start, end, step]
-
 datasource:
-  debug_cache_dataset: true
-  use_cache: True
   cache_path: ${paths.cache_path}
-  # debug_subset_range: [0, 1000, 1]
 
 trainer:
   accelerator: cpu
@@ -23,6 +15,7 @@ trainer:
 # Making the debugger stop at the error, instead of the wrapper that we have for WANDB termination.
 debug:
   raise_inner_exception: true
+
 # Use "vizviewer trace.json" to visualize the trace.
 # Profiler configuration for debugging
 # datamodule:
