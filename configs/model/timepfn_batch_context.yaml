@@ -1,12 +1,12 @@
-_target_: lmetk.model.wrappers.batchcontext_timepfn_wrapper.BatchContextTimePFNWrapper 
+_target_: lmetk.model.wrappers.batchcontext_timepfn_wrapper.BatchContextTimePFNWrapper
 
-seq_len: ${task_definition.seq_len}      # window size
-label_len: ${task_definition.label_len}  # overlap size
-pred_len: ${task_definition.pred_len}    # prediction size
+seq_len: ${task_definition.seq_len} # window size
+label_len: ${task_definition.label_len} # overlap size
+pred_len: ${task_definition.pred_len} # prediction size
 
 # Fixed in the TimePFN model
-embed_type: 'fixed'
-freq: 'h'
+embed_type: "fixed"
+freq: "h"
 
 # Parameters default for the given pretrained model
 load_path: ./checkpoints/TimePFN/checkpoint.pth
@@ -24,14 +24,11 @@ class_strategy: projection
 max_channel: 161
 # Some configs for testing used in the timepfn
 
-
-use_amp: False 
+use_amp: False
 # output_attention behaves weirdly, as argparset has True as default but debugger tells it is False and cannot find where it is overwriten
 output_attention: False #True
 inverse: False
 
-
 # Additional params needed for wrapper to run:
 features_mode: ${datasource.task_mode}
-device: 'cuda:0'
-
+device: "${trainer.accelerator}"

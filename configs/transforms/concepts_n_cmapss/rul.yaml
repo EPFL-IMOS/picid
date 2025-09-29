@@ -18,7 +18,7 @@ reshape_X:
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: features
-    assign_to: X
+    assign_to: features
 
 reshape_y:
   transform:
@@ -26,4 +26,4 @@ reshape_y:
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: rul
-    assign_to: y
+    assign_to: rul

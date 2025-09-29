@@ -28,7 +28,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
     ):
         backbone = TabPFNRegressor(
             ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
-            random_state=42,
+            random_state=kwargs["random_state"],
             device="cuda" if kwargs["device"] == "gpu" else "cpu",
         )
 
