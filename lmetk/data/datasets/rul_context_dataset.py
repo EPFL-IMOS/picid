@@ -1,4 +1,5 @@
 # @override decorator
+import torch
 from typing import Dict, List, override
 
 from lightning_fabric.utilities.data import AttributeDict
@@ -17,12 +18,12 @@ class RULContextBatchDataset(ContextBatchDataset):
     def __getitem__(self, batch_idx: List[int]):
         target: Dict = self.target_dataset.__getitem__(batch_idx)
         context: Dict = self.context_dataset.__getitem__(batch_idx)
-        target_seq_x, _ = target["rul"]
-        context_seq_x, _ = context["features"]
+        target_seq_x = target["rul_seq_x"]
+        context_seq_x = context["features_seq_x"]
 
         d = AttributeDict(
             {
-                "batch_idx": batch_idx,
+                "batch_idx": torch.tensor(batch_idx),
                 # (B=1, seq_len, C) -> (B=1, C),
                 # take the last time step,
                 # collate fn will concatenate over the batch dim

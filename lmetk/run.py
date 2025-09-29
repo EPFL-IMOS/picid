@@ -232,16 +232,20 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     data_library_part_path = Path(cfg.paths.root_dir) / "lmetk/data"
     transform_library_part_path = Path(cfg.paths.root_dir) / "lmetk/transforms"
 
+    cache_preprocessed_flag = True
     # Run the preprocessing pipeline
     preprocessor.pipeline(
         data_cache_path=data_cache_path,
         data_library_part_path=data_library_part_path,
         transform_library_part_path=transform_library_part_path,
+        cache_preprocessed=cache_preprocessed_flag,
     )
 
     # TODO: return_splits_on_first_level is not clea..
     data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
     meta_data_dict = preprocessor.get_meta_data_dict()
+    if cache_preprocessed_flag:
+        transforms_manager = preprocessor.get_chached_transform_manager()
 
     assert set(data_dict.keys()) == {"train", "val", "test"}
 
@@ -308,6 +312,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if inverse_transform_required:
             inverse_transform_name = cfg.evaluator[s].get(
                 "inverse_transform_name", None
+            )
+
+            assert inverse_transform_name is not None, (
+                f"Evaluator for {s} requires inverse scaling but no "
+                "inverse_transform_name is provided. Consider setting the inverse_transform_name in evaluator config group."
             )
         else:
             inverse_transform_name = None

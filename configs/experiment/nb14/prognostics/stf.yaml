@@ -9,7 +9,7 @@ defaults:
   - override /transforms: battery/compression_by_autoencoder
 
 transforms:
-  cycles2sequence:
+  autoencoder:
     transform:
       folder_name: ${paths.root_dir}/artifacts/debug/runs/nb14+reconstruction+residual_autoencoder/2025-09-25_05-07-35
     metadata:

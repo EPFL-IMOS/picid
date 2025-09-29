@@ -19,7 +19,7 @@ scaler_target:
     fit_on: train
 
 
-cycles2sequence:
+autoencoder:
   transform:
     _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
     folder_name: ${paths.root_dir}/artifacts/debug/runs/unibo+reconstruction+residual_autoencoder/2025-09-24_03-48-04

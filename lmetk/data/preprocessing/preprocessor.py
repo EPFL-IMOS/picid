@@ -195,32 +195,26 @@ class PreProcessor(PreProcessorInterface):
         """
         Run the preprocessing pipeline with optional caching.
 
-        Parameters
-        ----------
-        data_cache_path : str | None
-            Root cache directory for dataset and preprocessed stages.
-        data_library_part_path : str | None
-            Path to the library part (e.g. code) defining dataset loading.
-            Required if caching loaded data.
-        transform_library_part_path : str | None
-            Path to the library part (e.g. code) defining transforms.
-            Required if caching preprocessed data.
+        This method orchestrates the entire data preprocessing workflow, including
+        loading data, applying transformations, and leveraging a two-stage cache
+        to save intermediate results.
+
+        - Stage 1 Cache: Caches the data after it has been loaded and split.
+        - Stage 2 Cache: Caches the data after all transformations have been applied.
+        This cache also saves the state of the fitted transforms and metadata.
         """
 
         # -----------------
-        # Stage 2: Preprocessed cache check first (skip stage 1 if exists)
+        # Stage 2: Preprocessed cache check first (skip stage 1 if it exists)
         # -----------------
-
         datasource_config = ensure_serializable(self.datasource._init_kwargs)
         datasource_transforms_cfg = {
             "datasource": datasource_config,
             "transforms": ensure_serializable(self.transforms.config),
         }
 
-        preprocessed_data = None
+        preprocessed_data_loaded = False
         if data_cache_path and transform_library_part_path and cache_preprocessed:
-
-            # Compute expected hash first
             expected_hash = compute_cache_key(
                 config=datasource_transforms_cfg,
                 library_dir=transform_library_part_path,
@@ -230,24 +224,27 @@ class PreProcessor(PreProcessorInterface):
             preprocessed_meta = self.cache.load_metadata(
                 data_cache_path,
                 stage="preprocessed",
-                cache_key=expected_hash,  # handle will compute key internally
+                cache_key=expected_hash,
             )
 
             if preprocessed_meta:
-                pre_config, stored_hash = preprocessed_meta
-
-                # Check if the expected_hash is the same as stored one
+                _, stored_hash = preprocessed_meta
                 if stored_hash == expected_hash:
-                    # Cache hit → load preprocessed data and skip stage 1
-                    preprocessed_data = self.cache.load_data(
+                    # Cache hit -> load data and the container with our objects
+                    loaded_data, saved_objects = self.cache.load_data(
                         data_cache_path, stage="preprocessed", cache_key=expected_hash
                     )
-                    self.data = preprocessed_data
+                    self.data = loaded_data
+
+                    # Unpack the dictionary from the cache
+                    self.transforms = saved_objects["transforms"]
+                    self.meta_data = saved_objects["meta_data"]
+                    preprocessed_data_loaded = True
 
         # -----------------
         # Stage 1: Load + Split + Fetch
         # -----------------
-        if preprocessed_data is None:
+        if not preprocessed_data_loaded:
             if data_cache_path:
                 if not data_library_part_path:
                     raise ValueError(
@@ -259,23 +256,20 @@ class PreProcessor(PreProcessorInterface):
                     self.datasource.split_data()
                     return self.datasource, self.datasource.get_meta_data()
 
-                # Override datasource from the cached
                 self.datasource, self.meta_data = self.cache.handle(
                     cache_dir=data_cache_path,
                     stage="loaded_and_splitted_data",
                     build_fn=build_data_stage,
-                    config=datasource_config,  # datasource config
+                    config=datasource_config,
                     library_dir=data_library_part_path,
                     extensions=[".py"],
                 )
             else:
-                # no cache → always rebuild
                 self.datasource.load_data()
                 self.datasource.split_data()
 
             self.fetch_data()
 
-            # Validate split mode
             assert self.datasource.get_split_mode() == self.mode, (
                 f"Expected split mode from preprocessor: '{self.mode}', "
                 f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
@@ -284,31 +278,43 @@ class PreProcessor(PreProcessorInterface):
             logger.info("Data dictionary structure before transforms:")
             print_data_dict_structure(self.data)
 
-        # # -----------------
-        # # Stage 2: Transforms
-        # # -----------------
-        if data_cache_path and transform_library_part_path and cache_preprocessed:
+        # -----------------
+        # Stage 2: Transforms
+        # -----------------
+        if not preprocessed_data_loaded:
+            if data_cache_path and transform_library_part_path and cache_preprocessed:
 
-            def build_preprocess_stage():
-                return (
-                    self.apply_transforms(self.data, self.transforms.get_transforms()),
-                    self.meta_data,
+                def build_preprocess_stage():
+                    processed_data = self.apply_transforms(
+                        self.data, self.transforms.get_transforms()
+                    )
+
+                    # Create a dictionary to hold both objects to be saved in metadata.pkl
+                    objects_to_cache = {
+                        "transforms": self.transforms,
+                        "meta_data": self.meta_data,
+                    }
+                    return (processed_data, objects_to_cache)
+
+                # The cache handles the `objects_to_cache` dict, saving it to metadata.pkl
+                cached_data = self.cache.handle(
+                    cache_dir=data_cache_path,
+                    stage="preprocessed",
+                    build_fn=build_preprocess_stage,
+                    config=datasource_transforms_cfg,
+                    library_dir=transform_library_part_path,
+                    extensions=[".py"],
                 )
 
-            self.data, self.meta_data = self.cache.handle(
-                cache_dir=data_cache_path,
-                stage="preprocessed",
-                build_fn=build_preprocess_stage,
-                config=datasource_transforms_cfg,  # transform config
-                library_dir=transform_library_part_path,
-                extensions=[".py"],
-            )
-        else:
+                # Unpack the results to keep instance attributes consistent
+                self.data, saved_objects = cached_data
+                self.transforms = saved_objects["transforms"]
+                self.meta_data = saved_objects["meta_data"]
 
-            # no cache → always apply transforms
-            self.data = self.apply_transforms(
-                self.data, self.transforms.get_transforms()
-            )
+            else:
+                self.data = self.apply_transforms(
+                    self.data, self.transforms.get_transforms()
+                )
 
         self._is_preprocessed = True
 
@@ -316,3 +322,138 @@ class PreProcessor(PreProcessorInterface):
         print_data_dict_structure(self.data)
 
         return self.data
+
+    def get_chached_transform_manager(self):
+        return self.transforms
+
+    # def pipeline(
+    #     self,
+    #     data_cache_path: str = None,
+    #     data_library_part_path: str = None,
+    #     transform_library_part_path: str = None,
+    #     cache_preprocessed: bool = False,
+    # ) -> DatasetContainer:
+    #     """
+    #     Run the preprocessing pipeline with optional caching.
+
+    #     Parameters
+    #     ----------
+    #     data_cache_path : str | None
+    #         Root cache directory for dataset and preprocessed stages.
+    #     data_library_part_path : str | None
+    #         Path to the library part (e.g. code) defining dataset loading.
+    #         Required if caching loaded data.
+    #     transform_library_part_path : str | None
+    #         Path to the library part (e.g. code) defining transforms.
+    #         Required if caching preprocessed data.
+    #     """
+
+    #     # -----------------
+    #     # Stage 2: Preprocessed cache check first (skip stage 1 if exists)
+    #     # -----------------
+
+    #     datasource_config = ensure_serializable(self.datasource._init_kwargs)
+    #     datasource_transforms_cfg = {
+    #         "datasource": datasource_config,
+    #         "transforms": ensure_serializable(self.transforms.config),
+    #     }
+
+    #     preprocessed_data = None
+    #     if data_cache_path and transform_library_part_path and cache_preprocessed:
+
+    #         # Compute expected hash first
+    #         expected_hash = compute_cache_key(
+    #             config=datasource_transforms_cfg,
+    #             library_dir=transform_library_part_path,
+    #             extensions=[".py"],
+    #         )
+
+    #         preprocessed_meta = self.cache.load_metadata(
+    #             data_cache_path,
+    #             stage="preprocessed",
+    #             cache_key=expected_hash,  # handle will compute key internally
+    #         )
+
+    #         if preprocessed_meta:
+    #             pre_config, stored_hash = preprocessed_meta
+
+    #             # Check if the expected_hash is the same as stored one
+    #             if stored_hash == expected_hash:
+    #                 # Cache hit → load preprocessed data and skip stage 1
+    #                 preprocessed_data = self.cache.load_data(
+    #                     data_cache_path, stage="preprocessed", cache_key=expected_hash
+    #                 )
+    #                 self.data = preprocessed_data
+
+    #     # -----------------
+    #     # Stage 1: Load + Split + Fetch
+    #     # -----------------
+    #     if preprocessed_data is None:
+    #         if data_cache_path:
+    #             if not data_library_part_path:
+    #                 raise ValueError(
+    #                     "data_library_part_path must be provided if caching loaded data"
+    #                 )
+
+    #             def build_data_stage():
+    #                 self.datasource.load_data()
+    #                 self.datasource.split_data()
+    #                 return self.datasource, self.datasource.get_meta_data()
+
+    #             # Override datasource from the cached
+    #             self.datasource, self.meta_data = self.cache.handle(
+    #                 cache_dir=data_cache_path,
+    #                 stage="loaded_and_splitted_data",
+    #                 build_fn=build_data_stage,
+    #                 config=datasource_config,  # datasource config
+    #                 library_dir=data_library_part_path,
+    #                 extensions=[".py"],
+    #             )
+    #         else:
+    #             # no cache → always rebuild
+    #             self.datasource.load_data()
+    #             self.datasource.split_data()
+
+    #         self.fetch_data()
+
+    #         # Validate split mode
+    #         assert self.datasource.get_split_mode() == self.mode, (
+    #             f"Expected split mode from preprocessor: '{self.mode}', "
+    #             f"but got dataset split mode: '{self.datasource.get_split_mode()}'"
+    #         )
+
+    #         logger.info("Data dictionary structure before transforms:")
+    #         print_data_dict_structure(self.data)
+
+    #     # # -----------------
+    #     # # Stage 2: Transforms
+    #     # # -----------------
+    #     if data_cache_path and transform_library_part_path and cache_preprocessed:
+
+    #         def build_preprocess_stage():
+    #             return (
+    #                 self.apply_transforms(self.data, self.transforms.get_transforms()),
+    #                 self.meta_data,
+    #             )
+
+    #         self.data, self.meta_data = self.cache.handle(
+    #             cache_dir=data_cache_path,
+    #             stage="preprocessed",
+    #             build_fn=build_preprocess_stage,
+    #             config=datasource_transforms_cfg,  # transform config
+    #             library_dir=transform_library_part_path,
+    #             extensions=[".py"],
+    #         )
+    #     else:
+
+    #         # no cache → always apply transforms
+    #         self.data = self.apply_transforms(
+    #             self.data, self.transforms.get_transforms()
+    #         )
+
+    #     self._is_preprocessed = True
+
+    #     logger.info("Data dictionary structure after transforms:")
+    #     print_data_dict_structure(self.data)
+
+    #     return self.data
