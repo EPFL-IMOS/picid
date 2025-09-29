@@ -64,7 +64,6 @@ class BaseDataset(Dataset, ABC):
             logger.warning(
                 f"Unused parameters in BaseDataset __init__: {list(kwargs.keys())}"
             )
-        self.data_dict = data_dict
 
     @abstractmethod
     def get_collate_fn(self) -> Callable:

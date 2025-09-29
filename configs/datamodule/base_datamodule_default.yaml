@@ -3,7 +3,7 @@ train_batch_size: null
 val_batch_size: null
 test_batch_size: null
 
-num_workers: 4
+num_workers: 2
 prefetch_factor: 2
 
 # --Fixed ones--

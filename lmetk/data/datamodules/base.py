@@ -154,6 +154,10 @@ class BaseDataModule(LightningDataModule):
                     f"{ds_name} must be a subclass of BaseDataset or BaseConcatDataset, got {type(ds)}"
                 )
 
+        self._train_loader = None
+        self._val_loader = None
+        self._test_loader = None
+
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
         """
         Download and pre-process the underlying data.
@@ -194,6 +198,7 @@ class BaseDataModule(LightningDataModule):
         loader_args = dict(
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            persistent_workers=self.num_workers > 0,
         )
 
         if self.use_batch_sampler:
@@ -253,13 +258,17 @@ class BaseDataModule(LightningDataModule):
 
         drop_last = len(self.dataset_train) % batch_size == 1
 
-        loader = self._create_dataloader(
-            self.dataset_train,
-            batch_size=batch_size,
-            shuffle=self.hparams.shuffle_train,
-            drop_last=drop_last,
-            collate_fn=self.collate_fn_train,
-        )
+        if self._train_loader is None:
+            loader = self._create_dataloader(
+                self.dataset_train,
+                batch_size=batch_size,
+                shuffle=self.hparams.shuffle_train,
+                drop_last=drop_last,
+                collate_fn=self.collate_fn_train,
+            )
+            self._train_loader = loader
+        else:
+            loader = self._train_loader
 
         return loader
 
@@ -286,12 +295,16 @@ class BaseDataModule(LightningDataModule):
         else:
             batch_size = self.hparams.val_batch_size
 
-        loader = self._create_dataloader(
-            self.dataset_val,
-            batch_size=batch_size,
-            shuffle=self.hparams.shuffle_val,
-            collate_fn=self.collate_fn_val,
-        )
+        if self._val_loader is None:
+            loader = self._create_dataloader(
+                self.dataset_val,
+                batch_size=batch_size,
+                shuffle=self.hparams.shuffle_val,
+                collate_fn=self.collate_fn_val,
+            )
+            self._val_loader = loader
+        else:
+            loader = self._val_loader
 
         return loader
 
@@ -317,12 +330,16 @@ class BaseDataModule(LightningDataModule):
         else:
             batch_size = self.hparams.test_batch_size
 
-        loader = self._create_dataloader(
-            self.dataset_val,
-            batch_size=batch_size,
-            shuffle=self.hparams.shuffle_val,
-            collate_fn=self.collate_fn_val,
-        )
+        if self._test_loader is None:
+            loader = self._create_dataloader(
+                self.dataset_val,
+                batch_size=batch_size,
+                shuffle=self.hparams.shuffle_val,
+                collate_fn=self.collate_fn_val,
+            )
+            self._test_loader = loader
+        else:
+            loader = self._test_loader
 
         return loader
 
