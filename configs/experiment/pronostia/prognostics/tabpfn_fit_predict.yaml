@@ -2,5 +2,6 @@
 
 defaults:
   - pronostia/base
+  - pronostia/prognostics/base
   - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms: bearings/default_rul

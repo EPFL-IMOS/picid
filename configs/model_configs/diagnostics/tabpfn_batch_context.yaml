@@ -1,9 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /dataset: prognostics/rul_multiunit_dataset
-  - override /datamodule: base_datamodule_tabpfn
-  - override /model: tabpfn_batch_context
-
-task_definition:
-  requires_training: false

@@ -1,8 +1,8 @@
 #@package _global_
 
 defaults:
-  - override /dataset: prognostics/concept_rul_multiunit_dataset #sliding_window
-  - override /datamodule: base_datamodule_tabpfn
+  - override /dataset: prognostics/concept_rul_multiunit_dataset
+  - override /datamodule: base_datamodule_no_batch_sampler
   - override /model: cnn_1d
 
 task_definition:

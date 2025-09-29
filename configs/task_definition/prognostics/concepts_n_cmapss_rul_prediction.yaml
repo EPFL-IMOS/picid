@@ -1,4 +1,14 @@
-seq_len: 50  # window size
-label_len: 0  # overlap size
+seq_len: 50 # window size
+label_len: 0 # overlap size
 pred_len: 1 # prediction size
 task_type: rul
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - rul
+      - timestamps
+      - health_states
+      - unit
+      - concepts

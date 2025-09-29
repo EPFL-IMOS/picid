@@ -2,18 +2,18 @@ defaults:
   - concepts_n_cmapss_ds02/default@_here_
 
 # Introduce the task dimension to X, y. We
-reshape_X: 
+reshape_X:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: features
-    assign_to: X
+    assign_to: features
 
-reshape_y: 
+reshape_y:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: rul
-    assign_to: y
+    assign_to: rul

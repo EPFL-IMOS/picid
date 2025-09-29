@@ -47,21 +47,33 @@ class FitPredictTaskDataset(BaseDataset):
     def __init__(
         self,
         data_dict: dict[str, ndarray | list[ndarray]],
+        task_type: str,
         meta_data_dict: dict[str, any],
         convert_units_to_tasks: bool = False,
         **kwargs,
     ):
 
-        self.convert_units_to_tasks = convert_units_to_tasks
-
         # Make sure that the data_dict contains the required keys
-        required_keys = ["X", "y"]
+        if task_type in ["rul", "ahrul", "soc"]:
+            required_keys = ["features", "rul"]  # "time_features", "target"
+            context_key = "features"
+            target_key = task_type
+
+        elif task_type in ["forecasting"]:
+            required_keys = ["features", "target"]  # "time_features", "target"
+            context_key = "features"
+            target_key = "target"
+        else:
+            raise ValueError(f"Unknown task_type: {task_type}")
+
         for key in required_keys:
             if key not in data_dict:
                 raise ValueError(f"Data dictionary must contain the key: '{key}'")
 
-        X = data_dict["X"]
-        y = data_dict["y"]
+        X = data_dict[context_key]
+        y = data_dict[target_key]
+
+        self.convert_units_to_tasks = convert_units_to_tasks
 
         # make sure target is 3 dimensional and context features 3
         # This is because its a standard multi-target fit predict task (2) and 2 dimensional,
@@ -105,8 +117,8 @@ class FitPredictTaskDataset(BaseDataset):
                 )
 
                 return input_data_c
-            
-            else: 
+
+            else:
                 return input_data
 
         self.X = handle_multi_units(X, "X")
@@ -128,14 +140,20 @@ class FitPredictTaskDataset(BaseDataset):
     def __len__(self):
         return self.n_tasks
 
-    def __getitem__(self, task: int):
+    def __getitem__(self, task: list[int]):
+        # get the integer from the list, as the dataloader provides a list of indices
+        # Because we use batch sampler with batch size 1 in the DataModule
+        task = task[0]
+        X = np.expand_dims(self.X[task], axis=0)  # (1, n_samples, n_features)
+        y = np.expand_dims(self.y[task], axis=0)  # (1, n_samples, n_outputs)
+
         d = AttributeDict(
             {
-                "task_idx": task,
-                "task_num": self.n_tasks,
+                "task_idx": torch.tensor(task),
+                "task_num": torch.tensor(self.n_tasks),
                 "task_desc": f"Task {task + 1} of {self.n_tasks}",
-                "target": self.y[task],
-                "context": self.X[task],
+                "target": torch.from_numpy(y),
+                "context": torch.from_numpy(X),
             }
         )
 
