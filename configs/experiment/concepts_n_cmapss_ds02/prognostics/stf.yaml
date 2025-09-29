@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss_ds02/base
-  - /model_configs/prognostics/stf
+  - /model_configs/concepts_prognostics/stf
   - override /transforms: concepts_n_cmapss_ds02/default

@@ -18,6 +18,7 @@ from lmetk.data.datasets.base import (
     BaseDataset,
     BaseVectorizedConcatDataset,
 )
+from lmetk.data.datasets.hydra_concat_dataset import NonVectorizedHydraConcatDataset
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,13 @@ class BaseDataModule(LightningDataModule):
             ("dataset_test", dataset_test),
         ]:
             if not isinstance(
-                ds, (BaseDataset, BaseConcatDataset, BaseVectorizedConcatDataset)
+                ds,
+                (
+                    BaseDataset,
+                    BaseConcatDataset,
+                    BaseVectorizedConcatDataset,
+                    NonVectorizedHydraConcatDataset,
+                ),
             ):
                 raise TypeError(
                     f"{ds_name} must be a subclass of BaseDataset or BaseConcatDataset, got {type(ds)}"
