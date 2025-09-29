@@ -46,7 +46,11 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
         """
 
         if self.task_type in self.supported_types:
-            batch_x = batch["features"]
+
+            # The model expects input of shape (batch_size, in_channels, seq_len)
+            # but the input is of shape (batch_size, seq_len, in_channels)
+            # so we need to permute the dimensions
+            batch_x = batch["features"].permute(0, 2, 1)
             batch_y = batch[self.task_type]
             outputs = self.backbone(batch_x)
             model_out = {
