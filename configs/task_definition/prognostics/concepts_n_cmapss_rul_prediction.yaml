@@ -7,4 +7,8 @@ model:
   data_requirements:
     input_tensors:
       - features
-      - rul # infere from somewhere
+      - rul
+      - timestamps
+      - health_states
+      - unit
+      - concepts
