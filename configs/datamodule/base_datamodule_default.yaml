@@ -4,6 +4,7 @@ val_batch_size: null
 test_batch_size: null
 
 num_workers: 4
+prefetch_factor: 2
 
 # --Fixed ones--
 shuffle_train: True

@@ -322,5 +322,5 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     @override
     def split_data(self):
         logger.warning(
-            "UNIBO21 does not support data splitting. The project relies on predefined splits."
+            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
         )

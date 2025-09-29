@@ -298,5 +298,5 @@ class NB14Loader(AbstractDataSourceLoader):
     @override
     def split_data(self):
         logger.warning(
-            "RigidBodyDynamics does not support data splitting. The project relies on predefined splits."
+            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
         )
