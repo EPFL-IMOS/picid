@@ -8,6 +8,7 @@ defaults:
 
 task_definition:
   seq_len: 128
+  stride: 10
 
 datamodule:
   train_batch_size: 1024

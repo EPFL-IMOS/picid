@@ -46,38 +46,38 @@ def convert_outer_list_to_inner(data_list):
 
 train_names = [
     "000-DM-3.0-4019-S",  # minimum capacity 1.48
-    # "001-DM-3.0-4019-S",  # minimum capacity 1.81
-    # "002-DM-3.0-4019-S",  # minimum capacity 2.06
-    # "009-DM-3.0-4019-H",  # minimum capacity 1.41
-    # "010-DM-3.0-4019-H",  # minimum capacity 1.44
-    # "014-DM-3.0-4019-P",  # minimum capacity 1.7
-    # "015-DM-3.0-4019-P",  # minimum capacity 1.76
-    # "016-DM-3.0-4019-P",  # minimum capacity 1.56
-    # "017-DM-3.0-4019-P",  # minimum capacity 1.29
-    # #'047-DM-3.0-4019-P',#new 1.98
-    # #'049-DM-3.0-4019-P',#new 2.19
-    # "007-EE-2.85-0820-S",  # 2.5
-    # "008-EE-2.85-0820-S",  # 2.49
-    # "042-EE-2.85-0820-S",  # 2.51
-    # "043-EE-2.85-0820-H",  # 2.31
-    # "018-DP-2.00-1320-S",  # minimum capacity 1.82
-    # #'019-DP-2.00-1320-S',#minimum capacity 1.61
-    # "036-DP-2.00-1720-S",  # minimum capacity 1.91
-    # "037-DP-2.00-1720-S",  # minimum capacity 1.84
-    # "038-DP-2.00-2420-S",  # minimum capacity 1.854 (to 0)
-    # "050-DP-2.00-4020-S",  # new 1.81
-    # "051-DP-2.00-4020-S",  # new 1.866
-    # "040-DM-4.00-2320-S",  # minimum capacity 3.75, cycles 188
+    "001-DM-3.0-4019-S",  # minimum capacity 1.81
+    "002-DM-3.0-4019-S",  # minimum capacity 2.06
+    "009-DM-3.0-4019-H",  # minimum capacity 1.41
+    "010-DM-3.0-4019-H",  # minimum capacity 1.44
+    "014-DM-3.0-4019-P",  # minimum capacity 1.7
+    "015-DM-3.0-4019-P",  # minimum capacity 1.76
+    "016-DM-3.0-4019-P",  # minimum capacity 1.56
+    "017-DM-3.0-4019-P",  # minimum capacity 1.29
+    #'047-DM-3.0-4019-P',#new 1.98
+    #'049-DM-3.0-4019-P',#new 2.19
+    "007-EE-2.85-0820-S",  # 2.5
+    "008-EE-2.85-0820-S",  # 2.49
+    "042-EE-2.85-0820-S",  # 2.51
+    "043-EE-2.85-0820-H",  # 2.31
+    "018-DP-2.00-1320-S",  # minimum capacity 1.82
+    #'019-DP-2.00-1320-S',#minimum capacity 1.61
+    "036-DP-2.00-1720-S",  # minimum capacity 1.91
+    "037-DP-2.00-1720-S",  # minimum capacity 1.84
+    "038-DP-2.00-2420-S",  # minimum capacity 1.854 (to 0)
+    "050-DP-2.00-4020-S",  # new 1.81
+    "051-DP-2.00-4020-S",  # new 1.866
+    "040-DM-4.00-2320-S",  # minimum capacity 3.75, cycles 188
 ]
 
 test_names = [
     "003-DM-3.0-4019-S",  # minimum capacity 1.84
-    # "011-DM-3.0-4019-H",  # minimum capacity 1.36
-    # "013-DM-3.0-4019-P",  # minimum capacity 1.6
-    # "006-EE-2.85-0820-S",  # 2.621
-    # "044-EE-2.85-0820-H",  # 2.43
-    # "039-DP-2.00-2420-S",  # minimum capacity 1.93
-    # "041-DM-4.00-2320-S",  # minimum capacity 3.76, cycles 190
+    "011-DM-3.0-4019-H",  # minimum capacity 1.36
+    "013-DM-3.0-4019-P",  # minimum capacity 1.6
+    "006-EE-2.85-0820-S",  # 2.621
+    "044-EE-2.85-0820-H",  # 2.43
+    "039-DP-2.00-2420-S",  # minimum capacity 1.93
+    "041-DM-4.00-2320-S",  # minimum capacity 3.76, cycles 190
 ]
 
 
@@ -236,6 +236,14 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         data["test"] = test_entries
         data["val"] = copy.deepcopy(test_entries)
 
+        if self.debug_subset_range is not None:
+            data["train"] = data["train"][:2]
+            data["val"] = data["val"][:1]
+            data["test"] = data["test"][:1]
+            logger.info(
+                f"Debug subset range applied. New train size: {len(data['train'])}, val size: {len(data['val'])}, test size: {len(data['test'])}"
+            )
+
         return data
 
     def _process_split(
@@ -284,6 +292,11 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                     "target": curr_y,
                     "metadata": {"unit_name": unit_name},
                 }
+
+            if self.debug_subsample_rate is not None:
+                # subsample the data
+                entry["features"] = entry["features"][:: self.debug_subsample_rate]
+                entry["target"] = entry["target"][:: self.debug_subsample_rate]
 
             data_split.append(entry)
             left_idx = right_idx

@@ -18,6 +18,7 @@ defaults:
   - trainer: default
   - paths: default
   - hydra: default
+  - cache: default
 
   # experiment configs allow for version control of specific hyperparameters
   # e.g. best hyperparameters for given model and datamodule
@@ -39,8 +40,8 @@ defaults:
 # task name, determines output directory path
 experiment_group: "debug"
 
-# Cache data or not
-use_cache: True
+
+
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
 # overwrite from command line with `python train.py tags="[first_tag, second_tag]"`

@@ -227,12 +227,24 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
 
-    # Get cache dirs:
-    data_cache_path = cfg.paths.cache_path
-    data_library_part_path = Path(cfg.paths.root_dir) / "lmetk/data"
-    transform_library_part_path = Path(cfg.paths.root_dir) / "lmetk/transforms"
+    # Get cache dirs and flags
+    data_cache_path = (
+        cfg.paths.cache_path
+        if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
+        else None
+    )
+    data_library_part_path = (
+        Path(cfg.paths.root_dir) / "lmetk/data"
+        if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
+        else None
+    )
+    transform_library_part_path = (
+        Path(cfg.paths.root_dir) / "lmetk/transforms"
+        if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
+        else None
+    )
+    cache_preprocessed_flag = cfg.cache.use_cache_after_transfroms
 
-    cache_preprocessed_flag = True
     # Run the preprocessing pipeline
     preprocessor.pipeline(
         data_cache_path=data_cache_path,

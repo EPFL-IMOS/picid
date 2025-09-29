@@ -42,36 +42,36 @@ def convert_outer_list_to_inner(data_list):
 
 train_names = [
     "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW1",
-    # "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW2",
-    # "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7",
-    # #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW3',
-    # "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW4",
-    # "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5",
-    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW9',
-    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW10',
-    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW11',
-    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW13",
-    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW14",
-    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15",
-    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW17",
-    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW18",
-    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
-    # "RW_Skewed_Low_40C_DataSet_2Post/RW21",
-    # "RW_Skewed_Low_40C_DataSet_2Post/RW22",
-    # "RW_Skewed_Low_40C_DataSet_2Post/RW23",
-    # "RW_Skewed_High_40C_DataSet_2Post/RW25",
-    # "RW_Skewed_High_40C_DataSet_2Post/RW26",
-    # "RW_Skewed_High_40C_DataSet_2Post/RW27",
+    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW2",
+    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7",
+    #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW3',
+    "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW4",
+    "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5",
+    #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW9',
+    #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW10',
+    #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW11',
+    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW13",
+    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW14",
+    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15",
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW17",
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW18",
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
+    "RW_Skewed_Low_40C_DataSet_2Post/RW21",
+    "RW_Skewed_Low_40C_DataSet_2Post/RW22",
+    "RW_Skewed_Low_40C_DataSet_2Post/RW23",
+    "RW_Skewed_High_40C_DataSet_2Post/RW25",
+    "RW_Skewed_High_40C_DataSet_2Post/RW26",
+    "RW_Skewed_High_40C_DataSet_2Post/RW27",
 ]
 
 test_names = [
     "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW8",
-    # #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6',
-    # #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12',
-    # "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW16",
-    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW20",
-    # "RW_Skewed_Low_40C_DataSet_2Post/RW24",
-    # "RW_Skewed_High_40C_DataSet_2Post/RW28",
+    #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6',
+    #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12',
+    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW16",
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW20",
+    "RW_Skewed_Low_40C_DataSet_2Post/RW24",
+    "RW_Skewed_High_40C_DataSet_2Post/RW28",
 ]
 
 
@@ -209,6 +209,14 @@ class NB14Loader(AbstractDataSourceLoader):
         )
         data["test"] = test_entries
         data["val"] = copy.deepcopy(test_entries)
+
+        if self.debug_subset_range is not None:
+            data["train"] = data["train"][:2]
+            data["val"] = data["val"][:1]
+            data["test"] = data["test"][:1]
+            logger.info(
+                f"Debug subset range applied. New train size: {len(data['train'])}, val size: {len(data['val'])}, test size: {len(data['test'])}"
+            )
 
         return data
 
