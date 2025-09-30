@@ -1,3 +1,5 @@
+# https://www.sciencedirect.com/science/article/pii/S0952197622005723
+
 seq_len: 50 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
