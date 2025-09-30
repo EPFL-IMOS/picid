@@ -95,19 +95,17 @@ def _describe_list_of_ak_arrays(obj: list[ak.Array]) -> str:
                 mean_vals[i] = np.mean(lengths)
 
         # --- (NEW compact formatting logic) ---
-        output_lines = [f"list<ak.Array> x {len(obj)}"]
+        output_lines = [
+            f"list<ak.Array> x {len(obj)} shape:{get_ak_shape(obj)} (min/max/mean)"
+        ]
 
         for i in range(num_dims):
             is_last_dim = i == num_dims - 1
             dim_prefix = "└── " if is_last_dim else "├── "
-            stat_prefix = "    " if is_last_dim else "│   "
 
             # Add the line for the dimension
-            output_lines.append(f"\n{dim_prefix}dim {dim_labels[i]}:")
-
-            # Add the new, single, compact line for the statistics
             stats_str = f"{min_vals[i]:.0f} / {max_vals[i]:.0f} / {mean_vals[i]:.1f}"
-            output_lines.append(f"\n{stat_prefix}└── min/max/mean: {stats_str}")
+            output_lines.append(f"\n{dim_prefix}dim {dim_labels[i]}: {stats_str}")
 
         return "".join(output_lines)
 
