@@ -12,7 +12,7 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
     Transforms sequence data by computing the mean and standard deviation
     for each cycle, ignoring a specified padding value and np.nan.
 
-    Input shape: (N_cycles, win_len, channels)
+    Input shape: (N_cycles, cycle_len (var), channels)
     Output shape: (N_cycles, channels * 2)
     """
 

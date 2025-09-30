@@ -3,21 +3,102 @@ import torch
 from typing import Dict, List, override
 
 from lightning_fabric.utilities.data import AttributeDict
+from numpy import ndarray
 
 from lmetk.data.datasets.collate_functions import collate_key_value_batch
 from lmetk.data.datasets.context_dataset import ContextBatchDataset
 
 
 class RULContextBatchDataset(ContextBatchDataset):
-    """
-    Dataset for RUL prediction with context features.
-    Combines target RUL sequences with context feature sequences.
+    """Creates a dataset for Remaining Useful Life (RUL) prediction.
+
+    This class specializes `ContextBatchDataset` for a common RUL prediction
+    scenario: predicting the RUL at the end of a given sequence of operational
+    data. It uses a sliding window to generate input sequences (`X`) and
+    corresponding target sequences (`y`).
+
+    For a given input feature sequence of length `seq_len`, the corresponding
+    target RUL sequence also has length `seq_len`. In a typical training loop,
+    the target label is then taken as the **last value** of this RUL sequence.
+
+    Args:
+        data_dict (dict[str, ndarray | list[ndarray]]): A dictionary mapping string
+            keys (e.g., 'features', 'RUL') to the time-series data arrays. The
+            arrays can be NumPy arrays, PyTorch Tensors, or Awkward Arrays.
+        task_type (str): A string identifier for the task type (e.g., 'regression'),
+            used by parent classes.
+        seq_len (int): The length of the sliding window, defining the number of
+            historical time steps in each input sample.
+        label_len (int): The length of the "label" or "overlap" portion of the
+            sequence, used by the underlying sequencer. It defines the starting
+            point of the target sequence relative to the input sequence.
+        pred_len (int): The prediction horizon. **Note: This argument is ignored
+            and internally overridden to 0** to make the target window align
+            perfectly with the input window.
+        stride (int, optional): The step size the sliding window takes across the
+            data between generating consecutive sequences. Defaults to 1.
+        **kwargs: Additional keyword arguments passed to the parent `ContextBatchDataset`.
+
+    Example:
+        >>> import numpy as np
+        >>> # Example data: 100 time steps, 3 features
+        >>> features = np.random.rand(100, 3)
+        >>> # RUL counts down from 99 to 0
+        >>> rul = np.arange(99, -1, -1).reshape(-1, 1)
+        >>> data = {'features': features, 'RUL': rul}
+        ...
+        >>> # Create a dataset with a window size of 20
+        >>> dataset = RULContextBatchDataset(
+        ...     data_dict=data,
+        ...     task_type='regression',
+        ...     seq_len=20,
+        ...     label_len=10,
+        ...     pred_len=5  # This will be forced to 0
+        ... )
+        ...
+        >>> # Get the first sample from the dataset
+        >>> first_sample = dataset[0]
+        >>> input_features = first_sample['features']
+        >>> target_rul_sequence = first_sample['RUL']
+        ...
+        >>> print(f"Input features shape: {input_features.shape}")
+        Input features shape: (20, 3)
+        >>> print(f"Target RUL sequence shape: {target_rul_sequence.shape}")
+        Target RUL sequence shape: (20, 1)
+        ...
+        >>> # In training, the target is the last value of the RUL sequence.
+        >>> # Corresponds to the RUL at the end of the 20-step feature window.
+        >>> final_target_rul = target_rul_sequence[-1]
+        >>> print(f"Final target RUL value: {final_target_rul}")
+        Final target RUL value: [80]
+
+    Yields:
+        A dictionary where keys correspond to those in `data_dict` and values
+        are the sequenced NumPy arrays for a given sample index.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        data_dict: dict[str, ndarray | list[ndarray]],
+        task_type: str,
+        seq_len: int,  # window size
+        label_len: int,  # overlap size
+        pred_len: int,  # prediction size
+        stride: int = 1,
+        **kwargs,
+    ):
+        assert pred_len == 0, "pred_len must be 0 for RUL prediction."
         # Ensure the pred_length is zero
         kwargs["pred_len"] = 0
-        super().__init__(**kwargs)
+        super().__init__(
+            data_dict=data_dict,
+            task_type=task_type,
+            seq_len=seq_len,
+            label_len=label_len,
+            pred_len=pred_len,
+            stride=stride,
+            **kwargs,
+        )
 
     @override
     def __getitem__(self, batch_idx: List[int]):
