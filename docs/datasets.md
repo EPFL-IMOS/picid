@@ -94,3 +94,44 @@ Each batch from `ConceptRULDataset` is returned as an `AttributeDict` with the f
 - `concepts`: Concept vector associated with the current window.
 
 This structure enables models to learn from both raw features and high-level concepts for each time window, supporting robust RUL prediction.
+
+## RULContextBatchDataset
+
+`RULContextBatchDataset` is a specialized version of `ContextBatchDataset` designed specifically for **Remaining Useful Life (RUL) prediction**. It structures time-series data into fixed-length sequences where a window of operational features is used to predict the RUL value at the very end of that same window.
+
+-   **Inherits from `ContextBatchDataset`**: It uses the same underlying mechanism for handling target and context features.
+-   **Sliding Window Processing**: It moves a sliding window of a defined length (`seq_len`) over the time-series to generate samples.
+-   **RUL-Specific Target**: The core feature is that the model is trained to predict the RUL at the final time step of the input sequence. This is achieved by internally forcing the prediction length (`pred_len`) to 0, which aligns the target window perfectly with the input window.
+
+***
+
+### Batch Contents
+
+Since it inherits from `ContextBatchDataset`, each batch is returned as an `AttributeDict` with a similar structure. For RUL, the operational **features** are typically treated as the `context` and the **RUL values** as the `target`.
+
+-   `context['features_seq_x']`: The primary input for the model. This is a batch of `B` feature sequences, each with shape `(seq_len, C)`, where `C` is the number of features.
+-   `target['rul_seq_x']`: The sequence of RUL values corresponding to the input. This sequence aligned with the `context['features_seq_x']`.
+-   **Final RUL Target**: 💡 To get the single scalar RUL value to predict for each item in the batch, you would typically select the **very last element** from the `target['rul_seq_x']` tensor (e.g., `target['rul_seq_x'][:, -1, :]`). This represents the RUL at the end of the `seq_len` window.
+
+The output batch is: 
+```
+{
+	'batch_idx': [indices],
+	'rul': target['rul_seq_x'][:, -1, :], shape (B, 1)>
+	'features': context['features_seq_x'], shape (B, seq_len, C)
+}
+```
+
+***
+
+### The Role of `pred_len=0`
+
+Setting **`pred_len=0`** is the key mechanism that configures the dataset for this specific type of RUL task.
+
+The `pred_len` (prediction length) parameter is designed for forecasting tasks. It tells the dataset how many steps into the **future**, beyond the end of the input sequence, the target value lies.
+
+-   **Forecasting (`pred_len > 0`)**: If your input sequence ends at time `t`, setting `pred_len=5` means your target is the value at time `t+5`. You are predicting 5 steps *after* your input data ends.
+-   **RUL Prediction (`pred_len = 0`)**: By setting `pred_len=0`, you specify that there is **no future horizon**. The target you want to predict exists at the exact same time step where your input sequence ends (time `t`).
+
+This is why it's the correct setting for this task: it ensures the target RUL value is perfectly aligned with the end of the feature sequence you are feeding into the model. ⚙️
+

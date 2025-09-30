@@ -3,8 +3,8 @@ train_batch_size: null
 val_batch_size: null
 test_batch_size: null
 
-num_workers: 2
-prefetch_factor: 2
+num_workers: 4
+prefetch_factor: 10
 
 # --Fixed ones--
 shuffle_train: True
