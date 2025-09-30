@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from lmetk.data.datasources import SingleSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ def binarize_concept(x):
 
 def scale_concept(x):
     return np.clip(x / -0.035, 0, 1)
+
 
 class AGTF30KDataSource(SingleSourceLoader):
 
@@ -53,21 +54,15 @@ class AGTF30KDataSource(SingleSourceLoader):
         #     Path(self.path), f"_test_ST.csv"
         # )
 
-        filename_train = os.path.join(
-            Path(self.path), "_train_DT.csv"
-        )
+        filename_train = os.path.join(Path(self.path), "_train_DT.csv")
         if not os.path.exists(filename_train):
             raise FileNotFoundError(f"Train file not found: {filename_train}")
 
-        filename_test = os.path.join(
-            Path(self.path), "_test_DT.csv"
-        )
+        filename_test = os.path.join(Path(self.path), "_test_DT.csv")
         if not os.path.exists(filename_test):
             raise FileNotFoundError(f"Test file not found: {filename_test}")
 
-        filename_val = os.path.join(
-            Path(self.path), "_val_DT.csv"
-        )
+        filename_val = os.path.join(Path(self.path), "_val_DT.csv")
         if not os.path.exists(filename_val):
             raise FileNotFoundError(f"Validation file not found: {filename_val}")
 
@@ -79,14 +74,25 @@ class AGTF30KDataSource(SingleSourceLoader):
         df = pd.concat([df_train, df_test, df_val], axis=0)
 
         # timestamps
-        timestamps = df['signaldate'].copy()
+        timestamps = df["signaldate"].copy()
 
         # operating conditions: 'alt', 'MN', 'PLA'
         W_var = ["alt", "MN", "PLA"]
         self.df_W = df[W_var]
 
         # sensor readings
-        XS_VAR = ["Wf", "Pa", "S2_Pt", "S25_Pt", "S36_Pt", "S45_Tt", "S5_Pt", "VAFN", "N_LPC", "N_HPC"]
+        XS_VAR = [
+            "Wf",
+            "Pa",
+            "S2_Pt",
+            "S25_Pt",
+            "S36_Pt",
+            "S45_Tt",
+            "S5_Pt",
+            "VAFN",
+            "N_LPC",
+            "N_HPC",
+        ]
         self.df_X = df[XS_VAR]
 
         # fault_type
@@ -102,11 +108,9 @@ class AGTF30KDataSource(SingleSourceLoader):
             self.df_Y = subsampling(self.df_Y, self.subsampling_rate)
             timestamps = subsampling(timestamps, self.subsampling_rate)
 
-
         # remove non-minimum degradation
         # self.concepts = self.concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
 
- 
         # drop constant concepts
         # self.concepts = self.concepts.loc[:, (self.concepts != self.concepts.iloc[0]).any()]
         logger.info(f"Used concepts: {self.concepts.columns}")

@@ -1,12 +1,13 @@
 import warnings
 import logging
-from lmetk.data.datasources import SingleSourceLoader
+
 from lmetk.data.datasources.kubric_movie.movi_dataset import MoviDataset
 from collections import defaultdict
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from lmetk.data.data_objects.data import SplitDatasetContainer
 from typing import Any, Dict, override
 import torch
+
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
@@ -33,12 +34,13 @@ def convert_outer_list_to_inner(data_list):
 
     return stacked
 
+
 class MOViLoader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_path = kwargs['data_path']
-        self.normalization_file = kwargs['normalization_file']
-        
+        self.data_path = kwargs["data_path"]
+        self.normalization_file = kwargs["normalization_file"]
+
         self._is_isplitted = False
         self._is_loaded = False
         self.data_dict = None
@@ -49,13 +51,13 @@ class MOViLoader(AbstractDataSourceLoader):
             kwargs.get("multisource_data_splitter") == None
         ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
         self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
-    
+
     @override
     def load_data(self):
         self.data_dict = self._load_data()
         self._is_loaded = True
         self._is_isplitted = True
-    
+
     @override
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
@@ -72,12 +74,11 @@ class MOViLoader(AbstractDataSourceLoader):
         # Read raw CSV
         data = self.read_data()
 
-        
         # Convert to desired format
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
         test = convert_outer_list_to_inner(data["test"])
-        
+
         out_dict = {}
         for key in train.keys():
             out_dict[key] = {
@@ -86,28 +87,30 @@ class MOViLoader(AbstractDataSourceLoader):
                 "test": test[key],
             }
 
-        #logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
-        #logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
-        #logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        # logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
+        # logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
+        # logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
         return out_dict
+
     def read_data(
         self,
     ):
         data = defaultdict(list)
         for split in ["train", "val", "test"]:
             loader = MoviDataset(
-                dataset_dir=self.data_path, 
-                normalization_file=self.normalization_file, 
+                dataset_dir=self.data_path,
+                normalization_file=self.normalization_file,
                 nox4=False,
-                split=split)
-            
+                split=split,
+            )
+
             for i in range(len(loader)):
                 data_i = loader.__getitem__(i)
                 keys_to_pop = []
                 for key in data_i.keys():
-                    
+
                     item = data_i[key]
-                    
+
                     # Check if the item is a PyTorch Tensor
                     if isinstance(item, torch.Tensor):
                         # If so, move to CPU (if on GPU) and convert to numpy
@@ -115,7 +118,7 @@ class MOViLoader(AbstractDataSourceLoader):
                             data_i[key] = item.cpu().numpy()
                         except:
                             data_i[key] = item.to_dense().cpu().numpy()
-                    
+
                     else:
                         if isinstance(data_i[key], list):
                             updated_lst = []
@@ -124,22 +127,19 @@ class MOViLoader(AbstractDataSourceLoader):
                                     updated_lst.append(el.to_dense().cpu().numpy())
                                 else:
                                     updated_lst.append(None)
-                            data_i[key] = updated_lst #[:10]
+                            data_i[key] = updated_lst  # [:10]
                             # keys_to_pop.append(key)
                         elif isinstance(data_i[key], int):
                             pass
                         else:
                             print(key)
-                
+
                 # for key in keys_to_pop:
                 #     data_i.pop(key)
 
                 data[split].append(data_i)
-    
-            
-            del loader
 
-        
+            del loader
 
         return data
 
