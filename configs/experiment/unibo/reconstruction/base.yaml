@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: unibo21_bosello
-  - override /evaluator: default
+  - override /evaluator: reconstruction
   - override /task_definition: reconstruction/autoencoder
   
 evaluator:
