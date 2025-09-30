@@ -1,0 +1,16 @@
+_evaluator_defaults: &evaluator_defaults
+  _target_: lmetk.evaluator.default.ReconstructionEvaluator
+  metric_names: ["mae", "mse", "rmse"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
+
+  apply_inverse_scaling: False
+  inverse_transform_name: null
+  save_predictions: False
+  plot_reconstructions: True
+
+  # Some models predict always a multivariate time-series but then at evaluation we have to evaluate on one particular variable, hence here is a proposition how to tackle such cases
+  task_mode: ${datasource.task_mode} # univariate/multivariate
+  paths: ${paths}
+
+train: *evaluator_defaults
+val: *evaluator_defaults
+test: *evaluator_defaults

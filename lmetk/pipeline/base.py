@@ -85,7 +85,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         for name, evaluator in evaluators.items():
             self.effective_pred_len = getattr(evaluator, "effective_pred_len", None)
 
-    def log_epoch_metrics(self, mode=None):
+    def log_epoch_metrics(self, mode=None, step=None, epoch=None):
         """Log metrics.
 
         Parameters
@@ -93,7 +93,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         mode : str, optional
             The mode of the model, either "train", "val", or "test" (default: None).
         """
-        metrics_dict = self.evaluators[mode].compute(mode=mode)
+        metrics_dict = self.evaluators[mode].compute(mode=mode, epoch=epoch, step=step)
 
         for key in metrics_dict:
             self.log(
@@ -125,11 +125,11 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.evaluators["train"].update(model_outs)
         self.log(
             "train/loss",
-            model_outs["loss"],
-            on_step=False,
+            model_outs["loss"].detach().cpu(),
+            on_step=True,
             on_epoch=True,
             prog_bar=True,
-            batch_size=1,
+            batch_size=model_outs["targets"].shape[0],
         )
 
         # Return loss for backpropagation step
@@ -150,11 +150,11 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.evaluators["val"].update(model_outs)
         self.log(
             "val/loss",
-            model_outs["loss"],
+            model_outs["loss"].detach().cpu(),
             on_step=False,
             on_epoch=True,
             prog_bar=True,
-            batch_size=1,
+            batch_size=model_outs["targets"].shape[0],
         )
 
     def test_step(self, batch, batch_idx: int) -> None:
@@ -172,11 +172,11 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         self.evaluators["test"].update(model_outs)
         self.log(
             "test/loss",
-            model_outs["loss"],
+            model_outs["loss"].detach().cpu(),
             on_step=False,
             on_epoch=True,
             prog_bar=True,
-            batch_size=1,
+            batch_size=model_outs["targets"].shape[0],
         )
 
     def on_validation_epoch_start(self) -> None:
@@ -213,7 +213,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         This hook is used to log the train metrics.
         """
         # Log train metrics and reset evaluator
-        self.log_epoch_metrics(mode="train")
+        self.log_epoch_metrics(
+            mode="train", step=self.global_step, epoch=self.current_epoch
+        )
 
     def on_validation_epoch_end(self) -> None:
         """Lightning hook that is called when a validation epoch ends.
@@ -221,14 +223,18 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         This hook is used to log the validation metrics.
         """
         # Log validation metrics and reset evaluator
-        self.log_epoch_metrics(mode="val")
+        self.log_epoch_metrics(
+            mode="val", step=self.global_step, epoch=self.current_epoch
+        )
 
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends.
 
         This hook is used to log the test metrics.
         """
-        self.log_epoch_metrics(mode="test")
+        self.log_epoch_metrics(
+            mode="test", step=self.global_step, epoch=self.current_epoch
+        )
 
     def process_outputs(self, model_out: dict, batch) -> dict:
         """Handle model outputs.
