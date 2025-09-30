@@ -50,7 +50,7 @@ class SubsampleTransform(DenseTransform, NoFitMultiSourceTransformMixin):
 
 class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
-    Applies a sliding window aggregation to the input data.
+    Applies a non-overlapping window aggregation to the input data.
     """
 
     def __init__(

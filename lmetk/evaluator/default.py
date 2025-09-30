@@ -5,16 +5,21 @@ This module provides an evaluator class that inherits from AbstractEvaluator
 and implements evaluation logic for transformer-based forecasting models.
 """
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, override
 
 import numpy as np
 import xarray as xr
+import matplotlib.pyplot as plt
 
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
 
 from .base import AbstractEvaluator
+import matplotlib
+
+logger = logging.getLogger(__name__)
 
 
 class DefaultEvaluator(AbstractEvaluator):
@@ -29,6 +34,8 @@ class DefaultEvaluator(AbstractEvaluator):
         apply_inverse_scaling: bool = False,
         save_predictions: bool = False,
         paths: Optional[str] = None,
+        remote_logger: Optional[Any] = None,
+        collect_predictions: bool = False,
         **kwargs,
     ):
         """
@@ -42,6 +49,8 @@ class DefaultEvaluator(AbstractEvaluator):
             The scaler object with inverse_transform method
         apply_inverse : bool
             Whether to apply inverse scaling before computing metrics
+        remote_logger : Optional[Any]
+            Logger instance for remote logging evaluation details.
         """
         super().__init__(
             inverse_transform=inverse_transform,
@@ -55,8 +64,10 @@ class DefaultEvaluator(AbstractEvaluator):
         self.paths = paths
         self.save_predictions = save_predictions
         self.out_path = None
+        self.remote_logger: Optional[Any] = remote_logger
+        self.collect_predictions = save_predictions or collect_predictions
 
-        if save_predictions:
+        if self.collect_predictions:
             self.preds = []
             self.targets = []
             self.scaled_preds = []
@@ -71,7 +82,7 @@ class DefaultEvaluator(AbstractEvaluator):
     @override
     def reset(self):
         """Reset all metrics."""
-        if self.save_predictions:
+        if self.collect_predictions:
             self.preds.clear()
             self.targets.clear()
             self.scaled_preds.clear()
@@ -94,7 +105,7 @@ class DefaultEvaluator(AbstractEvaluator):
         predictions = model_out["predictions"]
         targets = model_out["targets"]
 
-        if self.save_predictions:
+        if self.collect_predictions:
             self.preds.append(predictions)
             self.targets.append(targets)
 
@@ -104,7 +115,7 @@ class DefaultEvaluator(AbstractEvaluator):
         )
 
         # Save predictions and targets if configured
-        if self.save_predictions and self.scaling_wrapper.apply_inverse:
+        if self.collect_predictions and self.scaling_wrapper.apply_inverse:
             self.scaled_preds.append(predictions)
             self.scaled_targets.append(targets)
 
@@ -112,8 +123,13 @@ class DefaultEvaluator(AbstractEvaluator):
         for metric in self.metrics.values():
             metric.update(predictions, targets)
 
+    def log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
+        """Log the plot to the remote logger."""
+        if self.remote_logger:
+            self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
+
     @override
-    def compute(self, mode: str) -> Dict[str, float]:
+    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
         """
         Compute final metric values.
 
@@ -258,3 +274,115 @@ class ForecastingEvaluator(DefaultEvaluator):
         model_out["predictions"] = predictions
         model_out["targets"] = targets
         super().update(model_out)
+
+
+class ReconstructionEvaluator(DefaultEvaluator):
+    """Evaluator for reconstruction tasks."""
+
+    def __init__(
+        self,
+        metric_names: List[str],
+        inverse_transform: Optional[InverseTransformMixin] = None,
+        apply_inverse_scaling: bool = False,
+        save_predictions: bool = False,
+        plot_reconstructions: bool = False,
+        paths: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the evaluator with specified metrics and optional scaling.
+
+        Parameters
+        ----------
+        metric_names : List[str]
+            List of metric names to compute.
+        inverse_transform : Optional[Any]
+            The scaler object with inverse_transform method
+        apply_inverse : bool
+            Whether to apply inverse scaling before computing metrics
+        """
+        collect_predictions = plot_reconstructions
+
+        matplotlib.use("Agg")  # Use a non-interactive backend
+        self.plot_reconstructions = plot_reconstructions
+        self.plots_out_path = None
+
+        super().__init__(
+            metric_names=metric_names,
+            inverse_transform=inverse_transform,
+            apply_inverse_scaling=apply_inverse_scaling,
+            save_predictions=save_predictions,
+            collect_predictions=collect_predictions,
+            paths=paths,
+            **kwargs,
+        )
+
+    def _plot_reconstructions(
+        self, preds: np.ndarray, targets: np.ndarray, mode: str, epoch: int, step: int
+    ) -> plt.Figure:
+        """Plot 10 reconstructions vs targets at fixed intervals of the testing data"""
+
+        if not self.remote_logger:
+            logger.warning(
+                "Remote logger is not configured. Skipping reconstruction plots."
+            )
+            return
+
+        # Select 10 evenly spaced indices for plotting
+        num_samples = len(preds)
+        indices = np.linspace(0, num_samples - 1, num=10, dtype=int)
+
+        fig, axes = plt.subplots(
+            5, 2, figsize=(15, 20)
+        )  # Create a 5x2 grid of subplots
+        axes = axes.flatten()  # Flatten the 2D array of axes for easier indexing
+
+        # Assuming targets and preds have shape (samples, time, dims)
+        num_dims = targets.shape[2]
+        colors = plt.get_cmap("tab10").colors  # Use a colormap for distinct colors
+
+        for i, idx in enumerate(indices):
+            ax = axes[i]
+            for dim in range(num_dims):
+                color = colors[dim % len(colors)]  # Cycle through colors if dims > 10
+                ax.plot(
+                    targets[idx, :, dim],
+                    label=f"Target (Dim {dim})",
+                    linestyle="--",
+                    color=color,
+                )
+                ax.plot(
+                    preds[idx, :, dim], label=f"Prediction (Dim {dim})", color=color
+                )
+                ax.set_title(f"Sample {idx}")
+                ax.set_xlabel("Time")
+                ax.set_ylabel("Value")
+                ax.legend()
+                ax.grid()
+        fig.suptitle(f"Reconstruction (Split: {mode}, Epoch: {epoch}, Step: {step})")
+
+        plt.tight_layout()  # Adjust layout to prevent overlap
+        return fig
+
+    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+
+        if self.plots_out_path is None:
+            if self.paths and getattr(self.paths, "plot_dir", None):
+                self.plots_out_path = Path(self.paths.plot_dir) / mode
+                self.plots_out_path.mkdir(parents=True, exist_ok=True)
+
+            assert (
+                self.plots_out_path is not None
+            ), "Output path must be specified to save predictions."
+
+        if self.plot_reconstructions:
+            preds = np.concatenate(self.preds, axis=0)
+            targets = np.concatenate(self.targets, axis=0)
+            fig_recons = self._plot_reconstructions(preds, targets, mode, epoch, step)
+            self.log_plot(fig_recons, "reconstructions_overview", mode, epoch, step)
+            fig_recons.savefig(
+                self.plots_out_path / f"reconstructions_overview_{epoch}_{step}.png"
+            )
+            plt.close(fig_recons)
+
+        return super().compute(mode, epoch=epoch, step=step)

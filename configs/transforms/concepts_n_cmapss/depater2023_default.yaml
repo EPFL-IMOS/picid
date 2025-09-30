@@ -24,6 +24,7 @@ scaler_rul:
     apply_to: rul
 
 # The paper describes:
+# https://www.sciencedirect.com/science/article/pii/S0952197622005723
 #  For each flight 𝑓 ≤ 𝑓 𝑒
 # a performed by engine 𝑒, we consider time-windows with
 # a size of 60, 70, 80, … , 𝑛𝑒,𝑓 − 10, 𝑛𝑒,𝑓 time-steps. These time-windows
@@ -40,7 +41,7 @@ subsample_features_target:
     window_size: 60
     aggregation: mean
   metadata:
-    apply_to: [features, descriptors, rul, concepts]
+    apply_to: [features, descriptors, concepts]
 
 subsample_others:
   transform:
@@ -49,7 +50,7 @@ subsample_others:
     window_size: 60
     aggregation: last
   metadata:
-    apply_to: [unit, timestamps, health_states]
+    apply_to: [unit, timestamps, health_states, rul]
 
 concatenate_features:
   # Concatenate time-features to the feature set
@@ -60,6 +61,8 @@ concatenate_features:
     apply_to: ["features", "descriptors"]
     assign_to: features
 
+# TODO: we should ditch this transform and handle change the dataset to one
+# that supports rugged data properly. (currently units are padded in the dataset)
 concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform

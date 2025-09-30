@@ -195,6 +195,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # display_config_sources(cfg)
     display_targets(cfg)
 
+    log.info("Instantiating loggers...")
+    logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
+
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
     dataset_source: SingleSourceLoader | MultiSourceLoader = hydra.utils.instantiate(
@@ -348,8 +351,16 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             )
         else:
             inverse_transform = None
+
+        remote_logger = None
+        for lgr in logger:
+            if isinstance(lgr, WandbLogger):
+                remote_logger = lgr
+
         evaluator = hydra.utils.instantiate(
-            cfg.evaluator[s], inverse_transform=inverse_transform
+            cfg.evaluator[s],
+            inverse_transform=inverse_transform,
+            remote_logger=remote_logger,
         )
         log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
         evaluators[s] = evaluator
@@ -369,9 +380,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     for callback in callbacks:
         if isinstance(callback, ModelCheckpointWithConfig):
             callback.config = cfg
-
-    log.info("Instantiating loggers...")
-    logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
 
     # TODO: why here? why not at the top of the file?
     # This allows configs to infer data dims from data
