@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import override
 import joblib
-from overrides import override
+
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
