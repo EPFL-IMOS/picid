@@ -5,8 +5,7 @@ defaults:
   - /model_configs/prognostics/stf
   
   - override /dataset: prognostics/rul_multiunit_dataset
-  - override /transforms: battery/compression_by_autoencoder
-
+  - override /transforms: battery/unibo/residual_autoencoder
 callbacks:
   early_stopping:
     monitor: val/loss

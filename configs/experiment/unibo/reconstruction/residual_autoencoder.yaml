@@ -3,20 +3,20 @@
 defaults:
   - unibo/reconstruction/base
   - /model_configs/reconstruction/residual_autoencoder
-  - override /transforms: battery/autoencoder
+  - override /transforms: shared/reconstruction/residual_autoencoder
 
 task_definition:
   seq_len: 128
 
 datamodule:
-  train_batch_size: 256
-  val_batch_size: 256
-  test_batch_size: 256
+  train_batch_size: 1024
+  val_batch_size: 1024
+  test_batch_size: 1024
 
 # it has to go to model_configs when I know how to infere input_channels with ${infere_dim: features, -1}
 model: 
   input_channels: 3
-  latent_dim: 32
+  latent_dim: 128
   dropout_prob: 0.2
 
   blocks_config:
@@ -26,6 +26,16 @@ model:
       stride: 2
 
     - in: 16
-      out: 8
+      out: 32
       kernel: 3
+      stride: 2
+
+    - in: 32
+      out: 64
+      kernel: 7
+      stride: 2
+    
+    - in: 64
+      out: 128
+      kernel: 7
       stride: 2

@@ -4,7 +4,7 @@ defaults:
   - nb14/base
   - nb14/reconstruction/base
   - /model_configs/reconstruction/residual_autoencoder
-  - override /transforms: battery/autoencoder
+  - override /transforms: shared/reconstruction/residual_autoencoder
 
 task_definition:
   seq_len: 128
