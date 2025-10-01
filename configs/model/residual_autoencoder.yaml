@@ -1,3 +1,7 @@
+# This is the key to the solution.
+# We define a group named 'block_configs' and explicitly tell Hydra
+# where to find its files using the special '_group_' key.
+
 _target_: lmetk.model.autoencoder.wrapper.AutoencoderWrapper
 
 input_channels: null # currently defined in the experiment
@@ -5,22 +9,8 @@ input_seq_len: ${task_definition.seq_len}
 latent_dim: null # currently defined in the experiment
 dropout_prob: null # currently defined in the experiment
 
-blocks_config:
-  - in: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    out: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    kernel: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    stride: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-
-  - in: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    out: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    kernel: null # to be defined in model_configs (if task specific) and experiment is dataset specific
-    stride: null
-
-  - in: null
-    out: null
-    kernel: null
-    stride: null
-
-data_requirements:
-  input_tensors:  null
-  output_tensors: null
+output_channels: null # A list of output filters, the lenght of the list is equal to the number of blocks
+kernels: null # A list of kernel sizes, the lenght of the list is equal to
+strides: null # A list of stride sizes, the lenght of the list is equal to
+dilations: null # A list of dilation sizes, the lenght of the list is equal to
+# The lenght of the lists above must be equal

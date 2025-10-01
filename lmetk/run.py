@@ -43,6 +43,7 @@ from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
+
 from lmetk.utils import (
     RankedLogger,
     extras,
@@ -55,6 +56,8 @@ from lmetk.utils import (
 )
 from lmetk.utils.logging_utils import get_hydra_override
 from lmetk.utils.awkward_utils import get_ak_shape
+from lmetk.utils.examine_model import get_model_summary
+from lmetk.model.autoencoder.utils import get_autoencoder_summary_and_tags
 
 # register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
@@ -193,6 +196,12 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
     display_targets(cfg)
+    if cfg.model._target_ == "lmetk.model.autoencoder.wrapper.AutoencoderWrapper":
+        model_summary_table, model_tags_list = get_autoencoder_summary_and_tags(
+            cfg.model
+        )
+        cfg.logger.wandb["tags"] = [tag for tag in model_tags_list]
+        log.info(model_summary_table)
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))
@@ -391,9 +400,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
             add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
 
-        backbone_wrapper = hydra.utils.instantiate(
-            cfg.model, **add_backbone_args
-        )  # TimePFNWrapper(backbone, **cfg.model)
+        backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args)
 
         if cfg.model.get("load_path", False):
             backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
@@ -430,6 +437,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if cfg.model.metadata.get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper
             model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
+    model_summary = get_model_summary(model)
 
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer,
@@ -446,20 +454,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         resolve=False,
     )
 
-    # # TODO: Persist resolved config (same content pushed to wandb) to filesystem
-    # try:
-    #     output_dir = Path(cfg.paths.output_dir).expanduser().resolve()
-    #     output_dir.mkdir(parents=True, exist_ok=True)
-    #     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    #     resolved_cfg = OmegaConf.create(cfg_to_wandb)
-    #     time_stamped_path = output_dir / f"config_wandb_{timestamp}.yaml"
-    #     latest_path = output_dir / "config_wandb_latest.yaml"
-    #     OmegaConf.save(resolved_cfg, time_stamped_path)
-    #     OmegaConf.save(resolved_cfg, latest_path)
-    #     log.info(f"Saved resolved config to: {time_stamped_path.as_uri()}")
-    # except Exception as e:
-    #     log.warning(f"Could not save cfg_to_wandb: {e}")
-
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
 
@@ -469,7 +463,14 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     if logger:
         log.info("Logging hyperparameters!")
-        log_hyperparameters({"cfg": cfg, "trainer": trainer})
+        log_hyperparameters(
+            {
+                "cfg": cfg,
+                "trainer": trainer,
+                "model/params/total": model_summary[-1]["total_params"],
+                "model/params/trainable": model_summary[-1]["trainable_params"],
+            }
+        )
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")
@@ -481,37 +482,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     trainer.test(model=model, datamodule=datamodule)
 
     return None, None  # metric_dict, object_dict
-
-
-def count_number_of_parameters(
-    model: torch.nn.Module, only_trainable: bool = True
-) -> int:
-    """Count the number of trainable params.
-
-    If all params, specify only_trainable = False.
-
-    Ref:
-        - https://discuss.pytorch.org/t/how-do-i-check-the-number-of-parameters-of-a-model/4325/9?u=brando_miranda
-        - https://stackoverflow.com/questions/49201236/check-the-total-number-of-parameters-in-a-pytorch-model/62764464#62764464
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        The model.
-    only_trainable : bool, optional
-        If True, only count trainable parameters (default: True).
-
-    Returns
-    -------
-    int
-        The number of parameters.
-    """
-    if only_trainable:
-        num_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    else:  # counts trainable and none-traibale
-        num_params: int = sum(p.numel() for p in model.parameters() if p)
-    assert num_params > 0, f"Err: {num_params=}"
-    return int(num_params)
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="run.yaml")

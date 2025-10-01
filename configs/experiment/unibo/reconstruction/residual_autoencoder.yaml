@@ -19,23 +19,8 @@ model:
   latent_dim: 128
   dropout_prob: 0.2
 
-  blocks_config:
-    - in: 3
-      out: 16
-      kernel: 5
-      stride: 2
-
-    - in: 16
-      out: 32
-      kernel: 3
-      stride: 2
-
-    - in: 32
-      out: 64
-      kernel: 7
-      stride: 2
-    
-    - in: 64
-      out: 128
-      kernel: 7
-      stride: 2
+  output_channels: [16, 32, 64]
+  kernels: [5, 5, 5]
+  strides: [2, 2, 2]
+  dilations: [1, 1, 1]
+  

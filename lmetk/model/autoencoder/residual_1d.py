@@ -15,14 +15,23 @@ class ResidualBlock(nn.Module):
     GroupNorm with num_groups=1 is used to simulate Layer Normalization.
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride, dropout_prob):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride, dropout_prob, dilation
+    ):
         super(ResidualBlock, self).__init__()
 
         # Calculate padding to maintain sequence length for stride=1, or halve it for stride=2
         padding = (kernel_size - 1) // 2
 
         self.layers = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, kernel_size, stride, padding),
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+            ),
             nn.GroupNorm(1, out_channels),  # Layer Normalization
             nn.ReLU(inplace=True),
             nn.Dropout(dropout_prob),
@@ -30,7 +39,12 @@ class ResidualBlock(nn.Module):
 
         # Skip connection to handle changes in dimensions
         self.skip_connection = (
-            nn.Conv1d(in_channels, out_channels, kernel_size=1, stride=stride)
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=1,
+                stride=stride,
+            )
             if stride != 1 or in_channels != out_channels
             else None
         )
@@ -50,7 +64,9 @@ class ResidualTransposeBlock(nn.Module):
     A symmetrical residual block for the decoder, using ConvTranspose1d.
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride, dropout_prob):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, stride, dropout_prob, dilation
+    ):
         super(ResidualTransposeBlock, self).__init__()
 
         padding = (kernel_size - 1) // 2
@@ -58,7 +74,13 @@ class ResidualTransposeBlock(nn.Module):
 
         self.layers = nn.Sequential(
             nn.ConvTranspose1d(
-                in_channels, out_channels, kernel_size, stride, padding, output_padding
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                output_padding=output_padding,
+                dilation=dilation,
             ),
             nn.GroupNorm(1, out_channels),  # Layer Normalization
             nn.ReLU(inplace=True),
@@ -67,11 +89,12 @@ class ResidualTransposeBlock(nn.Module):
 
         self.skip_connection = (
             nn.ConvTranspose1d(
-                in_channels,
-                out_channels,
+                in_channels=in_channels,
+                out_channels=out_channels,
                 kernel_size=1,
                 stride=stride,
                 output_padding=output_padding,
+                dilation=dilation,
             )
             if stride != 1 or in_channels != out_channels
             else None
@@ -103,17 +126,42 @@ class SymmetricalAutoencoder(nn.Module):
         super(SymmetricalAutoencoder, self).__init__()
         self.config = config
 
-        # --- Build Encoder ---
+        # --- Prepare Block Configurations ---
+        input_channels = int(config["input_channels"])
+        output_channels = [int(c) for c in config["output_channels"]]
+        kernels = [int(k) for k in config["kernels"]]
+        strides = [int(s) for s in config["strides"]]
+        dilations = [int(d) for d in config["dilations"]]
+
+        # Check that all configuration lists have the same length
+        assert len(output_channels) == len(kernels) == len(strides) == len(dilations), (
+            f"All configuration lists (output_channels, kernels, strides, dilations) must have the same length. "
+            f"Current lengths: {len(output_channels)}, {len(kernels)}, {len(strides)}, {len(dilations)}"
+        )
+
+        blocks_config = [
+            {"in": in_ch, "out": out_ch, "kernel": k, "stride": s, "dilation": d}
+            for in_ch, out_ch, k, s, d in zip(
+                [input_channels]
+                + output_channels[
+                    :-1
+                ],  # from input_channels: 3; and output_channels: [16, 32, 64]; It   Generates [3, 16, 32]
+                output_channels,  # The list [16, 32, 64]
+                kernels,
+                strides,
+                dilations,
+            )
+        ]
         encoder_blocks = []
-        blocks_config = config["blocks_config"]
         for block_cfg in blocks_config:
             encoder_blocks.append(
                 ResidualBlock(
-                    block_cfg["in"],
-                    block_cfg["out"],
-                    block_cfg["kernel"],
-                    block_cfg["stride"],
-                    config["dropout_prob"],
+                    int(block_cfg["in"]),
+                    int(block_cfg["out"]),
+                    int(block_cfg["kernel"]),
+                    int(block_cfg["stride"]),
+                    float(config["dropout_prob"]),
+                    int(config.get("dilation", 1)),
                 )
             )
         self.encoder_conv = nn.Sequential(*encoder_blocks)
@@ -121,21 +169,22 @@ class SymmetricalAutoencoder(nn.Module):
         # Calculate flattened size dynamically
         self._calculate_flattened_size()
 
-        self.encoder_fc = nn.Linear(self.flattened_size, config["latent_dim"])
+        self.encoder_fc = nn.Linear(self.flattened_size, int(config["latent_dim"]))
 
         # --- Build Decoder ---
-        self.decoder_fc = nn.Linear(config["latent_dim"], self.flattened_size)
+        self.decoder_fc = nn.Linear(int(config["latent_dim"]), self.flattened_size)
 
         decoder_blocks = []
         # Create decoder blocks in reverse order of encoder
         for block_cfg in reversed(blocks_config):
             decoder_blocks.append(
                 ResidualTransposeBlock(
-                    block_cfg["out"],
-                    block_cfg["in"],
-                    block_cfg["kernel"],
-                    block_cfg["stride"],
-                    config["dropout_prob"],
+                    int(block_cfg["out"]),
+                    int(block_cfg["in"]),
+                    int(block_cfg["kernel"]),
+                    int(block_cfg["stride"]),
+                    float(config["dropout_prob"]),
+                    int(config.get("dilation", 1)),
                 )
             )
         self.decoder_conv = nn.Sequential(*decoder_blocks)
@@ -143,7 +192,7 @@ class SymmetricalAutoencoder(nn.Module):
     def _calculate_flattened_size(self):
         """Passes a dummy tensor through the conv encoder to determine the flattened size."""
         dummy_input = torch.randn(
-            1, self.config["input_channels"], self.config["input_seq_len"]
+            1, int(self.config["input_channels"]), int(self.config["input_seq_len"])
         )
         dummy_output = self.encoder_conv(dummy_input)
         self.flattened_size = int(torch.numel(dummy_output) / dummy_output.shape[0])
@@ -153,13 +202,13 @@ class SymmetricalAutoencoder(nn.Module):
         # Conv1d expects (batch, channels, length)
         x = x.permute(0, 2, 1)
         x = self.encoder_conv(x)
-        x = x.view(x.size(0), -1)  # Flatten
+        x = x.reshape(x.size(0), -1)  # Flatten
         latent = self.encoder_fc(x)
         return latent
 
     def decode(self, z):
         x = self.decoder_fc(z)
-        x = x.view(x.size(0), *self.unflatten_shape)  # Unflatten
+        x = x.reshape(x.size(0), *self.unflatten_shape)  # Unflatten
         x = self.decoder_conv(x)
         # Permute back to (batch, length, channels)
         reconstructed = x.permute(0, 2, 1)
