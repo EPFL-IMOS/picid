@@ -26,6 +26,7 @@
   // "editor.codeActionsOnSave": {
   //   "source.organizeImports": "explicit"
   // }
+  "terminal.integrated.scrollback": 100000,
   "yaml.schemas": {
     "https://squidfunk.github.io/mkdocs-material/schema.json": "mkdocs.yml"
   },
