@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
-from rich import print as rprint
+
 from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
@@ -98,7 +98,9 @@ def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> st
                     max_vals[i] = np.max(lengths)
                     mean_vals[i] = np.mean(lengths)
 
-        output_lines = [f"list<ak.Array> x {len(obj)} shape (min/max/mean):"]
+        output_lines = [
+            f"list<ak.Array> x {len(obj)} shape{get_ak_shape(obj[0])} (min/max/mean):"
+        ]
         if calculate_stat:
             for i in range(num_dims):
                 is_last_dim = i == num_dims - 1
@@ -194,7 +196,7 @@ def print_data_dict_structure(data_dict, calculate_stat=True):
 
     tree = Tree("[bold]data_dict[/bold]")
     add_to_tree(tree, data_dict)
-    rprint(tree)
+    return tree
 
 
 def get_config_info(cfg):
