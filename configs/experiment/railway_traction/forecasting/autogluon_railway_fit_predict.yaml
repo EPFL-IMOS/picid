@@ -4,4 +4,6 @@ defaults:
   - railway_traction/forecasting/base
   - /model_configs/forecasting/autogluon_fit_predict
   - override /transforms: railway/context_paper
-  
+
+datamodule:
+   num_workers: 0

@@ -62,7 +62,7 @@ tabularize_x:
 
   metadata:
     apply_to: ["features", "time_features", "target"]
-    assign_to: X
+    assign_to: "features"
 
 tabularize_y:
   # Concatenate time-features to the feature set
@@ -79,4 +79,4 @@ tabularize_y:
 
   metadata:
     apply_to: ["target"]
-    assign_to: y
+    assign_to: "target"
