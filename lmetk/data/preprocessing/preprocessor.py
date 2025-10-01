@@ -5,7 +5,7 @@ from lmetk.data.preprocessing.base import PreProcessorInterface
 from lmetk.transforms.base.data_transform import DataTransform
 from lmetk.data.data_objects.data import DatasetContainer
 
-
+from rich import print as rprint
 import logging
 from lmetk.data.cache.offline import FileSystemCache
 from lmetk.utils import print_data_dict_structure
@@ -276,7 +276,7 @@ class PreProcessor(PreProcessorInterface):
             )
 
             logger.info("Data dictionary structure before transforms:")
-            print_data_dict_structure(self.data)
+            rprint(print_data_dict_structure(self.data))
 
         # -----------------
         # Stage 2: Transforms
@@ -319,7 +319,7 @@ class PreProcessor(PreProcessorInterface):
         self._is_preprocessed = True
 
         logger.info("Data dictionary structure after transforms:")
-        print_data_dict_structure(self.data)
+        rprint(print_data_dict_structure(self.data))
 
         return self.data
 
