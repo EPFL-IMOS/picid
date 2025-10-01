@@ -4,7 +4,7 @@ defaults:
   - xjtu_sy/base
   - xjtu_sy/reconstruction/base
   - /model_configs/reconstruction/residual_autoencoder
-  - override /transforms: bearings/autoencoder
+  - override /transforms: shared/reconstruction/residual_autoencoder
 
 task_definition:
   seq_len: 128

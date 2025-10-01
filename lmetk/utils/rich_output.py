@@ -58,11 +58,8 @@ import pandas as pd
 import awkward as ak
 from typing import List, Union
 
-# Assume your provided utility functions are in this file or imported
-# ak_find_var_dims, get_ak_shape, etc.
 
-
-def _describe_list_of_ak_arrays(obj: list[ak.Array]) -> str:
+def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:
     """
     Analyzes a list of awkward arrays and formats the stats in a compact,
     single-line-per-dimension tree.
@@ -71,41 +68,49 @@ def _describe_list_of_ak_arrays(obj: list[ak.Array]) -> str:
         return "list<ak.Array> x 0"
 
     try:
-        # --- (Data calculation part is unchanged) ---
-        first_arr = obj[0]
-        num_dims = first_arr.ndim
-        var_dims = ak_find_var_dims(first_arr)
-        min_vals, max_vals, mean_vals = ([0.0] * num_dims for _ in range(3))
-        dim_labels = [str(i) for i in range(num_dims)]
+        if calculate_stat:
+            # --- (Data calculation part is unchanged) ---
+            first_arr = obj[0]
+            num_dims = first_arr.ndim
+            var_dims = ak_find_var_dims(first_arr)
+            min_vals, max_vals, mean_vals = ([0.0] * num_dims for _ in range(3))
+            dim_labels = [str(i) for i in range(num_dims)]
 
-        for i in range(num_dims):
-            if i in var_dims:
-                all_lengths = np.concatenate(
-                    [ak.to_numpy(ak.num(arr, axis=i)) for arr in obj]
-                )
-                if all_lengths.size > 0:
-                    min_vals[i] = np.min(all_lengths)
-                    max_vals[i] = np.max(all_lengths)
-                    mean_vals[i] = np.mean(all_lengths)
-                dim_labels[i] = f"{i} (var)"
-            else:
-                lengths = [get_ak_shape(arr)[i] for arr in obj]
-                min_vals[i] = np.min(lengths)
-                max_vals[i] = np.max(lengths)
-                mean_vals[i] = np.mean(lengths)
+            ak_shapes = [get_ak_shape(arr) for arr in obj]
 
-        # --- (NEW compact formatting logic) ---
+            for i in range(num_dims):
+                if i in var_dims:
+                    # STEP 1: Get a simple list of lengths in one pass.
+                    # This is much faster than converting each item to a NumPy array and concatenating.
+                    lengths = [ak.num(arr, axis=i) for arr in obj]
+
+                    # STEP 2: Calculate stats if the list is not empty.
+                    if lengths:
+                        lengths_arr = ak.Array(lengths)
+                        min_vals[i] = ak.min(lengths_arr).item()
+                        max_vals[i] = ak.max(lengths_arr).item()
+                        mean_vals[i] = ak.mean(lengths_arr).item()
+
+                    dim_labels[i] = f"{i} (var)"
+                else:
+                    lengths = list(map(lambda x: x[i], ak_shapes))
+                    min_vals[i] = np.min(lengths)
+                    max_vals[i] = np.max(lengths)
+                    mean_vals[i] = np.mean(lengths)
+
         output_lines = [
-            f"list<ak.Array> x {len(obj)} shape[0]:{get_ak_shape(obj)} (min/max/mean)"
+            f"list<ak.Array> x {len(obj)} shape{get_ak_shape(obj[0])} (min/max/mean):"
         ]
+        if calculate_stat:
+            for i in range(num_dims):
+                is_last_dim = i == num_dims - 1
+                dim_prefix = "└── " if is_last_dim else "├── "
 
-        for i in range(num_dims):
-            is_last_dim = i == num_dims - 1
-            dim_prefix = "└── " if is_last_dim else "├── "
-
-            # Add the line for the dimension
-            stats_str = f"{min_vals[i]:.0f} / {max_vals[i]:.0f} / {mean_vals[i]:.1f}"
-            output_lines.append(f"\n{dim_prefix}dim {dim_labels[i]}: {stats_str}")
+                # Add the line for the dimension
+                stats_str = (
+                    f"{min_vals[i]:.0f} / {max_vals[i]:.0f} / {mean_vals[i]:.1f}"
+                )
+                output_lines.append(f"\n{dim_prefix}dim {dim_labels[i]}: {stats_str}")
 
         return "".join(output_lines)
 
@@ -113,7 +118,7 @@ def _describe_list_of_ak_arrays(obj: list[ak.Array]) -> str:
         return f"list<ak.Array> x {len(obj)} (stats failed: {e})"
 
 
-def describe_data_type(obj) -> str:
+def describe_data_type(obj, calculate_stat=False) -> str:
     """Describes a single data object."""
     if isinstance(obj, dict):
         return "{...}"
@@ -131,7 +136,7 @@ def describe_data_type(obj) -> str:
         first = obj[0]
         if isinstance(first, ak.Array):
             # Route to the simplified helper for awkward arrays
-            return _describe_list_of_ak_arrays(obj)
+            return _describe_list_of_ak_arrays(obj, calculate_stat)
         else:
             # Fallback for other list types
             descr = type(first).__name__
@@ -141,41 +146,12 @@ def describe_data_type(obj) -> str:
         return str(type(obj).__name__)
 
 
-# def describe_data_type(obj):
-#     if isinstance(obj, dict) or isinstance(obj, BaseDataObject):
-#         return "{...}"
-#     elif isinstance(obj, np.ndarray):
-#         return f"np.ndarray{obj.shape}"
-#     elif torch.is_tensor(obj):
-#         return f"torch.Tensor{tuple(obj.shape)}"
-#     elif isinstance(obj, pd.DataFrame):
-#         return f"pd.DataFrame{obj.shape}"
-#     elif isinstance(obj, pd.Series):
-#         return f"pd.Series{obj.shape}"
-#     elif isinstance(obj, ak.Array):
-#         return f"ak.Array {get_ak_shape(obj)}"
-#     elif isinstance(obj, list):
-#         if obj and (
-#             torch.is_tensor(obj[0])
-#             or isinstance(obj[0], np.ndarray)
-#             or isinstance(obj[0], pd.DataFrame)
-#             or isinstance(obj[0], pd.Series)
-#             or isinstance(obj[0], ak.Array)
-#         ):
-#             descr = describe_data_type(obj[0])
-#         else:
-#             descr = type(obj[0]).__name__ if obj else "empty"
-#         return f"list<{descr}> x {len(obj)}"
-#     else:
-#         return str(type(obj).__name__)
-
-
-def to_descriptive_dict(d):
+def to_descriptive_dict(d, calculate_stat=True):
     """Convert a (possibly nested) dictionary to a descriptive dictionary showing data types and shapes."""
     if isinstance(d, dict) or isinstance(d, BaseDataObject):
         return {k: to_descriptive_dict(v) for k, v in d.items()}
     else:
-        return describe_data_type(d)
+        return describe_data_type(d, calculate_stat)
 
 
 def descriptive_dict_differences_str(old, new, mode="added"):
@@ -201,18 +177,22 @@ def descriptive_dict_differences_str(old, new, mode="added"):
 
 
 # Plot the data_dict structure with tensor dimensions
-def print_data_dict_structure(data_dict):
+def print_data_dict_structure(data_dict, calculate_stat=True):
 
     def add_to_tree(tree, d):
         if isinstance(d, dict) or isinstance(d, BaseDataObject):
             for k, v in d.items():
                 if isinstance(v, dict) or isinstance(v, BaseDataObject):
-                    branch = tree.add(f"[bold]{k}[/bold] {describe_data_type(v)}")
+                    branch = tree.add(
+                        f"[bold]{k}[/bold] {describe_data_type(v, calculate_stat)}"
+                    )
                     add_to_tree(branch, v)
                 else:
-                    tree.add(f"[bold]{k}[/bold]: {describe_data_type(v)}")
+                    tree.add(
+                        f"[bold]{k}[/bold]: {describe_data_type(v, calculate_stat)}"
+                    )
         else:
-            tree.add(describe_data_type(d))
+            tree.add(describe_data_type(d, calculate_stat))
 
     tree = Tree("[bold]data_dict[/bold]")
     add_to_tree(tree, data_dict)

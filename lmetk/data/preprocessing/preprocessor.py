@@ -143,7 +143,9 @@ class PreProcessor(PreProcessorInterface):
                 f"Applying transform: '{transform_name}' "
                 f"(Strategy: {transform.strategy.__class__.__name__})"
             )
-            pre_descr_dict = to_descriptive_dict(data.to_split_dict()["train"])
+            pre_descr_dict = to_descriptive_dict(
+                data.to_split_dict()["train"], calculate_stat=False
+            )
             start_time = time.time()
             data, details = transform.forward(data)
 
@@ -152,7 +154,9 @@ class PreProcessor(PreProcessorInterface):
                 f" transform: '{transform.transform_name}' - "
                 f"completed in {end_time - start_time:.4f} seconds."
             )
-            post_descr_dict = to_descriptive_dict(data.to_split_dict()["train"])
+            post_descr_dict = to_descriptive_dict(
+                data.to_split_dict()["train"], calculate_stat=False
+            )
 
             changes = descriptive_dict_differences_str(
                 pre_descr_dict, post_descr_dict, mode="changed"
