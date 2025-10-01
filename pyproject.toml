@@ -31,6 +31,7 @@ dependencies = [
     "rich>=14.0.0",
     "awkward>=2.8.7",
     "xarray>=2025.9.0",
+    "hvplot>=0.12.1",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,8 @@ dev = [
     "phmd",
     "TabPFN",
     "viztracer>=1.0.4",
+    "panel>=1.8.1",
+    "holoviews>=1.21.0",
 ]
 
 [tool.setuptools]
