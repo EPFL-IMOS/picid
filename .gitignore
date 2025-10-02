@@ -20,7 +20,8 @@ artifacts/
 *.egg-info
 build
 /data/*
-
+/wandb/*
+/logs/*
 .model_cache
 container/rt_*
 

@@ -5,7 +5,9 @@ from typing import Any
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
+import torch
 from lmetk.utils import pylogger
+
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -40,21 +42,15 @@ def log_hyperparameters(object_dict: dict[str, Any]) -> None:
     exp_name = get_hydra_override("experiment")
     cfg["exp_name"] = exp_name
     # lgr.experiment.config.update(cfg)
-    # model = object_dict["model"]
     trainer = object_dict["trainer"]
 
     if not trainer.logger:
         log.warning("Logger not found! Skipping hyperparameter logging...")
         return
 
-    # # save number of model parameters
-    # hparams["model/params/total"] = sum(p.numel() for p in model.parameters())
-    # hparams["model/params/trainable"] = sum(
-    #     p.numel() for p in model.parameters() if p.requires_grad
-    # )
-    # hparams["model/params/non_trainable"] = sum(
-    #     p.numel() for p in model.parameters() if not p.requires_grad
-    # )
+    # save number of model parameters
+    hparams["model/params/total"] = object_dict["model/params/total"]
+    hparams["model/params/trainable"] = object_dict["model/params/trainable"]
 
     for key in cfg:
         hparams[key] = cfg[key]

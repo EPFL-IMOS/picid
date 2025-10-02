@@ -1,0 +1,94 @@
+{
+  "os": "Linux-5.15.0-153-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.12.11",
+  "startedAt": "2025-10-01T21:13:38.173163Z",
+  "args": [
+    "experiment=unibo/reconstruction/residual_autoencoder",
+    "cache.use_cache_after_loading=True",
+    "cache.use_cache_after_transfroms=True"
+  ],
+  "program": "lmetk/run.py",
+  "codePath": "lmetk/run.py",
+  "codePathLocal": "lmetk/run.py",
+  "git": {
+    "remote": "git@gitlab.epfl.ch:imos/TabPHM.git",
+    "commit": "4d2e4bbc42d36f71c50c501dfbc71bc356b5e81d"
+  },
+  "email": "tlscabinet@gmail.com",
+  "root": ".",
+  "host": "frank",
+  "executable": "/home/levtel/miniconda3/envs/phm2/bin/python",
+  "cpu_count": 128,
+  "cpu_count_logical": 128,
+  "gpu": "NVIDIA A30",
+  "gpu_count": 8,
+  "disk": {
+    "/": {
+      "total": "925814951936",
+      "used": "672965152768"
+    }
+  },
+  "memory": {
+    "total": "1082026131456"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-c8ccaf18-149d-d64a-b4db-8e776e275c5a"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-464a0908-d8db-6b14-817e-1d1bd769bdfb"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-c7fdd8d4-6270-141d-22b1-2e07daa3bca8"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-9a509ba0-6bd2-1189-30a4-64a229fc39bc"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-ef462896-888d-2053-903b-d819c86a881c"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-6490c2e7-c1a9-762b-9d59-c85551afccb0"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-f3847c43-9700-2783-a37f-7bbfb4f43d58"
+    },
+    {
+      "name": "NVIDIA A30",
+      "memoryTotal": "25769803776",
+      "cudaCores": 3584,
+      "architecture": "Ampere",
+      "uuid": "GPU-5ccfda68-7017-02bc-d226-b346eabb7e61"
+    }
+  ],
+  "cudaVersion": "12.9",
+  "writerId": "rang7wqovs8kda2fopewshk8wknym4is"
+}
