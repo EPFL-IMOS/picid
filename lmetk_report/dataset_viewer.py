@@ -52,8 +52,6 @@ def load_dataset_from_cfg(cfg: OmegaConf) -> dict:
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
 
-    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
-
     # Get cache dirs and flags
     data_cache_path = (
         cfg.paths.cache_path
@@ -93,6 +91,7 @@ def load_dataset_from_cfg(cfg: OmegaConf) -> dict:
 
 
 pn.extension("hvplot")
+# Time Series Viewer Component
 
 
 class TimeSeriesViewer(pn.viewable.Viewer):
@@ -103,10 +102,10 @@ class TimeSeriesViewer(pn.viewable.Viewer):
 
     data = param.Dict(default={})
     split_data: ak.Array = param.Parameter()
-
-    segment_slider = param.Parameter()
-    zoom = param.Parameter()
-    unit_slider = param.Parameter()
+    unit = param.Integer(default=0, bounds=(0, None))
+    segment = param.Integer(default=0, bounds=(0, None))
+    zoom = param.Range(default=(0, 0))
+    target = param.Parameter(default="")
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -114,40 +113,69 @@ class TimeSeriesViewer(pn.viewable.Viewer):
         # Persistent plot pane
         self.plot_pane = pn.pane.HoloViews(hv.Curve([]), sizing_mode="stretch_both")
 
-        self.param.watch(self._data_updated, "data")
-        self.param.watch(self._unit_data_updated, "split_data")
+        self.unit_slider = pn.widgets.IntSlider.from_param(self.param.unit)
+        self.segment_slider = pn.widgets.IntSlider.from_param(self.param.segment)
+        self.zoom_slider = pn.widgets.RangeSlider.from_param(self.param.zoom)
+
+        # watch model parameters, not widgets
+        self.param.watch(self._data_updated, ["data", "train_val_test_selector"])
+        self.param.watch(self._update_unit, ["unit", "split_data"])
+        self.param.watch(self._update_segment, ["unit", "segment", "split_data"])
+        self.param.watch(self._update_plot, ["unit", "segment", "split_data"])
+        self.param.watch(self._update_plot_zoom, ["zoom"])
 
     def _data_updated(self, event):
+        print("data updated event triggered")
         data = event.obj.data
         if not data:
             return
         print("Data updated, updating widgets...")
-        self.unit_slider = pn.widgets.IntSlider(
-            name="Unit", start=0, end=len(data) - 1, value=0
-        )
-        self.split_data = data.get(self.train_val_test_selector, {})
+        split_data = data.get(self.train_val_test_selector, {})
+        n_units = len(split_data.get("features", []))
 
-    def _unit_data_updated(self, event):
+        self.unit_slider.end = max(n_units - 1, 0)
+        self.split_data = split_data
+
+    def _update_unit(self, event):
         if not self.split_data:
             return
-        data = self.split_data["features"][self.unit_slider.value]
-        self.segment_slider = pn.widgets.IntSlider(
-            name="Segment", start=0, end=len(data) - 1, value=0
-        )
-        self.zoom = pn.widgets.RangeSlider(
-            name="Zoom (x)",
-            start=0,
-            end=len(data) - 1,
-            value=(0, len(data) - 1),
-        )
 
-        # Watch slider updates
-        self.unit_slider.param.watch(self._update_plot_slider, "value")
-        self.segment_slider.param.watch(self._update_plot_slider, "value")
-        self.zoom.param.watch(self._update_plot_zoom, "value")
+        unit = self.unit
+        features = self.split_data["features"][unit]
 
-        # Initial plot update
-        self.plot_pane.object = self._get_plot(xlim=self.zoom.value)
+        if isinstance(features, np.ndarray):
+            assert features.ndim == 2, "Expected 2D array (time x features)"
+            n_segments = 1
+        elif isinstance(features, ak.Array):
+            assert features.ndim == 3, "Expected 3D array (segments x time x features)"
+            n_segments = len(features)
+        else:
+            raise ValueError(f"Unsupported data type: {type(features)}")
+
+        self.segment_slider.name = f"Segment (total: {n_segments})"
+        self.segment = 0
+        self.segment_slider.start = 0
+        self.segment_slider.end = max(n_segments - 1, 0)
+
+    def _update_segment(self, event):
+        print("_update_segment triggered")
+        segment = self.segment
+        unit = self.unit
+        features = self.split_data["features"][unit]
+
+        if isinstance(features, np.ndarray):
+            assert features.ndim == 2, "Expected 2D array (time x features)"
+            features = features[np.newaxis, ...]  # add segment axis
+            # convert pandas to numpy if needed
+        elif isinstance(features, ak.Array):
+            assert features.ndim == 3, "Expected 3D array (segments x time x features)"
+        else:
+            raise ValueError(f"Unsupported data type: {type(features)}")
+        features = features[segment]
+
+        self.zoom = (0, len(features) - 1)
+        self.zoom_slider.start = 0
+        self.zoom_slider.end = len(features) - 1
 
     def _get_plot(self, unit=None, segment=None, xlim=None):
         if self.data is None or not self.split_data:
@@ -158,26 +186,56 @@ class TimeSeriesViewer(pn.viewable.Viewer):
         if segment is None:
             segment = self.segment_slider.value
 
-        plot_data = self.split_data["features"][unit][segment]
+        plot_data = self.split_data["features"][unit]
+        target = self.split_data["target"][unit]
+
+        if isinstance(plot_data, np.ndarray):
+            assert plot_data.ndim == 2, "Expected 2D array (time x features)"
+            plot_data = plot_data[np.newaxis, ...]  # add segment axis
+            if isinstance(target, pd.Series):
+                target = target.to_numpy()
+            target = target[np.newaxis, ...]
+        elif isinstance(plot_data, ak.Array):
+            assert plot_data.ndim == 3, "Expected 3D array (segments x time x features)"
+        else:
+            raise ValueError(f"Unsupported data type: {type(plot_data)}")
+
+        plot_data = plot_data[segment]
+        target = target[segment]
         df = pd.DataFrame(ak.to_numpy(plot_data))
+        if len(df) > 100000:
+            print(f"Downsampling data for performance... (original length: {len(df)})")
+            df = df.iloc[::100, :]  # downsample for performance
         plot = df.hvplot(width=600, height=300)
+
+        self.target = target
+
         if xlim is not None:
             plot = plot.opts(xlim=xlim)
         return plot
 
-    def _update_plot_slider(self, event):
-        segment = self.segment_slider.value
-        unit = self.unit_slider.value
-        plot_data = self.split_data["features"][unit][segment]
-
-        self.zoom.start = 0
-        self.zoom.end = len(plot_data) - 1
-        self.zoom.value = (0, len(plot_data) - 1)
-
-        self.plot_pane.object = self._get_plot(xlim=self.zoom.value)
-
     def _update_plot_zoom(self, event):
+        print("_update_plot_zoom triggered")
         self.plot_pane.object = self._get_plot(xlim=event.new)
+
+    def _update_plot(self, event):
+        print("_update_plot triggered")
+        self.plot_pane.object = self._get_plot()
+
+    def get_target(self):
+        target = self.target
+        if len(target) == 1:
+            return str(target[0])
+        if isinstance(target, np.ndarray):
+            df = pd.DataFrame(target)
+            if len(df) > 100000:
+                print(
+                    f"Downsampling target for performance... (original length: {len(df)})"
+                )
+                df = df.iloc[::100, :]  # downsample for performance
+            plot = df.hvplot()
+            return pn.pane.HoloViews(plot, sizing_mode="stretch_both")
+        return str(target)
 
     @param.depends("split_data", watch=True)
     def controls_panel(self):
@@ -189,22 +247,29 @@ class TimeSeriesViewer(pn.viewable.Viewer):
                 if self.segment_slider
                 else pn.pane.Markdown("_No data yet_")
             ),
-            self.zoom if self.zoom else pn.pane.Markdown("_No data yet_"),
+            self.zoom_slider if self.zoom else pn.pane.Markdown("_No data yet_"),
         )
 
     def __panel__(self):
         return pn.Column(
             self.controls_panel,
+            pn.Row(
+                pn.pane.Markdown("**Target**"),
+                self.get_target,
+                height=200,
+                sizing_mode="stretch_width",
+            ),
             pn.Row(self.plot_pane),
         )
 
 
-# Class-based Approach Using `param.Parameterized`
 class DatasetViewer(pn.viewable.Viewer):
     dataset_selector = param.Selector(objects=[], default=None)
+    debug = param.Boolean(default=False, label="Debug Mode")
     load_dataset_button = param.Action(
         lambda x: x.param.trigger("load_dataset_button"), label="Load Dataset"
     )
+    cfg = param.Parameter()
 
     # @param.depends("load_dataset_button", watch=True)
     # def on_load_dataset_button_pressed(self):
@@ -223,31 +288,43 @@ class DatasetViewer(pn.viewable.Viewer):
         # update the parameter objects (not overwrite)
         self.param.dataset_selector.objects = list(experiment_aliases.keys())
         self.dataset_selector = list(experiment_aliases.keys())[0]  # set default value
+
         self.data_structure_description = pn.Column("No data loaded yet")
         self.data_dict = {}
         self.timeseries_viewer = TimeSeriesViewer()
 
-    def plot_graph(self, dataset: any):
-        return hv.Curve([])  # Placeholder for actual plot
-
-    def load_config(self, exp_alias: str):
+    def load_config(self, exp_alias: str) -> OmegaConf:
 
         def load_cfg(overrides):
             with initialize(version_base="1.2", config_path="../configs"):
                 cfg = compose(config_name="run.yaml", overrides=overrides)
                 return cfg
 
-        cfg = load_cfg([f"experiment={exp_alias}", "paths=rt_local", "debug=nb14"])
+        debug_cfg_dict = {
+            "nb14/reconstruction/residual_autoencoder": "debug=nb14",
+            "pronostia/reconstruction/residual_autoencoder": "debug=default",
+            "xjtu_sy/reconstruction/residual_autoencoder": "debug=xjtu",
+            "unibo/reconstruction/residual_autoencoder": "debug=unibo",
+        }
+
+        debug_cfg = [debug_cfg_dict.get(exp_alias)] if self.debug else []
+        overrides = [f"experiment={exp_alias}", "paths=rt_local", *debug_cfg]
+        logger.info(f"Loading config with args: {overrides}")
+        cfg = load_cfg(overrides)
 
         logger.info(f"Loading cfg with alias: {exp_alias}")
         return cfg
 
     @param.depends("load_dataset_button", watch=True)
     def _on_load_dataset_button_pressed(self):
-        # self.data_dict = load_dataset_from_cfg(self.cfg)
-        print("Loading dataset...")
-        with open("testing_data.pkl", "rb") as f:
-            self.data_dict = pickle.load(f)
+        if self.cfg is None:
+            logger.warning("No cfg available, skipping dataset load")
+            return
+
+        self.data_dict = load_dataset_from_cfg(self.cfg)
+        # print("Loading dataset...")
+        # with open("testing_data.pkl", "rb") as f:
+        #     self.data_dict = pickle.load(f)
 
         self.timeseries_viewer.data = self.data_dict
         buf = StringIO()
@@ -255,15 +332,24 @@ class DatasetViewer(pn.viewable.Viewer):
         tree = print_data_dict_structure(self.data_dict)
         console.print(tree)
         self.data_structure_description.clear()
-        self.data_structure_description.append(pn.pane.Str(buf.getvalue(), width=400))
+        self.data_structure_description.append(pn.pane.Str(buf.getvalue(), width=600))
 
-    @param.depends("dataset_selector")
-    def config_pane(self):
+    @param.depends("dataset_selector", "debug", watch=True)
+    def _update_cfg(self):
         """Display the configuration of the selected dataset."""
+        if self.cfg is not None:
+            self.data_structure_description.clear()
         cfg = self.load_config(self.dataset_selector)
         self.cfg = cfg  # Store cfg for later use
-        cfg_json = OmegaConf.to_container(cfg.datasource, resolve=True)
-        json_pane = pn.pane.JSON(cfg_json, name="Configuration", depth=5, width=400)
+
+    @param.depends("cfg")
+    def config_pane(self):
+        if self.cfg is None:
+            logger.warning("No cfg available, skipping dataset load")
+            return
+
+        cfg_json = OmegaConf.to_container(self.cfg.datasource, resolve=True)
+        json_pane = pn.pane.JSON(cfg_json, name="Configuration", depth=5, width=600)
         logger.info(f"Loaded config for dataset: {self.dataset_selector}")
         return json_pane
 
