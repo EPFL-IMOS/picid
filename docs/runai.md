@@ -23,6 +23,7 @@ Steps:
 Once the container is started, the following steps are necessary to run:
 
 ```bash
+tmux
 source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
 uv pip install -e ".[dev]"

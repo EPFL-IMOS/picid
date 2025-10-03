@@ -104,28 +104,30 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
 
                         # --- 4. Build the full command as a single string ---
                         # Note the escaped quotes \"...\" for parameters that are lists.
-                        command_to_run="python lmetk/run.py \
-                        experiment=${dataset}/reconstruction/residual_autoencoder \
-                        task_definition.seq_len=$seq \
-                        datamodule.train_batch_size=${batch_size} \
-                        datamodule.val_batch_size=1024 \
-                        datamodule.test_batch_size=1024 \
-                        model.output_channels=\"${current_model_params[output_channels]}\" \
-                        model.kernels=\"${current_model_params[kernels]}\" \
-                        model.strides=\"${current_model_params[strides]}\" \
-                        model.dilations=\"${current_model_params[dilations]}\" \
-                        optimizer.parameters.lr=${lr} \
-                        optimizer.scheduler.scheduler_params.step_size=${step_size} \
-                        optimizer.parameters.weight_decay=0.0 \
-                        trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
-                        trainer.max_epochs=${max_epochs} \
-                        trainer.devices=[${device}] \
-                        logger.wandb.project='${wandb_log_folder}' \
-                        cache.use_cache_after_loading=True \
-                        cache.use_cache_after_transfroms=True"
-                        # debug=train_debug"
+                        command_to_run=(
+                            python lmetk/run.py \
+                            experiment=${dataset}/reconstruction/residual_autoencoder \
+                            task_definition.seq_len=$seq \
+                            datamodule.train_batch_size=${batch_size} \
+                            datamodule.val_batch_size=1024 \
+                            datamodule.test_batch_size=1024 \
+                            model.output_channels=\"${current_model_params[output_channels]}\" \
+                            model.kernels=\"${current_model_params[kernels]}\" \
+                            model.strides=\"${current_model_params[strides]}\" \
+                            model.dilations=\"${current_model_params[dilations]}\" \
+                            optimizer.parameters.lr=${lr} \
+                            optimizer.scheduler.scheduler_params.step_size=${step_size} \
+                            optimizer.parameters.weight_decay=0.0 \
+                            trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
+                            trainer.max_epochs=${max_epochs} \
+                            trainer.devices=[${device}] \
+                            logger.wandb.project='${wandb_log_folder}' \
+                            cache.use_cache_after_loading=True \
+                            cache.use_cache_after_transfroms=True
+                        )
+                        # debug=train_debug
                         # --- 5. Execute using the logger and run in the background (&) ---
-                        run_and_log "$command_to_run" "$run_name" &
+                        run_and_log "${command_to_run[*]}" "$run_name" &
 
                         # --- 6. Increment counters and manage parallel jobs ---
                         ((run_counter++))
