@@ -123,7 +123,7 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
                         logger.wandb.project='${wandb_log_folder}' \
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True"
-                        # debug=train_debug
+                        # debug=train_debug"
                         # --- 5. Execute using the logger and run in the background (&) ---
                         run_and_log "$command_to_run" "$run_name" &
 
