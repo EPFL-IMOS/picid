@@ -54,3 +54,14 @@ ckpt_path: null
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: 42
+
+# Limit the number of threads used by pytorch to the specified value
+# the reason for is that with time series we are quite heavy on data loading
+# costs for batch assembly which is parallelized using multiple threads
+# by the respective libraries (e.g. numpy, pandas, torch ...)
+# if we want to run multiple experiments in parallel on the same GPU
+# we need to limit the number of threads per experiment
+# otherwise, the system gets overloaded and experiments start to slow down drastically.
+# This is caused by the libraries assuming max_threds = f(number of total CPU cores)
+# and the container usually sees all CPU cores of the host system which are a lot for servers.
+num_threads: 32

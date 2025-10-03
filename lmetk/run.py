@@ -177,6 +177,15 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     tuple[dict[str, Any], dict[str, Any]]
         A tuple with metrics and dict with all instantiated objects.
     """
+    if cfg.get("num_threads", None) is not None:
+        torch.set_num_threads(cfg.num_threads)
+        os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
+        log.info(f"Set number of threads to {cfg.num_threads}")
+
     # Set seed for random number generators in pytorch, numpy and python.random
     L.seed_everything(cfg.seed, workers=True)
     # Seed for torch
