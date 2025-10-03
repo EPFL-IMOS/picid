@@ -686,6 +686,22 @@
             }
         },
         {
+            "name": "NB14: rul",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=nb14/prognostics/stf",
+                "debug=nb14"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "NB14: autoencoder",
             "type": "debugpy",
             "request": "launch",
@@ -694,7 +710,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=nb14/reconstruction/residual_autoencoder",
-                "debug=stf"
+                "debug=nb14"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -733,5 +749,22 @@
                 "PYTHONFAULTHANDLER": "1"
             }
         },
+        {
+            "name": "panel serve",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "-m",
+            "args": [
+                "panel",
+                "serve",
+                "lmetk_report/dataset_viewer.py",
+                "--show",
+                "--autoreload",
+                "--log-level",
+                "debug"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
     ]
 }
