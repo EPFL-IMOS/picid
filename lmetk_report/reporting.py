@@ -17,7 +17,7 @@ def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
                     for prefix, values in prefixes.items():
                         mean = values.get("mean", float("nan"))
                         std = values.get("std", float("nan"))
-                        formatted_value = f"{mean:.4f} ± {std:.4f}"
+                        formatted_value = f"{mean:.10f} ± {std:.10f}"
                         records.append(
                             {
                                 "Dataset": dataset,
