@@ -54,41 +54,37 @@ class NormalizedMSEMetricRailway(AbstractFileSystemMetric):
 
 
 class MAEMetric(AbstractMetric):
-    """Mean Absolute Error metric."""
+    """Mean Absolute Error metric with proper batch accumulation."""
 
     def __init__(self):
         super().__init__("mae")
+        self.reset()
 
     def reset(self):
-        self.values = []
+        """Resets the accumulators to zero."""
+        self.total_absolute_error = 0.0
+        self.total_count = 0
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        abs_errors = np.mean(np.abs(predictions - targets))
-        self.values.extend(abs_errors.flatten())
+        """
+        Updates the metric's state with a new batch of predictions and targets.
+        """
+        # 1. Calculate the absolute errors for every element in the batch
+        abs_errors = np.abs(predictions - targets)
+
+        # 2. Accumulate the sum of errors and the total element count
+        self.total_absolute_error += np.sum(abs_errors)
+        self.total_count += predictions.size
 
     def compute(self) -> float:
-        if not self.values:
+        """
+        Computes the final MAE from the accumulated values.
+        """
+        if self.total_count == 0:
             raise ValueError("No data available for computation")
-        return np.mean(self.values)
 
-
-# class MSEMetric(AbstractMetric):
-#     """Mean Squared Error metric."""
-
-#     def __init__(self):
-#         super().__init__("mse")
-
-#     def reset(self):
-#         self.values = []
-
-#     def update(self, predictions: np.ndarray, targets: np.ndarray):
-#         squared_errors = np.mean((predictions - targets) ** 2)
-#         self.values.extend(squared_errors.flatten())
-
-#     def compute(self) -> float:
-#         if not self.values:
-#             raise ValueError("No data available for computation")
-#         return np.mean(self.values)
+        # 3. Perform the final division only once
+        return self.total_absolute_error / self.total_count
 
 
 class MSEMetric(AbstractMetric):
@@ -113,7 +109,7 @@ class MSEMetric(AbstractMetric):
 
         # Accumulate
         self.total_squared_error += np.sum(squared_errors)
-        self.total_count += predictions.shape[0] * predictions.shape[1]  # B * L
+        self.total_count += predictions.size
 
     def compute(self) -> float:
         if self.total_count == 0:
@@ -149,25 +145,6 @@ class RMSEMetric(AbstractMetric):
         if self.total_count == 0:
             raise ValueError("No data available for computation")
         return np.sqrt(self.total_squared_error / self.total_count)
-
-
-# class RMSEMetric(AbstractMetric):
-#     """Root Mean Squared Error metric."""
-
-#     def __init__(self):
-#         super().__init__("rmse")
-
-#     def reset(self):
-#         self.values = []
-
-#     def update(self, predictions: np.ndarray, targets: np.ndarray):
-#         squared_errors = np.sqrt(np.mean((predictions - targets) ** 2))
-#         self.values.extend(squared_errors.flatten())
-
-#     def compute(self) -> float:
-#         if not self.values:
-#             raise ValueError("No data available for computation")
-#         return np.mean(self.values)
 
 
 class MAPEMetric(AbstractMetric):
@@ -246,30 +223,55 @@ class RSEMetric(AbstractMetric):
 
 
 class CORRMetric(AbstractMetric):
-    """Correlation coefficient metric."""
+    """
+    Correlation coefficient metric using a memory-efficient online algorithm.
+    """
 
     def __init__(self):
         super().__init__("corr")
+        self.reset()
 
     def reset(self):
-        self.predictions = []
-        self.targets = []
+        """Initializes the accumulators for the online algorithm."""
+        self.n = 0
+        self.sum_x = 0.0  # Sum of targets
+        self.sum_y = 0.0  # Sum of predictions
+        self.sum_x_sq = 0.0  # Sum of targets squared
+        self.sum_y_sq = 0.0  # Sum of predictions squared
+        self.sum_xy = 0.0  # Sum of the product of targets and predictions
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        self.predictions.extend(predictions.flatten())
-        self.targets.extend(targets.flatten())
+        """Updates the metric's state with a new batch."""
+        x = targets.flatten()
+        y = predictions.flatten()
+
+        # Update accumulators with the data from the current batch
+        self.n += x.size
+        self.sum_x += np.sum(x)
+        self.sum_y += np.sum(y)
+        self.sum_x_sq += np.sum(x**2)
+        self.sum_y_sq += np.sum(y**2)
+        self.sum_xy += np.sum(x * y)
 
     def compute(self) -> float:
-        if not self.predictions:
+        """Computes the final correlation coefficient from the accumulated values."""
+        if self.n == 0:
             raise ValueError("No data available for computation")
 
-        pred = np.array(self.predictions)
-        true = np.array(self.targets)
+        # Numerator of the Pearson correlation formula
+        numerator = self.n * self.sum_xy - self.sum_x * self.sum_y
 
-        u = ((true - true.mean()) * (pred - pred.mean())).sum()
-        d = np.sqrt(((true - true.mean()) ** 2 * (pred - pred.mean()) ** 2).sum())
+        # Denominator of the Pearson correlation formula
+        var_x = self.n * self.sum_x_sq - self.sum_x**2
+        var_y = self.n * self.sum_y_sq - self.sum_y**2
 
-        return u / d if d != 0 else 0.0
+        # Avoid division by zero if one of the variables has zero variance
+        if var_x <= 0 or var_y <= 0:
+            return 0.0
+
+        denominator = np.sqrt(var_x * var_y)
+
+        return numerator / denominator
 
 
 class NASAScoreMetric(AbstractMetric):
