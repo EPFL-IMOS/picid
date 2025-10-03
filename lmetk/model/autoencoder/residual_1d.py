@@ -21,7 +21,7 @@ class ResidualBlock(nn.Module):
         super(ResidualBlock, self).__init__()
 
         # Calculate padding to maintain sequence length for stride=1, or halve it for stride=2
-        padding = (kernel_size - 1) // 2
+        padding = "same"  # (kernel_size - 1) // 2
 
         self.layers = nn.Sequential(
             nn.Conv1d(
@@ -59,9 +59,15 @@ class ResidualBlock(nn.Module):
         return out + identity
 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 class ResidualTransposeBlock(nn.Module):
     """
     A symmetrical residual block for the decoder, using ConvTranspose1d.
+    This version is corrected to handle both odd and even kernel sizes.
     """
 
     def __init__(
@@ -69,6 +75,8 @@ class ResidualTransposeBlock(nn.Module):
     ):
         super(ResidualTransposeBlock, self).__init__()
 
+        # This padding calculation is the standard starting point.
+        # It's correct for odd kernels but makes the output 1 element too long for even kernels.
         padding = (kernel_size - 1) // 2
         output_padding = stride - 1
 
@@ -101,17 +109,21 @@ class ResidualTransposeBlock(nn.Module):
         )
 
     def forward(self, x):
+        # Since the encoder block now preserves length, this decoder block must also.
+        # We capture the target length from the input tensor 'x'.
+        target_len = x.shape[-1]
+
         identity = x
         out = self.layers(x)
 
+        # Trim the output of the main path to match the target length.
+        # This handles the +1 error from even kernels.
+        out = out[..., :target_len]
+
         if self.skip_connection:
             identity = self.skip_connection(x)
-
-        # Ensure the output size matches for the skip connection
-        if identity.shape[-1] != out.shape[-1]:
-            # Pad identity if there is a mismatch from ConvTranspose1d's output shape behavior
-            diff = out.shape[-1] - identity.shape[-1]
-            identity = nn.functional.pad(identity, [diff // 2, diff - diff // 2])
+            # Also trim the output of the skip connection.
+            identity = identity[..., :target_len]
 
         return out + identity
 
