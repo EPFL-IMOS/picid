@@ -196,12 +196,7 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
         self.kwargs = AttributeDict(kwargs)
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}(backbone={self.backbone}, "
-            f"out_channels={self.backbone.out_channels}, "
-            f"dimensions={self.dimensions},"
-            f"residual_connections={self.residual_connections})"
-        )
+        return f"{self.__class__.__name__}(backbone={self.backbone}"
 
     def __call__(self, batch):
         """Forward pass for the model.
