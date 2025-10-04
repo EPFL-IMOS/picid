@@ -9,10 +9,15 @@ import torch.nn as nn
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 class ResidualBlock(nn.Module):
     """
     A residual block for the encoder, composed of Conv1d, GroupNorm, Dropout, and a skip connection.
-    GroupNorm with num_groups=1 is used to simulate Layer Normalization.
+    This version uses manual padding to support all kernel sizes and strides.
     """
 
     def __init__(
@@ -20,22 +25,20 @@ class ResidualBlock(nn.Module):
     ):
         super(ResidualBlock, self).__init__()
 
-        # Calculate padding to maintain sequence length for stride=1, or halve it for stride=2
-        padding = "same"  # (kernel_size - 1) // 2
-
-        self.layers = nn.Sequential(
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation,
-            ),
-            nn.GroupNorm(1, out_channels),  # Layer Normalization
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout_prob),
+        # We will apply padding manually, so set padding=0 in the conv layer
+        self.conv = nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=0,  # <-- Set to 0
+            dilation=dilation,
         )
+
+        # Separate the rest of the layers from the convolution
+        self.norm = nn.GroupNorm(1, out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(dropout_prob)
 
         # Skip connection to handle changes in dimensions
         self.skip_connection = (
@@ -51,32 +54,48 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x):
         identity = x
-        out = self.layers(x)
+
+        # --- Manual "same" padding logic ---
+        # 1. Get the kernel size from the conv layer
+        k = self.conv.kernel_size[0]
+
+        # 2. Calculate left and right padding
+        # This handles both odd and even kernel sizes correctly
+        pad_left = (k - 1) // 2
+        pad_right = k - 1 - pad_left
+
+        # 3. Apply padding to the input tensor
+        padded_x = F.pad(x, (pad_left, pad_right))
+        # --- End of padding logic ---
+
+        # Pass the padded tensor through the layers
+        out = self.conv(padded_x)
+        out = self.norm(out)
+        out = self.relu(out)
+        out = self.dropout(out)
 
         if self.skip_connection:
             identity = self.skip_connection(x)
 
+        # The output of the convolution and the skip connection will have the same
+        # length because both are affected by the stride.
         return out + identity
-
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 
 class ResidualTransposeBlock(nn.Module):
     """
     A symmetrical residual block for the decoder, using ConvTranspose1d.
-    This version is corrected to handle both odd and even kernel sizes.
+    This version is robust to all kernel sizes and strides.
     """
 
     def __init__(
         self, in_channels, out_channels, kernel_size, stride, dropout_prob, dilation
     ):
         super(ResidualTransposeBlock, self).__init__()
+        # Store parameters to use in the forward pass
+        self.stride = stride
+        self.kernel_size = kernel_size
 
-        # This padding calculation is the standard starting point.
-        # It's correct for odd kernels but makes the output 1 element too long for even kernels.
         padding = (kernel_size - 1) // 2
         output_padding = stride - 1
 
@@ -90,7 +109,7 @@ class ResidualTransposeBlock(nn.Module):
                 output_padding=output_padding,
                 dilation=dilation,
             ),
-            nn.GroupNorm(1, out_channels),  # Layer Normalization
+            nn.GroupNorm(1, out_channels),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout_prob),
         )
@@ -109,21 +128,28 @@ class ResidualTransposeBlock(nn.Module):
         )
 
     def forward(self, x):
-        # Since the encoder block now preserves length, this decoder block must also.
-        # We capture the target length from the input tensor 'x'.
-        target_len = x.shape[-1]
-
         identity = x
         out = self.layers(x)
 
-        # Trim the output of the main path to match the target length.
-        # This handles the +1 error from even kernels.
-        out = out[..., :target_len]
+        # This trims the output by one element only when needed.
+        if self.kernel_size % 2 == 0:
+            # For stride > 1, the target is upsampled. This trims the extra element.
+            if self.stride > 1:
+                out = out[..., :-1]
+            # For stride = 1, the target is same-size. This also trims the extra element.
+            else:
+                target_len = x.shape[-1]
+                out = out[..., :target_len]
 
         if self.skip_connection:
             identity = self.skip_connection(x)
-            # Also trim the output of the skip connection.
-            identity = identity[..., :target_len]
+            # Apply the same robust logic to the skip connection
+            if self.kernel_size % 2 == 0:
+                if self.stride > 1:
+                    identity = identity[..., :-1]
+                else:
+                    target_len = x.shape[-1]
+                    identity = identity[..., :target_len]
 
         return out + identity
 
