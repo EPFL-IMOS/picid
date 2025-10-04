@@ -379,10 +379,11 @@ class ReconstructionEvaluator(DefaultEvaluator):
             preds = np.concatenate(self.preds, axis=0)
             targets = np.concatenate(self.targets, axis=0)
             fig_recons = self._plot_reconstructions(preds, targets, mode, epoch, step)
-            self.log_plot(fig_recons, "reconstructions_overview", mode, epoch, step)
-            fig_recons.savefig(
-                self.plots_out_path / f"reconstructions_overview_{epoch}_{step}.png"
-            )
-            plt.close(fig_recons)
+            if fig_recons:
+                self.log_plot(fig_recons, "reconstructions_overview", mode, epoch, step)
+                fig_recons.savefig(
+                    self.plots_out_path / f"reconstructions_overview_{epoch}_{step}.png"
+                )
+                plt.close(fig_recons)
 
         return super().compute(mode, epoch=epoch, step=step)
