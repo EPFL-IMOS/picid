@@ -203,12 +203,65 @@ class TimeSeriesViewer(pn.viewable.Viewer):
             raise ValueError(f"Unsupported data type: {type(plot_data)}")
 
         plot_data = plot_data[segment]
+        plot_data = ak.to_numpy(plot_data)
         target = target[segment]
-        df = pd.DataFrame(ak.to_numpy(plot_data))
+
+        df = pd.DataFrame(
+            plot_data[:128, :],
+            columns=[f"feat_{i}" for i in range(plot_data.shape[1])],
+        )
+
+        # torch.Size([1, 212, 3])
+        if self.model is not None:
+            plot_data_torch = torch.from_numpy(plot_data).unsqueeze(0).float()
+            with torch.no_grad():
+                recon_torch = self.model.backbone.forward(plot_data_torch[:, :128, :])
+                recon = recon_torch.squeeze(0).numpy()  # shape (128, features)
+                recon_df = pd.DataFrame(
+                    recon, columns=[f"recon_{i}" for i in range(recon.shape[1])]
+                )
+
+            df = pd.concat([df, recon_df], axis=1)
+
         if len(df) > 100000:
             print(f"Downsampling data for performance... (original length: {len(df)})")
             df = df.iloc[::100, :]  # downsample for performance
-        plot = df.hvplot(width=600, height=300)
+
+        # matplotlib default 10-color cycle
+        mpl_cycle = [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ]
+
+        plot = hv.Overlay(
+            [
+                df.hvplot.line(
+                    y=f"feat_{i}",
+                    line_dash="dashed",
+                    color=mpl_cycle[i % len(mpl_cycle)],
+                    width=600,
+                    height=300,
+                    label=f"feat_{i}",
+                )
+                * df.hvplot.line(
+                    y=f"recon_{i}",
+                    line_dash="solid",
+                    color=mpl_cycle[i % len(mpl_cycle)],
+                    width=600,
+                    height=300,
+                    label=f"recon_{i}",
+                )
+                for i in range(plot_data.shape[1])
+            ]
+        ).opts(legend_position="right", show_legend=True)
 
         self.target = target
 
@@ -242,7 +295,7 @@ class TimeSeriesViewer(pn.viewable.Viewer):
     @param.depends("split_data", watch=True)
     def controls_panel(self):
         return pn.Row(
-            pn.Param(self, parameters=["train_val_test_selector"]),
+            pn.Param(self, parameters=["train_val_test_selector", "use_model"]),
             self.unit_slider if self.unit_slider else pn.pane.Markdown("_No data yet_"),
             (
                 self.segment_slider
@@ -281,18 +334,20 @@ def parse_directory_for_model_checkpoints(directory: Path):
 
 
 class DatasetViewer(pn.viewable.Viewer):
-    dataset_selector = param.Selector(objects=[], default=None)
+
+    # Model Params
+    model = param.Parameter()
     model_selector = param.Selector(objects=[], default=None)
-    debug = param.Boolean(default=False, label="Debug Mode")
+    use_model = param.Boolean(default=True)
+
+    # Dataset Params
+    dataset_selector = param.Selector(objects=[], default=None)
     load_dataset_button = param.Action(
         lambda x: x.param.trigger("load_dataset_button"), label="Load Dataset"
     )
-    cfg = param.Parameter()
 
-    # @param.depends("load_dataset_button", watch=True)
-    # def on_load_dataset_button_pressed(self):
-    #     """Load dataset when the button is pressed."""
-    #     self.timeseries_viewer.dataset = self.load_dataset(self.dataset_selector)
+    debug = param.Boolean(default=False, label="Debug Mode")
+    cfg = param.Parameter()
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -352,6 +407,9 @@ class DatasetViewer(pn.viewable.Viewer):
         # with open("testing_data.pkl", "rb") as f:
         #     self.data_dict = pickle.load(f)
 
+        if self.use_model:
+            self.timeseries_viewer.model = self.model
+
         self.timeseries_viewer.data = self.data_dict
         buf = StringIO()
         console = Console(file=buf, force_terminal=False, color_system=None)
@@ -368,17 +426,23 @@ class DatasetViewer(pn.viewable.Viewer):
         cfg = self.load_config(self.dataset_selector)
         self.cfg = cfg  # Store cfg for later use
 
-    @param.depends("model_selector", watch=True)
+    @param.depends("model_selector", "use_model", watch=True)
     def _load_model(self):
         """Loads the model from the specified experiment directory."""
-        if self.model_selector is None:
+        if self.model_selector is None or not self.use_model:
             logger.warning("No model selected, skipping model load")
+            self.model = None
+            return
 
         logger.info(
             f"Loading model from: {self.model_selector}, path exists: {Path(self.model_selector).exists()}"
         )
 
-        config_path = find_config_file(Path(self.model_selector).parent.parent.parent)
+        config_path = find_config_file(
+            Path(self.model_selector).parent.parent.parent,
+            config_name="config_resolved.yaml",
+            select_from_hydra=False,
+        )
         cfg = omegaconf.OmegaConf.load(config_path)
         model = hydra.utils.instantiate(cfg.model)
 
@@ -389,8 +453,8 @@ class DatasetViewer(pn.viewable.Viewer):
         # Correct the keys in the state_dict if necessary
         corrected_state_dict = correct_state_dict_keys(state_dict)
         model.load_state_dict(corrected_state_dict)
-
-        return model
+        logger.info(f"Model loaded successfully from {self.model_selector}")
+        self.model = model
 
     @param.depends("cfg")
     def config_pane(self):
@@ -403,6 +467,17 @@ class DatasetViewer(pn.viewable.Viewer):
         logger.info(f"Loaded config for dataset: {self.dataset_selector}")
         return json_pane
 
+    def model_info_pane(self):
+        if self.model is None:
+            return pn.pane.Markdown("No model loaded")
+
+        model_str = repr(self.model)
+        return pn.Column(
+            pn.pane.Markdown(f"```\n{model_str}\n```", width=600),
+            scroll=True,
+            height=300,
+        )
+
     def __panel__(self):
         """Panel layout structure."""
         return pn.Row(
@@ -410,6 +485,7 @@ class DatasetViewer(pn.viewable.Viewer):
                 pn.Param(self.param),
                 self.config_pane,
                 self.data_structure_description,
+                self.model_info_pane,
             ),
             self.timeseries_viewer,
         )
