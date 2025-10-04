@@ -209,7 +209,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         model_summary_table, model_tags_list = get_autoencoder_summary_and_tags(
             cfg.model
         )
-        cfg.logger.wandb["tags"] = [tag for tag in model_tags_list]
+        if "wandb" in cfg.get("logger", {}):
+            cfg.logger.wandb["tags"] = [tag for tag in model_tags_list]
         log.info(model_summary_table)
 
     log.info("Instantiating loggers...")
@@ -455,6 +456,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
+    OmegaConf.save(cfg, cfg.paths.output_dir + "/config_resolved.yaml")
     # This is needed because wandb otherwise only tracks part of the config
     cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
     cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
