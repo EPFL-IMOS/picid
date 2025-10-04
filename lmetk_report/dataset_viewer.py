@@ -1,27 +1,28 @@
-from io import StringIO
-import os
-from pathlib import Path
 import logging
+import os
+from io import StringIO
+from pathlib import Path
 
+import awkward as ak
 import holoviews as hv
-from omegaconf import OmegaConf
+import hvplot.pandas
+import hydra
+import numpy as np
+import omegaconf
+import pandas as pd
 import panel as pn
 import param
 from hydra import compose, initialize
 from hydra.utils import instantiate
-import pandas as pd
-import numpy as np
-import awkward as ak
-import hvplot.pandas
-
+from omegaconf import OmegaConf
 from rich.console import Console
+import torch
 
-from lmetk.data.data_objects.data import DatasetContainer
 from lmetk.data.preprocessing.preprocessor import PreProcessor
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.utils.awkward_utils import ak_find_var_dims
+from lmetk.utils.omegaconf_utils import find_config_file
 from lmetk.utils.rich_output import print_data_dict_structure
-import pickle
+from lmetk.utils.torch_utils import correct_state_dict_keys
 
 FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 
@@ -101,6 +102,7 @@ class TimeSeriesViewer(pn.viewable.Viewer):
     )
 
     data = param.Dict(default={})
+    model = param.Parameter()
     split_data: ak.Array = param.Parameter()
     unit = param.Integer(default=0, bounds=(0, None))
     segment = param.Integer(default=0, bounds=(0, None))
@@ -263,8 +265,24 @@ class TimeSeriesViewer(pn.viewable.Viewer):
         )
 
 
+def parse_directory_for_model_checkpoints(directory: Path):
+    """Parse a directory and its subdirectories for *.pt model checkpoints and return a list of their full paths."""
+    model_checkpoints = []
+    if not directory.exists() or not directory.is_dir():
+        logger.warning(f"Directory {directory} does not exist or is not a directory.")
+        return model_checkpoints
+
+    for item in directory.rglob("*.ckpt"):  # Recursively search for .ckpt files
+        if item.is_file():
+            model_checkpoints.append(item.as_posix())  # Add full path as string
+        else:
+            logger.warning(f"Found {item} but it is not a file.")
+    return model_checkpoints
+
+
 class DatasetViewer(pn.viewable.Viewer):
     dataset_selector = param.Selector(objects=[], default=None)
+    model_selector = param.Selector(objects=[], default=None)
     debug = param.Boolean(default=False, label="Debug Mode")
     load_dataset_button = param.Action(
         lambda x: x.param.trigger("load_dataset_button"), label="Load Dataset"
@@ -285,6 +303,14 @@ class DatasetViewer(pn.viewable.Viewer):
             "xjtu_sy/reconstruction/residual_autoencoder": "reconstruction_nb14",
             "unibo/reconstruction/residual_autoencoder": "reconstruction_nb14",
         }
+
+        artifacts_path = Path("artifacts").absolute()
+        logger.info(f"Parsing model checkpoints in {artifacts_path}")
+
+        ckpts = parse_directory_for_model_checkpoints(Path("artifacts"))
+        self.param.model_selector.objects = ckpts
+        self.model_selector = ckpts[0]
+
         # update the parameter objects (not overwrite)
         self.param.dataset_selector.objects = list(experiment_aliases.keys())
         self.dataset_selector = list(experiment_aliases.keys())[0]  # set default value
@@ -341,6 +367,30 @@ class DatasetViewer(pn.viewable.Viewer):
             self.data_structure_description.clear()
         cfg = self.load_config(self.dataset_selector)
         self.cfg = cfg  # Store cfg for later use
+
+    @param.depends("model_selector", watch=True)
+    def _load_model(self):
+        """Loads the model from the specified experiment directory."""
+        if self.model_selector is None:
+            logger.warning("No model selected, skipping model load")
+
+        logger.info(
+            f"Loading model from: {self.model_selector}, path exists: {Path(self.model_selector).exists()}"
+        )
+
+        config_path = find_config_file(Path(self.model_selector).parent.parent.parent)
+        cfg = omegaconf.OmegaConf.load(config_path)
+        model = hydra.utils.instantiate(cfg.model)
+
+        state_dict = torch.load(
+            self.model_selector, map_location="cpu", weights_only=False
+        )["state_dict"]
+
+        # Correct the keys in the state_dict if necessary
+        corrected_state_dict = correct_state_dict_keys(state_dict)
+        model.load_state_dict(corrected_state_dict)
+
+        return model
 
     @param.depends("cfg")
     def config_pane(self):
