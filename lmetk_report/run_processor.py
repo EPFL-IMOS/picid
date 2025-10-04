@@ -1,6 +1,10 @@
 # lmetk_report/run_processor.py
 """
 Handles fetching, caching, and preprocessing of wandb experiment run data.
+
+This module is responsible for the first step of the analysis pipeline:
+getting the raw data from Weights & Biases (or a local cache) and transforming
+it into a clean, flat pandas DataFrame ready for analysis.
 """
 import ast
 import os
@@ -11,11 +15,12 @@ import pandas as pd
 import wandb
 from lmetk_report import config
 
+# Suppress common pandas warnings for a cleaner output.
 warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
 
 
 def _filter_columns(df: pd.DataFrame, filters: List[str]) -> List[str]:
-    """Find columns that contain any of the filter strings."""
+    """Helper function to find columns that contain any of the filter strings."""
     return [col for col in df.columns if any(f in col for f in filters)]
 
 
@@ -26,6 +31,7 @@ def _normalize_column(
     if column_to_normalize not in df.columns:
         return df, []
 
+    # Safely evaluate string-formatted dictionaries.
     def safe_load(item):
         if isinstance(item, str):
             try:
@@ -39,6 +45,7 @@ def _normalize_column(
         df = df.drop(columns=[column_to_normalize], errors="ignore")
         return df, []
 
+    # Use pandas' json_normalize to flatten the dictionary structures.
     flattened_df = pd.json_normalize(valid_entries)
     flattened_df.columns = [
         f"{column_to_normalize}.{col}" for col in flattened_df.columns
@@ -53,15 +60,11 @@ def load_runs_df(
     project_name: str, user: str, csv_cache_dir: str = "csv_files"
 ) -> Tuple[pd.DataFrame, List[str], List[str]]:
     """
-    Loads wandb run data, using a local CSV file as a cache.
-
-    This function fetches runs from the wandb API or loads them from a local CSV if
-    it exists. It then unnests config dictionaries, flattens them into columns,
-    and performs initial data cleaning.
+    Loads wandb run data, using a local CSV file as a cache, and prepares the DataFrame.
 
     Args:
-        project_name: The name of the wandb project.
-        user: The wandb username or entity.
+        project_name: The name of the wandb project (e.g., 'my-awesome-project').
+        user: The wandb username or entity (e.g., 'my-team').
         csv_cache_dir: The directory to store and look for cached CSV files.
 
     Returns:
@@ -77,6 +80,7 @@ def load_runs_df(
     try:
         # Attempt to load data from the local cache to speed up re-runs.
         runs_df = pd.read_csv(csv_path, index_col=0)
+        # The CSV stores dicts as strings, so we convert them back to Python objects.
         for col in ["summary", "config"]:
             runs_df[col] = runs_df[col].apply(ast.literal_eval)
         print(f"Loaded {len(runs_df)} runs from cached file: {csv_path}")
@@ -100,11 +104,11 @@ def load_runs_df(
         runs_df.to_csv(csv_path)
         print(f"Saved {len(runs_df)} runs to cache: {csv_path}")
 
-    # Merge the 'summary' (results) and 'config' (hyperparameters) dictionaries.
+    # Merge the 'summary' (results) and 'config' (hyperparameters) dictionaries for each run.
     for i, row in runs_df.iterrows():
         row["summary"].update(row["config"])
 
-    # Create the final DataFrame from the merged records.
+    # Create the final, unified DataFrame from the merged records.
     df = pd.DataFrame.from_records(
         [
             {**row["summary"], "run_name": row["run_name"]}
@@ -112,24 +116,25 @@ def load_runs_df(
         ]
     )
 
-    # --- Data Cleaning and Flattening ---
+    # --- Data Cleaning and Flattening from Config ---
     config_columns = []
     for column in config.COLUMNS_TO_NORMALIZE:
         df, new_cols = _normalize_column(df, column)
         config_columns.extend(new_cols)
 
-    # Drop columns that are mostly empty to reduce noise.
+    # Drop columns that are mostly empty (>90% NaN) to reduce noise.
     nan_cols_to_drop = df.columns[df.isna().mean() > 0.9].tolist()
     df = df.drop(columns=nan_cols_to_drop)
     print(f"Dropped {len(nan_cols_to_drop)} columns with >90% NaN values.")
 
-    # Drop columns based on specific name patterns defined in the config.
+    # Drop columns based on specific name patterns defined in the config file.
     cols_to_drop_by_filter = _filter_columns(df, config.COLUMN_FILTERS_TO_DROP)
     df = df.drop(columns=cols_to_drop_by_filter, errors="ignore")
     print(
         f"Dropped {len(cols_to_drop_by_filter)} columns based on name filters (e.g., 'paths.')."
     )
 
+    # Keep track of all columns that have been dropped.
     all_dropped_columns = nan_cols_to_drop + cols_to_drop_by_filter
 
     return df, config_columns, all_dropped_columns

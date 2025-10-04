@@ -209,7 +209,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         model_summary_table, model_tags_list = get_autoencoder_summary_and_tags(
             cfg.model
         )
-        if "wandb" in cfg.get("logger", {}):
+        # check if cfg.logger.wandb exists
+        if cfg.logger.get("wandb", False):
             cfg.logger.wandb["tags"] = [tag for tag in model_tags_list]
         log.info(model_summary_table)
 

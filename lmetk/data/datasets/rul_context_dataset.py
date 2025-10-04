@@ -88,8 +88,6 @@ class RULContextBatchDataset(ContextBatchDataset):
         **kwargs,
     ):
         assert pred_len == 0, "pred_len must be 0 for RUL prediction."
-        # Ensure the pred_length is zero
-        kwargs["pred_len"] = 0
         super().__init__(
             data_dict=data_dict,
             task_type=task_type,

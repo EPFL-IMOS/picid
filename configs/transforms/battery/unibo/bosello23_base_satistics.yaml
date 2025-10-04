@@ -13,11 +13,13 @@ scaler_target:
   metadata:
     apply_to: target
     fit_on: train
+    assign_to: rul
 
 sequence2statistics:
   transform:
     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
+    silent_logger: true
 
   metadata:
     apply_to: 'features'

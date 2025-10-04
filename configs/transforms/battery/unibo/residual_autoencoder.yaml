@@ -12,7 +12,7 @@ scaler_target:
 autoencoder:
   transform:
     _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
-    folder_name: ${paths.root_dir}/artifacts/debug/runs/unibo+reconstruction+residual_autoencoder/2025-09-24_03-48-04
+    folder_name: ${paths.root_dir}/artifacts/debug/runs/unibo+reconstruction+residual_autoencoder/2025-10-01_23-23-34
 
   metadata:
     apply_to: ['features', 'target']
@@ -25,6 +25,7 @@ sequence2statistics:
   transform:
     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
+    silent_logger: true
 
   metadata:
     apply_to: 'features'
