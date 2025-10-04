@@ -16,6 +16,6 @@ callbacks:
     mode: min
 
 # Need to correct it
-model:
-  d_x: 64
-  base_lr: 0.001
+# model:
+#   d_x: ${infere_dim:features,-1}
+#   base_lr: 0.001

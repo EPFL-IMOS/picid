@@ -7,29 +7,51 @@ aggregate results, and find the best-performing configurations.
 """
 from collections import defaultdict
 from typing import List, Dict, Any, Tuple
-
 import pandas as pd
 from lmetk_report import config
 
 
+def find_checkpoint_path(best_runs_df: pd.DataFrame) -> str | None:
+    """Attempts to find the best checkpoint path from the runs of a best-performing group."""
+    # 1. Try the primary column name specified in the config file.
+    configured_col = config.CHECKPOINT_PATH_COLUMN
+    if (
+        configured_col in best_runs_df.columns
+        and not best_runs_df[configured_col].dropna().empty
+    ):
+        return best_runs_df[configured_col].dropna().iloc[0]
+
+    # 2. If not found, try searching other common alternative names as a fallback.
+    common_alternatives = ["ckpt_path", "checkpoint_path"]
+    for col in common_alternatives:
+        if col in best_runs_df.columns and not best_runs_df[col].dropna().empty:
+            print(f"Warning: Using fallback checkpoint path column '{col}'.")
+            return best_runs_df[col].dropna().iloc[0]
+
+    print(
+        f"Warning: Could not find a valid checkpoint path. Checked '{configured_col}' and alternatives."
+    )
+    return None
+
+
 def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
-    """Extracts unique values from a column, handling lists and scalars."""
+    """Extracts unique values from a column, correctly handling lists and scalars."""
     if column not in df.columns:
         return []
     series = df[column].dropna()
     unique_items = set()
     for item in series:
         if isinstance(item, list):
-            unique_items.update(item)
+            unique_items.update(item)  # Unpack list items
         else:
-            unique_items.add(item)
+            unique_items.add(item)  # Add scalar items
     return list(unique_items)
 
 
 def get_optimized_metric(
     df_subset: pd.DataFrame, model_name: str, dataset_name: str
 ) -> str:
-    """Finds and returns the full name of the metric used for optimization."""
+    """Finds and returns the full name of the metric used for optimization (e.g., 'val/loss')."""
     metric_series = get_unique_values(
         df_subset, config.COLUMN_CONFIG["optimization_metric"]
     )
@@ -44,7 +66,7 @@ def get_optimized_metric(
 def get_varying_hyperparameters(
     df_subset: pd.DataFrame, config_cols: List[str], special_cols_to_exclude: List[str]
 ) -> Dict[str, List[Any]]:
-    """Identifies hyperparameters with more than one unique value, handling lists correctly."""
+    """Identifies hyperparameters with >1 unique value, handling list-based configs correctly."""
     varying_params = {}
     for col in config_cols:
         if col not in df_subset.columns:
@@ -56,12 +78,14 @@ def get_varying_hyperparameters(
 
             is_list_like = isinstance(cleaned_series.iloc[0], (list, tuple))
             if is_list_like:
+                # For lists, convert to tuples to make them hashable for uniqueness checks.
                 series_of_tuples = cleaned_series.apply(
                     lambda x: tuple(x) if isinstance(x, list) else x
                 )
                 if series_of_tuples.nunique() > 1:
                     varying_params[col] = [list(t) for t in series_of_tuples.unique()]
             else:
+                # For scalar values, use nunique() directly.
                 if cleaned_series.nunique() > 1:
                     varying_params[col] = cleaned_series.unique().tolist()
         except Exception as e:
@@ -81,10 +105,9 @@ def aggregate_and_find_best(
     all_performance_cols: List[str],
     optimization_col: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Performs groupby aggregation and finds the best run based on the optimization metric.
-    """
+    """Performs groupby aggregation and finds the best run based on the optimization metric."""
     subset_copy = df_subset.copy()
+    # Convert list columns to tuples to allow for grouping.
     for col in aggregation_cols:
         if (
             col in subset_copy.columns
@@ -95,26 +118,22 @@ def aggregate_and_find_best(
                 lambda x: tuple(x) if isinstance(x, list) else x
             )
 
-    # Create an aggregation dictionary for all performance columns
+    # Define aggregations: mean/std for metrics, and collect run names into a list.
     agg_dict = {
         col: ["mean", "std"]
         for col in all_performance_cols
         if col in subset_copy.columns
     }
-
-    # <<< NEW: Add an aggregation to collect run_names into a list >>>
     if "run_name" in subset_copy.columns:
         agg_dict["run_name"] = list
-
     if not agg_dict:
         return pd.DataFrame(), pd.DataFrame()
 
     aggregated_df = subset_copy.groupby(aggregation_cols).agg(agg_dict).reset_index()
-
-    # Clean up column names if pandas creates a multi-index for 'run_name'
     if ("run_name", "list") in aggregated_df.columns:
         aggregated_df.rename(columns={("run_name", "list"): "run_name"}, inplace=True)
 
+    # Determine sorting direction based on 'min' or 'max' optimization mode.
     mode = subset_copy[config.COLUMN_CONFIG["optimization_mode"]].unique()[0]
     is_ascending = mode == "min"
 
@@ -186,17 +205,32 @@ def analyze_results(
 
             # --- Step 4: Collect and structure the final results ---
 
-            # Extract the best hyperparameter values
             best_params = {}
             for hp_name in varying_hyperparams.keys():
                 best_params[hp_name] = best_result[hp_name].item()
 
-            # Extract the list of run names for the best configuration
             if "run_name" in best_result.columns:
-                # <<< CHANGED: Use .iloc[0, 0] to get the single value from the DataFrame cell
                 best_params["run_names"] = best_result["run_name"].iloc[0, 0]
 
-            # (rest of the result collection logic is the same...)
+            # <<< MODIFIED: Simplified logic to get the checkpoint path >>>
+            best_checkpoint_path = None
+            # 1. Check if we have the run names for the best configuration.
+            if "run_names" in best_params and best_params["run_names"]:
+                # 2. Take the first run name as a representative for this best group.
+                best_run_name = best_params["run_names"][0]
+
+                # 3. Use the unique run_name to look up the exact row in the original subset.
+                run_row = subset[subset["run_name"] == best_run_name]
+
+                # 4. Extract the path from the column specified in config.py for that single row.
+                if not run_row.empty:
+                    path_col = config.CHECKPOINT_PATH_COLUMN
+                    if (
+                        path_col in run_row.columns
+                        and not run_row[path_col].isna().iloc[0]
+                    ):
+                        best_checkpoint_path = run_row[path_col].iloc[0]
+
             mode = subset[config.COLUMN_CONFIG["optimization_mode"]].unique()[0]
             performance_results = defaultdict(dict)
             for metric in reporting_metrics:
@@ -218,6 +252,11 @@ def analyze_results(
                 "optimized_on": {"metric": optimization_col, "strategy": mode},
                 "metrics": performance_results,
             }
+            if "run_names" in best_params:
+                all_results[dataset][model]["best_run_names"] = best_params["run_names"]
+
+            all_results[dataset][model]["best_checkpoint_path"] = best_checkpoint_path
+
             all_results[dataset][model]["avg_epoch_time"] = {
                 "mean": subset["AvgTime/train_epoch_mean"].mean(),
                 "std": subset["AvgTime/train_epoch_mean"].std(),

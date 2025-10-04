@@ -1,11 +1,28 @@
-# src/reporting.py
+# lmetk_report/reporting.py
+"""
+Contains functions for creating presentation-ready summaries and reports
+from the processed analysis results.
+"""
 from collections import defaultdict
 import pandas as pd
 
 
 def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
-    """Processes the 'all_results' dictionary to create a pivoted summary DataFrame."""
+    """
+    Processes the 'all_results' dictionary to create a pivoted summary DataFrame.
+
+    This function unnests the results, formats performance metrics into a
+    'mean ± std' string, and pivots the data into a wide-format table for
+    easy comparison of models across datasets.
+
+    Args:
+        all_results: The nested dictionary from the analyze_results function.
+
+    Returns:
+        A pivoted summary table with models as rows and dataset/metrics as columns.
+    """
     records = []
+    # Step 1: Flatten the nested dictionary into a list of records.
     for dataset, models in all_results.items():
         for model, results in models.items():
             if (
@@ -17,6 +34,7 @@ def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
                     for prefix, values in prefixes.items():
                         mean = values.get("mean", float("nan"))
                         std = values.get("std", float("nan"))
+                        # Format the value as a "mean ± std" string for readability.
                         formatted_value = f"{mean:.10f} ± {std:.10f}"
                         records.append(
                             {
@@ -27,14 +45,16 @@ def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
                             }
                         )
     if not records:
-        print("No performance data found to create a summary table.")
+        print("Warning: No performance data found to create a summary table.")
         return pd.DataFrame()
 
+    # Step 2: Create a long-format DataFrame and pivot it.
     long_df = pd.DataFrame(records)
     summary_table = long_df.pivot_table(
         index="Model", columns=["Dataset", "Metric"], values="Value", aggfunc="first"
     )
 
-    summary_table.sort_index(axis=1, inplace=True)
-    summary_table.fillna("-", inplace=True)
+    # Step 3: Clean up the table for better presentation.
+    summary_table.sort_index(axis=1, inplace=True)  # Sort columns alphabetically.
+    summary_table.fillna("-", inplace=True)  # Fill missing values.
     return summary_table
