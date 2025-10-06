@@ -31,9 +31,9 @@ source "$SCRIPT_DIR/base/logging.sh"
 max_epochs=20
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="Train_n_cmapss_ds02_2025_10_06"
+wandb_log_folder="Train_n_cmapss_2025_10_06"
 # Define a list of datasets to run
-datasets=(concepts_n_cmapss_ds02)
+datasets=(concepts_n_cmapss, concepts_n_cmapss_ds02)
 model_names=(cnn_1d crossformer lstm patchtst stf tide timeseries_transformer xgboost_fit_predict)
 BATCH_SIZES=(16 128 512)
 
