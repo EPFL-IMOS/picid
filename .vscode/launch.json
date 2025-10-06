@@ -725,8 +725,8 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=unibo/reconstruction/stf",
-                "debug=default"
+                "experiment=unibo/reconstruction/residual_autoencoder",
+                "debug=unibo"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
