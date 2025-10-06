@@ -448,6 +448,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if cfg.model.metadata.get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper
             model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
+
     model_summary = get_model_summary(model)
 
     trainer: Trainer = hydra.utils.instantiate(
@@ -457,9 +458,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         num_sanity_val_steps=0,
     )
 
+    OmegaConf.save(cfg, cfg.paths.output_dir + "/config_resolved.yaml")
     # This is needed because wandb otherwise only tracks part of the config
-    cfg_to_wandb = OmegaConf.to_container(cfg, resolve=True)
-    cfg_to_wandb["hydra_cfg"] = OmegaConf.to_container(
+    cfg_container = OmegaConf.to_container(cfg, resolve=True)
+    resolved_cfg = OmegaConf.create(cfg_container)
+    OmegaConf.save(resolved_cfg, "config.yaml")
+
+    cfg_container["hydra_cfg"] = OmegaConf.to_container(
         # cannot resolve because not all interpolations are covered by us for now
         HydraConfig.get(),
         resolve=False,
@@ -469,8 +474,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         if isinstance(lgr, WandbLogger):
 
             exp_name = get_hydra_override("experiment")
-            cfg_to_wandb["exp_name"] = exp_name
-            lgr.experiment.config.update(cfg_to_wandb)
+            cfg_container["exp_name"] = exp_name
+            lgr.experiment.config.update(cfg_container)
 
     if logger:
         log.info("Logging hyperparameters!")

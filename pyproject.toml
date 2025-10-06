@@ -32,6 +32,7 @@ dependencies = [
     "awkward>=2.8.7",
     "xarray>=2025.9.0",
     "hvplot>=0.12.1",
+    "chronos-forecasting>=1.5.3",
 ]
 
 [project.optional-dependencies]

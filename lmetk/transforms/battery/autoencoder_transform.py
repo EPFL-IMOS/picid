@@ -16,6 +16,9 @@ from lmetk.transforms.battery.utils import get_mode_change_right_indices
 from lmetk.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
 import numpy as np
 
+from lmetk.utils.omegaconf_utils import find_config_file
+from lmetk.utils.torch_utils import correct_state_dict_keys
+
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
 
     def _load_model(self, experiment_dir: Path) -> torch.nn.Module:
         """Loads the model from the specified experiment directory."""
-        config_path = self._find_config_file(experiment_dir)
+        config_path = find_config_file(experiment_dir)
         self._cfg = omegaconf.OmegaConf.load(config_path)
 
         model = hydra.utils.instantiate(self._cfg.model)
@@ -72,7 +75,7 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
         )["state_dict"]
 
         # Correct the keys in the state_dict if necessary
-        corrected_state_dict = self._correct_state_dict_keys(state_dict)
+        corrected_state_dict = correct_state_dict_keys(state_dict)
         model.load_state_dict(corrected_state_dict)
 
         logger.info(f"Successfully loaded model from {checkpoint_path}")
@@ -104,29 +107,6 @@ class AutoencoderTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
             )
 
         return checkpoint_path
-
-    @staticmethod
-    def _find_config_file(experiment_dir: Path) -> Path:
-        """Finds the config.yaml file, excluding .hydra directories."""
-        # This searches for 'config.yaml' in all subdirectories of experiment_dir
-        for config_path in experiment_dir.rglob("config.yaml"):
-            # Ensure the config is inside a .hydra metadata folder
-            if ".hydra" in config_path.parts:
-                return config_path
-
-        raise FileNotFoundError(
-            f"config.yaml not found in {experiment_dir} (excluding .hydra directories)"
-        )
-
-    @staticmethod
-    def _correct_state_dict_keys(state_dict: Dict[str, Any]) -> OrderedDict:
-        """Removes an extraneous 'backbone.' prefix from state_dict keys."""
-        new_state_dict = OrderedDict()
-        for key, value in state_dict.items():
-            # Use removeprefix for a clean and explicit operation
-            new_key = key.removeprefix("backbone.")
-            new_state_dict[new_key] = value
-        return new_state_dict
 
     def fit_data(self, data: Any, metadata: Dict):
         """This transform does not require fitting."""

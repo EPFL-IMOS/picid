@@ -5,3 +5,4 @@ yield_strategy: True
 yield_batch_size: 1
 model_cache_path: ${paths.model_cache_dir}
 random_state: ${seed}
+n_jobs: ${num_threads}
