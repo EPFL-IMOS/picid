@@ -41,8 +41,14 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         output_dir: str = "testwdir/autogluon",
         **kwargs,
     ):
+        # dict_keys(['batch_idx', 'target', 'context'])
+        batch = next(iter(kwargs["train_dataloader"]))
+        # dict_keys(['features_seq_x', 'features_seq_y'])
+        context = batch["context"]
+        # dict_keys(['target_seq_x', 'target_seq_y'])
+        target = batch["target"]
 
-        self.n_targets = kwargs["train_dataloader"].dataset.y.shape[2]
+        self.n_targets = target["target_seq_x"].shape[2]
         self.label_names = [f"target_{i}" for i in range(self.n_targets)]
         self.problem_type = problem_type
         self.output_dir = output_dir
@@ -131,18 +137,24 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         forward_pattern = "samples sequence features -> samples (features sequence)"
         inverse_pattern = "samples (features sequence) -> samples sequence features"
 
-        historical_context_timestamps = rearrange(
-            batch["context"]["x_mark"], forward_pattern
-        )
+        batch_x = batch["target"]["target_seq_x"]
+        batch_y = batch["target"]["target_seq_y"]
+        batch_x_mark = batch["context"]["features_seq_x"]
+        batch_y_mark = batch["context"]["features_seq_y"]
 
-        historical_context = rearrange(batch["context"]["x"], forward_pattern)
-        future_context = rearrange(batch["context"]["y"], forward_pattern)
+        # TODO: Discuss with Leandro what to do with timestamps
+        # historical_context_timestamps = rearrange(
+        #     batch["context"]["x_mark"], forward_pattern
+        # )
 
-        historical_target = rearrange(batch["target"]["x"], forward_pattern)
-        future_target = rearrange(batch["target"]["y"], forward_pattern)
+        historical_context = rearrange(batch_x_mark, forward_pattern)
+        future_context = rearrange(batch_y_mark, forward_pattern)
+
+        historical_target = rearrange(batch_x, forward_pattern)
+        future_target = rearrange(batch_y, forward_pattern)
 
         feature_list = [
-            historical_context_timestamps,
+            # historical_context_timestamps,
             historical_context,
             historical_target,
             future_context,

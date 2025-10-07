@@ -43,11 +43,11 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
             Dictionary containing the updated model output.
         """
 
-        context_fit = batch["context"]["x"].squeeze(0)
-        target_fit = batch["target"]["x"].squeeze(0)
+        context_fit = batch["context"]["features_seq_x"].squeeze(0)
+        target_fit = batch["target"]["target_seq_x"].squeeze(0)
 
-        context = batch["context"]["y"].squeeze(0)
-        target = batch["target"]["y"].squeeze(0)
+        context = batch["context"]["features_seq_y"].squeeze(0)
+        target = batch["target"]["target_seq_y"].squeeze(0)
 
         # Extent the context with auxiliary features to give sence of seasonality
         self.fit(context_fit, target_fit)

@@ -28,8 +28,8 @@ class SESModelWrapper(AbstractFeedForwardWrapper):
         dict
             Dictionary containing the updated model output.
         """
-        batch_x = batch["batch_x"]
-        batch_y = batch["batch_y"]
+        batch_x = batch["target"]["target_seq_x"]
+        batch_y = batch["target"]["target_seq_y"]
 
         outputs = self.backbone(batch_x)
 
