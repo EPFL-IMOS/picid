@@ -1,12 +1,17 @@
 """Abstract class that provides an interface to handle the network output."""
 
+import sys
+import logging
 from abc import ABC, abstractmethod
 
 from einops import rearrange
 import numpy as np
+from omegaconf import OmegaConf
 import torch
 from lightning_fabric.utilities.data import AttributeDict
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractFitPredictWrapper(ABC):
@@ -56,6 +61,8 @@ class AbstractFitPredictWrapper(ABC):
         backbone,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
+        profile_fit_cfg: OmegaConf = None,
+        profile_predict_cfg: OmegaConf = None,
         **kwargs,
     ):
         super().__init__()
@@ -63,13 +70,33 @@ class AbstractFitPredictWrapper(ABC):
         self.kwargs = AttributeDict(kwargs)
         self.yield_strategy = yield_strategy
         self.yield_batch_size = yield_batch_size
+        self.profile_fit_cfg = profile_fit_cfg
+        self.profile_predict_cfg = profile_predict_cfg
+        self.profile_started_flag = False
 
         # Check if backbone supports fit predict
         if not hasattr(self.backbone, "fit") or not hasattr(self.backbone, "predict"):
             raise ValueError("Backbone model must implement fit and predict methods.")
 
+        if self.profile_fit_cfg or self.profile_predict_cfg:
+            assert not (
+                self.profile_fit_cfg and self.profile_predict_cfg
+            ), "Only one of profile_fit or profile_predict can be set."
+
     def fit(self, X, y):
-        self.backbone.fit(X.cpu(), y.cpu())
+        if self.profile_fit_cfg is not None:
+            from torch.profiler import record_function
+
+            if not self.profile_started_flag:
+
+                self._setup_profiler(self.profile_fit_cfg)
+                self.profile_started_flag = True
+            with record_function("dataloader_iteration"):
+                self.backbone.fit(X.cpu(), y.cpu())
+            self.profiler.step()
+            self._check_stop_profiler(self.profile_fit_cfg)
+        else:
+            self.backbone.fit(X.cpu(), y.cpu())
 
     def predict(self, X):
 
@@ -84,7 +111,20 @@ class AbstractFitPredictWrapper(ABC):
             ):
                 end = min(start + batch_size, n_samples)
                 batch_X = X[start:end]
-                batch_outputs = self.backbone.predict(batch_X)
+
+                if self.profile_predict_cfg is not None:
+                    from torch.profiler import record_function
+
+                    if not self.profile_started_flag:
+                        self._setup_profiler(self.profile_predict_cfg)
+                        self.profile_started_flag = True
+                    with record_function("dataloader_iteration"):
+                        batch_outputs = self.backbone.predict(batch_X)
+                    self.profiler.step()
+                    self._check_stop_profiler(self.profile_predict_cfg)
+                else:
+                    batch_outputs = self.backbone.predict(batch_X)
+
                 outputs_list.append(batch_outputs)
             outputs = np.concatenate(outputs_list, axis=0)
             y = torch.from_numpy(outputs)
@@ -119,6 +159,53 @@ class AbstractFitPredictWrapper(ABC):
     def allows_multi_target(self) -> bool:
         """Indicates whether the model supports multi-target prediction."""
         pass
+
+    def _setup_profiler(self, cfg: OmegaConf):
+        from torch.profiler import (
+            ProfilerActivity,
+            profile,
+            schedule,
+        )
+
+        sched = schedule(
+            wait=cfg.wait,
+            warmup=cfg.warmup,
+            active=cfg.active,
+            repeat=cfg.repeat,
+        )
+
+        acts = [getattr(ProfilerActivity, a) for a in cfg.activities]
+        profiler = profile(
+            activities=acts,
+            schedule=sched,
+            record_shapes=True,
+            with_stack=True,
+            profile_memory=True,
+        )
+
+        self.sched = sched
+        self.profiler = profiler
+
+        profiler.start()
+
+    def _check_stop_profiler(self, cfg):
+        state = self.sched(self.profiler.step_num)
+        from torch.profiler import ProfilerAction
+
+        if state == ProfilerAction.NONE:
+            self.profiler.stop()
+            logger.warning(
+                "Profiler has finished, terminating program. Printing results..."
+            )
+            logger.warning(
+                "\n%s",
+                self.profiler.key_averages().table(
+                    sort_by="self_cpu_time_total", row_limit=10
+                ),
+            )
+            self.profiler.export_chrome_trace(cfg.trace_path)
+            logger.warning(f"Profiler trace written to {cfg.trace_path}")
+            sys.exit(0)  # terminate program after profiler is done
 
 
 class AbstractFeedForwardWrapper(ABC, torch.nn.Module):

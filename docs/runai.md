@@ -27,7 +27,8 @@ tmux
 source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
 uv pip install -e ".[dev]"
-python lmetk/run.py paths=runai debug=default experiment=railway_traction/autogluon_railway_fit_predict
+uv pip install --upgrade netCDF4 h5py xarray nvitop
+python lmetk/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
 ```
 
 Alternatively, we provide a runscript `runai.sh`.

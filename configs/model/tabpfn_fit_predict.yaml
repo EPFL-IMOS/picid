@@ -1,8 +1,26 @@
 _target_: lmetk.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper
 ignore_pretraining_limits: True
 device: ${trainer.accelerator}
-yield_strategy: True
-yield_batch_size: 1
+
+# Since we use fit_with_cache_single_step_inference,
+# we push the single step evaluation to the tabpfn layer.
+# This is more memory efficient and faster than using
+# the yield_strategy with step size 1.
+yield_strategy: False
+yield_batch_size: null
+
 model_cache_path: ${paths.model_cache_dir}
 random_state: ${seed}
+
 n_jobs: ${num_threads}
+fit_mode: fit_with_cache_single_step_inference
+# Use "vizviewer trace.json" to visualize the trace.
+# Profiler configuration for debugging
+# profile_predict_cfg: # or profile_predict_cfg
+#   enable: true
+#   wait: 1
+#   warmup: 3
+#   active: 1
+#   repeat: 1
+#   activities: ["CPU", "CUDA"]
+#   trace_path: "trace.json"

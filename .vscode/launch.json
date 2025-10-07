@@ -195,6 +195,7 @@
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
+            "justMyCode": false,
             "args": [
                 "paths=rt_local",
                 "experiment=railway_traction/forecasting/tabpfn_fit_predict",

@@ -67,6 +67,8 @@ OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
 
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 
+os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
+
 
 def safe_div(a, b):
     if b == 0:
@@ -179,11 +181,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     if cfg.get("num_threads", None) is not None:
         torch.set_num_threads(cfg.num_threads)
-        os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
-        os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
         log.info(f"Set number of threads to {cfg.num_threads}")
 
     # Set seed for random number generators in pytorch, numpy and python.random
@@ -451,11 +453,17 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     model_summary = get_model_summary(model)
 
+    additional_trainer_args = {}
+    if isinstance(model, FitPredictWrapperLightningModule):
+        additional_trainer_args["limit_val_batches"] = 0.0
+
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer,
         callbacks=callbacks,
         logger=logger,
         num_sanity_val_steps=0,
+        **additional_trainer_args,
+        enable_progress_bar=cfg.get("enable_progress_bar", True),
     )
 
     OmegaConf.save(cfg, cfg.paths.output_dir + "/config_resolved.yaml")
