@@ -11,7 +11,7 @@ results/
 logs/
 artifacts/
 scripts/*.log
-phmd/
+#phmd/
 results/
 artifacts/
 
