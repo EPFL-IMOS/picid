@@ -25,6 +25,7 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
 
         self.aux_context = None
         self.y_aux = None
+        self.verify_inputs = False
 
     def fit(self, x, y):
         self.backbone.fit(x.cpu(), y.cpu())
@@ -42,6 +43,21 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
         dict
             Dictionary containing the updated model output.
         """
+
+        if not self.verify_inputs:
+            assert (
+                batch["context"]["features_seq_x"].shape[0] == 1
+            ), "Dimension 0 of features_seq_x must have exactly 1 element"
+            assert (
+                batch["target"]["target_seq_x"].shape[0] == 1
+            ), "Dimension 0 of target_seq_x must have exactly 1 element"
+            assert (
+                batch["context"]["features_seq_y"].shape[0] == 1
+            ), "Dimension 0 of features_seq_y must have exactly 1 element"
+            assert (
+                batch["target"]["target_seq_y"].shape[0] == 1
+            ), "Dimension 0 of target_seq_y must have exactly 1 element"
+            self.verify_inputs = True
 
         context_fit = batch["context"]["features_seq_x"].squeeze(0)
         target_fit = batch["target"]["target_seq_x"].squeeze(0)
