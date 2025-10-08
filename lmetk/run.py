@@ -466,11 +466,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         enable_progress_bar=cfg.get("enable_progress_bar", True),
     )
 
-    OmegaConf.save(cfg, cfg.paths.output_dir + "/config_resolved.yaml")
     # This is needed because wandb otherwise only tracks part of the config
     cfg_container = OmegaConf.to_container(cfg, resolve=True)
     resolved_cfg = OmegaConf.create(cfg_container)
-    OmegaConf.save(resolved_cfg, "config.yaml")
+    OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
 
     cfg_container["hydra_cfg"] = OmegaConf.to_container(
         # cannot resolve because not all interpolations are covered by us for now
