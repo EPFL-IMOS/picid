@@ -83,7 +83,16 @@ class AbstractFitPredictWrapper(ABC):
                 self.profile_fit_cfg and self.profile_predict_cfg
             ), "Only one of profile_fit or profile_predict can be set."
 
-    def fit(self, X, y):
+    def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
+        """Inner fit call to be potentially overridden by subclasses."""
+        self.backbone.fit(X, y)
+
+    def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        """Inner predict call to be potentially overridden by subclasses."""
+        return self.backbone.predict(X)
+
+    def fit(self, X: torch.Tensor, y: torch.Tensor):
+        """Fits the backbone model to the provided data."""
         if self.profile_fit_cfg is not None:
             from torch.profiler import record_function
 
@@ -92,14 +101,14 @@ class AbstractFitPredictWrapper(ABC):
                 self._setup_profiler(self.profile_fit_cfg)
                 self.profile_started_flag = True
             with record_function("dataloader_iteration"):
-                self.backbone.fit(X.cpu(), y.cpu())
+                self._call_fit(X.cpu(), y.cpu())
             self.profiler.step()
             self._check_stop_profiler(self.profile_fit_cfg)
         else:
-            self.backbone.fit(X.cpu(), y.cpu())
+            self._call_fit(X.cpu(), y.cpu())
 
-    def predict(self, X):
-
+    def predict(self, X: torch.Tensor) -> torch.Tensor:
+        """Predicts outputs for the given input data."""
         X = X.cpu()
         if self.yield_strategy:
             batch_size = self.yield_batch_size
@@ -119,17 +128,17 @@ class AbstractFitPredictWrapper(ABC):
                         self._setup_profiler(self.profile_predict_cfg)
                         self.profile_started_flag = True
                     with record_function("dataloader_iteration"):
-                        batch_outputs = self.backbone.predict(batch_X)
+                        batch_outputs = self._call_predict(batch_X.cpu())
                     self.profiler.step()
                     self._check_stop_profiler(self.profile_predict_cfg)
                 else:
-                    batch_outputs = self.backbone.predict(batch_X)
+                    batch_outputs = self._call_predict(batch_X.cpu())
 
                 outputs_list.append(batch_outputs)
             outputs = np.concatenate(outputs_list, axis=0)
             y = torch.from_numpy(outputs)
         else:
-            y = self.backbone.predict(X)
+            y = self._call_predict(X.cpu())
 
         if not isinstance(y, torch.Tensor):
             if hasattr(y, "__array__"):
