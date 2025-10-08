@@ -8,9 +8,3 @@
 	path = phmd
 	url = https://github.com/EPFL-IMOS/imos_phmd
 	branch = collab_lalr
-[submodule "uni2ts"]
-	path = uni2ts
-	url = https://github.com/SalesforceAIResearch/uni2ts.git
-[submodule "tabicl"]
-	path = tabicl
-	url = git@github.com:soda-inria/tabicl.git
