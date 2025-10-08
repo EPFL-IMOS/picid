@@ -1,5 +1,5 @@
 import logging
-
+import pandas as pd
 import numpy as np
 
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
@@ -29,7 +29,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
         return {
             "features": df_features,
             "time_features": np.array(df_features.index),
-            "target": df_target,
+            "target": pd.DataFrame(df_target),
             "metadata": {
                 "unit_id": unit_name,
                 "unit_length": len(df_features),

@@ -300,7 +300,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         key = f"dataset_{split}"
 
         init_cfg = cfg.dataset
-        if not (oc := getattr(cfg.dataset, "_overrides", None)):
+        if (oc := getattr(cfg.dataset, "_overrides", None)) is not None:
             if split in oc:
                 overrides = cfg.dataset._overrides[split]
                 init_cfg = OmegaConf.merge(cfg.dataset, overrides)

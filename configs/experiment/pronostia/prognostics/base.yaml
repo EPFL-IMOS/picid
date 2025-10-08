@@ -1,4 +1,17 @@
 #@package _global_
 
 defaults:
+  - override /datasource: pronostia
+  - override /evaluator: default
   - override /task_definition: prognostics/rul
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+  val:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+  test:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True

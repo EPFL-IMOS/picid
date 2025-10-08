@@ -3,14 +3,17 @@ from typing import Any, Dict, List
 
 import numpy as np
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
+from lmetk.transforms.base.multisource import (
+    ConcatinatedFitMultiSourceTransformMixin,
+    NoFitMultiSourceTransformMixin,
+)
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class RULTaskUpToFirstZero(RaggedOrDenseTransform, NoFitMultiSourceTransformMixin):
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
@@ -33,13 +36,17 @@ class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMi
 
         # Identify how many zeros in target
         target = convert_to_numpy(data["target"])
-
+        target.shape
         # Get number of zeros
         num_zeros = np.sum(target == 0)
         logger.info(f"Number of zeros in target: {num_zeros}")
 
         # Find the first zero occurance and cut everything after
         first_zero_idx = np.argmax(target == 0)
+        if first_zero_idx == 0:
+            logger.warning("No zero found in target, keeping the entire array")
+            return {"target": target, "features": convert_to_numpy(data["features"])}
+
         assert first_zero_idx > 0, "No zero found in target"
         # Shift idx to include zero
         first_zero_idx += 1
@@ -51,8 +58,7 @@ class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMi
         assert np.sum(target == 0) == 1, "Target does not contain exactly one zero"
 
         # Create the output dictinary
-        out_dict = {"example_output_1": target}
-        metadata["assign_to_map"].remove("example_output_1")
+        out_dict = {"target": target}
 
         keys = list(data.keys())
         keys.remove("target")
@@ -67,16 +73,6 @@ class RULTaskUpToFirstZero(DenseTransform, ConcatinatedFitMultiSourceTransformMi
         value = convert_to_numpy(data[key])
         value = value[:first_zero_idx]
         assert target.shape[0] == value.shape[0], "Shape mismatch after cutting"
-        out_dict["example_output_2"] = value
-
-        # General case
-        # for key in keys:
-
-        #     value = convert_to_numpy(data[key])
-        #     value = value[:first_zero_idx]
-        #     assert (
-        #         target.shape[0] == value.shape[0]
-        #     ), "Shape mismatch after cutting"
-        #     out_dict[key] = value
+        out_dict["features"] = value
 
         return out_dict

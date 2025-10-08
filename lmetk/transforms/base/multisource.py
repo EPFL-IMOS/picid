@@ -353,6 +353,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         data_types = set(
             [v for chunk in data_segments for v in chunk.get_instance_cls().values()]
         )
+        # TODO: here we have an issue that if we apply transform to ['features','target'] these variable have two distinct types like pd.DataFrame and pd.Series then the code crash.
         if len(data_types) != 1:
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"

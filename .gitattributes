@@ -1,1 +1,16 @@
-* text=auto eol=crlf
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+#
+# The above will handle all files NOT found below
+#
+
+# Explicitly declare text files you want to always be LF in your repository.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+
+# Explicitly declare files that will always have CRLF line endings.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
