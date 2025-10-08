@@ -298,8 +298,16 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     datasets = {}
     for split in ["train", "val", "test"]:
         key = f"dataset_{split}"
+
+        init_cfg = cfg.dataset
+        if not (oc := getattr(cfg.dataset, "_overrides", None)):
+            if split in oc:
+                overrides = cfg.dataset._overrides[split]
+                init_cfg = OmegaConf.merge(cfg.dataset, overrides)
+                log.info(f"Applied overrides for Dataset {split}: {overrides}")
+
         datasets[key] = hydra.utils.instantiate(
-            cfg.dataset,
+            init_cfg,
             data_dict={key: data_dict[split][key] for key in input_data_task_keys},
             meta_data_dict=meta_data_dict,
         )
