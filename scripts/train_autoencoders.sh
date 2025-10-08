@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # ==========================================================
 # SETUP: Clean and prepare the logs directory for a fresh run
 # ==========================================================
@@ -25,15 +24,17 @@ export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
 source "$SCRIPT_DIR/base/logging.sh"
 
+test_val_batch_size=2048
 
-
-max_epochs=20
+max_epochs=50
 check_val_every_n_epoch=1
 device=1
-wandb_log_folder="TabPHM-autoencoders-checks_02_10_night"
+wandb_log_folder="TabPHM-autoencoders-checks_06_10_night"
 # Define a list of datasets to run
-datasets=(unibo pronostia) # unibo  xjtu_sy nb14
-BATCH_SIZES=(128 256 512 1024)
+datasets=(pronostia unibo) # unibo  xjtu_sy nb14
+BATCH_SIZES=(2048)
+LEARNING_RATES=(0.0005)
+STEP_SIZES=(10)
 
 # ========================================================================
 # ✅ CHANGE 1: Define each model's parameters in an associative array.
@@ -90,8 +91,8 @@ MAX_PARALLEL=2 # Set the max number of jobs to run at once
 
 for dataset in "${!DATASET_SEQ_MAP[@]}"; do
     for batch_size in "${BATCH_SIZES[@]}"; do
-        for lr in 0.01 0.001 0.0005; do
-            for step_size in 10 20; do
+        for lr in "${LEARNING_RATES[@]}"; do
+            for step_size in "${STEP_SIZES[@]}"; do
                 for seq in ${DATASET_SEQ_MAP[$dataset]}; do
                 
                     declare -n arch_list="ARCHS_FOR_SEQ_LEN_${seq}"
@@ -109,8 +110,8 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
                             experiment=${dataset}/reconstruction/residual_autoencoder \
                             task_definition.seq_len=$seq \
                             datamodule.train_batch_size=${batch_size} \
-                            datamodule.val_batch_size=1024 \
-                            datamodule.test_batch_size=1024 \
+                            datamodule.val_batch_size=${test_val_batch_size} \
+                            datamodule.test_batch_size=${test_val_batch_size} \
                             model.output_channels=\"${current_model_params[output_channels]}\" \
                             model.kernels=\"${current_model_params[kernels]}\" \
                             model.strides=\"${current_model_params[strides]}\" \
