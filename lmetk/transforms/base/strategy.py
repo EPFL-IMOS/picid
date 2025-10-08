@@ -73,6 +73,7 @@ class TransformStrategy:
         assign_to_keys_map: str | List[str] = None,
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
+        transform_on_keys: Optional[list[str]] = None,
     ) -> SplitDatasetContainer:
 
         if isinstance(apply_to_keys, str):
@@ -121,6 +122,11 @@ class TransformStrategy:
 
         # This block handles both merging strategies
         transformed_results_for_new_key = defaultdict(dict)
+
+        if transform_on_keys is not None:
+            # If transform_on_keys is specified, filter available_splits
+            available_splits = list(set(available_splits) & set(transform_on_keys))
+
         for split in available_splits:
             chunks_to_transform = self._prepare_chunks_for_split(
                 target_data_to_transform, split, is_multi_unit

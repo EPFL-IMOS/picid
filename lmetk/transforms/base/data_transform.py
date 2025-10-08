@@ -154,6 +154,8 @@ class DataTransform:
         assert self.fit_on_split in (None, "train", "val", "test")
         # Define fit on key, if not specified, it is the same as apply_to
         self.fit_on_key = metadata.get("fit_on_key", None)
+        self.transform_on_keys = metadata.get("transform_on_keys", None)
+
         if self.fit_on_split is not None and self.fit_on_key is None:
             # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
             if isinstance(self.apply_to, list):
@@ -288,6 +290,7 @@ class DataTransform:
             assign_to_keys_map=self.assign_to_map,
             fit_on_split=self.fit_on_split,
             fit_on_key=self.fit_on_key,
+            transform_on_keys=self.transform_on_keys,
         )
 
         # --- Post-transformation Validation ---
