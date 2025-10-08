@@ -33,12 +33,12 @@ check_val_every_n_epoch=1
 device=0
 wandb_log_folder="TabPFN_2025_10_07"
 # Define a list of datasets to run
-datasets=(
-    "railway_traction/forecasting" \
-    "concepts_n_cmapss/prognostics" \
-    "concepts_n_cmapss_ds02/prognostics" \
-)
-
+# datasets=(
+    # "railway_traction/forecasting" \
+    # "concepts_n_cmapss_ds02/prognostics" \
+    # "concepts_n_cmapss/prognostics" \
+# )
+datasets=("concepts_n_cmapss/prognostics")
 model_names=(tabpfn_fit_predict)
 
 
@@ -49,7 +49,7 @@ model_names=(tabpfn_fit_predict)
 # --- 2. Initialize counters for tracking runs and managing parallel jobs ---
 run_counter=1
 job_counter=0
-MAX_PARALLEL=2 # Set the max number of jobs to run at once
+MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
 
 # Function to run and log commands
