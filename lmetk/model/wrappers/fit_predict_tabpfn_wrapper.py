@@ -1,16 +1,16 @@
 """Wrapper for the TimePFN model."""
 
-import os
+import logging
 from pathlib import Path
 from typing import override
-from einops import rearrange
+
 import joblib
-import torch
-from lightning_fabric.utilities.data import AttributeDict
 from tabpfn import TabPFNRegressor
 
-
+from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
 from .base import AbstractFitPredictWrapper
+
+logger = logging.getLogger(__name__)
 
 
 class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
@@ -26,13 +26,19 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         yield_batch_size: int = 128,
         **kwargs,
     ):
+        device = "cuda" if kwargs["device"] == "gpu" else "cpu"
         backbone = TabPFNRegressor(
             ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
             random_state=kwargs["random_state"],
-            device="cuda" if kwargs["device"] == "gpu" else "cpu",
+            device=device,
+            n_jobs=kwargs.get("n_jobs", -1),
+            fit_mode=kwargs.get("fit_mode", "fit_preprocessors"),
         )
 
+        logger.info(f"Using TabPFN on device: {backbone.device}, kwargs: {kwargs}")
+
         self.model_cache_path = model_cache_path
+        self.device = device
 
         super().__init__(
             backbone=backbone,
@@ -52,9 +58,9 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+            model_path = str(Path(".model_cache") / f"{task_id}.tabpfn_fit")
         else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
+            model_path = str(Path(model_path) / model_path / f"{task_id}.tabpfn_fit")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
@@ -64,6 +70,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
 
         # Use joblib to persist the estimator which may contain torch objects
         joblib.dump(self.backbone, model_path)
+        # save_fitted_tabpfn_model(self.backbone, model_path)
         return model_path
 
     @override
@@ -77,9 +84,9 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+            model_path = str(Path(".model_cache") / f"{task_id}.tabpfn_fit")
         else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
+            model_path = str(Path(model_path) / model_path / f"{task_id}.tabpfn_fit")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
@@ -88,6 +95,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
         self.backbone = joblib.load(model_path)
+        # self.backbone = load_fitted_tabpfn_model(model_path, device=self.device)
         return model_path
 
     @property

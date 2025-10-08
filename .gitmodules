@@ -1,10 +1,10 @@
 [submodule "rul-datasets"]
 	path = rul-datasets
-	url = git@github.com:tilman151/rul-datasets.git
+	url = https://github.com/tilman151/rul-datasets
 [submodule "TabPFN"]
 	path = TabPFN
 	url = https://github.com/PriorLabs/TabPFN
 [submodule "phmd"]
 	path = phmd
-	url = https://github.com/EPFL-IMOS/imos_phmd.git
+	url = https://github.com/EPFL-IMOS/imos_phmd
 	branch = collab_lalr

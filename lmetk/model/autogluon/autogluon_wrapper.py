@@ -41,8 +41,14 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         output_dir: str = "testwdir/autogluon",
         **kwargs,
     ):
+        # dict_keys(['batch_idx', 'target', 'context'])
+        batch = next(iter(kwargs["train_dataloader"]))
+        # dict_keys(['features_seq_x', 'features_seq_y'])
+        context = batch["context"]
+        # dict_keys(['target_seq_x', 'target_seq_y'])
+        target = batch["target"]
 
-        self.n_targets = kwargs["train_dataloader"].dataset.y.shape[2]
+        self.n_targets = target["target_seq_x"].shape[2]
         self.label_names = [f"target_{i}" for i in range(self.n_targets)]
         self.problem_type = problem_type
         self.output_dir = output_dir
@@ -106,69 +112,3 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
             feature_generator=self.feature_generators,
             save_space=self.save_space,
         )
-
-    def predict(self, x):
-        df = pd.DataFrame(x)
-        return self.backbone.predict(df).to_numpy()
-
-    def forward(self, batch):
-        """Forward pass for the Tune wrapper. Note the following:
-        future_context_timestamps := batch['context']['y_mark'] is not used due to possible noise,
-        historical_target_timestamps := batch['target']['x_mark']  is redundant with historical_context_timestamps,
-        future_target_timestamps := batch['target']['y_mark']  is redundant with future_context_timestamps.
-
-        Parameters
-        ----------self.backbone.fit(batch_x, batch_y)
-        batch : dict
-            Batch object containing the batched data.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the updated model output.
-        """
-
-        forward_pattern = "samples sequence features -> samples (features sequence)"
-        inverse_pattern = "samples (features sequence) -> samples sequence features"
-
-        historical_context_timestamps = rearrange(
-            batch["context"]["x_mark"], forward_pattern
-        )
-
-        historical_context = rearrange(batch["context"]["x"], forward_pattern)
-        future_context = rearrange(batch["context"]["y"], forward_pattern)
-
-        historical_target = rearrange(batch["target"]["x"], forward_pattern)
-        future_target = rearrange(batch["target"]["y"], forward_pattern)
-
-        feature_list = [
-            historical_context_timestamps,
-            historical_context,
-            historical_target,
-            future_context,
-        ]
-        X_fit = np.nan_to_num(torch.concatenate(feature_list, axis=1).cpu().numpy())
-        y_fit = future_target.cpu().numpy()
-
-        # Fit model
-        self.fit(X_fit, y_fit)
-
-        # Predict
-        outputs = self.predict(X_fit)
-
-        # Update evaluator with current batch
-        n_sequence, n_features = (
-            batch["target"]["y"].shape[1],
-            batch["target"]["y"].shape[2],
-        )
-        model_out = {
-            "predictions": rearrange(
-                torch.Tensor(outputs),
-                inverse_pattern,
-                sequence=n_sequence,
-                features=n_features,
-            ),
-            "targets": batch["target"]["y"],
-        }
-
-        return model_out

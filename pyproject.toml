@@ -18,7 +18,7 @@ dependencies = [
     "performer-pytorch>=1.1.4",
     "torchinfo>=1.7.1",
     "h5netcdf>=1.1.0",
-    "netCDF4>=1.6.5",
+    "netcdf4>=1.6.5",
     "openpyxl>=3.1.2",
     "tabpfn>=2.0.6",
     "jupyter>=1.1.1",
@@ -32,7 +32,8 @@ dependencies = [
     "awkward>=2.8.7",
     "xarray>=2025.9.0",
     "hvplot>=0.12.1",
-    "chronos-forecasting>=1.5.3",
+    "h5py>=3.11.0",
+    # "chronosx",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +48,7 @@ dev = [
     "mkdocstrings[python]>=0.30.0",
     "phmd",
     "TabPFN",
+    # "uni2ts",
     "viztracer>=1.0.4",
     "panel>=1.8.1",
     "holoviews>=1.21.0",
@@ -67,6 +69,7 @@ disable = ["logging-fstring-interpolation"]
 [tool.uv.sources]
 phmd = { path = "./phmd", editable = true }
 TabPFN = { path = "./TabPFN", editable = true }
+# uni2ts = { path = "./uni2ts", editable = true }
 
 torch = [
     { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
@@ -76,6 +79,7 @@ torchvision = [
     { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
     { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
 ]
+chronosx = { git = "https://github.com/amazon-science/chronos-forecasting.git", rev = "chronosx" }
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

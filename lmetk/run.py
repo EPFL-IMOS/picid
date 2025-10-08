@@ -67,6 +67,8 @@ OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
 
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 
+os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
+
 
 def safe_div(a, b):
     if b == 0:
@@ -179,11 +181,11 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     if cfg.get("num_threads", None) is not None:
         torch.set_num_threads(cfg.num_threads)
-        os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
-        os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
+        # os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
         log.info(f"Set number of threads to {cfg.num_threads}")
 
     # Set seed for random number generators in pytorch, numpy and python.random
@@ -296,8 +298,16 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     datasets = {}
     for split in ["train", "val", "test"]:
         key = f"dataset_{split}"
+
+        init_cfg = cfg.dataset
+        if not (oc := getattr(cfg.dataset, "_overrides", None)):
+            if split in oc:
+                overrides = cfg.dataset._overrides[split]
+                init_cfg = OmegaConf.merge(cfg.dataset, overrides)
+                log.info(f"Applied overrides for Dataset {split}: {overrides}")
+
         datasets[key] = hydra.utils.instantiate(
-            cfg.dataset,
+            init_cfg,
             data_dict={key: data_dict[split][key] for key in input_data_task_keys},
             meta_data_dict=meta_data_dict,
         )
@@ -451,18 +461,23 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     model_summary = get_model_summary(model)
 
+    additional_trainer_args = {}
+    if isinstance(model, FitPredictWrapperLightningModule):
+        additional_trainer_args["limit_val_batches"] = 0.0
+
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer,
         callbacks=callbacks,
         logger=logger,
         num_sanity_val_steps=0,
+        **additional_trainer_args,
+        enable_progress_bar=cfg.get("enable_progress_bar", True),
     )
 
-    OmegaConf.save(cfg, cfg.paths.output_dir + "/config_resolved.yaml")
     # This is needed because wandb otherwise only tracks part of the config
     cfg_container = OmegaConf.to_container(cfg, resolve=True)
     resolved_cfg = OmegaConf.create(cfg_container)
-    OmegaConf.save(resolved_cfg, "config.yaml")
+    OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
 
     cfg_container["hydra_cfg"] = OmegaConf.to_container(
         # cannot resolve because not all interpolations are covered by us for now

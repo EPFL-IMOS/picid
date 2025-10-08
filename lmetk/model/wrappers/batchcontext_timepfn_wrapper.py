@@ -32,10 +32,10 @@ class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
             Dictionary containing the updated model output.
         """
 
-        batch_x = batch["batch_x"]
-        batch_y = batch["batch_y"]
-        batch_x_mark = batch["batch_x_mark"]
-        batch_y_mark = batch["batch_y_mark"]
+        batch_x = batch["target"]["target_seq_x"]
+        batch_y = batch["target"]["target_seq_y"]
+        batch_x_mark = batch["context"]["features_seq_x"]
+        batch_y_mark = batch["context"]["features_seq_y"]
 
         channel_size = batch_x.size(2)
         max_channel_size = 161

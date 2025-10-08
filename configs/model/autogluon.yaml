@@ -1,9 +1,0 @@
-_target_: lmetk.model.autogluon.autogluon_wrapper.AutoGluonWrapper
-#lmetk/model/autogluon/autogluon_wrapper.py
-
-seq_len: ${task_definition.seq_len}      # window size
-label_len: ${task_definition.label_len}  # overlap size
-pred_len: ${task_definition.pred_len}    # prediction size
-
-# Additional params needed for wrapper to run:
-features_mode: no_feature_mode

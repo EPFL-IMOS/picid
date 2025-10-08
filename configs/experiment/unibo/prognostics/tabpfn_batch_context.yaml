@@ -1,9 +1,0 @@
-#@package _global_
-
-defaults:
-  - unibo/prognostics/base
-  - /model_configs/prognostics/tabpfn_batch_context
-  
-  - override /dataset: prognostics/rul_multiunit_dataset
-  - override /transforms: battery/unibo/residual_autoencoder
-
