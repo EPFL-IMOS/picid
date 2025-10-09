@@ -33,6 +33,7 @@ dependencies = [
     "xarray>=2025.9.0",
     "hvplot>=0.12.1",
     "h5py>=3.11.0",
+    "faiss-cpu>=1.12.0",
     # "chronosx",
 ]
 
