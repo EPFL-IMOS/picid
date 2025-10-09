@@ -19,7 +19,13 @@ from torch.utils.data import (
 import torch
 import warnings
 
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
+
 warnings.filterwarnings("ignore")
+
+
+class PicassoLoader(SingleSourceLoader):
+
 
 # class ContextBatchDatasetEnhanced(Dataset):
 #     """

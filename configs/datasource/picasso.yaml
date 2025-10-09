@@ -1,6 +1,6 @@
 _target_: lmetk.data.datasources.picasso.PicassoLoader
 
-
+# TODO: THIS NEEDS TO BE ADAPTED
 data_name: railway
 data_folder: railway
 data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
@@ -16,17 +16,17 @@ trend_decomp_rolling_window: null
 # Need to be discussed
 task_mode: univariate
 mode_mode: context
-  
+
 data_splitter:
   _target_: lmetk.data.preprocessing.TimeStampSplitter
   splitter_type: TimeStampSplitter
   test_start: "2023-01-24 00:00:00"
-  train_ratio: 0.9 
-  val_ratio: 0.1 
+  train_ratio: 0.9
+  val_ratio: 0.1
   create_splits_for: [features, timestamps, target, initial_dates]
 
   # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: ${oc.select:task_definition.seq_len,null}     # 96   # 384  # window size
+  seq_len: ${oc.select:task_definition.seq_len,null} # 96   # 384  # window size
   label_len: ${oc.select:task_definition.label_len,null} # 48 # 96  # overlap size
-  pred_len:  ${oc.select:task_definition.pred_len,null}  #96  # prediction size
+  pred_len: ${oc.select:task_definition.pred_len,null} #96  # prediction size
   apply_lookback: True

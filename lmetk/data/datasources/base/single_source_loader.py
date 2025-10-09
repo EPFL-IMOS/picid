@@ -1,9 +1,11 @@
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, override
+from typing import Any, Dict, Union, override
 
 import numpy as np
 from box import Box
+import awkward as ak
+from pandas.core.generic import NDFrame
 
 from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
@@ -33,7 +35,7 @@ class SingleSourceLoader(AbstractDataSourceLoader):
         self.data_splitter = data_splitter if not is_part_of_multisource else None
 
         # Define data source loader storage dict as centralized storage for the loaded data.
-        self.data_dict: Dict[str, Dict[str, np.ndarray]] | Box = {}
+        self.data_dict: Dict[str, Union[np.ndarray, ak.Array, NDFrame]] | Box = {}
 
         # Split flag, create before load, as some datasets might have predefined splits,
         # hence then _load_data method has to update self._is_splitted flag
@@ -41,7 +43,7 @@ class SingleSourceLoader(AbstractDataSourceLoader):
         self._is_loaded = False
 
     @abstractmethod
-    def _load_data(self) -> Dict[str, np.ndarray]:
+    def _load_data(self) -> Dict[str, Union[np.ndarray, ak.Array, NDFrame]]:
         """Load data from the data source."""
         raise NotImplementedError("Subclasses must implement this method.")
 

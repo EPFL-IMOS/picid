@@ -1,0 +1,13 @@
+seq_len: 4 # window size
+label_len: 0 # overlap size
+pred_len: 1 # prediction size
+stride: 1
+
+task_type: forecasting
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - time_features
+      - target
