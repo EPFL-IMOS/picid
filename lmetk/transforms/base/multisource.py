@@ -452,7 +452,12 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
                 for k, v in out_segment.items():
                     aka = ak.Array(tolist(v))
-                    out_segment[k] = ak_regularize_regular_axes(aka)
+                    regularized = ak_regularize_regular_axes(aka)
+
+                    # FIX: if the output is 1D we need to add an irregular axis
+                    # explicitly, otherwise the array is considered regular
+                    # and in subsequent transforms it is fed into the "regular" branch.
+                    out_segment[k] = ak.from_regular(regularized, axis=var_dim)
 
                 out.append(out_segment)
 
