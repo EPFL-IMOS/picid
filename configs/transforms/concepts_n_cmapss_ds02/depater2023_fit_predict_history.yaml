@@ -3,14 +3,14 @@ defaults:
 
 # Emulate de Pater LSTM-AE preprocessing
 
-tabularize_x:
+tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
     _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
-    seq_len: 50
+    seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
-    stride: 5
+    stride: ${task_definition.stride_train}
     timestep_dimension: 1
 
     select_features:
@@ -19,15 +19,34 @@ tabularize_x:
   metadata:
     apply_to: ["features"]
     assign_to: features
+    transform_on_keys: ["train"]
 
-tabularize_y:
+tabularize_x_val_test:
   # Concatenate time-features to the feature set
   transform:
     _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
-    seq_len: 50
+    seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
-    stride: 5
+    stride: ${task_definition.stride}
+    timestep_dimension: 1
+
+    select_features:
+      - features: history
+
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+    transform_on_keys: ["val", "test"]
+
+tabularize_y_train:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride_train}
     timestep_dimension: 1
 
     select_features:
@@ -36,3 +55,22 @@ tabularize_y:
   metadata:
     apply_to: ["rul"]
     assign_to: rul
+    transform_on_keys: ["train"]
+
+tabularize_y_val_test:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride}
+    timestep_dimension: 1
+
+    select_features:
+      - rul: horizon
+
+  metadata:
+    apply_to: ["rul"]
+    assign_to: rul
+    transform_on_keys: ["val", "test"]
