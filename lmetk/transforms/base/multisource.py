@@ -353,6 +353,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         data_types = set(
             [v for chunk in data_segments for v in chunk.get_instance_cls().values()]
         )
+        # TODO: here we have an issue that if we apply transform to ['features','target'] these variable have two distinct types like pd.DataFrame and pd.Series then the code crash.
         if len(data_types) != 1:
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
@@ -451,7 +452,12 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
                 for k, v in out_segment.items():
                     aka = ak.Array(tolist(v))
-                    out_segment[k] = ak_regularize_regular_axes(aka)
+                    regularized = ak_regularize_regular_axes(aka)
+
+                    # FIX: if the output is 1D we need to add an irregular axis
+                    # explicitly, otherwise the array is considered regular
+                    # and in subsequent transforms it is fed into the "regular" branch.
+                    out_segment[k] = ak.from_regular(regularized, axis=var_dim)
 
                 out.append(out_segment)
 

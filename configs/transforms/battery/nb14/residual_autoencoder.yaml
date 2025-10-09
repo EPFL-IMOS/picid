@@ -1,5 +1,5 @@
 defaults:
-  - shared/reconstruction/residual_autoencoder@_here_
+  - batter/shared/reconstruction/residual_autoencoder@_here_
 
 scaler_target:
   transform:
@@ -11,7 +11,7 @@ scaler_target:
 
 autoencoder:
   transform:
-    _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+    _target_:  lmetk.transforms.battery.autoencoder_transform.BatteryAutoencoderTransform  # Your wrapper class
     folder_name: ${paths.root_dir}/artifacts/debug/runs/unibo+reconstruction+residual_autoencoder/2025-09-24_03-48-04 # TODO, define the path where the autoencoder artifacts are stored
 
   metadata:

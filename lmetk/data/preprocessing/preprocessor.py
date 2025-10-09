@@ -138,48 +138,50 @@ class PreProcessor(PreProcessorInterface):
             )
 
         summary = []
-        for transform_name, transform in transforms.items():
-            logger.info(
-                f"Applying transform: '{transform_name}' "
-                f"(Strategy: {transform.strategy.__class__.__name__})"
-            )
-            pre_descr_dict = to_descriptive_dict(
-                data.to_split_dict()["train"], calculate_stat=False
-            )
-            start_time = time.time()
-            data, details = transform.forward(data)
 
-            end_time = time.time()
-            logger.info(
-                f" transform: '{transform.transform_name}' - "
-                f"completed in {end_time - start_time:.4f} seconds."
-            )
-            post_descr_dict = to_descriptive_dict(
-                data.to_split_dict()["train"], calculate_stat=False
-            )
+        try:
+            for transform_name, transform in transforms.items():
+                logger.info(
+                    f"Applying transform: '{transform_name}' "
+                    f"(Strategy: {transform.strategy.__class__.__name__})"
+                )
+                pre_descr_dict = to_descriptive_dict(
+                    data.to_split_dict()["train"], calculate_stat=False
+                )
+                start_time = time.time()
+                data, details = transform.forward(data)
 
-            changes = descriptive_dict_differences_str(
-                pre_descr_dict, post_descr_dict, mode="changed"
-            )
-            added = descriptive_dict_differences_str(
-                pre_descr_dict, post_descr_dict, mode="added"
-            )
-            removed = descriptive_dict_differences_str(
-                pre_descr_dict, post_descr_dict, mode="removed"
-            )
-            summary.append(
-                {
-                    "transform_name": transform_name,
-                    "time": f" {end_time - start_time:.4f}",
-                    "status": "Success",
-                    "details": details,
-                    "changes": str(changes),
-                    "added": str(added),
-                    "removed": str(removed),
-                }
-            )
+                end_time = time.time()
+                logger.info(
+                    f" transform: '{transform.transform_name}' - "
+                    f"completed in {end_time - start_time:.4f} seconds."
+                )
+                post_descr_dict = to_descriptive_dict(
+                    data.to_split_dict()["train"], calculate_stat=False
+                )
 
-        print_transforms_summary(summary)
+                changes = descriptive_dict_differences_str(
+                    pre_descr_dict, post_descr_dict, mode="changed"
+                )
+                added = descriptive_dict_differences_str(
+                    pre_descr_dict, post_descr_dict, mode="added"
+                )
+                removed = descriptive_dict_differences_str(
+                    pre_descr_dict, post_descr_dict, mode="removed"
+                )
+                summary.append(
+                    {
+                        "transform_name": transform_name,
+                        "time": f" {end_time - start_time:.4f}",
+                        "status": "Success",
+                        "details": details,
+                        "changes": str(changes),
+                        "added": str(added),
+                        "removed": str(removed),
+                    }
+                )
+        finally:
+            print_transforms_summary(summary)
         return data
 
     # configs of the dataset

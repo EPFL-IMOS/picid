@@ -5,6 +5,9 @@ label_len: 0 # overlap size
 pred_len: 1 # prediction size
 task_type: rul
 
+stride: 1
+stride_train: 5
+
 model:
   data_requirements:
     input_tensors:

@@ -107,20 +107,29 @@ class AbstractFitPredictWrapper(ABC):
         else:
             self._call_fit(X.cpu(), y.cpu())
 
+    def _iterate_batches(self, X: torch.Tensor):
+        """Yields preprocessed batches of X."""
+        X = X.cpu()  # preprocessing step
+        batch_size = self.yield_batch_size
+        n_samples = X.shape[0]
+
+        for start in range(0, n_samples, batch_size):
+            end = min(start + batch_size, n_samples)
+            batch_X = X[start:end]
+            yield batch_X
+
     def predict(self, X: torch.Tensor) -> torch.Tensor:
         """Predicts outputs for the given input data."""
         X = X.cpu()
         if self.yield_strategy:
-            batch_size = self.yield_batch_size
-            n_samples = X.shape[0]
             outputs_list = []
-            for start in tqdm(
-                range(0, n_samples, batch_size),
-                desc=f"Predicting in batches of size {batch_size}",
-            ):
-                end = min(start + batch_size, n_samples)
-                batch_X = X[start:end]
 
+            iterator = tqdm(
+                self._iterate_batches(X),
+                desc=f"Predicting in batches of size {self.yield_batch_size}",
+            )
+
+            for batch_X in iterator:
                 if self.profile_predict_cfg is not None:
                     from torch.profiler import record_function
 

@@ -43,6 +43,7 @@ class AkwardJaggedAutoregressiveSequencer:
         label_len: int,
         pred_len: int,
         stride: int = 1,
+        padding_left: int = 0,
     ):
         self.features = features
         self.seq_len = seq_len

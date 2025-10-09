@@ -14,12 +14,15 @@ defaults:
   - /datasource@train3: concepts_n_cmapss
   - /datasource@train4: concepts_n_cmapss
 
+  - /datasource@val1: concepts_n_cmapss
+  - /datasource@val2: concepts_n_cmapss
+  - /datasource@val3: concepts_n_cmapss
+  - /datasource@val4: concepts_n_cmapss
+
   - /datasource@test1: concepts_n_cmapss
   - /datasource@test2: concepts_n_cmapss
   - /datasource@test3: concepts_n_cmapss
   - /datasource@test4: concepts_n_cmapss
-
-  - /datasource@val1: concepts_n_cmapss
 
 source_list:
   train1: ${..train1}
@@ -27,18 +30,23 @@ source_list:
   train3: ${..train3}
   train4: ${..train4}
 
+  val1: ${..val1}
+  val2: ${..val2}
+  val3: ${..val3}
+  val4: ${..val4}
+
   test1: ${..test1}
   test2: ${..test2}
   test3: ${..test3}
   test4: ${..test4}
 
-  val1: ${..val1}
-
 multisource_data_splitter:
   _target_: lmetk.data.preprocessing.BySourceSplitter
-  sources_train: [train1, train2] #[train1, train2, train3, train4]
-  sources_test: [test1, test2] #[test1, test2, test3, test4]
-  sources_val: [val1] # TODO: why are there no val test sources in the original setup?
+  sources_train: [train1, train2, train3, train4]
+  sources_test: [test1, test2, test3, test4]
+
+  # We use train unit 6 from the training sets for validation
+  sources_val: [val1, val2, val3, val4]
 
 # TODO:
 # Model performance depends a lot on the data set splits
@@ -60,13 +68,18 @@ multisource_data_splitter:
 # roughly several K data points per cycle
 
 _train_load_args: &train_args
-  units: [1, 2, 3, 4, 5, 6]
+  units: [1, 2, 3, 4, 5]
+  mode: "train"
+
+_val_load_args: &val_args
+  units: [6]
   mode: "train"
 
 _test_load_args: &test_args
   units: [7, 8, 9, 10]
   mode: "test"
 
+########## Train Sources ##########
 train1:
   load_arguments:
     n_DS: "01"
@@ -90,7 +103,33 @@ train4:
     n_DS: "07"
     <<: *train_args
   group_by_unit: True
+########## Val Sources ##########
 
+val1:
+  load_arguments:
+    n_DS: "01"
+    <<: *val_args
+  group_by_unit: True
+
+val2:
+  load_arguments:
+    n_DS: "04"
+    <<: *val_args
+  group_by_unit: True
+
+val3:
+  load_arguments:
+    n_DS: "05"
+    <<: *val_args
+  group_by_unit: True
+
+val4:
+  load_arguments:
+    n_DS: "07"
+    <<: *val_args
+  group_by_unit: True
+
+########## Test Sources ##########
 test1:
   load_arguments:
     n_DS: "01"
@@ -112,11 +151,5 @@ test3:
 test4:
   load_arguments:
     n_DS: "07"
-    <<: *test_args
-  group_by_unit: True
-
-val1:
-  load_arguments:
-    n_DS: "01"
     <<: *test_args
   group_by_unit: True

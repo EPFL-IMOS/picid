@@ -23,4 +23,4 @@ model:
   d_yt: ${infer_data_dim:rul,-1}
   d_x: ${infer_data_dim:features,-1}
   n_timefeatures: 0
-  base_lr: 0.001
+  base_lr: ${optimizer.parameters.lr} #0.001

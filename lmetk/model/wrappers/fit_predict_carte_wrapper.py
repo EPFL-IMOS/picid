@@ -5,12 +5,13 @@ from pathlib import Path
 from typing import override
 
 import joblib
-from tabpfn import TabPFNRegressor
-
-from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
+import pandas as pd
 import torch
+from carte_ai import CARTERegressor, Table2GraphTransformer
+from carte_ai.configs.directory import config_directory
+from huggingface_hub import hf_hub_download
+
 from .base import AbstractFitPredictWrapper
-from carte_ai import CARTERegressor
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +43,19 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         fixed_params["random_state"] = random_state
         fixed_params["device"] = device
         fixed_params["n_jobs"] = n_jobs
-        fixed_params["pretrained_model_path"] = pretrained_model_path
+        fixed_params["pretrained_model_path"] = config_directory["pretrained_model"]
 
         backbone = CARTERegressor(**fixed_params)  # CARTERegressor for Regression
+        model_path = hf_hub_download(
+            repo_id="hi-paris/fastText", filename="cc.en.300.bin"
+        )
 
         logger.info(f"Using Carte on device: {backbone.device}, kwargs: {kwargs}")
 
         self.model_cache_path = model_cache_path
         self.device = device
+        self.backbone = backbone
+        self.preprocessor = Table2GraphTransformer(fasttext_model_path=model_path)
 
         super().__init__(
             backbone=backbone,
@@ -60,11 +66,18 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
-        self.backbone.fit(X, y)
+        X_train = pd.DataFrame(X.numpy())
+        y_train = y.squeeze(1).numpy()  # Ensure y is 1
+        X_train = self.preprocessor.fit_transform(X_train, y=y_train)
+        self.backbone.fit(X=X_train, y=y_train)
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
-        return self.backbone.predict(X)
+        X_test = pd.DataFrame(X.numpy())
+        # Transform the test data
+        X_test = self.preprocessor.transform(X_test)
+        y_pred = self.backbone.predict(X_test)
+        return y_pred
 
     @override
     def serialize_model(self, task_id: str | None = None):

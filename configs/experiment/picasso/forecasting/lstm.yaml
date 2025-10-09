@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - picasso/forecasting/base
+  - /model_configs/forecasting/lstm
+  - override /transforms: railway/railway_seasonal_leak

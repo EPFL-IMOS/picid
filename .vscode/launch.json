@@ -118,6 +118,21 @@
             }
         },
         {
+            "name": "Picasso: LSTM Model (LSTM_Forecaster)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=picasso/forecasting/lstm",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1"
+            }
+        },
+        {
             "name": "Railway Traction: Crossformer Model (Crossformer_Forecaster)",
             "type": "debugpy",
             "request": "launch",
@@ -178,7 +193,7 @@
             }
         },
         {
-            "name": "Railway Traction: TabPFN",
+            "name": "Railway Traction: TabPFN Seasonal Context",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -199,6 +214,23 @@
             "args": [
                 "paths=rt_local",
                 "experiment=railway_traction/forecasting/tabpfn_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Railway Traction: Fit-Predict Carte",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/carte_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -262,7 +294,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=concepts_n_cmapss/prognostics/tabpfn_batch_context",
+                "experiment=concepts_n_cmapss/prognostics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {

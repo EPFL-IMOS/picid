@@ -66,4 +66,4 @@ seed: 42
 # and the container usually sees all CPU cores of the host system which are a lot for servers.
 num_threads: 32
 
-enable_progress_bar: False
+enable_progress_bar: True
