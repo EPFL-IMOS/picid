@@ -54,16 +54,16 @@ MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
 
 # Function to run and log commands
-run_and_log() {
-    local command_to_run="$1"
-    local run_name="$2"
+# run_and_log() {
+#     local command_to_run="$1"
+#     local run_name="$2"
 
-    # For debugging, just print the command and run name
-    echo "DEBUG: Run Name: $run_name"
-    echo "DEBUG: Command: $command_to_run"
-    # Run the command and log its output
-    eval "sleep 5"
-}
+#     # For debugging, just print the command and run name
+#     echo "DEBUG: Run Name: $run_name"
+#     echo "DEBUG: Command: $command_to_run"
+#     # Run the command and log its output
+#     eval "sleep 5"
+# }
 
 pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
