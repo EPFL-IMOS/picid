@@ -10,4 +10,4 @@
 	branch = collab_lalr
 [submodule "TabDPT"]
 	path = TabDPT
-	url = https://github.com/layer6ai-labs/TabDPT-inference
+	url = git@github.com:layer6ai-labs/TabDPT.git
