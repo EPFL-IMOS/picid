@@ -24,10 +24,12 @@ Once the container is started, the following steps are necessary to run:
 
 ```bash
 tmux
+export PATH=/usr/local/cuda-12.6/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH
 source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
 uv pip install -e ".[dev]"
-uv pip install --upgrade netCDF4 h5py xarray nvitop
+# uv pip install --upgrade netCDF4 h5py xarray nvitop
 python lmetk/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
 ```
 

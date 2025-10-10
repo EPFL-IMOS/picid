@@ -1,0 +1,12 @@
+#@package _global_
+
+defaults:
+  - override /dataset: fit_predict_task
+  - override /datamodule: base_datamodule_fit_predict
+  - override /model: carte_fit_predict
+
+  - override /callbacks: gradient_free
+  - override /trainer: one_epoch
+
+task_definition:
+  requires_training: true

@@ -67,3 +67,7 @@ seed: 42
 num_threads: 32
 
 enable_progress_bar: True
+
+# If strange cuda errors in attention, try to set this to False to see if OOM errors play a role
+# because sometimes flash attention does not throw an error in an OOM situation.
+flash_attention: True

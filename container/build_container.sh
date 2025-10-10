@@ -13,7 +13,7 @@ LDAP_GID=${LDAP_GID:-<gid>}
 IMAGE_NAME="registry.rcp.epfl.ch/imos-<user>/<container_name>"
 
 # Optional: Tag
-TAG=1.0.0
+TAG=1.0.1
 
 echo "Using build arguments:"
 echo "  LDAP_USERNAME   = $LDAP_USERNAME"

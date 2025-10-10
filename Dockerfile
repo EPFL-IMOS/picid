@@ -19,6 +19,19 @@ RUN set -eux; \
     syncthing rsync rclone tzdata sudo; \
     rm -rf /var/lib/apt/lists/*
 
+#####################################
+# Install NVIDIA CUDA Toolkit 12.6
+#####################################
+RUN set -eux; \
+    # Add NVIDIA repository
+    wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb; \
+    dpkg -i cuda-keyring_1.1-1_all.deb; \
+    rm cuda-keyring_1.1-1_all.deb; \
+    apt-get update; \
+    # Install CUDA Toolkit (full developer version)
+    apt-get install -y cuda-toolkit-12-6; \
+    # Clean up
+    rm -rf /var/lib/apt/lists/*
 
 
 #####################################
@@ -68,5 +81,6 @@ COPY --chown=${LDAP_UID}:${LDAP_GID} pyproject.toml uv.lock ./
 # authentication issues. Therefore, we copy the repos directly.
 ADD --chown=${LDAP_UID}:${LDAP_GID} phmd phmd
 ADD --chown=${LDAP_UID}:${LDAP_GID} TabPFN TabPFN
+ADD --chown=${LDAP_UID}:${LDAP_GID} TabDPT TabDPT
 
 RUN uv sync --no-install-project --extra dev

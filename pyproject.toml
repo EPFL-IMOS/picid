@@ -37,6 +37,7 @@ dependencies = [
     # "chronosx",
     "carte-ai>=0.0.26",
     "huggingface-hub>=0.35.3",
+    "tabdpt",
 ]
 
 [project.optional-dependencies]
@@ -72,6 +73,7 @@ disable = ["logging-fstring-interpolation"]
 [tool.uv.sources]
 phmd = { path = "./phmd", editable = true }
 TabPFN = { path = "./TabPFN", editable = true }
+tabdpt = { path = "TabDPT", editable = true }
 # uni2ts = { path = "./uni2ts", editable = true }
 
 torch = [
