@@ -503,6 +503,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 init_cfg = OmegaConf.merge(cfg.dataset, overrides)
                 log.info(f"Applied overrides for Dataset {split}: {overrides}")
 
+        # TODO: Patch to allow association of subunit in the concat dataset
+        meta_data_dict = meta_data_dict.copy()
+        meta_data_dict["current_data_split"] = split
+
         datasets[key] = hydra.utils.instantiate(
             init_cfg,
             data_dict={key: data_dict[split][key] for key in input_data_task_keys},
@@ -650,6 +654,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             datamodule=datamodule,
         )
 
+    # This is very important for wandb because wandb logs the last lowest val/metric <-> lowest test/metric;
     trainer.test(model=model, datamodule=datamodule)
 
     # We want to avoid running this for pfn models where there is no training

@@ -1,0 +1,17 @@
+#@package _global_
+
+defaults:
+  - xjtu_sy/prognostics/base
+  - /model_configs/prognostics/stf
+  
+  - override /dataset: prognostics/rul_multiunit_dataset
+  - override /transforms: bearings/xjtu_sy/statistics
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
