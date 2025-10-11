@@ -79,14 +79,19 @@ class LSTM_Seq2Seq(nn.Module):
         batch_size = y_target.shape[0]
         y_dim = y_target.shape[2]
         outputs = -torch.ones(batch_size, pred_len, y_dim).to(y_target.device)
-        merged_context = self._merge(x_context, y_context)
+
+        if x_context is not None:
+            merged_context = self._merge(x_context, y_context)
+            decoder_sequence = self._merge(
+                x_context[:, -1], torch.zeros_like(y_target[:, 0])
+            )
+        else:
+            decoder_sequence = torch.zeros_like(y_target[:, 0])
+            merged_context = y_context
+
         hidden, cell = self.encoder(merged_context)
 
-        decoder_input = (
-            self._merge(x_context[:, -1], torch.zeros_like(y_target[:, 0]))
-            .unsqueeze(1)
-            .to(y_context.device)
-        )
+        decoder_input = decoder_sequence.unsqueeze(1).to(y_context.device)
 
         for t in range(0, pred_len):
             output, hidden, cell = self.decoder(decoder_input, hidden, cell)
@@ -97,7 +102,10 @@ class LSTM_Seq2Seq(nn.Module):
                 if random.random() < teacher_forcing_prob
                 else output
             )
-            decoder_input = self._merge(x_target[:, t].unsqueeze(1), decoder_y)
+            if x_target is not None:
+                decoder_input = self._merge(x_target[:, t].unsqueeze(1), decoder_y)
+            else:
+                decoder_input = decoder_y
         return outputs
 
 
@@ -178,7 +186,11 @@ class LSTM_Forecaster(Forecaster):
             task_type=task_type,
             **kwargs,
         )
-        self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+
+        if d_x > 0:
+            self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+        else:
+            self.t2v = None
 
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
         no_y_as_input = task_type in REGRESSION_TASKS
@@ -199,6 +211,10 @@ class LSTM_Forecaster(Forecaster):
 
         if self.task_type in REGRESSION_TASKS:
             self.model = LSTM_Regression(self.t2v, self.encoder, self.decoder).to(
+                self.device
+            )
+        if self.task_type in ["state_forecasting"]:
+            self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(
                 self.device
             )
         elif self.task_type in ["forecasting"]:
@@ -233,7 +249,7 @@ class LSTM_Forecaster(Forecaster):
 
         if self.task_type in REGRESSION_TASKS:
             preds = self.model.forward(x_t, y_t, teacher_forcing_prob=force)
-        elif self.task_type in ["forecasting"]:
+        elif self.task_type in ["forecasting", "state_forecasting"]:
             preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)
         return (preds,)
 

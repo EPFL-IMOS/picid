@@ -39,6 +39,7 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         assert task_type in [
             "forecasting",
+            "state_forecasting",
             "rul",
             "ahrul",
             "soc",
@@ -201,7 +202,11 @@ class Forecaster(CustomEvaluatorLightningModule):
         **forward_kwargs,
     ) -> Tuple[torch.Tensor]:
 
-        x_t, y_t = self.nan_to_num(x_t, y_t)
+        if y_t is not None:
+            (y_t,) = self.nan_to_num(y_t)
+
+        if x_t is not None:
+            (x_t,) = self.nan_to_num(x_t)
 
         if x_c is not None:
             (x_c,) = self.nan_to_num(x_c)
@@ -265,6 +270,15 @@ class Forecaster(CustomEvaluatorLightningModule):
                 batch["context"]["features_seq_y"],
                 batch["target"]["target_seq_y"],
             )
+
+        elif self.task_type == "state_forecasting":
+            batch = (
+                None,
+                batch["features_seq_x"],
+                None,
+                batch["features_seq_y"],
+            )
+
         elif self.task_type in REGRESSION_TASKS:
 
             f = batch["features"]
