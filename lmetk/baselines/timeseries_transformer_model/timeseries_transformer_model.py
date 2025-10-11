@@ -60,7 +60,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             task_type=task_type,
         )
 
-        self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+        if self.d_x > 0:
+            self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
 
         self.n_timefeatures = n_timefeatures

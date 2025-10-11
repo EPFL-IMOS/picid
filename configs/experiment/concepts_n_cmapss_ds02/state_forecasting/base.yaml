@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - override /task_definition: state_forecasting/c4_l0_p1
+  - override /evaluator: forecasting
