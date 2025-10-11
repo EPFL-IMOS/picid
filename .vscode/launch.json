@@ -512,7 +512,71 @@
             }
         },
         {
-            "name": "Concepts N-CMAPSS (DS02): LSTM State Forecasting",
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: stf ",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/stf",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: patchtst",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/patchtst",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: timeseries_transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/timeseries_transformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: tide",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/tide",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: LSTM",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -528,7 +592,7 @@
             }
         },
         {
-            "name": "Concepts N-CMAPSS (DS02): Crossformer State Forecasting",
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: Crossformer",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
