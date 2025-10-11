@@ -292,3 +292,74 @@ class NASAScoreMetric(AbstractMetric):
         if not self.values:
             raise ValueError("No data available for computation")
         return np.mean(self.values)
+
+
+class MASEMetric(AbstractMetric):
+    """Mean Absolute Scaled Error (MASE) metric supporting multi-feature inputs.
+
+    Reference:
+        Hyndman, R. J., & Koehler, A. B. (2006).
+        Another look at measures of forecast accuracy.
+        International Journal of Forecasting, 22(4), 679–688.
+    """
+
+    def __init__(self, training_series: np.ndarray = None, seasonality: int = 1):
+        """
+        Args:
+            training_series: Array of historical values used for scaling (T, F) or (T,) shape.
+            seasonality: Periodicity used for the naive forecast (default=1 for non-seasonal data).
+        """
+        super().__init__("mase")
+        self.training_series = training_series
+        self.seasonality = seasonality
+        self.reset()
+
+        if training_series is not None:
+            self.scale = self._compute_scale(training_series, seasonality)
+        else:
+            self.scale = None
+
+    def _compute_scale(self, series: np.ndarray, m: int) -> float:
+        """Computes scaling factor as mean absolute naive forecast error."""
+        series = np.asarray(series)
+        if series.ndim == 1:
+            diffs = np.abs(series[m:] - series[:-m])
+        else:
+            diffs = np.abs(series[m:, :] - series[:-m, :]).flatten()
+        scale = np.mean(diffs)
+        if scale == 0:
+            raise ValueError(
+                "Zero scaling factor in MASE; training series may be constant."
+            )
+        return scale
+
+    def reset(self):
+        """Resets accumulated errors."""
+        self.total_absolute_error = 0.0
+        self.total_count = 0
+
+    def update(self, predictions: np.ndarray, targets: np.ndarray):
+        """Accumulates absolute errors for batched data."""
+        if self.scale is None:
+            raise ValueError(
+                "Scale not initialized. Provide a training_series during initialization."
+            )
+
+        predictions = np.asarray(predictions)
+        targets = np.asarray(targets)
+        if predictions.shape != targets.shape:
+            raise ValueError(
+                f"Shape mismatch: predictions {predictions.shape}, targets {targets.shape}"
+            )
+
+        abs_errors = np.abs(predictions - targets)
+        self.total_absolute_error += np.sum(abs_errors)
+        self.total_count += np.prod(targets.shape)
+
+    def compute(self) -> float:
+        """Computes final Mean Absolute Scaled Error."""
+        if self.total_count == 0:
+            raise ValueError("No data available for computation")
+
+        mase = (self.total_absolute_error / self.total_count) / self.scale
+        return mase
