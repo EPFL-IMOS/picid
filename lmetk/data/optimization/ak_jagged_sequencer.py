@@ -43,13 +43,23 @@ class AkwardJaggedAutoregressiveSequencer:
         label_len: int,
         pred_len: int,
         stride: int = 1,
-        padding_left: int = 0,
+        # TODO: What is our strategy for having def. params? everythewe? I vote everywhere.
+        padding_left_flag: int = 0,
+        return_index_flag: bool = False,
+        warmup_steps: int = None,
     ):
         self.features = features
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
         self.stride = stride
+
+        # Flags to use additional sequencer features
+        # Partially (not implemented yet)
+        self.padding_left_flag = padding_left_flag
+        self.return_index_flag = return_index_flag
+        self.warmup_steps = warmup_steps
+
         self.device = torch.device("cpu")
         self._checked_output_shapes = False
 
@@ -187,7 +197,10 @@ class AkwardJaggedAutoregressiveSequencer:
             ), f"seq_y feature dim mismatch: expected {self.num_features}, got {seq_y.shape[2]}"
             self._checked_output_shapes = True
 
-        return seq_x, seq_y
+        if self.return_index_flag:
+            return seq_x, seq_y, torch.tensor(idx_sel)
+        else:
+            return seq_x, seq_y
 
     def sequences_batch(
         self, batch_idx: List[int]

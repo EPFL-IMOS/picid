@@ -121,30 +121,11 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
             fold = task[self.fold]
             if t == self.task_mode:
                 # Extract the main task meta data
+                # add here some sor of split/unit info subdict
                 self.meta_data = task.meta
 
             tasks_fold_dict[t] = fold
         return tasks_fold_dict
-
-    # def _cache_task_data(self, task_fold_dict):
-    #     if not self.debug_cache_path:
-    #         raise ValueError("debug_cache_path must be set when caching task data.")
-
-    #     filename = self._get_cache_file_name("dataset")
-    #     cache_path = Path(self.debug_cache_path) / filename
-
-    #     logger.info(f"Caching task data to {cache_path}")
-
-    #     with open(cache_path, "wb") as f:
-    #         pickle.dump(task_fold_dict, f)
-
-    #     metadata_filename = self._get_cache_file_name("metadata")
-    #     metadata_path = Path(self.debug_cache_path) / metadata_filename
-
-    #     logger.info(f"Caching task metadata to {metadata_path}")
-
-    #     with open(metadata_path, "wb") as f:
-    #         pickle.dump(self.meta_data, f)
 
     def _retrieve_cached_task_data(self, path: Path):
         if not path.exists():
@@ -167,24 +148,10 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
     def _load_data(self):
 
         tasks_fold_dict = None
-        # If we are in debug mode, we try to load the cached data
-        # if self.debug_cache_dataset:
-        #     cache_path = Path(self.debug_cache_path)
-        #     metadata_file = cache_path / self._get_cache_file_name("metadata")
-        #     task_file = cache_path / self._get_cache_file_name("dataset")
-
-        #     if metadata_file.exists() and task_file.exists():
-        #         tasks_fold_dict = self._retrieve_cached_task_data(task_file)
-        #         self.meta_data = self._retrieve_cached_task_data(metadata_file)
-        #         logger.info(f"Loaded cached task data from {task_file}")
-        #         logger.info(f"Loaded cached metadata from {metadata_file}")
-
         if tasks_fold_dict is None:
             tasks_fold_dict = self._init_phmd_dataset(
                 self.auxiliary_tasks + [self.task_mode]
             )
-            # if self.debug_cache_dataset:
-            #     self._cache_task_data(tasks_fold_dict)
 
         if self.debug_subset_range is not None:
             for key in tasks_fold_dict:
@@ -203,6 +170,7 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         main_fold = tasks_fold_dict[self.task_mode]
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
         auxiliary_tasks_fold_dict.pop(self.task_mode, None)
+
         # TODO: add some clarification on how does the output of _preprocess_fold look like
         main_fold = self._preprocess_fold(main_fold, auxiliary_tasks_fold_dict)
 
@@ -210,6 +178,9 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         data = defaultdict(list)
         unit_col = self._get_unit_column()
 
+        # Collect additional metadata regarding split/unit
+        additional_metadata_unit_name = defaultdict(list)
+        additional_metadata_unit_id = defaultdict(list)
         for split in ["train", "val", "test"]:
             df = main_fold[split]
             for unit_name in np.unique(df[unit_col]):
@@ -238,18 +209,45 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
                 post = df_unit.isna().sum()
                 assert (pre == post).all(), "Selection created new NaNs"
 
-                data[split].append(
-                    self._process_unit(
-                        df_unit=df_unit,
-                        unit_name=unit_name,
-                        features_col=self._get_features_columns(),
-                        target_col=self._get_target_column(),
-                    )
+                # Load unit data
+                unit_data = self._process_unit(
+                    df_unit=df_unit,
+                    unit_name=unit_name,
+                    features_col=self._get_features_columns(),
+                    target_col=self._get_target_column(),
                 )
+
+                data[split].append(unit_data)
+
+                # Update the metadata
+                metadata_unit_name = unit_data.get("metadata", {}).get(
+                    "unit_name", None
+                )
+                metadata_unit_id = unit_data.get("metadata", {}).get("unit_id", None)
+
+                if metadata_unit_name is not None and metadata_unit_name != {}:
+
+                    assert (
+                        metadata_unit_id != {}
+                    ), f"Metadata unit id is empty for unit name {metadata_unit_name}"
+
+                    assert (
+                        metadata_unit_id is not None
+                    ), f"Metadata unit id is None for unit name {metadata_unit_name}"
+
+                    additional_metadata_unit_name[split].append(metadata_unit_name)
+                    additional_metadata_unit_id[split].append(metadata_unit_id)
 
         # Modify the splits if needed by source:
         if self.dataset_fold is not None:
             data = self._unibo_bosello_split(data)
+
+        if additional_metadata_unit_name:
+            # Update self.meta_data with the unit_names
+            self.meta_data["unit_names"] = additional_metadata_unit_name
+
+        if additional_metadata_unit_id:
+            self.meta_data["unit_ids"] = additional_metadata_unit_id
 
         # The data structure in data is:
         # {

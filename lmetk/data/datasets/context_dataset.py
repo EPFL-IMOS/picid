@@ -20,6 +20,9 @@ class ContextBatchDataset(BaseDataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
+        padding_left_flag: int = 0,
+        return_index_flag: bool = False,
+        warmup_steps: int = None,
         **kwargs,
     ):
 
@@ -43,19 +46,23 @@ class ContextBatchDataset(BaseDataset):
         self.target_feature = data_dict[target_key]
         self.context_features = data_dict[context_key]
 
-        self.target_dataset = SlidingWindowBatchDataset(
-            data_dict={target_key: self.target_feature},
+        # We batch two separate sequences in parallel (one for context, one for target)
+        # They must have the same length (number of samples)
+        dataset_shared_params = dict(
             seq_len=seq_len,
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
+            padding_left_flag=padding_left_flag,
+            return_index_flag=return_index_flag,
+            warmup_steps=warmup_steps,
+        )
+
+        self.target_dataset = SlidingWindowBatchDataset(
+            data_dict={target_key: self.target_feature}, **dataset_shared_params
         )
         self.context_dataset = SlidingWindowBatchDataset(
-            data_dict={context_key: self.context_features},
-            seq_len=seq_len,
-            label_len=label_len,
-            pred_len=pred_len,
-            stride=stride,
+            data_dict={context_key: self.context_features}, **dataset_shared_params
         )
 
         super().__init__(data_dict, **kwargs)

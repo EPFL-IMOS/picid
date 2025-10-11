@@ -23,16 +23,5 @@ scaler_target:
   
   metadata:
     apply_to: target
+    assign_to: rul
     fit_on: train
-
-autoencoder:
-  transform:
-    _target_:  lmetk.transforms.bearings.simple_stat.BearingStat  # Your wrapper class
-    folder_name: ${paths.root_dir}/artifacts/debug/runs/pronostia+reconstruction+residual_autoencoder/2025-10-05_22-49-19
-    batch_size: 65536
-
-  metadata:
-    apply_to: ['features', 'target']
-    assign_to: 
-      features: features
-      target: rul
