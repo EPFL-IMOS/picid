@@ -67,12 +67,16 @@ class Model(nn.Module):
             self.feature_dim = configs.feature_dim
         else:
             freq_map = {"h": 4, "t": 5, "s": 6, "m": 1, "a": 1, "w": 2, "d": 3, "b": 3}
-
             self.feature_dim = freq_map[self.freq]
 
-        flatten_dim = (
-            self.seq_len + (self.seq_len + self.pred_len) * self.feature_encode_dim
-        )
+        if not self.task_name in ["state_forecasting"]:
+            flatten_dim = (
+                self.seq_len + (self.seq_len + self.pred_len) * self.feature_encode_dim
+            )
+            temporal_decoder_in_dim = self.decode_dim + self.feature_encode_dim
+        else:
+            flatten_dim = self.seq_len
+            temporal_decoder_in_dim = self.decode_dim
 
         self.feature_encoder = ResBlock(
             self.feature_dim, self.res_hidden, self.feature_encode_dim, dropout, bias
@@ -91,6 +95,7 @@ class Model(nn.Module):
         if (
             self.task_name == "long_term_forecast"
             or self.task_name == "short_term_forecast"
+            or self.task_name == "state_forecasting"
         ):
             self.decoders = nn.Sequential(
                 *(
@@ -114,7 +119,7 @@ class Model(nn.Module):
                 ),
             )
             self.temporalDecoder = ResBlock(
-                self.decode_dim + self.feature_encode_dim,
+                temporal_decoder_in_dim,
                 self.temporalDecoderHidden,
                 1,
                 dropout,
@@ -189,16 +194,25 @@ class Model(nn.Module):
         stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
         x_enc /= stdev
 
-        feature = self.feature_encoder(batch_y_mark)
-        hidden = self.encoders(
-            torch.cat([x_enc, feature.reshape(feature.shape[0], -1)], dim=-1)
-        )
+        if self.task_name != "state_forecasting":
+            feature = self.feature_encoder(batch_y_mark)
+            hidden = self.encoders(
+                torch.cat([x_enc, feature.reshape(feature.shape[0], -1)], dim=-1)
+            )
+        else:
+            hidden = self.encoders(x_enc)
+
         decoded = self.decoders(hidden).reshape(
             hidden.shape[0], self.pred_len, self.decode_dim
         )
-        dec_out = self.temporalDecoder(
-            torch.cat([feature[:, self.seq_len :], decoded], dim=-1)
-        ).squeeze(-1) + self.residual_proj(x_enc)
+
+        if self.task_name != "state_forecasting":
+            temp_dec_in = torch.cat([feature[:, self.seq_len :], decoded], dim=-1)
+        else:
+            temp_dec_in = decoded
+        dec_out = self.temporalDecoder(temp_dec_in).squeeze(-1) + self.residual_proj(
+            x_enc
+        )
         # print(feature.sum().item(), hidden.sum().item(), decoded.sum().item(), dec_out.sum().item())
 
         # De-Normalization
@@ -246,6 +260,17 @@ class Model(nn.Module):
                 dim=-1,
             )
             return dec_out  # [B, L, D]
+
+        if self.task_name == "state_forecasting":
+            dec_out = torch.stack(
+                [
+                    self.forecast(x_enc[:, :, feature], x_mark_enc, x_dec, None)
+                    for feature in range(x_enc.shape[-1])
+                ],
+                dim=-1,
+            )
+            return dec_out  # [B, L, D]
+
         if self.task_name == "imputation":
             dec_out = torch.stack(
                 [
@@ -257,6 +282,7 @@ class Model(nn.Module):
                 dim=-1,
             )
             return dec_out  # [B, L, D]
+
         if self.task_name == "anomaly_detection":
             raise NotImplementedError(
                 "Task anomaly_detection for Tide is temporarily not supported"

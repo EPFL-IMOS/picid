@@ -274,9 +274,9 @@ class Forecaster(CustomEvaluatorLightningModule):
         elif self.task_type == "state_forecasting":
             batch = (
                 None,
-                batch["features_seq_x"],
+                batch["features_seq_x"],  # y_c
                 None,
-                batch["features_seq_y"],
+                batch["features_seq_y"],  # y_t
             )
 
         elif self.task_type in REGRESSION_TASKS:
@@ -292,8 +292,8 @@ class Forecaster(CustomEvaluatorLightningModule):
             batch = (
                 None,
                 None,
-                f,
-                t,
+                f,  # x_t
+                t,  # y_t
             )
         else:
             raise ValueError(f"Unrecognized task type: {self.task_type}")
