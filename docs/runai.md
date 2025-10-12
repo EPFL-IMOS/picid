@@ -24,13 +24,19 @@ Once the container is started, the following steps are necessary to run:
 
 ```bash
 tmux
+mkdir -p $HOME/lib
+ln -s /usr/lib/x86_64-linux-gnu/libcuda.so.1 $HOME/lib/libcuda.so
 export PATH=/usr/local/cuda-12.6/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH
+export LIBRARY_PATH=$HOME/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
 uv pip install -e ".[dev]"
 # uv pip install --upgrade netCDF4 h5py xarray nvitop
 python lmetk/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
+python lmetk/run.py paths=runai experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict
+
 ```
 
 Alternatively, we provide a runscript `runai.sh`.
