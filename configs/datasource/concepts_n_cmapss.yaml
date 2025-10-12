@@ -5,7 +5,7 @@ _target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
 
 # Must have keys
 data_name: ${.data_folder}_${.n_DS}
-task_mode: multivariate
+task_mode: rul
 
 # Additional
 data_folder: N-CMAPSS
