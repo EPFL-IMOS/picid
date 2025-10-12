@@ -213,7 +213,7 @@ class LSTM_Forecaster(Forecaster):
             self.model = LSTM_Regression(self.t2v, self.encoder, self.decoder).to(
                 self.device
             )
-        if self.task_type in ["state_forecasting"]:
+        elif self.task_type in ["state_forecasting"]:
             self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(
                 self.device
             )
