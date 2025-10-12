@@ -781,28 +781,41 @@ wheels = [
 
 [[package]]
 name = "carte-ai"
-version = "0.0.26"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.25"
+source = { editable = "local_packages/carte-ai" }
 dependencies = [
     { name = "catboost" },
     { name = "category-encoders" },
     { name = "fasttext" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pyarrow" },
     { name = "scikit-learn" },
     { name = "scipy" },
-    { name = "seaborn" },
     { name = "tabpfn" },
     { name = "torch" },
     { name = "torch-geometric" },
     { name = "torcheval" },
     { name = "xgboost" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/0a/73f19501717d27a43c2ec440366c0819e82c7abeec29652e66a87604a4fa/carte_ai-0.0.26.tar.gz", hash = "sha256:29aefc515974f854e183358f5f5f7258f31a7ef082e88f2f9505b80707cc2d45", size = 40308725 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/e6/932d603c61deb6cf86859a4d660629f20edd4a652dd1cf82ab574b508d45/carte_ai-0.0.26-py3-none-any.whl", hash = "sha256:8d665e844701b21bf5339f0720d349bfb52f48461d8d34e78d308b8a66743ba0", size = 40327277 },
+
+[package.metadata]
+requires-dist = [
+    { name = "catboost" },
+    { name = "category-encoders" },
+    { name = "coverage", marker = "extra == 'test'" },
+    { name = "fasttext" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pytest", marker = "extra == 'test'" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+    { name = "tabpfn" },
+    { name = "torch" },
+    { name = "torch-geometric" },
+    { name = "torcheval" },
+    { name = "xgboost" },
 ]
+provides-extras = ["test"]
 
 [[package]]
 name = "catalogue"
@@ -4298,7 +4311,7 @@ wheels = [
 [[package]]
 name = "phmd"
 version = "2025.0.4"
-source = { editable = "phmd" }
+source = { editable = "local_packages/phmd" }
 dependencies = [
     { name = "gdown" },
     { name = "h5py" },
@@ -6119,7 +6132,7 @@ wheels = [
 [[package]]
 name = "tabdpt"
 version = "1.1.5"
-source = { directory = "TabDPT" }
+source = { editable = "local_packages/TabDPT" }
 dependencies = [
     { name = "appdirs" },
     { name = "faiss-cpu" },
@@ -6173,7 +6186,7 @@ dev = [
 [[package]]
 name = "tabpfn"
 version = "2.2.1"
-source = { editable = "TabPFN" }
+source = { editable = "local_packages/TabPFN" }
 dependencies = [
     { name = "einops" },
     { name = "eval-type-backport" },
@@ -6303,7 +6316,7 @@ dev = [
 requires-dist = [
     { name = "autogluon", specifier = ">=1.3.1" },
     { name = "awkward", specifier = ">=2.8.7" },
-    { name = "carte-ai", specifier = ">=0.0.26" },
+    { name = "carte-ai", editable = "local_packages/carte-ai" },
     { name = "coverage", marker = "extra == 'dev'" },
     { name = "einops", specifier = ">=0.7.0" },
     { name = "faiss-cpu", specifier = ">=1.12.0" },
@@ -6327,7 +6340,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.1.1" },
     { name = "panel", marker = "extra == 'dev'", specifier = ">=1.8.1" },
     { name = "performer-pytorch", specifier = ">=1.1.4" },
-    { name = "phmd", marker = "extra == 'dev'", editable = "phmd" },
+    { name = "phmd", marker = "extra == 'dev'", editable = "local_packages/phmd" },
     { name = "positional-encodings", specifier = ">=6.0.3" },
     { name = "progpy", specifier = ">=1.7.1" },
     { name = "pyarrow", specifier = ">=20.0.0" },
@@ -6338,9 +6351,9 @@ requires-dist = [
     { name = "python-box", specifier = ">=7.3.2" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scikit-learn", specifier = ">=1.3.2" },
-    { name = "tabdpt", directory = "TabDPT" },
-    { name = "tabpfn", editable = "TabPFN" },
-    { name = "tabpfn", marker = "extra == 'dev'", editable = "TabPFN" },
+    { name = "tabdpt", editable = "local_packages/TabDPT" },
+    { name = "tabpfn", editable = "local_packages/TabPFN" },
+    { name = "tabpfn", marker = "extra == 'dev'", editable = "local_packages/TabPFN" },
     { name = "torchinfo", specifier = ">=1.7.1" },
     { name = "torchsummary", specifier = ">=1.5.1" },
     { name = "viztracer", marker = "extra == 'dev'", specifier = ">=1.0.4" },

@@ -34,10 +34,9 @@ dependencies = [
     "hvplot>=0.12.1",
     "h5py>=3.14.0",
     "faiss-cpu>=1.12.0",
-    # "chronosx",
-    "carte-ai>=0.0.26",
     "huggingface-hub>=0.35.3",
     "tabdpt",
+    "carte-ai",
 ]
 
 [project.optional-dependencies]
@@ -71,10 +70,11 @@ disable = ["logging-fstring-interpolation"]
 
 
 [tool.uv.sources]
-phmd = { path = "./phmd", editable = true }
-TabPFN = { path = "./TabPFN", editable = true }
-tabdpt = { path = "TabDPT", editable = true }
-# uni2ts = { path = "./uni2ts", editable = true }
+phmd = { path = "./local_packages/phmd", editable = true }
+TabPFN = { path = "./local_packages/TabPFN", editable = true }
+tabdpt = { path = "./local_packages/TabDPT", editable = true }
+carte-ai = { path = "./local_packages/carte-ai", editable = true }
+# uni2ts = { path = "./local_packages/uni2ts", editable = true }
 
 torch = [
     { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },

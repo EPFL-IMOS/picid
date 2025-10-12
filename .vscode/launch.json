@@ -394,6 +394,7 @@
                 "experiment=concepts_n_cmapss_ds02/prognostics/carte_fit_predict",
                 "debug=default"
             ],
+            "justMyCode": false,
             "env": {
                 "HYDRA_FULL_ERROR": "1",
                 "PYTHONFAULTHANDLER": "1"
