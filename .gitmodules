@@ -1,13 +1,16 @@
 [submodule "rul-datasets"]
-	path = rul-datasets
+	path = local_packages/rul-datasets
 	url = https://github.com/tilman151/rul-datasets
 [submodule "TabPFN"]
-	path = TabPFN
+	path = local_packages/TabPFN
 	url = https://github.com/PriorLabs/TabPFN
 [submodule "phmd"]
-	path = phmd
+	path = local_packages/phmd
 	url = https://github.com/EPFL-IMOS/imos_phmd
 	branch = collab_lalr
 [submodule "TabDPT"]
-	path = TabDPT
+	path = local_packages/TabDPT
 	url = git@github.com:layer6ai-labs/TabDPT.git
+[submodule "carte"]
+	path = local_packages/carte-ai
+	url = git@github.com:soda-inria/carte.git
