@@ -267,6 +267,17 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 ]
             )
             # TODO: workout the case of {None}, we should explicitly state which dim to use in such cases!
+            if var_dim == {None}:
+                var_dim = {metadata.get("ragged_dim", None)}
+
+                # check that metadata is not None, otherwise raise error
+                if var_dim == {None}:
+                    raise ValueError(
+                        "Data appears to be ragged but no variable-length dimension "
+                        "was found. Please specify 'ragged_dim' in metadata."
+                        f"Transform metadata is: {metadata} in transform {self.__class__.__name__}"
+                    )
+
             assert (
                 len(var_dim) == 1
             ), f"Expected exactly one variable-length dimension, found {var_dim}"
