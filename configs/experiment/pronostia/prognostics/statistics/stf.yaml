@@ -21,7 +21,9 @@ datamodule:
 
 
 
-
+dataset:
+  dataset_cfg:
+    get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.
 
 
 
@@ -35,7 +37,4 @@ callbacks:
     mode: min
 
 
-# This func. could be useful later on. Some flags directly through the whole pipeline to the RaggedArray and Sequencer
-# dataset:
-#   dataset_cfg:
-#     return_index_flag: true
+

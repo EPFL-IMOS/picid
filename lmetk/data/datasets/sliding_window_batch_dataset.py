@@ -30,7 +30,6 @@ class SlidingWindowBatchDataset(BaseDataset):
         stride: int,
         suffixes=["_seq_x", "_seq_y"],
         padding_left_flag: int = 0,
-        return_index_flag: bool = False,
         warmup_steps: int = None,
         **kwargs,
     ):
@@ -46,7 +45,6 @@ class SlidingWindowBatchDataset(BaseDataset):
             pred_len=pred_len,
             stride=stride,
             padding_left_flag=padding_left_flag,
-            return_index_flag=return_index_flag,
             warmup_steps=warmup_steps,
         )
 
@@ -90,18 +88,13 @@ class SlidingWindowBatchDataset(BaseDataset):
             # x, y = drv.sequences_batch(idx)
 
             sequencer_output = drv.sequences_batch(idx)
-            if drv.driver.return_index_flag:
-                x, y, idx_sel = sequencer_output
-            else:
-                x, y = sequencer_output
+            x, y = sequencer_output
 
             # seq_x: (B, seq_len, C),
             # seq_y: (B, label_len + pred_len, C);
             # note that y can be empty tensor; (B,T,C)
             out[f"{k}{self.suffixes[0]}"] = x
             out[f"{k}{self.suffixes[1]}"] = y
-            if drv.driver.return_index_flag:
-                out["idx_sel"] = idx_sel
 
         return out
 

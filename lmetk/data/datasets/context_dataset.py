@@ -21,7 +21,6 @@ class ContextBatchDataset(BaseDataset):
         pred_len: int,  # prediction size
         stride: int = 1,
         padding_left_flag: int = 0,
-        return_index_flag: bool = False,
         warmup_steps: int = None,
         **kwargs,
     ):
@@ -54,7 +53,6 @@ class ContextBatchDataset(BaseDataset):
             pred_len=pred_len,
             stride=stride,
             padding_left_flag=padding_left_flag,
-            return_index_flag=return_index_flag,
             warmup_steps=warmup_steps,
         )
 

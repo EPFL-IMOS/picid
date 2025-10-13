@@ -32,7 +32,6 @@ class DenseArraySequencer(BaseSequencer):
         pred_len: int,
         stride: int,
         padding_left_flag: int = 0,
-        return_index_flag: bool = False,
         warmup_steps: int = None,
     ):
         if isinstance(array, np.ndarray):
@@ -52,7 +51,6 @@ class DenseArraySequencer(BaseSequencer):
             pred_len=pred_len,
             stride=stride,
             padding_left_flag=padding_left_flag,
-            return_index_flag=return_index_flag,
             warmup_steps=warmup_steps,
         )
 
@@ -75,7 +73,6 @@ class RaggedArraySequencer(BaseSequencer):
         pred_len: int,
         stride: int,
         padding_left_flag: int = 0,
-        return_index_flag: bool = False,
         warmup_steps: int = None,
     ):
         array = ak.values_astype(array, np.float32)
@@ -92,7 +89,6 @@ class RaggedArraySequencer(BaseSequencer):
             pred_len=pred_len,
             stride=stride,
             padding_left_flag=padding_left_flag,
-            return_index_flag=return_index_flag,
             warmup_steps=warmup_steps,
         )
 
