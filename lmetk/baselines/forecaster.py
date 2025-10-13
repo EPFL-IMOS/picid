@@ -6,6 +6,9 @@ import torch
 from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
+from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
+    WarmupReduceLROnPlateauScheduler,
+)
 from lmetk.model.utils.revin import RevIN, SeriesDecomposition
 from lmetk.pipeline.base import CustomEvaluatorLightningModule
 
@@ -327,10 +330,64 @@ class Forecaster(CustomEvaluatorLightningModule):
             patience=3,
             factor=0.2,
         )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
                 "monitor": "val/loss",
+                "interval": "epoch",
+                "frequency": 1,
             },
         }
+
+
+class TransformerForecaster(Forecaster):
+    def __init__(self, scheduler_Loss_monitor="forecast_loss", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.scheduler_Loss_monitor = scheduler_Loss_monitor
+        self.validation_step_outputs = []
+
+    def _validation_step(self, batch, batch_idx):
+        outs = super()._validation_step(batch, batch_idx)
+        self.validation_step_outputs.append(outs)
+        return outs
+
+    def on_validation_epoch_end(self):
+        super().on_validation_epoch_end()
+        outs = self.validation_step_outputs
+        total = 0
+        count = 0
+        for dict_ in outs:
+            if self.scheduler_Loss_monitor in dict_:
+                total += dict_[self.scheduler_Loss_monitor].mean()
+                count += 1
+            else:
+                raise ValueError(
+                    f"Could not find {self.scheduler_Loss_monitor} in the validation outputs"
+                )
+
+        avg_val_loss = total / count
+        self.scheduler.step(avg_val_loss, is_end_epoch=True)
+        self.validation_step_outputs.clear()
+
+    def training_step(self, batch, batch_idx):
+        outs = super().training_step(batch, batch_idx)
+        self.scheduler.step()
+        return outs
+
+    def configure_optimizers(self):
+        self.optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.base_lr,
+            weight_decay=self.l2_coeff,
+        )
+        self.scheduler = WarmupReduceLROnPlateauScheduler(
+            self.optimizer,
+            init_lr=self.init_lr,
+            peak_lr=self.base_lr,
+            warmup_steps=self.warmup_steps,
+            patience=self.patience,
+            factor=self.decay_factor,
+        )

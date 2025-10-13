@@ -6,8 +6,7 @@ import torch.nn.functional as F
 import torchmetrics
 
 from lmetk.baselines.definitions import REGRESSION_TASKS
-from lmetk.baselines.forecaster import Forecaster
-from lmetk.lr_scheduler import WarmupReduceLROnPlateauScheduler
+from lmetk.baselines.forecaster import TransformerForecaster
 
 from .nn import Spacetimeformer
 
@@ -22,7 +21,7 @@ def find_ckpt(path):
     return files[0]
 
 
-class Spacetimeformer_Forecaster(Forecaster):
+class Spacetimeformer_Forecaster(TransformerForecaster):
     def __init__(
         self,
         d_yc: int,
@@ -116,6 +115,7 @@ class Spacetimeformer_Forecaster(Forecaster):
             d_x = 1
 
         super().__init__(
+            scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
@@ -435,42 +435,3 @@ class Spacetimeformer_Forecaster(Forecaster):
         if output_attn:
             return forecast_output, recon_output, (logits, labels), attn
         return forecast_output, recon_output, (logits, labels)
-
-    def _validation_step(self, batch, batch_idx):
-        outs = super()._validation_step(batch, batch_idx)
-        self.validation_step_outputs.append(outs)
-        return outs
-
-    def on_validation_epoch_end(self):
-        super().on_validation_epoch_end()
-        outs = self.validation_step_outputs
-        total = 0
-        count = 0
-        for dict_ in outs:
-            if "forecast_loss" in dict_:
-                total += dict_["forecast_loss"].mean()
-                count += 1
-        avg_val_loss = total / count
-        self.scheduler.step(avg_val_loss, is_end_epoch=True)
-        self.validation_step_outputs.clear()
-
-    def training_step(self, batch, batch_idx):
-        outs = super().training_step(batch, batch_idx)
-        self.scheduler.step()
-        return outs
-
-    def configure_optimizers(self):
-        self.optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.base_lr,
-            weight_decay=self.l2_coeff,
-        )
-        self.scheduler = WarmupReduceLROnPlateauScheduler(
-            self.optimizer,
-            init_lr=self.init_lr,
-            peak_lr=self.base_lr,
-            warmup_steps=self.warmup_steps,
-            patience=self.patience,
-            factor=self.decay_factor,
-        )
-        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

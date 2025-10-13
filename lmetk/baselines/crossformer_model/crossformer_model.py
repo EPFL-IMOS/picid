@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from lmetk.baselines.definitions import REGRESSION_TASKS
-from lmetk.baselines.forecaster import Forecaster
+from lmetk.baselines.forecaster import TransformerForecaster
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
 )
@@ -15,7 +15,7 @@ from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
 from .cross_former import Crossformer
 
 
-class Crossformer_Forecaster(Forecaster):
+class Crossformer_Forecaster(TransformerForecaster):
     def __init__(
         self,
         d_x: int,
@@ -52,6 +52,7 @@ class Crossformer_Forecaster(Forecaster):
         **kwargs,
     ):
         super().__init__(
+            scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
@@ -236,4 +237,3 @@ class Crossformer_Forecaster(Forecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
-        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")

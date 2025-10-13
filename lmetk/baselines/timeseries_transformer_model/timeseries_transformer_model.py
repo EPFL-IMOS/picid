@@ -7,16 +7,13 @@ import torch.nn.functional as F
 from torch import nn
 
 from lmetk.baselines.definitions import REGRESSION_TASKS
-from lmetk.baselines.forecaster import Forecaster
+from lmetk.baselines.forecaster import TransformerForecaster
 from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
-from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
-    WarmupReduceLROnPlateauScheduler,
-)
 
 from .timeseries_transformer import Model as Transformer
 
 
-class Timeseries_Transformer_Forecaster(Forecaster):
+class Timeseries_Transformer_Forecaster(TransformerForecaster):
     def __init__(
         self,
         d_x: int,
@@ -47,6 +44,7 @@ class Timeseries_Transformer_Forecaster(Forecaster):
         **kwargs,
     ):
         super().__init__(
+            scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
@@ -212,19 +210,3 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             "forecast_out": forecast_out,
             "forecast_mask": forecast_mask,
         }
-
-    def configure_optimizers(self):
-        self.optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.base_lr,
-            weight_decay=self.l2_coeff,
-        )
-        self.scheduler = WarmupReduceLROnPlateauScheduler(
-            self.optimizer,
-            init_lr=self.init_lr,
-            peak_lr=self.base_lr,
-            warmup_steps=self.warmup_steps,
-            patience=self.patience,
-            factor=self.decay_factor,
-        )
-        return dict(optimizer=self.optimizer, scheduler=self.scheduler, monitor="loss")
