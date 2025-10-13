@@ -11,10 +11,12 @@ import uuid
 import hydra
 import lightning as L
 import numpy as np
+import omegaconf
 import torch
 import awkward as ak
 
-from lightning import Callback, Trainer
+from lightning import Callback, Trainer, LightningDataModule
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf
@@ -29,6 +31,7 @@ from lmetk.data.datasources.nb14.loader import NB14Loader
 from lmetk.data.datasources.unibo.loader import UNIBO21Loader
 
 from lmetk.data.preprocessing.preprocessor import PreProcessor
+from lmetk.evaluator.base import AbstractEvaluator
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardWrapper,
     AbstractFitPredictWrapper,
@@ -156,6 +159,168 @@ def initialize_hydra() -> DictConfig:
 
 torch.set_num_threads(1)
 log = RankedLogger(__name__, rank_zero_only=True)
+
+
+def log_training_run_config(
+    cfg: DictConfig,
+    trainer: Trainer,
+    model: L.LightningModule,
+    logger: list[Logger],
+):
+
+    # This is needed because wandb otherwise only tracks part of the config
+    cfg_container = OmegaConf.to_container(cfg, resolve=True)
+    resolved_cfg = OmegaConf.create(cfg_container)
+    OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
+
+    cfg_container["hydra_cfg"] = OmegaConf.to_container(
+        # cannot resolve because not all interpolations are covered by us for now
+        HydraConfig.get(),
+        resolve=False,
+    )
+
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+
+            exp_name = get_hydra_override("experiment")
+            cfg_container["exp_name"] = exp_name
+            lgr.experiment.config.update(cfg_container)
+
+    if logger:
+        model_summary = get_model_summary(model)
+        log.info("Logging hyperparameters!")
+        log_hyperparameters(
+            {
+                "cfg": cfg,
+                "trainer": trainer,
+                "model/params/total": model_summary[-1]["total_params"],
+                "model/params/trainable": model_summary[-1]["trainable_params"],
+            }
+        )
+
+
+def create_lightning_module(
+    cfg: DictConfig,
+    datamodule: LightningDataModule,
+    evaluators: list[AbstractEvaluator],
+    optimizer: Any,
+    loss: Any,
+):
+    if not cfg.model.get("metadata", False):
+        add_backbone_args = {}
+        if cfg.datasource.data_name == "railway":
+            add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
+            add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
+
+        backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args)
+
+        if cfg.model.get("load_path", False):
+            backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
+
+        if isinstance(backbone_wrapper, AbstractFeedForwardWrapper):
+            model = ConstantLossLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,
+            )
+        elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
+            model = TrainingLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,
+            )
+
+        elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
+            model = FitPredictWrapperLightningModule(
+                backbone=backbone_wrapper,
+                loss=loss,
+                evaluators=evaluators,
+                optimizer=optimizer,
+                debug=cfg.get("debug", False),
+            )
+        else:
+            raise ValueError(
+                f"Unsupported backbone wrapper type: {type(backbone_wrapper)}"
+            )
+
+    else:
+        if cfg.model.metadata.get("lightning_model", False):
+            # Model is already a standard LightningModule and does not require a wrapper
+            model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
+
+    return model
+
+
+def rerun_best_model_checkpoint(
+    cfg: DictConfig,
+    datamodule: LightningDataModule,
+    device: torch.device,
+    callbacks: list[Callback],
+    evaluators: list[AbstractEvaluator],
+    optimizer: Any,
+    loss: Any,
+    logger: list[Logger],
+) -> None:
+
+    checkpoint_model = None
+    for callback in callbacks:
+        if isinstance(callback, ModelCheckpoint):
+            log.info(
+                f"Loading best model from checkpoint at {callback.best_model_path}"
+            )
+            model_path = Path(callback.best_model_path)
+            ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+
+            checkpoint_model = create_lightning_module(
+                cfg=cfg,
+                datamodule=datamodule,
+                evaluators=evaluators,
+                optimizer=optimizer,
+                loss=loss,
+            )
+
+            checkpoint_model.load_state_dict(ckpt["state_dict"], strict=True)
+            checkpoint_model.to(device)
+            break  # there is only one checkpoint callback
+
+    if checkpoint_model is None:
+        raise ValueError("No ModelCheckpoint callback found, cannot load best model.")
+
+    # New trainer to log final metrics on validation set
+    # Because wandb displays validation metrics from the final, not the best epoch.
+    checkpoint_trainer: Trainer = hydra.utils.instantiate(
+        cfg.trainer,
+        num_sanity_val_steps=0,
+        enable_progress_bar=cfg.get("enable_progress_bar", True),
+    )
+
+    log.info("Re-testing best model checkpoint on validation set!")
+    val_loader = datamodule.val_dataloader()
+    results = checkpoint_trainer.test(model=checkpoint_model, dataloaders=val_loader)
+    if results:
+        logged = {}
+        for k, v in results[0].items():
+            suffix = k.split("/", 1)[1] if "/" in k else k
+            logged[f"val_best_rerun/{suffix}"] = v
+        log.info(logged)
+        for lgr in logger:
+            if isinstance(lgr, WandbLogger):
+                lgr.log_metrics(logged)
+
+    log.info("Re-testing best model checkpoint on test set!")
+    test_loader = datamodule.test_dataloader()
+    results = checkpoint_trainer.test(model=checkpoint_model, dataloaders=test_loader)
+    if results:
+        logged = {}
+        for k, v in results[0].items():
+            suffix = k.split("/", 1)[1] if "/" in k else k
+            logged[f"test_best_rerun/{suffix}"] = v
+        log.info(logged)
+        for lgr in logger:
+            if isinstance(lgr, WandbLogger):
+                lgr.log_metrics(logged)
 
 
 @task_wrapper
@@ -429,51 +594,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # by using a resolver like ${infer_data_dim:input_key,dim}
     register_data_dim_resolver(data=data_dict["train"])
 
-    if not cfg.model.get("metadata", False):
-        add_backbone_args = {}
-        if cfg.datasource.data_name == "railway":
-            add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
-            add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
-
-        backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args)
-
-        if cfg.model.get("load_path", False):
-            backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
-
-        if isinstance(backbone_wrapper, AbstractFeedForwardWrapper):
-            model = ConstantLossLightningModule(
-                backbone=backbone_wrapper,
-                loss=loss,
-                evaluators=evaluators,
-                optimizer=optimizer,
-            )
-        elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
-            model = TrainingLightningModule(
-                backbone=backbone_wrapper,
-                loss=loss,
-                evaluators=evaluators,
-                optimizer=optimizer,
-            )
-
-        elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
-            model = FitPredictWrapperLightningModule(
-                backbone=backbone_wrapper,
-                loss=loss,
-                evaluators=evaluators,
-                optimizer=optimizer,
-                debug=cfg.get("debug", False),
-            )
-        else:
-            raise ValueError(
-                f"Unsupported backbone wrapper type: {type(backbone_wrapper)}"
-            )
-
-    else:
-        if cfg.model.metadata.get("lightning_model", False):
-            # Model is already a standard LightningModule and does not require a wrapper
-            model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
-
-    model_summary = get_model_summary(model)
+    model = create_lightning_module(
+        cfg=cfg,
+        datamodule=datamodule,
+        evaluators=evaluators,
+        optimizer=optimizer,
+        loss=loss,
+    )
 
     additional_trainer_args = {}
     if isinstance(model, FitPredictWrapperLightningModule):
@@ -488,34 +615,12 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         enable_progress_bar=cfg.get("enable_progress_bar", True),
     )
 
-    # This is needed because wandb otherwise only tracks part of the config
-    cfg_container = OmegaConf.to_container(cfg, resolve=True)
-    resolved_cfg = OmegaConf.create(cfg_container)
-    OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
-
-    cfg_container["hydra_cfg"] = OmegaConf.to_container(
-        # cannot resolve because not all interpolations are covered by us for now
-        HydraConfig.get(),
-        resolve=False,
+    log_training_run_config(
+        cfg=cfg,
+        trainer=trainer,
+        model=model,
+        logger=logger,
     )
-
-    for lgr in logger:
-        if isinstance(lgr, WandbLogger):
-
-            exp_name = get_hydra_override("experiment")
-            cfg_container["exp_name"] = exp_name
-            lgr.experiment.config.update(cfg_container)
-
-    if logger:
-        log.info("Logging hyperparameters!")
-        log_hyperparameters(
-            {
-                "cfg": cfg,
-                "trainer": trainer,
-                "model/params/total": model_summary[-1]["total_params"],
-                "model/params/trainable": model_summary[-1]["trainable_params"],
-            }
-        )
 
     if cfg.task_definition.get("requires_training", False):
         log.info("Starting training!")
@@ -526,6 +631,22 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # This is very important for wandb because wandb logs the last lowest val/metric <-> lowest test/metric;
     trainer.test(model=model, datamodule=datamodule)
+
+    # We want to avoid running this for pfn models where there is no training
+    # and thus no checkpoint and rerunning pfn model would take significant time.
+    if cfg.task_definition.get("requires_training", False) and (
+        cfg.trainer.max_epochs > 1
+    ):
+        rerun_best_model_checkpoint(
+            cfg=cfg,
+            datamodule=datamodule,
+            device=trainer.strategy.root_device,
+            callbacks=callbacks,
+            evaluators=evaluators,
+            optimizer=optimizer,
+            loss=loss,
+            logger=logger,
+        )
 
     return None, None  # metric_dict, object_dict
 
