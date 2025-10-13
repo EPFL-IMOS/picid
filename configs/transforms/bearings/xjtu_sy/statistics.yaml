@@ -12,6 +12,7 @@
 scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+    ragged_dim: 1
     
   metadata:
     apply_to: features
