@@ -225,13 +225,22 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         data_is_ragged = data_types.pop() is ak.Array
 
         if data_is_ragged:
-            # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
-            # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
-            ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
-            # The data is regular if the only "ragged dimension" found is None.
-            data_is_ragged_but_regular = ragged_dims == {None}
-            if data_is_ragged_but_regular:
-                data_is_ragged = False
+            # TODO: This patch is solely valid for the cases when we have 2D data (N,C) then some numpy transforms can by chance work with the data.
+            # For example that is valid for the case when we scale targets size of N by 1. But that is not valid when we have 3D data (N,T,C) and we want to scale the features.
+
+            # Make sure we have 2 dim here if not then skip the rest of this if
+            dims = [
+                data_segments[-1][key].ndim for key in list(data_segments[-1].keys())
+            ]
+            if len(set(dims)) == 1 and dims[0] == 2:
+                # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
+                # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
+                ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
+
+                # The data is regular if the only "ragged dimension" found is None.
+                data_is_ragged_but_regular = ragged_dims == {None}
+                if data_is_ragged_but_regular:
+                    data_is_ragged = False
 
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
@@ -257,6 +266,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                     for data_segment in data_segments
                 ]
             )
+            # TODO: workout the case of {None}, we should explicitly state which dim to use in such cases!
             assert (
                 len(var_dim) == 1
             ), f"Expected exactly one variable-length dimension, found {var_dim}"

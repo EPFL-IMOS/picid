@@ -100,7 +100,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
         # --- 2. Handle Ragged Array Processing (if enabled) ---
 
-        if self.use_ragged:
+        if self._init_kwargs['use_ragged']:
             # For ragged mode, we reshape the flat time-series data into sequences
             # of a fixed length (SAMPLE_RANGE_SIZE).
 
