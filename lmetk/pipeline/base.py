@@ -101,6 +101,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
                 metrics_dict[key],
                 prog_bar=True,
                 on_step=False,
+                # Needs to be true to update the callbacks (such as early stopping)
+                on_epoch=True,
             )
 
         self.evaluators[mode].reset()
