@@ -1,0 +1,36 @@
+#@package _global_
+
+defaults:
+  - override /dataset: state_forecasting/default
+  - override /datamodule: base_datamodule
+  - override /model: timeseries_transformer
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  d_yc: ${infer_data_dim:features,-1}
+  d_yt: ${infer_data_dim:features,-1}
+  d_x: 0
+  n_timefeatures: 0
+
+  transformer_args:
+    seq_len: ${task_definition.seq_len}
+    pred_len: ${task_definition.pred_len}
+    dec_in: ${infer_data_dim:features,-1}
+    c_out: ${infer_data_dim:features,-1}
+    enc_context_in: null
+    dec_context_in: null
+
+    # We need a different embedding (DataEmbedding)
+    # if we have no encoder and decoder context.
+    embed_type: 3 # DataEmbedding_wo_temp

@@ -1,0 +1,19 @@
+#@package _global_
+
+defaults:
+  - override /datasource: concepts_n_cmapss_ds02_state_forecasting
+  - override /evaluator: forecasting
+  - override /task_definition: state_forecasting/c4_l0_p1
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_features
+    apply_inverse_scaling: True
+
+  val:
+    inverse_transform_name: scaler_features
+    apply_inverse_scaling: True
+
+  test:
+    inverse_transform_name: scaler_features
+    apply_inverse_scaling: True

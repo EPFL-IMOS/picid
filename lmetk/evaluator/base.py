@@ -3,7 +3,10 @@
 from abc import ABC, abstractmethod
 
 from typing import Optional, Any
-from lmetk.evaluator.scaling_wrapper import ScalingWrapper
+from lmetk.evaluator.scaling_wrapper import (
+    MultivariateTimeseriesScalingWrapper,
+    ScalingWrapper,
+)
 from lmetk.transforms.base.multisource import InverseTransformMixin
 
 
@@ -37,11 +40,19 @@ class AbstractEvaluator(ABC):
             Additional keyword arguments to set as instance variables.
         """
         super().__init__()
-        self.scaling_wrapper = ScalingWrapper(
-            inverse_transform=inverse_transform,
-            apply_inverse_scaling=apply_inverse_scaling,
-            task_mode=task_mode,
-        )
+
+        if task_mode == "multivariate":
+            self.scaling_wrapper = MultivariateTimeseriesScalingWrapper(
+                inverse_transform=inverse_transform,
+                apply_inverse_scaling=apply_inverse_scaling,
+                task_mode=task_mode,
+            )
+        else:
+            self.scaling_wrapper = ScalingWrapper(
+                inverse_transform=inverse_transform,
+                apply_inverse_scaling=apply_inverse_scaling,
+                task_mode=task_mode,
+            )
 
         self.task_mode = task_mode
         self.paths = paths

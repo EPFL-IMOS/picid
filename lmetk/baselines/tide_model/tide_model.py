@@ -65,9 +65,15 @@ class TiDE_Forecaster(Forecaster):
             task_type=task_type,
         )
 
+        task_name = (
+            "state_forecasting"
+            if (self.task_type == "state_forecasting")
+            else "long_term_forecast"
+        )
+
         configs = OmegaConf.create(
             {
-                "task_name": "long_term_forecast",
+                "task_name": task_name,
                 "seq_len": ts_in,
                 # "label_len": ts_in, # not used?
                 "pred_len": ts_out,
@@ -145,7 +151,9 @@ class TiDE_Forecaster(Forecaster):
             y_c = torch.zeros(
                 (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
             )
-
+        elif self.task_type == "state_forecasting":
+            assert x_c is None, "x_c should be None for state forecasting tasks"
+            assert x_t is None, "x_t should be None for state forecasting tasks"
         # x_t = torch.rand_like(x_t)
         # y_c = y_c + 0.1 * torch.rand_like(y_c)
 

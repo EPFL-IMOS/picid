@@ -7,7 +7,7 @@ from typing import override
 import joblib
 import torch
 
-from TabDPT.src.tabdpt import TabDPTRegressor
+from tabdpt import TabDPTRegressor
 from .base import AbstractFitPredictWrapper
 
 logger = logging.getLogger(__name__)

@@ -60,7 +60,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             task_type=task_type,
         )
 
-        self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+        if self.d_x > 0:
+            self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
+
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
 
         self.n_timefeatures = n_timefeatures
@@ -69,7 +71,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
                 [0] * (d_x - n_timefeatures) + [1] * n_timefeatures
             )
 
-        is_regression = self.task_type in REGRESSION_TASKS
+        is_regression = (
+            self.task_type in REGRESSION_TASKS or self.task_type == "state_forecasting"
+        )
 
         self.transformer = Transformer(transformer_args, decoder_only=is_regression)
         self.init_lr = init_lr
@@ -134,6 +138,9 @@ class Timeseries_Transformer_Forecaster(Forecaster):
             )
             output = self.transformer(None, None, batch_y, batch_y_mark)
 
+        if self.task_type == "state_forecasting":
+            batch_x = y_c.to(self.device)
+            output = self.transformer(None, None, batch_x, None)
         else:
             batch_x, batch_y, batch_x_mark, batch_y_mark = (
                 y_c.to(self.device),

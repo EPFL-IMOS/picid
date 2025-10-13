@@ -104,6 +104,17 @@ class Spacetimeformer_Forecaster(Forecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
+
+        if task_type == "state_forecasting":
+            # currently we populate d_x as zero vector for state forecasting
+            # this would need to be changes if we want to include timefeatures
+            assert d_x == 0, "for state forecasting d_x must be 0"
+
+            # in state forecasting we do not have covariates
+            # however, we still have toembed a zero vector because
+            # the embedding adds positional and variable embeddings
+            d_x = 1
+
         super().__init__(
             d_x=d_x,
             d_yc=d_yc,
@@ -355,6 +366,13 @@ class Spacetimeformer_Forecaster(Forecaster):
 
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
+
+        if self.task_type == "state_forecasting":
+            # in state forecasting we do not have covariates
+            # however, we still have toembed a zero vector because
+            # the embedding adds positional and variable embeddings
+            x_c = torch.zeros(y_c.shape[0], y_c.shape[1], 1).to(y_c.device)
+            x_t = torch.zeros(y_t.shape[0], y_t.shape[1], 1).to(y_t.device)
 
         enc_x = x_c
         enc_y = y_c

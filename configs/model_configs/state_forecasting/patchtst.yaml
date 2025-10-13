@@ -1,0 +1,26 @@
+#@package _global_
+
+defaults:
+  - override /dataset: state_forecasting/default
+  - override /datamodule: base_datamodule
+  - override /model: patchtst
+
+task_definition:
+  requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  ts_in: ${task_definition.seq_len}
+  ts_out: ${task_definition.pred_len}
+  d_yc: ${infer_data_dim:features,-1}
+  d_yt: ${infer_data_dim:features,-1}
+  d_x: 0
+  include_x_t: false

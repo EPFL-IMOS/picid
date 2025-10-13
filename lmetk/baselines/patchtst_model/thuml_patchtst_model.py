@@ -109,7 +109,7 @@ class PatchTST_Forecaster(Forecaster):
             self.d_x_mask = None
         self.mask_y_c = mask_y_c
 
-        if self.task_type in REGRESSION_TASKS:
+        if self.task_type in REGRESSION_TASKS or self.task_type == "state_forecasting":
             # We only support this case so far
             assert (
                 self.include_x_t is False
@@ -133,7 +133,7 @@ class PatchTST_Forecaster(Forecaster):
             if self.mask_y_c:
                 y_c = torch.zeros_like(y_c)
 
-        if not self.include_x_t:
+        if not self.include_x_t and x_t is not None:
             x_t = torch.zeros_like(x_t, device=self.device)
 
         # In the regresssion case, we show x_t as additional features
@@ -162,7 +162,10 @@ class PatchTST_Forecaster(Forecaster):
                 x_mark_dec=x_t,
             )
         else:
-            batch_x = torch.cat([y_c, x_c], dim=2)
+            if x_c is not None:
+                batch_x = torch.cat([y_c, x_c], dim=2)
+            else:
+                batch_x = y_c
             # outputs = self.model(x=batch_x)
             outputs = self.model(
                 x_enc=batch_x, x_mark_enc=x_c, x_dec=None, x_mark_dec=x_t

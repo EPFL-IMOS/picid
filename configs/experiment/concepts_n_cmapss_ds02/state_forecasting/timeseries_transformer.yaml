@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds02/state_forecasting/base
+  - /model_configs/state_forecasting/timeseries_transformer
+  - override /transforms: concepts_n_cmapss/depater2023_default

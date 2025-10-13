@@ -98,6 +98,9 @@ class ConceptRULDataset(BaseDataset):
                 "features": torch.Tensor(x).squeeze(),
                 "rul": torch.Tensor([self.df_Y[i * self.stride]]).squeeze(),
                 "concepts": torch.Tensor(self.concepts[i * self.stride]),
+                "health_state": torch.Tensor(
+                    [self.health_states[i * self.stride]]
+                ).squeeze(),
             }
         )
 

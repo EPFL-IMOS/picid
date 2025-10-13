@@ -4,7 +4,8 @@
     "PYTHONPATH": "${workspaceFolder}"
   },
   "python.analysis.extraPaths": [
-    "${workspaceFolder}"
+    "${workspaceFolder}",
+    "./local_packages/carte-ai"
   ],
   "python.testing.unittestArgs": [
     "-v",

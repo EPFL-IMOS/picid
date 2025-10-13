@@ -24,7 +24,7 @@ echo "Script directory determined as: $SCRIPT_DIR"
 # Add this line to get detailed errors from Hydra
 export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
-source "$SCRIPT_DIR/base/logging.sh"
+source "$SCRIPT_DIR/../../base/logging.sh"
 
 
 
@@ -40,8 +40,10 @@ wandb_log_folder="TabPFN_ds02_sweep_2025_10_09"
 # )
 datasets=("concepts_n_cmapss_ds02/prognostics")
 model_names=(tabpfn_fit_predict)
-context_lengths=(5 10 20 50 100)
-train_set_strides=(1 5 10 20 50)
+
+# Careful here because of oom issues with long context lengths / short strides
+context_lengths=(5 10 20 50)
+train_set_strides=(5 10 20 50)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -83,7 +85,7 @@ for model_name in "${model_names[@]}"; do
                     python lmetk/run.py \
                     paths=runai \
                     experiment=${dataset}/${model_name} \
-                    trainer.devices=[${device}] \
+                    # trainer.devices=[${device}] \
                     logger.wandb.project=${wandb_log_folder} \
                     task_definition.seq_len=${context_length} \
                     task_definition.stride_train=${train_set_stride} \

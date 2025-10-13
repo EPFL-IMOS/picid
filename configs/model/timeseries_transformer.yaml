@@ -4,8 +4,8 @@ metadata:
   lightning_model: true
 
 task_type: ${task_definition.task_type}
-d_yc:  null # must be set by the model_config
-d_yt:  null # must be set by the model_config
+d_yc: null # must be set by the model_config
+d_yt: null # must be set by the model_config
 d_x: null # must be set by the model_config
 
 decay_factor: 0.9
@@ -18,12 +18,12 @@ use_revin: false
 use_seasonal_decomp: false
 
 transformer_args:
-  features: M 
+  features: M
   seq_len: null # must be set by the model_config
   label_len: 0
   pred_len: null # must be set by the model_config
   e_layers: 2
-  d_layers: 2 
+  d_layers: 2
   factor: 3
   enc_in: 1
   dec_in: 1
@@ -31,11 +31,11 @@ transformer_args:
   dec_context_in: null # must be set by the model_config
   c_out: 1
   des: Exp
-  embed_type: 5 
+  embed_type: 5
   output_attention: false
   embed: timeF # true
   freq: t #h
-  dropout: 0.0  
+  dropout: 0.0
   n_heads: 2
 
   d_ff: 256

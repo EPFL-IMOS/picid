@@ -43,7 +43,6 @@ from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.transforms.base.transform_manager import ConfigTransformManager
 
-
 from lmetk.utils import (
     RankedLogger,
     extras,
@@ -187,6 +186,17 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         # os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
         # os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
         log.info(f"Set number of threads to {cfg.num_threads}")
+
+    if not (fa_flag := cfg.get("flash_attention", True)):
+        if not fa_flag:
+            log.warning(
+                "Flash attention is disabled. This may lead to increased memory usage."
+            )
+            #  If OOM errors occur, try to set these to False
+            # because otherwise flash attention does not throw an error.
+            torch.backends.cuda.enable_flash_sdp(False)
+            torch.backends.cuda.enable_mem_efficient_sdp(False)
+            torch.backends.cuda.enable_math_sdp(True)
 
     # Set seed for random number generators in pytorch, numpy and python.random
     L.seed_everything(cfg.seed, workers=True)

@@ -29,13 +29,15 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         random_state: int,
         device: str,
         n_jobs: int,
+        max_epoch: int = 500,
         pretrained_model_path: str = None,
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
         **kwargs,
     ):
-        device = "cuda" if device == "gpu" else "cpu"
+        # Lightning uses 'cuda' or 'gpu' as device string
+        device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
 
         fixed_params = dict()
         fixed_params["num_model"] = num_model
@@ -44,6 +46,7 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         fixed_params["device"] = device
         fixed_params["n_jobs"] = n_jobs
         fixed_params["pretrained_model_path"] = config_directory["pretrained_model"]
+        fixed_params["max_epoch"] = max_epoch
 
         backbone = CARTERegressor(**fixed_params)  # CARTERegressor for Regression
         model_path = hf_hub_download(

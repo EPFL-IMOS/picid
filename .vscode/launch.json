@@ -239,6 +239,23 @@
             }
         },
         {
+            "name": "Railway Traction: Fit-Predict TabDPT",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=railway_traction/forecasting/tabdpt_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Railway Traction: Fit-Predict Autogluon",
             "type": "debugpy",
             "request": "launch",
@@ -367,6 +384,23 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (DS02): Carte Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/carte_fit_predict",
+                "debug=default"
+            ],
+            "justMyCode": false,
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Concepts N-CMAPSS (DS02): TabPFN Batch-Context",
             "type": "debugpy",
             "request": "launch",
@@ -479,6 +513,102 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: stf ",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/stf",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: patchtst",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/patchtst",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: timeseries_transformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/timeseries_transformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: tide",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/tide",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/lstm",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02) State Forecasting: Crossformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/state_forecasting/crossformer",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Concepts N-CMAPSS (DS02): CNN-1D",
             "type": "debugpy",
             "request": "launch",
@@ -583,6 +713,22 @@
             "args": [
                 "paths=rt_local",
                 "experiment=xjtu_sy/prognostics/tabpfn_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "XJTU_SY : LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/prognostics/lstm",
                 "debug=default"
             ],
             "env": {
