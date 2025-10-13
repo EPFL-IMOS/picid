@@ -12,13 +12,12 @@
 scaler_features:
   transform:
     _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
-    ragged_dim: 1
+    # TODO: ragged_dim: 1
     
   metadata:
     apply_to: features
     fit_on: train
-    additional_metadata_keys: 
-      ragged_dim: 1
+
 
 scaler_target:
   transform:
