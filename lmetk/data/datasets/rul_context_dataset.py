@@ -154,20 +154,3 @@ class RULContextBatchDataset(ContextBatchDataset):
 
     def get_collate_fn(self):
         return collate_key_value_batch
-
-
-# import awkward as ak
-# import numpy as np
-
-# arr = ak.Array({
-#     "level1": [
-#         {"a": 1, "b": 4, "c": 6},
-#         {"a": 2, "b": 5},
-#         {"a": 3, "b": None, "c": None}
-#     ]
-# })
-# print(arr)
-
-# index = np.array([("level1", "b"), ("level1", "c")])
-
-# print(index.shape)
