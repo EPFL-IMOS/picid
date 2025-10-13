@@ -334,8 +334,8 @@ class BaseDataModule(LightningDataModule):
             loader = self._create_dataloader(
                 self.dataset_test,
                 batch_size=batch_size,
-                shuffle=self.hparams.shuffle_val,
-                collate_fn=self.collate_fn_val,
+                shuffle=self.hparams.shuffle_test,
+                collate_fn=self.collate_fn_test,
             )
             self._test_loader = loader
         else:
