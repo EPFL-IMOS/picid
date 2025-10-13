@@ -85,9 +85,8 @@ class RULContextBatchDataset(ContextBatchDataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
-        # TODO: What is our strategy for having def. params? everythewe? I vote everywhere.
+        get_unit_id: bool = False,
         padding_left_flag: int = 0,
-        return_index_flag: bool = False,
         warmup_steps: int = None,
         **kwargs,
     ):
@@ -95,10 +94,12 @@ class RULContextBatchDataset(ContextBatchDataset):
 
         self.meta_data_dict = kwargs["meta_data_dict"]
 
+        self.get_unit_id = get_unit_id
         # Inject the unit name/id extraction functions into the meta_data_dict
-        self.unid_id = self.extract_unit_id()
-        self.unid_name = self.extract_unit_name()
-        # self.meta_data_dict[key]
+        if self.get_unit_id:
+            self.unid_id = self.extract_unit_id()
+            self.unid_name = self.extract_unit_name()
+
         super().__init__(
             data_dict=data_dict,
             task_type=task_type,
@@ -107,7 +108,6 @@ class RULContextBatchDataset(ContextBatchDataset):
             pred_len=pred_len,
             stride=stride,
             padding_left_flag=padding_left_flag,
-            return_index_flag=return_index_flag,
             warmup_steps=warmup_steps,
             **kwargs,
         )
@@ -132,12 +132,6 @@ class RULContextBatchDataset(ContextBatchDataset):
         d = AttributeDict(
             {
                 "batch_idx": torch.tensor(batch_idx),
-                # It has to b be on the one level down because we should have for every element of the batch one id, otherwise we get errors when we shuffle dataset
-                "unit_id": torch.tensor(
-                    [self.unid_id] * len(batch_idx)
-                ),  # * len(batch_idx)
-                # How can we actually collate strings?
-                # "unit_name": (self.unid_name),
                 # (B=1, seq_len, C) -> (B=1, C),
                 # take the last time step,
                 # collate fn will concatenate over the batch dim
@@ -147,9 +141,11 @@ class RULContextBatchDataset(ContextBatchDataset):
             }
         )
 
-        ragged_indices = context.get("idx_sel", None)
-        if ragged_indices is not None:
-            d["ragged_indices"] = ragged_indices
+        if self.get_unit_id:
+            # It has to b be on the one level down because we should have for every element of the batch one id, otherwise we get errors when we shuffle dataset
+            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx))
+            # How can we actually collate strings?
+            # "unit_name": (self.unid_name),
         return AttributeDict(d)
 
     def get_collate_fn(self):
