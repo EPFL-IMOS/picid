@@ -171,7 +171,7 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
         auxiliary_tasks_fold_dict.pop(self.task_mode, None)
 
-        # TODO: add some clarification on how does the output of _preprocess_fold look like
+        # Dict{train: list, val: list, test: list}
         main_fold = self._preprocess_fold(main_fold, auxiliary_tasks_fold_dict)
 
         # Process each split
