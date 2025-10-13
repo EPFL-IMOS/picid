@@ -74,7 +74,6 @@ class TransformStrategy:
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
         transform_on_keys: Optional[list[str]] = None,
-        additional_metadata_keys: Optional[Dict[str, Any]] = None,
     ) -> SplitDatasetContainer:
 
         if isinstance(apply_to_keys, str):
@@ -111,7 +110,6 @@ class TransformStrategy:
                 "apply_to_keys": fit_on_key,
                 "assign_to_keys": assign_to_keys,
                 "assign_to_map": assign_to_keys_map,
-                "additional_metadata_keys": additional_metadata_keys,
             }
 
             if is_multi_unit:
@@ -139,7 +137,6 @@ class TransformStrategy:
                 "apply_to_keys": apply_to_keys,
                 "assign_to_keys": assign_to_keys,
                 "assign_to_map": assign_to_keys_map,
-                "additional_metadata_keys": additional_metadata_keys,
             }
             # Call the appropriate transform method
             if is_multi_unit:
