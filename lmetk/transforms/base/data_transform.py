@@ -156,10 +156,6 @@ class DataTransform:
         self.fit_on_key = metadata.get("fit_on_key", None)
         self.transform_on_keys = metadata.get("transform_on_keys", None)
 
-        # New feature: any transform now can pass any dict directly to the multisource handling. It adds flexibility to modify inners transforms
-        # without changing the DataTransform interface. For example, in transform_on_keys can be also moved to additional_metadata_keys
-        self.additional_metadata_keys = metadata.get("additional_metadata_keys", None)
-
         if self.fit_on_split is not None and self.fit_on_key is None:
             # Ensure that in such a case self.apply_to is string, not a list, so no ambiguity
             if isinstance(self.apply_to, list):
@@ -295,7 +291,6 @@ class DataTransform:
             fit_on_split=self.fit_on_split,
             fit_on_key=self.fit_on_key,
             transform_on_keys=self.transform_on_keys,
-            additional_metadata_keys=self.additional_metadata_keys,
         )
 
         # --- Post-transformation Validation ---
