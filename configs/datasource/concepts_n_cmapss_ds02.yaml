@@ -40,6 +40,6 @@ test1:
 val1:
   load_arguments:
     n_DS: "02"
-    units: [20]
+    units: [18]
     mode: "train"
   group_by_unit: True
