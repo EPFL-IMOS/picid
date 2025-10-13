@@ -16,6 +16,8 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+    additional_metadata_keys: 
+      ragged_dim: 1
 
 scaler_target:
   transform:
