@@ -100,7 +100,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
         # --- 2. Handle Ragged Array Processing (if enabled) ---
 
-        if self._init_kwargs['use_ragged']:
+        if self._init_kwargs["use_ragged"]:
             # For ragged mode, we reshape the flat time-series data into sequences
             # of a fixed length (SAMPLE_RANGE_SIZE).
 
@@ -144,7 +144,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                 )
 
             # Convert the NumPy arrays to Awkward Arrays for ragged processing
-            df_features = ak.from_numpy(df_features)
+            df_features = ak.from_regular(ak.from_numpy(df_features), axis=1)
             df_target = ak.from_numpy(df_target)
 
         # --- 3. Assemble and Return the Final Dictionary ---
@@ -153,7 +153,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             "features": df_features,
             "target": df_target,
             "metadata": {
-                "unit_id": unit_name.strip("Bearing"),
+                "unit_id": UNIT_NAMES_TO_ID[unit_name.strip("Bearing")],
                 "unit_name": f"Bearing {unit_name.strip("Bearing")}",
                 "unit_length": len(df_features),
                 "features_columns": features_col,

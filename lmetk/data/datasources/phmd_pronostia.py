@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
-
+import awkward as ak
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ UNIT_NAMES_TO_ID = {
     "3_3": (3, 3),
 }
 
+SAMPLE_RANGE_SIZE = 256
+
 
 class PronostiaLoader(PHMDMultiSourceLoader):
 
@@ -41,22 +43,94 @@ class PronostiaLoader(PHMDMultiSourceLoader):
     def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
         return main_fold
 
-    def _process_unit(self, df_unit, unit_name, features_col, target_col):
+    def _process_unit(
+        self, df_unit: pd.DataFrame, unit_name: str, features_col: list, target_col: str
+    ):
+        """
+        Processes a single unit's DataFrame for Remaining Useful Life (RUL) prediction.
 
-        df_features = df_unit[features_col].copy().reset_index(drop=True)
-        df_target = df_unit[target_col].copy().reset_index(drop=True)
-        # repeat the same id for every step
-        unit_id = UNIT_NAMES_TO_ID[unit_name]
+        This method extracts features and targets. It supports two modes:
+        1.  Standard Mode: Returns features and targets as pandas DataFrames.
+        2.  Ragged Mode: Reshapes continuous data into fixed-size sequences,
+            creating ragged Awkward Arrays suitable for sequence models.
+
+        Args:
+            df_unit (pd.DataFrame): The DataFrame for a single operational unit.
+            unit_name (str): The identifier for the unit (e.g., 'Bearing1_3').
+            features_col (list): A list of column names to be used as features.
+            target_col (str): The name of the RUL target column.
+
+        Returns:
+            dict: A dictionary containing the processed 'features', 'target', and 'metadata'.
+
+        Raises:
+            ValueError: If data length is incompatible with the ragged processing mode,
+                        or if RUL values are inconsistent within a sequence in ragged mode.
+        """
+        # --- 1. Prepare Features and Target ---
+
+        # Ensure the task mode is set to 'rul' as this function is specific to it.
+        if self.task_mode != "rul":
+            raise ValueError(
+                f"This processor is configured for 'rul' task, but got '{self.task_mode}'."
+            )
+
+        # Use .copy() to prevent pandas' SettingWithCopyWarning
+        features = df_unit[features_col].copy().reset_index(drop=True)
+        target = df_unit[[target_col]].copy().reset_index(drop=True)
+
+        # --- 2. Handle Ragged Array Processing (if enabled) ---
+
+        if self._init_kwargs["use_ragged"]:
+            # Check if the total number of samples can be evenly divided into sequences.
+            if len(features) % SAMPLE_RANGE_SIZE != 0:
+                raise ValueError(
+                    f"Unit {unit_name} has {len(features)} samples, which is not "
+                    f"divisible by the required sample range of {SAMPLE_RANGE_SIZE}."
+                )
+
+            # Reshape features from (total_samples, num_features) into
+            # (num_sequences, sequence_length, num_features).
+            features = features.to_numpy().reshape(
+                -1, SAMPLE_RANGE_SIZE, features.shape[-1]
+            )
+
+            # Reshape target to match the new sequence structure.
+            target = target.to_numpy().reshape(-1, SAMPLE_RANGE_SIZE, 1)
+
+            # Data Integrity Check: The RUL value must be constant across any single sequence.
+            # This check works by comparing every RUL value in a sequence to the first one.
+            if not np.all(target == target[:, 0:1, :]):
+                raise ValueError(
+                    f"Unit {unit_name} has varying RUL values within a single sample range of "
+                    f"{SAMPLE_RANGE_SIZE}. Please check data integrity."
+                )
+
+            # Since RUL is constant per sequence, we only need one value per sequence.
+            # This reduces the target from (num_sequences, 32768, 1) to (num_sequences, 1).
+            target = target[:, 0, :].reshape(-1, 1)
+
+            # Convert the NumPy arrays to Awkward Arrays for ragged processing.
+            features = ak.from_regular(ak.from_numpy(features), axis=1)
+            target = ak.from_numpy(target)
+
+        # --- 3. Assemble and Return the Final Dictionary ---
+
+        # Use .get() for safer dictionary access to avoid errors on missing keys.
+        unit_id = UNIT_NAMES_TO_ID.get(unit_name.strip("Bearing"), -1)
+
         return {
-            "features": df_features,
-            "time_features": np.array(df_features.index),
-            "target": pd.DataFrame(df_target),
+            "features": features,
+            "target": target,
             "metadata": {
-                "unit_name": f"Bearing {unit_name}",
                 "unit_id": unit_id,
-                "unit_length": len(df_features),
+                "unit_name": f"Bearing {unit_name.strip("Bearing")}",
+                "unit_length": len(
+                    features
+                ),  # This will be num_sequences in ragged mode
                 "features_columns": features_col,
                 "target_col": target_col,
-                "target_in_the_featurs": True,
+                "target_in_features": True,
+                "task": self.task_mode,
             },
         }

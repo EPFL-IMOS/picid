@@ -6,12 +6,9 @@ defaults:
   
   - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: bearings/xjtu_sy/statistics
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
 
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
+
+dataset:
+  dataset_cfg:
+    get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.
 

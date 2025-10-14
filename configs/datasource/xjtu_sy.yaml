@@ -5,4 +5,4 @@ task_mode: rul # rul, fault
 auxiliary_tasks: [] # When we want to have fault as main task, we can use rul as auxiliary task
 cache_dir: ${paths.data_dir}/phmd_cache
 
-use_ragged: True
+use_ragged: True # This flag at the end assumed to be true by def
