@@ -42,8 +42,8 @@ class BaseVectorizedConcatDataset(ConcatDataset):
             return self.get_collate_fn()(out)
         else:
             raise NotImplementedError(
-                "Your Sequencer does not support list indexing, but you are using BaseVectorizedConcatDataset. "
-                "Please implement list indexing in your Sequencer or switch to BaseConcatDataset."
+                "Your data module / data loader does not support list indexing, but you are using BaseVectorizedConcatDataset. "
+                "Please enable list indexing in your data module / data loader or switch to BaseConcatDataset."
             )
 
     @abstractmethod
