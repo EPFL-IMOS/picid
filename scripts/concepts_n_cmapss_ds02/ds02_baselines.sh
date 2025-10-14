@@ -24,7 +24,7 @@ echo "Script directory determined as: $SCRIPT_DIR"
 # Add this line to get detailed errors from Hydra
 export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
-# source "$SCRIPT_DIR/../base/logging.sh"
+source "$SCRIPT_DIR/../base/logging.sh"
 
 
 
