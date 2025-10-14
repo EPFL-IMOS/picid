@@ -276,12 +276,14 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             model_out["predictions"], "predictions"
         )
         model_out["targets"] = self._to_numpy(model_out["targets"], "targets")
-        model_out["batch_idx"] = self._to_numpy(batch["batch_idx"], "batch_idx")
+
+        if "batch_idx" in batch and batch["batch_idx"] is not None:
+            model_out["batch_idx"] = self._to_numpy(batch["batch_idx"], "batch_idx")
 
         # Process optional 'unit_id' from the batch
         if "unit_id" in batch and batch["unit_id"] is not None:
             model_out["unit_id"] = self._to_numpy(batch["unit_id"], "unit_id")
-        
+
         # Extend here if you want to pass smth from the batch to the evaluator
 
         return model_out
