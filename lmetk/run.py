@@ -650,7 +650,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             datamodule=datamodule,
         )
 
-    trainer.test(model=model, datamodule=datamodule)
+    trainer.test(chpt_path="best", datamodule=datamodule)
 
     # We want to avoid running this for pfn models where there is no training
     # and thus no checkpoint and rerunning pfn model would take significant time.
