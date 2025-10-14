@@ -88,6 +88,7 @@ for model_name in "${model_names[@]}"; do
                     logger.wandb.project='${wandb_log_folder}' \
                     cache.use_cache_after_loading=True \
                     cache.use_cache_after_transfroms=True
+                    enable_progress_bar=False \
                     seed=${seed}
                 )
                 # debug=train_debug

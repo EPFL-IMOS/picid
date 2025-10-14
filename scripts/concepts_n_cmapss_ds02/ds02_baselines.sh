@@ -24,11 +24,11 @@ echo "Script directory determined as: $SCRIPT_DIR"
 # Add this line to get detailed errors from Hydra
 export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
-source "$SCRIPT_DIR/../base/logging.sh"
+# source "$SCRIPT_DIR/../base/logging.sh"
 
 
 
-max_epochs=20
+max_epochs=50
 check_val_every_n_epoch=1
 device=0
 wandb_log_folder="TabPFN_ds02_sweep_2025_10_09"
@@ -48,17 +48,17 @@ job_counter=0
 MAX_PARALLEL=3 # Set the max number of jobs to run at once
 
 
-# Function to run and log commands
-# run_and_log() {
-#     local command_to_run="$1"
-#     local run_name="$2"
+Function to run and log commands
+run_and_log() {
+    local command_to_run="$1"
+    local run_name="$2"
 
-#     # For debugging, just print the command and run name
-#     echo "DEBUG: Run Name: $run_name"
-#     echo "DEBUG: Command: $command_to_run"
-#     # Run the command and log its output
-#     eval "sleep 5"
-# }
+    # For debugging, just print the command and run name
+    echo "DEBUG: Run Name: $run_name"
+    echo "DEBUG: Command: $command_to_run"
+    # Run the command and log its output
+    eval "sleep 5"
+}
 
 pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
@@ -88,6 +88,7 @@ for model_name in "${model_names[@]}"; do
                     logger.wandb.project='${wandb_log_folder}' \
                     cache.use_cache_after_loading=True \
                     cache.use_cache_after_transfroms=True
+                    enable_progress_bar=False \
                     seed=${seed}
                 )
                 # debug=train_debug
