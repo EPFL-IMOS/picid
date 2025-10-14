@@ -35,7 +35,7 @@ wandb_log_folder="n_cmapss_final"
 # Define a list of datasets to run
 datasets=(concepts_n_cmapss)
 model_names=(cnn_1d crossformer lstm patchtst stf tide timeseries_transformer xgboost_fit_predict)
-BATCH_SIZES=(16 128 512)
+BATCH_SIZES=(16 512)
 SEEDS=(72 88 101 666 226688)
 
 # ========================================================================
