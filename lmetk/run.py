@@ -654,7 +654,14 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             datamodule=datamodule,
         )
 
-    trainer.test(ckpt_path="best", datamodule=datamodule)
+    if cfg.trainer.max_epochs > 1:
+        # Intention is to reload all deep-learning trained models from checkpoint
+        trainer.test(ckpt_path="best", datamodule=datamodule)
+    else:
+        # If max epochs is 1, there is no checkpoint to load from
+        # So we just test the model as is
+        log.info("Starting testing without training (used for pre-trained models)!")
+        trainer.test(model=model, datamodule=datamodule)
 
     # We want to avoid running this for pfn models where there is no training
     # and thus no checkpoint and rerunning pfn model would take significant time.
