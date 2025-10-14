@@ -23,3 +23,11 @@ sequence2statistics:
 
   metadata:
     apply_to: 'features'
+
+  
+ragged2regularragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'features'
