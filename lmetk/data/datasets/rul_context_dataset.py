@@ -85,9 +85,21 @@ class RULContextBatchDataset(ContextBatchDataset):
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
         stride: int = 1,
+        get_unit_id: bool = False,
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
         **kwargs,
     ):
         assert pred_len == 0, "pred_len must be 0 for RUL prediction."
+
+        self.meta_data_dict = kwargs["meta_data_dict"]
+
+        self.get_unit_id = get_unit_id
+        # Inject the unit name/id extraction functions into the meta_data_dict
+        if self.get_unit_id:
+            self.unid_id = self.extract_unit_id()
+            self.unid_name = self.extract_unit_name()
+
         super().__init__(
             data_dict=data_dict,
             task_type=task_type,
@@ -95,8 +107,20 @@ class RULContextBatchDataset(ContextBatchDataset):
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
+            padding_left_flag=padding_left_flag,
+            warmup_steps=warmup_steps,
             **kwargs,
         )
+
+    def extract_unit_id(self):
+        return self.meta_data_dict["unit_ids"][
+            self.meta_data_dict["current_data_split"]
+        ][self.meta_data_dict["concat_dataset_index"]]
+
+    def extract_unit_name(self):
+        return self.meta_data_dict["unit_names"][
+            self.meta_data_dict["current_data_split"]
+        ][self.meta_data_dict["concat_dataset_index"]]
 
     @override
     def __getitem__(self, batch_idx: List[int]):
@@ -104,7 +128,7 @@ class RULContextBatchDataset(ContextBatchDataset):
         context: Dict = self.context_dataset.__getitem__(batch_idx)
         target_seq_x = target["rul_seq_x"]
         context_seq_x = context["features_seq_x"]
-
+        # TO FINISH: we have now "unit_id" and "unit_name" in batch, how to collate it?
         d = AttributeDict(
             {
                 "batch_idx": torch.tensor(batch_idx),
@@ -117,6 +141,11 @@ class RULContextBatchDataset(ContextBatchDataset):
             }
         )
 
+        if self.get_unit_id:
+            # It has to b be on the one level down because we should have for every element of the batch one id, otherwise we get errors when we shuffle dataset
+            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx))
+            # How can we actually collate strings?
+            # "unit_name": (self.unid_name),
         return AttributeDict(d)
 
     def get_collate_fn(self):
