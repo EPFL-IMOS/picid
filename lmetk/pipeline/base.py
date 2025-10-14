@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Union, Dict
 
 import numpy as np
 import torch
@@ -236,41 +236,49 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             mode="test", step=self.global_step, epoch=self.current_epoch
         )
 
-    def process_outputs(self, model_out: dict, batch) -> dict:
-        """Handle model outputs.
+    def _to_numpy(self, data: Union[torch.Tensor, np.ndarray], name: str) -> np.ndarray:
+        """
+        Converts a PyTorch Tensor or NumPy array to a NumPy array.
+
+        This helper function centralizes the conversion logic, detaching a tensor
+        from the computation graph and moving it to the CPU.
+        """
+        if isinstance(data, torch.Tensor):
+            return data.detach().cpu().numpy()
+        if isinstance(data, np.ndarray):
+            return data
+        # Raise a more informative error
+        raise TypeError(
+            f"'{name}' must be a torch.Tensor or np.ndarray, but got {type(data).__name__}"
+        )
+
+    def process_outputs(
+        self, model_out: Dict[str, Any], batch: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle model outputs by converting specified tensors to NumPy arrays.
 
         Parameters
         ----------
         model_out : dict
-            Dictionary containing the model output.
+            Dictionary containing the model output, including 'predictions' and 'targets'.
         batch : dict
-            Batch object containing the batched data.
+            The input batch, containing 'batch_idx' and optionally 'unit_id'.
 
         Returns
         -------
         dict
-            Dictionary containing the updated model output.
+            The updated model_out dictionary with values converted to NumPy arrays.
         """
-        preds = model_out["predictions"]
-        targets = model_out["targets"]
+        # Process required keys from model_out and batch
+        model_out["predictions"] = self._to_numpy(
+            model_out["predictions"], "predictions"
+        )
+        model_out["targets"] = self._to_numpy(model_out["targets"], "targets")
+        model_out["batch_idx"] = self._to_numpy(batch["batch_idx"], "batch_idx")
 
-        if isinstance(preds, torch.Tensor):
-            model_out["predictions"] = preds.detach().cpu().numpy()
-        elif isinstance(preds, np.ndarray):
-            model_out["predictions"] = preds
-        else:
-            raise ValueError(
-                f"predictions must be either torch.Tensor or np.ndarray, got {type(preds)}"
-            )
-
-        if isinstance(targets, torch.Tensor):
-            model_out["targets"] = targets.detach().cpu().numpy()
-        elif isinstance(targets, np.ndarray):
-            model_out["targets"] = targets
-        else:
-            raise ValueError(
-                f"targets must be either torch.Tensor or np.ndarray, got {type(targets)}"
-            )
+        # Process optional 'unit_id' from the batch
+        if "unit_id" in batch and batch["unit_id"] is not None:
+            model_out["unit_id"] = self._to_numpy(batch["unit_id"], "unit_id")
 
         return model_out
 
