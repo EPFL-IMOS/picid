@@ -62,9 +62,13 @@ def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
     for idx in range(lenghts[0]):
         sub_data_dict = {}
 
-        # Go ovet the all keys and collect the corresponding tensors
+        # Go over the all keys and collect the corresponding tensors
         for key, val in data_dict.items():
             sub_data_dict[key] = val[idx]
+
+        # TODO, also in the run.py: Patch to allow association of subunit in the concat dataset
+        meta_data_dict = meta_data_dict.copy()
+        meta_data_dict["concat_dataset_index"] = idx
 
         dataset = instantiate(
             dataset_cfg,

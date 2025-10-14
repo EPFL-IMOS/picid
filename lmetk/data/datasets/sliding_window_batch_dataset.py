@@ -29,6 +29,8 @@ class SlidingWindowBatchDataset(BaseDataset):
         pred_len: int,
         stride: int,
         suffixes=["_seq_x", "_seq_y"],
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
         **kwargs,
     ):
 
@@ -36,27 +38,25 @@ class SlidingWindowBatchDataset(BaseDataset):
         self._length: Optional[int] = None
         self.suffixes = suffixes
 
+        # Common params for all sequencers
+        sequencer_params = dict(
+            seq_len=seq_len,
+            label_len=label_len,
+            pred_len=pred_len,
+            stride=stride,
+            padding_left_flag=padding_left_flag,
+            warmup_steps=warmup_steps,
+        )
+
         for key, arr in data_dict.items():
             if arr is None:
                 continue
 
             if isinstance(arr, (np.ndarray, torch.Tensor)):
-                driver = DenseArraySequencer(
-                    array=arr,
-                    seq_len=seq_len,
-                    label_len=label_len,
-                    pred_len=pred_len,
-                    stride=stride,
-                )
+                driver = DenseArraySequencer(arr, **sequencer_params)
 
             elif isinstance(arr, ak.Array):
-                driver = RaggedArraySequencer(
-                    array=arr,
-                    seq_len=seq_len,
-                    label_len=label_len,
-                    pred_len=pred_len,
-                    stride=stride,
-                )
+                driver = RaggedArraySequencer(arr, **sequencer_params)
             else:
                 raise NotImplementedError(
                     f"Unsupported type for key '{key}': {type(arr)}"
@@ -83,12 +83,19 @@ class SlidingWindowBatchDataset(BaseDataset):
         """
         out = {}
         for k, drv in self.sequencers.items():
-            x, y = drv.sequences_batch(idx)
+
+            # OLD
+            # x, y = drv.sequences_batch(idx)
+
+            sequencer_output = drv.sequences_batch(idx)
+            x, y = sequencer_output
+
             # seq_x: (B, seq_len, C),
             # seq_y: (B, label_len + pred_len, C);
             # note that y can be empty tensor; (B,T,C)
             out[f"{k}{self.suffixes[0]}"] = x
             out[f"{k}{self.suffixes[1]}"] = y
+
         return out
 
     def get_collate_fn(self):

@@ -31,6 +31,8 @@ class DenseArraySequencer(BaseSequencer):
         label_len: int,
         pred_len: int,
         stride: int,
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
     ):
         if isinstance(array, np.ndarray):
             array = ak.Array(array)
@@ -48,6 +50,8 @@ class DenseArraySequencer(BaseSequencer):
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
+            padding_left_flag=padding_left_flag,
+            warmup_steps=warmup_steps,
         )
 
     def __len__(self):
@@ -68,6 +72,8 @@ class RaggedArraySequencer(BaseSequencer):
         label_len: int,
         pred_len: int,
         stride: int,
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
     ):
         array = ak.values_astype(array, np.float32)
         ragged_dim = find_singular_ragged_dim({"array": array})  # validate ragged dim
@@ -82,6 +88,8 @@ class RaggedArraySequencer(BaseSequencer):
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
+            padding_left_flag=padding_left_flag,
+            warmup_steps=warmup_steps,
         )
 
     def __len__(self):

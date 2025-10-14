@@ -43,13 +43,20 @@ class AkwardJaggedAutoregressiveSequencer:
         label_len: int,
         pred_len: int,
         stride: int = 1,
-        padding_left: int = 0,
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
     ):
         self.features = features
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
         self.stride = stride
+
+        # Flags to use additional sequencer features
+        # Partially (not implemented yet)
+        self.padding_left_flag = padding_left_flag
+        self.warmup_steps = warmup_steps
+
         self.device = torch.device("cpu")
         self._checked_output_shapes = False
 

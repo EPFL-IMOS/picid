@@ -6,12 +6,25 @@ defaults:
   
   - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: bearings/pronostia/statistics
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
 
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
+
+# task_definition:
+#   seq_len: 1024
+#   stride: 1024
+  
+  
+datamodule: 
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 16
+  shuffle_train: True
+
+
+
+dataset:
+  dataset_cfg:
+    get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.
+
+
+
 
