@@ -8,12 +8,13 @@ defaults:
 task_definition:
   requires_training: true
 
-model: 
-  ts_in:  ${task_definition.seq_len}
+model:
+  ts_in: ${task_definition.seq_len}
   ts_out: ${task_definition.pred_len}
-  d_yc:  ${infer_data_dim:target,-1} 
-  d_yt:  ${infer_data_dim:target,-1}
-  d_x:   ${infer_data_dim:features,-1}
+  d_yc: ${infer_data_dim:target,-1}
+  d_yt: ${infer_data_dim:target,-1}
+  d_x: ${infer_data_dim:features,-1}
+  warmup_steps: ${infer_dataloader_length:train}
 
 callbacks:
   early_stopping:

@@ -23,4 +23,5 @@ model:
   d_yc: ${infer_data_dim:${task_definition.task_type},-1}
   d_yt: ${infer_data_dim:${task_definition.task_type},-1}
   d_x: ${infer_data_dim:features,-1}
+  warmup_steps: ${infer_dataloader_length:train}
   include_x_t: false

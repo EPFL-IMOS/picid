@@ -24,5 +24,6 @@ model:
   d_yt: ${infer_data_dim:${task_definition.task_type},-1}
   d_x: ${infer_data_dim:features,-1}
   seg_len: ${quot:${task_definition.seq_len},10}
+  warmup_steps: ${infer_dataloader_length:train}
   # can only use time features if no future context available
   decoder_embedding: random

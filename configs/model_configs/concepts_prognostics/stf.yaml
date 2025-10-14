@@ -22,5 +22,6 @@ model:
   d_yc: ${infer_data_dim:rul,-1}
   d_yt: ${infer_data_dim:rul,-1}
   d_x: ${infer_data_dim:features,-1}
+  warmup_steps: ${infer_dataloader_length:train}
   n_timefeatures: 0
   base_lr: 0.001

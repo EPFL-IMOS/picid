@@ -14,6 +14,7 @@ model:
   d_x: ${infer_data_dim:features,-1}
   # TODO: replace with actual timefeatures when available
   n_timefeatures: 0
+  warmup_steps: ${infer_dataloader_length:train}
 
   transformer_args:
     seq_len: ${task_definition.seq_len}
