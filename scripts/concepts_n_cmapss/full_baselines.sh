@@ -87,10 +87,18 @@ for model_name in "${model_names[@]}"; do
                     trainer.devices=[${device}] \
                     logger.wandb.project='${wandb_log_folder}' \
                     cache.use_cache_after_loading=True \
-                    cache.use_cache_after_transfroms=True
+                    cache.use_cache_after_transfroms=True \
                     enable_progress_bar=False \
                     seed=${seed}
                 )
+
+                # Random sleep only for runs 2 and 3
+                if (( run_counter > 1 && run_counter <= $MAX_PARALLEL )); then
+                    sleep_time=$((60 * (RANDOM % 3 + 1)))  # 1–3 minutes
+                    echo "Delaying launch of run ${run_name} by ${sleep_time}s..."
+                    sleep $sleep_time
+                fi
+
                 # debug=train_debug
                 # --- 5. Execute using the logger and run in the background (&) ---
                 run_and_log "${command_to_run[*]}" "$run_name" &
