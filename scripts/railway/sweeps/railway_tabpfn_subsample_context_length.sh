@@ -39,11 +39,7 @@ wandb_log_folder="railway_traction_final"
     # "concepts_n_cmapss/prognostics" \
 # )
 datasets=("railway_traction/forecasting")
-model_names=(tabpfn_fit_predict tabdpt_fit_predict)
-
-# Careful here because of oom issues with long context lengths / short strides
-context_lengths=(1 5)
-train_set_strides=(1 5)
+model_names=(tabpfn_fit_predict)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -73,42 +69,36 @@ trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2
 
 for model_name in "${model_names[@]}"; do
     for dataset in "${datasets[@]}"; do
-        for context_length in "${context_lengths[@]}"; do
-            for train_set_stride in "${train_set_strides[@]}"; do
-                # --- 3. Create a unique and descriptive name for this specific run ---
-                # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
-                run_name=$(printf "%03d_%s_%s" "$run_counter" "${dataset//\//_}" "${model_name}" )
+        # --- 3. Create a unique and descriptive name for this specific run ---
+        # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
+        run_name=$(printf "%03d_%s_%s" "$run_counter" "${dataset//\//_}" "${model_name}" )
 
-                # --- 4. Build the full command as a single string ---
-                # Note the escaped quotes \"...\" for parameters that are lists.
-                command_to_run=(
-                    python lmetk/run.py \
-                    paths=runai \
-                    experiment=${dataset}/${model_name} \
-                    # trainer.devices=[${device}] \
-                    logger.wandb.project=${wandb_log_folder} \
-                    task_definition.seq_len=${context_length} \
-                    task_definition.stride_train=${train_set_stride} \
-                    cache.use_cache_after_loading=True \
-                    cache.use_cache_after_transfroms=True
-                )
-                # debug=train_debug
-                # --- 5. Execute using the logger and run in the background (&) ---
-                run_and_log "${command_to_run[*]}" "$run_name" &
-                pid=$!
-                pids+=($pid)
-                # --- 6. Increment counters and manage parallel jobs ---
-                ((run_counter++))
-                ((job_counter++))
-                # First, check if all our "slots" are full.
-                if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
-                    # If they are, wait for any single job to finish.
-                    wait -n
-                    # Decrement the counter because a slot just opened up.
-                    ((job_counter--))
-                fi
-            done
-        done
+        # --- 4. Build the full command as a single string ---
+        # Note the escaped quotes \"...\" for parameters that are lists.
+        command_to_run=(
+            python lmetk/run.py \
+            paths=runai \
+            experiment=${dataset}/${model_name} \
+            # trainer.devices=[${device}] \
+            logger.wandb.project=${wandb_log_folder} \
+            cache.use_cache_after_loading=True \
+            cache.use_cache_after_transfroms=True
+        )
+        # debug=train_debug
+        # --- 5. Execute using the logger and run in the background (&) ---
+        run_and_log "${command_to_run[*]}" "$run_name" &
+        pid=$!
+        pids+=($pid)
+        # --- 6. Increment counters and manage parallel jobs ---
+        ((run_counter++))
+        ((job_counter++))
+        # First, check if all our "slots" are full.
+        if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
+            # If they are, wait for any single job to finish.
+            wait -n
+            # Decrement the counter because a slot just opened up.
+            ((job_counter--))
+        fi
     done
 done
 

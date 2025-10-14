@@ -31,7 +31,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=50
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="TabPFN_2025_10_07"
+wandb_log_folder="concepts_n_cmapss"
 # Define a list of datasets to run
 # datasets=(
     # "railway_traction/forecasting" \
