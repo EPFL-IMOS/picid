@@ -1,12 +1,12 @@
-cut_to_first_zero_target:
-  transform:
-    _target_: lmetk.transforms.bearings.cut_till_first_zero.RULTaskUpToFirstZero
+# cut_to_first_zero_target:
+#   transform:
+#     _target_: lmetk.transforms.bearings.cut_till_first_zero.RULTaskUpToFirstZero
 
-  metadata:
-    apply_to: ["target", "features"]
-    assign_to: 
-      target: target
-      features: features
+#   metadata:
+#     apply_to: ["target", "features"]
+#     assign_to: 
+#       target: target
+#       features: features
 
 # Autoencoder transform 
 scaler_features:
@@ -25,3 +25,19 @@ scaler_target:
     apply_to: target
     assign_to: rul
     fit_on: train
+  
+sequence2statistics:
+  transform:
+    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    padding_value: null
+    silent_logger: true
+
+  metadata:
+    apply_to: 'features'
+
+ragged2regularragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'features'

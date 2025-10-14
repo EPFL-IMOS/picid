@@ -273,6 +273,7 @@ class PreProcessor(PreProcessorInterface):
             else:
                 self.datasource.load_data()
                 self.datasource.split_data()
+                self.meta_data = self.datasource.get_meta_data()
 
             self.fetch_data()
 

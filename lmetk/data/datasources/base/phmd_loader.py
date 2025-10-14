@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, override
-
+import awkward as ak
 import numpy as np
 import pandas as pd
 from lmetk.data.data_objects.data import SplitDatasetContainer
@@ -153,20 +153,6 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
                 self.auxiliary_tasks + [self.task_mode]
             )
 
-        if self.debug_subset_range is not None:
-            for key in tasks_fold_dict:
-                for subkey in tasks_fold_dict[key]:
-                    tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[
-                        range(*self.debug_subset_range)
-                    ]
-
-        if self.debug_subsample_rate is not None:
-            for key in tasks_fold_dict:
-                for subkey in tasks_fold_dict[key]:
-                    tasks_fold_dict[key][subkey] = tasks_fold_dict[key][subkey].iloc[
-                        :: self.debug_subsample_rate, :
-                    ]
-
         main_fold = tasks_fold_dict[self.task_mode]
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
         auxiliary_tasks_fold_dict.pop(self.task_mode, None)
@@ -248,6 +234,30 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
 
         if additional_metadata_unit_id:
             self.meta_data["unit_ids"] = additional_metadata_unit_id
+
+        if self.debug_subset_range is not None:
+            n_cycles, cycle_len, feature_num = self.debug_subset_range
+            for key in data:
+                # Use enumerate to get both the index (i) and the element (elem)
+                for i, elem in enumerate(data[key]):
+                    updated_elem = {}
+                    for subkey in elem:
+                        value = elem[subkey]
+                        # Check if the value is an awkward array to be sliced
+                        if isinstance(value, ak.Array):
+                            if value.ndim != 3:
+                                updated_elem[subkey] = value[:n_cycles]
+                            else:
+                                updated_elem[subkey] = value[
+                                    :n_cycles, :cycle_len, :feature_num
+                                ]
+                        # --- Important Fix ---
+                        # Also copy any values that are NOT awkward arrays
+                        else:
+                            updated_elem[subkey] = value
+
+                    # Use the index 'i' to update the original list
+                    data[key][i] = updated_elem
 
         # The data structure in data is:
         # {

@@ -8,9 +8,9 @@ defaults:
   - override /transforms: bearings/pronostia/statistics
 
 
-task_definition:
-  seq_len: 1024
-  stride: 1024
+# task_definition:
+#   seq_len: 1024
+#   stride: 1024
   
   
 datamodule: 
@@ -25,16 +25,6 @@ dataset:
   dataset_cfg:
     get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.
 
-
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
 
 
 
