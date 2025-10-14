@@ -281,6 +281,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         # Process optional 'unit_id' from the batch
         if "unit_id" in batch and batch["unit_id"] is not None:
             model_out["unit_id"] = self._to_numpy(batch["unit_id"], "unit_id")
+        
+        # Extend here if you want to pass smth from the batch to the evaluator
 
         return model_out
 
