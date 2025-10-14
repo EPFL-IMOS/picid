@@ -7,7 +7,7 @@ defaults:
 
 model_checkpoint:
   dirpath: ${paths.ckpt_dir}/checkpoints
-  filename: "epoch{epoch:03d}-val_loss{val/loss:.5f}"
+  filename: "epoch{epoch:03d}-val_loss{val/loss:.8f}"
   monitor: MSE
   mode: max
   auto_insert_metric_name: False
