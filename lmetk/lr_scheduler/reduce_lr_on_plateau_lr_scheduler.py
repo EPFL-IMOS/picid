@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import torch
 from torch.optim import Optimizer
 
 from .lr_scheduler import LearningRateScheduler
@@ -44,26 +45,34 @@ class ReduceLROnPlateauScheduler(LearningRateScheduler):
         lr: float,
         patience: int = 1,
         factor: float = 0.3,
-    ) -> None:
+        min_lr: float = 1e-8,
+        apply_init_lr_to_scheduler: bool = True,
+    ):
         super(ReduceLROnPlateauScheduler, self).__init__(optimizer, lr)
+        self.optimizer = optimizer
         self.lr = lr
+        self.best_val_loss = float("inf")
         self.patience = patience
         self.factor = factor
-        self.val_loss = float("inf")
-        self.count = 0
-        self._old_val_loss = None
+        self.min_lr = min_lr
+        self.num_bad_epochs = 0
+
+        if apply_init_lr_to_scheduler:
+            self.set_lr(self.optimizer, lr)
 
     def step(self, val_loss: float):
-        val_loss = val_loss.mean()
-        if self.val_loss < val_loss:
-            self.count += 1
-        else:
-            self.count = 0
-            self.val_loss = val_loss
+        if isinstance(val_loss, torch.Tensor):
+            val_loss = val_loss.item()
 
-        if self.patience == self.count:
-            self.count = 0
-            self.lr *= self.factor
+        if val_loss < self.best_val_loss:
+            self.best_val_loss = val_loss
+            self.num_bad_epochs = 0
+        else:
+            self.num_bad_epochs += 1
+
+        if self.num_bad_epochs >= self.patience:
+            self.lr = max(self.lr * self.factor, self.min_lr)
             self.set_lr(self.optimizer, self.lr)
+            self.num_bad_epochs = 0
 
         return self.lr

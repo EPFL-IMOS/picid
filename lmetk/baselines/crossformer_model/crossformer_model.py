@@ -226,7 +226,7 @@ class Crossformer_Forecaster(TransformerForecaster):
     def configure_optimizers(self):
         self.optimizer = torch.optim.Adam(
             self.parameters(),
-            lr=self.base_lr,
+            lr=self.init_lr,
             # weight_decay=self.l2_coeff,
         )
         self.scheduler = WarmupReduceLROnPlateauScheduler(
@@ -237,3 +237,7 @@ class Crossformer_Forecaster(TransformerForecaster):
             patience=self.patience,
             factor=self.decay_factor,
         )
+
+        # Were not returning the scheduler here as it is stepped manually
+        # in the training/validation steps
+        return [self.optimizer]

@@ -30,7 +30,7 @@ from .reduce_lr_on_plateau_lr_scheduler import ReduceLROnPlateauScheduler
 from .warmup_lr_scheduler import WarmupLRScheduler
 
 
-class WarmupReduceLROnPlateauScheduler(LearningRateScheduler, ReduceLROnPlateau):
+class WarmupReduceLROnPlateauScheduler(LearningRateScheduler):
     r"""
     Warmup learning rate until `warmup_steps` and reduce learning rate on plateau after.
 
@@ -64,14 +64,18 @@ class WarmupReduceLROnPlateauScheduler(LearningRateScheduler, ReduceLROnPlateau)
                 init_lr=init_lr,
                 peak_lr=peak_lr,
                 warmup_steps=warmup_steps,
+                apply_init_lr_to_scheduler=False,
             ),
             ReduceLROnPlateauScheduler(
                 optimizer=optimizer,
                 lr=peak_lr,
                 patience=patience,
                 factor=factor,
+                apply_init_lr_to_scheduler=False,
             ),
         ]
+
+        self.set_lr(optimizer, init_lr)
 
     def load_state_dict(self, state_dict):
         self.schedulers[0].load_state_dict(state_dict["warmup"])
@@ -105,4 +109,11 @@ class WarmupReduceLROnPlateauScheduler(LearningRateScheduler, ReduceLROnPlateau)
 
         self.update_steps += 1
 
-        return self.get_lr()
+        # Keep for debugging purposes
+        # lr = self.get_lr()
+        # lr = self.optimizer.param_groups[0]["lr"]
+
+        # if stage == 0:
+        #     print(f"\n[0] step: {self.update_steps}, lr: {lr}")
+        # elif stage == 1 and is_end_epoch:
+        #     print(f"\n[1] step: {self.update_steps}, lr: {lr}")

@@ -42,22 +42,30 @@ class WarmupLRScheduler(LearningRateScheduler):
         init_lr: float,
         peak_lr: float,
         warmup_steps: int,
+        apply_init_lr_to_scheduler: bool = True,
     ) -> None:
         super(WarmupLRScheduler, self).__init__(optimizer, init_lr)
+        self.optimizer = optimizer
         self.init_lr = init_lr
-        if warmup_steps != 0:
-            warmup_rate = peak_lr - init_lr
-            self.warmup_rate = warmup_rate / warmup_steps
-        else:
-            self.warmup_rate = 0
-        self.update_steps = 1
+        self.peak_lr = peak_lr
+        self.warmup_steps = int(warmup_steps)
+        self.update_steps = 0
         self.lr = init_lr
-        self.warmup_steps = warmup_steps
+        self.warmup_rate = (
+            0.0 if self.warmup_steps == 0 else (peak_lr - init_lr) / self.warmup_steps
+        )
+
+        if apply_init_lr_to_scheduler:
+            self.set_lr(self.optimizer, init_lr)
 
     def step(self, val_loss: Optional[torch.FloatTensor] = None):
-        if self.update_steps < self.warmup_steps:
-            lr = self.init_lr + self.warmup_rate * self.update_steps
+        # increment first so that the Nth call reaches peak_lr when warmup_steps == N
+        self.update_steps += 1
+        if self.warmup_steps > 0 and self.update_steps <= self.warmup_steps:
+            # exact linear interpolation with clamping on the last warmup step
+            progress = self.update_steps / self.warmup_steps
+            lr = self.init_lr + (self.peak_lr - self.init_lr) * progress
+            if self.update_steps == self.warmup_steps:
+                lr = self.peak_lr
             self.set_lr(self.optimizer, lr)
             self.lr = lr
-        self.update_steps += 1
-        return self.lr
