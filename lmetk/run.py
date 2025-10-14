@@ -97,6 +97,27 @@ OmegaConf.register_new_resolver(
     "infer_data_dim", lambda key, dim: "not yet initialized"
 )
 
+OmegaConf.register_new_resolver(
+    "infer_dataloader_length", lambda key: "not yet initialized"
+)
+
+
+def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
+
+    def get_key(lengths, key):
+        if key not in lengths:
+            raise KeyError(
+                f"Resolver issue: key: '{key}' "
+                f"not found in dataloader lengths dictionary ({lengths.keys()})."
+            )
+        return lengths[key]
+
+    OmegaConf.register_new_resolver(
+        "infer_dataloader_length",
+        lambda key: get_key(lengths, key),
+        replace=True,
+    )
+
 
 def register_data_dim_resolver(
     data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
@@ -506,6 +527,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     )
 
     # Log the sizes of one batch for each data loader
+    loader_lengths = {}
     for split, loader in zip(
         ["train", "val", "test"],
         [
@@ -514,13 +536,15 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             datamodule.test_dataloader(),
         ],
     ):
+        loader_lengths[split] = len(loader)
         batch = next(iter(loader))
-        log.info(f"Batch shapes for {split}:")
+        log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
         for key, value in batch.items():
             if isinstance(value, torch.Tensor):
                 log.info(f"  {key}: {value.shape}")
             else:
                 log.info(f"  {key}: Non-tensor value of type {type(value)}")
+    register_infer_dataloader_length_resolver(loader_lengths)
 
     evaluators = {}
     for s in ["train", "val", "test"]:
