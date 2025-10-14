@@ -249,6 +249,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             return data.detach().cpu().numpy()
         if isinstance(data, np.ndarray):
             return data
+        if isinstance(data, list):
+            # Handle scalar values by converting them to a NumPy array
+            return np.array(data)
         # Raise a more informative error
         raise TypeError(
             f"'{name}' must be a torch.Tensor or np.ndarray, but got {type(data).__name__}"
