@@ -315,6 +315,7 @@ def rerun_best_model_checkpoint(
         cfg.trainer,
         num_sanity_val_steps=0,
         enable_progress_bar=cfg.get("enable_progress_bar", True),
+        logger=False,
     )
 
     log.info("Re-testing best model checkpoint on validation set!")
