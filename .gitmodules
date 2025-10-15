@@ -15,6 +15,6 @@
 [submodule "carte"]
 	path = local_packages/carte-ai
 	url = git@github.com:soda-inria/carte.git
-[submodule "local_packages/local_packages/TimeLLM"]
-	path = local_packages/local_packages/TimeLLM
+[submodule "local_packages/TimeLLM"]
+	path = local_packages/TimeLLM
 	url = git@gitlab.epfl.ch:acoutinh/timellm-imos.git
