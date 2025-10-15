@@ -37,7 +37,8 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
 
         # Check how many dim in just 3 them unsqueeze 1st dim
         if features.ndim == 2:
-            logger.info(f"Input features shape: {features.shape}")
+            if not self.silent_logger:
+                logger.info(f"Input features shape: {features.shape}")
             # unsqueeze 0 dim to have (sw, win_len, channels). For example (sw of single cycle, win len, channels)
             features = features[np.newaxis, np.newaxis, :, :]
             if not self.silent_logger:

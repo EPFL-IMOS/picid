@@ -1,6 +1,6 @@
 #@package _global_
 
 defaults:
-  - concepts_n_cmapss_ds02/prognostics/base
-  - /model_configs/concepts_prognostics/lstm
-  - override /transforms: concepts_n_cmapss_ds02/depater2023_default
+  - unibo/prognostics/base
+  - /model_configs/prognostics/lstm
+  - override /transforms: battery/unibo/bosello23_base_satistics

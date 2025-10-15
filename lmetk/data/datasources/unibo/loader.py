@@ -80,6 +80,9 @@ test_names = [
     "041-DM-4.00-2320-S",  # minimum capacity 3.76, cycles 190
 ]
 
+UNIT_NAMES_TO_ID = train_names + test_names
+UNIT_NAMES_TO_ID = {name: idx for idx, name in enumerate(UNIT_NAMES_TO_ID)}
+
 
 class UNIBO21Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
@@ -137,6 +140,33 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
         logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+
+        # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
+        unit_ids_meta_data = {
+            "unit_ids": {
+                "train": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["train"]
+                ],
+                "val": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["val"]
+                ],
+                "test": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["test"]
+                ],
+            },
+            "unit_names": {
+                "train": [entry["metadata"]["unit_name"] for entry in data["train"]],
+                "val": [entry["metadata"]["unit_name"] for entry in data["val"]],
+                "test": [entry["metadata"]["unit_name"] for entry in data["test"]],
+            },
+        }
+
+        # update the meta_data with any other info you want to store
+        self.meta_data.update(unit_ids_meta_data)
+
         return out_dict
 
     def read_data(
@@ -244,6 +274,8 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                 f"Debug subset range applied. New train size: {len(data['train'])}, val size: {len(data['val'])}, test size: {len(data['test'])}"
             )
 
+        # Meta data
+
         return data
 
     def _process_split(
@@ -281,6 +313,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                     "target": ak.from_numpy(curr_y.reshape(-1, 1)),  # flattened_y
                     "metadata": {
                         "unit_name": unit_name,
+                        "unit_id": UNIT_NAMES_TO_ID[unit_name],
                         # "cycle_indices": cycle_indices,
                         "n_cycles": len(lengths),
                     },

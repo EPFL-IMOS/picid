@@ -82,7 +82,7 @@ class NB14Loader(AbstractDataSourceLoader):
         self._is_isplitted = False
         self._is_loaded = False
         self.data_dict = None
-        self.meta_data = None
+        self.meta_data = {}
 
         # Instantiate multisource_data_splitter if is not none
         assert (
