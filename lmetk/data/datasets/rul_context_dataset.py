@@ -90,7 +90,7 @@ class RULContextBatchDataset(ContextBatchDataset):
         warmup_steps: int = None,
         **kwargs,
     ):
-        assert pred_len == 0, "pred_len must be 0 for RUL prediction."
+        # assert pred_len == 1, "pred_len must be 0 for RUL prediction."
 
         self.meta_data_dict = kwargs["meta_data_dict"]
 
@@ -135,7 +135,8 @@ class RULContextBatchDataset(ContextBatchDataset):
                 # (B=1, seq_len, C) -> (B=1, C),
                 # take the last time step,
                 # collate fn will concatenate over the batch dim
-                "rul": target_seq_x[:, -1],
+                # TODO: Keep dim
+                "rul": target_seq_x[:, -1].flatten(),  # target_seq_x[:, -1],
                 # (B, seq_len, C)
                 "features": context_seq_x,
             }

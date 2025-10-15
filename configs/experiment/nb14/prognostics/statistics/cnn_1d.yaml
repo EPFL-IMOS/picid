@@ -1,8 +1,8 @@
 #@package _global_
 
 defaults:
-  - unibo/prognostics/base
+  - nb14/prognostics/base
   - /model_configs/prognostics/cnn_1d
   
   - override /dataset: prognostics/rul_multiunit_dataset
-  - override /transforms: battery/unibo/bosello23_base_satistics
+  - override /transforms: battery/nb14/bosello23_base_statistics
