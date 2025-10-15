@@ -171,7 +171,8 @@
             "args": [
                 "paths=rt_local",
                 "experiment=railway_traction/forecasting/patchtst",
-                "debug=default"
+                "debug=default",
+                "trainer.max_epochs=2"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1"
@@ -617,6 +618,22 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/cnn_1d",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): TimeLLM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/timellm",
                 "debug=default"
             ],
             "env": {

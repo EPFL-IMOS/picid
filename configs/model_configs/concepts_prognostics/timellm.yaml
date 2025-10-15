@@ -1,12 +1,23 @@
 #@package _global_
 
 defaults:
-  - override /dataset: fit_predict_task
-  - override /datamodule: base_datamodule_fit_predict
+  - override /dataset: prognostics/concept_rul_multiunit_dataset
+  - override /datamodule: base_datamodule_no_batch_sampler
   - override /model: timellm
-
-  - override /callbacks: gradient_free
-  - override /trainer: one_epoch
 
 task_definition:
   requires_training: true
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
+
+model:
+  seq_len: ${task_definition.seq_len}
+  in_channels: ${infer_data_dim:features,-1}
+  base_lr: 0.001
