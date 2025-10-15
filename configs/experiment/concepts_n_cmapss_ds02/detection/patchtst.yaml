@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds02/detection/base
+  - /model_configs/detection/patchtst
+  - override /transforms: concepts_n_cmapss_ds02/depater2023_default

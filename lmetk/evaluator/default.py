@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 
 class DefaultEvaluator(AbstractEvaluator):
-    """Default evaluator that updates metrics incrementally."""
-
-    """Sequential evaluator that updates metrics incrementally."""
+    """Unified evaluator for regression and classification."""
 
     def __init__(
         self,
         metric_names: List[str],
+        task_type: str = "regression",  # "regression" or "classification"
+        num_classes: Optional[int] = None,
         inverse_transform: Optional[InverseTransformMixin] = None,
         apply_inverse_scaling: bool = False,
         save_predictions: bool = False,
@@ -38,20 +38,6 @@ class DefaultEvaluator(AbstractEvaluator):
         collect_predictions: bool = False,
         **kwargs,
     ):
-        """
-        Initialize the evaluator with specified metrics and optional scaling.
-
-        Parameters
-        ----------
-        metric_names : List[str]
-            List of metric names to compute.
-        inverse_transform : Optional[Any]
-            The scaler object with inverse_transform method
-        apply_inverse : bool
-            Whether to apply inverse scaling before computing metrics
-        remote_logger : Optional[Any]
-            Logger instance for remote logging evaluation details.
-        """
         super().__init__(
             inverse_transform=inverse_transform,
             apply_inverse_scaling=apply_inverse_scaling,
@@ -59,35 +45,40 @@ class DefaultEvaluator(AbstractEvaluator):
             **kwargs,
         )
 
-        # Validate and create metrics
+        self.task_type = task_type.lower()
+        assert self.task_type in [
+            "regression",
+            "classification",
+        ], f"Unsupported task_type: {task_type}"
+
         self.metrics = {}
         self.paths = paths
         self.save_predictions = save_predictions
         self.out_path = None
-        self.remote_logger: Optional[Any] = remote_logger
+        self.remote_logger = remote_logger
         self.collect_predictions = save_predictions or collect_predictions
 
         if self.collect_predictions:
-            self.preds = []
-            self.targets = []
-            self.scaled_preds = []
-            self.scaled_targets = []
+            self.preds, self.targets = [], []
+            self.scaled_preds, self.scaled_targets = [], []
 
         for name in metric_names:
-            metric = MetricFactory.create_metric(name, paths=paths)
+            if self.task_type == "classification":
+                metric = MetricFactory.create_classification_metric(
+                    name, num_classes=num_classes
+                )
+            else:
+                metric = MetricFactory.create_metric(name, paths=paths)
             self.metrics[name.lower()] = metric
-
         self.metric_names = [name.lower() for name in metric_names]
 
     @override
     def reset(self):
-        """Reset all metrics."""
         if self.collect_predictions:
             self.preds.clear()
             self.targets.clear()
             self.scaled_preds.clear()
             self.scaled_targets.clear()
-
         for metric in self.metrics.values():
             metric.reset()
 
@@ -95,36 +86,33 @@ class DefaultEvaluator(AbstractEvaluator):
     def update(self, model_out: dict):
         """
         Update metrics with new predictions and targets.
-
-        Parameters
-        ----------
-        model_out : dict
-            Dictionary containing 'predictions' and 'targets' keys with numpy arrays
+        Regression: (N, T, D)
+        Classification: preds (N, T, C), targets (N, T, 1)
         """
-        # Batch, Seq. Lenght, Feature Dim
         predictions = model_out["predictions"]
         targets = model_out["targets"]
+
+        if self.task_type == "classification":
+            targets = targets.astype(int)  # ensure integer labels
 
         if self.collect_predictions:
             self.preds.append(predictions)
             self.targets.append(targets)
 
-        # Apply inverse scaling if configured
+        # Apply inverse scaling if needed (rare for classification)
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
             predictions, targets
         )
 
-        # Save predictions and targets if configured
         if self.collect_predictions and self.scaling_wrapper.apply_inverse:
             self.scaled_preds.append(predictions)
             self.scaled_targets.append(targets)
 
-        # Update all metrics
+        # Update metrics
         for metric in self.metrics.values():
             metric.update(predictions, targets)
 
     def log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
-        """Log the plot to the remote logger."""
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
 
@@ -146,10 +134,7 @@ class DefaultEvaluator(AbstractEvaluator):
             d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
 
             dict_to_save.update(
-                {
-                    "preds": (d_names, preds),
-                    "targets": (d_names, targets),
-                }
+                {"preds": (d_names, preds), "targets": (d_names, targets)}
             )
         elif self.save_predictions and self.scaling_wrapper.apply_inverse:
             dict_to_save.update(
@@ -169,7 +154,6 @@ class DefaultEvaluator(AbstractEvaluator):
             if self.paths and getattr(self.paths, "eval_details", None):
                 self.out_path = Path(self.paths.eval_details) / mode
                 self.out_path.mkdir(parents=True, exist_ok=True)
-
             assert (
                 self.out_path is not None
             ), "Output path must be specified to save predictions."
@@ -183,6 +167,43 @@ class DefaultEvaluator(AbstractEvaluator):
             results[name] = metric.compute()
 
         return results
+
+
+class ClassificationEvaluator(DefaultEvaluator):
+    """Evaluator for classification tasks."""
+
+    def __init__(
+        self,
+        num_classes: int,
+        metric_names: List[str],
+        inverse_transform: Optional[InverseTransformMixin] = None,
+        apply_inverse_scaling: bool = False,
+        save_predictions: bool = False,
+        paths: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the evaluator with specified metrics and optional scaling.
+
+        Parameters
+        ----------
+        metric_names : List[str]
+            List of metric names to compute.
+        inverse_transform : Optional[Any]
+            The scaler object with inverse_transform method
+        apply_inverse : bool
+            Whether to apply inverse scaling before computing metrics
+        """
+        super().__init__(
+            metric_names=metric_names,
+            num_classes=num_classes,
+            task_type="classification",
+            inverse_transform=inverse_transform,
+            apply_inverse_scaling=apply_inverse_scaling,
+            save_predictions=save_predictions,
+            paths=paths,
+            **kwargs,
+        )
 
 
 class ForecastingEvaluator(DefaultEvaluator):
