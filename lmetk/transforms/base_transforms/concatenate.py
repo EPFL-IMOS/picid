@@ -141,3 +141,31 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
                 data[key] = ak.concatenate(value, axis=var_dim - 1).to_numpy()
 
         return data
+
+
+# class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsTransform):
+#     def __init__(self, **kwargs):
+#         """
+#         Initialize the transform.
+
+#         Args:
+#             **kwargs: Additional keyword arguments
+#         """
+#         super().__init__(**kwargs)
+
+#     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+#         """
+#         Concatenate ragged arrays along a single ragged dimension
+#         """
+#         for key, value in data.items():
+#             assert isinstance(value, ak.Array), f"Key '{key}' is not an awkward array."
+#             dims = ak_find_var_dims(value)
+#             if len(dims) != 1:
+#                 raise ValueError(
+#                     f"Key '{key}' has {len(dims)} ragged dimensions, expected exactly one."
+#                 )
+#             else:
+#                 var_dim = dims[0]
+#                 data[key] = ak.concatenate(value, axis=var_dim - 1).to_numpy()
+
+#         return data

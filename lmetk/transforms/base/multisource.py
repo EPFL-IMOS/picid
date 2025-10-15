@@ -536,6 +536,53 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         return out
 
 
+# class ConcatenateUnitsTransform(MultiSourceTransformInterface):
+#     """"""
+
+#     def __init__(self):
+#         """
+#         Initialize the MultiSourceTransformMixin.
+#         """
+#         super().__init__()
+#         # Check if the class is a subclass of TransformerMixin
+#         if not hasattr(self, "fit_data") or not hasattr(self, "transform_data"):
+#             raise TypeError(
+#                 "ConcatinatedFitMultiSourceTransformMixin requires the class "
+#                 "to implement fit and transform methods."
+#             )
+
+#     def fit_multi_source(
+#         self,
+#         data_segments: list[NamedTransformInput],
+#         metadata: Optional[Dict[str, Any]] = None,
+#     ) -> None:
+#         """ """
+#         self.fit_function_to_data_segments(
+#             data_segments, self.fit_data, copy.deepcopy(metadata)
+#         )
+
+#     def transform_multi_source(
+#         self,
+#         data_segments: list[NamedTransformInput],
+#         metadata: Optional[Dict[str, Any]] = None,
+#     ) -> list[ndarray]:
+#         """
+#         go from list of n -> list of 1
+#         """
+
+#         lengths = [len(chunk.keys()) for chunk in data_segments]
+#         if len(set(lengths)) != 1:
+#             raise ValueError(
+#                 f"The lengths of the data segments are not the same. Lengths: {lengths}"
+#             )
+
+#         out = self.transform_function_to_data_segments(
+#             data_segments, self.transform_data, copy.deepcopy(metadata)
+#         )
+
+#         return out
+
+
 class NoFitMultiSourceTransformMixin(ConcatinatedFitMultiSourceTransformMixin):
     """
     A stateless mixin for transforming data from multiple sources without fitting.
