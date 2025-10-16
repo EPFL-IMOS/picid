@@ -5,7 +5,7 @@ import copy
 import numpy as np
 from numpy import ndarray
 import awkward as ak
-import pandas as pd
+from collections import defaultdict
 
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 from lmetk.transforms.base.base_transform import (
@@ -20,6 +20,7 @@ from lmetk.utils.awkward_utils import (
     ak_find_var_dims,
     ak_regularize_regular_axes,
     ragged_index_tuples,
+    get_ak_shape,
 )
 from tqdm import tqdm
 from typing import Optional
@@ -536,51 +537,128 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         return out
 
 
-# class ConcatenateUnitsTransform(MultiSourceTransformInterface):
-#     """"""
+class ConcatenateUnitsTransform(MultiSourceTransformInterface):
+    """"""
 
-#     def __init__(self):
-#         """
-#         Initialize the MultiSourceTransformMixin.
-#         """
-#         super().__init__()
-#         # Check if the class is a subclass of TransformerMixin
-#         if not hasattr(self, "fit_data") or not hasattr(self, "transform_data"):
-#             raise TypeError(
-#                 "ConcatinatedFitMultiSourceTransformMixin requires the class "
-#                 "to implement fit and transform methods."
-#             )
+    def __init__(self, axis: int = None):
+        """
+        Initialize the MultiSourceTransformMixin.
+        """
+        super().__init__()
+        # Check if the class is a subclass of TransformerMixin
+        self.axis = axis
 
-#     def fit_multi_source(
-#         self,
-#         data_segments: list[NamedTransformInput],
-#         metadata: Optional[Dict[str, Any]] = None,
-#     ) -> None:
-#         """ """
-#         self.fit_function_to_data_segments(
-#             data_segments, self.fit_data, copy.deepcopy(metadata)
-#         )
+        # assert axis is not None, "axis must be specified"
+        assert self.axis is not None, (
+            "axis must be specified for the transforms which inherit from the ConcatenateUnitsTransform."
+            "Please choose along which axis you want to concatenate the data bafore it is passed to the transform."
+        )
 
-#     def transform_multi_source(
-#         self,
-#         data_segments: list[NamedTransformInput],
-#         metadata: Optional[Dict[str, Any]] = None,
-#     ) -> list[ndarray]:
-#         """
-#         go from list of n -> list of 1
-#         """
+    def fit_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """ """
+        raise NotImplementedError(
+            f"fit_multi_source is not implemented for {self.__class__.__name__}"
+        )
+        # self.fit_data(data_segments, metadata=copy.deepcopy(metadata))
 
-#         lengths = [len(chunk.keys()) for chunk in data_segments]
-#         if len(set(lengths)) != 1:
-#             raise ValueError(
-#                 f"The lengths of the data segments are not the same. Lengths: {lengths}"
-#             )
+    def transform_multi_source(
+        self,
+        data_segments: list[NamedTransformInput],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> list[ndarray]:
+        """
+        go from list of n -> list of 1
+        """
 
-#         out = self.transform_function_to_data_segments(
-#             data_segments, self.transform_data, copy.deepcopy(metadata)
-#         )
+        lengths = [len(chunk.keys()) for chunk in data_segments]
+        if len(set(lengths)) != 1:
+            raise ValueError(
+                f"The lengths of the data segments are not the same. Lengths: {lengths}"
+            )
 
-#         return out
+        apply_to_keys = metadata["apply_to_keys"]
+
+        # Get the types of the named transform input
+        data_types = defaultdict(list)
+        for data in data_segments:
+            classes = data.get_instance_cls()
+            for k, v in classes.items():
+                data_types[k].append(v)
+
+        # Check that for each key the data types are the same
+        for k, v in data_types.items():
+            if len(set(v)) != 1:
+                raise ValueError(
+                    f"The data types for key '{k}' are not the same across all data segments. Found: {v}"
+                )
+            data_types[k] = v[0]
+
+        assert set(data_types.keys()) == set(
+            apply_to_keys
+        ), "The keys in the data segments do not match the keys to apply the transform to."
+
+        # Concatenation logic in case the incomming data is ragged
+        out = {}
+        for key in apply_to_keys:
+            collect = []
+
+            if data_types[key] is ak.Array:
+                for data_segment in data_segments:
+                    assert (
+                        key in data_segment
+                    ), f"Key '{key}' not found in data segment."
+
+                    assert isinstance(
+                        data_segment[key], ak.Array
+                    ), f"Key '{key}' is not an awkward array."
+                    collect.append(data_segment[key])
+
+                # Concatenate along the specified axis
+                out[key] = ak.concatenate(collect, axis=self.axis)
+
+            elif data_types[key] is np.ndarray:
+                for data_segment in data_segments:
+                    assert (
+                        key in data_segment
+                    ), f"Key '{key}' not found in data segment."
+
+                    collect.append(data_segment[key])
+
+                out[key] = np.concatenate(collect, axis=self.axis)
+
+            else:
+                raise ValueError(
+                    f"Data type {data_types[key]} for key '{key}' is not supported."
+                )
+
+        if len(apply_to_keys) > 1:
+            lengths = []
+            for key in apply_to_keys:
+                if data_types[key] is ak.Array:
+                    # Check the final arrays have the same number of rows
+                    lengths.append(get_ak_shape(out[key])[self.axis])
+
+                elif data_types[key] is np.ndarray:
+                    # Check the final arrays have the same number of rows
+                    lengths.append(out[key].shape[self.axis])
+                else:
+                    raise ValueError(
+                        f"Data type {data_types[key]} for key '{key}' is not supported."
+                    )
+
+            if len(set(lengths)) != 1:
+                raise ValueError(
+                    f"The lengths of the concatenated arrays are not the same. Lengths: {lengths}"
+                )
+
+        out = NamedTransformInput(**out)
+        out = [self.transform_data(out, metadata=copy.deepcopy(metadata))]
+
+        return out
 
 
 class NoFitMultiSourceTransformMixin(ConcatinatedFitMultiSourceTransformMixin):

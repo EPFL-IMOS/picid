@@ -27,22 +27,6 @@ defaults:
 # output from the model: full forecast (fc_0, fc_1)
 
 
-# ragged2numpy_features:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
-
-#   metadata:
-#     apply_to: ["features"]
-#     assign_to: features
-
-  
-# ragged2numpy_target:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
-
-#   metadata:
-#     apply_to: ["rul"]
-
 tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
@@ -115,17 +99,25 @@ tabularize_y_val_test:
     assign_to: rul
     transform_on_keys: ["val", "test"]
 
-
-
-concatenate_features:
-  # Concatenate time-features to the feature set
+concatenate_units:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    axis: 1
 
   metadata:
-    apply_to: ["features"]
-    assign_to: features
+    apply_to: ["features", "rul"]
+    assign_to: ["features", "rul"]
 
+
+
+# concatenate_features:
+#   # Concatenate time-features to the feature set
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+
+#   metadata:
+#     apply_to: ["features"]
+#     assign_to: features
 
 # concatenate_units:
 #   transform:
@@ -134,3 +126,19 @@ concatenate_features:
 #     apply_to:
 #       [features]
 
+
+# ragged2numpy_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
+
+#   metadata:
+#     apply_to: ["features"]
+#     assign_to: features
+
+  
+# ragged2numpy_target:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
+
+#   metadata:
+#     apply_to: ["rul"]
