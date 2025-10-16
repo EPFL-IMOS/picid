@@ -50,7 +50,7 @@ tabularize_y_train:
     timestep_dimension: 1
 
     select_features:
-      - rul: horizon
+      - rul: present
 
   metadata:
     apply_to: ["rul"]
@@ -68,7 +68,7 @@ tabularize_y_val_test:
     timestep_dimension: 1
 
     select_features:
-      - rul: horizon
+      - rul: present
 
   metadata:
     apply_to: ["rul"]

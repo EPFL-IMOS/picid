@@ -144,22 +144,43 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
                 seqs = collect_sequences(1)  # Collect seq_y
                 feature_data[key] = seqs
 
+            if selection == "present":
+                seqs = collect_sequences(0)  # Collect seq_x
+                feature_data[key] = seqs
+
             if selection == "history":
                 seqs = collect_sequences(0)  # Collect seq_x
                 feature_data[key] = seqs
 
             if selection == "horizon":
-                seqs = collect_sequences(1)  # Collect seq_x
+                seqs = collect_sequences(1)  # Collect seq_y
                 feature_data[key] = seqs
 
         # Now reshape in batch task dimension.
+        # Here we directly create a 3D tensor with the task dimension as the first dimension.
+        # In terms of tabularization, this mmeans we create all task tables in one go.
         for key, selection in self.select_features.items():
             if selection == "t":
-                feature_data[key] = rearrange(feature_data[key], "b t ... -> t b ...")
+                # We want to select all contextual features at the prediction time point t.
+                feature_data[key] = rearrange(feature_data[key], "b t f -> t b f")
+            elif selection == "present":
+                # Present is defined as the last time point of the history window.
+                # b = batch h = history (time steps) f = features
+                # We want to select all contextual features at the prediction time point t.
+                feature_data[key] = rearrange(
+                    feature_data[key][:, -1, None], "b 1 f -> 1 b f"
+                )
             elif selection == "history":
+                # b = batch h = history (time steps) f = features
+                # We add the task dimension as the first dimension and flatten h and f
+                # because we want all of history for all features in the tabular vector.
                 feature_data[key] = rearrange(feature_data[key], "b h f -> 1 b (h f)")
             elif selection == "horizon":
+                # Since the tabularization only allows one target (scalar), we map the horizon
+                # to the task dimension. This way, we create new tasks for each horizon step.
                 feature_data[key] = rearrange(feature_data[key], "b t f -> t b f")
+            else:
+                raise ValueError(f"Unknown selection type: {selection}")
 
         n_tasks = set([values.shape[0] for key, values in feature_data.items()])
 
@@ -172,23 +193,29 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
 
         """
         Current model of the naming convention:
-
+        naming scheme p = present
+        
                                         t
                                         |
                     --------------------------
            Target   |  history | p | horizon |
                     --------------------------
-           Context  |  history | p | horizon |
+           Context1 |  history | p | horizon |
+           Context2 |  history | p | horizon |
                     --------------------------
                         ---> time axis
         """
 
+        # That means some features have task dimension 1 (history) while other
+        # have bigger task dimension due to the fact that we create directly the 3D table for all tasks.
+        # Therefore we need to pad the task dimensions of the history features to the max task dimension.
         if max(n_tasks) != min(n_tasks) and (
             "history" in self.select_features.values()
+            or "present" in self.select_features.values()
         ):
 
             for key, selection in self.select_features.items():
-                if selection == "history":
+                if selection in ["history", "present"]:
                     feature_data[key] = repeat(
                         feature_data[key], "1 b h -> t b h", t=max(n_tasks)
                     )
