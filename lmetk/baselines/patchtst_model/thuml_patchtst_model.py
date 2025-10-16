@@ -7,7 +7,11 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch import nn
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import (
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+    STATE_FORECASTING_TASKS,
+)
 from lmetk.baselines.forecaster import TransformerForecaster
 
 from .thuml_patchtst import Model as PatchTST
@@ -26,7 +30,9 @@ class PatchTST_Forecaster(TransformerForecaster):
         e_layers: int = 3,
         d_layers: int = 3,
         d_ff: int = 64,
-        freq: str = "h",
+        n_heads: int = 4,
+        activation: str = "gelu",
+        factor: int = 3,
         use_x_dim: bool = False,
         include_x_t: bool = True,
         # training
@@ -37,7 +43,6 @@ class PatchTST_Forecaster(TransformerForecaster):
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
         linear_shared_weights: bool = False,
-        time_emb_dim: int = 0,
         # this model could support teacher forcing
         # teacher_forcing_prob: float = 0.5,
         transformer_args: dict = None,
@@ -65,25 +70,40 @@ class PatchTST_Forecaster(TransformerForecaster):
             task_type=task_type,
         )
 
+        configs = {
+            "seq_len": ts_in + ts_out if include_x_t else ts_in,
+            # "label_len": ts_in, # not used?
+            "pred_len": ts_out,
+            # "freq": freq,
+            # "feature_encode_dim": time_emb_dim,
+            "dropout": dropout,
+            "d_model": d_model,
+            "e_layers": e_layers,
+            "d_layers": d_layers,
+            "c_out": d_yt,
+            "d_ff": d_ff,
+            "feature_dim": d_yc + d_x if use_x_dim else None,
+            "factor": factor,
+            "n_heads": n_heads,
+            "activation": activation,
+        }
+
+        if task_type not in CLASSIFICATION_TASKS:
+            extra_configs = {
+                "task_name": "long_term_forecast",
+                "enc_in": 1,
+            }
+        else:
+            extra_configs = {
+                "task_name": "classification",
+                "num_class": d_yt,
+                "enc_in": d_yc + d_x,
+            }
+
         configs = OmegaConf.create(
             {
-                "task_name": "long_term_forecast",
-                "seq_len": ts_in + ts_out if include_x_t else ts_in,
-                # "label_len": ts_in, # not used?
-                "pred_len": ts_out,
-                # "freq": freq,
-                # "feature_encode_dim": time_emb_dim,
-                "dropout": dropout,
-                "d_model": d_model,
-                "e_layers": e_layers,
-                "d_layers": d_layers,
-                "c_out": d_yt,
-                "d_ff": d_ff,
-                "feature_dim": d_yc + d_x if use_x_dim else None,
-                "factor": 3,
-                "n_heads": 4,
-                "activation": "gelu",
-                "enc_in": 1,
+                **configs,
+                **extra_configs,
             }
         )
 
@@ -107,7 +127,10 @@ class PatchTST_Forecaster(TransformerForecaster):
             self.d_x_mask = None
         self.mask_y_c = mask_y_c
 
-        if self.task_type in REGRESSION_TASKS or self.task_type == "state_forecasting":
+        if (
+            self.task_type
+            in REGRESSION_TASKS + STATE_FORECASTING_TASKS + CLASSIFICATION_TASKS
+        ):
             # We only support this case so far
             assert (
                 self.include_x_t is False
@@ -136,7 +159,7 @@ class PatchTST_Forecaster(TransformerForecaster):
 
         # In the regresssion case, we show x_t as additional features
         # to the encoder.
-        if self.task_type in REGRESSION_TASKS:
+        if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
             # We only support this case so far
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
@@ -164,12 +187,18 @@ class PatchTST_Forecaster(TransformerForecaster):
                 batch_x = torch.cat([y_c, x_c], dim=2)
             else:
                 batch_x = y_c
-            # outputs = self.model(x=batch_x)
+
             outputs = self.model(
                 x_enc=batch_x, x_mark_enc=x_c, x_dec=None, x_mark_dec=x_t
             )
 
-        outputs = outputs[:, :, : y_t.shape[2]]
+            if self.task_type not in CLASSIFICATION_TASKS:
+                # outputs are 3d tensor [B, L, D]
+                outputs = outputs[:, :, : y_t.shape[2]]
+            else:
+                # 2d tensor [B, num_class]
+                outputs = outputs.unsqueeze(1)
+
         return (outputs,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
