@@ -1,6 +1,6 @@
 _evaluator_defaults: &evaluator_defaults
   _target_: lmetk.evaluator.multiunit.MultiUnitEvaluator
-  metric_names: ["mpe", "mae", "mse", "rmse"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
+  metric_names: ["mpe", "phm_score", "mae", "mse", "rmse"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
 
   apply_inverse_scaling: False
   inverse_transform_name: null

@@ -55,3 +55,56 @@ class MeanPercentageErrorMetric(AbstractMetric):
 
         # Calculate the mean and convert to percentage
         return (self.running_sum_of_errors / self.total_count) * 100
+
+
+class PHMScoreMetric(AbstractMetric):
+    """
+    Calculates the scoring function from the IEEE 2012 PHM Data Challenge competition.
+    The score is an average of an asymmetric function A_i, which depends
+    on the percentage error of the RUL prediction.
+
+    Ref: H.Dhungana et al., "Bearing Prognostics Using the PRONOSTIA Data A Comparative Study" (Eq. 1,2 & 3).
+    """
+
+    def __init__(self):
+        super().__init__("phm_score")
+        self.reset()
+        # Pre-calculate ln(0.5) for efficiency
+        self._ln_half = np.log(0.5)
+
+    def reset(self):
+        """Resets the running sum of scores and the total count."""
+        self.total_sum_of_A = 0.0
+        self.total_count = 0
+
+    def update(self, predictions: np.ndarray, targets: np.ndarray):
+        """
+        Processes a batch to update the metric's state.
+        """
+        assert (
+            predictions.shape == targets.shape
+        ), "Shape mismatch between predictions and targets"
+
+        epsilon = 1e-9
+        # Step 1: Calculate the percentage error for each sample in the batch
+        percent_errors = 100 * (targets - predictions) / (targets + epsilon)
+
+        # Step 2: Calculate A_i for each sample using the asymmetric formula
+        late_prediction_scores = np.exp(-self._ln_half * (percent_errors / 5.0))
+        early_prediction_scores = np.exp(self._ln_half * (percent_errors / 20.0))
+
+        A_i_batch = np.where(
+            percent_errors <= 0, late_prediction_scores, early_prediction_scores
+        )
+
+        # Step 3: Accumulate the sum of A_i scores and the sample count
+        self.total_sum_of_A += np.sum(A_i_batch)
+        self.total_count += predictions.size
+
+    def compute(self) -> float:
+        """
+        Computes the final mean score over all updated batches.
+        """
+        if self.total_count == 0:
+            raise ValueError("Metric has not been updated with any data.")
+        return self.total_sum_of_A / self.total_count
