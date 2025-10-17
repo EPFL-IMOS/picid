@@ -256,6 +256,10 @@ class Forecaster(CustomEvaluatorLightningModule):
         )
         *_, y_t = batch
 
+        # Here we squeeze 2 because this class handles multiple tasks
+        # and some tasks produce just one feature,
+        # which should go into the 2D evaluator,
+        # squeeze(2) does nothing if there are multiple features in dim 2
         return {
             "loss": loss.mean(),
             # This is needed because evaluator works over the numpy arrays
