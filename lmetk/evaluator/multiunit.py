@@ -9,7 +9,8 @@ import logging
 
 from typing import Any, Dict, List, Optional, override
 import numpy as np
-
+from pathlib import Path
+import xarray as xr
 
 from lmetk.metrics.metric_factory import MetricFactory
 from collections import defaultdict
@@ -50,6 +51,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
         self.scaler = inverse_transform
 
         # --- Logic from DefaultEvaluator ---
+        self.out_path = None
         self.paths = paths
         self.save_predictions = save_predictions
         self.remote_logger = remote_logger
@@ -75,6 +77,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
             self.targets = []
             self.scaled_preds = []
             self.scaled_targets = []
+            self.unit_ids = []
 
     @override
     def reset(self):
@@ -92,6 +95,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
         if self.collect_predictions:
             self.preds.append(predictions)
             self.targets.append(targets)
+            self.unit_ids.append(unit_ids)
 
         # Apply inverse scaling if configured
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
@@ -108,7 +112,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
         if unit_ids.ndim == 1:
             unique_units = np.unique(unit_ids)
             get_indices = lambda unit: np.where(unit_ids == unit)[0]
-            get_key = lambda unit: int(unit)
+            get_key = lambda unit: int(unit[0])
         elif unit_ids.ndim == 2:
             unique_units = np.unique(unit_ids, axis=0)
             get_indices = lambda unit: np.where((unit_ids == unit).all(axis=1))[0]
@@ -123,8 +127,8 @@ class MultiUnitEvaluator(AbstractEvaluator):
             key = get_key(unit)
             indices = get_indices(unit)
 
-            unit_predictions = predictions[:, indices]
-            unit_targets = targets[:, indices]
+            unit_predictions = predictions[indices]
+            unit_targets = targets[indices]
 
             # Update all metrics associated with this unit key
             for metric in self.unit_metrics[key].values():
@@ -135,19 +139,8 @@ class MultiUnitEvaluator(AbstractEvaluator):
         self, mode: str = "val", epoch: int = 0, step: int = 0
     ) -> Dict[str, float]:
         """Compute final metrics, save predictions, and return flattened results."""
-        # --- Saving logic from DefaultEvaluator (simplified for example) ---
-        if self.save_predictions and self.collect_predictions:
-            pass
-            # print("\n[Evaluator] Saving predictions to a file would happen here.")
-            # # Dummy saving logic:
-            # all_preds = np.concatenate(self.preds, axis=0)
-            # all_targets = np.concatenate(self.targets, axis=0)
-            # print(f"  - Total raw predictions collected: {all_preds.shape}")
-            # if self.apply_inverse_scaling:
-            #     all_scaled_preds = np.concatenate(self.scaled_preds, axis=0)
-            #     print(
-            #         f"  - Total scaled predictions collected: {all_scaled_preds.shape}"
-            #     )
+        # --- Saving logic extracted into helper ---
+        self._save_predictions_if_needed(mode)
 
         # --- Metric computation logic from MultiUnitEvaluator ---
         flat_results = {}
@@ -169,3 +162,60 @@ class MultiUnitEvaluator(AbstractEvaluator):
             flat_results[f"{name}_std"] = np.std(values)
 
         return flat_results
+
+    def _save_predictions_if_needed(self, mode: str) -> None:
+        """Save collected predictions/targets to disk when configured."""
+        dict_to_save = {}
+
+        if self.save_predictions and self.collect_predictions:
+            predictions = np.concatenate(self.preds, axis=0)
+            targets = np.concatenate(self.targets, axis=0)
+            unit_ids = np.concatenate(self.unit_ids, axis=0)
+
+            d_names = ["sample"] + [f"dim{i}" for i in range(1, predictions.ndim)]
+            dict_to_save.update(
+                {
+                    "predictions": xr.DataArray(
+                        data=predictions,
+                        dims=d_names,
+                    ),
+                    "targets": xr.DataArray(
+                        data=targets,
+                        dims=d_names,
+                    ),
+                    "unit_ids": xr.DataArray(
+                        data=unit_ids,
+                        dims=["sample"]
+                        + [f"unit_dim{i}" for i in range(1, unit_ids.ndim)],
+                    ),
+                }
+            )
+
+            if self.apply_inverse_scaling:
+                scaled_predictions = np.concatenate(self.scaled_preds, axis=0)
+                scaled_targets = np.concatenate(self.scaled_targets, axis=0)
+
+                dict_to_save.update(
+                    {
+                        "scaled_predictions": xr.DataArray(
+                            data=scaled_predictions,
+                            dims=d_names,
+                        ),
+                        "scaled_targets": xr.DataArray(
+                            data=scaled_targets,
+                            dims=d_names,
+                        ),
+                    }
+                )
+
+        if not dict_to_save:
+            return
+
+        if self.out_path is None:
+            if self.paths and getattr(self.paths, "eval_details", None):
+                self.out_path = Path(self.paths.eval_details) / mode
+                self.out_path.mkdir(parents=True, exist_ok=True)
+
+            assert (
+                self.out_path is not None
+            ), "Output path must be specified to save predictions."

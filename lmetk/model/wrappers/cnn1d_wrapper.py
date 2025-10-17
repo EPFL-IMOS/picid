@@ -55,8 +55,15 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
             outputs = self.backbone(batch_x)
             model_out = {
                 "predictions": outputs.unsqueeze(1),
-                "targets": batch_y.unsqueeze(1),
+                "targets": batch_y,
             }
+
+            # Make sure the shapes of predictions and targets are correct
+            if model_out["predictions"].shape != model_out["targets"].shape:
+                raise ValueError(
+                    f"Shape mismatch: predictions {model_out['predictions'].shape} "
+                    f"and targets {model_out['targets'].shape}."
+                )
             return model_out
         else:
             raise ValueError(f"Task {self.task_type} not supported.")

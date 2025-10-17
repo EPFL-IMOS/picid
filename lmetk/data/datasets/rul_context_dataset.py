@@ -133,20 +133,18 @@ class RULContextBatchDataset(ContextBatchDataset):
         # TO FINISH: we have now "unit_id" and "unit_name" in batch, how to collate it?
         d = AttributeDict(
             {
-                "batch_idx": torch.tensor(batch_idx),
-                # (B=1, seq_len, C) -> (B=1, C),
-                # take the last time step,
-                # collate fn will concatenate over the batch dim
-                # TODO: Keep dim
-                "rul": target_seq_x[:, -1].flatten(),  # target_seq_x[:, -1],
-                # (B, seq_len, C)
-                "features": context_seq_x,
+                "batch_idx": torch.tensor(batch_idx).unsqueeze(1),  # (B,1)
+                # Out targets are (B,F) or (B,T,F), in the case of RUL here we have (B,F)
+                "rul": target_seq_x[
+                    :, -1
+                ],  # Collate fn will concatenate over the batch dim take the last time step; # (B=1, seq_len, C) -> (B=1, C),
+                "features": context_seq_x,  # (B, seq_len, C)
             }
         )
 
         if self.get_unit_id:
-            # It has to b be on the one level down because we should have for every element of the batch one id, otherwise we get errors when we shuffle dataset
-            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx))
+            # (B,F)
+            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx)).unsqueeze(1)
             # How can we actually collate strings?
             # "unit_name": (self.unid_name),
         return AttributeDict(d)
