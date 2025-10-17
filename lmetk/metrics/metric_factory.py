@@ -14,6 +14,7 @@ from lmetk.metrics.metrics import (
     NormalizedMAEMetricRailway,
     NormalizedMSEMetricRailway,
 )
+from lmetk.metrics.rul_metrics import MeanPercentageErrorMetric
 
 
 class MetricFactory:
@@ -30,6 +31,7 @@ class MetricFactory:
         "mae_railway": NormalizedMAEMetricRailway,
         "mse_railway": NormalizedMSEMetricRailway,
         "nasa_score": NASAScoreMetric,
+        "mpe": MeanPercentageErrorMetric,
     }
 
     @classmethod

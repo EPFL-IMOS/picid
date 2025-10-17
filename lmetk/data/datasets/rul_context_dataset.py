@@ -90,7 +90,9 @@ class RULContextBatchDataset(ContextBatchDataset):
         warmup_steps: int = None,
         **kwargs,
     ):
-        # assert pred_len == 1, "pred_len must be 0 for RUL prediction."
+        assert pred_len == 1, "pred_len must be 0 for RUL prediction."
+        # It is makes sense in the context of RUL as we want to predict the RUL at the end of the sequence x, seq_y is not used in this dataset
+        pred_len = 0  # Force pred_len to 0 for RUL tasks
 
         self.meta_data_dict = kwargs["meta_data_dict"]
 
