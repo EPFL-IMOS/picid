@@ -219,3 +219,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
             assert (
                 self.out_path is not None
             ), "Output path must be specified to save predictions."
+
+        if len(dict_to_save) > 0:
+            df = xr.Dataset(dict_to_save)
+            df.to_netcdf(self.out_path / "predictions.nc")

@@ -67,3 +67,23 @@ You can also customize your paths locally using a config file in `configs/paths`
 source .venv/bin/activate
 python lmetk/run.py paths=rt_local debug=default experiment=railway_traction/autogluon_railway_fit_predict
 ```
+
+
+UPDATE: what has worked for L. on 17/10/2025
+
+```bash
+# Step 1: Clone all submodules defined in .gitmodules
+git submodule update --init --recursive
+
+# Step 2: Create the virtual environment
+uv venv
+
+# Step 3: Activate the new environment
+source .venv/bin/activate
+
+# Step 4: Install all dependencies from the lock file
+uv sync
+
+# This installs your project, dev dependencies, and all local submodules
+uv pip install -e ".[dev,local]"
+```
