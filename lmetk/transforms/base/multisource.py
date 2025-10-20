@@ -537,7 +537,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         return out
 
 
-class ConcatenateUnitsTransform(MultiSourceTransformInterface):
+class ConcatenateUnitsMixing(MultiSourceTransformInterface):
     """"""
 
     def __init__(self, axis: int = None):
@@ -550,7 +550,7 @@ class ConcatenateUnitsTransform(MultiSourceTransformInterface):
 
         # assert axis is not None, "axis must be specified"
         assert self.axis is not None, (
-            "axis must be specified for the transforms which inherit from the ConcatenateUnitsTransform."
+            "axis must be specified for the transforms which inherit from the ConcatenateUnitsMixing."
             "Please choose along which axis you want to concatenate the data bafore it is passed to the transform."
         )
 

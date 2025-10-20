@@ -8,7 +8,7 @@ from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.base.multisource import (
     ConcatinatedFitMultiSourceTransformMixin,
-    ConcatenateUnitsTransform,
+    ConcatenateUnitsMixing,
 )
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
@@ -146,7 +146,7 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
         return data
 
 
-class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsTransform):
+class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing):
     def __init__(self, axis: int, **kwargs):
         """
         Initialize the transform.
@@ -157,7 +157,7 @@ class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsTransf
         """
         self.axis = axis
         RaggedTransform.__init__(self)
-        ConcatenateUnitsTransform.__init__(self, axis=axis)
+        ConcatenateUnitsMixing.__init__(self, axis=axis)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
