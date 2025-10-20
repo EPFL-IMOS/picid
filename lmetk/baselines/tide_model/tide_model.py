@@ -7,7 +7,11 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from torch import nn
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import (
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+    STATE_FORECASTING_TASKS,
+)
 from lmetk.baselines.forecaster import TransformerForecaster
 
 from .tide import Model as TiDE
@@ -65,27 +69,43 @@ class TiDE_Forecaster(TransformerForecaster):
             task_type=task_type,
         )
 
-        task_name = (
-            "state_forecasting"
-            if (self.task_type == "state_forecasting")
-            else "long_term_forecast"
-        )
+        configs = {
+            "seq_len": ts_in,
+            "pred_len": ts_out,
+            "freq": freq,
+            "feature_encode_dim": time_emb_dim,
+            "dropout": dropout,
+            "d_model": d_model,
+            "e_layers": e_layers,
+            "d_layers": d_layers,
+            "d_ff": d_ff,
+            "feature_dim": d_x if use_x_dim else None,
+        }
+
+        # This might be confusing at first, but the reason why we keep
+        # task names aligned with the original codebase is
+        # to make it easier to merge future changes from upstream.
+        if task_type in CLASSIFICATION_TASKS:
+            extra_configs = {
+                "task_name": "classification",
+                "num_class": d_yt,
+                "c_out": 1,
+            }
+        elif task_type in STATE_FORECASTING_TASKS + REGRESSION_TASKS:
+            extra_configs = {
+                "task_name": "state_forecasting",
+                "c_out": d_yt,
+            }
+        else:
+            extra_configs = {
+                "task_name": "long_term_forecast",
+                "c_out": d_yt,
+            }
 
         configs = OmegaConf.create(
             {
-                "task_name": task_name,
-                "seq_len": ts_in,
-                # "label_len": ts_in, # not used?
-                "pred_len": ts_out,
-                "freq": freq,
-                "feature_encode_dim": time_emb_dim,
-                "dropout": dropout,
-                "d_model": d_model,
-                "e_layers": e_layers,
-                "d_layers": d_layers,
-                "c_out": d_yt,
-                "d_ff": d_ff,
-                "feature_dim": d_x if use_x_dim else None,
+                **configs,
+                **extra_configs,
             }
         )
 
@@ -100,6 +120,7 @@ class TiDE_Forecaster(TransformerForecaster):
         self.transformer_args = transformer_args
         self.include_x_t = include_x_t
         self.mask_y_c = mask_y_c
+        self.configs = configs
         # self.teacher_forcing_prob = teacher_forcing_prob
 
         if d_x_mask is not None:
@@ -143,21 +164,40 @@ class TiDE_Forecaster(TransformerForecaster):
         #   batch_y_mark = torch.concat(
         #         [x_mark_enc, batch_y_mark[:, -self.pred_len :, :]], dim=1
         #     )
-        if self.task_type in REGRESSION_TASKS:
+        if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
             # We only support this case so far
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
-            x_c = x_t
-            y_c = torch.zeros(
-                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
+            # For now we assume that we have no past context in regression tasks
+            # technically we could support it here.
+            # We also assume that we have no historical target,
+            # if we had, we would call it "contextual forecasting"
+            x_mark_enc = x_t
+            batch_y_mark = x_t
+            x_enc = torch.zeros(
+                (x_t.shape[0], x_t.shape[1], self.configs.c_out), device=x_t.device
             )
+
         elif self.task_type == "state_forecasting":
+            # In state forecasting, we have historical target values
+            # but no context, as we want to learn the state transition dynamics
             assert x_c is None, "x_c should be None for state forecasting tasks"
             assert x_t is None, "x_t should be None for state forecasting tasks"
-        # x_t = torch.rand_like(x_t)
-        # y_c = y_c + 0.1 * torch.rand_like(y_c)
+            x_mark_enc = None
+            batch_y_mark = None
+            x_enc = y_c
+        else:
+            # contextual forecasting, we use the full information
+            x_mark_enc = x_c
+            batch_y_mark = x_t
+            x_enc = y_c
 
-        outputs = self.model(x_enc=y_c, x_mark_enc=x_c, batch_y_mark=x_t, x_dec=None)
+        outputs = self.model(
+            x_enc=x_enc,
+            x_mark_enc=x_mark_enc,
+            batch_y_mark=batch_y_mark,
+            x_dec=None,
+        )
 
         return (outputs,)
 

@@ -1,0 +1,23 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/concept_rul_multiunit_dataset
+  - override /datamodule: base_datamodule_no_batch_sampler
+  - override /model: lstm
+
+task_definition:
+  requires_training: true
+
+model:
+  d_yc: 0
+  d_yt: ${task_definition.num_classes}
+  d_x: ${infer_data_dim:features,-1}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min

@@ -1,18 +1,17 @@
-import random
+import logging
 from typing import Tuple
 
-import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
-from torch import nn
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
 from lmetk.baselines.forecaster import TransformerForecaster
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
     WarmupReduceLROnPlateauScheduler,
 )
 
 from .cross_former import Crossformer
+
+logger = logging.getLogger(__name__)
 
 
 class Crossformer_Forecaster(TransformerForecaster):
@@ -66,7 +65,7 @@ class Crossformer_Forecaster(TransformerForecaster):
             task_type=task_type,
         )
 
-        no_y_as_input = task_type in REGRESSION_TASKS
+        no_y_as_input = task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS
 
         configs = {
             "data_dim": (
@@ -95,7 +94,7 @@ class Crossformer_Forecaster(TransformerForecaster):
         n_parameters = sum(
             p.numel() for p in self.crossformer.parameters() if p.requires_grad
         )
-        print("number of crossformer parameters: %d" % n_parameters)
+        logger.info("number of crossformer parameters: %d" % n_parameters)
 
         self.init_lr = init_lr
         self.base_lr = base_lr
@@ -114,16 +113,17 @@ class Crossformer_Forecaster(TransformerForecaster):
             self.d_x_mask = d_x_mask
         else:
             self.d_x_mask = None
-        # self.teacher_forcing_prob = teacher_forcing_prob
 
-        assert d_yt <= d_yc, "d_yt should be less than or equal to d_yc"
+        if self.task_type not in REGRESSION_TASKS + CLASSIFICATION_TASKS:
+            assert d_yt <= d_yc, "d_yt should be less than or equal to d_yc"
 
         if self.decoder_embedding == "DSW":
+            not_supported = CLASSIFICATION_TASKS + REGRESSION_TASKS
             assert not self.task_type in [
                 "rul",
                 "ahrul",
                 "soc",
-            ], "DSW decoder embedding not supported for task_type in ['rul', 'ahrul', 'soc']"
+            ], f"DSW decoder embedding not supported for task_type in {not_supported}"
 
     @property
     def train_step_forward_kwargs(self):
@@ -165,9 +165,10 @@ class Crossformer_Forecaster(TransformerForecaster):
             forecast_out = outputs[..., -self.out_data_dim :]
         elif self.decoder_embedding == "random":
 
-            if self.task_type in REGRESSION_TASKS:
+            if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
                 x_seq = x_t
                 outputs = self.crossformer(x_seq=x_seq)
+                # TODO: read paper and see if this can be improved
                 forecast_out = outputs[..., -self.out_data_dim :]
             else:
                 x_seq = y_c

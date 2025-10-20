@@ -1,9 +1,9 @@
 import random
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import nn
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
 from lmetk.baselines.forecaster import Forecaster
 
 from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
@@ -110,11 +110,18 @@ class LSTM_Seq2Seq(nn.Module):
 
 
 class LSTM_Regression(nn.Module):
-    def __init__(self, t2v: Time2Vec, encoder: LSTM_Encoder, decoder: LSTM_Decoder):
+    def __init__(
+        self,
+        t2v: Time2Vec,
+        encoder: LSTM_Encoder,
+        decoder: LSTM_Decoder,
+        n_classes: Optional[int] = None,
+    ):
         super().__init__()
         self.t2v = t2v
         self.encoder = encoder
         self.decoder = decoder
+        self.n_classes = n_classes
 
     def _merge(self, x, y):
         return torch.cat((x, y), dim=-1)
@@ -130,7 +137,7 @@ class LSTM_Regression(nn.Module):
 
         pred_len = y_target.shape[1]
         batch_size = y_target.shape[0]
-        y_dim = y_target.shape[2]
+        y_dim = y_target.shape[2] if self.n_classes is None else self.n_classes
         outputs = -torch.ones(batch_size, pred_len, y_dim).to(y_target.device)
         hidden, cell = self.encoder(x_target)
 
@@ -193,7 +200,9 @@ class LSTM_Forecaster(Forecaster):
             self.t2v = None
 
         time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
-        no_y_as_input = task_type in REGRESSION_TASKS
+        no_y_as_input = (
+            task_type in REGRESSION_TASKS or task_type in CLASSIFICATION_TASKS
+        )
 
         self.encoder = LSTM_Encoder(
             input_dim=time_dim + (d_yc if not no_y_as_input else 0),
@@ -213,6 +222,11 @@ class LSTM_Forecaster(Forecaster):
             self.model = LSTM_Regression(self.t2v, self.encoder, self.decoder).to(
                 self.device
             )
+        elif self.task_type in CLASSIFICATION_TASKS:
+            assert d_yc == 0, "LSTM classifier does not support context labels"
+            self.model = LSTM_Regression(
+                self.t2v, self.encoder, self.decoder, n_classes=d_yt
+            ).to(self.device)
         elif self.task_type in ["state_forecasting"]:
             self.model = LSTM_Seq2Seq(self.t2v, self.encoder, self.decoder).to(
                 self.device
@@ -247,7 +261,7 @@ class LSTM_Forecaster(Forecaster):
             # stats (update_stats = False).
             y_t = self.revin(y_t, mode="norm", update_stats=False)
 
-        if self.task_type in REGRESSION_TASKS:
+        if self.task_type in REGRESSION_TASKS or self.task_type in CLASSIFICATION_TASKS:
             preds = self.model.forward(x_t, y_t, teacher_forcing_prob=force)
         elif self.task_type in ["forecasting", "state_forecasting"]:
             preds = self.model.forward(x_c, y_c, x_t, y_t, teacher_forcing_prob=force)

@@ -1,0 +1,34 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/concept_rul_multiunit_dataset
+  - override /datamodule: base_datamodule_no_batch_sampler
+  - override /model: timeseries_transformer
+
+task_definition:
+  requires_training: true
+
+model:
+  d_yc: 0
+  d_yt: ${task_definition.num_classes}
+  d_x: ${infer_data_dim:features,-1}
+  # TODO: replace with actual timefeatures when available
+  n_timefeatures: 0
+
+  transformer_args:
+    seq_len: ${task_definition.seq_len}
+    pred_len: ${task_definition.pred_len}
+    enc_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
+    dec_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
+    embed_type: 5
+    dec_in: ${task_definition.num_classes}
+    c_out: ${task_definition.num_classes}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min

@@ -264,7 +264,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         outs = {
             "features": self.df_X.values,  # sensor data measurements
             "timestamps": self.df_X.index.values.reshape(-1, 1),  # cycle numbers
-            "health_states": self.df_A["hs"].values,
+            "health_states": self.df_A["hs"].values.reshape(-1, 1),
             "unit": self.df_A["unit"].values,
             "descriptors": self.df_W.values,  # operating conditions
             "concepts": self.concepts.values,

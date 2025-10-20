@@ -9,7 +9,7 @@ task_definition:
   requires_training: true
 
 model:
-  d_yc: ${infer_data_dim:${task_definition.task_type},-1}
+  d_yc: 0
   d_yt: ${infer_data_dim:${task_definition.task_type},-1}
   d_x: ${infer_data_dim:features,-1}
 
