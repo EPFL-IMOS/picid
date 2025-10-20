@@ -6,7 +6,10 @@ import awkward as ak
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import (
+    ConcatinatedFitMultiSourceTransformMixin,
+    ConcatenateUnitsMixing,
+)
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
@@ -143,29 +146,28 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
         return data
 
 
-# class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsTransform):
-#     def __init__(self, **kwargs):
-#         """
-#         Initialize the transform.
+class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing):
+    def __init__(self, axis: int, **kwargs):
+        """
+        Initialize the transform.
 
-#         Args:
-#             **kwargs: Additional keyword arguments
-#         """
-#         super().__init__(**kwargs)
+        Args:
+            axis: The axis along which to concatenate ragged arrays
+            **kwargs: Additional keyword arguments
+        """
+        self.axis = axis
+        RaggedTransform.__init__(self)
+        ConcatenateUnitsMixing.__init__(self, axis=axis)
 
-#     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
-#         """
-#         Concatenate ragged arrays along a single ragged dimension
-#         """
-#         for key, value in data.items():
-#             assert isinstance(value, ak.Array), f"Key '{key}' is not an awkward array."
-#             dims = ak_find_var_dims(value)
-#             if len(dims) != 1:
-#                 raise ValueError(
-#                     f"Key '{key}' has {len(dims)} ragged dimensions, expected exactly one."
-#                 )
-#             else:
-#                 var_dim = dims[0]
-#                 data[key] = ak.concatenate(value, axis=var_dim - 1).to_numpy()
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+        """
+        Concatenate ragged arrays along a single ragged dimension
+        """
 
-#         return data
+        apply_to_keys = metadata["apply_to_keys"]
+        out = {}
+        for key in apply_to_keys:
+            # convert to numpy
+            out[key] = ak.to_numpy(data[key])
+
+        return out

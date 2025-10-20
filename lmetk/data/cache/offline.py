@@ -78,6 +78,7 @@ class FileSystemCache:
         """
         pkl_file, _, _, metadata_file = self._paths(cache_dir, stage, cache_key)
         if not pkl_file.exists() and not metadata_file.exists():
+            logger.info(f"Cache files not found: stage {stage}")
             return None
         return joblib.load(pkl_file), joblib.load(metadata_file)
 

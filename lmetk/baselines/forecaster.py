@@ -163,6 +163,7 @@ class Forecaster(CustomEvaluatorLightningModule):
         x_t = x_t.to(self.device).float()
         # move y_c to cpu if it isn't already there, scale, and then move back to the model device
         y_c = torch.from_numpy(self._scaler(y_c.cpu().numpy())).to(self.device).float()
+
         # create dummy y_t of zeros
         y_t = (
             torch.zeros((x_t.shape[0], x_t.shape[1], self.d_yt)).to(self.device).float()
@@ -307,6 +308,7 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         return batch
 
+    # target (B, F)
     def _training_step(self, batch, batch_idx):
         batch = self._map_batch_to_task(batch)
         outs = self.step(batch, train=True)

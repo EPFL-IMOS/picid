@@ -1,8 +1,20 @@
 #@package _global_
 
 defaults:
+  - override /datasource: nb14_bosello
   - override /evaluator: default
   - override /task_definition: prognostics/rul
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+  val:
+    inverse_transform_name: scaler_target 
+    apply_inverse_scaling: True
+  test:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
 
 
 callbacks:
@@ -14,15 +26,7 @@ callbacks:
     monitor: val/loss
     mode: min
 
-evaluator:
-  train:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
 
-  val:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
-
-  test:
-    inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
+dataset:
+  dataset_cfg:
+    get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.

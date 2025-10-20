@@ -1,6 +1,6 @@
 seq_len: 16  # window size
 label_len: 0  # overlap size
-pred_len: 0 # prediction size
+pred_len: 1 # prediction size
 stride: 1
 task_type: ahrul
 

@@ -35,8 +35,13 @@ dependencies = [
     "h5py>=3.14.0",
     "faiss-cpu>=1.12.0",
     "huggingface-hub>=0.35.3",
+    # Local submodule dependencies
+    # uv will resolve these using [tool.uv.sources]
     "tabdpt",
     "carte-ai",
+    "phmd",
+    "TabPFN",
+    "rul-datasets",
 ]
 
 [project.optional-dependencies]
@@ -49,8 +54,6 @@ dev = [
     "pytest-mock",
     "mkdocs-material>=9.6.20",
     "mkdocstrings[python]>=0.30.0",
-    "phmd",
-    "TabPFN",
     # "uni2ts",
     "viztracer>=1.0.4",
     "panel>=1.8.1",
@@ -74,6 +77,7 @@ phmd = { path = "./local_packages/phmd", editable = true }
 TabPFN = { path = "./local_packages/TabPFN", editable = true }
 tabdpt = { path = "./local_packages/TabDPT", editable = true }
 carte-ai = { path = "./local_packages/carte-ai", editable = true }
+rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
 # uni2ts = { path = "./local_packages/uni2ts", editable = true }
 
 torch = [

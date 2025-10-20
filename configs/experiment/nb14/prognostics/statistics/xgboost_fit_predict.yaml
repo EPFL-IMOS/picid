@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - unibo/prognostics/base
+  - /model_configs/concepts_prognostics/xgboost_fit_predict
+  - override /transforms: battery/unibo/bosello23_base_statistics

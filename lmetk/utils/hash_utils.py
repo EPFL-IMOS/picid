@@ -1,11 +1,12 @@
 """Data utilities."""
 
-import torch
+from typing import Union, List
 import hashlib
-import omegaconf
+
 import json
 from pathlib import Path
 from omegaconf import OmegaConf, DictConfig, ListConfig
+
 # def generate_zero_sparse_connectivity(m, n):
 #     """Generate a zero sparse connectivity matrix.
 
@@ -50,7 +51,7 @@ def ensure_serializable(obj):
 def hash_config(cfg):
     """
     Make a stable hash from a Hydra/OmegaConf config.
-    
+
     Parameters
     ----------
     cfg : DictConfig | dict | list
@@ -64,6 +65,7 @@ def hash_config(cfg):
     cfg = ensure_serializable(cfg)
     config_str = json.dumps(cfg, sort_keys=True)
     return hashlib.sha256(config_str.encode("utf-8")).hexdigest()
+
 
 def hash_directory(directory: str, extensions=None) -> str:
     """
@@ -82,9 +84,25 @@ def hash_directory(directory: str, extensions=None) -> str:
                     sha.update(chunk)
     return sha.hexdigest()
 
-def compute_cache_key(config: dict, library_dir: str, extensions=None) -> str:
+
+def compute_cache_key(
+    config: dict, library_dir: Union[str, List[str], Path], extensions=None
+) -> str:
     """Combine config hash and library hash into one cache key."""
     config_hash = hash_config(config)
-    lib_hash = hash_directory(library_dir, extensions)
+
+    # Handle both a single directory string and a list of directory strings
+    if isinstance(library_dir, str) or isinstance(library_dir, Path):
+        # If it's just a string, hash that one directory
+        lib_hash = hash_directory(library_dir, extensions)
+    elif isinstance(library_dir, list):
+        # If it's a list, hash each directory and combine the hashes
+        all_lib_hashes = [hash_directory(d, extensions) for d in library_dir]
+        # Sort to make the hash independent of the list order
+        all_lib_hashes.sort()
+        lib_hash = "".join(all_lib_hashes)
+    else:
+        raise TypeError("library_dir must be a string or a list of strings.")
+
     combined = hashlib.sha256((config_hash + lib_hash).encode()).hexdigest()
     return combined
