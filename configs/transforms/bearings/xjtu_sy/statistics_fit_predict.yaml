@@ -1,5 +1,5 @@
 defaults:
-  - battery/xjtu_sy/statistics@_here_
+  - bearings/xjtu_sy/statistics@_here_
 
 # Emulate de Pater LSTM-AE preprocessing
 

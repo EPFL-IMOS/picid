@@ -24,7 +24,7 @@ run_command() {
     fi
 }
 
-MODELS=("lstm" "cnn_1d" "crossformer" "stf" "patchtst" "tide" "timeseries_transformer")
+MODELS=("lstm" "cnn_1d" "crossformer" "stf" "patchtst" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
 
 for model in "${MODELS[@]}"; do
     echo "Testing model: $model"

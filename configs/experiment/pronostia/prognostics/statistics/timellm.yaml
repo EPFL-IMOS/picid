@@ -4,4 +4,4 @@
 defaults:
   - pronostia/prognostics/base
   - /model_configs/concepts_prognostics/timellm
-  - override /transforms: battery/pronostia/statistics_fit_predict
+  - override /transforms: bearings/pronostia/statistics_fit_predict

@@ -1,5 +1,5 @@
 defaults:
-  - battery/pronostia/statistics@_here_
+  - bearings/pronostia/statistics@_here_
 
 # Emulate de Pater LSTM-AE preprocessing
 
