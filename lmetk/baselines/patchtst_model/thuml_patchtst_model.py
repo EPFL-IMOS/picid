@@ -165,7 +165,7 @@ class PatchTST_Forecaster(TransformerForecaster):
             assert y_c is None, "y_c should be None for regression tasks"
             x_c = x_t
             y_c = torch.zeros(
-                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
+                (x_t.shape[0], x_t.shape[1], self.d_yt), device=x_c.device
             )
 
         if self.include_x_t:
