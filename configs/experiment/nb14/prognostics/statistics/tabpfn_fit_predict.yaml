@@ -1,6 +1,6 @@
 #@package _global_
 
 defaults:
-  - unibo/prognostics/base
+  - nb14/prognostics/base
   - /model_configs/concepts_prognostics/tabpfn_fit_predict
-  - override /transforms: battery/unibo/bosello23_base_statistics
+  - override /transforms: battery/nb14/bosello23_base_statistics_fit_predict_history

@@ -1,6 +1,7 @@
 #@package _global_
 
+
 defaults:
-  - unibo/prognostics/base
+  - pronostia/prognostics/base
   - /model_configs/concepts_prognostics/timellm
-  - override /transforms: battery/unibo/bosello23_base_statistics
+  - override /transforms: battery/pronostia/statistics_fit_predict
