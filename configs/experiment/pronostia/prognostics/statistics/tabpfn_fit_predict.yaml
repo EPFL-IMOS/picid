@@ -5,3 +5,13 @@ defaults:
   - pronostia/prognostics/base
   - /model_configs/concepts_prognostics/tabpfn_fit_predict
   - override /transforms: bearings/pronostia/statistics_fit_predict
+
+
+task_definition:
+  stride_train: 10
+
+datamodule: 
+  train_batch_size: 1
+  val_batch_size: 1
+  test_batch_size: 1
+  shuffle_train: True

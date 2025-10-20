@@ -8,13 +8,13 @@ defaults:
 evaluator:
   train:
     inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
+    apply_inverse_scaling: False
   val:
     inverse_transform_name: scaler_target 
-    apply_inverse_scaling: True
+    apply_inverse_scaling: False
   test:
     inverse_transform_name: scaler_target
-    apply_inverse_scaling: True
+    apply_inverse_scaling: False
 
 
 callbacks:

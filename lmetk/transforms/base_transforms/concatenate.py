@@ -9,6 +9,7 @@ from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.base.multisource import (
     ConcatinatedFitMultiSourceTransformMixin,
     ConcatenateUnitsMixing,
+    NoFitMultiSourceTransformMixin,
 )
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
@@ -144,6 +145,22 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
                 data[key] = ak.concatenate(value, axis=var_dim - 1).to_numpy()
 
         return data
+
+
+class PopulateTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
+
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+        """
+        Concatenate ragged arrays along a single ragged dimension
+        """
+
+        apply_to_keys = metadata["apply_to_keys"]
+        out = {}
+        for key in apply_to_keys:
+            # convert to numpy
+            out[key] = ak.to_numpy(data[key])
+
+        return out
 
 
 class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing):

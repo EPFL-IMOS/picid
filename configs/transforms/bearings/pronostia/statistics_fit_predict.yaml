@@ -35,7 +35,7 @@ tabularize_x_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
-    timestep_dimension: 5
+    timestep_dimension: 1
 
     select_features:
       - features: history
@@ -98,6 +98,14 @@ tabularize_y_val_test:
     apply_to: ["rul"]
     assign_to: rul
     transform_on_keys: ["val", "test"]
+
+populate_unit_information:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.PopulateTransform
+
+  metadata:
+    apply_to: ["metadata"]
+    assign_to: ["additional"]
 
 concatenate_units:
   transform:

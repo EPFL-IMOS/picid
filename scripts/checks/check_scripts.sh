@@ -26,21 +26,20 @@ run_command() {
 
 MODELS=("lstm" "cnn_1d" "crossformer" "stf" "patchtst" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
 
-for model in "${MODELS[@]}"; do
-    echo "Testing model: $model"
-    
-    # Create a list of commands to execute for each model
-    commands=(
-        # "python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1"
-        "python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
-        # "python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
-        # "python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
-    )
-    
-    # Iterate over the commands and run them
-    for cmd in "${commands[@]}"; do
-        echo "Running: $cmd"
+# Create a list of commands to execute for each model
+commands=(
+    "python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1"
+    "python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
+    # "python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
+    # "python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
+)
+
+for cmd in "${commands[@]}"; do
+    echo "Running: $cmd"
+    for model in "${MODELS[@]}"; do
+        echo "Testing model: $model"    
         run_command "$cmd"
     done
-
 done
+
+
