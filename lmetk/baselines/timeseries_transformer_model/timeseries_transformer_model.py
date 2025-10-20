@@ -6,7 +6,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import (
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+    STATE_FORECASTING_TASKS,
+)
 from lmetk.baselines.forecaster import TransformerForecaster
 from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 
@@ -68,12 +72,15 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
             transformer_args["d_x_embedding_router"] = torch.tensor(
                 [0] * (d_x - n_timefeatures) + [1] * n_timefeatures
             )
+        else:
+            transformer_args["d_x_embedding_router"] = None
 
-        is_regression = (
-            self.task_type in REGRESSION_TASKS or self.task_type == "state_forecasting"
+        is_decoder_only = (
+            self.task_type
+            in REGRESSION_TASKS + CLASSIFICATION_TASKS + STATE_FORECASTING_TASKS
         )
 
-        self.transformer = Transformer(transformer_args, decoder_only=is_regression)
+        self.transformer = Transformer(transformer_args, decoder_only=is_decoder_only)
         self.init_lr = init_lr
         self.base_lr = base_lr
         self.patience = patience
@@ -121,13 +128,13 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         if self.d_x_mask is not None:
             x_t[:, :, self.mask_tt] = 0
 
-        if self.task_type in REGRESSION_TASKS:
+        if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
             # We only support this case so far
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
             x_c = x_t
             y_c = torch.zeros(
-                (x_t.shape[0], x_t.shape[1], self.d_yc), device=x_c.device
+                (x_t.shape[0], x_t.shape[1], self.d_yt), device=x_c.device
             )
 
             batch_y, batch_y_mark = (
@@ -136,7 +143,7 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
             )
             output = self.transformer(None, None, batch_y, batch_y_mark)
 
-        if self.task_type == "state_forecasting":
+        elif self.task_type in STATE_FORECASTING_TASKS:
             batch_x = y_c.to(self.device)
             output = self.transformer(None, None, batch_x, None)
         else:
