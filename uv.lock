@@ -5646,6 +5646,27 @@ wheels = [
 ]
 
 [[package]]
+name = "rul-datasets"
+version = "0.0.0"
+source = { editable = "local_packages/rul-datasets" }
+dependencies = [
+    { name = "h5py" },
+    { name = "pytorch-lightning" },
+    { name = "scikit-learn" },
+    { name = "torch" },
+    { name = "tqdm" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "h5py", specifier = ">=3.10.0,<4.0.0" },
+    { name = "pytorch-lightning", specifier = ">1.4.4" },
+    { name = "scikit-learn", specifier = ">=1.0.0,<2.0.0" },
+    { name = "torch", specifier = ">1.9.0" },
+    { name = "tqdm", specifier = ">=4.62.2,<5.0.0" },
+]
+
+[[package]]
 name = "s3transfer"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6285,12 +6306,14 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "performer-pytorch" },
+    { name = "phmd" },
     { name = "positional-encodings" },
     { name = "progpy" },
     { name = "pyarrow" },
     { name = "pyrootutils" },
     { name = "python-box" },
     { name = "rich" },
+    { name = "rul-datasets" },
     { name = "scikit-learn" },
     { name = "tabdpt" },
     { name = "tabpfn" },
@@ -6309,11 +6332,9 @@ dev = [
     { name = "mkdocstrings", extra = ["python"] },
     { name = "mypy" },
     { name = "panel" },
-    { name = "phmd" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
-    { name = "tabpfn" },
     { name = "viztracer" },
 ]
 
@@ -6345,7 +6366,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.1.1" },
     { name = "panel", marker = "extra == 'dev'", specifier = ">=1.8.1" },
     { name = "performer-pytorch", specifier = ">=1.1.4" },
-    { name = "phmd", marker = "extra == 'dev'", editable = "local_packages/phmd" },
+    { name = "phmd", editable = "local_packages/phmd" },
     { name = "positional-encodings", specifier = ">=6.0.3" },
     { name = "progpy", specifier = ">=1.7.1" },
     { name = "pyarrow", specifier = ">=20.0.0" },
@@ -6355,10 +6376,10 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'dev'" },
     { name = "python-box", specifier = ">=7.3.2" },
     { name = "rich", specifier = ">=14.0.0" },
+    { name = "rul-datasets", editable = "local_packages/rul-datasets" },
     { name = "scikit-learn", specifier = ">=1.3.2" },
     { name = "tabdpt", editable = "local_packages/TabDPT" },
     { name = "tabpfn", editable = "local_packages/TabPFN" },
-    { name = "tabpfn", marker = "extra == 'dev'", editable = "local_packages/TabPFN" },
     { name = "torchinfo", specifier = ">=1.7.1" },
     { name = "torchsummary", specifier = ">=1.5.1" },
     { name = "viztracer", marker = "extra == 'dev'", specifier = ">=1.0.4" },

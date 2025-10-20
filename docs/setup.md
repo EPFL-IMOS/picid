@@ -85,5 +85,17 @@ source .venv/bin/activate
 uv sync
 
 # This installs your project, dev dependencies, and all local submodules
-uv pip install -e ".[dev,local]"
+uv pip install -e ".[dev]"
 ```
+
+# Remove env
+
+# Deactivate if you're in the .venv
+deactivate
+
+# Remove the virtual environment folder
+rm -rf .venv
+
+# Forcefully unregister all submodules and remove their directories
+git submodule deinit --all -f
+git clean -fdx local_packages

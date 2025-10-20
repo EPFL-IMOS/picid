@@ -74,7 +74,7 @@ tabularize_y_train:
     timestep_dimension: 1
 
     select_features:
-      - rul: horizon
+      - rul: present
 
   metadata:
     apply_to: ["rul"]
@@ -92,7 +92,7 @@ tabularize_y_val_test:
     timestep_dimension: 1
 
     select_features:
-      - rul: horizon
+      - rul: present
 
   metadata:
     apply_to: ["rul"]
@@ -107,38 +107,3 @@ concatenate_units:
   metadata:
     apply_to: ["features", "rul"]
     assign_to: ["features", "rul"]
-
-
-
-# concatenate_features:
-#   # Concatenate time-features to the feature set
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
-
-#   metadata:
-#     apply_to: ["features"]
-#     assign_to: features
-
-# concatenate_units:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
-#   metadata:
-#     apply_to:
-#       [features]
-
-
-# ragged2numpy_features:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
-
-#   metadata:
-#     apply_to: ["features"]
-#     assign_to: features
-
-  
-# ragged2numpy_target:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.Ragged2DenseDataTransform    
-
-#   metadata:
-#     apply_to: ["rul"]
