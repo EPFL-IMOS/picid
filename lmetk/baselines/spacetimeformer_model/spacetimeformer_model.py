@@ -5,7 +5,11 @@ import torch
 import torch.nn.functional as F
 import torchmetrics
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import (
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+    STATE_FORECASTING_TASKS,
+)
 from lmetk.baselines.forecaster import TransformerForecaster
 
 from .nn import Spacetimeformer
@@ -104,7 +108,7 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         **kwargs,
     ):
 
-        if task_type == "state_forecasting":
+        if task_type in STATE_FORECASTING_TASKS:
             # currently we populate d_x as zero vector for state forecasting
             # this would need to be changes if we want to include timefeatures
             assert d_x == 0, "for state forecasting d_x must be 0"
@@ -129,7 +133,7 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
             task_type=task_type,
         )
 
-        decoder_only = self.task_type in REGRESSION_TASKS
+        decoder_only = self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS
         if decoder_only:
             start_token_len = 0
 
@@ -367,7 +371,7 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
 
-        if self.task_type == "state_forecasting":
+        if self.task_type in STATE_FORECASTING_TASKS:
             # in state forecasting we do not have covariates
             # however, we still have toembed a zero vector because
             # the embedding adds positional and variable embeddings
@@ -427,6 +431,7 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         )
 
         if self.decoder_only:
+            # TODO: find a better solution for this
             forecast_output = forecast_output[:, -y_t.shape[1] :, :]
 
         if target_mask is not None:

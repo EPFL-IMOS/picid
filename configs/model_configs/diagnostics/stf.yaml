@@ -19,8 +19,8 @@ callbacks:
 
 model:
   max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
-  d_yc: ${infer_data_dim:rul,-1}
-  d_yt: ${infer_data_dim:rul,-1}
+  d_yc: 0
+  d_yt: ${task_definition.num_classes}
   d_x: ${infer_data_dim:features,-1}
   n_timefeatures: 0
   base_lr: 0.001
