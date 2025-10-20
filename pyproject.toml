@@ -35,6 +35,13 @@ dependencies = [
     "h5py>=3.14.0",
     "faiss-cpu>=1.12.0",
     "huggingface-hub>=0.35.3",
+    # Local submodule dependencies
+    # uv will resolve these using [tool.uv.sources]
+    "tabdpt",
+    "carte-ai",
+    "phmd",
+    "TabPFN",
+    "rul-datasets",
 ]
 
 [project.optional-dependencies]
@@ -52,16 +59,6 @@ dev = [
     "panel>=1.8.1",
     "holoviews>=1.21.0",
 ]
-
-# All local submodules that need to be installed as editable packages
-local = [
-    "phmd",
-    "TabPFN",
-    "tabdpt",
-    "carte-ai",
-    "rul-datasets",
-]
-
 
 [tool.setuptools]
 # If your package is at the top-level (./lmetk), this is fine:
