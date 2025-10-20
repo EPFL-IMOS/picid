@@ -17,7 +17,8 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
     """
 
     def __init__(
-        self, padding_value: Optional[float] = None, silent_logger: bool = False
+        self,
+        padding_value: Optional[float] = None,
     ):
         """
         Args:
@@ -26,7 +27,6 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         """
         super().__init__()
         self.padding_value = padding_value
-        self.silent_logger = silent_logger
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:
         """
@@ -37,17 +37,14 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
 
         # Check how many dim in just 3 them unsqueeze 1st dim
         if features.ndim == 2:
-            if not self.silent_logger:
-                logger.info(f"Input features shape: {features.shape}")
+            logger.debug(f"Input features shape: {features.shape}")
             # unsqueeze 0 dim to have (sw, win_len, channels). For example (sw of single cycle, win len, channels)
             features = features[np.newaxis, np.newaxis, :, :]
-            if not self.silent_logger:
-                logger.info(
-                    f"Reshaped features to: {features.shape}, unsqueezed two dim to have (N_cycles=1, N_win=1, win_len, channels)"
-                )
+            logger.debug(
+                f"Reshaped features to: {features.shape}, unsqueezed two dim to have (N_cycles=1, N_win=1, win_len, channels)"
+            )
 
-        if not self.silent_logger:
-            logger.info(f"Original feature shape for statistics: {features.shape}")
+        logger.debug(f"Original feature shape for statistics: {features.shape}")
 
         # Create a working copy to handle padding, ensuring dtype supports nan
         working_features = features.astype(float)
@@ -55,10 +52,7 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         # NEW: If a padding_value is specified, replace it with np.nan
         if self.padding_value is not None:
             working_features[working_features == self.padding_value] = np.nan
-            if not self.silent_logger:
-                logger.info(
-                    f"Replaced padding value '{self.padding_value}' with np.nan."
-                )
+            logger.debug(f"Replaced padding value '{self.padding_value}' with np.nan.")
 
         # 1. Calculate mean using the modified data
         mean_per_cycle = np.nanmean(working_features, axis=(1, 2))
@@ -74,8 +68,8 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         statistical_features = np.concatenate(
             [mean_per_cycle.T, std_per_cycle.T], axis=0
         ).squeeze(1)
-        if not self.silent_logger:
-            logger.info(f"New statistical feature shape: {statistical_features.shape}")
+
+        logger.debug(f"New statistical feature shape: {statistical_features.shape}")
 
         assert statistical_features.ndim == 1, "Output should be 1D array per cycle."
         # 5. Return the calculated features
