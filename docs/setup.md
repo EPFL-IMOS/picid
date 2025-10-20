@@ -88,8 +88,9 @@ uv sync
 uv pip install -e ".[dev]"
 ```
 
-# Remove env
+# Remove env and all dependencies 
 
+```bash
 # Deactivate if you're in the .venv
 deactivate
 
@@ -99,3 +100,4 @@ rm -rf .venv
 # Forcefully unregister all submodules and remove their directories
 git submodule deinit --all -f
 git clean -fdx local_packages
+```
