@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - xjtu_sy/prognostics/base
+  - /model_configs/prognostics/lstm
+  - override /transforms: bearings/xjtu_sy/statistics

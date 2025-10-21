@@ -65,7 +65,7 @@ class ScalingWrapper:
         # Apply inverse transform while preserving original shapes
         pred_shape = predictions.shape
         target_shape = targets.shape
-
+        # TODO: this logic should not be here! We have to define how does the output should look like
         if len(pred_shape) == 3:
 
             assert (
@@ -86,11 +86,11 @@ class ScalingWrapper:
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
                 NamedTransformInput(**dict(predictions=predictions)), metadata={}
-            ).reshape((1, -1))
+            )  # .reshape((1, -1))
 
             targets_transformed = self.inverse_transform.inverse_transform(
                 NamedTransformInput(**dict(targets=targets)), metadata={}
-            ).reshape((1, -1))
+            )  # .reshape((1, -1))
         else:
             raise ValueError(f"Unexpected shape: {pred_shape}")
 

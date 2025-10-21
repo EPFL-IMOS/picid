@@ -19,7 +19,14 @@ sequence2statistics:
   transform:
     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
-    silent_logger: true
+
+  metadata:
+    apply_to: 'features'
+
+  
+ragged2regularragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: 'features'

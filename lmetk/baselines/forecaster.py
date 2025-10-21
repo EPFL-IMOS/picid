@@ -3,7 +3,11 @@ from typing import Tuple
 from einops import rearrange
 import torch
 
-from lmetk.baselines.definitions import REGRESSION_TASKS
+from lmetk.baselines.definitions import (
+    ALL_TASKS,
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+)
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
 from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
@@ -39,14 +43,9 @@ class Forecaster(CustomEvaluatorLightningModule):
         self.null_value = None
         self.loss = loss
         self.task_type = task_type
+        self.classification_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
-        assert task_type in [
-            "forecasting",
-            "state_forecasting",
-            "rul",
-            "ahrul",
-            "soc",
-        ], f"Unrecognized task type: {task_type}"
+        assert task_type in ALL_TASKS, f"Unrecognized task type: {task_type}"
 
         if linear_window:
             self.linear_model = LinearModel(
@@ -135,6 +134,35 @@ class Forecaster(CustomEvaluatorLightningModule):
         forecasting_loss = self.loss_fn(y_t, outputs, full_mask)
         return forecasting_loss, full_mask
 
+    def classification_loss(
+        self, outputs: torch.Tensor, y_t: torch.Tensor, mask: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Cross-entropy loss for batched sequence classification with masking.
+
+        Args:
+            outputs: (B, T, C) unbounded logits
+            y_t: (B, T) integer class labels
+            mask: (B, T) binary mask (1 for valid, 0 for padded positions)
+
+        Returns:
+            Scalar masked mean loss
+        """
+
+        b, t, c = outputs.shape
+        # flatten
+        outputs_flat = outputs.reshape(-1, c)
+        y_flat = y_t.reshape(-1).long()
+        if mask is None:
+            mask_flat = torch.ones(outputs_flat.shape[0], device=outputs_flat.device)
+        else:
+            mask_flat = mask.reshape(-1).float()
+
+        loss = self.classification_criterion(outputs_flat, y_flat)
+        # Avoid division-by-zero when every position is masked out.
+        masked_loss = (loss * mask_flat).sum() / mask_flat.sum().clamp_min(1.0)
+        return masked_loss
+
     def compute_loss(
         self,
         batch: Tuple[torch.Tensor],
@@ -145,10 +173,15 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         outputs, *_ = self(x_c, y_c, x_t, y_t, **forward_kwargs)
 
-        loss, mask = self.forecasting_loss(
-            outputs=outputs, y_t=y_t, time_mask=time_mask
-        )
-        return loss, outputs, mask
+        if self.task_type in CLASSIFICATION_TASKS:
+            assert time_mask is None, "time masking not supported for classification"
+            loss = self.classification_loss(outputs=outputs, y_t=y_t, mask=None)
+            return loss, outputs, None
+        else:
+            loss, mask = self.forecasting_loss(
+                outputs=outputs, y_t=y_t, time_mask=time_mask
+            )
+            return loss, outputs, mask
 
     def predict(
         self,
@@ -163,6 +196,7 @@ class Forecaster(CustomEvaluatorLightningModule):
         x_t = x_t.to(self.device).float()
         # move y_c to cpu if it isn't already there, scale, and then move back to the model device
         y_c = torch.from_numpy(self._scaler(y_c.cpu().numpy())).to(self.device).float()
+
         # create dummy y_t of zeros
         y_t = (
             torch.zeros((x_t.shape[0], x_t.shape[1], self.d_yt)).to(self.device).float()
@@ -229,7 +263,15 @@ class Forecaster(CustomEvaluatorLightningModule):
         preds, *extra = self.forward_model_pass(
             x_c, seasonal_yc, x_t, y_t, **forward_kwargs
         )
-        assert preds.shape == y_t.shape, f"{preds.shape} != {y_t.shape}"
+
+        if self.task_type not in CLASSIFICATION_TASKS:
+            assert preds.shape == y_t.shape, f"{preds.shape} != {y_t.shape}"
+        else:
+            assert preds.shape == (
+                y_t.shape[0],
+                y_t.shape[1],
+                self.d_yt,
+            ), f"{preds.shape} != {(y_t.shape[0], y_t.shape[1], self.d_yt)}"
 
         if y_c is not None:
             baseline = self.linear_model(trend_yc, pred_len=pred_len, d_yt=d_yt)
@@ -286,7 +328,9 @@ class Forecaster(CustomEvaluatorLightningModule):
                 batch["features_seq_y"],  # y_t
             )
 
-        elif self.task_type in REGRESSION_TASKS:
+        elif self.task_type in REGRESSION_TASKS or (
+            self.task_type in CLASSIFICATION_TASKS
+        ):
 
             f = batch["features"]
             assert f.dim() == 3, "features must be 3D (B, T, D)"
@@ -307,6 +351,7 @@ class Forecaster(CustomEvaluatorLightningModule):
 
         return batch
 
+    # target (B, F)
     def _training_step(self, batch, batch_idx):
         batch = self._map_batch_to_task(batch)
         outs = self.step(batch, train=True)

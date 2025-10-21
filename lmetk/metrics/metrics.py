@@ -1,8 +1,16 @@
 """Concrete metric implementations."""
 
 import numpy as np
-from .base import AbstractFileSystemMetric, AbstractMetric
 import pandas as pd
+import torch
+from torchmetrics.classification import (
+    MulticlassAccuracy,
+    MulticlassF1Score,
+    MulticlassPrecision,
+    MulticlassRecall,
+)
+
+from .base import AbstractFileSystemMetric, AbstractMetric
 
 
 class NormalizedMAEMetricRailway(AbstractFileSystemMetric):
@@ -363,3 +371,87 @@ class MASEMetric(AbstractMetric):
 
         mase = (self.total_absolute_error / self.total_count) / self.scale
         return mase
+
+
+class MulticlassAccuracyMetric(AbstractMetric):
+    def __init__(self, num_classes: int):
+        self.metric = MulticlassAccuracy(num_classes=num_classes, average="micro")
+        super().__init__("accuracy")
+
+    def reset(self):
+        self.metric.reset()
+
+    def update(self, predictions, targets):
+        predictions = torch.from_numpy(predictions)
+        targets = torch.from_numpy(targets)
+
+        preds = (
+            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+        )
+        self.metric.update(preds, targets)
+
+    def compute(self):
+        return self.metric.compute().item()
+
+
+class MulticlassPrecisionMetric(AbstractMetric):
+    def __init__(self, num_classes: int):
+        self.metric = MulticlassPrecision(num_classes=num_classes, average="micro")
+        super().__init__("precision")
+
+    def reset(self):
+        self.metric.reset()
+
+    def update(self, predictions, targets):
+        predictions = torch.from_numpy(predictions)
+        targets = torch.from_numpy(targets)
+
+        preds = (
+            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+        )
+        self.metric.update(preds, targets)
+
+    def compute(self):
+        return self.metric.compute().item()
+
+
+class MulticlassRecallMetric(AbstractMetric):
+    def __init__(self, num_classes: int):
+        self.metric = MulticlassRecall(num_classes=num_classes, average="micro")
+        super().__init__("recall")
+
+    def reset(self):
+        self.metric.reset()
+
+    def update(self, predictions, targets):
+        predictions = torch.from_numpy(predictions)
+        targets = torch.from_numpy(targets)
+
+        preds = (
+            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+        )
+        self.metric.update(preds, targets)
+
+    def compute(self):
+        return self.metric.compute().item()
+
+
+class MulticlassF1Metric(AbstractMetric):
+    def __init__(self, num_classes: int):
+        self.metric = MulticlassF1Score(num_classes=num_classes, average="micro")
+        super().__init__("f1")
+
+    def reset(self):
+        self.metric.reset()
+
+    def update(self, predictions, targets):
+        predictions = torch.from_numpy(predictions)
+        targets = torch.from_numpy(targets)
+
+        preds = (
+            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+        )
+        self.metric.update(preds, targets)
+
+    def compute(self):
+        return self.metric.compute().item()

@@ -73,6 +73,9 @@ test_names = [
     "RW_Skewed_High_40C_DataSet_2Post/RW28",
 ]
 
+UNIT_NAMES_TO_ID = train_names + test_names
+UNIT_NAMES_TO_ID = {name: idx for idx, name in enumerate(UNIT_NAMES_TO_ID)}
+
 
 class NB14Loader(AbstractDataSourceLoader):
     def __init__(self, **kwargs):
@@ -82,7 +85,7 @@ class NB14Loader(AbstractDataSourceLoader):
         self._is_isplitted = False
         self._is_loaded = False
         self.data_dict = None
-        self.meta_data = None
+        self.meta_data = {}
 
         # Instantiate multisource_data_splitter if is not none
         assert (
@@ -128,6 +131,33 @@ class NB14Loader(AbstractDataSourceLoader):
         logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
         logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
         logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+
+        # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
+        unit_ids_meta_data = {
+            "unit_ids": {
+                "train": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["train"]
+                ],
+                "val": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["val"]
+                ],
+                "test": [
+                    UNIT_NAMES_TO_ID[entry["metadata"]["unit_name"]]
+                    for entry in data["test"]
+                ],
+            },
+            "unit_names": {
+                "train": [entry["metadata"]["unit_name"] for entry in data["train"]],
+                "val": [entry["metadata"]["unit_name"] for entry in data["val"]],
+                "test": [entry["metadata"]["unit_name"] for entry in data["test"]],
+            },
+        }
+
+        # update the meta_data with any other info you want to store
+        self.meta_data.update(unit_ids_meta_data)
+
         return out_dict
 
     def read_data(

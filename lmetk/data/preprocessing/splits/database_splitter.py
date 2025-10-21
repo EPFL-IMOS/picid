@@ -174,7 +174,7 @@ class TimeStampSplitter(TimeSeriesSplitter):
 
     def __repr__(self):
         return (
-            f"DateBasedSplitter(test_start={self.test_start}, test_end={self.test_end}, "
+            f"TimeStampSplitter(test_start={self.test_start}, test_end={self.test_end}, "
             f"train_ratio={self.train_ratio}, val_ratio={self.val_ratio}, "
             f"seq_len={self.seq_len}, pred_len={self.pred_len}, "
             f"apply_lookback={self.apply_lookback}, freq='{self.frequency}')"
