@@ -19,6 +19,7 @@ class ContextBatchDataset(BaseDataset):
         seq_len: int,  # window size
         label_len: int,  # overlap size
         pred_len: int,  # prediction size
+        pred_offset: int = 0,
         stride: int = 1,
         padding_left_flag: int = 0,
         warmup_steps: int = None,
@@ -54,6 +55,7 @@ class ContextBatchDataset(BaseDataset):
             stride=stride,
             padding_left_flag=padding_left_flag,
             warmup_steps=warmup_steps,
+            pred_offset=pred_offset,
         )
 
         self.target_dataset = SlidingWindowBatchDataset(

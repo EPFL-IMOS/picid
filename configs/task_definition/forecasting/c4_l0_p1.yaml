@@ -2,6 +2,7 @@ seq_len: 4 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
 stride: 1
+pred_offset: 3
 
 task_type: forecasting
 

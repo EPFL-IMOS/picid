@@ -43,6 +43,7 @@ class AkwardJaggedAutoregressiveSequencer:
         label_len: int,
         pred_len: int,
         stride: int = 1,
+        pred_offset: int = 0,
         padding_left_flag: int = 0,
         warmup_steps: int = None,
     ):
@@ -51,6 +52,7 @@ class AkwardJaggedAutoregressiveSequencer:
         self.label_len = label_len
         self.pred_len = pred_len
         self.stride = stride
+        self.pred_offset = pred_offset
 
         # Flags to use additional sequencer features
         # Partially (not implemented yet)
@@ -83,7 +85,7 @@ class AkwardJaggedAutoregressiveSequencer:
             • iterate over parent prefixes only
             • compute valid t directly from the stored length
         """
-        required_len = self.seq_len + self.pred_len
+        required_len = self.seq_len + self.pred_len + self.pred_offset
         stride = int(self.stride)
 
         # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
@@ -152,9 +154,9 @@ class AkwardJaggedAutoregressiveSequencer:
         # in the last dimension of the tuple
         now_point = idx_sel_t[-1]
         x_range = np.arange(0, self.seq_len)[None, :].repeat(b_dim, axis=0)
-        y_range = np.arange(0, self.label_len + self.pred_len)[None, :].repeat(
-            b_dim, axis=0
-        )
+        y_range = np.arange(
+            self.pred_offset, self.label_len + self.pred_len + self.pred_offset
+        )[None, :].repeat(b_dim, axis=0)
 
         x_range = ak.Array(x_range + now_point[:, None])
         y_range = ak.Array(y_range + now_point[:, None] + self.seq_len - self.label_len)

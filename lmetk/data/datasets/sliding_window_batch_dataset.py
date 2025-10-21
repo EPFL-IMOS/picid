@@ -28,6 +28,7 @@ class SlidingWindowBatchDataset(BaseDataset):
         label_len: int,
         pred_len: int,
         stride: int,
+        pred_offset: int = 0,
         suffixes=["_seq_x", "_seq_y"],
         padding_left_flag: int = 0,
         warmup_steps: int = None,
@@ -44,6 +45,7 @@ class SlidingWindowBatchDataset(BaseDataset):
             label_len=label_len,
             pred_len=pred_len,
             stride=stride,
+            pred_offset=pred_offset,
             padding_left_flag=padding_left_flag,
             warmup_steps=warmup_steps,
         )
