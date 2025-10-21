@@ -116,6 +116,17 @@ class BaseDataModule(LightningDataModule):
             else None
         )
 
+        for ds_name, ds in [
+            ("dataset_train", dataset_train),
+            ("dataset_val", dataset_val),
+            ("dataset_test", dataset_test),
+        ]:
+            if subset_range is not None:
+                if len(range(*subset_range)) > len(ds):
+                    raise ValueError(
+                        f"Subset range end index {subset_range} exceeds dataset length {len(ds)} for {ds_name}."
+                    )
+
         self.dataset_train = (
             dataset_train
             if subset_range is None
