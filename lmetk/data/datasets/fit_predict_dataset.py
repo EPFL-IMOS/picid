@@ -52,6 +52,8 @@ class FitPredictTaskDataset(BaseDataset):
         convert_units_to_tasks: bool = False,
         **kwargs,
     ):
+        # Additional default values
+        self.get_unit_id
 
         # Make sure that the data_dict contains the required keys
         if task_type in ["rul", "ahrul", "soc"]:
@@ -65,6 +67,12 @@ class FitPredictTaskDataset(BaseDataset):
             target_key = "target"
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
+
+        if kwargs.get("dataset_cfg", None) is not None:
+            dataset_cfg = kwargs.pop("dataset_cfg")
+
+            if dataset_cfg.get("get_unit_id", None):
+                self.get_unit_id = True
 
         for key in required_keys:
             if key not in data_dict:

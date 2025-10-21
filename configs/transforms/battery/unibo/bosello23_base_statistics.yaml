@@ -23,7 +23,7 @@ sequence2statistics:
   metadata:
     apply_to: 'features'
 
-  
+# This transform is requred, otherwise the  features and target in the concat dataset will be batched over diferent dimensions.  
 ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform

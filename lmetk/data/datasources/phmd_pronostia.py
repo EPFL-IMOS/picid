@@ -122,6 +122,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
         return {
             "features": features,
             "target": target,
+            "unit_id": ak.from_numpy(np.array(unit_id)),
             "metadata": {
                 "unit_id": unit_id,
                 "unit_name": f"Bearing {unit_name.strip("Bearing")}",

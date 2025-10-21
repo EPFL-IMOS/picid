@@ -147,22 +147,6 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
         return data
 
 
-class PopulateTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
-
-    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
-        """
-        Concatenate ragged arrays along a single ragged dimension
-        """
-
-        apply_to_keys = metadata["apply_to_keys"]
-        out = {}
-        for key in apply_to_keys:
-            # convert to numpy
-            out[key] = ak.to_numpy(data[key])
-
-        return out
-
-
 class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing):
     def __init__(self, axis: int, **kwargs):
         """
