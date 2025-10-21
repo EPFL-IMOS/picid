@@ -6,12 +6,11 @@ pred_len: ${task_definition.pred_len}
 stride: ${task_definition.stride}
 
 task_type: ${task_definition.task_type}
-
-#
-_overrides:
-  test:
-    stride: 1
-  val:
-    stride: 2
-  train:
-    stride: 3
+# TODO: decide if its fair to compare same train strides with tabpfn.
+# _overrides:
+#   test:
+#     stride: 1
+#   val:
+#     stride: 2
+#   train:
+#     stride: 3

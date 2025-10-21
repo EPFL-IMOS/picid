@@ -545,6 +545,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         batch = next(iter(loader))
         log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
         for key, value in batch.items():
+            # TODO: handle nested structures (attributedict, list, etc)
             if isinstance(value, torch.Tensor):
                 log.info(f"  {key}: {value.shape}")
             else:
