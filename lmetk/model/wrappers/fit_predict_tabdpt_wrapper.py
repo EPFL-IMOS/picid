@@ -21,12 +21,13 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     def __init__(
         self,
+        device: str,
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
         **kwargs,
     ):
-        device = "cuda" if kwargs["device"] == "gpu" else "cpu"
+        device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
         backbone = TabDPTRegressor(
             inf_batch_size=yield_batch_size,
             device=device,
