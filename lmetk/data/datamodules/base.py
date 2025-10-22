@@ -115,6 +115,7 @@ class BaseDataModule(LightningDataModule):
             if (hasattr(dataset_test, "get_collate_fn") and not use_batch_sampler)
             else None
         )
+<<<<<<< HEAD
 
         # for ds_name, ds in [
         #     ("dataset_train", dataset_train),
@@ -133,20 +134,24 @@ class BaseDataModule(LightningDataModule):
                 if subset_range is None
                 else Subset(dataset_train, range(*subset_range))
             )
+=======
+>>>>>>> 66f0ec8 (fixing stftt)
 
-        if subset_range[0] < dataset_val.__len__():
-            self.dataset_val = (
-                dataset_val
-                if subset_range is None
-                else Subset(dataset_val, range(*subset_range))
-            )
-
-        if subset_range[0] < dataset_test.__len__():
-            self.dataset_test = (
-                dataset_test
-                if subset_range is None
-                else Subset(dataset_test, range(*subset_range))
-            )
+        self.dataset_train = (
+            dataset_train
+            if (subset_range is None) or (subset_range[0] > dataset_train.__len__())
+            else Subset(dataset_train, range(*subset_range))
+        )
+        self.dataset_val = (
+            dataset_val
+            if (subset_range is None) or (subset_range[0] > dataset_val.__len__())
+            else Subset(dataset_val, range(*subset_range))
+        )
+        self.dataset_test = (
+            dataset_test
+            if (subset_range is None) or (subset_range[0] > dataset_test.__len__())
+            else Subset(dataset_test, range(*subset_range))
+        )
 
         self.save_hyperparameters(
             hparams, ignore=["datasets", "dataset_train", "dataset_val", "dataset_test"]

@@ -56,6 +56,7 @@ class MinMaxScalerSklearn(
     """
 
     def __init__(self):
+        super().__init__()
         self.scaler = MinMaxScaler()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
@@ -124,6 +125,7 @@ class StandardScalerSklearn(
     """
 
     def __init__(self):
+        super().__init__()
         self.scaler = StandardScaler()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):

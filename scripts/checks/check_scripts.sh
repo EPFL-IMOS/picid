@@ -24,21 +24,30 @@ run_command() {
     fi
 }
 
-MODELS=("lstm" "cnn_1d" "crossformer" "stf" "patchtst" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
+MODELS=("lstm" "cnn_1d" "stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
 
 # Create a list of commands to execute for each model
+
+# 1. Use SINGLE QUOTES (') to define the commands.
+# This prevents ${model} from being expanded immediately.
 commands=(
-    "python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1"
-    "python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
-    # "python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
-    # "python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1"
+    #'python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1'
+    #'python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
+    'python lmetk/run.py experiment=pronostia/prognostics/stftt/${model}.yaml trainer.max_epochs=25'
+    # 'python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
 )
 
-for cmd in "${commands[@]}"; do
-    echo "Running: $cmd"
+# 2. Keep the loop order the same (commands outer, models inner).
+for cmd_template in "${commands[@]}"; do
     for model in "${MODELS[@]}"; do
-        echo "Testing model: $model"    
-        run_command "$cmd"
+        echo "Testing model: $model"
+        
+        # 3. Use 'eval' to substitute the $model variable into the command template.
+        # This creates the final command string to be executed.
+        eval "final_cmd=\"$cmd_template\""
+        
+        # 4. Run the fully-formed command.
+        run_command "$final_cmd"
     done
 done
 

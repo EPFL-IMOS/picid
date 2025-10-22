@@ -1,12 +1,12 @@
 
 #@package _global_
 
-defaults:
-  # Disable wandb logger to avoid unnecessary network calls during debugging.
-  - default
+# defaults:
+#   # Disable wandb logger to avoid unnecessary network calls during debugging.
+#   - default
 
-trainer:
-  max_epochs: 5
+# trainer:
+#   max_epochs: 5
 
 # instead of debug, in run.yaml. I put debug here
 # We aim to shorten the dataset for debugging purposes.

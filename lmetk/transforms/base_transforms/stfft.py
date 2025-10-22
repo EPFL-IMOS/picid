@@ -92,7 +92,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
             phase_shift=self.phase_shift,
         )
 
-        logger.info(
+        logger.debug(
             f"STFT initialized: win_len={self.win_len}, hop={self.hop}, "
             f"fs={self.fs}, fft_mode={self.fft_mode}, output_format={self.output_format}, "
             f"apply_to_columns={self.apply_to_columns}"
@@ -108,7 +108,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
             )
 
         n_rows, n_columns = data.shape
-        logger.info(f"Input '{key}' shape: ({n_rows}, {n_columns})")
+        logger.debug(f"Input '{key}' shape: ({n_rows}, {n_columns})")
 
         # Check for NaN values
         if np.any(np.isnan(data)):
@@ -165,7 +165,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
             reshaped = stft_result.T
 
         axis_name = "column" if self.apply_to_columns else "row"
-        logger.info(
+        logger.debug(
             f"STFT for '{key}' {axis_name} {signal_idx}: {stft_result.shape} -> {reshaped.shape}"
         )
         return reshaped
@@ -215,14 +215,14 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
             final_result = stft_results_for_key[0]
 
         axis_name = "columns"
-        logger.info(
+        logger.debug(
             f"Combined STFT result for key '{key}' ({axis_name}): {final_result.shape}"
         )
-        logger.info(f"Final concatenated STFT shape: {final_result.shape}")
+        logger.debug(f"Final concatenated STFT shape: {final_result.shape}")
 
         if "target" not in data.keys():
             return final_result
-
+        # TODO: DO WE STILL NEED THIS PART? It is responsigble for handling the targets alignment
         # metadata
         out_dict = {"features": final_result}
 
@@ -230,7 +230,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         # Convert to numpy array
         target = convert_to_numpy(target, key)
 
-        logger.info(f"Added data '{key}' with shape {target.shape}")
+        logger.debug(f"Added data '{key}' with shape {target.shape}")
 
         # Allign targets
         n_frames = final_result.shape[0]
@@ -240,7 +240,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
         # Concatenate and reshape (-1,1)
         target = np.array(frame_targets).reshape(-1, 1)
-        logger.info(f"Final target shape: {target.shape}")
+        logger.debug(f"Final target shape: {target.shape}")
 
         assert target.shape[0] == n_frames, "Target and result shapes do not match"
 

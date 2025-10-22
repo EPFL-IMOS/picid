@@ -144,7 +144,7 @@ class RULContextBatchDataset(ContextBatchDataset):
 
         if self.get_unit_id:
             # (B,F)
-            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx)).unsqueeze(1)
+            d["unit_id"] = torch.tensor([self.unid_id] * len(batch_idx))
             # How can we actually collate strings?
             # "unit_name": (self.unid_name),
         return AttributeDict(d)
