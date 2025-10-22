@@ -12,6 +12,7 @@ trainer:
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.
 datamodule:
+  num_workers: 0
   subset_range: [30, 256, 2]  # [start, end, step]
 
 datasource:

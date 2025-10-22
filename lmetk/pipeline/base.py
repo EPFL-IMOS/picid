@@ -274,6 +274,10 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         dict
             The updated model_out dictionary with values converted to NumPy arrays.
         """
+
+        # if task=='rul':
+        #     # We expect here the result always 2d for the regression task
+
         # Process required keys from model_out and batch
         model_out["predictions"] = self._to_numpy(
             model_out["predictions"], "predictions"
@@ -560,8 +564,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             model_out = {}
             model_out["loss"] = torch.tensor([1])
             # Add task dimension back to predictions and targets
-            model_out["predictions"] = y.unsqueeze(0)
-            model_out["targets"] = y.unsqueeze(0)
+            model_out["predictions"] = y.unsqueeze(1)
+            model_out["targets"] = y.unsqueeze(1)
             return model_out
 
     def model_step_predict(self, batch) -> dict:
@@ -609,8 +613,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
         model_out = {
             # Add task dimension back to predictions and targets
-            "predictions": outputs.unsqueeze(0),
-            "targets": y.unsqueeze(0),
+            "predictions": outputs.unsqueeze(1),
+            "targets": y.unsqueeze(1),
         }
 
         # Add a dummy loss

@@ -522,6 +522,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             f"Expected: {features_set}, "
             f"Found: {set(data_dict[split].keys())}"
         )
+    # Potentially we can delete this line hence offloading explicitly stating the input keys in the .yaml files
     input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
 
     # 1. Create the datasets and store them in a dictionary

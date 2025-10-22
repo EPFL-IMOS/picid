@@ -67,19 +67,32 @@ class ScalingWrapper:
         target_shape = targets.shape
         # TODO: this logic should not be here! We have to define how does the output should look like
         if len(pred_shape) == 3:
+            # predictions: (B, T, C).
+            # For now we the T=1
+            if self.task_mode != "forecasting":
+                assert (
+                    pred_shape[1] == 1
+                ), f"Expected first dim (time dimentions) to be 1 for 3D predictions, got {pred_shape[1]}"
+            elif self.task_mode == "forecasting":
+                # 1. time dim is assumed to be first and can be greater than 1
 
-            assert (
-                pred_shape[0] == 1 or self.task_mode
-            ), f"Expected batch size of 1 for 3D predictions, got {pred_shape[0]}"
+                # 2. we do not work with multivariate for now
+                assert (
+                    pred_shape[2] == 1
+                ), f"Expected last dim (feature dimentions) to be 1 for 3D predictions, got {pred_shape[2]}"
+
+            # flatten time dimension into batch dimension
+            predictions = rearrange(predictions, "b t c -> (b t) c")
+            targets = rearrange(targets, "b t c -> (b t) c")
 
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(predictions=predictions.squeeze(0))),
+                NamedTransformInput(**dict(predictions=predictions)),
                 metadata={},
             ).reshape(pred_shape)
 
             targets_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(targets=targets.squeeze(0))), metadata={}
+                NamedTransformInput(**dict(targets=targets)), metadata={}
             ).reshape(target_shape)
 
         elif len(pred_shape) == 2:

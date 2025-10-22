@@ -53,7 +53,7 @@ class FitPredictTaskDataset(BaseDataset):
         **kwargs,
     ):
         # Additional default values
-        self.get_unit_id
+        self.get_unit_id = False
 
         # Make sure that the data_dict contains the required keys
         if task_type in ["rul", "ahrul", "soc"]:
@@ -141,6 +141,21 @@ class FitPredictTaskDataset(BaseDataset):
             self.X.shape[1] == self.y.shape[1]
         ), f"Inconsistent number of time steps: {self.X.shape[1]} != {self.y.shape[1]}"
 
+        if self.get_unit_id:
+            unit_id = data_dict.get("unit_id", None)
+            self.unit_id = handle_multi_units(unit_id, "unit_id")
+            assert (
+                self.unit_id is not None
+            ), "Unit ID must be provided if get_unit_id is True. Otherwise set dataset_cfg.get_unit_id to False."
+            # Check that 0 and 1 dimension match the number of tasks and samples
+            assert (
+                self.unit_id.shape[0] == self.X.shape[0]
+                and self.unit_id.shape[1] == self.X.shape[1]
+            ), (
+                f"Unit ID must have the same shape as X in the first two dimensions. "
+                f"Expected ({self.X.shape[0]}, {self.X.shape[1]}), got ({self.unit_id.shape[0]}, {self.unit_id.shape[1]})"
+            )
+
         self.n_tasks = len(self.y)  # first dimension is the task dimension
 
         super().__init__(data_dict, **kwargs)
@@ -164,6 +179,13 @@ class FitPredictTaskDataset(BaseDataset):
                 "context": torch.from_numpy(X),
             }
         )
+
+        if self.get_unit_id:
+            # unit_id = np.expand_dims(
+            #     self.unit_id[task], axis=0
+            # )  # (1, n_samples, n_features)
+            unit_id = self.unit_id[task]
+            d["unit_id"] = torch.from_numpy(unit_id)
 
         return AttributeDict(d)
 

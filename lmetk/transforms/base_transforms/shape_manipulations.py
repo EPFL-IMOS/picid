@@ -112,3 +112,18 @@ class ExpandScalarToReferenceFeatureSize(
         output_array = np.full(output_shape, fill_value)
 
         return output_array
+
+
+class RaggedToDenseTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+        """
+        Concatenate ragged arrays along a single ragged dimension
+        """
+
+        apply_to_keys = metadata["apply_to_keys"]
+        out = {}
+        for key in apply_to_keys:
+            # convert to numpy
+            out[key] = ak.to_numpy(data[key])
+
+        return out

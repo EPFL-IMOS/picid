@@ -97,7 +97,27 @@ class TransformStrategy:
                     transformed_data[key] = data[key].copy(deep=False)
 
         is_multi_unit = data.is_multi_unit
-        available_splits = list(data[apply_to_keys[0]].keys())
+        if not apply_to_keys:
+            raise ValueError(
+                "No 'apply_to_keys' provided. Provide at least one key to apply the transform."
+            )
+
+        apply_key = apply_to_keys[0]
+        if apply_key not in data:
+            available_keys = ", ".join(sorted(map(str, list(data.keys()))))
+            raise KeyError(
+                f"Apply-to key '{apply_key}' not found in data. "
+                f"Check the spelling in the transform or ensure the key is present in the data dictionary. "
+                f"Available keys: [{available_keys}]"
+            )
+
+        if not isinstance(data[apply_key], Mapping):
+            raise TypeError(
+                f"Unexpected structure for data['{apply_key}']; expected a mapping with split keys "
+                f"(e.g. 'train','val','test'). Found type: {type(data[apply_key]).__name__}."
+            )
+
+        available_splits = list(data[apply_key].keys())
 
         # --- 2. FIT TRANSFORMER (with SINGLE/MULTI LOGIC) ---
 

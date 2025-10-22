@@ -106,8 +106,23 @@ tabularize_y_val_test:
     transform_on_keys: ["val", "test"]
 
 
+concatenate_units_and_ragged2numpy:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    axis: 1
+
+  metadata:
+    apply_to: ["features", "rul", "unit_id"]
+    assign_to: ["features", "rul", "unit_id"]
 
 
+# ragged2dense:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RaggedToDenseTransform
+
+#   metadata:
+#     apply_to: ["features", "rul", "unit_id"]
+  
 
 
 
