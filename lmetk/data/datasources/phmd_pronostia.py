@@ -26,7 +26,7 @@ UNIT_NAMES_TO_ID = {
     "3_3": (3, 3),
 }
 
-SAMPLE_RANGE_SIZE = 256
+SAMPLE_RANGE_SIZE = 2560
 
 
 class PronostiaLoader(PHMDMultiSourceLoader):

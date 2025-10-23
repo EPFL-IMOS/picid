@@ -149,11 +149,12 @@ class MultiUnitEvaluator(AbstractEvaluator):
         if not self.unit_metrics:
             return {f"{name}_mean": 0.0 for name in self.metric_names}
 
-        for unit_id, metrics in self.unit_metrics.items():
-            for name, metric in metrics.items():
-                value = metric.compute()
-                flat_results[f"{name}_{unit_id}"] = value
-                average_collector[name].append(value)
+        # !!! Uncomment to get the per-unit metrics logged
+        # for unit_id, metrics in self.unit_metrics.items():
+        #     for name, metric in metrics.items():
+        #         value = metric.compute()
+        #         flat_results[f"{name}_{unit_id}"] = value
+        #         average_collector[name].append(value)
 
         for name, values in average_collector.items():
             flat_results[f"{name}_mean"] = np.mean(values)

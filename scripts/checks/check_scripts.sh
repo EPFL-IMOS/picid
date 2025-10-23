@@ -24,7 +24,9 @@ run_command() {
     fi
 }
 
-MODELS=("lstm" "cnn_1d" "stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
+MODELS=("stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
+# "lstm"  "stf" "patchtst" "cnn_1d"
+
 
 # Create a list of commands to execute for each model
 
@@ -33,7 +35,9 @@ MODELS=("lstm" "cnn_1d" "stf" "patchtst")  #"crossformer" "tide" "timeseries_tra
 commands=(
     #'python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1'
     #'python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
-    'python lmetk/run.py experiment=pronostia/prognostics/stftt/${model}.yaml trainer.max_epochs=25'
+    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=25 optimizer.parameters.lr=0.01'
+    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01'
+    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01 optimizer.parameters.weight_decay=0.0001'
     # 'python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
 )
 
