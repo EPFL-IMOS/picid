@@ -10,7 +10,7 @@ defaults:
   - datamodule: null
   - model: null
   - task_definition: null
-  - optimizer: default
+  - optimization: default
   - loss: default
   - evaluator: null
   - callbacks: default

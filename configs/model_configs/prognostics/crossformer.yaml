@@ -4,6 +4,7 @@ defaults:
   - override /dataset: prognostics/rul_multiunit_dataset
   - override /datamodule: base_datamodule
   - override /model: crossformer
+  - override /optimization: warmup_reduce_on_plateau_adam
 
 task_definition:
   requires_training: true

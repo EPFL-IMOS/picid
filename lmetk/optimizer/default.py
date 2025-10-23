@@ -25,10 +25,12 @@ class DefaultOptimizer(AbstractOptimizer):
     """
 
     def __init__(self, optimizer_id, parameters, scheduler=None) -> None:
-        optimizer_id = optimizer_id
-        self.optimizer = functools.partial(
-            TORCH_OPTIMIZERS[optimizer_id], **parameters
+
+        raise DeprecationWarning(
+            "DefaultOptimizer is deprecated and will be removed in future versions."
         )
+
+        self.optimizer = functools.partial(TORCH_OPTIMIZERS[optimizer_id], **parameters)
         if scheduler is not None:
             scheduler_id = scheduler.get("scheduler_id")
             scheduler_params = scheduler.get("scheduler_params")

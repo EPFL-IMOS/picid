@@ -1,13 +1,11 @@
 import logging
 from typing import Tuple
 
+from typing import Callable
 import torch
 
 from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
 from lmetk.baselines.forecaster import TransformerForecaster
-from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
-    WarmupReduceLROnPlateauScheduler,
-)
 
 from .cross_former import Crossformer
 
@@ -17,6 +15,8 @@ logger = logging.getLogger(__name__)
 class Crossformer_Forecaster(TransformerForecaster):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_x: int,
         d_yc: int,
         d_yt: int,
@@ -34,28 +34,23 @@ class Crossformer_Forecaster(TransformerForecaster):
         baseline: bool = False,
         decoder_embedding: str = "random",
         # training
-        l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
         linear_shared_weights: bool = False,
         device: str = "cuda",
-        warmup_steps: float = 1000,
-        decay_factor: float = 0.8,
-        init_lr: float = 1e-10,
-        base_lr: float = 5e-4,
-        patience: int = 3,
         d_x_mask=None,
         mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
             scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
-            l2_coeff=l2_coeff,
             loss=loss,
             linear_window=linear_window,
             use_revin=use_revin,
@@ -96,11 +91,6 @@ class Crossformer_Forecaster(TransformerForecaster):
         )
         logger.info("number of crossformer parameters: %d" % n_parameters)
 
-        self.init_lr = init_lr
-        self.base_lr = base_lr
-        self.patience = patience
-        self.warmup_steps = warmup_steps
-        self.decay_factor = decay_factor
         self.target_mask = None
         self.decoder_embedding = decoder_embedding
         self.out_data_dim = d_yt
@@ -223,22 +213,3 @@ class Crossformer_Forecaster(TransformerForecaster):
             "forecast_out": forecast_out,
             "forecast_mask": forecast_mask,
         }
-
-    def configure_optimizers(self):
-        self.optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=self.init_lr,
-            # weight_decay=self.l2_coeff,
-        )
-        self.scheduler = WarmupReduceLROnPlateauScheduler(
-            self.optimizer,
-            init_lr=self.init_lr,
-            peak_lr=self.base_lr,
-            warmup_steps=self.warmup_steps,
-            patience=self.patience,
-            factor=self.decay_factor,
-        )
-
-        # Were not returning the scheduler here as it is stepped manually
-        # in the training/validation steps
-        return [self.optimizer]

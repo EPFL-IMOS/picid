@@ -21,12 +21,5 @@ n_heads: 4
 baseline: false
 decoder_embedding: DSW
 
-
 use_revin: false
 use_seasonal_decomp: false
-
-warmup_steps: 10000
-decay_factor: 0.9
-init_lr: 1.0e-10
-base_lr: 5.0e-4
-patience: 5

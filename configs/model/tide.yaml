@@ -6,8 +6,8 @@ metadata:
 task_type: ${task_definition.task_type}
 ts_in: null # must be set by the model_config
 ts_out: null # must be set by the model_config
-d_yc:  null # must be set by the model_config
-d_yt:  null # must be set by the model_config
+d_yc: null # must be set by the model_config
+d_yt: null # must be set by the model_config
 d_x: null # must be set by the model_config
 d_model: 256
 d_ff: 512
@@ -20,9 +20,3 @@ use_x_dim: true
 
 use_revin: false
 use_seasonal_decomp: false
-
-warmup_steps: 10000
-decay_factor: 0.9
-init_lr: 1.0e-10
-base_lr: 5.0e-4
-patience: 5

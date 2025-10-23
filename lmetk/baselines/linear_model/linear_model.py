@@ -1,3 +1,6 @@
+from typing import Callable
+
+import torch
 from lmetk.baselines.forecaster import Forecaster
 
 from .linear_ar import LinearModel
@@ -6,13 +9,13 @@ from .linear_ar import LinearModel
 class Linear_Forecaster(Forecaster):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_x: int,
         d_yc: int,
         d_yt: int,
         context_points: int,
         task_type: str,
-        learning_rate: float = 1e-3,
-        l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
         linear_shared_weights: bool = False,
@@ -21,11 +24,11 @@ class Linear_Forecaster(Forecaster):
         **kwargs,
     ):
         super().__init__(
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
-            l2_coeff=l2_coeff,
-            learning_rate=learning_rate,
             loss=loss,
             linear_window=linear_window,
             linear_shared_weights=linear_shared_weights,

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Union, Dict
+from typing import Any, Callable, Union, Dict
 
 import numpy as np
 import torch
@@ -318,7 +318,8 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         backbone: torch.nn.Module,
         loss: torch.nn.Module,
         evaluators: dict[str, AbstractEvaluator],
-        optimizer: Any = None,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         **kwargs,
     ) -> None:
         super().__init__(evaluators=evaluators)
@@ -330,7 +331,8 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         )
 
         self.backbone = backbone
-        self.optimizer = optimizer
+        self.optimizer_factory = optimizer_factory
+        self.scheduler_factory = scheduler_factory
         self.loss = loss
 
     def __repr__(self) -> str:
@@ -699,14 +701,41 @@ class CustomTimePFNLightningModule(CustomEvaluatorLightningModule):
         )
         return model_out
 
-    def __init__(self, backbone, loss, evaluators, optimizer=None, **kwargs):
-        super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
+    def __init__(
+        self,
+        evaluators,
+        **kwargs,
+    ):
+
+        super().__init__(
+            evaluators,
+            **kwargs,
+        )
+
+        raise NotImplementedError(
+            "This class is deprecated. optimizer / backbone handling is not implemented properly."
+        )
 
 
 class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
-    def __init__(self, backbone, loss, evaluators, optimizer=None, **kwargs):
-        super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
+    def __init__(
+        self,
+        backbone,
+        loss,
+        evaluators,
+        optimizer_factory: Callable[..., torch.optim.Optimizer] = None,
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler] = None,
+        **kwargs,
+    ):
+        super().__init__(
+            backbone,
+            loss,
+            evaluators,
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
+            **kwargs,
+        )
 
     def model_step(self, batch, stage: str) -> dict:
         model_out = super().model_step(batch, stage)
@@ -724,8 +753,18 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
 class TrainingLightningModule(BackboneWrapperLightningModule):
 
-    def __init__(self, backbone, loss, evaluators, optimizer, **kwargs):
-        super().__init__(backbone, loss, evaluators, optimizer, **kwargs)
+    def __init__(
+        self,
+        backbone,
+        loss,
+        evaluators,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
+        **kwargs,
+    ):
+        super().__init__(
+            backbone, loss, evaluators, optimizer_factory, scheduler_factory, **kwargs
+        )
 
     # TODO: I should not rewrite the whole model_step
     def model_step(self, batch, stage: str) -> dict:
@@ -763,8 +802,20 @@ class TrainingLightningModule(BackboneWrapperLightningModule):
         dict:
             A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        optimizer_config = self.optimizer.configure_optimizer(
-            list(self.backbone.parameters())
-        )
+        optimizer = self.optimizer_factory(list(self.backbone.parameters()))
 
-        return optimizer_config
+        if self.scheduler_factory is not None:
+            scheduler = self.scheduler_factory(optimizer=optimizer)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/loss",
+                    "interval": "epoch",
+                    "frequency": 1,
+                },
+            }
+
+        else:
+            return {"optimizer": optimizer}

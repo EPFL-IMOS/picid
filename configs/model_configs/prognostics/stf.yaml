@@ -4,6 +4,7 @@ defaults:
   - override /dataset: prognostics/rul_multiunit_dataset
   - override /datamodule: base_datamodule
   - override /model: stf
+  - override /optimization: warmup_reduce_on_plateau
 
 task_definition:
   requires_training: true
@@ -23,4 +24,7 @@ model:
   d_yt: ${infer_data_dim:rul,-1}
   d_x: ${infer_data_dim:features,-1}
   n_timefeatures: 0
-  base_lr: ${optimizer.parameters.lr} #0.001
+
+optimization:
+  scheduler:
+    factor: 0.95
