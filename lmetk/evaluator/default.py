@@ -112,6 +112,7 @@ class DefaultEvaluator(AbstractEvaluator):
         for metric in self.metrics.values():
             metric.update(predictions, targets)
 
+    # TODO: I think this fucntion can be moved to the base evaluator class, it is also used in the MultiUnitEvaluator.
     def log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})

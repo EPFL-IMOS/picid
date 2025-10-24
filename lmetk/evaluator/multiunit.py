@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, override
 import numpy as np
 from pathlib import Path
 import xarray as xr
-
+import matplotlib.pyplot as plt
 from lmetk.metrics.metric_factory import MetricFactory
 from collections import defaultdict
 from lmetk.transforms.base.multisource import InverseTransformMixin
@@ -49,6 +49,7 @@ class MultiUnitEvaluator(AbstractEvaluator):
         self.metric_names = [name.lower() for name in metric_names]
         self.apply_inverse_scaling = apply_inverse_scaling
         self.scaler = inverse_transform
+        self.log_image_every_n_epochs = 10
 
         # --- Logic from DefaultEvaluator ---
         self.out_path = None
@@ -142,6 +143,11 @@ class MultiUnitEvaluator(AbstractEvaluator):
         # --- Saving logic extracted into helper ---
         self._save_predictions_if_needed(mode)
 
+        if mode != "train":
+            self._log_pred_vs_target_curves(mode, epoch)
+
+        if mode == "val" and epoch % self.log_image_every_n_epochs == 0:
+            self._log_pred_vs_target_curves(mode, epoch)
         # --- Metric computation logic from MultiUnitEvaluator ---
         flat_results = {}
         average_collector = defaultdict(list)
@@ -150,19 +156,139 @@ class MultiUnitEvaluator(AbstractEvaluator):
             return {f"{name}_mean": 0.0 for name in self.metric_names}
 
         # !!! Uncomment to get the per-unit metrics logged
-        # for unit_id, metrics in self.unit_metrics.items():
-        #     for name, metric in metrics.items():
-        #         value = metric.compute()
-        #         flat_results[f"{name}_{unit_id}"] = value
-        #         average_collector[name].append(value)
+        for unit_id, metrics in self.unit_metrics.items():
+            for name, metric in metrics.items():
+                value = metric.compute()
+                # !!! Uncomment to get the per-unit metrics logged
+                # flat_results[f"{name}_{unit_id}"] = value
+                average_collector[name].append(value)
 
         for name, values in average_collector.items():
             flat_results[f"{name}_mean"] = np.mean(values)
 
-        for name, values in average_collector.items():
-            flat_results[f"{name}_std"] = np.std(values)
+        # for name, values in average_collector.items():
+        #     flat_results[f"{name}_std"] = np.std(values)
 
         return flat_results
+
+    def _log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
+        if self.remote_logger:
+            self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
+
+    def _log_pred_vs_target_curves(self, mode: str, step: int) -> None:
+        """Log prediction vs target curves for each unit using remote logger."""
+        if not self.remote_logger:
+            return
+
+        # Check if there's data to plot
+        if not self.preds:
+            logger.warning("No predictions collected, skipping pred_vs_target curves.")
+            return
+
+        try:
+            # Concatenate all collected batches
+            predictions = np.concatenate(self.preds, axis=0)
+            targets = np.concatenate(self.targets, axis=0)
+            unit_ids = np.concatenate(self.unit_ids, axis=0)
+        except ValueError:
+            logger.warning(
+                "Could not concatenate predictions/targets (likely empty), skipping plots."
+            )
+            return
+
+        # --- Per-Unit Plotting Logic (adapted from update() method) ---
+        if unit_ids.ndim == 1:
+            unique_units = np.unique(unit_ids)
+            get_indices = lambda unit: np.where(unit_ids == unit)[0]
+            get_title_str = lambda unit: str(int(unit))
+        elif unit_ids.ndim == 2:
+            unique_units = np.unique(unit_ids, axis=0)
+            get_indices = lambda unit: np.where((unit_ids == unit).all(axis=1))[0]
+            get_title_str = lambda unit: str(tuple(int(x) for x in unit))
+        else:
+            logger.warning(
+                f"Unsupported shape for unit_ids: {unit_ids.shape}. "
+                "Skipping pred_vs_target curves."
+            )
+            return
+
+        # Loop through each unique unit and create/log a plot
+        for unit in unique_units:
+            indices = get_indices(unit)
+            if len(indices) == 0:
+                continue
+
+            unit_predictions = predictions[indices]
+            unit_targets = targets[indices]
+
+            # Create the plot
+            fig, ax = matplotlib.pyplot.subplots()
+            ax.plot(unit_targets.flatten(), label="Target", linestyle="--")
+            ax.plot(unit_predictions.flatten(), label="Prediction", alpha=0.8)
+
+            unit_title = get_title_str(unit)
+            ax.set_title(f"Unit {unit_title} - Predictions vs Targets")
+            ax.legend()
+            ax.grid(True)
+
+            # Call the class's internal _log_plot helper
+            self._log_plot(
+                fig=fig,
+                title=f"pred_vs_target_unit_{unit_title}",
+                mode=mode,
+                epoch=0,  # Pass a dummy epoch, as _log_plot requires it but doesn't use it
+                step=step,
+            )
+
+            # Close the figure to free up memory
+            matplotlib.pyplot.close(fig)
+
+    def _plot_reconstructions(
+        self, preds: np.ndarray, targets: np.ndarray, mode: str, epoch: int, step: int
+    ) -> plt.Figure:
+        """Plot 10 reconstructions vs targets at fixed intervals of the testing data"""
+
+        if not self.remote_logger:
+            logger.warning(
+                "Remote logger is not configured. Skipping reconstruction plots."
+            )
+            return
+
+        # Select 10 evenly spaced indices for plotting
+        num_samples = len(preds)
+        indices = np.linspace(0, num_samples - 1, num=10, dtype=int)
+
+        fig, axes = plt.subplots(
+            5, 2, figsize=(15, 20)
+        )  # Create a 5x2 grid of subplots
+        axes = axes.flatten()  # Flatten the 2D array of axes for easier indexing
+
+        # Assuming targets and preds have shape (samples, time, dims)
+        num_dims = targets.shape[2]
+        colors = plt.get_cmap("tab10").colors  # Use a colormap for distinct colors
+
+        for i, idx in enumerate(indices):
+            ax = axes[i]
+            for dim in range(num_dims):
+                color = colors[dim % len(colors)]  # Cycle through colors if dims > 10
+                ax.plot(
+                    targets[idx, :, dim],
+                    label=f"Target (Dim {dim})",
+                    linestyle="--",
+                    color=color,
+                )
+                ax.plot(
+                    preds[idx, :, dim], label=f"Prediction (Dim {dim})", color=color
+                )
+                ax.set_title(f"Sample {idx}")
+                ax.set_xlabel("Time")
+                ax.set_ylabel("Value")
+                ax.legend()
+                ax.grid()
+        fig.suptitle(f"Reconstruction (Split: {mode}, Epoch: {epoch}, Step: {step})")
+
+        plt.tight_layout()  # Adjust layout to prevent overlap
+        return fig
 
     def _save_predictions_if_needed(self, mode: str) -> None:
         """Save collected predictions/targets to disk when configured."""
