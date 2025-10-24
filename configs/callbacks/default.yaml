@@ -9,7 +9,7 @@ model_checkpoint:
   dirpath: ${paths.ckpt_dir}/checkpoints
   filename: "epoch{epoch:03d}-val_loss{val/loss:.8f}"
   monitor: MSE
-  mode: max
+  mode: min
   auto_insert_metric_name: False
   save_weights_only: False
   save_top_k: 1
@@ -18,7 +18,7 @@ model_checkpoint:
 early_stopping:
   monitor: MSE
   patience: 25
-  mode: max
+  mode: min
 
 model_summary:
   max_depth: -1

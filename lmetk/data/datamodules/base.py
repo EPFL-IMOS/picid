@@ -115,7 +115,6 @@ class BaseDataModule(LightningDataModule):
             if (hasattr(dataset_test, "get_collate_fn") and not use_batch_sampler)
             else None
         )
-<<<<<<< HEAD
 
         # for ds_name, ds in [
         #     ("dataset_train", dataset_train),
@@ -128,14 +127,11 @@ class BaseDataModule(LightningDataModule):
         #                 f"Subset range end index {subset_range} exceeds dataset length {len(ds)} for {ds_name}."
         #             )
 
-        if subset_range[0] < dataset_train.__len__():
-            self.dataset_train = (
-                dataset_train
-                if subset_range is None
-                else Subset(dataset_train, range(*subset_range))
-            )
-=======
->>>>>>> 66f0ec8 (fixing stftt)
+        self.dataset_train = (
+            dataset_train
+            if subset_range is None or (subset_range[0] > dataset_train.__len__())
+            else Subset(dataset_train, range(*subset_range))
+        )
 
         self.dataset_train = (
             dataset_train

@@ -1,0 +1,26 @@
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    runtime_key: target
+    unit_key: unit_id
+    dataset_name: PRONOSTIA
+
+  metadata:
+    apply_to: ['target','unit_id']
+    assign_to: rul
+
+# scaler_features:
+#   transform:
+#     _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+    
+#   metadata:
+#     apply_to: features
+#     fit_on: train
+
+ragged2regularragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'features'
+

@@ -4,6 +4,3 @@ defaults:
   - pronostia/prognostics/base
   - /model_configs/prognostics/lstm
   - override /transforms: bearings/pronostia/spectral
-
-model: 
-  learning_rate: 0.001

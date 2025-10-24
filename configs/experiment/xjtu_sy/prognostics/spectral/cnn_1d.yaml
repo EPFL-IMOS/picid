@@ -5,4 +5,4 @@ defaults:
   - /model_configs/prognostics/cnn_1d
   
   - override /dataset: prognostics/rul_multiunit_dataset
-  - override /transforms: bearings/xjtu_sy/stftt
+  - override /transforms: bearings/xjtu_sy/spectral

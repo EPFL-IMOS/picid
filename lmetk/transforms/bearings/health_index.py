@@ -1,0 +1,291 @@
+import logging
+from typing import Any, Dict, List, Optional, Tuple, override, Union
+import numpy as np
+
+from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.data.data_objects.data import NamedTransformInput
+from lmetk.data.data_objects.utils import convert_to_numpy
+
+from lmetk.transforms.base.multisource import (
+    NoFitMultiSourceTransformMixin,
+    InverseTransformMixin,
+)
+
+
+logger = logging.getLogger(__name__)
+
+# --- Type Aliases ---
+UnitKey = Union[Tuple[int, int], str]
+UnitLifeLookup = Dict[UnitKey, float]
+DatasetLifeLookup = Dict[str, UnitLifeLookup]
+
+# --- Default Lookup Dictionary ---
+DEFAULT_TOTAL_LIFE_LOOKUP: DatasetLifeLookup = {
+    "PRONOSTIA": {
+        (1, 1): 28020.0,
+        (1, 2): 8700.0,
+        (1, 3): 18010.0,
+        (1, 4): 11280.0,
+        (1, 5): 23010.0,
+        (1, 6): 23010.0,
+        (1, 7): 15010.0,
+        (2, 1): 9100.0,
+        (2, 2): 7960.0,
+        (2, 3): 12010.0,
+        (2, 4): 6110.0,
+        (2, 5): 20010.0,
+        (2, 6): 5710.0,
+        (2, 7): 1710.0,
+        (3, 1): 5140.0,
+        (3, 2): 16360.0,
+        (3, 3): 3510.0,
+    },
+    "XJTU-SY": {
+        (1, 1): 123.0,
+        (1, 2): 161.0,
+        (1, 3): 158.0,
+        (1, 4): 122.0,
+        (1, 5): 52.0,
+        (2, 1): 491.0,
+        (2, 2): 161.0,
+        (2, 3): 533.0,
+        (2, 4): 42.0,
+        (2, 5): 339.0,
+        (3, 1): 2538.0,
+        (3, 2): 2496.0,
+        (3, 3): 371.0,
+        (3, 4): 1515.0,
+        (3, 5): 114.0,
+    },
+}
+
+
+class HealthIndexTransform(
+    DenseTransform, NoFitMultiSourceTransformMixin, InverseTransformMixin
+):
+    """
+    Calculates a Health Index (HI) based on a runtime channel and a
+    predefined total life for a *specific unit* in a dataset.
+
+    The HI is calculated as: HI = 1 - (Runtime / Total_Life)
+    The inverse is: Runtime = (1 - HI) * Total_Life
+
+    It outputs a single-column (n_rows, 1) numpy array containing the HI.
+
+    This transform validates that the calculated HI is within [0.0, 1.0]
+    and raises a ValueError if it is not.
+    """
+
+    def __init__(
+        self,
+        runtime_key: str,
+        unit_key: str,
+        dataset_name: str,
+        total_life_lookup: Optional[DatasetLifeLookup] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the HealthIndexTransform.
+
+        Args:
+            runtime_key: The key in the `data` dict to find the 1D
+                runtime vector (e.g., 'cycle').
+            unit_key: The key in the `metadata` dict to find the
+                unit identifier (e.g., 'unit_id'). This is required
+                in metadata to enable inverse_transform.
+            dataset_name: The name of the current dataset (e.g., "PRONOSTIA").
+            total_life_lookup: A nested dictionary.
+                Format: {dataset_name: {unit_key: total_life_float, ...}}
+                If None, defaults to `DEFAULT_TOTAL_LIFE_LOOKUP`.
+            **kwargs: Additional arguments for BaseTransform.
+        """
+        super().__init__(**kwargs)
+        self.runtime_key = runtime_key
+        self.unit_key = unit_key
+        self.dataset_name = dataset_name
+
+        if total_life_lookup is None:
+            self.total_life_lookup = DEFAULT_TOTAL_LIFE_LOOKUP
+            logger.info(
+                "total_life_lookup not provided, using DEFAULT_TOTAL_LIFE_LOOKUP."
+            )
+        else:
+            self.total_life_lookup = total_life_lookup
+
+        if self.dataset_name not in self.total_life_lookup:
+            raise KeyError(
+                f"dataset_name '{self.dataset_name}' not found in "
+                f"total_life_lookup. Available keys: {self.total_life_lookup.keys()}"
+            )
+
+        self.dataset_unit_lives = self.total_life_lookup[self.dataset_name]
+
+        logger.debug(
+            f"HealthIndexTransform initialized: "
+            f"runtime_key='{self.runtime_key}', "
+            f"unit_key='{self.unit_key}' (in metadata), "
+            f"dataset_name='{self.dataset_name}'"
+        )
+
+    def _get_total_life(self, unit_id: UnitKey) -> float:
+        """Helper function to look up and validate the Total_Life."""
+        if unit_id not in self.dataset_unit_lives:
+            raise KeyError(
+                f"Unit ID '{unit_id}' not found in total_life_lookup "
+                f"for dataset '{self.dataset_name}'. "
+                f"Available unit keys: {self.dataset_unit_lives.keys()}"
+            )
+
+        total_life = self.dataset_unit_lives[unit_id]
+
+        if total_life <= 0:
+            raise ValueError(
+                f"Total_Life for dataset '{self.dataset_name}', unit '{unit_id}' "
+                f"must be a positive number, but got {total_life}"
+            )
+
+        return total_life
+
+    def _get_total_life_from_metadata(self, unit_id) -> float:
+        """Safely extracts the unit_id from metadata and gets Total_Life."""
+
+        if isinstance(unit_id, np.ndarray):
+            unit_id = tuple(unit_id)
+
+        return self._get_total_life(unit_id)
+
+    @override
+    def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+        """
+        Calculates the HI vector for the unit specified in the metadata.
+
+        Args:
+            data: Dictionary containing 1D runtime vector
+                  at data[self.runtime_key].
+            metadata: Dictionary containing unit ID at metadata[self.unit_key].
+
+        Returns:
+            A 2D numpy array of shape (n_rows, 1) containing the HI.
+        """
+        # 1. Get Runtime vector from data
+        if self.runtime_key not in data:
+            raise KeyError(
+                f"runtime_key '{self.runtime_key}' not found in data. "
+                f"Available data keys: {data.keys()}"
+            )
+        runtime = data[self.runtime_key]
+        init_shape = runtime.shape
+        runtime_vector = convert_to_numpy(runtime).flatten()
+
+        if runtime_vector.ndim != 1:
+            raise ValueError(
+                f"data['{self.runtime_key}'] must be a 1D vector, "
+                f"but has shape {runtime_vector.shape}"
+            )
+        if np.any(np.isinf(runtime_vector)):
+            raise ValueError(f"Infinite values found in '{self.runtime_key}'")
+
+        # 2. Get Total_Life from metadata
+        unit_id = data.get(self.unit_key)  # For error message
+        total_life = self._get_total_life_from_metadata(unit_id)
+
+        # 3. Calculate Health Index
+        health_index_vector = 1.0 - (runtime_vector / (total_life))
+
+        # 4. Validate the HI is within the [0.0, 1.0] range
+        min_hi = np.nanmin(health_index_vector)
+        max_hi = np.nanmax(health_index_vector)
+
+        min_hi_init = np.nanmin(runtime_vector)
+        max_hi_init = np.nanmax(runtime_vector)
+
+        logger.info(
+            f"Unit id: {unit_id}, min/max health_indicator: {np.round(min_hi,2)}/{np.round(max_hi,2)}"
+            f"correspond to min/max RUL values: {min_hi_init}/{max_hi_init}"
+        )
+        if min_hi < 0.0 or max_hi > 1.0:
+            raise ValueError(
+                f"Calculated HI for unit '{unit_id}' is outside the valid "
+                f"[0.0, 1.0] range. Found min={min_hi}, max={max_hi}. "
+                f"Check if runtime data in '{self.runtime_key}' (max={np.nanmax(runtime_vector)}) "
+                f"exceeds Total_Life ({total_life}) or is negative."
+            )
+
+        # 5. Reshape to (n_rows, 1)
+        hi_column = health_index_vector.reshape(-1, 1)
+
+        logger.debug(
+            f"HealthIndexTransform result shape: {hi_column.shape} "
+            f"(Unit: {unit_id}, Total_Life: {total_life})"
+        )
+        #
+        assert (
+            init_shape == hi_column.shape
+        ), f"Shapes of initial {self.runtime_key} do not match after transform"
+
+        return hi_column
+
+    @override
+    def inverse_transform(
+        self,
+        data: NamedTransformInput,
+        metadata: dict = None,
+    ) -> np.ndarray:
+        """
+        Reverses the HI calculation to estimate the Runtime.
+        Formula: Runtime = (1 - HI) * Total_Life
+
+        Args:
+            data: Input data dictionary. Assumed to be the output of
+                  transform_data, e.g., {'features': hi_vector}.
+            metadata: Dictionary containing the unit ID at
+                      metadata[self.unit_key]. This is required.
+
+        Returns:
+            A 2D numpy array of shape (n_rows, 1) containing the
+            reconstructed Runtime.
+        """
+        if self.unit_key not in metadata:
+            raise ValueError(
+                f"metadata must contain '{self.unit_key}' for inverse_transform."
+            )
+
+        # 1. Get Total_Life from metadata
+        total_life = self._get_total_life_from_metadata(metadata["unit_id"])
+
+        # 2. Get HI vector from data dict
+        if not data:
+            raise ValueError("No data provided to inverse_transform.")
+        if len(data) > 1:
+            logger.warning(
+                f"inverse_transform received {len(data)} keys. "
+                f"Only using the first key: '{list(data.keys())[0]}'"
+            )
+
+        hi_vector = convert_to_numpy(list(data.values())[0]).flatten()
+
+        if hi_vector.ndim != 1:
+            raise ValueError(
+                f"Input HI data must be a 1D vector, "
+                f"but has shape {hi_vector.shape}"
+            )
+
+        # 3. Calculate Runtime
+        # Runtime = (1 - HI) * Total_Life
+        runtime_vector = (1.0 - hi_vector) * (total_life - 1)
+
+        # 4. Reshape to (n_rows, 1)
+        runtime_column = runtime_vector.reshape(-1, 1)
+
+        return runtime_column
+
+    def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
+        return self.transform_data(data, metadata)
+
+    def get_feature_names(
+        self, input_keys: List[str], input_shapes: Dict[str, Tuple[int, int]]
+    ) -> List[str]:
+        """
+        Returns the feature name for the new HI column.
+        """
+        return [f"HI_ds_{self.dataset_name}_from_{self.runtime_key}"]

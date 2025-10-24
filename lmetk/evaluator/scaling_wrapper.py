@@ -36,6 +36,7 @@ class ScalingWrapper:
         self,
         predictions: Tuple[torch.Tensor, np.ndarray],
         targets: Tuple[torch.Tensor, np.ndarray],
+        **kwargs,
     ) -> tuple:
         """
         Apply inverse transform to predictions and targets if needed.
@@ -52,6 +53,7 @@ class ScalingWrapper:
         tuple
             (transformed_predictions, transformed_targets)
         """
+        metadata = kwargs.get("metadata", {})
         if not (self.inverse_transform and self.apply_inverse):
             return predictions, targets
 
@@ -88,21 +90,21 @@ class ScalingWrapper:
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
                 NamedTransformInput(**dict(predictions=predictions)),
-                metadata={},
+                metadata=metadata,
             ).reshape(pred_shape)
 
             targets_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(targets=targets)), metadata={}
+                NamedTransformInput(**dict(targets=targets)), metadata=metadata
             ).reshape(target_shape)
 
         elif len(pred_shape) == 2:
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(predictions=predictions)), metadata={}
+                NamedTransformInput(**dict(predictions=predictions)), metadata=metadata
             )  # .reshape((1, -1))
 
             targets_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(targets=targets)), metadata={}
+                NamedTransformInput(**dict(targets=targets)), metadata=metadata
             )  # .reshape((1, -1))
         else:
             raise ValueError(f"Unexpected shape: {pred_shape}")

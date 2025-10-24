@@ -99,8 +99,8 @@ class MultiUnitEvaluator(AbstractEvaluator):
             self.unit_ids.append(unit_ids)
 
         # Apply inverse scaling if configured
-        predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
-            predictions, targets
+        predictions, targets = self._inverse_transform_per_unit(
+            predictions, targets, unit_ids
         )
 
         # Save predictions and targets if configured
@@ -170,6 +170,62 @@ class MultiUnitEvaluator(AbstractEvaluator):
         #     flat_results[f"{name}_std"] = np.std(values)
 
         return flat_results
+
+    def _inverse_transform_per_unit(self, predictions, targets, unit_ids):
+        """Apply inverse scaling per unit if needed."""
+        # This method can be implemented if per-unit inverse scaling is required.
+        # Apply inverse scaling if configured
+        # --- Per-Unit Plotting Logic (adapted from update() method) ---
+        if unit_ids.ndim == 1:
+            unique_units = np.unique(unit_ids)
+            get_indices = lambda unit: np.where(unit_ids == unit)[0]
+            get_title_str = lambda unit: str(int(unit))
+        elif unit_ids.ndim == 2:
+            unique_units = np.unique(unit_ids, axis=0)
+            get_indices = lambda unit: np.where((unit_ids == unit).all(axis=1))[0]
+            get_title_str = lambda unit: str(tuple(int(x) for x in unit))
+        else:
+            logger.warning(
+                f"Unsupported shape for unit_ids: {unit_ids.shape}. "
+                "Skipping pred_vs_target curves."
+            )
+            return
+
+        # Instantiate the np.array with -inf and then fill it with predictions/targets
+        pred_shape = predictions.shape
+        target_shape = targets.shape
+        predictions_filled = np.full(pred_shape, -np.inf)
+        targets_filled = np.full(target_shape, -np.inf)
+
+        # Loop through each unique unit and create/log a plot
+        for unit in unique_units:
+            indices = get_indices(unit)
+            if len(indices) == 0:
+                continue
+
+            unit_predictions = predictions[indices]
+            unit_targets = targets[indices]
+            # Check if unit_predictions and unit_targets are not empty
+            if unit_predictions.size == 0 or unit_targets.size == 0:
+                continue
+            # Apply inverse scaling for this unit
+            unit_predictions, unit_targets = (
+                self.scaling_wrapper.inverse_transform_if_needed(
+                    unit_predictions, unit_targets, metadata={"unit_id": unit}
+                )
+            )
+
+            # Fill the corresponding indices in the full array
+            predictions_filled[indices] = unit_predictions
+            targets_filled[indices] = unit_targets
+
+        # Check that there are no -inf values left
+        if np.isinf(predictions_filled).any() or np.isinf(targets_filled).any():
+            raise ValueError(
+                "Some predictions or targets were not filled after inverse transform."
+            )
+
+        return predictions_filled, targets_filled
 
     def _log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
         if self.remote_logger:

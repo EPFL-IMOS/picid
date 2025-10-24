@@ -148,12 +148,13 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             df_target = ak.from_numpy(df_target)
 
         # --- 3. Assemble and Return the Final Dictionary ---
-
+        unit_id = UNIT_NAMES_TO_ID.get(unit_name.strip("Bearing"), -1)
         return {
             "features": df_features,
             "target": df_target,
+            "unit_id": ak.from_numpy(np.array(unit_id)),
             "metadata": {
-                "unit_id": UNIT_NAMES_TO_ID[unit_name.strip("Bearing")],
+                "unit_id": unit_id,
                 "unit_name": f"Bearing {unit_name.strip("Bearing")}",
                 "unit_length": len(df_features),
                 "features_columns": features_col,
