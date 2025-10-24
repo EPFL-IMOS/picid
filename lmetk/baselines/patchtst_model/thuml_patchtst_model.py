@@ -1,11 +1,7 @@
-import random
-from typing import Tuple
+from typing import Callable, Tuple
 
-import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
 from omegaconf import OmegaConf
-from torch import nn
 
 from lmetk.baselines.definitions import (
     CLASSIFICATION_TASKS,
@@ -20,6 +16,8 @@ from .thuml_patchtst import Model as PatchTST
 class PatchTST_Forecaster(TransformerForecaster):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_x: int,
         d_yc: int,
         d_yt: int,
@@ -36,7 +34,6 @@ class PatchTST_Forecaster(TransformerForecaster):
         use_x_dim: bool = False,
         include_x_t: bool = True,
         # training
-        l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
         d_model: int = 64,
@@ -46,21 +43,17 @@ class PatchTST_Forecaster(TransformerForecaster):
         # this model could support teacher forcing
         # teacher_forcing_prob: float = 0.5,
         transformer_args: dict = None,
-        warmup_steps: float = 1000,
-        decay_factor: float = 0.8,
-        init_lr: float = 1e-10,
-        base_lr: float = 5e-4,
-        patience: int = 3,
         d_x_mask: list[int] = None,
         mask_y_c: bool = False,
         **kwargs,
     ):
         super().__init__(
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
             scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
-            l2_coeff=l2_coeff,
             loss=loss,
             linear_window=linear_window,
             use_revin=use_revin,
@@ -109,11 +102,6 @@ class PatchTST_Forecaster(TransformerForecaster):
 
         self.model = PatchTST(configs)
 
-        self.init_lr = init_lr
-        self.base_lr = base_lr
-        self.patience = patience
-        self.warmup_steps = warmup_steps
-        self.decay_factor = decay_factor
         self.target_mask = None
         self.transformer_args = transformer_args
         self.include_x_t = include_x_t

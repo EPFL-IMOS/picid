@@ -224,9 +224,35 @@ def create_lightning_module(
     cfg: DictConfig,
     datamodule: LightningDataModule,
     evaluators: list[AbstractEvaluator],
-    optimizer: Any,
     loss: Any,
 ):
+    # we can only partially initialize the optimizer here because
+    # we need the parameter list from the model later
+    # as a consequence, the same applies for the scheduler
+    # because we need the optimizer instance
+
+    # Instantiate optimizer (partially)
+    optimizer_factory = hydra.utils.instantiate(
+        cfg.optimization.optimizer, _partial_=True
+    )
+
+    if (
+        hasattr(cfg.optimization, "scheduler")
+        and cfg.optimization.scheduler is not None
+    ):
+        # Instantiate scheduler (partially)
+        scheduler_factory = hydra.utils.instantiate(
+            cfg.optimization.scheduler,
+            _partial_=True,
+        )
+        log.info(f"Scheduler: {cfg.optimization.scheduler._target_}")
+    else:
+        scheduler_factory = None
+
+    log.info(f"Optimizer: {cfg.optimization.optimizer._target_}")
+    # Check the LightningModules to see the full initialization of optimizer/scheduler
+
+    model = None
     if not cfg.model.get("metadata", False):
         add_backbone_args = {}
         if cfg.datasource.data_name == "railway":
@@ -243,14 +269,16 @@ def create_lightning_module(
                 backbone=backbone_wrapper,
                 loss=loss,
                 evaluators=evaluators,
-                optimizer=optimizer,
+                optimizer_factory=optimizer_factory,
+                scheduler_factory=scheduler_factory,
             )
         elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
             model = TrainingLightningModule(
                 backbone=backbone_wrapper,
                 loss=loss,
                 evaluators=evaluators,
-                optimizer=optimizer,
+                optimizer_factory=optimizer_factory,
+                scheduler_factory=scheduler_factory,
             )
 
         elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
@@ -258,7 +286,8 @@ def create_lightning_module(
                 backbone=backbone_wrapper,
                 loss=loss,
                 evaluators=evaluators,
-                optimizer=optimizer,
+                optimizer_factory=optimizer_factory,
+                scheduler_factory=scheduler_factory,
                 debug=cfg.get("debug", False),
             )
         else:
@@ -269,8 +298,14 @@ def create_lightning_module(
     else:
         if cfg.model.metadata.get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper
-            model = hydra.utils.instantiate(cfg.model, evaluators=evaluators)
+            model = hydra.utils.instantiate(
+                cfg.model,
+                evaluators=evaluators,
+                optimizer_factory=optimizer_factory,
+                scheduler_factory=scheduler_factory,
+            )
 
+    assert model is not None, "Model could not be instantiated."
     return model
 
 
@@ -280,7 +315,6 @@ def rerun_best_model_checkpoint(
     device: torch.device,
     callbacks: list[Callback],
     evaluators: list[AbstractEvaluator],
-    optimizer: Any,
     loss: Any,
     logger: list[Logger],
 ) -> None:
@@ -298,7 +332,6 @@ def rerun_best_model_checkpoint(
                 cfg=cfg,
                 datamodule=datamodule,
                 evaluators=evaluators,
-                optimizer=optimizer,
                 loss=loss,
             )
 
@@ -599,10 +632,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
         evaluators[s] = evaluator
 
-    # Instantiate optimizer
-    optimizer = hydra.utils.instantiate(cfg.optimizer)
-    log.info(f"Optimizer: {cfg.optimizer._target_}")
-
     # Instantiate loss function
     loss = hydra.utils.instantiate(cfg.loss)
     log.info(f"Loss: {cfg.loss._target_}")
@@ -624,7 +653,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         cfg=cfg,
         datamodule=datamodule,
         evaluators=evaluators,
-        optimizer=optimizer,
         loss=loss,
     )
 
@@ -675,7 +703,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             device=trainer.strategy.root_device,
             callbacks=callbacks,
             evaluators=evaluators,
-            optimizer=optimizer,
             loss=loss,
             logger=logger,
         )

@@ -1,6 +1,7 @@
 import random
 from typing import Tuple, Optional
 
+from typing import Callable
 import torch
 from torch import nn
 from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
@@ -159,6 +160,8 @@ class LSTM_Regression(nn.Module):
 class LSTM_Forecaster(Forecaster):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_x: int,
         d_yc: int,
         d_yt: int,
@@ -168,9 +171,7 @@ class LSTM_Forecaster(Forecaster):
         hidden_dim: int = 32,
         dropout_p: float = 0.2,
         # training
-        learning_rate: float = 1e-3,
         teacher_forcing_prob: float = 0.5,
-        l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
         linear_shared_weights: bool = False,
@@ -183,8 +184,8 @@ class LSTM_Forecaster(Forecaster):
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
-            l2_coeff=l2_coeff,
-            learning_rate=learning_rate,
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
             loss=loss,
             linear_window=linear_window,
             use_revin=use_revin,

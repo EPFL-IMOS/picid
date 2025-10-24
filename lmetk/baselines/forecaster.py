@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Tuple
+from typing import Callable, Tuple
 from einops import rearrange
 import torch
 
@@ -10,9 +10,6 @@ from lmetk.baselines.definitions import (
 )
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
-    WarmupReduceLROnPlateauScheduler,
-)
 from lmetk.model.utils.revin import RevIN, SeriesDecomposition
 from lmetk.pipeline.base import CustomEvaluatorLightningModule
 
@@ -20,25 +17,26 @@ from lmetk.pipeline.base import CustomEvaluatorLightningModule
 class Forecaster(CustomEvaluatorLightningModule):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_x: int,
         d_yc: int,
         d_yt: int,
         task_type: str,
-        learning_rate: float = 1e-3,
-        l2_coeff: float = 0,
         loss: str = "mse",
         linear_window: int = 0,
         linear_shared_weights: bool = False,
         use_revin: bool = False,
         use_seasonal_decomp: bool = False,
-        verbose: int = True,
         evaluators: dict[str, AbstractEvaluator] = {},
+        # catch all parameters
+        verbose: int = True,
         metadata: dict = {},
     ):
         super().__init__(evaluators=evaluators)
         self._inv_scaler = lambda x: x
-        self.l2_coeff = l2_coeff
-        self.learning_rate = learning_rate
+        self.optimizer_factory = optimizer_factory
+        self.scheduler_factory = scheduler_factory
         self.time_masked_idx = None
         self.null_value = None
         self.loss = loss
@@ -371,24 +369,27 @@ class Forecaster(CustomEvaluatorLightningModule):
         return self(*batch, **self.eval_step_forward_kwargs)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.learning_rate, weight_decay=self.l2_coeff
-        )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            patience=3,
-            factor=0.2,
-        )
 
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "val/loss",
-                "interval": "epoch",
-                "frequency": 1,
-            },
-        }
+        optimizer = self.optimizer_factory(params=self.parameters())
+
+        if self.scheduler_factory is not None:
+            scheduler = self.scheduler_factory(optimizer=optimizer)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/loss",
+                    "interval": "epoch",
+                    "frequency": 1,
+                },
+            }
+
+        else:
+            raise NotImplementedError(
+                "Check this branch if it is really working as intended and remove this line."
+            )
+            return optimizer
 
 
 class TransformerForecaster(Forecaster):
@@ -427,19 +428,9 @@ class TransformerForecaster(Forecaster):
         return outs
 
     def configure_optimizers(self):
-        self.optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.init_lr,
-            weight_decay=self.l2_coeff,
-        )
-        self.scheduler = WarmupReduceLROnPlateauScheduler(
-            self.optimizer,
-            init_lr=self.init_lr,
-            peak_lr=self.base_lr,
-            warmup_steps=self.warmup_steps,
-            patience=self.patience,
-            factor=self.decay_factor,
-        )
+        self.optimizer = self.optimizer_factory(params=self.parameters())
+        assert self.scheduler_factory is not None, "Scheduler factory must be provided"
+        self.scheduler = self.scheduler_factory(optimizer=self.optimizer)
 
         # Were not returning the scheduler here as it is stepped manually
         # in the training/validation steps

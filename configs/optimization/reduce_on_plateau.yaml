@@ -1,0 +1,11 @@
+lr: 1.0e-3
+
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: ${optimization.lr}
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  patience: 3 # number of epochs with no improvement after which learning rate will be reduced
+  factor: 0.2 # decay factor after patience is exceeded

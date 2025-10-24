@@ -1,0 +1,16 @@
+lr: 5.0e-4
+start_lr: 1.0e-10
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: ${optimization.lr}
+  weight_decay: 0.0
+
+scheduler:
+  _target_: lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler.WarmupReduceLROnPlateauScheduler
+  # Warmup params
+  init_lr: ${optimization.start_lr}
+  peak_lr: ${optimization.lr}
+  warmup_steps: ${infer_dataloader_length:train}
+  patience: 5 # number of epochs with no improvement after which learning rate will be reduced
+  factor: 0.9 # decay factor after patience is exceeded

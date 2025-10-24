@@ -4,6 +4,7 @@ defaults:
   - override /dataset: state_forecasting/default
   - override /datamodule: base_datamodule
   - override /model: lstm
+  - override /optimization: reduce_on_plateau
 
 task_definition:
   requires_training: true

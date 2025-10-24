@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import pkg_resources
 import torch
@@ -28,6 +28,8 @@ def find_ckpt(path):
 class Spacetimeformer_Forecaster(TransformerForecaster):
     def __init__(
         self,
+        optimizer_factory: Callable[..., torch.optim.Optimizer],
+        scheduler_factory: Callable[..., torch.optim.lr_scheduler._LRScheduler],
         d_yc: int,
         d_yt: int,
         d_x: int,
@@ -72,14 +74,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         head_f: str = "linear",
         norm: str = "batch",
         use_final_norm: bool = True,
-        init_lr: float = 1e-10,
-        base_lr: float = 5e-4,
-        patience: int = 3,
-        warmup_steps: float = 1000,
-        decay_factor: float = 0.8,
         initial_downsample_convs: int = 0,
         intermediate_downsample_convs: int = 0,
-        l2_coeff: float = 1e-3,
         loss: str = "mse",
         class_loss_imp: float = 1e-3,
         recon_loss_imp: float = 0,
@@ -119,11 +115,12 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
             d_x = 1
 
         super().__init__(
+            optimizer_factory=optimizer_factory,
+            scheduler_factory=scheduler_factory,
             scheduler_Loss_monitor="forecast_loss",
             d_x=d_x,
             d_yc=d_yc,
             d_yt=d_yt,
-            l2_coeff=l2_coeff,
             loss=loss,
             linear_window=linear_window,
             use_revin=use_revin,
@@ -220,11 +217,6 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
 
         self.target_mask = target_mask
         self.start_token_len = start_token_len
-        self.init_lr = init_lr
-        self.base_lr = base_lr
-        self.patience = patience
-        self.warmup_steps = warmup_steps
-        self.decay_factor = decay_factor
         self.embed_method = embed_method
         self.class_loss_imp = class_loss_imp if not decoder_only else 0.0
         self.recon_loss_imp = recon_loss_imp

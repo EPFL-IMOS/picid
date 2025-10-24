@@ -8,12 +8,6 @@ d_yc: null # must be set by the model_config
 d_yt: null # must be set by the model_config
 d_x: null # must be set by the model_config
 
-decay_factor: 0.9
-warmup_steps: 10000
-patience: 5
-init_lr: 1.0e-10
-base_lr: 5.0e-4
-
 use_revin: false
 use_seasonal_decomp: false
 
