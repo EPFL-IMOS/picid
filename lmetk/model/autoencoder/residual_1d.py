@@ -14,33 +14,71 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 class ResidualBlock(nn.Module):
     """
-    A residual block for the encoder, composed of Conv1d, GroupNorm, Dropout, and a skip connection.
-    This version uses manual padding to support all kernel sizes and strides.
+    A residual block for the encoder, composed of Conv1d, GroupNorm, Dropout,
+    and a skip connection.
+
+    This "clever" version allows for configurable normalization and activation
+    layers and uses nn.Identity() for disabled components.
     """
 
     def __init__(
-        self, in_channels, out_channels, kernel_size, stride, dropout_prob, dilation
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        dilation: int = 1,
+        dropout_prob: float = 0.0,
+        norm_type: str = "group",  # "group", "batch", or None
+        activation: str = "relu",  # "relu", "gelu", or "silu"
     ):
         super(ResidualBlock, self).__init__()
+        self.dilation = dilation
+        self.stride = stride
 
-        # We will apply padding manually, so set padding=0 in the conv layer
+        # 1. Convolution (padding is handled in forward)
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=0,  # <-- Set to 0
+            padding=0,
             dilation=dilation,
         )
 
-        # Separate the rest of the layers from the convolution
-        self.norm = nn.GroupNorm(1, out_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.dropout = nn.Dropout(dropout_prob)
+        # 2. "Clever" Normalization
+        if norm_type == "group":
+            # GroupNorm(1, ...) is like InstanceNorm, good for varying seq lengths
+            self.norm = nn.GroupNorm(1, out_channels)
+        elif norm_type == "batch":
+            self.norm = nn.BatchNorm1d(out_channels)
+        elif norm_type is None or norm_type.lower() == "none":
+            self.norm = nn.Identity()
+        else:
+            raise ValueError(f"Unknown norm_type: {norm_type}")
 
-        # Skip connection to handle changes in dimensions
+        # 3. "Clever" Activation
+        if activation == "relu":
+            self.act = nn.ReLU(inplace=True)
+        elif activation == "gelu":
+            self.act = nn.GELU()
+        elif activation == "silu" or activation == "swish":
+            self.act = nn.SiLU(inplace=True)
+        else:
+            raise ValueError(f"Unknown activation: {activation}")
+
+        # 4. "Clever" Dropout
+        # nn.Dropout(0) is an Identity, but this is more explicit
+        self.dropout = nn.Dropout(dropout_prob) if dropout_prob > 0 else nn.Identity()
+
+        # 5. "Clever" Skip Connection (logic is already good)
         self.skip_connection = (
             nn.Conv1d(
                 in_channels=in_channels,
@@ -55,65 +93,89 @@ class ResidualBlock(nn.Module):
     def forward(self, x):
         identity = x
 
-        # --- Manual "same" padding logic ---
-        # 1. Get the kernel size from the conv layer
+        # --- Manual "same" padding logic (corrected for dilation) ---
         k = self.conv.kernel_size[0]
+        d = self.dilation
 
-        # 2. Calculate left and right padding
-        # This handles both odd and even kernel sizes correctly
-        pad_left = (k - 1) // 2
-        pad_right = k - 1 - pad_left
+        pad_total = d * (k - 1)
+        pad_left = pad_total // 2
+        pad_right = pad_total - pad_left
 
-        # 3. Apply padding to the input tensor
         padded_x = F.pad(x, (pad_left, pad_right))
         # --- End of padding logic ---
 
-        # Pass the padded tensor through the layers
+        # Apply the layers in order
         out = self.conv(padded_x)
         out = self.norm(out)
-        out = self.relu(out)
+        out = self.act(out)  # <-- Use the configurable activation
         out = self.dropout(out)
 
         if self.skip_connection:
             identity = self.skip_connection(x)
 
-        # The output of the convolution and the skip connection will have the same
-        # length because both are affected by the stride.
         return out + identity
 
 
 class ResidualTransposeBlock(nn.Module):
     """
     A symmetrical residual block for the decoder, using ConvTranspose1d.
-    This version is robust to all kernel sizes and strides.
+    This "clever" version is robust to all kernel sizes and strides
+    and supports configurable normalization and activation.
     """
 
     def __init__(
-        self, in_channels, out_channels, kernel_size, stride, dropout_prob, dilation
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int,
+        dropout_prob: float,
+        dilation: int,
+        norm_type: str = "group",  # "group", "batch", or None
+        activation: str = "relu",  # "relu", "gelu", or "silu"
     ):
         super(ResidualTransposeBlock, self).__init__()
-        # Store parameters to use in the forward pass
         self.stride = stride
         self.kernel_size = kernel_size
 
         padding = (kernel_size - 1) // 2
         output_padding = stride - 1
 
-        self.layers = nn.Sequential(
-            nn.ConvTranspose1d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=padding,
-                output_padding=output_padding,
-                dilation=dilation,
-            ),
-            nn.GroupNorm(1, out_channels),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout_prob),
+        # --- 1. Build main layers manually ---
+        self.conv_t = nn.ConvTranspose1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            output_padding=output_padding,
+            dilation=dilation,
         )
 
+        # 2. "Clever" Normalization
+        if norm_type == "group":
+            self.norm = nn.GroupNorm(1, out_channels)
+        elif norm_type == "batch":
+            self.norm = nn.BatchNorm1d(out_channels)
+        elif norm_type is None or norm_type.lower() == "none":
+            self.norm = nn.Identity()
+        else:
+            raise ValueError(f"Unknown norm_type: {norm_type}")
+
+        # 3. "Clever" Activation
+        if activation == "relu":
+            self.act = nn.ReLU(inplace=True)
+        elif activation == "gelu":
+            self.act = nn.GELU()
+        elif activation == "silu" or activation == "swish":
+            self.act = nn.SiLU(inplace=True)
+        else:
+            raise ValueError(f"Unknown activation: {activation}")
+
+        # 4. "Clever" Dropout
+        self.dropout = nn.Dropout(dropout_prob) if dropout_prob > 0 else nn.Identity()
+
+        # --- 5. Build skip connection ---
         self.skip_connection = (
             nn.ConvTranspose1d(
                 in_channels=in_channels,
@@ -129,14 +191,18 @@ class ResidualTransposeBlock(nn.Module):
 
     def forward(self, x):
         identity = x
-        out = self.layers(x)
+
+        # Apply main layers
+        out = self.conv_t(x)
+        out = self.norm(out)
+        out = self.act(out)
+        out = self.dropout(out)
 
         # This trims the output by one element only when needed.
+        # (This logic is unchanged from your original)
         if self.kernel_size % 2 == 0:
-            # For stride > 1, the target is upsampled. This trims the extra element.
             if self.stride > 1:
                 out = out[..., :-1]
-            # For stride = 1, the target is same-size. This also trims the extra element.
             else:
                 target_len = x.shape[-1]
                 out = out[..., :target_len]
@@ -171,35 +237,45 @@ class SymmetricalAutoencoder(nn.Module):
         strides = [int(s) for s in config["strides"]]
         dilations = [int(d) for d in config["dilations"]]
 
-        # Check that all configuration lists have the same length
-        assert len(output_channels) == len(kernels) == len(strides) == len(dilations), (
-            f"All configuration lists (output_channels, kernels, strides, dilations) must have the same length. "
-            f"Current lengths: {len(output_channels)}, {len(kernels)}, {len(strides)}, {len(dilations)}"
-        )
+        # --- Get global "clever" args from config ---
+        # These will be passed to every block
+        dropout_prob = float(config.get("dropout_prob", 0.0))
+        norm_type = config.get("norm_type", "group")
+        activation = config.get("activation", "relu")
+        # ---
+
+        assert (
+            len(output_channels) == len(kernels) == len(strides) == len(dilations)
+        ), "All configuration lists must have the same length."
 
         blocks_config = [
             {"in": in_ch, "out": out_ch, "kernel": k, "stride": s, "dilation": d}
             for in_ch, out_ch, k, s, d in zip(
-                [input_channels]
-                + output_channels[
-                    :-1
-                ],  # from input_channels: 3; and output_channels: [16, 32, 64]; It   Generates [3, 16, 32]
-                output_channels,  # The list [16, 32, 64]
+                [input_channels] + output_channels[:-1],
+                output_channels,
                 kernels,
                 strides,
                 dilations,
             )
         ]
+
+        # --- Build Encoder (Updated) ---
         encoder_blocks = []
         for block_cfg in blocks_config:
             encoder_blocks.append(
                 ResidualBlock(
-                    int(block_cfg["in"]),
-                    int(block_cfg["out"]),
-                    int(block_cfg["kernel"]),
-                    int(block_cfg["stride"]),
-                    float(config["dropout_prob"]),
-                    int(config.get("dilation", 1)),
+                    # Per-block settings
+                    in_channels=int(block_cfg["in"]),
+                    out_channels=int(block_cfg["out"]),
+                    kernel_size=int(block_cfg["kernel"]),
+                    stride=int(block_cfg["stride"]),
+                    dilation=int(
+                        block_cfg["dilation"]
+                    ),  # <-- FIX 1: Use per-block dilation
+                    # Global settings
+                    dropout_prob=dropout_prob,
+                    norm_type=norm_type,
+                    activation=activation,
                 )
             )
         self.encoder_conv = nn.Sequential(*encoder_blocks)
@@ -207,22 +283,27 @@ class SymmetricalAutoencoder(nn.Module):
         # Calculate flattened size dynamically
         self._calculate_flattened_size()
 
+        # --- FC Layers (Unchanged) ---
         self.encoder_fc = nn.Linear(self.flattened_size, int(config["latent_dim"]))
-
-        # --- Build Decoder ---
         self.decoder_fc = nn.Linear(int(config["latent_dim"]), self.flattened_size)
 
+        # --- Build Decoder (Updated) ---
         decoder_blocks = []
-        # Create decoder blocks in reverse order of encoder
         for block_cfg in reversed(blocks_config):
             decoder_blocks.append(
                 ResidualTransposeBlock(
-                    int(block_cfg["out"]),
-                    int(block_cfg["in"]),
-                    int(block_cfg["kernel"]),
-                    int(block_cfg["stride"]),
-                    float(config["dropout_prob"]),
-                    int(config.get("dilation", 1)),
+                    # Per-block settings
+                    in_channels=int(block_cfg["out"]),
+                    out_channels=int(block_cfg["in"]),
+                    kernel_size=int(block_cfg["kernel"]),
+                    stride=int(block_cfg["stride"]),
+                    dilation=int(
+                        block_cfg["dilation"]
+                    ),  # <-- FIX 1: Use per-block dilation
+                    # Global settings
+                    dropout_prob=dropout_prob,
+                    norm_type=norm_type,
+                    activation=activation,
                 )
             )
         self.decoder_conv = nn.Sequential(*decoder_blocks)
@@ -235,6 +316,8 @@ class SymmetricalAutoencoder(nn.Module):
         dummy_output = self.encoder_conv(dummy_input)
         self.flattened_size = int(torch.numel(dummy_output) / dummy_output.shape[0])
         self.unflatten_shape = dummy_output.shape[1:]
+
+    # --- encode, decode, and forward methods are unchanged ---
 
     def encode(self, x):
         # Conv1d expects (batch, channels, length)

@@ -1,4 +1,12 @@
 _target_: lmetk.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper
 task_type: ${task_definition.task_type}
-in_channels: null
+
+input_channels: null
 seq_len: null
+
+output_channels: null
+kernels: null
+strides: null
+dilations: null
+latent_dim: null
+dropout_prob: null
