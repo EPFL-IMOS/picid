@@ -10,7 +10,7 @@ checkpoints/
 results/
 logs/
 artifacts/
-scripts/*.log
+scripts/**/*.log
 #phmd/
 results/
 artifacts/

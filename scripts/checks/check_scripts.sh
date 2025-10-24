@@ -25,7 +25,7 @@ run_command() {
 }
 
 MODELS=("stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
-# "lstm"  "stf" "patchtst" "cnn_1d"
+# "lstm"  "stf" "patchtst" "cnn_1d"  "stf" "patchtst"
 
 
 # Create a list of commands to execute for each model
@@ -33,12 +33,18 @@ MODELS=("stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte
 # 1. Use SINGLE QUOTES (') to define the commands.
 # This prevents ${model} from being expanded immediately.
 commands=(
+
+    'python lmetk/run.py experiment=xjtu_sy/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+    # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+    # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+
     #'python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1'
     #'python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
-    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=25 optimizer.parameters.lr=0.01'
-    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01'
-    'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01 optimizer.parameters.weight_decay=0.0001'
-    # 'python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
+    #'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16'
+    #'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16'
+    # 'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01'
+    # 'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01 optimizer.parameters.weight_decay=0.0001'
+    #'python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=25 debug=pronostia'
 )
 
 # 2. Keep the loop order the same (commands outer, models inner).
