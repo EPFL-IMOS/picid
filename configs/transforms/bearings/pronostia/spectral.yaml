@@ -1,0 +1,67 @@
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+    
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  
+  metadata:
+    apply_to: target
+    assign_to: rul
+    fit_on: train
+
+# average_fetures:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
+#     window_size: 20
+  
+#   metadata:
+#     apply_to: features
+
+spectral:
+  transform:
+    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    stats_to_compute: ["mean", 
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "peak_to_peak_value",
+        "variance",
+        "skewness",
+        "kurtosis",
+        "abs_energy",
+        # rul_features inspired
+        "peak_factor",
+        "change_coefficient",
+        "clearance_factor",
+        # Entropy stats
+        "spectral_entropy",
+        "shannon_entropy",
+        "permutation_entropy",]
+    
+  metadata:
+    apply_to: 'features'
+    assign_to: 'features'
+
+
+    
+sequence2statistics:
+  transform:
+    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    padding_value: null
+
+  metadata:
+    apply_to: 'features'
+
+ragged2regularragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'features'
+
