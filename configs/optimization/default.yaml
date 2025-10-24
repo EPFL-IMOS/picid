@@ -7,5 +7,5 @@ optimizer:
 
 scheduler: # Comment or delete these lines to disable the scheduler
   _target_: torch.optim.lr_scheduler.StepLR # torch id of the scheduler. Set to null to disable.
-  step_size: 10 #${trainer.max_epochs}/5
+  step_size: ${int_div:${trainer.max_epochs}, 5}
   gamma: 0.5

@@ -65,7 +65,9 @@ from lmetk.model.autoencoder.utils import get_autoencoder_summary_and_tags
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
 OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
 OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
-
+OmegaConf.register_new_resolver("mod", lambda x, y: int(x) % int(y))
+# integer division operator
+OmegaConf.register_new_resolver("int_div", lambda a, b: int(a) // int(b))
 
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 

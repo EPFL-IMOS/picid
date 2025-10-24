@@ -1,3 +1,11 @@
+
+ragged2regularragged3:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'features'
+
 scaler_target:
   transform:
     _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
@@ -17,10 +25,5 @@ scaler_target:
 #     apply_to: features
 #     fit_on: train
 
-ragged2regularragged:
-  transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
-  metadata:
-    apply_to: 'features'
 

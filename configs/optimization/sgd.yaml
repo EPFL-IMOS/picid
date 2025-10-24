@@ -1,0 +1,11 @@
+lr: 1.0e-3 # warmup peaks at lr
+
+optimizer:
+  _target_: torch.optim.SGD
+  lr: ${optimization.lr}
+  weight_decay: 0.0
+
+scheduler: # Comment or delete these lines to disable the scheduler
+  _target_: torch.optim.lr_scheduler.StepLR # torch id of the scheduler. Set to null to disable.
+  step_size: ${oc.eval:"${trainer.max_epochs} % 5"}
+  gamma: 0.5

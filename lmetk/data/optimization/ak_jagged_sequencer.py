@@ -183,6 +183,9 @@ class AkwardJaggedAutoregressiveSequencer:
         # Ensure the output shapes are correct (check it only once), n dim is correct as well, shape is (T,C) meaning timestamps, features
         if not self._checked_output_shapes:
             assert (
+                len(seq_x.shape) == 3
+            ), f"seq_x ndim mismatch: expected 3, got seq_x.shape {seq_x.shape}"
+            assert (
                 seq_x.shape[1] == self.seq_len
             ), f"seq_x length mismatch: expected {self.seq_len}, got {seq_x.shape[1]}"
             assert (

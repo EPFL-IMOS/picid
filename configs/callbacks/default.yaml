@@ -17,7 +17,7 @@ model_checkpoint:
 
 early_stopping:
   monitor: MSE
-  patience: 25
+  patience: ${trainer.max_epochs} #${trainer.min_epochs}
   mode: min
 
 model_summary:

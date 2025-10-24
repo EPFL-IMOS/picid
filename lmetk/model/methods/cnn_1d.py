@@ -90,12 +90,6 @@ class EncoderModel(nn.Module):
         # --- 4. APPLY WEIGHT INITIALIZATION ---
         self.apply(self._init_weights)
 
-        # --- 5. OVERRIDE FINAL LAYER INIT ---
-        # (This is still a good idea, as it forces a stable start)
-        if self.task_type == "regression":
-            nn.init.constant_(self.final_head[0].weight, 0)
-            nn.init.constant_(self.final_head[0].bias, 0)
-
     def _init_weights(self, m):
         """
         Applies Kaiming and Zero-initialization to the model.
