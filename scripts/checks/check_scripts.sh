@@ -24,7 +24,7 @@ run_command() {
     fi
 }
 
-MODELS=("stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
+MODELS=("lstm" "stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte_fit_predict" "tabpfn_fit_predict" "tabdpt_fit_predict" "xgboost_fit_predict")
 # "lstm"  "stf" "patchtst" "cnn_1d"  "stf" "patchtst"
 
 
@@ -34,7 +34,7 @@ MODELS=("stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer" "carte
 # This prevents ${model} from being expanded immediately.
 commands=(
 
-    'python lmetk/run.py experiment=xjtu_sy/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+    'python lmetk/run.py experiment=pronostia/prognostics/raw/${model}.yaml task_definition.seq_len=2560 trainer.max_epochs=1000  datamodule.val_batch_size=1024 datamodule.train_batch_size=512 optimization.lr=0.001 optimization.optimizer.weight_decay=1e-5 evaluator.val.log_image=False' # model.n_layers=2 model.hidden_dim=128'
     # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
     # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
 

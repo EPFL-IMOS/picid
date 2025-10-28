@@ -1,10 +1,28 @@
 
+reshape_y:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b c -> (a b) c"
+  metadata:
+    apply_to: target
+    assign_to: target
+
+
+# as features have 1st var dim then we first have to regularize then use reshape_x
 ragged2regularragged3:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: 'features'
+
+reshape_x:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b c -> (a b) c"
+  metadata:
+    apply_to: features
+    assign_to: features
 
 scaler_target:
   transform:
@@ -17,13 +35,13 @@ scaler_target:
     apply_to: ['target','unit_id']
     assign_to: rul
 
-# scaler_features:
-#   transform:
-#     _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+scaler_features:
+  transform:
+    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
     
-#   metadata:
-#     apply_to: features
-#     fit_on: train
+  metadata:
+    apply_to: features
+    fit_on: train
 
 
 
