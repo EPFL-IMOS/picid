@@ -108,7 +108,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
 
             # Since RUL is constant per sequence, we only need one value per sequence.
             # This reduces the target from (num_sequences, 32768, 1) to (num_sequences, 1).
-            target = target[:, 0, :].reshape(-1, 1)
+            # target = target[:, 0, :].reshape(-1, 1)
 
             # Convert the NumPy arrays to Awkward Arrays for ragged processing.
             features = ak.from_regular(ak.from_numpy(features), axis=1)

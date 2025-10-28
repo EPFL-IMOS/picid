@@ -132,7 +132,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
                 # Since RUL is constant per sequence, we only need one value.
                 # This reduces the target from shape (n, 32768, 1) to (n, 1, 1).
-                df_target = df_target[:, 0:1, :]
+                # df_target = df_target[:, 0:1, :]
 
                 # Finally, flatten to a simple 2D array of shape (num_sequences, 1)
                 df_target = df_target.reshape(-1, 1)
