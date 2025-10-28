@@ -37,6 +37,8 @@ class MultiUnitEvaluator(AbstractEvaluator):
         paths: Optional[str] = None,
         remote_logger: Optional[Any] = None,
         collect_predictions: bool = False,
+        log_image_every_n_epochs: bool = 10,
+        log_image: bool = True,
         **kwargs,
     ):
         super().__init__(
@@ -49,7 +51,8 @@ class MultiUnitEvaluator(AbstractEvaluator):
         self.metric_names = [name.lower() for name in metric_names]
         self.apply_inverse_scaling = apply_inverse_scaling
         self.scaler = inverse_transform
-        self.log_image_every_n_epochs = 10
+        self.log_image_every_n_epochs = log_image_every_n_epochs
+        self.log_fit_vs_target_curves = log_image
 
         # --- Logic from DefaultEvaluator ---
         self.out_path = None
@@ -143,11 +146,13 @@ class MultiUnitEvaluator(AbstractEvaluator):
         # --- Saving logic extracted into helper ---
         self._save_predictions_if_needed(mode)
 
-        if mode != "train":
-            self._log_pred_vs_target_curves(mode, epoch)
+        if self.log_fit_vs_target_curves:
+            if mode != "train":
+                self._log_pred_vs_target_curves(mode, epoch)
 
-        if mode == "val" and epoch % self.log_image_every_n_epochs == 0:
-            self._log_pred_vs_target_curves(mode, epoch)
+            if mode == "val" and epoch % self.log_image_every_n_epochs == 0:
+                self._log_pred_vs_target_curves(mode, epoch)
+
         # --- Metric computation logic from MultiUnitEvaluator ---
         flat_results = {}
         average_collector = defaultdict(list)
