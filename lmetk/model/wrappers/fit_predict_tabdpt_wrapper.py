@@ -1,11 +1,12 @@
 """Wrapper for the TimePFN model."""
 
+from functools import partial
 import logging
 from pathlib import Path
 from typing import override
 
-import joblib
 import torch
+import cloudpickle
 
 from tabdpt import TabDPTRegressor
 from .base import AbstractFitPredictWrapper
@@ -28,12 +29,13 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         **kwargs,
     ):
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
-        backbone = TabDPTRegressor(
+        logger.info(f"Using TabDPT on device: {device}, kwargs: {kwargs}")
+
+        backbone = partial(
+            TabDPTRegressor,
             inf_batch_size=yield_batch_size,
             device=device,
         )
-
-        logger.info(f"Using TabDPT on device: {backbone.device}, kwargs: {kwargs}")
 
         self.model_cache_path = model_cache_path
         self.device = device
@@ -42,11 +44,16 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             backbone=backbone,
             yield_strategy=yield_strategy,
             yield_batch_size=yield_batch_size,
+            reinit_on_fit=True,
             **kwargs,
         )
 
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
+
+        if self.reinit_on_fit:
+            self._reinit_backbone()
+
         self.backbone.fit(X.numpy(), y.numpy().ravel())
 
     @override
@@ -64,9 +71,9 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+            model_path = str(Path(".model_cache") / f"{task_id}.cloudpickle")
         else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
+            model_path = str(Path(model_path) / model_path / f"{task_id}.cloudpickle")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
@@ -75,7 +82,10 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
 
         # Use joblib to persist the estimator which may contain torch objects
-        joblib.dump(self.backbone, model_path)
+
+        with open(model_path, "wb") as f:
+            cloudpickle.dump(self.backbone, f)
+        # cloudpickle.dump(self.backbone, model_path)
         # save_fitted_tabpfn_model(self.backbone, model_path)
         return model_path
 
@@ -90,9 +100,9 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
+            model_path = str(Path(".model_cache") / f"{task_id}.cloudpickle")
         else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
+            model_path = str(Path(model_path) / model_path / f"{task_id}.cloudpickle")
 
         if model_path is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
@@ -100,7 +110,9 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         if not Path(model_path).exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
-        self.backbone = joblib.load(model_path)
+        # self.backbone = cloudpickle.load(model_path)
+        with open(model_path, "rb") as f:
+            self.backbone = cloudpickle.load(f)
         # self.backbone = load_fitted_tabpfn_model(model_path, device=self.device)
         return model_path
 

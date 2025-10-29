@@ -63,28 +63,71 @@ class AbstractFitPredictWrapper(ABC):
         yield_batch_size: int = 128,
         profile_fit_cfg: OmegaConf = None,
         profile_predict_cfg: OmegaConf = None,
+        reinit_on_fit: bool = False,
         **kwargs,
     ):
         super().__init__()
-        self.backbone = backbone
+
+        # Accept either a model instance or a callable factory (e.g., functools.partial)
+        # If a callable is provided we will instantiate it immediately and keep the
+        # factory for optional re-initialization before fit.
+        if callable(backbone) and not (
+            hasattr(backbone, "fit") and hasattr(backbone, "predict")
+        ):
+
+            assert (
+                reinit_on_fit
+            ), "When providing a callable backbone, reinit_on_fit must be True."
+
+            # treat `backbone` as a factory that returns a model instance when called
+            self.backbone_factory = backbone
+        else:
+            assert not callable(
+                backbone
+            ), "We can not reinitialize on fit when providing a model instance."
+
+            self.backbone_factory = None
+            self.backbone = backbone
+            # Check if backbone supports fit/predict
+            if not hasattr(self.backbone, "fit") or not hasattr(
+                self.backbone, "predict"
+            ):
+                raise ValueError(
+                    "Backbone model must implement fit and predict methods."
+                )
+
         self.kwargs = AttributeDict(kwargs)
         self.yield_strategy = yield_strategy
         self.yield_batch_size = yield_batch_size
         self.profile_fit_cfg = profile_fit_cfg
         self.profile_predict_cfg = profile_predict_cfg
         self.profile_started_flag = False
-
-        # Check if backbone supports fit predict
-        if not hasattr(self.backbone, "fit") or not hasattr(self.backbone, "predict"):
-            raise ValueError("Backbone model must implement fit and predict methods.")
+        self.reinit_on_fit = reinit_on_fit
 
         if self.profile_fit_cfg or self.profile_predict_cfg:
             assert not (
                 self.profile_fit_cfg and self.profile_predict_cfg
             ), "Only one of profile_fit or profile_predict can be set."
 
+    def _reinit_backbone(self):
+        """Re-instantiate backbone from the provided factory (if any)."""
+        if self.backbone_factory is None:
+            raise RuntimeError(
+                "No backbone factory available to re-initialize the model."
+            )
+
+        self.backbone = self.backbone_factory()
+        # sanity check after re-init
+        if not hasattr(self.backbone, "fit") or not hasattr(self.backbone, "predict"):
+            raise ValueError(
+                "Re-initialized backbone must implement fit and predict methods."
+            )
+
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
         """Inner fit call to be potentially overridden by subclasses."""
+        if self.reinit_on_fit:
+            self._reinit_backbone()
+
         self.backbone.fit(X, y)
 
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
