@@ -42,6 +42,8 @@ dependencies = [
     "phmd",
     "TabPFN",
     "rul-datasets",
+    "sortedcontainers>=2.4.0",
+    "numba>=0.62.1",
 ]
 
 [project.optional-dependencies]

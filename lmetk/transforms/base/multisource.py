@@ -6,6 +6,7 @@ import numpy as np
 from numpy import ndarray
 import awkward as ak
 from collections import defaultdict
+from sortedcontainers import SortedDict
 
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 from lmetk.transforms.base.base_transform import (
@@ -96,7 +97,10 @@ def tolist(d):
         The nested list representation of the dictionary, or the original
         object if it was not a dictionary.
     """
-    if isinstance(d, dict):
+    if isinstance(d, (SortedDict)):
+        return [tolist(v) for v in d.values()]
+
+    elif isinstance(d, dict):
         return [tolist(d[i]) for i in sorted(d)]
     return d  # already a numpy array
 
@@ -415,11 +419,13 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                     next(iter(data_segment.values())), var_dim
                 )
 
+                index_depth = len(multi_index[0])
+
                 # Merge metadata from the segment with the overall metadata
                 data_segment_metadata = copy.deepcopy(metadata)
                 data_segment_metadata.update(data_segment.metadata or {})
 
-                out_segment = {}
+                out_segment = SortedDict()
                 use_tqdm = len(multi_index) > 100
                 iterator = multi_index
                 if use_tqdm:
@@ -446,13 +452,32 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                     # second level is the coord in the ragged dim
 
                     for k, block in out_subsegment[0].items():
-                        d: dict = out_segment.setdefault(k, {})
+                        d: dict = out_segment.setdefault(k, SortedDict())
                         for i in coord[:-1]:
-                            d: dict = d.setdefault(i, {})
+                            d: dict = d.setdefault(i, SortedDict())
                         d[coord[-1]] = block  # keep as np.ndarray
 
                 for k, v in out_segment.items():
-                    aka = ak.Array(tolist(v))
+                    # Example <Array [[[0.458, -1.28], ..., [...]], ...] type='870 * var * var * float64'>
+                    if index_depth == 1:
+                        # v maps integer indices to NumPy arrays (ragged)
+                        # convert directly using offsets and concatenation
+                        subarrays = [np.asarray(arr) for arr in v.values()]
+                        lengths = np.fromiter(
+                            (len(a) for a in subarrays), dtype=np.int64
+                        )
+                        offsets = np.concatenate([[0], np.cumsum(lengths)])
+                        if len(subarrays) == 0:
+                            aka = ak.Array([])
+                        else:
+                            content = ak.from_numpy(np.concatenate(subarrays))
+                            layout = ak.contents.ListOffsetArray(
+                                ak.index.Index64(offsets), content.layout
+                            )
+                            aka = ak.Array(layout)
+                    else:
+                        aka = ak.Array(tolist(v))
+
                     regularized = ak_regularize_regular_axes(aka)
 
                     # FIX: if the output is 1D we need to add an irregular axis
