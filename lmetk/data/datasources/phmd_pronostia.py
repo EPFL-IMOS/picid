@@ -114,10 +114,9 @@ class PronostiaLoader(PHMDMultiSourceLoader):
 
             # Data Integrity Check: The RUL value must be constant across any single sequence.
             # This check works by comparing every RUL value in a sequence to the first one.
-            if not np.unique(target, axis=1).shape[1] == 10:
+            if not np.unique(target, axis=1).shape[1] == 1:
                 raise ValueError(
-                    f"Unit {unit_name} has wrong RUL values within a single sample range of"
-                    f"{SAMPLE_RANGE_SIZE}, where {int(SAMPLE_RANGE_SIZE/10)} is number of samples per second. Please check data integrity."
+                    f"Unit {unit_name} has wrong RUL values within a single sample range"
                 )
 
             # Since RUL is constant per sequence, we only need one value per sequence.
