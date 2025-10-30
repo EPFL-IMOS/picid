@@ -26,6 +26,20 @@ UNIT_NAMES_TO_ID = {
     "3_3": (3, 3),
 }
 
+
+TEST_RULS = {
+    "1_3": 5730,
+    "1_4": 2900,  # 339, Adjusting this then Table 4 from the "Remaining useful life estimation of bearing via temporal convolutional networks enhanced by a gated convolutional unit" paper make sense
+    "1_5": 1610,
+    "1_6": 1460,
+    "1_7": 7570,
+    "2_3": 7530,
+    "2_4": 1390,
+    "2_5": 3090,
+    "2_6": 1290,
+    "2_7": 580,
+    "3_3": 820,
+}
 SAMPLE_RANGE_SIZE = 2560
 
 
@@ -117,7 +131,15 @@ class PronostiaLoader(PHMDMultiSourceLoader):
         # --- 3. Assemble and Return the Final Dictionary ---
 
         # Use .get() for safer dictionary access to avoid errors on missing keys.
-        unit_id = UNIT_NAMES_TO_ID.get(unit_name.strip("Bearing"), -1)
+
+        unit_key = unit_name.strip("Bearing")
+        unit_id = UNIT_NAMES_TO_ID.get(unit_key, -1)
+
+        # It seems to be not needed
+        # if self.cut_the_test and unit_key in TEST_RULS:
+        #     first_predicting_point = int(TEST_RULS[unit_key] / 10)
+        #     features = features[:-first_predicting_point]
+        #     target = target[:-first_predicting_point]
 
         return {
             "features": features,
@@ -125,7 +147,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
             "unit_id": ak.from_numpy(np.array(unit_id)),
             "metadata": {
                 "unit_id": unit_id,
-                "unit_name": f"Bearing {unit_name.strip("Bearing")}",
+                "unit_name": f"Bearing {unit_key}",
                 "unit_length": len(
                     features
                 ),  # This will be num_sequences in ragged mode
