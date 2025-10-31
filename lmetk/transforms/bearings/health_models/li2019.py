@@ -5,11 +5,12 @@ import numpy as np
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.data.data_objects.utils import convert_to_numpy
+from lmetk.transforms.base.multisource import FitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
 
-class Li2019FPTCutTransform(DenseTransform):
+class Li2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "2*sigma interval of kurtosis" method from Li et al. 2019.
