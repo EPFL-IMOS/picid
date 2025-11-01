@@ -1,4 +1,6 @@
 
+
+
 reshape_y:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
@@ -23,6 +25,24 @@ reshape_x:
   metadata:
     apply_to: features
     assign_to: features
+
+
+
+features2RMS:
+
+  transform:
+    _target_: lmetk.transforms.signal_processing.rms.MovingRMSTransform
+    window_size: 2560
+    apply_to_columns: True
+    save_images: True
+    saving_path: ${paths.log_dir}/rms_images
+    unit_key: unit_id
+  
+  metadata:
+    apply_to: ['features', 'unit_id']
+    assign_to: index
+
+
 
 scaler_target:
   transform:

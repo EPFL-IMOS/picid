@@ -220,32 +220,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         )
         logger.debug(f"Final concatenated STFT shape: {final_result.shape}")
 
-        if "target" not in data.keys():
-            return final_result
-        # TODO: DO WE STILL NEED THIS PART? It is responsigble for handling the targets alignment
-        # metadata
-        out_dict = {"features": final_result}
-
-        target = data["target"]
-        # Convert to numpy array
-        target = convert_to_numpy(target, key)
-
-        logger.debug(f"Added data '{key}' with shape {target.shape}")
-
-        # Allign targets
-        n_frames = final_result.shape[0]
-        centers = np.arange(n_frames) * self.hop  # in samples
-        end_idx = np.clip(centers + self.win_len // 2 - 1, 0, len(target) - 1)
-        frame_targets = target[end_idx]  # aligned targets per time frame
-
-        # Concatenate and reshape (-1,1)
-        target = np.array(frame_targets).reshape(-1, 1)
-        logger.debug(f"Final target shape: {target.shape}")
-
-        assert target.shape[0] == n_frames, "Target and result shapes do not match"
-
-        out_dict["target"] = target
-        return out_dict
+        return final_result
 
     def __call__(self, data: Dict, metadata: Dict) -> np.ndarray:
         return self.transform_data(data, metadata)
