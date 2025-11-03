@@ -411,7 +411,8 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 # Ensure that all the keys have same dim 0
                 assert len(set([len(val) for val in data_segment.values()])) == 1, (
                     f"All keys in data_segment must have the same length at the first dimension. "
-                    f"Found lengths: {[len(val) for val in data_segment.values()]}"
+                    f"Transform {self.__class__.__name__} expects all keys in the data segment to have the same length at the first dimension when handling ragged data without native support."
+                    f"Keys: {list(data_segment.keys())}, Lengths: {[len(val) for val in data_segment.values()]}"
                 )
 
                 var_dim = find_singular_ragged_dim(data_segment)

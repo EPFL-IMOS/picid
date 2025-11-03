@@ -5,17 +5,21 @@ from sklearn.linear_model import LinearRegression
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import FitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import (
+    NoFitMultiSourceTransformMixin,
+)
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
+class Ahmad2019FPTCutTransform(DenseTransform, NoFitMultiSourceTransformMixin):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "Alarm bound technique" from Ahmad et al. 2019.
-    ...
+
+    If `gain_threshold` is a float, FPT is the first point to cross it.
+    If `gain_threshold` is None, an automatic strategy is used.
     """
 
     def __init__(
@@ -24,12 +28,36 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
         features_keys: List[str],
         normal_period_end: int = 100,
         window_size: int = 70,
-        gain_threshold: float = 0.1,
+        gain_threshold: Optional[float] = None,
+        regression_stride: int = 1,
+        auto_fpt_strategy: str = "robust_threshold",
+        auto_fpt_top_k: int = 5,
+        dataset_name: str = "UnknownDataset",
+        unit_id_key: Optional[str] = None,
+        fpt_indexes_strategy: str = "min",
         **kwargs,
     ):
         """
         Initialize the Ahmad2019FPTCutTransform.
-        ...
+
+        Args:
+            signal_key: Key for the 1D/2D signal array to find the FPT.
+            features_keys: List of keys for arrays to be sliced.
+            normal_period_end: End index of the "normal" operation period.
+            window_size: Size of the sliding window for regression.
+            gain_threshold: Threshold to trigger FPT. If None,
+                `auto_fpt_strategy` is used.
+            regression_stride: The step size for the regression window.
+            auto_fpt_strategy: Strategy if `gain_threshold` is None.
+                - "max_ratio": FPT is the index of the max ratio.
+                - "robust_threshold": FPT is the *first* index to cross
+                  the minimum ratio of the top 'k' ratios.
+            auto_fpt_top_k: The 'k' value for "robust_threshold" strategy.
+            dataset_name: Optional name of the dataset for logging.
+            unit_id_key: Optional key to find the unit ID for logging.
+            fpt_indexes_strategy: Strategy ('min', 'max', 'mean') to
+                use if `signal_key` provides multiple signal columns.
+            **kwargs: Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.signal_key = signal_key
@@ -37,17 +65,31 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
         self.normal_period_end = normal_period_end
         self.window_size = window_size
         self.gain_threshold = gain_threshold
+        self.regression_stride = regression_stride
+        self.auto_fpt_strategy = auto_fpt_strategy
+        self.auto_fpt_top_k = auto_fpt_top_k
+        self.dataset_name = dataset_name
+        self.unit_id_key = unit_id_key
+        self.fpt_indexes_strategy = fpt_indexes_strategy
 
         if not self.features_keys:
             raise ValueError("`features_keys` list cannot be empty.")
+        if self.fpt_indexes_strategy not in ["min", "max", "mean"]:
+            raise ValueError(
+                f"Invalid fpt_indexes_strategy '{self.fpt_indexes_strategy}'."
+            )
+        if self.auto_fpt_strategy not in ["max_ratio", "robust_threshold"]:
+            raise ValueError(f"Invalid auto_fpt_strategy '{self.auto_fpt_strategy}'.")
 
     def _linear_rectification_technique(self, signal: np.ndarray) -> np.ndarray:
-        """NumPy-based implementation of linear_rectification_technique."""
+        """
+        NumPy-based implementation of the Linear Rectification Technique.
+        """
         n = len(signal)
         if n < 2:
             return signal
 
-        growth_rate = np.mean(np.diff(signal))
+        growth_rate = np.nan_to_num(np.mean(np.diff(signal)), nan=0.0)
         smoothed = np.zeros(n)
         smoothed[0] = signal[0]
 
@@ -57,15 +99,17 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
 
             if h_i_min <= h_i <= (1 + growth_rate) * h_i_min:
                 smoothed[i] = h_i
-            elif (h_i < h_i_min) or (h_i > (1 + growth_rate) * h_i_min):
+            elif h_i < h_i_min or h_i > (1 + growth_rate) * h_i_min:
                 smoothed[i] = h_i_min + growth_rate
 
         return smoothed
 
-    def _find_fpt(self, signal_vector: np.ndarray) -> int:
-        """NumPy-based implementation of ahmad_et_al_2019."""
+    def _find_fpt(self, signal_vector: np.ndarray, unit_id: str) -> int:
+        """
+        Finds the FPT for a single 1D signal vector.
+        """
         if signal_vector.ndim != 1:
-            raise ValueError(f"Signal from '{self.signal_key}' must be 1D.")
+            raise ValueError(f"Signal vector provided to _find_fpt must be 1D.")
 
         if self.normal_period_end > len(signal_vector):
             logger.warning(
@@ -73,13 +117,17 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
                 f"than signal length ({len(signal_vector)}). Using available data."
             )
 
-        rms_normal = np.mean(signal_vector[0 : self.normal_period_end])
+        # Calculate the RMS of the normal period to normalize the signal, as per Ahmad2019
+        lin_reg = LinearRegression().fit(
+            X=np.arange(self.normal_period_end).reshape(-1, 1),
+            y=signal_vector[0 : self.normal_period_end].reshape(-1, 1),
+        )
 
-        if rms_normal < 1e-10:
-            logger.warning(
-                "Mean of normal period is near zero. " "Normalized HI may be unstable."
-            )
-            rms_normal = 1e-10
+        index = [[x] for x in range(0, self.normal_period_end)]
+        values = [[y] for y in signal_vector[0 : self.normal_period_end]]
+        lin_reg = LinearRegression().fit(X=index, y=values)
+        rms_normal = lin_reg.coef_[0][0]
+        rms_normal = 1e-10 if rms_normal < 1e-10 else rms_normal
 
         health_indicator = signal_vector / rms_normal
         lrt = self._linear_rectification_technique(health_indicator)
@@ -87,42 +135,112 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
         if self.window_size > len(lrt):
             raise ValueError(
                 f"Window size {self.window_size} is longer than the "
-                f"signal length {len(lrt)}."
+                f"rectified signal length {len(lrt)}."
             )
 
         X_reg = np.arange(self.window_size).reshape(-1, 1)
+        # Store (end_index, ratio)
+        ratio_collector: List[Tuple[int, float]] = []
 
-        for i in range(len(lrt) - self.window_size):
-            start_index = i
+        # Use the specified regression_stride
+        for i in range(
+            self.normal_period_end,
+            len(lrt) - self.window_size + 1,
+            self.regression_stride,
+        ):
             end_index = i + self.window_size
-            y_reg = lrt[start_index:end_index].reshape(-1, 1)
+            y_reg = lrt[i:end_index].reshape(-1, 1)
 
-            try:
-                lin_reg = LinearRegression().fit(X=X_reg, y=y_reg)
-                slope = lin_reg.coef_[0][0]
-                intercept = lin_reg.intercept_[0]
-            except Exception as e:
-                logger.warning(f"Linear regression failed at index {i}: {e}")
+            lin_reg = LinearRegression().fit(X=X_reg, y=y_reg)
+            slope = lin_reg.coef_[0][0]
+            intercept = lin_reg.intercept_[0]
+
+            if intercept < 1e-10:
+                ratio_collector.append((end_index, 0.0))
                 continue
 
             gain = abs(slope * self.window_size)
-            if intercept < 1e-10:
-                continue
+            ratio = gain / intercept
+            ratio_collector.append((end_index, ratio))
 
-            if (gain / intercept) > self.gain_threshold:
-                logger.info(f"Ahmad2019 FPT found at index {end_index}.")
-                return end_index
+        # --- FPT Logic: Apply automatic or fixed threshold ---
+        if not ratio_collector:
+            raise ValueError(
+                f"Ahmad2019 FPT not found for signal '{self.signal_key}'. "
+                "The regression failed or the intercept was near zero for all windows."
+            )
 
-        # --- MODIFIED SECTION ---
-        # If the loop finishes without finding an FPT, raise an error.
-        raise ValueError(
-            f"Ahmad2019 FPT not found for signal '{self.signal_key}'. "
-            f"The sliding window regression never met the 'gain_threshold' "
-            f"(currently {self.gain_threshold}). "
-            f"Consider adjusting 'normal_period_end' (currently {self.normal_period_end}), "
-            f"'window_size' (currently {self.window_size}), or 'gain_threshold'."
-        )
-        # --- END MODIFIED SECTION ---
+        # 1. Automatic Mode: Use the specified auto_fpt_strategy
+        if self.gain_threshold is None:
+            if self.auto_fpt_strategy == "max_ratio":
+                fpt_index, max_ratio = max(ratio_collector, key=lambda x: x[1])
+                logger.info(
+                    f"Ahmad2019 FPT (Auto 'max_ratio') found at index {fpt_index} "
+                    f"with max ratio {max_ratio:.4f}."
+                )
+                return fpt_index
+
+            elif self.auto_fpt_strategy == "robust_threshold":
+                k = min(self.auto_fpt_top_k, len(ratio_collector))
+                sorted_ratios = sorted(
+                    ratio_collector, key=lambda x: x[1], reverse=True
+                )
+                top_k_ratios = sorted_ratios[:k]
+                # calculate average of the top-k ratios to determine a robust threshold, or use the minimum of the top-k ratios
+
+                robust_threshold = np.mean([x[1] for x in top_k_ratios])
+
+                # Find the first index that crosses this robust threshold
+                for end_index, ratio in ratio_collector:
+                    if ratio >= robust_threshold:
+                        logger.info(
+                            f"Ahmad2019 FPT (Auto 'robust_threshold') found at index {end_index}. "
+                            f"(First point to cross robust threshold={robust_threshold:.4f}, "
+                            f"derived from top {k} ratios)."
+                        )
+                        return end_index
+
+                # Should be unreachable if ratio_collector is not empty
+                return ratio_collector[0][0]
+
+        # 2. Fixed Threshold Mode: Find the first index to cross the threshold
+        else:
+            fpt_candidates = [
+                idx for idx, ratio in ratio_collector if ratio > self.gain_threshold
+            ]
+
+            if fpt_candidates:
+                fpt_index = min(fpt_candidates)  # Get first prediction time
+                logger.info(
+                    f"Ahmad2019 FPT (Fixed) found at index {fpt_index} "
+                    f"(ratio crossed {self.gain_threshold})."
+                )
+                return fpt_index
+
+            # 3. Fixed Threshold Mode: Threshold was never met
+            max_ratio = max(ratio_collector, key=lambda x: x[1])[1]
+            min_ratio = min(ratio_collector, key=lambda x: x[1])[1]
+            avg_ratio = np.mean([r[1] for r in ratio_collector])
+
+            raise ValueError(
+                f"Ahmad2019 FPT not found for signal '{self.signal_key}' "
+                f"for unit '{unit_id}' in dataset '{self.dataset_name}'. "
+                f"The sliding window regression never met the 'gain_threshold' "
+                f"(currently {self.gain_threshold}). "
+                f"Observed Ratios: max={max_ratio:.4f}, min={min_ratio:.4f}, "
+                f"avg={avg_ratio:.4f}. Consider adjusting 'normal_period_end' "
+                f"({self.normal_period_end}), 'window_size' ({self.window_size}), "
+                "or 'gain_threshold' (or set to None for automatic mode)."
+            )
+
+    def _get_unit_id(self, data: NamedTransformInput, metadata: Dict) -> str:
+        """Helper to safely extract the unit ID for logging."""
+        if self.unit_id_key:
+            if self.unit_id_key in data:
+                # Handle array or scalar unit_id
+                unit_id_data = data[self.unit_id_key]
+                return str(unit_id_data)
+        return "UnknownUnit"
 
     @override
     def transform_data(
@@ -131,6 +249,7 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
         """
         Finds FPT, slices all feature arrays, and returns them in a dict.
         """
+        unit_id = self._get_unit_id(data, metadata)
 
         if self.signal_key not in data:
             raise KeyError(
@@ -138,13 +257,48 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
                 f"Available keys: {data.keys()}"
             )
 
-        signal_vector = convert_to_numpy(data[self.signal_key]).flatten()
+        signal_vector = convert_to_numpy(data[self.signal_key], ensure_2d=True)
+        if signal_vector.ndim == 1:
+            signal_vector = signal_vector.reshape(-1, 1)
 
-        # 1. Find the First Prediction Time (FPT) index
-        fpt_index = self._find_fpt(signal_vector)
+        # 1. Find FPT index for each signal column
+        fpt_indexes = []
+        for col_idx in range(signal_vector.shape[1]):
+            col_signal = signal_vector[:, col_idx]
+            try:
+                _fpt_index = self._find_fpt(col_signal, unit_id)
+                fpt_indexes.append(_fpt_index)
+            except ValueError as e:
+                logger.error(
+                    f"Failed to find FPT for col {col_idx} "
+                    f"of '{self.signal_key}'. Error: {e}"
+                )
 
+        if not fpt_indexes:
+            raise ValueError(
+                f"Could not find FPT for any column in '{self.signal_key}'. "
+                "Check signal data and transform parameters."
+            )
+
+        # 2. Apply strategy to get a single FPT index
+        if len(fpt_indexes) > 1:
+            if self.fpt_indexes_strategy == "min":
+                fpt_index = min(fpt_indexes)
+            elif self.fpt_indexes_strategy == "max":
+                fpt_index = max(fpt_indexes)
+            else:  # "mean"
+                fpt_index = int(np.mean(fpt_indexes))
+        else:
+            fpt_index = fpt_indexes[0]
+
+        logger.info(
+            f"Final FPT index for unit '{unit_id}' set to {fpt_index} "
+            f"using strategy '{self.fpt_indexes_strategy}' "
+            f"from indexes {fpt_indexes}."
+        )
+
+        # 3. Slice all requested feature arrays
         sliced_data_dict: Dict[str, np.ndarray] = {}
-
         for key in self.features_keys:
             if key not in data:
                 raise KeyError(
@@ -152,19 +306,24 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
                     f"Available keys: {data.keys()}"
                 )
 
-            features_array = convert_to_numpy(data[key])
+            if key == self.unit_id_key:
+                logger.debug(f"Passing through key '{key}' without slicing.")
+                sliced_data_dict[key] = data[key]
+                continue
 
-            if features_array.ndim < 1:  # Allow 1D or 2D
+            features_array = convert_to_numpy(data[key], ensure_2d=False)
+
+            if features_array.ndim < 1:
                 raise ValueError(f"Features array from '{key}' must be at least 1D.")
 
-            if len(signal_vector) != features_array.shape[0]:
+            if signal_vector.shape[0] != features_array.shape[0]:
                 raise ValueError(
-                    f"Length of signal '{self.signal_key}' ({len(signal_vector)}) does not "
-                    f"match number of rows in '{key}' ({features_array.shape[0]})."
+                    f"Length of signal '{self.signal_key}' ({signal_vector.shape[0]}) "
+                    f"does not match number of rows in '{key}' "
+                    f"({features_array.shape[0]})."
                 )
 
-            # 2. Slice the features array from that index
-            sliced_features = features_array[fpt_index:, ...]  # Use ellipsis for n-dim
+            sliced_features = features_array[fpt_index:, ...]
 
             if sliced_features.shape[0] == 0:
                 logger.warning(
@@ -174,7 +333,6 @@ class Ahmad2019FPTCutTransform(DenseTransform, FitMultiSourceTransformMixin):
 
             sliced_data_dict[key] = sliced_features
 
-        # 3. Return the dictionary of sliced arrays
         return sliced_data_dict
 
     def __call__(self, data: Dict, metadata: Dict) -> Dict[str, np.ndarray]:
