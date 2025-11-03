@@ -55,15 +55,22 @@ class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixi
 
     def __init__(
         self,
-        window_size: int,
+        window_size: int | str,
         step: int,
         agg: str = "mean",
+        dim: int = 0,
         **kwargs,
     ):
         super().__init__()
+        if isinstance(window_size, int):
+            assert window_size > 0, "window_size must be a positive integer."
+        elif isinstance(window_size, str):
+            assert window_size == "full", "window_size string must be 'full'."
+
         self.window_size = window_size
         self.step = step
         self.agg = agg
+        self.dim = dim
 
         # Map string to numpy aggregation function
         self._agg_func = {
@@ -85,22 +92,32 @@ class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixi
         lengths = [len(segment) for segment in data.values()]
 
         for key, value in data.items():
-            arr = np.asarray(value)
-            n_windows = (len(arr) - self.window_size) // self.step + 1
-            if n_windows <= 0:
-                data[key] = np.array([])
-                continue
 
-            if self.agg not in ["first", "last"]:
-                windows = [
-                    arr[i * self.step : i * self.step + self.window_size]
-                    for i in range(n_windows)
-                ]
-                data[key] = self._agg_func(np.stack(windows), axis=1)
-            elif self.agg == "first":
-                data[key] = arr[:: self.step][:n_windows]
+            if self.window_size == "full":
+                window_size = value.shape[self.dim]
+            else:
+                window_size = self.window_size
+
+            arr = np.asarray(value)
+            arr_moved = np.moveaxis(arr, self.dim, 0)
+            windows = np.lib.stride_tricks.sliding_window_view(
+                arr_moved, window_shape=window_size, axis=0
+            )
+            # the reason why we switch axis is that
+            # sliding_window_view does not support step and they
+            # recommend this trick, which works easiest if its always
+            # in the same dimension (here first):
+            strided_windows = windows[:: self.step, ...]
+            strided_windows = np.moveaxis(strided_windows, 0, self.dim)
+
+            # Stride tricks adds the window in the last dimension.
+            # so we apply aggregation in dim -1.
+            if self.agg == "first":
+                data[key] = np.take(strided_windows, 0, axis=-1)
             elif self.agg == "last":
-                data[key] = arr[self.window_size - 1 :: self.step][:n_windows]
+                data[key] = np.take(strided_windows, -1, axis=-1)
+            else:
+                data[key] = self._agg_func(strided_windows, axis=-1)
 
         if len(set(lengths)) > 1:
             logger.warning(

@@ -8,6 +8,7 @@ import awkward as ak
 from collections import defaultdict
 from sortedcontainers import SortedDict
 
+from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
 from lmetk.data.data_objects.data import DatasetContainer, NamedTransformInput
 from lmetk.transforms.base.base_transform import (
     BaseTransform,
@@ -389,7 +390,11 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 out_segment = transform_func(data_segment, metadata=metadata)
 
                 if data_is_ragged_but_regular:
-                    out_segment = ak.Array(out_segment)
+                    if isinstance(out_segment, BaseDataObjectWithMetadata):
+                        for key, val in out_segment.items():
+                            out_segment[key] = ak.Array(val)
+                    else:
+                        out_segment = ak.Array(out_segment)
 
                 out.append(out_segment)
 

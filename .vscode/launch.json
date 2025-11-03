@@ -211,7 +211,7 @@
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "justMyCode": true,
             "args": [
                 "paths=rt_local",
                 "experiment=railway_traction/forecasting/tabpfn_fit_predict",
@@ -374,6 +374,7 @@
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
+            "justMyCode": true,
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_fit_predict",
@@ -382,6 +383,27 @@
             "env": {
                 "HYDRA_FULL_ERROR": "1",
                 "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): RUNAI TabDPT Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "python": "/workspace/setup/.venv/bin/python",
+            "justMyCode": false,
+            "args": [
+                "paths=runai",
+                "experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1",
+                "PATH": "/usr/local/cuda-12.6/bin:${env:PATH}",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.6/lib64:${env:LD_LIBRARY_PATH}:${env:HOME}/lib:${env:LD_LIBRARY_PATH}",
+                "LIBRARY_PATH": "${env:HOME}/lib:${env:LIBRARY_PATH}"
             }
         },
         {
