@@ -952,6 +952,23 @@
             }
         },
         {
+            "name": "Pronostia : 1D CNN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=pronostia/prognostics/combined/cnn_1d.yaml",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Pronostia : TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
