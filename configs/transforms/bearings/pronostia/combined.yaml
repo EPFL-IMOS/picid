@@ -9,7 +9,7 @@ scaler_features:
 take_last_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
-    step: 60
+    step: 1 # TO BE CHANGED SOMEHOW
     window_size: full
     aggregation: last
     dim: 1
