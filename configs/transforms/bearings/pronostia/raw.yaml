@@ -1,10 +1,18 @@
+reshape_y:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b c -> (a b) c"
+  metadata:
+    apply_to: target
+    assign_to: target
+
 # as features have 1st var dim then we first have to regularize then use reshape_x
-ragged2regularragged3:
+ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
-    apply_to: 'features'
+    apply_to: "features"
 
 reshape_x_for_health_index:
   transform:
@@ -14,16 +22,23 @@ reshape_x_for_health_index:
     apply_to: features
     assign_to: features_flatten
 
+# plot_features:
+#   transform:
+#     unit_key: unit_id
+#     _target_: lmetk.transforms.base_transforms.plot_transforms.PlotFeatures
+#   metadata:
+#     apply_to: ["features_flatten", "unit_id"]
+
 moving_average:
   transform:
     _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
     window_size: 2560
     chunk_size: 2560
     causal: True
-  
+
   metadata:
     apply_to: features_flatten
-    assign_to: features_flatten 
+    assign_to: features
 
 features2RMS:
   transform:
@@ -33,10 +48,6 @@ features2RMS:
     save_images: True
     saving_path: ${paths.log_dir}/rms_images
     unit_key: unit_id
-  
-  metadata:
-    apply_to: ['features_flatten', 'unit_id']
-    assign_to: index
 
 # li2019_features:
 #   transform:
@@ -70,14 +81,16 @@ features2RMS:
 #     apply_to: ['target', 'index', unit_id]
 #     assign_to: ['target']
 
+# reshape_y:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+#     pattern: "a b c -> (a b) c"
+#   metadata:
+#     apply_to: target
+#     assign_to: target
 
-reshape_y:
-  transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
-    pattern: "a b c -> (a b) c"
-  metadata:
-    apply_to: target
-    assign_to: target
+#     apply_to: ["features", "unit_id"]
+#     assign_to: index
 
 scaler_target:
   transform:
@@ -87,7 +100,7 @@ scaler_target:
     dataset_name: PRONOSTIA
 
   metadata:
-    apply_to: ['target','unit_id']
+    apply_to: ["target", "unit_id"]
     assign_to: rul
 
 reshape_x:
@@ -100,11 +113,8 @@ reshape_x:
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
-    
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
-
-
-

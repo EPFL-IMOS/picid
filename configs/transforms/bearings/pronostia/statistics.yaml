@@ -35,7 +35,7 @@ scaler_target:
     apply_to: ["target", "unit_id"]
     assign_to: rul
 
-sequence2statistics:
+time_domain_features:
   transform:
     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
     stats_to_compute: [

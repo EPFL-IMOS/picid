@@ -1,3 +1,29 @@
+scaler_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+
+take_last_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: full
+    aggregation: last
+    dim: 1
+  metadata:
+    apply_to: target
+
+# Reduce target dim
+reshape_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a 1 1 -> a 1"
+  metadata:
+    apply_to: target
+
 scaler_target:
   transform:
     _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
@@ -6,22 +32,14 @@ scaler_target:
     dataset_name: PRONOSTIA
 
   metadata:
-    apply_to: ['target','unit_id']
+    apply_to: ["target", "unit_id"]
     assign_to: rul
 
-scaler_features:
-  transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
-    
-  metadata:
-    apply_to: features
-    fit_on: train
-
-
-spectral:
+spectral_features:
   transform:
     _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
-    stats_to_compute: ["mean", 
+    stats_to_compute: [
+        "mean",
         "maximum",
         "minimum",
         "root_mean_square",
@@ -37,26 +55,24 @@ spectral:
         # Entropy stats
         "spectral_entropy",
         "shannon_entropy",
-        "permutation_entropy",]
-    
+        "permutation_entropy",
+      ]
+
   metadata:
-    apply_to: 'features'
-    assign_to: 'features'
+    apply_to: "features"
+    assign_to: "features"
 
-
-    
 sequence2statistics:
   transform:
     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
 
   metadata:
-    apply_to: 'features'
+    apply_to: "features"
 
 ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
-    apply_to: 'features'
-
+    apply_to: "features"
