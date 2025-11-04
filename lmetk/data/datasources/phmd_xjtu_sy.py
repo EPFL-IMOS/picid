@@ -135,7 +135,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                 # df_target = df_target[:, 0:1, :]
 
                 # Finally, flatten to a simple 2D array of shape (num_sequences, 1)
-                df_target = df_target.reshape(-1, 1)
+                # df_target = df_target.reshape(-1, 1)
 
             elif self.task_mode == "fault":
                 # This functionality has not been implemented yet.
