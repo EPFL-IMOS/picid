@@ -222,6 +222,10 @@ class HealthIndexTransform(
         min_hi_init = np.nanmin(runtime_vector)
         max_hi_init = np.nanmax(runtime_vector)
 
+        # Find indexes of min and max values for health_index_vector
+        agrmin = np.argmin(health_index_vector)
+        argmax = np.argmax(health_index_vector)
+
         # Check that it is a monotonically decreasing function
         # 1) identify the step of decrease (how many records have the same value)
         step_decrease = diff_at_step_n(
@@ -236,9 +240,12 @@ class HealthIndexTransform(
             )
 
         logger.info(
-            f"Unit id: {unit_id}, min/max health_indicator: {np.round(min_hi,2)}/{np.round(max_hi,2)}"
-            f"correspond to min/max RUL values: {min_hi_init}/{max_hi_init}"
+            f"Unit {unit_id} HI Validation: "
+            f"Range=[{np.round(min_hi, 3)}, {np.round(max_hi, 3)}]. "
+            f"Min HI at index {agrmin}, Max HI at index {argmax}. "
+            f"Original runtime range=[{min_hi_init}, {max_hi_init}]."
         )
+
         if min_hi < 0.0 or max_hi > 1.0:
             raise ValueError(
                 f"Calculated HI for unit '{unit_id}' is outside the valid "

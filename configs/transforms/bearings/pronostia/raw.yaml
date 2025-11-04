@@ -14,13 +14,13 @@ ragged2regularragged:
   metadata:
     apply_to: "features"
 
-reshape_x_for_health_index:
-  transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
-    pattern: "a b c -> (a b) c"
-  metadata:
-    apply_to: features
-    assign_to: features_flatten
+# reshape_x_for_health_index:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+#     pattern: "a b c -> (a b) c"
+#   metadata:
+#     apply_to: features
+#     assign_to: features_flatten
 
 # plot_features:
 #   transform:
@@ -29,25 +29,25 @@ reshape_x_for_health_index:
 #   metadata:
 #     apply_to: ["features_flatten", "unit_id"]
 
-moving_average:
-  transform:
-    _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
-    window_size: 2560
-    chunk_size: 2560
-    causal: True
+# moving_average:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
+#     window_size: 2560
+#     chunk_size: 2560
+#     causal: True
 
-  metadata:
-    apply_to: features_flatten
-    assign_to: features
+#   metadata:
+#     apply_to: features_flatten
+#     assign_to: features
 
-features2RMS:
-  transform:
-    _target_: lmetk.transforms.signal_processing.rms.MovingRMSTransform
-    window_size: 2560
-    apply_to_columns: True
-    save_images: True
-    saving_path: ${paths.log_dir}/rms_images
-    unit_key: unit_id
+# features2RMS:
+#   transform:
+#     _target_: lmetk.transforms.signal_processing.rms.MovingRMSTransform
+#     window_size: 2560
+#     apply_to_columns: True
+#     save_images: True
+#     saving_path: ${paths.log_dir}/rms_images
+#     unit_key: unit_id
 
 # li2019_features:
 #   transform:

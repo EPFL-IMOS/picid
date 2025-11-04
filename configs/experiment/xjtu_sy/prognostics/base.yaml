@@ -29,4 +29,6 @@ evaluator:
     metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
     apply_inverse_scaling: True
 
-
+dataset:
+  dataset_cfg:
+    get_unit_id: true
