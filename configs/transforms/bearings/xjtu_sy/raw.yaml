@@ -41,7 +41,7 @@ scaler_target:
     _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
-    dataset_name: PRONOSTIA
+    dataset_name: XJTU-SY
 
   metadata:
     apply_to: ['target','unit_id']
@@ -55,6 +55,15 @@ reshape_x:
   metadata:
     apply_to: features
     assign_to: features
+
+# plot:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.plot_transforms.PlotFeatures
+#     unit_key: unit_id
+
+#   metadata:
+#     apply_to: ['features',  'unit_id']
+#     assign_to: ['features']
 
 scaler_features:
   transform:

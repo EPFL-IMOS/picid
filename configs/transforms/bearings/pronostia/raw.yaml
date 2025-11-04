@@ -38,53 +38,37 @@ features2RMS:
     apply_to: ['features_flatten', 'unit_id']
     assign_to: index
 
-
-# Ahmad2019FPT:
+# li2019_features:
 #   transform:
-#     _target_: lmetk.transforms.bearings.health_models.ahmad2019.Ahmad2019FPTCutTransform
+#     _target_: lmetk.transforms.bearings.health_models.li2019.Li2019FPTCutTransform
 #     signal_key: index
 #     features_keys: ['features']
-#     normal_period_end: 100
-#     window_size: 100
+#     normal_period_end: 200
+#     window_size: 200
 #     fpt_indexes_strategy: min
 #     dataset_name: PRONOSTIA
 #     unit_id_key: unit_id
+#     use_predefined_test: True
 
 #   metadata:
 #     apply_to: ['features', 'index', unit_id]
 #     assign_to: ['features']
 
-li2019_features:
-  transform:
-    _target_: lmetk.transforms.bearings.health_models.li2019.Li2019FPTCutTransform
-    signal_key: index
-    features_keys: ['features']
-    normal_period_end: 200
-    window_size: 200
-    fpt_indexes_strategy: min
-    dataset_name: PRONOSTIA
-    unit_id_key: unit_id
-    use_predefined_test: True
+# li2019_target:
+#   transform:
+#     _target_: lmetk.transforms.bearings.health_models.li2019.Li2019FPTCutTransform
+#     signal_key: index
+#     features_keys: ['target']
+#     normal_period_end: 200
+#     window_size: 200
+#     fpt_indexes_strategy: min
+#     dataset_name: PRONOSTIA
+#     unit_id_key: unit_id
+#     use_predefined_test: True
 
-  metadata:
-    apply_to: ['features', 'index', unit_id]
-    assign_to: ['features']
-
-li2019_target:
-  transform:
-    _target_: lmetk.transforms.bearings.health_models.li2019.Li2019FPTCutTransform
-    signal_key: index
-    features_keys: ['target']
-    normal_period_end: 200
-    window_size: 200
-    fpt_indexes_strategy: min
-    dataset_name: PRONOSTIA
-    unit_id_key: unit_id
-    use_predefined_test: True
-
-  metadata:
-    apply_to: ['target', 'index', unit_id]
-    assign_to: ['target']
+#   metadata:
+#     apply_to: ['target', 'index', unit_id]
+#     assign_to: ['target']
 
 
 reshape_y:
