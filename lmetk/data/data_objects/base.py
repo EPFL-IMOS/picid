@@ -152,8 +152,9 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
             else:
                 if self._instance_cls[key] != type(value):
                     logger.warning(
-                        f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}"
+                        f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}. Changing stored type."
                     )
+                    self._instance_cls[key] = type(value)
             self._data[key] = value
         elif isinstance(value, BaseDataObject):
             self._instance_cls[key] = type(value)
