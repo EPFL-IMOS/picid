@@ -59,6 +59,27 @@ DEFAULT_TOTAL_LIFE_LOOKUP: DatasetLifeLookup = {
     },
 }
 
+DECREASE_PERIOD = {"PRONOSTIA": 2560, "XJTU-SY": 32768}
+
+
+def diff_at_step_n(vector, n):
+    """
+    Calculates the difference between elements (i + n) and (i)
+    for i = 0, n, 2n, ...
+    """
+
+    # This slices the vector into:
+    # [v[n], v[2n], v[3n], ...]
+    v_i_plus_n = vector[n::n]
+
+    # This slices the vector into:
+    # [v[0], v[n], v[2n], ...]
+    # We use -n to ensure this vector is the same
+    # length as the one above.
+    v_i = vector[:-n:n]
+
+    return v_i_plus_n - v_i
+
 
 class HealthIndexTransform(
     DenseTransform, NoFitMultiSourceTransformMixin, InverseTransformMixin
@@ -189,8 +210,10 @@ class HealthIndexTransform(
         unit_id = data.get(self.unit_key)  # For error message
         total_life = self._get_total_life_from_metadata(unit_id)
 
-        # 3. Calculate Health Index
-        health_index_vector = 1.0 - (runtime_vector / (total_life))
+        # 3. Calculate Health Index vector
+        # HI = 1 - (Runtime / Total_Life)
+        # As the Runtime goes from Total_Life left to 0 then we use (Runtime / Total_Life), hence HI goes from 1 to 0 as expected
+        health_index_vector = runtime_vector / (total_life)
 
         # 4. Validate the HI is within the [0.0, 1.0] range
         min_hi = np.nanmin(health_index_vector)
@@ -198,6 +221,19 @@ class HealthIndexTransform(
 
         min_hi_init = np.nanmin(runtime_vector)
         max_hi_init = np.nanmax(runtime_vector)
+
+        # Check that it is a monotonically decreasing function
+        # 1) identify the step of decrease (how many records have the same value)
+        step_decrease = diff_at_step_n(
+            health_index_vector, n=DECREASE_PERIOD[self.dataset_name]
+        )
+
+        if not np.all(step_decrease <= 0):
+            raise ValueError(
+                f"Calculated HI for unit '{unit_id}' is not a monotonically "
+                f"decreasing function. Check the runtime data in "
+                f"'{self.runtime_key}'."
+            )
 
         logger.info(
             f"Unit id: {unit_id}, min/max health_indicator: {np.round(min_hi,2)}/{np.round(max_hi,2)}"
@@ -271,8 +307,8 @@ class HealthIndexTransform(
             )
 
         # 3. Calculate Runtime
-        # Runtime = (1 - HI) * Total_Life
-        runtime_vector = (1.0 - hi_vector) * (total_life - 1)
+        # Runtime = HI * Total_Life
+        runtime_vector = hi_vector * total_life
 
         # 4. Reshape to (n_rows, 1)
         runtime_column = runtime_vector.reshape(-1, 1)
