@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import awkward as ak
@@ -17,13 +17,18 @@ logger = logging.getLogger(__name__)
 
 
 class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
-    def __init__(self, **kwargs):
+    def __init__(self, dim: int = 1, **kwargs):
         """
         Initialize the transform.
 
         Args:
             **kwargs: Additional keyword arguments
         """
+        self.dim = dim
+        assert dim in (
+            1,
+            2,
+        ), "This transform currently supports concatination along dim 1 or 2 only."
         super().__init__(**kwargs)
 
     def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
@@ -48,21 +53,42 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
             )
         return value
 
-    def _check_length_consistency(
-        self, arrays: List[np.ndarray], keys: List[str]
-    ) -> int:
-        """Check that all arrays have the same number of rows."""
+    def _ensure_3d(self, value: np.ndarray, key: str) -> np.ndarray:
+        """Ensure array is 3D for concatenation."""
+        if value.ndim == 1:
+            value = value.reshape(-1, 1, 1)
+            logger.info(f"Reshaped 1D array '{key}' to 3D: {value.shape}")
+        elif value.ndim == 2:
+            value = value.reshape(value.shape[0], value.shape[1], 1)
+            logger.info(f"Reshaped 2D array '{key}' to 3D: {value.shape}")
+        elif value.ndim > 3:
+            raise ValueError(
+                f"Key '{key}' has unsupported dimensions: {value.ndim}. "
+                f"Only 1D, 2D, and 3D arrays are supported."
+            )
+        return value
+
+    def _check_shape_consistency(
+        self, arrays: List[np.ndarray], keys: List[str], concat_dim: int
+    ) -> Tuple[int, Tuple[int, ...]]:
+        """Check that all arrays have matching shapes in non-concatenation dimensions."""
         if not arrays:
             raise ValueError("No arrays to concatenate")
 
-        lengths = [arr.shape[0] for arr in arrays]
-        unique_lengths = set(lengths)
+        ref_shape = arrays[0].shape
+        for key, arr in zip(keys, arrays):
+            if len(arr.shape) != len(ref_shape):
+                raise ValueError(
+                    f"Array '{key}' has {len(arr.shape)} dims, expected {len(ref_shape)}"
+                )
+            for dim, (s1, s2) in enumerate(zip(ref_shape, arr.shape)):
+                if dim != concat_dim and s1 != s2:
+                    raise ValueError(
+                        f"Shape mismatch in dimension {dim} (excluding concat_dim={concat_dim}): "
+                        f"{keys[0]}={ref_shape}, {key}={arr.shape}"
+                    )
 
-        if len(unique_lengths) > 1:
-            length_info = {keys[i]: lengths[i] for i in range(len(keys))}
-            raise ValueError(f"Length mismatch between arrays: {length_info}")
-
-        return lengths[0]
+        return ref_shape[concat_dim], ref_shape
 
     def _check_for_nans(self, arrays: List[np.ndarray], keys: List[str]) -> None:
         """Check for NaN values and raise error if found."""
@@ -88,12 +114,17 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
         arrays = []
         keys = []
 
+        max_dim = max([np.array(v).ndim for v in data.values()])
+        assert max_dim <= 3, "This transform currently supports up to 3D arrays only."
+
         for key, value in data.items():
             # Convert to numpy array
             value = self._convert_to_numpy(value, key)
 
-            # Ensure 2D shape
-            value = self._ensure_2d(value, key)
+            if max_dim < 3:
+                value = self._ensure_2d(value, key)
+            else:
+                value = self._ensure_3d(value, key)
 
             arrays.append(value)
             keys.append(key)
@@ -103,14 +134,17 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
             raise ValueError("No arrays to concatenate")
 
         # Check length consistency
-        n_rows = self._check_length_consistency(arrays, keys)
-        logger.info(f"All arrays have consistent length: {n_rows}")
+        n_rows, ref_shape = self._check_shape_consistency(arrays, keys, self.dim)
+        logger.info(f"All arrays have consistent shapes: {n_rows} {ref_shape}")
 
         # Check for NaN values (will raise error if found)
         self._check_for_nans(arrays, keys)
 
         # Final concatenation
-        result = np.concatenate(arrays, axis=1)
+        logger.info(
+            f"Concatenating arrays with shapes: {[arr.shape for arr in arrays]}"
+        )
+        result = np.concatenate(arrays, axis=self.dim)
         logger.info(f"Final concatenated shape: {result.shape}")
 
         return result

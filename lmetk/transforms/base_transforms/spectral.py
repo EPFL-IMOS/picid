@@ -272,10 +272,20 @@ class SpectralStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             # Compute all requested stats for this signal's spectrum
             for stat_name in self.stats_to_compute:
                 stat_value = self._compute_stat(spectrum, stat_name)
-                all_features.append(stat_value)
+                # Ensure stat_value is a 1D numpy array. Convert numpy scalars to 1-element arrays.
+                if isinstance(stat_value, np.ndarray):
+                    stat_arr = stat_value.reshape(-1)
+                elif isinstance(stat_value, np.generic) or np.isscalar(stat_value):
+                    stat_arr = np.array([stat_value])
+                else:
+                    stat_arr = np.asarray(stat_value).reshape(-1)
+
+                if np.isnan(stat_arr).any():
+                    raise ValueError(f"Stat '{stat_name}' for signal {sig_idx} is NaN.")
+                all_features.append(stat_arr)
 
         # Reshape all features into a single row vector
-        final_result = np.array(all_features).reshape(1, -1)
+        final_result = np.concatenate(all_features)
 
         logger.debug(f"SpectralStatsTransform result shape: {final_result.shape}")
         return final_result

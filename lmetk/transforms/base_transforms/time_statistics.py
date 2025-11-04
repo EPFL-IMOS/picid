@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, override
 import numpy as np
 from scipy import stats  # For skewness and kurtosis
+import scipy
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
@@ -9,6 +10,23 @@ from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
+
+
+def hankel_svdvals(data, hankel_window_size, slice_window_size):
+    """Slices data in 'slice_window_size' and compute hankel matrix singular values with 'hankel_window_size'"""
+
+    n_slices = len(data) // slice_window_size
+    hankel_svd = []
+
+    for i in range(n_slices):
+        sample_data = data[slice_window_size * i : slice_window_size * (i + 1)]
+        c = sample_data[0:hankel_window_size]
+        r = sample_data[hankel_window_size - 1 :]
+        h = scipy.linalg.hankel(c, r)
+
+        hankel_svd.append(scipy.linalg.svdvals(h))
+
+    return np.array(hankel_svd).mean(axis=0)
 
 
 class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
@@ -39,12 +57,15 @@ class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         "change_coefficient",  # Note: This is mean / std
         "clearance_factor",
         "abs_energy",
+        "hankel_svd",
     }
 
     def __init__(
         self,
         stats_to_compute: List[str],
         apply_to_columns: bool = True,
+        hankel_window_size: Optional[int] = 200,
+        slice_window_size: Optional[int] = None,
         **kwargs,
     ):
         """
@@ -59,6 +80,8 @@ class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         """
         super().__init__(**kwargs)
         self.apply_to_columns = apply_to_columns
+        self.hankel_window_size = hankel_window_size
+        self.slice_window_size = slice_window_size
 
         # Validate the requested statistics
         self.stats_to_compute = stats_to_compute
@@ -144,6 +167,21 @@ class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             mean_sq_val = np.mean(signal**2)
             return np.max(signal) / (mean_sq_val + epsilon)
 
+        elif stat_name == "hankel_svd":
+            assert (
+                len(signal) >= self.hankel_window_size
+            ), f"Signal length {len(signal)} is shorter than hankel_window_size."
+
+            return hankel_svdvals(
+                signal,
+                hankel_window_size=self.hankel_window_size,
+                slice_window_size=(
+                    self.slice_window_size
+                    if self.slice_window_size is not None
+                    else len(signal)
+                ),
+            )
+
         # This should not be reachable due to __init__ check
         else:
             raise ValueError(f"Unknown statistic handler: {stat_name}")
@@ -203,10 +241,20 @@ class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             # Compute all requested stats for this signal
             for stat_name in self.stats_to_compute:
                 stat_value = self._compute_stat(signal, stat_name)
-                all_features.append(stat_value)
+                # Ensure stat_value is a 1D numpy array. Convert numpy scalars to 1-element arrays.
+                if isinstance(stat_value, np.ndarray):
+                    stat_arr = stat_value.reshape(-1)
+                elif isinstance(stat_value, np.generic) or np.isscalar(stat_value):
+                    stat_arr = np.array([stat_value])
+                else:
+                    stat_arr = np.asarray(stat_value).reshape(-1)
+
+                if np.isnan(stat_arr).any():
+                    raise ValueError(f"Stat '{stat_name}' for signal {sig_idx} is NaN.")
+                all_features.append(stat_arr)
 
         # Reshape all features into a single row vector
-        final_result = np.array(all_features)  # .reshape(1, -1)
+        final_result = np.concatenate(all_features)
 
         logger.debug(f"TimeStatsTransform result shape: {final_result.shape}")
         return final_result
