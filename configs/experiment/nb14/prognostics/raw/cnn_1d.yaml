@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - nb14/prognostics/base
+  - /model_configs/prognostics/cnn_1d
+  - override /evaluator: per_unit
+  
+  #- override /dataset: prognostics/rul_multiunit_dataset
+  - override /transforms: battery/nb14/raw

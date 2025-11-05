@@ -1,3 +1,14 @@
+plot_features:
+  transform:
+    unit_key: unit_id
+    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+    saving_path: ${paths.log_dir}/images
+    features_key: features
+    target_key: target
+  
+  metadata:
+    apply_to: ["features", "target", "unit_id"]    
+
 subsample_features_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
@@ -8,7 +19,16 @@ subsample_features_target:
   metadata:
     apply_to: [features, target]
 
-
+plot_features_subsampled:
+  transform:
+    unit_key: unit_id
+    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+    saving_path: ${paths.log_dir}/images_subsampled
+    features_key: features
+    target_key: target
+  
+  metadata:
+    apply_to: ["features", "target", "unit_id"]    
 ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform

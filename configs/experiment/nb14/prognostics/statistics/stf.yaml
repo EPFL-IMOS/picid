@@ -6,5 +6,3 @@ defaults:
   
   # - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: battery/nb14/bosello23_base_statistics
-
-w

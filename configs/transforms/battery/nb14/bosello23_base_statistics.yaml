@@ -23,7 +23,7 @@ sequence2statistics:
   metadata:
     apply_to: 'features'
 
-# Why do we have this transform now? 
+# Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
 ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform

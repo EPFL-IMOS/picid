@@ -1,5 +1,5 @@
 _target_: lmetk.data.datasources.nb14.loader.NB14Loader
 
 data_name: NB14
-task_mode: ahRul #ahRul, rul
+task_mode: ahRul
 data_dir: ${paths.data_dir}
