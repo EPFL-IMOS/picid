@@ -125,7 +125,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
 
             # Convert the NumPy arrays to Awkward Arrays for ragged processing.
             features = ak.from_regular(ak.from_numpy(features), axis=1)
-            target = ak.from_numpy(target)
+            target = ak.from_regular(ak.from_numpy(target), axis=1)
 
         # --- 3. Assemble and Return the Final Dictionary ---
 

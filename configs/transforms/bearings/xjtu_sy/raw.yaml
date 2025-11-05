@@ -1,9 +1,20 @@
+subsample_features_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 10
+    window_size: 1
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: [features, target]
+
+
 ragged2regularragged:
   transform:
     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
-    apply_to: 'features'
+    apply_to: 'features'    
 
 reshape_x_for_health_index:
   transform:
@@ -29,6 +40,14 @@ reshape_x_for_health_index:
 #     assign_to: index
 
 
+
+target_to_regular_ragged:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: 'target'
+  
 reshape_y:
   transform:
     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
@@ -38,14 +57,7 @@ reshape_y:
     assign_to: target
 
 
-subsample_features_target:
-  transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
-    step: 60
-    window_size: 60
-    aggregation: last
-  metadata:
-    apply_to: [features, target]
+
 
 
 scaler_target:
