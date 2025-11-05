@@ -33,6 +33,26 @@ Collection of battery datasets covering multiple chemistries and experimental pr
 Includes measurements such as voltage, current, temperature, and internal resistance.  
 Supports research on State-of-Health (SOH), Remaining Useful Life (RUL), and degradation modeling.
 
+### NB14
+
+Each data unit contains **features**, **targets**, and a **unit_id**, stored as ragged arrays.
+
+* **Features Shape:** `(n_cycles, cycle_length, n_features)`
+    * The `cycle_length` dimension is **ragged**, meaning each cycle has a variable length.
+* **Targets Shape:** `(n_cycles, 1)`
+    * Each cycle (from features) corresponds to a single target value.
+* **Unit ID Shape:** `(1,)`
+
+### UNIBO
+
+Each data unit contains **features**, **targets**, and a **unit_id**, stored as ragged arrays.
+
+* **Features Shape:** `(n_cycles, cycle_length, n_features)`
+    * The `cycle_length` dimension is **ragged**, meaning each cycle has a variable length.
+* **Targets Shape:** `(n_cycles, 1)`
+    * Each cycle (from features) corresponds to a single target value.
+* **Unit ID Shape:** `(1,)`
+
 ### concepts_n_cmapss
 An augmented version of the **N-CMAPSS** dataset for turbofan engine prognostics.  
 Enriches the original dataset with domain concepts, improving feature engineering  
@@ -69,6 +89,9 @@ Supports fault detection, early fault prediction, and prognostics.
 ### railway
 Railway equipment dataset for predictive maintenance and anomaly detection.  
 Covers multiple subsystems and sensor modalities, supporting comprehensive reliability analysis.
+
+
+
 
 ---
 
