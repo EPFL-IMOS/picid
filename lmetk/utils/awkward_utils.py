@@ -2,7 +2,7 @@
 
 import awkward as ak
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Optional
 
 
 def ak_unflatten_discontinous_groups(
@@ -163,3 +163,59 @@ def get_ak_shape(arr: ak.Array) -> List[Union[int, str]]:
         shape.extend(t.shape)
 
     return shape
+
+
+def ak_flatten_variable_dims(
+    arr: ak.Array, axis: Optional[Union[int, List[int]]] = None
+) -> ak.Array:
+    """
+    Flattens specified or all variable dimensions of an Awkward Array.
+
+    This function is designed to handle the (N, var, F) -> (N*var_i, F)
+    transformation you described.
+
+    Args:
+        arr: The input Awkward Array.
+        axis: The dimension(s) to flatten.
+            - If None (default): Automatically finds all variable (ragged)
+              dimensions using `ak_find_var_dims` and flattens them.
+            - If int: Flattens the specified axis.
+            - If List[int]: Flattens all specified axes.
+
+    Returns:
+        A new Awkward Array with the specified dimensions flattened.
+    """
+
+    axes_to_flatten: List[int]
+
+    if axis is None:
+        # Automatic mode: find all variable dimensions
+        axes_to_flatten = ak_find_var_dims(arr)
+        if not axes_to_flatten:
+            # No variable dims found, nothing to do
+            return arr
+    elif isinstance(axis, int):
+        axes_to_flatten = [axis]
+    else:  # It's a List[int]
+        axes_to_flatten = axis
+
+    # Sort axes in reverse order to flatten from the innermost
+    # specified axis outward. This preserves the indices of
+    # the outer axes during the loop.
+    # e.g., (N, var, var, F) and flatten [1, 2]
+    # 1. Flatten axis 2 -> (N, var, var*F) (axis 1 is still 1)
+    # 2. Flatten axis 1 -> (N, var*var*F)
+    axes_to_flatten = sorted(axes_to_flatten, reverse=True)
+
+    output_arr = arr
+    for ax in axes_to_flatten:
+        try:
+            output_arr = ak.flatten(output_arr, axis=ax)
+        except ValueError as e:
+            # Handle cases where axis is out of bounds
+            raise ValueError(
+                f"Failed to flatten axis {ax}. "
+                f"Array shape: {ak.type(arr)}, Error: {e}"
+            ) from e
+
+    return output_arr
