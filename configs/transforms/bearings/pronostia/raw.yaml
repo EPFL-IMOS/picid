@@ -27,7 +27,7 @@ ragged2regularragged:
 #     unit_key: unit_id
 #     _target_: lmetk.transforms.base_transforms.plot_transforms.PlotFeatures
 #   metadata:
-#     apply_to: ["features_flatten", "unit_id"]
+#     apply_to: ["features_flatten", "target", "unit_id"]
 
 # moving_average:
 #   transform:

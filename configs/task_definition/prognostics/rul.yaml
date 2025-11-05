@@ -1,7 +1,7 @@
-seq_len: 16  # window size
-label_len: 0  # overlap size
+seq_len: 16 # window size
+label_len: 0 # overlap size
 pred_len: 1 # prediction size
-stride: 1 
+stride: 1
 stride_train: 1 # TODO: why 5 for the concept
 task_type: rul
 

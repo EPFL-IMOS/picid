@@ -38,7 +38,7 @@ scaler_target:
 time_domain_features:
   transform:
     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
-    hankel_window_size: 10
+    hankel_window_size: 200
     stats_to_compute: [
         "mean",
         "maximum",

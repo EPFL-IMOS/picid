@@ -3,9 +3,13 @@
 # defaults:
 #   # Disable wandb logger to avoid unnecessary network calls during debugging.
 #   - default
+defaults:
+  # Disable wandb logger to avoid unnecessary network calls during debugging.
+  - override /logger: csv
 
-# trainer:
-#   max_epochs: 5
+trainer:
+  accelerator: cpu
+  devices: 1
 
 # instead of debug, in run.yaml. I put debug here
 # We aim to shorten the dataset for debugging purposes.

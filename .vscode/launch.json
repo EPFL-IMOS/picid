@@ -960,7 +960,8 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=pronostia/prognostics/combined/cnn_1d.yaml",
+                "experiment=pronostia/prognostics/combined/crossformer",
+                "task_definition.seq_len=50",
                 "debug=pronostia"
             ],
             "env": {

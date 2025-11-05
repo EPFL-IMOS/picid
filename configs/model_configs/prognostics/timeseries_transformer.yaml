@@ -11,9 +11,11 @@ task_definition:
 
 model:
   d_yc: 0
+  d_yt: ${infer_data_dim:${task_definition.task_type},-1}
   d_x: ${infer_data_dim:features,-1}
   # TODO: replace with actual timefeatures when available
   n_timefeatures: 0
+  warmup_steps: ${infer_dataloader_length:train}
 
   transformer_args:
     seq_len: ${task_definition.seq_len}

@@ -26,4 +26,5 @@ model_cache_dir: ${paths.output_dir}/model_cache_dir
 # path to working directory
 work_dir: ${hydra:runtime.cwd}
 
-cache_path: /tmp/TabPHM_cache/${datasource.data_name}
+# cache_path: /tmp/TabPHM_cache/${datasource.data_name}
+cache_path: /workspace/datasets/TabPHMcache/${datasource.data_name}

@@ -74,6 +74,20 @@ OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
 
 
+# import threading, traceback
+
+# _orig_start = threading.Thread.start
+
+
+# def traced_start(self, *args, **kwargs):
+#     print(f"\n[Thread started: {self.name}]")
+#     traceback.print_stack(limit=5)
+#     return _orig_start(self, *args, **kwargs)
+
+
+# threading.Thread.start = traced_start
+
+
 def safe_div(a, b):
     if b == 0:
         raise ZeroDivisionError("division by zero")
@@ -402,11 +416,14 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     if cfg.get("num_threads", None) is not None:
         torch.set_num_threads(cfg.num_threads)
-        # os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
-        # os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
-        # os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
-        # os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
-        # os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["OMP_THREAD_LIMIT"] = str(cfg.num_threads)
+        os.environ["NUMBA_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
+        os.environ["BLIS_NUM_THREADS"] = str(cfg.num_threads)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
         log.info(f"Set number of threads to {cfg.num_threads}")
 
     if not (fa_flag := cfg.get("flash_attention", True)):

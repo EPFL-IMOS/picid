@@ -31,3 +31,4 @@ trace.json
 scratch.ipynb
 /lmetk_report/csv_files/*
 /output
+/plot_dir
