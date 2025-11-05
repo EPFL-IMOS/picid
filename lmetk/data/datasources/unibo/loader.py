@@ -81,7 +81,7 @@ test_names = [
 ]
 
 UNIT_NAMES_TO_ID = train_names + test_names
-UNIT_NAMES_TO_ID = {name: idx for idx, name in enumerate(UNIT_NAMES_TO_ID)}
+UNIT_NAMES_TO_ID = {name: int(name.split("-")[0]) for name in UNIT_NAMES_TO_ID}
 
 
 class UNIBO21Loader(AbstractDataSourceLoader):
@@ -311,6 +311,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                     "features": flattened_x,
                     # "time_features": ak.from_numpy(np.array(curr_y.reshape(-1, 1))),
                     "target": ak.from_numpy(curr_y.reshape(-1, 1)),  # flattened_y
+                    "unit_id": ak.from_numpy(np.array([UNIT_NAMES_TO_ID[unit_name]])),
                     "metadata": {
                         "unit_name": unit_name,
                         "unit_id": UNIT_NAMES_TO_ID[unit_name],

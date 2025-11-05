@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import Any, Dict, override
 
 import awkward as ak
-
+import numpy as np
 from lmetk.data.data_objects.data import SplitDatasetContainer
 from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
 from lmetk.data.datasources.nb14.nasa_random_data import NasaRandomizedData
@@ -74,7 +74,9 @@ test_names = [
 ]
 
 UNIT_NAMES_TO_ID = train_names + test_names
-UNIT_NAMES_TO_ID = {name: idx for idx, name in enumerate(UNIT_NAMES_TO_ID)}
+UNIT_NAMES_TO_ID = {
+    name: int(name.split("/")[1].strip("RW")) for name in UNIT_NAMES_TO_ID
+}
 
 
 class NB14Loader(AbstractDataSourceLoader):
@@ -277,6 +279,7 @@ class NB14Loader(AbstractDataSourceLoader):
                 # Use valid_lengths to unpad and flatten
                 lengths = valid_lengths[left_idx:right_idx]
                 flattened_x = table_to_ak_array(curr_x, lengths)
+
                 # flattened_x, flattened_y, cycle_indices = flatten_cycles(
                 #     curr_x, curr_y, lengths
                 # )
@@ -284,6 +287,7 @@ class NB14Loader(AbstractDataSourceLoader):
                     "features": flattened_x,
                     # "time_features": ak.from_numpy(np.array(flattened_x.shape[0])),
                     "target": ak.from_numpy(curr_y.reshape(-1, 1)),
+                    "unit_id": ak.from_numpy(np.array([UNIT_NAMES_TO_ID[unit_name]])),
                     "metadata": {
                         "unit_name": unit_name,
                         # "cycle_indices": cycle_indices,
