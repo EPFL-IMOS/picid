@@ -117,6 +117,10 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
         max_dim = max([np.array(v).ndim for v in data.values()])
         assert max_dim <= 3, "This transform currently supports up to 3D arrays only."
 
+        # plot the dimensions of each array
+        logger.info(
+            f"Concatenation input: {[ (k, np.array(v).shape) for k,v in data.items() ]}"
+        )
         for key, value in data.items():
             # Convert to numpy array
             value = self._convert_to_numpy(value, key)

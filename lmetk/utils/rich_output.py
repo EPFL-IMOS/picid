@@ -266,6 +266,7 @@ def print_transforms_summary(summary: dict[str, str]):
     table.add_column("Changes", style="yellow", overflow="fold")
     table.add_column("Added", style="yellow", overflow="fold")
     table.add_column("Removed", style="yellow", overflow="fold")
+    table.add_column("Inputs", style="yellow", overflow="fold")
 
     for summary_dict in summary:
         table.add_row(
@@ -276,6 +277,7 @@ def print_transforms_summary(summary: dict[str, str]):
             summary_dict.get("changes", ""),
             summary_dict.get("added", ""),
             summary_dict.get("removed", ""),
+            summary_dict.get("inputs", ""),
         )
 
     Console(width=180).print(table)

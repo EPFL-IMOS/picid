@@ -952,7 +952,7 @@
             }
         },
         {
-            "name": "Pronostia : 1D CNN",
+            "name": "Pronostia (Combined): 1D CNN",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -962,6 +962,24 @@
                 "paths=rt_local",
                 "experiment=pronostia/prognostics/combined/crossformer",
                 "task_definition.seq_len=50",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Pronostia (Combined): TabPFN Fit-Predict ",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=pronostia/prognostics/combined/tabpfn_fit_predict",
+                "task_definition.seq_len=3",
                 "debug=pronostia"
             ],
             "env": {

@@ -31,19 +31,19 @@ source "$SCRIPT_DIR/../../base/logging.sh"
 max_epochs=50
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="TabPFN_ds02_sweep_2025_10_09"
+wandb_log_folder="pronostia_full"
 # Define a list of datasets to run
 # datasets=(
     # "railway_traction/forecasting" \
     # "concepts_n_cmapss_ds02/prognostics" \
     # "concepts_n_cmapss/prognostics" \
 # )
-datasets=("concepts_n_cmapss_ds02/prognostics")
+datasets=(pronostia)
 model_names=(tabdpt_fit_predict)
 
 # Careful here because of oom issues with long context lengths / short strides
-context_lengths=(5 10 20 50)
-train_set_strides=(5 10 20 50)
+context_lengths=(1 3 5 10)
+train_set_strides=(1 5 10)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -84,7 +84,7 @@ for model_name in "${model_names[@]}"; do
                 command_to_run=(
                     python lmetk/run.py \
                     paths=runai \
-                    experiment=${dataset}/${model_name} \
+                    experiment=${dataset}/prognostics/combined/${model_name} \
                     # trainer.devices=[${device}] \
                     logger.wandb.project=${wandb_log_folder} \
                     task_definition.seq_len=${context_length} \

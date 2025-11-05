@@ -35,9 +35,9 @@ wandb_log_folder="pronostia_full"
 # Define a list of datasets to run
 datasets=(pronostia)
 model_names=(crossformer lstm patchtst stf tide timeseries_transformer)
-BATCH_SIZES=(16 512)
+BATCH_SIZES=(16)
 SEEDS=(72 88 101 666 226688)
-SEQ_LEN=(100 200 500)
+SEQ_LEN=(200 500)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -83,7 +83,7 @@ for model_name in "${model_names[@]}"; do
                         datamodule.train_batch_size=${batch_size} \
                         datamodule.val_batch_size=1024 \
                         datamodule.test_batch_size=1024 \
-                        task_definition.seq_len=${SEQ_LEN} \
+                        task_definition.seq_len=${seq_len} \
                         trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
                         trainer.max_epochs=${max_epochs} \
                         trainer.devices=[${device}] \

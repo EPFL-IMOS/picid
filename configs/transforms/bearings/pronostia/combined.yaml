@@ -35,6 +35,50 @@ scaler_target:
     apply_to: ["target", "unit_id"]
     assign_to: rul
 
+############# CumSum Feature #################
+cumsum_feature:
+  transform:
+    _target_: lmetk.transforms.signal_processing.cumsum.CumSumTransform
+
+  metadata:
+    apply_to: "features"
+    assign_to: "cumsum_feature"
+
+take_last_cumsum:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 1 # TO BE CHANGED SOMEHOW
+    window_size: full
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: cumsum_feature
+
+cumsum_feature_scaler:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: cumsum_feature
+    fit_on: train
+
+# Reduce target dim
+reshape_cumsum:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "1 a -> a"
+  metadata:
+    apply_to: cumsum_feature
+
+ragged2regular_cumsum_feature:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: "cumsum_feature"
+
+############# CumSum Feature #################
+
 time_domain_features:
   transform:
     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
@@ -109,5 +153,5 @@ concatenate_features:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
-    apply_to: ["spectral_features", "time_domain_features"]
+    apply_to: ["spectral_features", "time_domain_features", "cumsum_feature"]
     assign_to: features

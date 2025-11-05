@@ -3,6 +3,4 @@
 defaults:
   - pronostia/prognostics/base
   - /model_configs/prognostics/tide
-
-  - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: bearings/pronostia/combined

@@ -178,6 +178,7 @@ class PreProcessor(PreProcessorInterface):
                         "changes": str(changes),
                         "added": str(added),
                         "removed": str(removed),
+                        "inputs": str(pre_descr_dict),
                     }
                 )
         finally:

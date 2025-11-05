@@ -19,28 +19,8 @@ evaluator:
     metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
     apply_inverse_scaling: True
 
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
 dataset:
   dataset_cfg:
-    get_unit_id: true # Adds unit ids to the dataset output hennce to the batch as well. Note that to it works solely if data unit metadata has unit_name and unit_id.
-
-# task_definition:
-#   seq_len: 1024
-#   stride: 1024
-  
-  
-# datamodule: 
-#   train_batch_size: 16
-#   val_batch_size: 16
-#   test_batch_size: 16
-#   shuffle_train: True
-
+    # Adds unit ids to the dataset output hennce to the batch as well.
+    # Note that to it works solely if data unit metadata has unit_name and unit_id.
+    get_unit_id: true
