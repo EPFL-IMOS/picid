@@ -10,13 +10,12 @@ defaults:
 trainer:
   accelerator: cpu
   devices: 1
-
 # instead of debug, in run.yaml. I put debug here
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.
-datamodule:
-  num_workers: 0
-  subset_range: [10, 100, 2] # [start, end, step]
+# datamodule:
+#   num_workers: 0
+#   subset_range: [10, 100, 2] # [start, end, step]
 
 # datasource:
 # debug_cache_dataset: true

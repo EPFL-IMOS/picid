@@ -24,4 +24,4 @@ job_logging:
 
 job:
   # get the selected option from the experiment group, then flatten it
-  name: ${flat:${hydra:runtime.choices.experiment}}
+  name: ${flat:${experiment_group}/${hydra:runtime.choices.experiment}}

@@ -91,6 +91,7 @@ for model_name in "${model_names[@]}"; do
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
                         enable_progress_bar=False \
+                        experiment_group=no_smoothing \
                         seed=${seed}
                     )
 
