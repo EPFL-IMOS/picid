@@ -39,6 +39,11 @@ class MultiUnitEvaluator(AbstractEvaluator):
         collect_predictions: bool = False,
         log_image_every_n_epochs: bool = 10,
         log_image: bool = True,
+        # --- ADDED PARAMS FOR PLOT SUBSAMPLING ---
+        enable_plot_subsampling: bool = True,
+        plot_subsample_threshold: int = 2000,
+        plot_subsample_factor: int = 10,
+        # -------------------------------------------
         **kwargs,
     ):
         super().__init__(
@@ -53,6 +58,12 @@ class MultiUnitEvaluator(AbstractEvaluator):
         self.scaler = inverse_transform
         self.log_image_every_n_epochs = log_image_every_n_epochs
         self.log_fit_vs_target_curves = log_image
+
+        # --- ADDED PARAMS FOR PLOT SUBSAMPLING ---
+        self.enable_plot_subsampling = enable_plot_subsampling
+        self.plot_subsample_threshold = plot_subsample_threshold
+        self.plot_subsample_factor = plot_subsample_factor
+        # -------------------------------------------
 
         # --- Logic from DefaultEvaluator ---
         self.out_path = None
@@ -197,7 +208,10 @@ class MultiUnitEvaluator(AbstractEvaluator):
                 f"Unsupported shape for unit_ids: {unit_ids.shape}. "
                 "Skipping pred_vs_target curves."
             )
-            return
+            # Return original arrays if scaling cannot be applied per unit
+            return self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
 
         # Instantiate the np.array with -inf and then fill it with predictions/targets
         pred_shape = predictions.shape
@@ -229,6 +243,12 @@ class MultiUnitEvaluator(AbstractEvaluator):
 
         # Check that there are no -inf values left
         if np.isinf(predictions_filled).any() or np.isinf(targets_filled).any():
+            # If scaling was not applied, inverse_transform_if_needed would return originals
+            # This check might fail if scaling is off and originals contain -inf
+            # If scaling is off, just return the original untransformed data
+            if not self.scaling_wrapper.apply_inverse:
+                return predictions, targets
+
             raise ValueError(
                 "Some predictions or targets were not filled after inverse transform."
             )
@@ -285,13 +305,35 @@ class MultiUnitEvaluator(AbstractEvaluator):
             unit_predictions = predictions[indices]
             unit_targets = targets[indices]
 
+            # --- MODIFIED: PLOT SUBSAMPLING LOGIC ---
+            plot_targets = unit_targets.flatten()
+            plot_preds = unit_predictions.flatten()
+            title_suffix = ""
+
+            num_points = plot_targets.shape[0]
+            if (
+                self.enable_plot_subsampling
+                and num_points > self.plot_subsample_threshold
+                and self.plot_subsample_factor > 1
+            ):
+                plot_targets = plot_targets[:: self.plot_subsample_factor]
+                plot_preds = plot_preds[:: self.plot_subsample_factor]
+                title_suffix = f" (Subsampled 1:{self.plot_subsample_factor})"
+                logger.debug(
+                    f"Subsampling plot for unit {get_title_str(unit)} by factor {self.plot_subsample_factor}. "
+                    f"Original points: {num_points}, Plotted points: {len(plot_targets)}"
+                )
+            # --- END OF MODIFICATION ---
+
             # Create the plot
             fig, ax = matplotlib.pyplot.subplots()
-            ax.plot(unit_targets.flatten(), label="Target", linestyle="--")
-            ax.plot(unit_predictions.flatten(), label="Prediction", alpha=0.8)
+            # MODIFIED: Use subsampled data for plotting
+            ax.plot(plot_targets, label="Target", linestyle="--")
+            ax.plot(plot_preds, label="Prediction", alpha=0.8)
 
             unit_title = get_title_str(unit)
-            ax.set_title(f"Unit {unit_title} - Predictions vs Targets")
+            # MODIFIED: Add suffix to title
+            ax.set_title(f"Unit {unit_title} - Predictions vs Targets{title_suffix}")
             ax.legend()
             ax.grid(True)
 

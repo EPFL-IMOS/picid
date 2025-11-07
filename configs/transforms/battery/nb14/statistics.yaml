@@ -15,23 +15,6 @@ scaler_target:
     fit_on: train
     assign_to: rul
 
-# sequence2statistics:
-#   transform:
-#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
-#     padding_value: null
-
-#   metadata:
-#     apply_to: 'features'
-
-# # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
-# ragged_regular_ragged_features:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
-
-#   metadata:
-#     apply_to: 'features'
-
-
 time_domain_features:
   transform:
     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
@@ -65,12 +48,6 @@ ragged2regular_time_domain_features:
   metadata:
     apply_to: "time_domain_features"
 
-ragged2regular_cumsum_feature:
-  transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
-
-  metadata:
-    apply_to: "cumsum_feature"
 
 spectral_domain_features:
   transform:
@@ -113,15 +90,22 @@ concatenate_features:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
-    apply_to: ["spectral_features", "time_domain_features", "cumsum_feature"]
+    apply_to: ["spectral_features", "time_domain_features"]
     assign_to: features
 
+final_scaler_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
 
 # This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
 take_last_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
-    step: 1 # TO BE CHANGED SOMEHOW
+    step: 1 
     window_size: full
     aggregation: last
     dim: 0
