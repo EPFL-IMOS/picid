@@ -3,7 +3,6 @@
 defaults:
   - nb14/prognostics/base
   - /model_configs/prognostics/cnn_1d
-  - override /evaluator: default
   - override /transforms: battery/nb14/raw
 
 

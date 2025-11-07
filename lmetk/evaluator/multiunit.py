@@ -128,7 +128,10 @@ class MultiUnitEvaluator(AbstractEvaluator):
 
         # Step 2: Loop through unique units and update metrics using a unified logic.
         for unit in unique_units:
-            key = get_key(unit)
+            if type(unit) == np.int64:
+                key = int(unit)
+            else:
+                key = get_key(unit)
             indices = get_indices(unit)
 
             unit_predictions = predictions[indices]
