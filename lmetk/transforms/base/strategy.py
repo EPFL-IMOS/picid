@@ -147,6 +147,7 @@ class TransformStrategy:
             # If transform_on_keys is specified, filter available_splits
             available_splits = list(set(available_splits) & set(transform_on_keys))
 
+        transform_log = {}
         for split in available_splits:
             chunks_to_transform = self._prepare_chunks_for_split(
                 target_data_to_transform, split, is_multi_unit
@@ -160,9 +161,10 @@ class TransformStrategy:
             }
             # Call the appropriate transform method
             if is_multi_unit:
-                transformed_chunks = transform_instance.transform_multi_source(
+                transformed_chunks, log = transform_instance.transform_multi_source(
                     chunks_to_transform, metadata=metadata
                 )
+                transform_log.update({split: log})
             else:
                 transformed_chunks = [
                     transform_instance.transform_data(
@@ -191,7 +193,7 @@ class TransformStrategy:
             transformed_results=transformed_results_for_new_key,
         )
 
-        return transformed_data
+        return transformed_data, transform_log
 
     def _merge_transformed_data(self, base_data, transformed_results):
 

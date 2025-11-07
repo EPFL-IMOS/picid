@@ -282,7 +282,7 @@ class DataTransform:
                 "apply_to as mapping is not supported yet in DataTransform.forward"
             )
 
-        transformed_data = self.strategy.apply(
+        transformed_data, transform_log = self.strategy.apply(
             transform_instance=self.transform_instance,
             data=data,
             apply_to_keys=self.apply_to,
@@ -363,4 +363,4 @@ class DataTransform:
                     )
 
         # TODO: additional checks,
-        return transformed_data, "transform_log"
+        return transformed_data, transform_log

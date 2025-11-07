@@ -344,7 +344,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         list
             A list of transformed data segments.
         """
-
+        transform_log = {}
         apply_to_keys = metadata["apply_to_keys"]
         # Check whenever keys list, if not make a list
         if not isinstance(apply_to_keys, list):
@@ -387,6 +387,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 None  # Initialize index_depth for logging in exception handling
             )
             if (not data_is_ragged) and transform_supports_dense:
+                transform_log["mode"] = "dense"
                 out = []
                 for data_segment in data_segments:
                     # Handle the case when the data is ragged but structurally regular
@@ -406,6 +407,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                     out.append(out_segment)
 
             elif data_is_ragged and (not transform_supports_ragged):
+                transform_log["mode"] = "ragged_to_dense"
                 # The logic is that we find the rugged dimension, ensure that there is only one,
                 # flatten along that dimension, convert to numpy, apply the transform function,
                 # and then reassemble the original structure.
@@ -500,6 +502,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                     out.append(out_segment)
 
             elif data_is_ragged and transform_supports_ragged:
+                transform_log["mode"] = "ragged"
                 out = []
                 for data_segment in data_segments:
                     out.append(transform_func(data_segment, metadata=metadata))
@@ -556,6 +559,10 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                         logger.error(
                             f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
                         )
+                else:
+                    logger.error(
+                        " > Error occurred before the transform could be applied. Most likely cause is the data structure."
+                    )
             elif data_is_ragged and transform_supports_ragged:
                 logger.error("Case: Ragged Data & Ragged-supporting Transform")
                 logger.error(" > the data is directly passed to the transform.")
@@ -568,7 +575,14 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
             raise
 
-        return out
+        transform_log["flags"] = {
+            "data_is_ragged": data_is_ragged,
+            "data_is_ragged_but_regular": data_is_ragged_but_regular,
+            "transform_supports_ragged": transform_supports_ragged,
+            "transform_supports_dense": transform_supports_dense,
+        }
+
+        return out, transform_log
 
     def fit_multi_source(
         self,
@@ -626,11 +640,11 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 f"The lengths of the data segments are not the same. Lengths: {lengths}"
             )
 
-        out = self.transform_function_to_data_segments(
+        out, transform_log = self.transform_function_to_data_segments(
             data_segments, self.transform_data, copy.deepcopy(metadata)
         )
 
-        return out
+        return out, transform_log
 
 
 class ConcatenateUnitsMixing(MultiSourceTransformInterface):

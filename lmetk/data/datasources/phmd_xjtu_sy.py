@@ -145,7 +145,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
             # Convert the NumPy arrays to Awkward Arrays for ragged processing
             df_features = ak.from_regular(ak.from_numpy(df_features), axis=1)
-            df_target = ak.from_regular(ak.from_numpy(df_target), axis=1)
+            df_target = ak.from_numpy(df_target)
 
         # --- 3. Assemble and Return the Final Dictionary ---
         unit_id = UNIT_NAMES_TO_ID.get(unit_name.strip("Bearing"), -1)
