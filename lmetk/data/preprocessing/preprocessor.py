@@ -149,7 +149,7 @@ class PreProcessor(PreProcessorInterface):
                     data.to_split_dict()["train"], calculate_stat=False
                 )
                 start_time = time.time()
-                data, details = transform.forward(data)
+                data, transform_log = transform.forward(data)
 
                 end_time = time.time()
                 logger.info(
@@ -174,7 +174,7 @@ class PreProcessor(PreProcessorInterface):
                         "transform_name": transform_name,
                         "time": f" {end_time - start_time:.4f}",
                         "status": "Success",
-                        "details": details,
+                        "details": str(transform_log["train"]),
                         "changes": str(changes),
                         "added": str(added),
                         "removed": str(removed),
