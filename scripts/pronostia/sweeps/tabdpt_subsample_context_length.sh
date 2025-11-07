@@ -90,7 +90,8 @@ for model_name in "${model_names[@]}"; do
                     task_definition.seq_len=${context_length} \
                     task_definition.stride_train=${train_set_stride} \
                     cache.use_cache_after_loading=True \
-                    cache.use_cache_after_transfroms=True
+                    cache.use_cache_after_transfroms=True \
+                    experiment_group=no_smoothing
                 )
                 # debug=train_debug
                 # --- 5. Execute using the logger and run in the background (&) ---

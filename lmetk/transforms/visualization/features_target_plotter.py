@@ -7,7 +7,7 @@ import math
 import matplotlib.pyplot as plt
 
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import RaggedTransform
+from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
 
@@ -24,7 +24,7 @@ plt.switch_backend("Agg")
 logger = logging.getLogger(__name__)
 
 
-class FeatureTargetPlotter(RaggedTransform, NoFitMultiSourceTransformMixin):
+class FeatureTargetPlotter(RaggedOrDenseTransform, NoFitMultiSourceTransformMixin):
     """
     A pass-through transform that plots features and/or targets
     from `awkward` arrays.

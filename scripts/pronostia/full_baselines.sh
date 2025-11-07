@@ -31,13 +31,13 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=20
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="pronostia_full"
+wandb_log_folder="pronostia_full_smoothed_renormalized"
 # Define a list of datasets to run
 datasets=(pronostia)
 model_names=(crossformer lstm patchtst stf tide timeseries_transformer)
 BATCH_SIZES=(16)
 SEEDS=(72 88 101 666 226688)
-SEQ_LEN=(200 500)
+SEQ_LEN=(50 100 200)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -91,6 +91,7 @@ for model_name in "${model_names[@]}"; do
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
                         enable_progress_bar=False \
+                        experiment_group=no_smoothing \
                         seed=${seed}
                     )
 
