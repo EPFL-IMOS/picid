@@ -305,12 +305,20 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             if flatten:
                 # Use valid_lengths to unpad and flatten
                 lengths = valid_lengths[left_idx:right_idx]
-                flattened_x = table_to_ak_array(curr_x, lengths)
-                # flattened_x, flattened_y, cycle_indices = flatten_cycles(curr_x, curr_y, lengths)
+                features = table_to_ak_array(curr_x, lengths)
+
+                lengths = ak.num(features, axis=1)
+                curr_y = curr_y.reshape(-1, 1)
+
+                output_list = [
+                    np.repeat(curr_y[i : i + 1], lengths[i], axis=0)
+                    for i in range(curr_y.shape[0])
+                ]
+                target = ak.to_regular(ak.Array(output_list), axis=-1)
+
                 entry = {
-                    "features": flattened_x,
-                    # "time_features": ak.from_numpy(np.array(curr_y.reshape(-1, 1))),
-                    "target": ak.from_numpy(curr_y.reshape(-1, 1)),  # flattened_y
+                    "features": features,  # N cycles, cycle_len, n_features
+                    "target": target,
                     "unit_id": ak.from_numpy(np.array([UNIT_NAMES_TO_ID[unit_name]])),
                     "metadata": {
                         "unit_name": unit_name,

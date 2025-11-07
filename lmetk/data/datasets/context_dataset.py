@@ -65,12 +65,13 @@ class ContextBatchDataset(BaseDataset):
             data_dict={context_key: self.context_features}, **dataset_shared_params
         )
 
-        super().__init__(data_dict, **kwargs)
-
-    def __len__(self):
         assert len(self.target_dataset) == len(
             self.context_dataset
         ), "Target and context sequencers must have the same length"
+
+        super().__init__(data_dict, **kwargs)
+
+    def __len__(self):
         return len(self.target_dataset)
 
     def __getitem__(self, batch_idx: List[int]):
