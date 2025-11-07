@@ -128,6 +128,8 @@ def describe_data_type(obj, calculate_stat=False) -> str:
         return f"torch.Tensor{tuple(obj.shape)}"
     elif isinstance(obj, (pd.DataFrame, pd.Series)):
         return f"{type(obj).__name__}{obj.shape}"
+    elif isinstance(obj, ak.Array):
+        return f"ak.Array {str(obj.type)}"
 
     elif isinstance(obj, list):
         if not obj:

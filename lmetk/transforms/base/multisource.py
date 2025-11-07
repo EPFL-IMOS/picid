@@ -27,6 +27,8 @@ from lmetk.utils.awkward_utils import (
 from tqdm import tqdm
 from typing import Optional
 
+from lmetk.utils.rich_output import describe_data_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -380,129 +382,191 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         # Handle different cases based on data type and transform capabilities
         # --------------------------------------------------------------------
         # Construct current data segment from each source
-        if (not data_is_ragged) and transform_supports_dense:
-            out = []
-            for data_segment in data_segments:
-                # Handle the case when the data is ragged but structurally regular
-                if data_is_ragged_but_regular:
-                    for key, val in data_segment.items():
-                        data_segment[key] = val.to_numpy()
-
-                out_segment = transform_func(data_segment, metadata=metadata)
-
-                if data_is_ragged_but_regular:
-                    if isinstance(out_segment, BaseDataObjectWithMetadata):
-                        for key, val in out_segment.items():
-                            out_segment[key] = ak.Array(val)
-                    else:
-                        out_segment = ak.Array(out_segment)
-
-                out.append(out_segment)
-
-        elif data_is_ragged and (not transform_supports_ragged):
-            # The logic is that we find the rugged dimension, ensure that there is only one,
-            # flatten along that dimension, convert to numpy, apply the transform function,
-            # and then reassemble the original structure.
-            # Many loops, therefore I assume quite slow.
-            logger.warning(
-                f"Transform {self.__class__.__name__} does not support ragged arrays natively. "
-                "This might be slow for large datasets."
+        try:
+            index_depth = (
+                None  # Initialize index_depth for logging in exception handling
             )
-            out = []
+            if (not data_is_ragged) and transform_supports_dense:
+                out = []
+                for data_segment in data_segments:
+                    # Handle the case when the data is ragged but structurally regular
+                    if data_is_ragged_but_regular:
+                        for key, val in data_segment.items():
+                            data_segment[key] = val.to_numpy()
 
-            for data_segment in data_segments:
-                # TODO the logic here still do not support the case when one feature is ragged and another one is array
-                # in the apply to keys ['features','target'] and 'target' is an array then there is not check or logic that takes it into consideration for now.
+                    out_segment = transform_func(data_segment, metadata=metadata)
 
-                # Ensure that all the keys have same dim 0
-                assert len(set([len(val) for val in data_segment.values()])) == 1, (
-                    f"All keys in data_segment must have the same length at the first dimension. "
-                    f"Transform {self.__class__.__name__} expects all keys in the data segment to have the same length at the first dimension when handling ragged data without native support."
-                    f"Keys: {list(data_segment.keys())}, Lengths: {[len(val) for val in data_segment.values()]}"
-                )
-
-                var_dim = find_singular_ragged_dim(data_segment)
-                multi_index = ragged_index_tuples(
-                    next(iter(data_segment.values())), var_dim
-                )
-
-                index_depth = len(multi_index[0])
-
-                # Merge metadata from the segment with the overall metadata
-                data_segment_metadata = copy.deepcopy(metadata)
-                data_segment_metadata.update(data_segment.metadata or {})
-
-                out_segment = SortedDict()
-                use_tqdm = len(multi_index) > 100
-                iterator = multi_index
-                if use_tqdm:
-                    iterator = tqdm(
-                        multi_index,
-                        desc=f"{self.__class__.__name__}: transforming ragged segments",
-                    )
-                for coord in iterator:
-                    subsegment = {}
-                    for k in data_segment.keys():
-                        np_data = data_segment[k][coord].to_numpy()
-                        subsegment[k] = np_data
-                    out_subsegment = [transform_func(subsegment, metadata=metadata)]
-
-                    out_subsegment = postprocess_transformed_data(
-                        out_subsegment, metadata
-                    )
-                    assert (
-                        len(out_subsegment) == 1
-                    ), "Expected single output from transform."
-
-                    # Assemble all the output in a 2 level dictionary
-                    # first level is the array key,
-                    # second level is the coord in the ragged dim
-
-                    for k, block in out_subsegment[0].items():
-                        d: dict = out_segment.setdefault(k, SortedDict())
-                        for i in coord[:-1]:
-                            d: dict = d.setdefault(i, SortedDict())
-                        d[coord[-1]] = block  # keep as np.ndarray
-
-                for k, v in out_segment.items():
-                    # Example <Array [[[0.458, -1.28], ..., [...]], ...] type='870 * var * var * float64'>
-                    if index_depth == 1:
-                        # v maps integer indices to NumPy arrays (ragged)
-                        # convert directly using offsets and concatenation
-                        subarrays = [np.asarray(arr) for arr in v.values()]
-                        lengths = np.fromiter(
-                            (len(a) for a in subarrays), dtype=np.int64
-                        )
-                        offsets = np.concatenate([[0], np.cumsum(lengths)])
-                        if len(subarrays) == 0:
-                            aka = ak.Array([])
+                    if data_is_ragged_but_regular:
+                        if isinstance(out_segment, BaseDataObjectWithMetadata):
+                            for key, val in out_segment.items():
+                                out_segment[key] = ak.Array(val)
                         else:
-                            content = ak.from_numpy(np.concatenate(subarrays))
-                            layout = ak.contents.ListOffsetArray(
-                                ak.index.Index64(offsets), content.layout
+                            out_segment = ak.Array(out_segment)
+
+                    out.append(out_segment)
+
+            elif data_is_ragged and (not transform_supports_ragged):
+                # The logic is that we find the rugged dimension, ensure that there is only one,
+                # flatten along that dimension, convert to numpy, apply the transform function,
+                # and then reassemble the original structure.
+                # Many loops, therefore I assume quite slow.
+                logger.warning(
+                    f"Transform {self.__class__.__name__} does not support ragged arrays natively. "
+                    "This might be slow for large datasets."
+                )
+                out = []
+
+                for data_segment in data_segments:
+                    # TODO the logic here still do not support the case when one feature is ragged and another one is array
+                    # in the apply to keys ['features','target'] and 'target' is an array then there is not check or logic that takes it into consideration for now.
+
+                    # Ensure that all the keys have same dim 0
+                    assert len(set([len(val) for val in data_segment.values()])) == 1, (
+                        f"All keys in data_segment must have the same length at the first dimension. "
+                        f"Transform {self.__class__.__name__} expects all keys in the data segment to have the same length at the first dimension when handling ragged data without native support."
+                        f"Keys: {list(data_segment.keys())}, Lengths: {[len(val) for val in data_segment.values()]}"
+                    )
+
+                    var_dim = find_singular_ragged_dim(data_segment)
+                    multi_index = ragged_index_tuples(
+                        next(iter(data_segment.values())), var_dim
+                    )
+
+                    index_depth = len(multi_index[0])
+
+                    # Merge metadata from the segment with the overall metadata
+                    data_segment_metadata = copy.deepcopy(metadata)
+                    data_segment_metadata.update(data_segment.metadata or {})
+
+                    out_segment = SortedDict()
+                    use_tqdm = len(multi_index) > 100
+                    iterator = multi_index
+                    if use_tqdm:
+                        iterator = tqdm(
+                            multi_index,
+                            desc=f"{self.__class__.__name__}: transforming ragged segments",
+                        )
+                    for coord in iterator:
+                        subsegment = {}
+                        for k in data_segment.keys():
+                            np_data = data_segment[k][coord].to_numpy()
+                            subsegment[k] = np_data
+                        out_subsegment = [transform_func(subsegment, metadata=metadata)]
+
+                        out_subsegment = postprocess_transformed_data(
+                            out_subsegment, metadata
+                        )
+                        assert (
+                            len(out_subsegment) == 1
+                        ), "Expected single output from transform."
+
+                        # Assemble all the output in a 2 level dictionary
+                        # first level is the array key,
+                        # second level is the coord in the ragged dim
+
+                        for k, block in out_subsegment[0].items():
+                            d: dict = out_segment.setdefault(k, SortedDict())
+                            for i in coord[:-1]:
+                                d: dict = d.setdefault(i, SortedDict())
+                            d[coord[-1]] = block  # keep as np.ndarray
+
+                    for k, v in out_segment.items():
+                        # Example <Array [[[0.458, -1.28], ..., [...]], ...] type='870 * var * var * float64'>
+                        if index_depth == 1:
+                            # v maps integer indices to NumPy arrays (ragged)
+                            # convert directly using offsets and concatenation
+                            subarrays = [np.asarray(arr) for arr in v.values()]
+                            lengths = np.fromiter(
+                                (len(a) for a in subarrays), dtype=np.int64
                             )
-                            aka = ak.Array(layout)
-                    else:
-                        aka = ak.Array(tolist(v))
+                            offsets = np.concatenate([[0], np.cumsum(lengths)])
+                            if len(subarrays) == 0:
+                                aka = ak.Array([])
+                            else:
+                                content = ak.from_numpy(np.concatenate(subarrays))
+                                layout = ak.contents.ListOffsetArray(
+                                    ak.index.Index64(offsets), content.layout
+                                )
+                                aka = ak.Array(layout)
+                        else:
+                            aka = ak.Array(tolist(v))
 
-                    regularized = ak_regularize_regular_axes(aka)
+                        regularized = ak_regularize_regular_axes(aka)
 
-                    # FIX: if the output is 1D we need to add an irregular axis
-                    # explicitly, otherwise the array is considered regular
-                    # and in subsequent transforms it is fed into the "regular" branch.
-                    out_segment[k] = ak.from_regular(regularized, axis=var_dim)
+                        # FIX: if the output is 1D we need to add an irregular axis
+                        # explicitly, otherwise the array is considered regular
+                        # and in subsequent transforms it is fed into the "regular" branch.
+                        out_segment[k] = ak.from_regular(regularized, axis=var_dim)
+                    out.append(out_segment)
 
-                out.append(out_segment)
+            elif data_is_ragged and transform_supports_ragged:
+                out = []
+                for data_segment in data_segments:
+                    out.append(transform_func(data_segment, metadata=metadata))
 
-        elif data_is_ragged and transform_supports_ragged:
-            out = []
-            for data_segment in data_segments:
-                out.append(transform_func(data_segment, metadata=metadata))
+            else:
+                raise ValueError(
+                    f"Transform {self.__class__.__name__} does not support the data type {data_types}"
+                )
 
-        else:
-            raise ValueError(
-                f"Transform {self.__class__.__name__} does not support the data type {data_types}"
+        except Exception:
+            t_name = self.__class__.__name__
+            logger.error("-" * 160)
+            logger.error(
+                f"Transform Error Details ({t_name}.transform_function_to_data_segments())"
             )
+            logger.error("-" * 160)
+
+            logger.error(
+                f"Data type details: "
+                f"data_is_ragged={data_is_ragged}, "
+                f"data_is_ragged_but_regular={data_is_ragged_but_regular}, "
+                f"transform_supports_ragged={transform_supports_ragged}, "
+                f"transform_supports_dense={transform_supports_dense}",
+            )
+
+            logger.error("-" * 160)
+            logger.error(f"Metadata: {metadata}")
+            logger.error(f"Data segment: {data_segment}")
+            logger.error(f"Data segment keys: {list(data_segment.keys())}")
+            logger.error("Data segment contents:")
+            for k, v in data_segment.items():
+                logger.error(
+                    f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
+                )
+
+            logger.error("-" * 160)
+            logger.error("Case analysis:")
+
+            if (not data_is_ragged) and transform_supports_dense:
+                logger.error("Case: Dense Data & Dense-supporting Transform.")
+                logger.error(" > the data is directly passed to the transform.")
+            elif data_is_ragged and (not transform_supports_ragged):
+                logger.error("Case: Ragged Data & Dense-only Transform")
+                logger.error(
+                    " > the data is processed in regular blocks, converted to numpy, transformed, and reassembled."
+                )
+                if index_depth is not None:
+                    logger.error(f" > index_depth: {index_depth}")
+                    logger.error(
+                        f" > multi_index length: {len(multi_index)} example index : {multi_index[0]}"
+                    )
+                    logger.error(f" > subsegment keys: {list(subsegment.keys())}")
+                    for k, v in subsegment.items():
+                        logger.error(
+                            f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
+                        )
+            elif data_is_ragged and transform_supports_ragged:
+                logger.error("Case: Ragged Data & Ragged-supporting Transform")
+                logger.error(" > the data is directly passed to the transform.")
+            else:
+                logger.error("Unknown case encountered during transformation.")
+
+            logger.error("-" * 160)
+            logger.error("Error Details: ", exc_info=True)
+            logger.error("-" * 160)
+
+            raise
 
         return out
 
