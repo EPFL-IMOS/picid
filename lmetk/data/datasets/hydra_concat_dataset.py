@@ -8,6 +8,9 @@ from torch.utils.data._utils.collate import default_collate
 
 from lmetk.data.datasets.base import BaseVectorizedConcatDataset
 from torch.utils.data import ConcatDataset
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
@@ -106,6 +109,14 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
         """
         self.meta_data_dict = meta_data_dict
         datasets = initialize_datasets(dataset_cfg, data_dict, meta_data_dict)
+
+        # Report how many datasets were created
+        logger.info(
+            f"The {self.__class__.__name__} has instantiated {len(datasets)} datasets."
+        )
+        # Report the length of each dataset
+        for i, ds in enumerate(datasets):
+            logger.info(f"Dataset {i} length: {len(ds)}")
 
         self.collate_fn = (
             datasets[0].get_collate_fn()

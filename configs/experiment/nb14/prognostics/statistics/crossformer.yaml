@@ -3,4 +3,4 @@
 defaults:
   - nb14/prognostics/base
   - /model_configs/prognostics/crossformer
-  - override /transforms: battery/nb14/bosello23_base_statistics
+  - override /transforms: battery/nb14/statistics

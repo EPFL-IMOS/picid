@@ -2,7 +2,7 @@
 
 defaults:
   - override /datasource: unibo21_bosello
-  - override /evaluator: default
+  - override /evaluator: per_unit
   - override /task_definition: prognostics/rul
 
 evaluator:

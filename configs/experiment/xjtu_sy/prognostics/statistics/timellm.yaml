@@ -3,4 +3,4 @@
 defaults:
   - unibo/prognostics/base
   - /model_configs/concepts_prognostics/timellm
-  - override /transforms: battery/unibo/bosello23_base_statistics
+  - override /transforms: battery/unibo/statistics
