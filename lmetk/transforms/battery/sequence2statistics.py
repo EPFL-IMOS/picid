@@ -33,7 +33,8 @@ class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
         Transforms a single data segment by calculating statistics.
         """
         # (N, win_len, channels)
-        features = data["features"]
+        assert len(data) == 1, "Data dictionary must contain exactly one entry."
+        _, features = next(iter(data.items()))
 
         # Check how many dim in just 3 them unsqueeze 1st dim
         if features.ndim == 2:
