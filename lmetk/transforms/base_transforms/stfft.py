@@ -25,6 +25,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         window_type: str = "hann",
         output_format: str = "magnitude",
         apply_to_columns: bool = True,
+        subbands: Optional[List[Tuple[float, float]]] = None,
         **kwargs,
     ):
         """Initialize STFT transform using scipy's ShortTimeFFT.
@@ -57,6 +58,7 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         self.window_type = window_type
         self.output_format = output_format
         self.apply_to_columns = apply_to_columns
+        self.subbands = subbands  # list of (low_freq, high_freq) in Hz
 
         # Validate parameters
         valid_fft_modes = ["onesided", "twosided", "centered", "onesided2X"]
@@ -148,7 +150,128 @@ class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
             power = np.abs(stft_result) ** 2
             result = np.log10(power + 1e-10)  # Add small epsilon to avoid log(0)
 
+        # result at this point is frequencies x time_points
+        # Apply subband filtering if specified
+        if self.subbands is not None:
+            freqs = self.stft.f
+            band_results = []
+            for low, high in self.subbands:
+                mask = (freqs >= low) & (freqs <= high)
+                if np.any(mask):
+                    band_data = result[mask, :]
+                    freq_band = freqs[mask]
+                    band_features = self.frequency_features_np(
+                        band_data, freq_band, as_list=True
+                    )
+                    band_results.append(np.array(band_features))
+                else:
+                    logger.warning(f"No frequencies found in range {low}-{high} Hz")
+            if band_results:
+                result = np.concatenate(band_results, axis=0)
+            else:
+                logger.warning("No valid subbands selected, returning empty array.")
+                result = np.zeros_like(result)
+
         return result
+
+    @staticmethod
+    def frequency_features_np(S, freqs, as_list: bool = False) -> Dict[str, np.ndarray]:
+        """
+        Compute frequency-domain statistical features F12–F24 using NumPy.
+
+        Args:
+            S (np.ndarray): magnitude spectrum, shape (K, T)
+            freqs (np.ndarray): frequency values, shape (K,)
+        Returns:
+            dict: feature arrays of shape (T,)
+        """
+        K, T = S.shape
+        eps = 1e-12
+        s_sum = np.sum(S, axis=0) + eps
+
+        # F12: spectral mean
+        F12 = np.mean(S, axis=0)
+
+        # F13: RMS of spectrum
+        F13 = np.sqrt(np.mean((S - F12) ** 2, axis=0))
+
+        # F14: frequency statistic value 3
+        F14 = np.sum((S - F12) ** 3, axis=0) / ((K - 1) * (F13**3 + eps))
+
+        # F15: frequency statistic value 4
+        F15 = np.sum((S - F12) ** 4, axis=0) / ((K - 1) * (F13**4 + eps))
+
+        # F16: frequency centre of gravity
+        F16 = np.sum(freqs[:, None] * S, axis=0) / s_sum
+
+        # F17: frequency statistic value 6 (std around F16)
+        F17 = np.sqrt(np.sum(((freqs[:, None] - F16) ** 2) * S, axis=0) / (K - 1))
+
+        # F18: root mean square frequency
+        F18 = np.sqrt(np.sum((freqs[:, None] ** 2) * S, axis=0) / s_sum)
+
+        # F19: frequency statistic value 8
+        num = np.sum((freqs[:, None] ** 4) * S, axis=0)
+        den = np.sum((freqs[:, None] ** 2) * S, axis=0)
+        F19 = np.sqrt(num / (den + eps))
+
+        # F20: frequency statistic value 9
+        num = np.sum((freqs[:, None] ** 2) * S, axis=0)
+        den = np.sqrt(np.sum(S, axis=0) * np.sum((freqs[:, None] ** 4) * S, axis=0))
+        F20 = num / (den + eps)
+
+        # F21: frequency statistic value 10
+        F21 = F17 / (F16 + eps)
+
+        # F22: frequency statistic value 11
+        F22 = np.sum(((freqs[:, None] - F16) ** 3) * S, axis=0) / (
+            (K - 1) * (F17**3 + eps)
+        )
+
+        # F23: frequency statistic value 12
+        F23 = np.sum(((freqs[:, None] - F16) ** 4) * S, axis=0) / (
+            (K - 1) * (F17**4 + eps)
+        )
+
+        # There seems to be an error in the original definition of F24.
+        # F24: standard deviation frequency (corrected exponent 1/2)
+        # F24 = np.sum(((freqs[:, None] - F16) ** 0.5) * S, axis=0) / (
+        #     (K - 1) * (F17**0.5 + eps)
+        # )
+
+        if as_list:
+            return [
+                F12,
+                F13,
+                F14,
+                F15,
+                F16,
+                F17,
+                F18,
+                F19,
+                F20,
+                F21,
+                F22,
+                F23,
+                # F24,
+            ]
+
+        else:
+            return {
+                "F12": F12,
+                "F13": F13,
+                "F14": F14,
+                "F15": F15,
+                "F16": F16,
+                "F17": F17,
+                "F18": F18,
+                "F19": F19,
+                "F20": F20,
+                "F21": F21,
+                "F22": F22,
+                "F23": F23,
+                # "F24": F24,
+            }
 
     def _reshape_for_concatenation(
         self, stft_result: np.ndarray, key: str, signal_idx: int
