@@ -12,8 +12,6 @@ from lmetk.transforms.battery.autoencoder_transform import AutoencoderTransform
 from lmetk.transforms.base_transforms.autoencoder_transform import (
     BaseAutoencoderTransform,
 )
-
-# --- IMPORT THE UTILITY NEEDED FOR THE FIX ---
 from lmetk.utils.awkward_utils import ak_regularize_regular_axes
 
 
@@ -43,10 +41,10 @@ def transform_fixture():
         mock_cfg_dict = {
             "dataset": {
                 "dataset_cfg": {
-                    "seq_len": 3,
+                    "seq_len": 4,
                     "label_len": 1,
                     "pred_len": 1,
-                    "stride": 2,
+                    "stride": 1,
                 }
             },
             "model": {},  # Mock model config
@@ -189,8 +187,7 @@ def test_reconstruct_ragged_array(transform_fixture):
     result = t._reconstruct_ragged_array(index, blocks)
 
     # Unit 0 gets 2 blocks, Unit 1 gets 1 block
-    expected = ak.Array([[[1.1, 1.2], [2.1, 2.2]], [[3.1, 3.2]]])  # Unit 0  # Unit 1
-    # We must also regularize the expected array to match the function's output
+    expected = ak.Array([[[1.1, 1.2], [2.1, 2.2]], [[3.1, 3.2]]])
     expected = ak_regularize_regular_axes(expected)
 
     # Use direct assertion, not ak.all()
@@ -204,36 +201,32 @@ def test_transform_data_integration(transform_fixture):
     t = transform_fixture  # Mocked transform, batch_size=2, seq_len=4, stride=1
 
     # 1. Define Input Data (using awkward arrays)
+    # Per user spec: 3 units (N=3) with variable lengths (var) and 2 features (C=2)
+    # Unit 0 (L=5): 1 seq. Needs indices [0-4]. (idx < 5-4-1+1=1) -> idx=0
+    # Unit 1 (L=6): 2 seqs. Needs indices [0-5]. (idx < 6-4-1+1=2) -> idx=0,1
+    # Unit 2 (L=7): 3 seqs. Needs indices [0-6]. (idx < 7-4-1+1=3) -> idx=0,1,2
+    # Total sequences = 1 + 2 + 3 = 6
 
-    # --- THIS IS THE FIX (Part 1) ---
-    # We now use ONE unit with 6 cycles.
-    # This will create 2 valid sequences (stride=1):
-    # - Seq 0 (start 0): needs points 0-4. Valid.
-    # - Seq 1 (start 1): needs points 1-5. Valid.
     features_ak = ak.Array(
         [
-            [
-                [1.0, 1.1],
-                [2.0, 2.1],
-                [3.0, 3.1],
-                [4.0, 4.1],
-                [5.0, 5.1],
-                [6.0, 6.1],
-            ]  # Unit 0, length 6
+            # Unit 0 (L=5, C=2)
+            [[1.0, 1.1], [2.0, 2.1], [3.0, 3.1], [4.0, 4.1], [5.0, 5.1]],
+            # Unit 1 (L=6, C=2)
+            [[10, 11], [12, 13], [14, 15], [16, 17], [18, 19], [20, 21]],
+            # Unit 2 (L=7, C=2)
+            [[30, 31], [32, 33], [34, 35], [36, 37], [38, 39], [40, 41], [42, 43]],
         ]
     )
 
-    # Targets: 2 target values per unit/cycle
+    # Targets: (N, var, 1) with constant values per unit
     target_ak = ak.Array(
         [
-            [
-                [99, 9.9],
-                [99, 9.8],
-                [99, 9.7],
-                [99, 9.6],
-                [99, 9.5],
-                [99, 9.4],
-            ]  # Unit 0, length 6
+            # Unit 0 (L=5, C=1)
+            [[3.0], [3.0], [3.0], [3.0], [3.0]],
+            # Unit 1 (L=6, C=1)
+            [[2.0], [2.0], [2.0], [2.0], [2.0], [2.0]],
+            # Unit 2 (L=7, C=1)
+            [[1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]],
         ]
     )
 
@@ -244,11 +237,22 @@ def test_transform_data_integration(transform_fixture):
     data = {"features": features_ak, "target": target_ak}
 
     # 2. Define Mock Model Behavior
-    # We have 2 sequences, batch_size=2. Loop will run ONCE.
-    # We assume the encoder returns a 2D latent vector
-    mock_encoded_batch_1 = torch.tensor([[0.5, 0.6], [1.5, 1.6]], dtype=torch.float32)
+    # We have 6 sequences, batch_size=2. Loop will run 3 times.
+    # The sequencer should interleave the sequences.
+    # Batch 1: [Unit 0, Seq 0], [Unit 1, Seq 0]
+    # Batch 2: [Unit 1, Seq 1], [Unit 2, Seq 0]
+    # Batch 3: [Unit 2, Seq 1], [Unit 2, Seq 2]
 
-    t._model.backbone.encode.side_effect = [mock_encoded_batch_1]
+    # We assume the encoder returns a 2D latent vector
+    mock_encoded_batch_1 = torch.tensor([[0.1, 0.2], [1.1, 1.2]], dtype=torch.float32)
+    mock_encoded_batch_2 = torch.tensor([[1.3, 1.4], [2.1, 2.2]], dtype=torch.float32)
+    mock_encoded_batch_3 = torch.tensor([[2.3, 2.4], [2.5, 2.6]], dtype=torch.float32)
+
+    t._model.backbone.encode.side_effect = [
+        mock_encoded_batch_1,
+        mock_encoded_batch_2,
+        mock_encoded_batch_3,
+    ]
 
     # 3. Run the transform
     result = t.transform_data(data, metadata={})
@@ -257,31 +261,48 @@ def test_transform_data_integration(transform_fixture):
 
     # --- Verify Features ---
     # The concatenated encoded blocks should be:
-    # np.array([[0.5, 0.6], [1.5, 1.6]])
-    # Reconstructed, this should be:
-    expected_features = ak.Array([[[0.5, 0.6], [1.5, 1.6]]])  # Unit 0
+    # np.array([[0.1, 0.2], [1.1, 1.2], [1.3, 1.4], [2.1, 2.2], [2.3, 2.4], [2.5, 2.6]])
+    # Reconstructed, this should map back to the units:
+    expected_features = ak.Array(
+        [
+            [[0.1, 0.2]],  # Unit 0
+            [[1.1, 1.2], [1.3, 1.4]],  # Unit 1
+            [[2.1, 2.2], [2.3, 2.4], [2.5, 2.6]],  # Unit 2
+        ]
+    )
     expected_features = ak_regularize_regular_axes(expected_features)
 
     assert "features" in result
     assert ak.almost_equal(result["features"], expected_features)
 
     # --- Verify Targets ---
-    # The `y` from `sq_target.sequences_batch` will have shape (2, 2, 2)
-    # Seq 0 y-window: [target[3], target[4]] -> [[99, 9.6], [99, 9.5]]
-    # Seq 1 y-window: [target[4], target[5]] -> [[99, 9.5], [99, 9.4]]
+    # _process_target_batch takes the *last* item from the target window.
+    # Target window `y`: `[idx + 3 : idx + 5]`
+    # Last item's index is `idx + 4`.
     #
-    # _process_target_batch takes the *last* item from this window (y_batch[:, -1, :])
-    # - For Seq 0: [99, 9.5] (which is target[4])
-    # - For Seq 1: [99, 9.4] (which is target[5])
+    # Unit 0, Seq 0 (idx=0): takes target[4] -> [3.0]
+    #
+    # Unit 1, Seq 0 (idx=0): takes target[4] -> [2.0]
+    # Unit 1, Seq 1 (idx=1): takes target[5] -> [2.0]
+    #
+    # Unit 2, Seq 0 (idx=0): takes target[4] -> [1.0]
+    # Unit 2, Seq 1 (idx=1): takes target[5] -> [1.0]
+    # Unit 2, Seq 2 (idx=2): takes target[6] -> [1.0]
+    #
+    # The target values are constant, so the logic holds.
 
-    # --- THIS IS THE FIX (Part 2) ---
-    # Update expected_targets to match this logic
-    expected_targets = ak.Array([[[99, 9.5], [99, 9.4]]])  # Unit 0
+    expected_targets = ak.Array(
+        [
+            [[3.0]],  # Unit 0
+            [[2.0], [2.0]],  # Unit 1
+            [[1.0], [1.0], [1.0]],  # Unit 2
+        ]
+    )
     expected_targets = ak_regularize_regular_axes(expected_targets)
 
     assert "target" in result
     assert ak.almost_equal(result["target"], expected_targets)
 
     # --- Final Sanity Check ---
-    # Check that 'encode' was called ONCE
-    assert t._model.backbone.encode.call_count == 1
+    # Check that 'encode' was called 3 times
+    assert t._model.backbone.encode.call_count == 3
