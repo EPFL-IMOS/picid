@@ -109,7 +109,11 @@ class FeatureTargetPlotter(RaggedOrDenseTransform, NoFitMultiSourceTransformMixi
         """Helper to safely extract the unit ID from metadata for logging/filenames."""
         if metadata and self.unit_key in metadata:
             unit_id = metadata[self.unit_key]
-            if isinstance(unit_id, (tuple, list, np.ndarray)):
+            if (
+                isinstance(unit_id, (tuple, list, np.ndarray))
+                and unit_id.ndim > 0
+                and len(unit_id) > 1
+            ):
                 return "_".join(map(str, unit_id))
             else:
                 return str(unit_id).replace(" ", "_")
@@ -255,6 +259,9 @@ class FeatureTargetPlotter(RaggedOrDenseTransform, NoFitMultiSourceTransformMixi
             if self.unit_key
             else {}
         )
+
+        mode = metadata.get("mode", None)
+        unit_id_str = f"{mode}_{unit_id_str}"
 
         try:
             # --- 1. Prepare Data ---
