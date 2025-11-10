@@ -169,12 +169,18 @@ class PreProcessor(PreProcessorInterface):
                 removed = descriptive_dict_differences_str(
                     pre_descr_dict, post_descr_dict, mode="removed"
                 )
+
+                transform_log = (
+                    transform_log["train"]
+                    if "train" in transform_log
+                    else transform_log["test"]
+                )
                 summary.append(
                     {
                         "transform_name": transform_name,
                         "time": f" {end_time - start_time:.4f}",
                         "status": "Success",
-                        "details": str(transform_log["train"]),
+                        "details": str(transform_log),
                         "changes": str(changes),
                         "added": str(added),
                         "removed": str(removed),
