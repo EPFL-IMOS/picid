@@ -6,16 +6,6 @@ scaler_features:
     apply_to: features
     fit_on: train
 
-subsample_features_target:
-  transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
-    step: 1
-    window_size: full
-    aggregation: last_1000
-    dim: 0
-  metadata:
-    apply_to: [features, target]
-
 take_last_target:
   transform:
     _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
@@ -39,7 +29,7 @@ scaler_target:
     _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
-    dataset_name: PRONOSTIA
+    dataset_name: XJTU-SY
 
   metadata:
     apply_to: ["target", "unit_id"]
@@ -87,7 +77,48 @@ ragged2regular_cumsum_feature:
   metadata:
     apply_to: "cumsum_feature"
 
-############# CumSum Feature #################
+############# STFT Feature #################
+# stft:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.stfft.STFTTransform
+#     win_len: 512
+#     hop: 256
+#     fs: 25600
+
+#     # up to Nyquist frequency
+#     subbands:
+#       - [0, 4267]
+#       - [4267, 8533]
+#       - [8533, 12800]
+
+#   metadata:
+#     apply_to: "features"
+#     assign_to: "features_stft"
+
+# # Reduce target dim
+# reshape_stft:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+#     pattern: "a b  -> (a b)"
+#   metadata:
+#     apply_to: features_stft
+
+# sequence2statistics:
+#   transform:
+#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+#     padding_value: null
+
+#   metadata:
+#     apply_to: "features_stft"
+
+# ragged2regularragged:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+#   metadata:
+#     apply_to: "features_stft"
+
+############# Time Domain Features #################
 
 time_domain_features:
   transform:
@@ -108,7 +139,7 @@ time_domain_features:
         "change_coefficient", # Note: This is mean / std
         "clearance_factor",
         "abs_energy",
-        "hankel_svd",
+        # "hankel_svd",
       ]
 
   metadata:
@@ -121,6 +152,8 @@ ragged2regular_time_domain_features:
 
   metadata:
     apply_to: "time_domain_features"
+
+############# Spectral Statistics Features #################
 
 spectral_domain_features:
   transform:
@@ -163,16 +196,36 @@ concatenate_features:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
-    apply_to: ["spectral_features", "time_domain_features", "cumsum_feature"]
+    apply_to: [
+        "spectral_features",
+        "time_domain_features",
+        "cumsum_feature",
+        # "features_stft",
+      ]
     assign_to: features
 
-plot_features_final:
+# moving_average:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
+#     window_size: 32
+#     causal: True
+#   metadata:
+#     apply_to: features
+
+final_scaler_features:
   transform:
-    unit_key: unit_id
-    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
-    saving_path: ${paths.log_dir}/images_subsampled
-    features_key: features
-    target_key: target
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
-    apply_to: ["features", "target", "unit_id"]
+    apply_to: features
+    fit_on: train
+# plot_features_final:
+#   transform:
+#     unit_key: unit_id
+#     _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+#     saving_path: ${paths.log_dir}/images_subsampled
+#     features_key: features
+#     target_key: target
+
+#   metadata:
+#     apply_to: ["features", "target", "unit_id"]

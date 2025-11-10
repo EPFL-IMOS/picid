@@ -1,0 +1,14 @@
+#@package _global_
+
+defaults:
+  - override /datasource: phme20
+  - override /evaluator: rul
+  - override /task_definition: prognostics/rul
+
+evaluator:
+  train:
+    apply_inverse_scaling: false
+  val:
+    apply_inverse_scaling: false
+  test:
+    apply_inverse_scaling: false

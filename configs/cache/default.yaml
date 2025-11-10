@@ -1,3 +1,11 @@
 # Cache data or not
 use_cache_after_loading: True
 use_cache_after_transfroms: True
+
+# This file lock is ment to prevent multiple preprocessing processes to run at the same time.
+# This can happen if a shell script is used to start multiple training processes in parallel,
+# which can lead to deadlocking or severely slowing down performance due to multiprocessing overhead
+# on servers with many cpus.
+# Use flock in your shell script to prevent this from happening.
+use_preprocessing_file_lock: False
+preprocessing_file_lock_path: /tmp/lmetk_preprocess.lock

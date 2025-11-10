@@ -18,6 +18,6 @@ trainer:
 #   subset_range: [10, 100, 2] # [start, end, step]
 
 # datasource:
-# debug_cache_dataset: true
-# debug_cache_path: ${paths.data_dir}/debug_cache
-# debug_subset_range: [30, 100, null]
+#   debug_cache_dataset: true
+#   debug_cache_path: ${paths.data_dir}/debug_cache
+#   debug_subset_range: [30, 100, null]

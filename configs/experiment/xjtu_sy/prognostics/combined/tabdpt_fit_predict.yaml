@@ -3,7 +3,7 @@
 defaults:
   - xjtu_sy/prognostics/base
   - /model_configs/prognostics/tabdpt_fit_predict
-  - override /transforms: bearings/pronostia/combined_fit_predict
+  - override /transforms: bearings/xjtu_sy/combined_fit_predict
 
 task_definition:
   stride_train: 1

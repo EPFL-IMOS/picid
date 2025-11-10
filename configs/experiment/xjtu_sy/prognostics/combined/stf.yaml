@@ -3,4 +3,4 @@
 defaults:
   - xjtu_sy/prognostics/base
   - /model_configs/prognostics/stf
-  - override /transforms: bearings/pronostia/combined
+  - override /transforms: bearings/xjtu_sy/combined

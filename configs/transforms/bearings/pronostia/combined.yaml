@@ -77,75 +77,118 @@ ragged2regular_cumsum_feature:
   metadata:
     apply_to: "cumsum_feature"
 
-############# CumSum Feature #################
+############# STFT Feature #################
+# stft:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.stfft.STFTTransform
+#     win_len: 512
+#     hop: 256
+#     fs: 25600
 
-time_domain_features:
-  transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
-    hankel_window_size: 10
-    stats_to_compute: [
-        "mean",
-        "maximum",
-        "minimum",
-        "root_mean_square",
-        "abs_avg", # Defined as a wrapper for root_mean_square in the source
-        "peak_to_peak_value",
-        "standard_deviation",
-        "skewness",
-        "kurtosis",
-        "variance",
-        "peak_factor",
-        "change_coefficient", # Note: This is mean / std
-        "clearance_factor",
-        "abs_energy",
-        "hankel_svd",
-      ]
+#     # up to Nyquist frequency
+#     subbands:
+#       - [0, 4267]
+#       - [4267, 8533]
+#       - [8533, 12800]
 
-  metadata:
-    apply_to: "features"
-    assign_to: "time_domain_features"
+#   metadata:
+#     apply_to: "features"
+#     assign_to: "features_stft"
 
-ragged2regular_time_domain_features:
-  transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+# Reduce target dim
+# reshape_stft:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+#     pattern: "a b  -> (a b)"
+#   metadata:
+#     apply_to: features_stft
 
-  metadata:
-    apply_to: "time_domain_features"
+# sequence2statistics:
+#   transform:
+#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+#     padding_value: null
 
-spectral_domain_features:
-  transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+#   metadata:
+#     apply_to: "features_stft"
 
-    stats_to_compute: [
-        "mean",
-        "maximum",
-        "minimum",
-        "root_mean_square",
-        "peak_to_peak_value",
-        "variance",
-        "skewness",
-        "kurtosis",
-        "abs_energy",
-        # rul_features inspired
-        "peak_factor",
-        "change_coefficient",
-        "clearance_factor",
-        # Entropy stats
-        "spectral_entropy",
-        "shannon_entropy",
-        "permutation_entropy",
-      ]
+# ragged2regularragged:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
-  metadata:
-    apply_to: "features"
-    assign_to: "spectral_features"
+#   metadata:
+#     apply_to: "features_stft"
 
-ragged2regular_spectral_features:
-  transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+############# Time Domain Features #################
 
-  metadata:
-    apply_to: "spectral_features"
+# time_domain_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+#     hankel_window_size: 10
+#     stats_to_compute: [
+#         "mean",
+#         "maximum",
+#         "minimum",
+#         "root_mean_square",
+#         "abs_avg", # Defined as a wrapper for root_mean_square in the source
+#         "peak_to_peak_value",
+#         "standard_deviation",
+#         "skewness",
+#         "kurtosis",
+#         "variance",
+#         "peak_factor",
+#         "change_coefficient", # Note: This is mean / std
+#         "clearance_factor",
+#         "abs_energy",
+#         "hankel_svd",
+#       ]
+
+#   metadata:
+#     apply_to: "features"
+#     assign_to: "time_domain_features"
+
+# ragged2regular_time_domain_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+#   metadata:
+#     apply_to: "time_domain_features"
+
+############# Spectral Statistics Features #################
+
+# spectral_domain_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+
+#     stats_to_compute: [
+#         "mean",
+#         "maximum",
+#         "minimum",
+#         "root_mean_square",
+#         "peak_to_peak_value",
+#         "variance",
+#         "skewness",
+#         "kurtosis",
+#         "abs_energy",
+#         # rul_features inspired
+#         "peak_factor",
+#         "change_coefficient",
+#         "clearance_factor",
+#         # Entropy stats
+#         "spectral_entropy",
+#         "shannon_entropy",
+#         "permutation_entropy",
+#       ]
+
+#   metadata:
+#     apply_to: "features"
+#     assign_to: "spectral_features"
+
+# ragged2regular_spectral_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+#   metadata:
+#     apply_to: "spectral_features"
 
 concatenate_features:
   # Concatenate time-features to the feature set
@@ -153,7 +196,12 @@ concatenate_features:
     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
-    apply_to: ["spectral_features", "time_domain_features", "cumsum_feature"]
+    apply_to: [
+        # "spectral_features",
+        # "time_domain_features",
+        "cumsum_feature",
+        # "features_stft",
+      ]
     assign_to: features
 
 # moving_average:
@@ -179,5 +227,5 @@ final_scaler_features:
 #     features_key: features
 #     target_key: target
 
-# metadata:
-#   apply_to: ["features", "target", "unit_id"]
+#   metadata:
+#     apply_to: ["features", "target", "unit_id"]
