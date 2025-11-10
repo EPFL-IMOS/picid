@@ -342,4 +342,4 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
 
     def __repr__(self):
         # TODO: solve it somehow else
-        return "MOVi dataset bug fix"
+        return f"{self.__class__.__name__}(...)"
