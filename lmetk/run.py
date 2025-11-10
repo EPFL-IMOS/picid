@@ -1,8 +1,40 @@
 """Main entry point for training and testing models."""
 
 import os
-import random
+import yaml
 from pathlib import Path
+
+
+def _preload_thread_env() -> None:
+    """Read num_threads from Hydra config early and set env vars."""
+    cfg_path = Path(__file__).resolve().parent.parent / "configs" / "run.yaml"
+    try:
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+            if "num_threads" not in cfg:
+                raise KeyError("num_threads is not defined in config")
+            num_threads = int(cfg.get("num_threads"))
+
+            for var in [
+                "OMP_THREAD_LIMIT",
+                "NUMBA_NUM_THREADS",
+                "OMP_NUM_THREADS",
+                "OPENBLAS_NUM_THREADS",
+                "MKL_NUM_THREADS",
+                "VECLIB_MAXIMUM_THREADS",
+                "BLIS_NUM_THREADS",
+                "NUMEXPR_NUM_THREADS",
+            ]:
+                os.environ[var] = str(num_threads)
+
+            print(f"[INFO] Preloaded thread limit: {num_threads}")
+
+    except (FileNotFoundError, ValueError, TypeError, KeyError) as exc:
+        print(f"[WARN] Could not read num_threads from {cfg_path}: {exc}")
+        raise
+
+
+_preload_thread_env()
 
 # shutil
 from typing import Any, Tuple, Union
@@ -14,6 +46,10 @@ import numpy as np
 import omegaconf
 import torch
 import awkward as ak
+import random
+
+from threadpoolctl import threadpool_info
+from joblib import parallel_backend
 
 from lightning import Callback, Trainer, LightningDataModule
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -23,6 +59,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from hydra.core.hydra_config import HydraConfig
 
+from lmetk.data.cache.file_lock import FileLock
 from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
@@ -196,6 +233,35 @@ def initialize_hydra() -> DictConfig:
 
 torch.set_num_threads(1)
 log = RankedLogger(__name__, rank_zero_only=True)
+
+
+def verify_thread_limits(expected: int):
+    log.info(f"[Thread sanity check] Expected threads: {expected}")
+
+    # environment variables
+    for var in [
+        "OMP_THREAD_LIMIT",
+        "NUMBA_NUM_THREADS",
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "BLIS_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+    ]:
+        val = os.environ.get(var)
+        if val:
+            log.info(f"{var:25s}: {val}")
+
+    # native library threadpools
+    try:
+        for lib in threadpool_info():
+            name = lib.get("internal_api", "unknown")
+            num_threads = lib.get("num_threads")
+            path = Path(lib.get("filepath", "")).name
+            log.info(f"{name:12s} ({path:35s}) → {num_threads} threads")
+    except Exception as e:
+        log.error(f"Could not query threadpools: {e}")
 
 
 def log_training_run_config(
@@ -415,16 +481,15 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         A tuple with metrics and dict with all instantiated objects.
     """
     if cfg.get("num_threads", None) is not None:
+
+        log.warning(f"Setting number of threads for all libraries to {cfg.num_threads}")
+        verify_thread_limits(cfg.num_threads)
+        parallel_backend("loky", n_jobs=cfg.num_threads)
         torch.set_num_threads(cfg.num_threads)
-        os.environ["OMP_THREAD_LIMIT"] = str(cfg.num_threads)
-        os.environ["NUMBA_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["OMP_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["OPENBLAS_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["MKL_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["VECLIB_MAXIMUM_THREADS"] = str(cfg.num_threads)
-        os.environ["BLIS_NUM_THREADS"] = str(cfg.num_threads)
-        os.environ["NUMEXPR_NUM_THREADS"] = str(cfg.num_threads)
+        torch.set_num_interop_threads(cfg.num_threads)
         log.info(f"Set number of threads to {cfg.num_threads}")
+    else:
+        log.info("Using default number of threads for all libraries")
 
     if not (fa_flag := cfg.get("flash_attention", True)):
         if not fa_flag:
@@ -517,20 +582,39 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         else None
     )
     cache_preprocessed_flag = cfg.cache.use_cache_after_transfroms
-
-    # Run the preprocessing pipeline
-    preprocessor.pipeline(
-        data_cache_path=data_cache_path,
-        data_library_part_path=data_library_part_path,
-        transform_library_part_path=transform_library_part_path,
-        cache_preprocessed=cache_preprocessed_flag,
+    use_file_lock = cfg.cache.get("use_preprocessing_file_lock", False)
+    file_lock_path = cfg.cache.get(
+        "preprocessing_file_lock_path", "/tmp/lmetk_preprocess.lock"
     )
 
-    # TODO: return_splits_on_first_level is not clea..
-    data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
-    meta_data_dict = preprocessor.get_meta_data_dict()
-    if cache_preprocessed_flag:
-        transforms_manager = preprocessor.get_chached_transform_manager()
+    if use_file_lock:
+        file_lock = FileLock(path=file_lock_path)
+        log.info(
+            f"Acquiring preprocessing file lock at {file_lock_path} to prevent concurrent preprocessing."
+        )
+        file_lock.acquire()
+        log.info("Preprocessing file lock acquired.")
+
+    try:
+        # Run the preprocessing pipeline
+        preprocessor.pipeline(
+            data_cache_path=data_cache_path,
+            data_library_part_path=data_library_part_path,
+            transform_library_part_path=transform_library_part_path,
+            cache_preprocessed=cache_preprocessed_flag,
+        )
+
+        # TODO: return_splits_on_first_level is not clea..
+        data_dict = preprocessor.get_processed_data_dict(
+            return_splits_on_first_level=True
+        )
+        meta_data_dict = preprocessor.get_meta_data_dict()
+        if cache_preprocessed_flag:
+            transforms_manager = preprocessor.get_chached_transform_manager()
+    finally:
+        if use_file_lock:
+            file_lock.release()
+            log.info("Preprocessing file lock released.")
 
     assert set(data_dict.keys()) == {"train", "val", "test"}
 

@@ -3,4 +3,4 @@
 defaults:
   - cbmv3/diagnostics/base
   - /model_configs/diagnostics/lstm
-  - override /transforms: generic/normalize_feature_target
+  - override /transforms: cbmv3/normalize_feature_target

@@ -1,0 +1,28 @@
+scaler_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: rul
+    fit_on: train
+
+
+plot_features:
+  transform:
+    unit_key: unit_id
+    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+    saving_path: ${paths.log_dir}/images
+    features_key: features
+    target_key: rul
+
+  metadata:
+    apply_to: ["features", "rul", "unit_id"]
+

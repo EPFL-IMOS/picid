@@ -26,12 +26,17 @@ class CBMv3Loader(PHMDMultiSourceLoader):
         df_features = df_unit[features_col].copy().reset_index(drop=True)
         df_target = df_unit[target_col].copy().reset_index(drop=True)
 
+        unit_id = np.array(np.astype(unit_name, int))
+        unit_name = f"Unit_{unit_id}"
+
         return {
             "features": df_features.values,
             "time_features": np.array(df_features.index),
-            "target": df_target.values,
+            "unit_id": unit_id,
+            "rul": df_target.values,
             "metadata": {
-                "unit_id": unit_name,
+                "unit_id": unit_id,
+                "unit_name": unit_name,
                 "unit_length": len(df_features),
                 "features_columns": features_col,
                 "target_col": target_col,
