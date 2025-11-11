@@ -44,6 +44,7 @@ def convert_outer_list_to_inner(data_list):
     return stacked
 
 
+# Ideally we should adapt the processing code to consume train
 train_names = [
     "000-DM-3.0-4019-S",  # minimum capacity 1.48
     "001-DM-3.0-4019-S",  # minimum capacity 1.81
@@ -82,6 +83,68 @@ test_names = [
 
 UNIT_NAMES_TO_ID = train_names + test_names
 UNIT_NAMES_TO_ID = {name: int(name.split("-")[0]) for name in UNIT_NAMES_TO_ID}
+
+
+train_names = [
+    # Group 1
+    "000-DM-3.0-4019-S",  # minimum capacity 1.48
+    "001-DM-3.0-4019-S",  # minimum capacity 1.81
+    # Group 2
+    "009-DM-3.0-4019-H",  # minimum capacity 1.41
+    # Group 3
+    "014-DM-3.0-4019-P",  # minimum capacity 1.7
+    "015-DM-3.0-4019-P",  # minimum capacity 1.76
+    "017-DM-3.0-4019-P",  # minimum capacity 1.29
+    #'047-DM-3.0-4019-P',#new 1.98 Excluded by Bosello et al. 2023
+    #'049-DM-3.0-4019-P',#new 2.19 Excluded by Bosello et al. 2023
+    # Group 4
+    "007-EE-2.85-0820-S",  # 2.5
+    "008-EE-2.85-0820-S",  # 2.49
+    # Group 5
+    "043-EE-2.85-0820-H",  # 2.31
+    # Group 6
+    "018-DP-2.00-1320-S",  # minimum capacity 1.82
+    # '019-DP-2.00-1320-S',# minimum capacity 1.61; Excluded by Bosello et al. 2023
+    "036-DP-2.00-1720-S",  # minimum capacity 1.91
+    "037-DP-2.00-1720-S",  # minimum capacity 1.84
+    "038-DP-2.00-2420-S",  # minimum capacity 1.854 (to 0)
+    "050-DP-2.00-4020-S",  # new 1.81
+    # Group 7
+    "040-DM-4.00-2320-S",  # minimum capacity 3.75, cycles 188
+]
+
+val_names = [
+    # Group 1
+    "002-DM-3.0-4019-S",  # minimum capacity 2.06
+    # Group 2
+    "010-DM-3.0-4019-H",  # minimum capacity 1.44
+    # Group 3
+    "016-DM-3.0-4019-P",  # minimum capacity 1.56
+    # Group 4
+    "042-EE-2.85-0820-S",  # 2.51
+    # Group 5 is not present in val as there are only 2 units, one for train one for test
+    # Group 6
+    "051-DP-2.00-4020-S",  # new 1.866
+    # Group 7 is not present in val as there are only 2 units, one for train one for test
+]
+
+
+test_names = [
+    # Group 1
+    "003-DM-3.0-4019-S",  # minimum capacity 1.84
+    # Group 2
+    "011-DM-3.0-4019-H",  # minimum capacity 1.36
+    # Group 3
+    "013-DM-3.0-4019-P",  # minimum capacity 1.6
+    # Group 4
+    "006-EE-2.85-0820-S",  # 2.621
+    # Group 5
+    "044-EE-2.85-0820-H",  # 2.43
+    # Group 6
+    "039-DP-2.00-2420-S",  # minimum capacity 1.93
+    # Group 7
+    "041-DM-4.00-2320-S",  # minimum capacity 3.76, cycles 190
+]
 
 
 class UNIBO21Loader(AbstractDataSourceLoader):
@@ -137,9 +200,15 @@ class UNIBO21Loader(AbstractDataSourceLoader):
                 "test": test[key],
             }
 
-        logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
-        logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
-        logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        logger.info(
+            f"Number of train units: {len(out_dict['features']['train'])}, units: {[entry['unit_name'][:3] for entry in out_dict['metadata']['train']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['train']]}"
+        )
+        logger.info(
+            f"Number of val units: {len(out_dict['features']['val'])}, units: {[entry['unit_name'][:3] for entry in out_dict['metadata']['val']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['val']]}"
+        )
+        logger.info(
+            f"Number of test units: {len(out_dict['features']['test'])}, units: {[entry['unit_name'][:3] for entry in out_dict['metadata']['test']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['test']]}"
+        )
 
         # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
         unit_ids_meta_data = {
@@ -172,7 +241,8 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     def read_data(
         self,
     ):
-        data = defaultdict(list)
+        # 1. --- Setup ---
+        # (Assuming train_names, val_names, test_names are available in scope)
         dataset = UniboPowertoolsData(
             test_types=[],
             chunk_size=1000000,
@@ -185,98 +255,112 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         rul_handler = RulHandler()
 
-        dataset.prepare_data(train_names, test_names)
+        # --- KEY CHANGE 1 ---
+        # Pass all three name lists to your newly refactored class
+        dataset.prepare_data(train_names, test_names, val_names)
+
         dataset_handler = ModelDataHandler(
             dataset, [CycleCols.VOLTAGE, CycleCols.CURRENT, CycleCols.TEMPERATURE]
         )
 
         CAPACITY_THRESHOLDS = {
-            3.0: 2.7,  # th 90% - min 2.1, 70%
-            2.85: 2.7,  # th 94.7% - min 2.622, 92%
-            2.0: 1.93,  # th 96.5% - min 1.93, 96.5%
-            4.0: 3.77,  # th 94.2% - min 3.77 94.2%
-            4.9: 4.7,  # th 95.9% - min 4.3, 87.7%
-            5.0: 4.5,  # th 90% - min 3.63, 72.6%
+            3.0: 2.7,
+            2.85: 2.7,
+            2.0: 1.93,
+            4.0: 3.77,
+            4.9: 4.7,
+            5.0: 4.5,
         }
 
+        # --- KEY CHANGE 2 ---
+        # We now assume dataset_handler also returns data for the validation split
+        # (18 variables total, just like your NASA data handler)
         (
             train_x,
             train_y_soh,
+            validation_x,
+            validation_y_soh,
             test_x,
             test_y_soh,
             train_battery_range,
+            validation_battery_range,
             test_battery_range,
             time_train,
+            time_validation,
             time_test,
             current_train,
+            current_validation,
             current_test,
             initial_cycle_lenghts_train,
+            initial_cycle_lenghts_validation,
             initial_cycle_lenghts_test,
-        ) = dataset_handler.get_discharge_whole_cycle_future(train_names, test_names)
-
-        train_y = rul_handler.prepare_y_future(
-            train_names,
-            train_battery_range,
-            train_y_soh,
-            current_train,
-            time_train,
-            CAPACITY_THRESHOLDS,
-        )
-        del current_train
-        del time_train
-
-        test_y = rul_handler.prepare_y_future(
-            test_names,
-            test_battery_range,
-            test_y_soh,
-            current_test,
-            time_test,
-            CAPACITY_THRESHOLDS,
-        )
-        del current_test
-        del time_test
-
-        # first one is SOH, we keep only RUL
-        train_y = train_y[:, 1]
-        test_y = test_y[:, 1]
-
-        # Get train
-        data = defaultdict(list)
-        # Get train
-        data = defaultdict(list)
-
-        data["train"] = self._process_split(
-            x=train_x,
-            y=train_y,
-            battery_range=train_battery_range,
-            names=train_names,
-            valid_lengths=initial_cycle_lenghts_train,
-            flatten=True,
+        ) = dataset_handler.get_discharge_whole_cycle_future(
+            train_names, test_names, val_names  # Pass all three
         )
 
-        # Get test
-        test_entries = self._process_split(
-            x=test_x,
-            y=test_y,
-            battery_range=test_battery_range,
-            names=test_names,
-            valid_lengths=initial_cycle_lenghts_test,
-            flatten=True,
-        )
-        data["test"] = test_entries
-        data["val"] = copy.deepcopy(test_entries)
+        # 3. --- Organize Data for Looping ---
+        split_data = {
+            "train": {
+                "x": train_x,
+                "y_soh": train_y_soh,
+                "battery_range": train_battery_range,
+                "time": time_train,
+                "current": current_train,
+                "valid_lengths": initial_cycle_lenghts_train,
+                "names": train_names,
+            },
+            "val": {
+                "x": validation_x,
+                "y_soh": validation_y_soh,
+                "battery_range": validation_battery_range,
+                "time": time_validation,
+                "current": current_validation,
+                "valid_lengths": initial_cycle_lenghts_validation,
+                "names": val_names,
+            },
+            "test": {
+                "x": test_x,
+                "y_soh": test_y_soh,
+                "battery_range": test_battery_range,
+                "time": time_test,
+                "current": current_test,
+                "valid_lengths": initial_cycle_lenghts_test,
+                "names": test_names,
+            },
+        }
 
-        if self.debug_subset_range is not None:
-            data["train"] = data["train"][:2]
-            data["val"] = data["val"][:1]
-            data["test"] = data["test"][:1]
-            logger.info(
-                f"Debug subset range applied. New train size: {len(data['train'])}, val size: {len(data['val'])}, test size: {len(data['test'])}"
+        processed_data = defaultdict(list)
+
+        # 4. --- Process in a Loop ---
+        for split_name, data in split_data.items():
+            # Skip if data is missing (e.g., val_names was None)
+            if data["x"] is None:
+                continue
+
+            # Prepare Y data (RUL)
+            y_raw = rul_handler.prepare_y_future(
+                data["names"],
+                data["battery_range"],
+                data["y_soh"],
+                data["current"],
+                data["time"],
+                CAPACITY_THRESHOLDS,
             )
 
-        # Meta data
+            # Keep only RUL (second column)
+            y_rul = y_raw[:, 1]
 
-        return data
+            # Process the split and store it
+            processed_data[split_name] = self._process_split(
+                x=data["x"],
+                y=y_rul,
+                battery_range=data["battery_range"],
+                names=data["names"],
+                valid_lengths=data["valid_lengths"],
+                flatten=True,
+            )
+
+        return processed_data
 
     def _process_split(
         self, x, y, battery_range, names, valid_lengths=None, flatten=False
