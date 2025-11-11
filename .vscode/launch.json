@@ -936,6 +936,42 @@
             }
         },
         {
+            "name": "XJTU SY (Combined): lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/prognostics/combined/lstm",
+                "task_definition.seq_len=50",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "XJTU SY (Combined): cnn_1d",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=xjtu_sy/prognostics/raw/cnn_1d",
+                "task_definition.seq_len=50",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Pronostia : TabPFN Batch Context",
             "type": "debugpy",
             "request": "launch",
@@ -952,7 +988,7 @@
             }
         },
         {
-            "name": "Pronostia (Combined): 1D CNN",
+            "name": "Pronostia (Combined): 1D STF",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -960,7 +996,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=pronostia/prognostics/combined/crossformer",
+                "experiment=pronostia/prognostics/combined/lstm",
                 "task_definition.seq_len=50",
                 "debug=pronostia"
             ],
@@ -1115,6 +1151,58 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+        {
+            "name": "PHM20: lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/lstm",
+                "debug=pronostia",
+                "logger=wandb"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "HSF15: lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=hsf15/prognostics/lstm",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "CBMv3: lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=cbmv3/diagnostics/lstm",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
     ]
 }
