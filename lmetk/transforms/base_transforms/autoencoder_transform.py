@@ -17,7 +17,7 @@ from lmetk.utils.torch_utils import correct_state_dict_keys
 logger = logging.getLogger(__name__)
 
 
-class AutoencoderTransform(
+class BaseAutoencoderTransform(
     RaggedOrDenseTransform,
     NoFitMultiSourceTransformMixin,
 ):
@@ -61,7 +61,9 @@ class AutoencoderTransform(
 
     def _load_model(self, experiment_dir: Path) -> torch.nn.Module:
         """Loads the model from the specified experiment directory."""
-        config_path = find_config_file(experiment_dir)
+        config_path = find_config_file(
+            experiment_dir, "config_resolved.yaml", select_from_hydra=False
+        )
         self._cfg = omegaconf.OmegaConf.load(config_path)
 
         model = hydra.utils.instantiate(self._cfg.model)
