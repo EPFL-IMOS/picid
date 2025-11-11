@@ -40,40 +40,64 @@ def convert_outer_list_to_inner(data_list):
 
 
 train_names = [
+    # Group 1
     "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW1",
     "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW2",
-    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7",
+    # Group 2
     #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW3',
     "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW4",
-    "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5",
+    # Group 3
     #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW9',
     #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW10',
     #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW11',
+    # Group 4
     "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW13",
     "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW14",
-    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15",
+    # Group 5
     "RW_Skewed_High_Room_Temp_DataSet_2Post/RW17",
-    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW18",
-    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
+    # Group 6
     "RW_Skewed_Low_40C_DataSet_2Post/RW21",
     "RW_Skewed_Low_40C_DataSet_2Post/RW22",
-    "RW_Skewed_Low_40C_DataSet_2Post/RW23",
+    # Group 7
     "RW_Skewed_High_40C_DataSet_2Post/RW25",
     "RW_Skewed_High_40C_DataSet_2Post/RW26",
+]
+val_names = [
+    # Group 1
+    "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW7",
+    # Group 2
+    "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW5",
+    # Group 4
+    "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW15",
+    # Group 5
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW18",
+    # Group 6
+    "RW_Skewed_Low_40C_DataSet_2Post/RW23",
+    # Group 7
     "RW_Skewed_High_40C_DataSet_2Post/RW27",
 ]
 
+
 test_names = [
+    # Group 1
     "Battery_Uniform_Distribution_Variable_Charge_Room_Temp_DataSet_2Post/RW8",
-    #'Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6',
-    #'Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12',
+    # Group 2
+    "Battery_Uniform_Distribution_Discharge_Room_Temp_DataSet_2Post/RW6",
+    # Group 3
+    # "Battery_Uniform_Distribution_Charge_Discharge_DataSet_2Post/RW12",
+    # Group 4
     "RW_Skewed_Low_Room_Temp_DataSet_2Post/RW16",
-    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW20",
+    # Group 5
+    "RW_Skewed_High_Room_Temp_DataSet_2Post/RW19",
+    # "RW_Skewed_High_Room_Temp_DataSet_2Post/RW20",
+    # Group 6
     "RW_Skewed_Low_40C_DataSet_2Post/RW24",
+    # Group 7
     "RW_Skewed_High_40C_DataSet_2Post/RW28",
 ]
 
-UNIT_NAMES_TO_ID = train_names + test_names
+UNIT_NAMES_TO_ID = train_names + val_names + test_names
 UNIT_NAMES_TO_ID = {
     name: int(name.split("/")[1].strip("RW")) for name in UNIT_NAMES_TO_ID
 }
@@ -130,9 +154,15 @@ class NB14Loader(AbstractDataSourceLoader):
                 "test": test[key],
             }
 
-        logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
-        logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
-        logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        logger.info(
+            f"Number of train units: {len(out_dict['features']['train'])}, units: {[entry['unit_name'].split('/')[-1] for entry in out_dict['metadata']['train']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['train']]}"
+        )
+        logger.info(
+            f"Number of val units: {len(out_dict['features']['val'])}, units: {[entry['unit_name'].split('/')[-1] for entry in out_dict['metadata']['val']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['val']]}"
+        )
+        logger.info(
+            f"Number of test units: {len(out_dict['features']['test'])}, units: {[entry['unit_name'].split('/')[-1] for entry in out_dict['metadata']['test']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['test']]}"
+        )
 
         # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
         unit_ids_meta_data = {
@@ -162,94 +192,100 @@ class NB14Loader(AbstractDataSourceLoader):
 
         return out_dict
 
-    def read_data(
-        self,
-    ):
-        data = defaultdict(list)
-
+    def read_data(self):
         nasa_data_handler = NasaRandomizedData(self.data_path)
         rul_handler = RulHandler()
 
-        # These parameters are taken from Bosello
         CAPACITY_THRESHOLDS = None
         NOMINAL_CAPACITY = 2.2
 
+        # 1. Get all data: Note the CORRECTED variable names
         (
             train_x,
-            train_y_soh,
+            train_y,
+            validation_x,
+            validation_y,
             test_x,
-            test_y_soh,
-            train_battery_range,
-            test_battery_range,
+            test_y,
+            battery_n_cycle_train,
+            battery_n_cycle_validation,
+            battery_n_cycle_test,
             time_train,
+            time_validation,
             time_test,
             current_train,
+            current_validation,
             current_test,
             initial_cycle_lenghts_train,
+            initial_cycle_lenghts_validation,
             initial_cycle_lenghts_test,
-        ) = nasa_data_handler.get_discharge_whole_cycle_future(train_names, test_names)
-
-        train_y = rul_handler.prepare_y_future(
-            train_names,
-            train_battery_range,
-            train_y_soh,
-            current_train,
-            time_train,
-            CAPACITY_THRESHOLDS,
-            capacity=NOMINAL_CAPACITY,
-        )
-        del current_train
-        del time_train
-
-        test_y = rul_handler.prepare_y_future(
-            test_names,
-            test_battery_range,
-            test_y_soh,
-            current_test,
-            time_test,
-            CAPACITY_THRESHOLDS,
-            capacity=NOMINAL_CAPACITY,
-        )
-        del current_test
-        del time_test
-
-        # first one is SOH, we keep only RUL
-        train_y = train_y[:, 1]
-        test_y = test_y[:, 1]
-
-        # Get train
-        data = defaultdict(list)
-
-        data["train"] = self._process_split(
-            x=train_x,
-            y=train_y,
-            battery_range=train_battery_range,
-            names=train_names,
-            valid_lengths=initial_cycle_lenghts_train,
-            flatten=True,
+        ) = nasa_data_handler.get_discharge_whole_cycle_future(
+            train_names=train_names, test_names=test_names, validation_names=val_names
         )
 
-        # Get test
-        test_entries = self._process_split(
-            x=test_x,
-            y=test_y,
-            battery_range=test_battery_range,
-            names=test_names,
-            valid_lengths=initial_cycle_lenghts_test,
-            flatten=True,
-        )
-        data["test"] = test_entries
-        data["val"] = copy.deepcopy(test_entries)
+        # 2. Organize the data into a structure we can loop over.
+        #    (Assuming train_names, val_names, test_names are available in this scope)
+        split_data = {
+            "train": {
+                "x": train_x,
+                "y_soh": train_y,
+                "battery_range": battery_n_cycle_train,
+                "time": time_train,
+                "current": current_train,
+                "valid_lengths": initial_cycle_lenghts_train,
+                "names": train_names,
+            },
+            "val": {
+                "x": validation_x,
+                "y_soh": validation_y,
+                "battery_range": battery_n_cycle_validation,
+                "time": time_validation,
+                "current": current_validation,
+                "valid_lengths": initial_cycle_lenghts_validation,
+                "names": val_names,
+            },
+            "test": {
+                "x": test_x,
+                "y_soh": test_y,
+                "battery_range": battery_n_cycle_test,
+                "time": time_test,
+                "current": current_test,
+                "valid_lengths": initial_cycle_lenghts_test,
+                "names": test_names,
+            },
+        }
 
-        if self.debug_subset_range is not None:
-            data["train"] = data["train"][:2]
-            data["val"] = data["val"][:1]
-            data["test"] = data["test"][:1]
-            logger.info(
-                f"Debug subset range applied. New train size: {len(data['train'])}, val size: {len(data['val'])}, test size: {len(data['test'])}"
+        processed_data = defaultdict(list)
+
+        # 3. Loop through the structure and apply the logic *once*
+        for split_name, data in split_data.items():
+            # Prepare the Y data (RUL)
+            # We pass data["y_soh"] and data["battery_range"]
+            # which now correctly hold train_y and battery_n_cycle_train
+            y_raw = rul_handler.prepare_y_future(
+                data["names"],
+                data["battery_range"],
+                data["y_soh"],
+                data["current"],
+                data["time"],
+                CAPACITY_THRESHOLDS,
+                capacity=NOMINAL_CAPACITY,
             )
 
-        return data
+            # Keep only RUL (the second column)
+            y_rul = y_raw[:, 1]
+
+            # Process the split and store it
+            processed_data[split_name] = self._process_split(
+                x=data["x"],
+                y=y_rul,
+                battery_range=data["battery_range"],
+                names=data["names"],
+                valid_lengths=data["valid_lengths"],
+                flatten=True,
+            )
+
+        return processed_data
 
     def _process_split(
         self, x, y, battery_range, names, valid_lengths=None, flatten=False

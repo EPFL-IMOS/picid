@@ -88,22 +88,22 @@ class NasaRandomizedData:
             return (
                 train_x,
                 train_y,
+                validation_x,
+                validation_y,
                 test_x,
                 test_y,
                 battery_n_cycle_train,
+                battery_n_cycle_validation,
                 battery_n_cycle_test,
                 time_train,
+                time_validation,
                 time_test,
                 current_train,
-                current_test,
-                validation_x,
-                validation_y,
-                battery_n_cycle_validation,
-                time_validation,
                 current_validation,
+                current_test,
                 initial_cycle_lenghts_train,
-                initial_cycle_lenghts_test,
                 initial_cycle_lenghts_validation,
+                initial_cycle_lenghts_test,
             )
 
         return (
