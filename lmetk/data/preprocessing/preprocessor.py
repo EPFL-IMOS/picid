@@ -306,6 +306,6 @@ class PreProcessor(PreProcessorInterface):
 
         self._is_preprocessed = True
         logger.info("Data dictionary structure after transforms:")
-        # rprint(print_data_dict_structure(self.data)) # Assuming rprint is defined elsewhere
+        rprint(print_data_dict_structure(self.data))
 
         return self.data
