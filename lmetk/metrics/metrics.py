@@ -19,7 +19,7 @@ class NormalizedMAEMetricRailway(AbstractFileSystemMetric):
     def __init__(self, paths: dict = None):
         super().__init__("mae", paths)
         self.factor = (
-            pd.read_csv(f"{paths.data_dir}/railway/railway.csv")["Bahnlast"]
+            pd.read_csv(f"{paths['data_dir']}/railway/railway.csv")["Bahnlast"]
             .abs()
             .mean()
         )
@@ -43,7 +43,7 @@ class NormalizedMSEMetricRailway(AbstractFileSystemMetric):
     def __init__(self, paths: dict = None):
         super().__init__("mse", paths)
         self.factor = (
-            pd.read_csv(f"{paths.data_dir}/railway/railway.csv")["Bahnlast"]
+            pd.read_csv(f"{paths['data_dir']}/railway/railway.csv")["Bahnlast"]
             .abs()
             .mean()
         )
