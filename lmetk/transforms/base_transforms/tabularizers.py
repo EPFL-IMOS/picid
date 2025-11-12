@@ -12,7 +12,8 @@
 #     assign_to: features
 
 import logging
-from typing import Any, Dict
+import random
+from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
@@ -52,6 +53,8 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
         label_len: int,
         pred_len: int,
         stride: int,
+        subset_ratio: Optional[float] = None,
+        subset_seed: int = 42,
         **kwargs,
     ):
 
@@ -79,6 +82,8 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
         self.label_len = label_len
         self.pred_len = pred_len
         self.stride = stride
+        self.subset_ratio = subset_ratio
+        self.subset_seed = subset_seed
 
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
         # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
@@ -118,6 +123,7 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
         data_segment = data
         N_samples = None
         feature_data = {}
+        split = metadata["mode"]
 
         for key, selection in self.select_features.items():
 
@@ -136,7 +142,21 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
                     pred_len=self.pred_len,
                     stride=self.stride,
                 )
-                batch_idx = np.arange(len(seq))
+
+                subset_ratio = self.subset_ratio
+                if subset_ratio is not None and 0 < subset_ratio < 1:
+                    rng = random.Random(self.subset_seed)  # independent RNG
+                    len_ds = len(seq)
+                    n_subset = int(len_ds * subset_ratio)
+                    batch_idx = rng.sample(range(len_ds), n_subset)
+                    batch_idx.sort()
+                    logger.info(
+                        f"Subsetting {split} sequences: using {n_subset} out of {len_ds} sequences."
+                    )
+                    logger.info(f"Subset indices start with: {batch_idx[:100]}")
+                else:
+                    batch_idx = np.arange(len(seq))
+
                 results = seq.sequences_batch(batch_idx)
                 return results[collect_idx]
 

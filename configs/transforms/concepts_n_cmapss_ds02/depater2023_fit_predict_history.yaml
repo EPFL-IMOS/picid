@@ -34,6 +34,8 @@ tabularize_x_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
     timestep_dimension: 1
 
     select_features:
@@ -70,6 +72,8 @@ tabularize_y_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
     timestep_dimension: 1
 
     select_features:
