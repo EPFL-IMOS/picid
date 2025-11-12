@@ -142,7 +142,7 @@ def describe_data_type(obj, calculate_stat=False) -> str:
         else:
             # Fallback for other list types
             descr = type(first).__name__
-            return f"list<{descr}> x {len(obj)}"
+            return f"list<{descr}> x {len(obj)} \[{describe_data_type(first, False)}, ...\]"
 
     else:
         return str(type(obj).__name__)

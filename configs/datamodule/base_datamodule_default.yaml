@@ -10,3 +10,8 @@ prefetch_factor: 10
 shuffle_train: True
 shuffle_val: False
 shuffle_test: False
+
+train_subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+val_subset_ratio: null
+test_subset_ratio: null
+subset_seed: ${oc.select:task_definition.subset_seed,null}

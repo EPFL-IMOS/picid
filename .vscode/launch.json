@@ -378,7 +378,25 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_fit_predict",
-                "debug=default"
+                "debug=default",
+                "task_definition.subset_ratio=0.1"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/lstm",
+                "debug=default",
+                "task_definition.subset_ratio=0.1"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -512,22 +530,6 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/patchtst",
-                "debug=default"
-            ],
-            "env": {
-                "HYDRA_FULL_ERROR": "1",
-                "PYTHONFAULTHANDLER": "1"
-            }
-        },
-        {
-            "name": "Concepts N-CMAPSS (DS02): LSTM",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "lmetk/run.py",
-            "console": "integratedTerminal",
-            "args": [
-                "paths=rt_local",
-                "experiment=concepts_n_cmapss_ds02/prognostics/lstm",
                 "debug=default"
             ],
             "env": {
@@ -1072,15 +1074,15 @@
             }
         },
         {
-            "name": "NB14: rul",
+            "name": "NB14: lstm",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb14/prognostics/stf",
-                "debug=nb14"
+                "experiment=nb14/prognostics/statistics/xgboost_fit_predict",
+                // "debug=nb14"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -1097,6 +1099,22 @@
                 "paths=rt_local",
                 "experiment=nb14/reconstruction/residual_autoencoder",
                 "debug=nb14"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "UNIBO: lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=unibo/prognostics/statistics/xgboost_fit_predict",
+                // "debug=nb14"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",

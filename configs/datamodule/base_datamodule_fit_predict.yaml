@@ -13,3 +13,8 @@ test_batch_size: 1
 
 # No need to shuffle train as as the whole batch is passed in one iteration
 shuffle_train: False
+
+# This must be done in the tabularizer
+train_subset_ratio: null
+val_subset_ratio: null
+test_subset_ratio: null

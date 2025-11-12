@@ -24,7 +24,7 @@ echo "Script directory determined as: $SCRIPT_DIR"
 # Add this line to get detailed errors from Hydra
 export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
-source "$SCRIPT_DIR/../base/logging.sh"
+source "$SCRIPT_DIR/../../base/logging.sh"
 
 
 
@@ -107,7 +107,7 @@ for model_name in "${model_names[@]}"; do
 
                     # Random sleep only for runs 2, 3 up to MAX_PARALLEL to stagger preprocessing starts
                     if (( run_counter > 1 && run_counter <= $MAX_PARALLEL )); then
-                        sleep_time=$((60 * (RANDOM % 3 + 1)))  # 6–8 minutes
+                        sleep_time=$((60 * (RANDOM % 3 + 1)))  # 1–3 minutes
                         echo "Delaying launch of run ${run_name} by ${sleep_time}s..."
                         sleep $sleep_time
                     fi

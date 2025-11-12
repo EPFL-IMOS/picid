@@ -1,5 +1,6 @@
 import inspect
 import logging
+import random
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -50,6 +51,10 @@ class BaseDataModule(LightningDataModule):
         subset_range: Optional[
             Tuple[int, int, int]
         ] = None,  # Used for debugging purposes
+        train_subset_ratio: Optional[float] = None,
+        val_subset_ratio: Optional[float] = None,
+        test_subset_ratio: Optional[float] = None,
+        subset_seed: int = 42,
         profiler_cfg=None,
     ):
         # for ds in ["train", "val", "test"]:
@@ -98,6 +103,10 @@ class BaseDataModule(LightningDataModule):
         self.prefetch_factor = prefetch_factor
         self.pin_memory = pin_memory
         self.use_batch_sampler = use_batch_sampler
+        self.train_subset_ratio = train_subset_ratio
+        self.val_subset_ratio = val_subset_ratio
+        self.test_subset_ratio = test_subset_ratio
+        self.subset_seed = subset_seed
 
         # We need them because the debug subset does not have this function.
         self.collate_fn_train = (
@@ -209,7 +218,14 @@ class BaseDataModule(LightningDataModule):
         pass
 
     def _create_dataloader(
-        self, ds, batch_size, shuffle=True, drop_last=False, collate_fn=None
+        self,
+        ds,
+        batch_size,
+        shuffle=True,
+        drop_last=False,
+        collate_fn=None,
+        subset_ratio=None,
+        split_name=None,
     ):
 
         loader_args = dict(
@@ -217,6 +233,19 @@ class BaseDataModule(LightningDataModule):
             pin_memory=self.pin_memory,
             persistent_workers=self.num_workers > 0,
         )
+
+        if subset_ratio is not None and 0 < subset_ratio < 1:
+            rng = random.Random(self.subset_seed)  # independent RNG
+            len_ds = len(ds)
+            n_subset = int(len_ds * subset_ratio)
+            subset_indices = rng.sample(range(len_ds), n_subset)
+            subset_indices.sort()
+
+            ds = Subset(ds, subset_indices)
+            logger.info(
+                f"Subsetting {split_name} dataset sequences: using {n_subset} out of {len_ds} sequences."
+            )
+            logger.info(f"Subset indices start with: {subset_indices[:100]}")
 
         if self.use_batch_sampler:
             assert collate_fn is None, "collate_fn not supported with use_batch_sampler"
@@ -282,6 +311,8 @@ class BaseDataModule(LightningDataModule):
                 shuffle=self.hparams.shuffle_train,
                 drop_last=drop_last,
                 collate_fn=self.collate_fn_train,
+                subset_ratio=self.train_subset_ratio,
+                split_name="train",
             )
             self._train_loader = loader
         else:
@@ -318,6 +349,8 @@ class BaseDataModule(LightningDataModule):
                 batch_size=batch_size,
                 shuffle=self.hparams.shuffle_val,
                 collate_fn=self.collate_fn_val,
+                subset_ratio=self.val_subset_ratio,
+                split_name="val",
             )
             self._val_loader = loader
         else:
@@ -353,6 +386,8 @@ class BaseDataModule(LightningDataModule):
                 batch_size=batch_size,
                 shuffle=self.hparams.shuffle_test,
                 collate_fn=self.collate_fn_test,
+                subset_ratio=self.test_subset_ratio,
+                split_name="test",
             )
             self._test_loader = loader
         else:
