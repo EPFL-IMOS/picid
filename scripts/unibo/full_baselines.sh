@@ -24,18 +24,18 @@ echo "Script directory determined as: $SCRIPT_DIR"
 # Add this line to get detailed errors from Hydra
 export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
-source "$SCRIPT_DIR/../../base/logging.sh"
+source "$SCRIPT_DIR/../base/logging.sh"
 
 
 
 max_epochs=100
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="n_cmapss_final"
+wandb_log_folder="unibo_full"
 # Define a list of datasets to run
-datasets=(nb14)
+datasets=(unibo)
 transform_groups=(statistics)
-model_names=(cnn_1d crossformer lstm patchtst stf tide timeseries_transformer xgboost_fit_predict)
+model_names=(crossformer lstm patchtst stf tide timeseries_transformer)
 BATCH_SIZES=(16 512)
 SEEDS=(72 88 101 666 226688)
 
@@ -63,6 +63,14 @@ for model_name in "${model_names[@]}"; do
 
                     # --- 4. Build the full command as a single string ---
                     # Note the escaped quotes \"...\" for parameters that are lists.
+
+                    # Use file lock only for the first run to avoid deadlocks once cache is built
+                    if (( run_counter == 1 )); then
+                        use_preprocessing_file_lock=True
+                    else
+                        use_preprocessing_file_lock=False
+                    fi
+
                     command_to_run=(
                         python lmetk/run.py \
                         paths=runai \
@@ -76,18 +84,28 @@ for model_name in "${model_names[@]}"; do
                         logger.wandb.project='${wandb_log_folder}' \
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
+                         cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
+                        cache.preprocessing_file_lock_path=/tmp/lmetk_preprocess.lock \
                         enable_progress_bar=False \
+                        experiment_group=${transform} \
                         seed=${seed}
                     )
 
-                    # Random sleep only for runs 2 and 3
+                    # Random sleep only for runs 2, 3 up to MAX_PARALLEL to stagger preprocessing starts
                     if (( run_counter > 1 && run_counter <= $MAX_PARALLEL )); then
                         sleep_time=$((60 * (RANDOM % 3 + 1)))  # 1–3 minutes
                         echo "Delaying launch of run ${run_name} by ${sleep_time}s..."
                         sleep $sleep_time
                     fi
 
-                    # debug=train_debug
+                    # Block all processes except the first one here to prevent multiple preprocessings at once
+                    if (( run_counter > 1 )); then
+                    (
+                        flock 200
+                    ) 200>/tmp/lmetk_preprocess.lock
+                    echo "Python lock released, continuing..."
+                    fi
+
                     # --- 5. Execute using the logger and run in the background (&) ---
                     run_and_log "${command_to_run[*]}" "$run_name" &
                     pid=$!
