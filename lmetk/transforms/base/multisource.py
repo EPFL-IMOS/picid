@@ -315,7 +315,7 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         data_segments: list[NamedTransformInput],
         transform_func: Callable,
         metadata: Dict[str, Any],
-    ):
+    ) -> tuple[list[Any], dict[str, Any]]:
         """
         Apply a transformation function to a list of data segments.
 
@@ -679,7 +679,7 @@ class ConcatenateUnitsMixing(MultiSourceTransformInterface):
         self,
         data_segments: list[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> list[ndarray]:
+    ) -> tuple[list[Any], dict[str, Any]]:
         """
         go from list of n -> list of 1
         """
@@ -768,7 +768,7 @@ class ConcatenateUnitsMixing(MultiSourceTransformInterface):
         out = NamedTransformInput(**out)
         out = [self.transform_data(out, metadata=copy.deepcopy(metadata))]
 
-        return out
+        return out, {}
 
 
 class NoFitMultiSourceTransformMixin(ConcatinatedFitMultiSourceTransformMixin):
