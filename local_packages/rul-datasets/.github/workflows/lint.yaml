@@ -1,0 +1,31 @@
+name: Lint
+on:
+  workflow_call:
+
+jobs:
+  lint-black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-poetry
+        with:
+          poetry-version: "1.7.1"
+      - run: poetry run black --check rul_datasets
+
+  lint-flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-poetry
+        with:
+          poetry-version: "1.7.1"
+      - run: poetry run flake8 rul_datasets
+
+  lint-mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-poetry
+        with:
+          poetry-version: "1.7.1"
+      - run: poetry run mypy rul_datasets

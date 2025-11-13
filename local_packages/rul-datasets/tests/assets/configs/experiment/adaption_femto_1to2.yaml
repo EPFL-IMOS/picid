@@ -1,0 +1,15 @@
+# @package __global__
+defaults:
+  - override /reader@dm.source.reader: femto
+  - override /reader@dm.target.reader: femto
+
+dm:
+  source:
+    reader:
+      fd: 1
+      window_size: null
+    batch_size: 64
+  target:
+    reader:
+      fd: 2
+      window_size: null
