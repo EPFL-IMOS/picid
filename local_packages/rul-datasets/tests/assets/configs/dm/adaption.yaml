@@ -1,0 +1,13 @@
+defaults:
+    - /reader@source.reader: cmapss
+    - /reader@target.reader: cmapss
+
+_target_: rul_datasets.DomainAdaptionDataModule
+source:
+  _target_: rul_datasets.RulDataModule
+  batch_size: ???
+target:
+  _target_: ${..source._target_}
+  reader:
+    percent_broken: 0.8
+  batch_size: ${..source.batch_size}

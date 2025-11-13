@@ -1,0 +1,12 @@
+# @package __global__
+
+dm:
+  source:
+    reader:
+      fd: 2
+      window_size: 15
+    batch_size: 64
+  target:
+    reader:
+      fd: 4
+      window_size: 15

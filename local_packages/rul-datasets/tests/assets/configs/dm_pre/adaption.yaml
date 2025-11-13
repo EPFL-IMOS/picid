@@ -1,0 +1,14 @@
+defaults:
+  - /reader@source.reader: cmapss
+  - /reader@target.reader: cmapss
+
+_target_: rul_datasets.PretrainingAdaptionDataModule
+num_samples: 1000
+source:
+  _target_: rul_datasets.RulDataModule
+  batch_size: ???
+target:
+  _target_: ${..source._target_}
+  batch_size: ${..source.batch_size}
+  reader:
+    truncate_val: True
