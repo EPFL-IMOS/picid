@@ -170,11 +170,15 @@ class PreProcessor(PreProcessorInterface):
                     pre_descr_dict, post_descr_dict, mode="removed"
                 )
 
-                transform_log = (
-                    transform_log["train"]
-                    if "train" in transform_log
-                    else transform_log["test"]
-                )
+                if transform_log is not None and transform_log:
+                    transform_log = (
+                        transform_log["train"]
+                        if "train" in transform_log
+                        else transform_log["test"]
+                    )
+                else:
+                    transform_log = "No additional transform log."
+
                 summary.append(
                     {
                         "transform_name": transform_name,
