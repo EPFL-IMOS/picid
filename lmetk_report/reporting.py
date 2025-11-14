@@ -7,7 +7,7 @@ from collections import defaultdict
 import pandas as pd
 
 
-def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
+def create_summary_table(all_results: defaultdict, precision=10) -> pd.DataFrame:
     """
     Processes the 'all_results' dictionary to create a pivoted summary DataFrame.
 
@@ -34,8 +34,10 @@ def create_summary_table(all_results: defaultdict) -> pd.DataFrame:
                     for prefix, values in prefixes.items():
                         mean = values.get("mean", float("nan"))
                         std = values.get("std", float("nan"))
-                        # Format the value as a "mean ± std" string for readability.
-                        formatted_value = f"{mean:.10f} ± {std:.10f}"
+                        count = values.get("count", "n/a")
+                        formatted_value = (
+                            f"{mean:.{precision}f} ± {std:.{precision}f} (n={count})"
+                        )
                         records.append(
                             {
                                 "Dataset": dataset,
