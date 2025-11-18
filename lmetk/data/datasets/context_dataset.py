@@ -36,6 +36,11 @@ class ContextBatchDataset(BaseDataset):
             required_keys = ["features", "target"]  # "time_features", "target"
             context_key = "features"
             target_key = "target"
+
+        elif task_type in ["fault_classification"]:
+            required_keys = ["features", "target"]  # "time_features", "target"
+            context_key = "features"
+            target_key = "target"
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
 

@@ -5,3 +5,52 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+
+# # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+# ragged_regular_ragged_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+#   metadata:
+#     apply_to: features
+
+
+# This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
+take_last_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 1 
+    window_size: full
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: target
+# Output shape is (N_cycles,1) 
+
+# Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+ragged_regular_ragged_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: target
+
+
+
+take_last_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 1 
+    window_size: full
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: features
+
+# Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+ragged_regular_ragged_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: features
