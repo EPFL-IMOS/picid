@@ -1,4 +1,12 @@
+"""
+Transformer-specific evaluator implementation for time series forecasting.
+
+This module provides an evaluator class that inherits from AbstractEvaluator
+and implements evaluation logic for transformer-based forecasting models.
+"""
+
 import logging
+from pathlib import Path
 from typing import Any, Dict, List, Optional, override
 from pathlib import Path
 from collections import defaultdict
@@ -12,6 +20,8 @@ from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.base import AbstractMetric
 from .base import AbstractEvaluator  # Assuming AbstractEvaluator is in .base
+
+from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +50,9 @@ class DefaultEvaluator(AbstractEvaluator):
         )
 
         self.task_type = task_type.lower()
-        assert self.task_type in [
-            "regression",
-            "classification",
-        ], f"Unsupported task_type: {task_type}"
+        assert CLASSIFICATION_TASKS, f"Unsupported task_type: {task_type}"
+        assert REGRESSION_TASKS, f"Unsupported task_type: {task_type}"
+        assert FORECASTING_TASKS, f"Unsupported task_type: {task_type}"
 
         self.metrics = {}  # Primary metrics (will store DENORMALIZED if scaling is ON)
         self.paths = paths
@@ -52,6 +61,7 @@ class DefaultEvaluator(AbstractEvaluator):
         self.remote_logger = remote_logger
         self.collect_predictions = save_predictions or collect_predictions
         self.metric_names = [name.lower() for name in metric_names]
+        self.num_classes = num_classes
 
         if self.collect_predictions:
             self.preds, self.targets = [], []
@@ -59,7 +69,7 @@ class DefaultEvaluator(AbstractEvaluator):
 
         # Helper to create metrics
         def _create_metric(name):
-            if self.task_type == "classification":
+            if self.task_type == CLASSIFICATION_TASKS:
                 return MetricFactory.create_classification_metric(
                     name, num_classes=num_classes
                 )
@@ -98,14 +108,40 @@ class DefaultEvaluator(AbstractEvaluator):
         """
         Update metrics, performing dual metric updates for normalized and
         denormalized data when scaling is active.
+        Update metrics with new predictions and targets.
+        Regression: preds (N, T=1, 1), targets (N, T=1, 1)
+        Classification: preds (N, T, C), targets (N, T, 1)
+        Forecasting: preds (N, T, 1), targets (N, T, 1)
+        Note: At the moment, only single-target tasks are supported!
         """
         predictions = model_out["predictions"]
         targets = model_out["targets"]
 
+        assert targets.ndim == 3 or targets.shape[2] == 1, f"Expected shape (N, T, 1), got {targets.shape}"
+
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
-        if self.task_type == "classification":
-            targets = targets.astype(int)
+        if self.task_type in CLASSIFICATION_TASKS:
+            assert self.scaling_wrapper.inverse_transform is None, "Scaling must be None for classification"
+            assert predictions.ndim == 3, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+            assert predictions.shape[2] == self.num_classes, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+            targets = targets.astype(int)  # ensure integer labels
+
+        elif self.task_type in REGRESSION_TASKS:
+            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
+
+        elif self.task_type in FORECASTING_TASKS:
+            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
+
+        else:
+            raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
+
 
         # 1. Store Normalized Data (BEFORE inverse transform)
         if is_denormalized_run:
@@ -122,6 +158,9 @@ class DefaultEvaluator(AbstractEvaluator):
             # Store original data for file saving when scaling is OFF
             self.preds.append(predictions)
             self.targets.append(targets)
+
+        else:
+            raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
 
         # 2. Apply inverse scaling (MODIFIES predictions/targets)
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
@@ -176,6 +215,9 @@ class DefaultEvaluator(AbstractEvaluator):
 
         # Determine dimension names for xarray
         d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
+        if self.task_type in CLASSIFICATION_TASKS and preds.shape[-1] > 1:
+            preds = np.argmax(preds, axis=-1, keepdims=True)
 
         # 1. Save PRIMARY (Denormalized or Original) predictions
         dict_to_save.update({"preds": (d_names, preds), "targets": (d_names, targets)})
