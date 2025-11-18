@@ -7,6 +7,7 @@ getting the raw data from Weights & Biases (or a local cache) and transforming
 it into a clean, flat pandas DataFrame ready for analysis.
 """
 import ast
+import json
 import os
 import warnings
 from typing import List, Tuple
@@ -14,6 +15,7 @@ from typing import List, Tuple
 import pandas as pd
 import wandb
 from lmetk_report import config
+from tqdm import tqdm
 
 # Suppress common pandas warnings for a cleaner output.
 warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
@@ -89,7 +91,7 @@ def load_runs_df(
         print(f"Fetching runs from wandb project: {user}/{project_name}...")
         runs = api.runs(f"{user}/{project_name}")
         summary_list, config_list, name_list = [], [], []
-        for run in runs:
+        for run in tqdm(runs):
             if run.state == "finished":
                 summary_list.append(run.summary._json_dict)
                 config_list.append(
@@ -126,6 +128,7 @@ def load_runs_df(
     nan_cols_to_drop = df.columns[df.isna().mean() > 0.9].tolist()
     df = df.drop(columns=nan_cols_to_drop)
     print(f"Dropped {len(nan_cols_to_drop)} columns with >90% NaN values.")
+    print(f"The columns were drropped: {nan_cols_to_drop}")
 
     # Drop columns based on specific name patterns defined in the config file.
     cols_to_drop_by_filter = _filter_columns(df, config.COLUMN_FILTERS_TO_DROP)

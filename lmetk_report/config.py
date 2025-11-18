@@ -32,7 +32,12 @@ COLUMNS_TO_NORMALIZE = [
 
 # Columns to exclude from being considered as varying hyperparameters, even if they vary.
 # This typically includes run-specific seeds or identifiers.
-SPECIAL_COLUMNS = ["datasource.parameters.data_seed"]
+SPECIAL_COLUMNS = [
+    "datasource.parameters.data_seed",
+    "task_definition.subset_seed",
+    "datamodule.subset_seed",
+    "seed",
+]
 
 # Column name filters for columns to be dropped entirely during data loading.
 # This is useful for removing noisy or irrelevant configuration groups.

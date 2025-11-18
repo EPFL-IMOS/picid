@@ -6,7 +6,7 @@ This module contains functions to group data, identify varying hyperparameters,
 aggregate results, and find the best-performing configurations.
 """
 from collections import defaultdict
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 from lmetk_report import config
 
@@ -104,7 +104,14 @@ def aggregate_and_find_best(
     aggregation_cols: List[str],
     all_performance_cols: List[str],
     optimization_col: str,
+    optimization_mode: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+
+    assert optimization_mode in [
+        "min",
+        "max",
+    ], "optimization_mode must be 'min' or 'max'"
+
     """Performs groupby aggregation and finds the best run based on the optimization metric."""
     subset_copy = df_subset.copy()
     # Convert list columns to tuples to allow for grouping.
@@ -120,7 +127,7 @@ def aggregate_and_find_best(
 
     # Define aggregations: mean/std for metrics, and collect run names into a list.
     agg_dict = {
-        col: ["mean", "std"]
+        col: ["mean", "std", "count"]
         for col in all_performance_cols
         if col in subset_copy.columns
     }
@@ -133,10 +140,7 @@ def aggregate_and_find_best(
     if ("run_name", "list") in aggregated_df.columns:
         aggregated_df.rename(columns={("run_name", "list"): "run_name"}, inplace=True)
 
-    # Determine sorting direction based on 'min' or 'max' optimization mode.
-    mode = subset_copy[config.COLUMN_CONFIG["optimization_mode"]].unique()[0]
-    is_ascending = mode == "min"
-
+    is_ascending = optimization_mode == "min"
     sorted_results = aggregated_df.sort_values(
         by=(optimization_col, "mean"), ascending=is_ascending
     )
@@ -149,6 +153,8 @@ def analyze_results(
     dropped_columns: List[str],
     reporting_metrics: List[str],
     metric_prefixes: List[str],
+    optimization_col: Optional[str] = None,
+    optimization_mode: Optional[str] = None,
 ) -> defaultdict:
     """Main function to orchestrate the analysis of experiment results."""
     config_columns = [col for col in config_columns if col not in dropped_columns]
@@ -168,7 +174,17 @@ def analyze_results(
 
             subset["Model"] = model
 
-            optimization_col = get_optimized_metric(subset, model, dataset)
+            if optimization_col is None:
+                try:
+                    optimization_col = get_optimized_metric(subset, model, dataset)
+                except Exception as e:
+                    print(
+                        f"Warning: Could not determine optimization column for {model} on {dataset}. Error: {e}"
+                    )
+
+                    print("Falling back to default optimization metric 'test/mse'.")
+                    optimization_col = "test/mse"
+
             all_performance_cols = [
                 f"{p}{m}"
                 for p in metric_prefixes
@@ -196,8 +212,18 @@ def analyze_results(
                     print(f"{col}: {unique}")
             print("---------")
 
+            if optimization_mode is None:
+                # Determine sorting direction based on 'min' or 'max' optimization mode.
+                optimization_mode = subset[
+                    config.COLUMN_CONFIG["optimization_mode"]
+                ].unique()[0]
+
             sorted_aggregated, best_result = aggregate_and_find_best(
-                subset, aggregation_cols, all_performance_cols, optimization_col
+                subset,
+                aggregation_cols,
+                all_performance_cols,
+                optimization_col=optimization_col,
+                optimization_mode=optimization_mode,
             )
 
             if best_result.empty:
@@ -240,11 +266,13 @@ def analyze_results(
                     if (col_name, "mean") in best_result.columns:
                         mean_val = best_result[(col_name, "mean")].values[0]
                         std_val = best_result[(col_name, "std")].values[0]
+                        count_val = best_result[(col_name, "count")].values[0]
                         if col_name == optimization_col and mode == "max":
                             mean_val, std_val = mean_val * 100, std_val * 100
                         performance_results[metric][prefix_key] = {
                             "mean": mean_val,
                             "std": std_val,
+                            "count": count_val,
                         }
 
             all_results[dataset][model]["best_hyperparameters"] = best_params
