@@ -2,6 +2,7 @@ from typing import Union
 
 import awkward as ak
 import numpy as np
+import pandas as pd
 import torch
 
 from lmetk.data.optimization.ak_jagged_sequencer import (
@@ -39,9 +40,11 @@ class DenseArraySequencer(BaseSequencer):
             array = ak.Array(array)
         elif isinstance(array, torch.Tensor):
             array = ak.Array(array.numpy())
+        elif isinstance(array, pd.DataFrame):
+            array = ak.Array(array.to_numpy())
         else:
             raise TypeError(
-                f"array must be np.ndarray or torch.Tensor but got {type(array)}."
+                f"array must be np.ndarray, torch.Tensor or pd.DataFrame but got {type(array)}."
             )
         array = ak.values_astype(array, np.float32)
         array = ak.from_regular(array, axis=0)  # ensure regularity
