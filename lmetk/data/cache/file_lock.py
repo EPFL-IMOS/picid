@@ -1,4 +1,11 @@
-import fcntl
+import sys
+
+SYSTEM_PLATFORM = sys.platform
+if SYSTEM_PLATFORM == "win32":
+    import msvcrt
+else:
+    import fcntl
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,7 +54,10 @@ class FileLock:
             This method blocks until the lock is available if another process holds it.
         """
         self.handle = open(self.path, "w")
-        fcntl.flock(self.handle, fcntl.LOCK_EX)
+        if SYSTEM_PLATFORM == "win32":
+            msvcrt.locking(self.handle.fileno(), msvcrt.LK_LOCK)
+        else:
+            fcntl.flock(self.handle, fcntl.LOCK_EX)
         logger.info("Lock acquired.")
 
     def release(self):
@@ -61,6 +71,9 @@ class FileLock:
             Safe to call even if lock was never acquired (checks if handle exists).
         """
         if self.handle:
-            fcntl.flock(self.handle, fcntl.LOCK_UN)
+            if SYSTEM_PLATFORM == 'win32':
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 100)
+            else:
+                fcntl.flock(self.handle, fcntl.LOCK_UN)
             self.handle.close()
             logger.info("Lock released.")
