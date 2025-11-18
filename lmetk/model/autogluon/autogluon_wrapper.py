@@ -3,6 +3,8 @@
 from typing import Optional, Any
 
 import torch
+
+from lmetk.baselines.definitions import CLASSIFICATION_TASKS
 from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
 
 from omegaconf import OmegaConf
@@ -30,7 +32,7 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
     def __init__(
         self,
         presets: str = "best",
-        problem_type: str = "regression",
+        task_type: str = "regression",
         holdout_frac: Optional[float] = None,
         num_bag_folds: int = 0,
         num_stack_levels: int = 0,
@@ -50,7 +52,7 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
 
         self.n_targets = target["target_seq_x"].shape[2]
         self.label_names = [f"target_{i}" for i in range(self.n_targets)]
-        self.problem_type = problem_type
+        self.task_type = task_type
         self.output_dir = output_dir
 
         backbone = self._initialize_backbone()
@@ -76,16 +78,21 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         self.save_space = save_space
 
     def _initialize_backbone(self):
+        if self.task_type in CLASSIFICATION_TASKS:
+            problem_type = "classification"
+        else:
+            problem_type = "binary"
+
         if self.n_targets > 1:
             return MultilabelTabularPredictor(
                 labels=self.label_names,
-                problem_type=self.problem_type,
+                problem_type=problem_type,
                 path=self.output_dir,
             )
         else:
             return TabularPredictor(
                 label=self.label_names[0],
-                problem_type=self.problem_type,
+                problem_type=problem_type,
                 path=self.output_dir,
             )
 

@@ -1,9 +1,11 @@
 """Wrapper for the TimePFN model."""
+from typing import override
 
 import torch
 from .base import AbstractFeedForwardWrapper
 
-from tabpfn import TabPFNRegressor
+from tabpfn import TabPFNRegressor, TabPFNClassifier
+from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
 
 
 class TabPFNWrapper(AbstractFeedForwardWrapper):
@@ -12,12 +14,29 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
     This wrapper defines the forward pass of the TimePFN model.
     """
 
-    def __init__(self, **kwargs):
-        backbone = TabPFNRegressor(
-            ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
-            random_state=kwargs["random_state"],
-            device="cuda" if kwargs["device"] == "gpu" else "cpu",
-        )
+    def __init__(self, task_type: str, **kwargs):
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for TabPFNWrapper.")
+
+        self.task_type = task_type
+
+        if task_type in self.classification_tasks:
+            backbone = TabPFNClassifier(
+                ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
+                random_state=kwargs["random_state"],
+                device="cuda" if kwargs["device"] == "gpu" else "cpu",
+            )
+        else:
+            backbone = TabPFNRegressor(
+                ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
+                random_state=kwargs["random_state"],
+                device="cuda" if kwargs["device"] == "gpu" else "cpu",
+            )
         super().__init__(backbone=backbone, **kwargs)
         self.model_fit_flag = False
         self.lag = 0
@@ -28,8 +47,11 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
         self.aux_context = None
         self.y_aux = None
 
-    def fit(self, x, y):
-        self.backbone.fit(x.cpu(), y.cpu())
+    def predict(self, X: torch.Tensor) -> torch.Tensor:
+        if self.task_type in CLASSIFICATION_TASKS:
+            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+        else:
+            return torch.Tensor(self.backbone.predict(X.numpy()))
 
     def forward(self, batch):
         """Forward pass for the Tune wrapper.

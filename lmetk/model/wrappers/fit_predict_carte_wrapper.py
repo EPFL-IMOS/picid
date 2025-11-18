@@ -12,6 +12,7 @@ from carte_ai.configs.directory import config_directory
 from huggingface_hub import hf_hub_download
 
 from .base import AbstractFitPredictWrapper
+from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         random_state: int,
         device: str,
         n_jobs: int,
+        task_type: str,
         max_epoch: int = 500,
         pretrained_model_path: str = None,
         model_cache_path: str = None,
@@ -36,6 +38,16 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         yield_batch_size: int = 128,
         **kwargs,
     ):
+        # Define supported tasks based on your new categories
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for FitPredictCarteWrapper.")
+
+        self.task_type = task_type
+
         # Lightning uses 'cuda' or 'gpu' as device string
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
 

@@ -3,6 +3,7 @@
 from .base import AbstractFeedForwardWrapper
 
 from lmetk.model.methods.ses_model import SESModelBaseline
+from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 
 class SESModelWrapper(AbstractFeedForwardWrapper):
@@ -11,7 +12,18 @@ class SESModelWrapper(AbstractFeedForwardWrapper):
     This wrapper defines the forward pass of the SESModel baseline.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, task_type: str, **kwargs):
+
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = None
+        self.supported_types = self.regression_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for SESModelWrapper.")
+
+        self.task_type = task_type
+
         backbone = SESModelBaseline(**kwargs)
         super().__init__(backbone=backbone, **kwargs)
 

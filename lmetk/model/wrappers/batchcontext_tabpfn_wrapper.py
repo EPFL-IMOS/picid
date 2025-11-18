@@ -5,6 +5,7 @@ from tabpfn import TabPFNRegressor
 
 
 from .base import AbstractFeedForwardWrapper
+from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 
 class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
@@ -13,7 +14,17 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
     This wrapper defines the forward pass of the TimePFN model.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, task_type: str, **kwargs):
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = []
+        self.supported_types = self.regression_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for BatchContextTabPFNWrapper.")
+
+        self.task_type = task_type
+
         backbone = TabPFNRegressor(
             ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
             random_state=kwargs["random_state"],

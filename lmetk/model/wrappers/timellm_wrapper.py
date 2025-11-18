@@ -1,3 +1,4 @@
+from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
 from lmetk.model.methods.cnn1d import CNN
 from lmetk.model.wrappers.base import (
     AbstractFeedForwardTrainingWrapper,
@@ -10,9 +11,13 @@ class TimeLLMWrapper(AbstractFeedForwardTrainingWrapper):
 
     def __init__(self, task_type: str, seq_len: int, **kwargs):
 
-        self.supported_types = ["rul", "ahrul"]
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = None
+        self.supported_types = self.regression_tasks
+
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for CNN1D_Wrapper.")
+            raise ValueError(f"Task {task_type} not supported for TimeLLMWrapper.")
 
         self.task_type = task_type
         self.seq_len = seq_len

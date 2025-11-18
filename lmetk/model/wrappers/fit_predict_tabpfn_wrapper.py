@@ -5,11 +5,14 @@ from pathlib import Path
 from typing import Literal, override
 
 import joblib
-from tabpfn import TabPFNRegressor
+import torch
+
+from tabpfn import TabPFNRegressor, TabPFNClassifier
 
 from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
 import torch
 from .base import AbstractFitPredictWrapper
+from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
     def __init__(
         self,
         device: str,
+        task_type: str,
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
@@ -30,14 +34,35 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         full_outputs_path: str = None,
         **kwargs,
     ):
+
+        # Define supported tasks based on your new categories
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for FitPredictTabPFNWrapper.")
+
+        self.task_type = task_type
+
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
-        backbone = TabPFNRegressor(
-            ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
-            random_state=kwargs["random_state"],
-            device=device,
-            n_jobs=kwargs.get("n_jobs", -1),
-            fit_mode=kwargs.get("fit_mode", "fit_preprocessors"),
-        )
+
+        if task_type in self.classification_tasks:
+            backbone = TabPFNClassifier(
+                ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
+                random_state=kwargs["random_state"],
+                device=device,
+                n_jobs=kwargs.get("n_jobs", -1),
+                fit_mode=kwargs.get("fit_mode", "fit_preprocessors"),
+            )
+        else:
+            backbone = TabPFNRegressor(
+                ignore_pretraining_limits=kwargs["ignore_pretraining_limits"],
+                random_state=kwargs["random_state"],
+                device=device,
+                n_jobs=kwargs.get("n_jobs", -1),
+                fit_mode=kwargs.get("fit_mode", "fit_preprocessors"),
+            )
 
         logger.info(f"Using TabPFN on device: {backbone.device}, kwargs: {kwargs}")
 
@@ -55,16 +80,23 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
-        """Inner predict call to be potentially overridden by subclasses."""
-        output = self.backbone.predict(X, output_type=self.output_type)
-        if self.full_outputs_path is not None:
-            output["criterion"] = output["criterion"].cpu()
-            output["logits"] = output["logits"].cpu()
-            output_file = Path(self.full_outputs_path) / "predictions.pt"
-            torch.save(output, output_file)
-            if self.output_type == "full":
-                output = output["mean"]
-        return output
+        if self.task_type in CLASSIFICATION_TASKS:
+            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+        else:
+            return torch.Tensor(self.backbone.predict(X.numpy()))
+
+    # @override
+    # def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+    #     """Inner predict call to be potentially overridden by subclasses."""
+    #     output = self.backbone.predict(X, output_type=self.output_type)
+    #     if self.full_outputs_path is not None:
+    #         output["criterion"] = output["criterion"].cpu()
+    #         output["logits"] = output["logits"].cpu()
+    #         output_file = Path(self.full_outputs_path) / "predictions.pt"
+    #         torch.save(output, output_file)
+    #         if self.output_type == "full":
+    #             output = output["mean"]
+    #     return output
 
     @override
     def serialize_model(self, task_id: str | None = None):
