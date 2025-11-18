@@ -4,13 +4,24 @@ from einops import rearrange
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
+from lmetk.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
 
 
 class BatchContextXGBoostWrapper(AbstractFeedForwardWrapper):
     """Wrapper for the XGboost model."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, task_type: str, **kwargs):
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = []
+        self.supported_types = self.regression_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for BatchContextXGBoostWrapper.")
+
+        self.task_type = task_type
+
         backbone = MultiOutputRegressor(
             GradientBoostingRegressor(random_state=42, verbose=3)
         )

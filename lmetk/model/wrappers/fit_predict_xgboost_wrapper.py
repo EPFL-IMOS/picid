@@ -1,23 +1,45 @@
 from pathlib import Path
 from typing import override
 import joblib
+import torch
 
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.multioutput import MultiOutputRegressor
+from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
+from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 
+from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from lmetk.model.wrappers.base import AbstractFitPredictWrapper
 
 
 class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
-    """Wrapper for the XGboost model."""
+    """Wrapper for the XGboost model for regression and classification."""
 
-    def __init__(self, model_cache_path: str = None, **kwargs):
-        backbone = MultiOutputRegressor(
-            GradientBoostingRegressor(random_state=42, verbose=2)
-        )
+    def __init__(self, task_type: str, model_cache_path: str = None, **kwargs):
+
+        # Define supported tasks based on your new categories
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+        self.task_type = task_type
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for FitPredictXGBoostWrapper.")
+
+        # --- Model Configuration ---
+        # 1. Determine the model's task_type and num_classes
+        if task_type in self.classification_tasks:
+            backbone= GradientBoostingClassifier(n_estimators=3, random_state=42, verbose=2)
+        else:
+            backbone = GradientBoostingRegressor(random_state=42, verbose=2)
 
         self.model_cache_path = model_cache_path
-        super().__init__(backbone=backbone, **kwargs)
+        super().__init__(backbone=backbone, task_type=task_type, **kwargs)
+
+    @override
+    def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        if self.task_type in CLASSIFICATION_TASKS:
+            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+        else:
+            return torch.Tensor(self.backbone.predict(X.numpy()))
 
     @override
     def serialize_model(self, task_id):
@@ -61,4 +83,4 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     @override
     def allows_multi_target(self) -> bool:
         """Indicates whether the model supports multi-target prediction."""
-        return True
+        return False
