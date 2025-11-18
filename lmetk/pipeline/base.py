@@ -124,6 +124,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         """
         model_outs = self._training_step(batch, batch_idx)
         model_outs = self.process_outputs(model_out=model_outs, batch=batch)
+        # Don't update evaluator due to compute error with dummy prediction
         self.log(
             "train/loss",
             model_outs["loss"].detach().cpu(),
@@ -213,7 +214,7 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
 
         This hook is used to log the train metrics.
         """
-        # Log train metrics and reset evaluator
+        # Don't log train metrics due to compute error with no predictions
 
     def on_validation_epoch_end(self) -> None:
         """Lightning hook that is called when a validation epoch ends.
