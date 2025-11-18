@@ -1,1 +1,3 @@
 _target_: lmetk.models.persistence.Persistence
+
+task_type: ${task_definition.task_type}
