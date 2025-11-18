@@ -124,7 +124,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         """
         model_outs = self._training_step(batch, batch_idx)
         model_outs = self.process_outputs(model_out=model_outs, batch=batch)
-        self.evaluators["train"].update(model_outs)
         self.log(
             "train/loss",
             model_outs["loss"].detach().cpu(),
