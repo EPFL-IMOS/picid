@@ -1,0 +1,15 @@
+# These scalers are pre-computed and do not need to be fitted on the data.
+
+clean_data:
+  transform:
+    _target_: lmetk.transforms.base_transforms.data_cleaning.FillTransform
+
+  metadata:
+    apply_to: ["features", "target"]
+
+binary_to_multiclass:
+  transform:
+    _target_: lmetk.transforms.building.label_converter.BinaryToMultiClassTransform
+
+  metadata:
+    apply_to: ["timestamps", "target"]
