@@ -1,0 +1,14 @@
+_target_: lmetk.data.datasources.phmd_hsf15.HSF15Loader
+fold: 0
+data_name: HSF15
+
+# Propeller Thrust decay state coefficient (Kkt) ptdsc_port
+# Propeller Torque decay state coefficient (Kkq) ptdsc_stbd
+# Hull decay state coefficient (Khull) hdsc
+# GT Compressor decay state coefficient (KMcompr) gcdsc
+# GT Turbine decay state coefficient (KMturb) gtdsc
+
+task_mode: cooler # cooler,valve,pump,accumulator
+auxiliary_tasks: [] # When we want to have fault as main task, we can use rul as auxiliary task
+cache_dir: ${paths.data_dir}/phmd_cache
+num_classes: 3
