@@ -65,6 +65,17 @@ class FitPredictTaskDataset(BaseDataset):
             required_keys = ["features", "target"]  # "time_features", "target"
             context_key = "features"
             target_key = "target"
+
+        elif task_type in ["health_state"]:
+            required_keys = ["features", "health_states"]
+            context_key = "features"
+            target_key = "health_states"
+
+        elif task_type in ["classification"]:
+            required_keys = ["features", "target"]
+            context_key = "features"
+            target_key = "target"
+
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
 
@@ -129,6 +140,9 @@ class FitPredictTaskDataset(BaseDataset):
             else:
                 return input_data
 
+        # y[0][:, 0:10, :] = 10  # only for debugging purposes TODO Delete
+        # y[:, 0:5, :] = 10
+        # y[:, 10:20, :] = 1
         self.X = handle_multi_units(X, "X")
         self.y = handle_multi_units(y, "y")
         self.meta_data_dict = meta_data_dict
