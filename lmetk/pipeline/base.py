@@ -214,9 +214,6 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         This hook is used to log the train metrics.
         """
         # Log train metrics and reset evaluator
-        self.log_epoch_metrics(
-            mode="train", step=self.global_step, epoch=self.current_epoch
-        )
 
     def on_validation_epoch_end(self) -> None:
         """Lightning hook that is called when a validation epoch ends.
