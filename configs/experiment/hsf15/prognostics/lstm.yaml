@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - hsf15/prognostics/base
-  - /model_configs/diagnostics/lstm
-  - override /transforms: hsf15/default
