@@ -6,7 +6,7 @@ import torch
 from lmetk.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
-    REGRESSION_TASKS,
+    REGRESSION_TASKS, FORECASTING_TASKS,
 )
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
@@ -43,6 +43,11 @@ class Forecaster(CustomEvaluatorLightningModule):
         self.task_type = task_type
         self.classification_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
+        # Define supported tasks based on your new categories
+        self.supported_types = ALL_TASKS
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for Forecaster.")
         assert task_type in ALL_TASKS, f"Unrecognized task type: {task_type}"
 
         if linear_window:
@@ -303,9 +308,9 @@ class Forecaster(CustomEvaluatorLightningModule):
         return {
             "loss": loss.mean(),
             # This is needed because evaluator works over the numpy arrays
-            "predictions": outputs.squeeze(2),
+            "predictions": outputs,
             "mask": mask,
-            "targets": y_t.squeeze(2),
+            "targets": y_t,
         }
 
     def _map_batch_to_task(self, batch):
