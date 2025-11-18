@@ -19,6 +19,8 @@ from lmetk.transforms.base.multisource import InverseTransformMixin
 from .base import AbstractEvaluator
 import matplotlib
 
+from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,10 +48,9 @@ class DefaultEvaluator(AbstractEvaluator):
         )
 
         self.task_type = task_type.lower()
-        assert self.task_type in [
-            "regression",
-            "classification",
-        ], f"Unsupported task_type: {task_type}"
+        assert CLASSIFICATION_TASKS, f"Unsupported task_type: {task_type}"
+        assert REGRESSION_TASKS, f"Unsupported task_type: {task_type}"
+        assert FORECASTING_TASKS, f"Unsupported task_type: {task_type}"
 
         self.metrics = {}
         self.paths = paths
@@ -57,13 +58,14 @@ class DefaultEvaluator(AbstractEvaluator):
         self.out_path = None
         self.remote_logger = remote_logger
         self.collect_predictions = save_predictions or collect_predictions
+        self.num_classes = num_classes
 
         if self.collect_predictions:
             self.preds, self.targets = [], []
             self.scaled_preds, self.scaled_targets = [], []
 
         for name in metric_names:
-            if self.task_type == "classification":
+            if self.task_type in CLASSIFICATION_TASKS:
                 metric = MetricFactory.create_classification_metric(
                     name, num_classes=num_classes
                 )
@@ -86,23 +88,40 @@ class DefaultEvaluator(AbstractEvaluator):
     def update(self, model_out: dict):
         """
         Update metrics with new predictions and targets.
-        Regression: (N, T, D)
+        Regression: preds (N, T=1, 1), targets (N, T=1, 1)
         Classification: preds (N, T, C), targets (N, T, 1)
+        Forecasting: preds (N, T, 1), targets (N, T, 1)
+        Note: At the moment, only single-target tasks are supported!
         """
         predictions = model_out["predictions"]
         targets = model_out["targets"]
 
-        if self.task_type == "classification":
+        assert targets.ndim == 3 or targets.shape[2] == 1, f"Expected shape (N, T, 1), got {targets.shape}"
+
+        if self.task_type in CLASSIFICATION_TASKS:
+            assert self.scaling_wrapper.inverse_transform is None, "Scaling must be None for classification"
+            assert predictions.ndim == 3, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+            assert predictions.shape[2] == self.num_classes, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
             targets = targets.astype(int)  # ensure integer labels
+
+        elif self.task_type in REGRESSION_TASKS:
+            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
+
+        elif self.task_type in FORECASTING_TASKS:
+            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
+
+        else:
+            raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
 
         if self.collect_predictions:
             self.preds.append(predictions)
             self.targets.append(targets)
-
-        # Apply inverse scaling if needed (rare for classification)
-        predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
-            predictions, targets
-        )
 
         if self.collect_predictions and self.scaling_wrapper.apply_inverse:
             self.scaled_preds.append(predictions)
@@ -133,6 +152,9 @@ class DefaultEvaluator(AbstractEvaluator):
             preds = np.concatenate(self.preds, axis=0)
             targets = np.concatenate(self.targets, axis=0)
             d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
+            if self.task_type in CLASSIFICATION_TASKS and preds.shape[-1] > 1:
+                preds = np.argmax(preds, axis=-1, keepdims=True)
 
             dict_to_save.update(
                 {"preds": (d_names, preds), "targets": (d_names, targets)}
