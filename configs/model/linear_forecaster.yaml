@@ -1,4 +1,5 @@
 _target_: lmetk.baselines.linear_model.linear_model.Linear_Forecaster
+task_type: ${task_definition.task_type}
 
 metadata:
   lightning_model: true
