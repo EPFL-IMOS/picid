@@ -6,6 +6,7 @@ REGRESSION_TASKS = ["regression", "rul", "ahrul", "soc"]  # regression from x_t 
 CLASSIFICATION_TASKS = [
     "classification",
     "health_state",
+    "fault_classification",
 ]  # binary/multi-class classification x_t -> y_t
 FORECASTING_TASKS = ["forecasting"]  # contextual forecasting x_c, y_c, x_t -> y_t
 STATE_FORECASTING_TASKS = ["state_forecasting"]  # non-contextual forecasting y_c -> y_t
