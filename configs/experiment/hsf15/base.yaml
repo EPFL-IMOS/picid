@@ -7,10 +7,9 @@ defaults:
 evaluator:
   train:
     apply_inverse_scaling: false
-    save_predictions: false
   val:
     apply_inverse_scaling: false
-    save_predictions: false
+    save_predictions: true
   test:
     apply_inverse_scaling: false
-    save_predictions: false
+    save_predictions: true

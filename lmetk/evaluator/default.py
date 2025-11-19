@@ -117,27 +117,34 @@ class DefaultEvaluator(AbstractEvaluator):
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
 
-    @override
-    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+    def _prepare_predictions_for_save(self) -> Dict[str, Any]:
         """
-        Compute final metric values.
+        Concatenates stored predictions/targets and prepares the dictionary
+        for saving using xarray.Dataset. Subclasses should override this
+        for task-specific formatting (e.g., classification logits).
 
         Returns
         -------
-        Dict[str, float]
-            Dictionary with metric names as keys and computed values as values
+        Dict[str, Any]
+            Dictionary ready for xr.Dataset creation, or empty dict if not saving.
         """
         dict_to_save = {}
 
-        if self.save_predictions:
-            preds = np.concatenate(self.preds, axis=0)
-            targets = np.concatenate(self.targets, axis=0)
-            d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+        if not self.save_predictions or not self.collect_predictions:
+            return dict_to_save
 
-            dict_to_save.update(
-                {"preds": (d_names, preds), "targets": (d_names, targets)}
-            )
-        elif self.save_predictions and self.scaling_wrapper.apply_inverse:
+        preds = np.concatenate(self.preds, axis=0)
+        targets = np.concatenate(self.targets, axis=0)
+
+        # Determine dimension names for xarray
+        # Example: ['sample', 'dim1', 'dim2']
+        d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
+        # 1. Save normalized predictions
+        dict_to_save.update({"preds": (d_names, preds), "targets": (d_names, targets)})
+
+        # 2. Save denormalized predictions, if applicable
+        if self.scaling_wrapper.apply_inverse:
             dict_to_save.update(
                 {
                     "preds_denormalized": (
@@ -151,6 +158,17 @@ class DefaultEvaluator(AbstractEvaluator):
                 }
             )
 
+        return dict_to_save
+
+    def _save_predictions_to_file(self, dict_to_save: Dict[str, Any], mode: str):
+        """
+        Handles path setup and saves the prepared prediction data dictionary
+        to a netCDF file.
+        """
+        if not dict_to_save:
+            return
+
+        # Check and set output path if necessary
         if self.out_path is None:
             if self.paths and getattr(self.paths, "eval_details", None):
                 self.out_path = Path(self.paths.eval_details) / mode
@@ -159,15 +177,97 @@ class DefaultEvaluator(AbstractEvaluator):
                 self.out_path is not None
             ), "Output path must be specified to save predictions."
 
-        if len(dict_to_save) > 0:
+        # Perform the saving action
+        try:
             df = xr.Dataset(dict_to_save)
             df.to_netcdf(self.out_path / "predictions.nc")
+            logger.info(f"Predictions saved to {self.out_path / 'predictions.nc'}")
+        except Exception as e:
+            logger.error(
+                f"Failed to save predictions to netCDF at {self.out_path}: {e}"
+            )
+            # Optionally re-raise or handle gracefully
 
+    def _compute_metrics(self) -> Dict[str, float]:
+        """
+        Computes all collected metrics. Subclasses can override to add
+        post-computation logging or analysis.
+
+        Returns
+        -------
+        Dict[str, float]
+            Dictionary with metric names and computed values.
+        """
         results = {}
         for name, metric in self.metrics.items():
             results[name] = metric.compute()
-
         return results
+
+    @override
+    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+        """
+        Orchestrates the computation, saving, and reporting steps.
+        """
+        # 1. Prepare Data for Saving (Calls overridable method)
+        dict_to_save = self._prepare_predictions_for_save()
+
+        # 2. Handle Output Path and Saving (Isolated logic)
+        self._save_predictions_to_file(dict_to_save, mode)
+
+        # 3. Compute and Return Metrics (Isolated logic)
+        return self._compute_metrics()
+
+    # @override
+    # def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+    #     """
+    #     Compute final metric values.
+
+    #     Returns
+    #     -------
+    #     Dict[str, float]
+    #         Dictionary with metric names as keys and computed values as values
+    #     """
+    #     dict_to_save = {}
+
+    #     if self.save_predictions:
+    #         preds = np.concatenate(self.preds, axis=0)
+    #         targets = np.concatenate(self.targets, axis=0)
+    #         d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
+    #         dict_to_save.update(
+    #             {"preds": (d_names, preds), "targets": (d_names, targets)}
+    #         )
+    #     elif self.save_predictions and self.scaling_wrapper.apply_inverse:
+    #         dict_to_save.update(
+    #             {
+    #                 "preds_denormalized": (
+    #                     d_names,
+    #                     np.concatenate(self.scaled_preds, axis=0),
+    #                 ),
+    #                 "targets_denormalized": (
+    #                     d_names,
+    #                     np.concatenate(self.scaled_targets, axis=0),
+    #                 ),
+    #             }
+    #         )
+
+    #     if self.out_path is None:
+    #         if self.paths and getattr(self.paths, "eval_details", None):
+    #             self.out_path = Path(self.paths.eval_details) / mode
+    #             self.out_path.mkdir(parents=True, exist_ok=True)
+    #         assert (
+    #             self.out_path is not None
+    #         ), "Output path must be specified to save predictions."
+
+    #     if len(dict_to_save) > 0:
+    #         df = xr.Dataset(dict_to_save)
+    #         df.to_netcdf(self.out_path / "predictions.nc")
+
+    #     results = {}
+    #     for name, metric in self.metrics.items():
+    #         results[name] = metric.compute()
+
+    #     return results
 
 
 class ClassificationEvaluator(DefaultEvaluator):
@@ -205,6 +305,50 @@ class ClassificationEvaluator(DefaultEvaluator):
             paths=paths,
             **kwargs,
         )
+
+    @override
+    def _prepare_predictions_for_save(self) -> Dict[str, Any]:
+        """
+        Custom saving logic for classification: saves logits as predictions
+        and ensures targets are properly formatted (B, T, C).
+        """
+        dict_to_save = {}
+
+        if not self.save_predictions or not self.collect_predictions:
+            return dict_to_save
+
+        # Predictions are logits (B, T, L)
+        preds = np.concatenate(self.preds, axis=0)
+
+        # Targets are integer labels (B, T, 1) and must be converted to one-hot (B, T, C)
+        # Note: Targets are integer labels (B, T, 1) when collected in update(), but here
+        # we treat them as needing to match the pred dimension for consistency (B,T,L)
+
+        # Assuming targets are already (B, T, C) or (B, T, 1) and we need to match pred dims
+        targets = np.concatenate(self.targets, axis=0)
+
+        # Check if targets are 1D/2D and need an extra class dimension (C) for logging,
+        # although usually classification targets are saved as integers.
+        # Given your note: "preds are logits with dims (B,T,L) where L is logits
+        # and (B,T,C) for targets where C is classes," we'll assume the targets
+        # list contains the final, 3D target shape (B, T, C) or (B, T, L) for safety.
+
+        # Determine dimension names for xarray
+        # Use the dimensions of the predictions (logits)
+        d_names = ["sample"] + ["time"] + ["class_logits"]
+
+        # Save Logits
+        dict_to_save.update({"preds_logits": (d_names, preds)})
+
+        # Determine target dimension names (assuming they match prediction dimensions L=C for save)
+        t_names = ["sample"] + ["class_labels"]
+
+        # Save Targets (as collected, usually integer labels)
+        dict_to_save.update({"targets_labels": (t_names, targets)})
+
+        # Skip denormalized saving as scaling is usually not applied to logits/integer labels
+
+        return dict_to_save
 
 
 class ForecastingEvaluator(DefaultEvaluator):

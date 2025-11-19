@@ -2,7 +2,7 @@
 
 defaults:
   - hsf15/base
-    - hsf15/accumulator/base
+  - hsf15/accumulator/base
   - /model_configs/diagnostics/lstm
   - override /transforms: hsf15/default
 
