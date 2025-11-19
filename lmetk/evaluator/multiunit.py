@@ -8,12 +8,11 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib
 
+# Assuming these imports are correct for your project structure:
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.base import AbstractMetric
-
-# Import the DefaultEvaluator (assuming it's in a sibling file)
-from lmetk.evaluator.default import DefaultEvaluator
+from lmetk.evaluator.default import DefaultEvaluator  # Assumed base class
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +20,9 @@ logger = logging.getLogger(__name__)
 class MultiUnitEvaluator(DefaultEvaluator):
     """
     Evaluator that handles per-unit metrics, inverse scaling, and prediction saving.
-    It inherits core orchestration logic (saving files, logging plots) from DefaultEvaluator
-    and specializes the data handling for multi-unit scenarios.
+    It inherits core orchestration logic from DefaultEvaluator and uses dual metric
+    storage to report both normalized and denormalized results without modifying
+    the base metric classes.
     """
 
     def __init__(
@@ -39,9 +39,10 @@ class MultiUnitEvaluator(DefaultEvaluator):
         enable_plot_subsampling: bool = True,
         plot_subsample_threshold: int = 2000,
         plot_subsample_factor: int = 10,
+        log_per_unit_metrics: bool = True,
         **kwargs,
     ):
-        # 1. Initialize Base (Handles metrics, collections, paths, basic flags)
+        # 1. Initialize Base
         super().__init__(
             metric_names=metric_names,
             inverse_transform=inverse_transform,
@@ -60,12 +61,21 @@ class MultiUnitEvaluator(DefaultEvaluator):
         self.plot_subsample_threshold = plot_subsample_threshold
         self.plot_subsample_factor = plot_subsample_factor
 
-        # 3. Extra Collections (DefaultEvaluator only handles preds/targets)
+        # 🎯 Store the new parameter
+        self.log_per_unit_metrics = log_per_unit_metrics
+
+        # 3. Extra Collections (Base only handles preds/targets/scaled_preds/scaled_targets)
         if self.collect_predictions:
             self.unit_ids = []
 
         # 4. Per-Unit Metric Storage
+        # Primary storage (stores Denormalized if applied_inverse_scaling=True)
         self.unit_metrics = defaultdict(self._create_metric_dict)
+
+        # Secondary storage for the other set of results (stores Normalized if applied_inverse_scaling=True)
+        if self.scaling_wrapper.apply_inverse:
+            self.normalized_unit_metrics = defaultdict(self._create_metric_dict)
+
         self.reset()
 
     def _create_metric_dict(self) -> Dict[str, AbstractMetric]:
@@ -78,33 +88,42 @@ class MultiUnitEvaluator(DefaultEvaluator):
     @override
     def reset(self):
         """Reset base collections and multi-unit specific collections."""
-        super().reset()  # Resets preds, targets, metrics (from DefaultEvaluator)
+        super().reset()
         if self.collect_predictions:
             self.unit_ids = []
         self.unit_metrics.clear()
+        if hasattr(self, "normalized_unit_metrics"):
+            self.normalized_unit_metrics.clear()
 
     @override
     def update(self, model_out: dict):
         """
-        Update metrics with new predictions, handling unit splitting, scaling, and per-unit metric update.
+        Update metrics with new predictions, handling unit splitting, scaling, and DUAL metric update.
         """
         predictions = model_out["predictions"]
         targets = model_out["targets"]
         unit_ids = model_out["unit_id"]
 
-        # Collect original data and unit IDs
+        is_denormalized_run = self.scaling_wrapper.apply_inverse
+
+        # Data BEFORE inverse scaling (normalized data) - Must copy before modification
+        if is_denormalized_run:
+            normalized_predictions = predictions.copy()
+            normalized_targets = targets.copy()
+
+        # Collect original data and unit IDs (Base logic uses predictions/targets here)
         if self.collect_predictions:
             self.preds.append(predictions)
             self.targets.append(targets)
             self.unit_ids.append(unit_ids)
 
-        # Apply inverse scaling (MultiUnit specific logic)
+        # Apply inverse scaling (MODIFIES predictions/targets in place)
         predictions, targets = self._inverse_transform_per_unit(
             predictions, targets, unit_ids
         )
 
-        # Collect scaled data if inverse scaling was applied
-        if self.collect_predictions and self.scaling_wrapper.apply_inverse:
+        # Collect scaled data (if inverse scaling was applied)
+        if self.collect_predictions and is_denormalized_run:
             self.scaled_preds.append(predictions)
             self.scaled_targets.append(targets)
 
@@ -124,19 +143,26 @@ class MultiUnitEvaluator(DefaultEvaluator):
             )
 
         for unit in unique_units:
-            # Use safer type check for numpy integers
             if isinstance(unit, (int, np.integer)):
                 key = int(unit)
             else:
                 key = get_key(unit)
             indices = get_indices(unit)
 
-            unit_predictions = predictions[indices]
-            unit_targets = targets[indices]
+            unit_predictions_denorm = predictions[indices]
+            unit_targets_denorm = targets[indices]
 
-            # Update specific unit metrics
+            # A. Update PRIMARY Metrics (Now store DENORMALIZED results)
             for metric in self.unit_metrics[key].values():
-                metric.update(unit_predictions, unit_targets)
+                metric.update(unit_predictions_denorm, unit_targets_denorm)
+
+            # B. Update SECONDARY Metrics (Only if dual reporting is needed)
+            if is_denormalized_run:
+                unit_predictions_norm = normalized_predictions[indices]
+                unit_targets_norm = normalized_targets[indices]
+
+                for metric in self.normalized_unit_metrics[key].values():
+                    metric.update(unit_predictions_norm, unit_targets_norm)
 
     # -------------------------------------------------------------------------
     # 🎯 OVERRIDDEN ARCHITECTURAL METHODS
@@ -144,9 +170,7 @@ class MultiUnitEvaluator(DefaultEvaluator):
 
     @override
     def _prepare_predictions_for_save(self) -> Dict[str, Any]:
-        """
-        Extends base saving logic to include unit_ids.
-        """
+        """Extends base saving logic to include unit_ids."""
         # 1. Get standard preds/targets from parent
         dict_to_save = super()._prepare_predictions_for_save()
 
@@ -170,22 +194,50 @@ class MultiUnitEvaluator(DefaultEvaluator):
     @override
     def _compute_metrics(self) -> Dict[str, float]:
         """
-        Aggregates per-unit metrics into a global mean/std.
+        Computes all collected metrics, returning individual per-unit results (if
+        log_per_unit_metrics is True) and the global aggregated mean.
         """
         flat_results = {}
         average_collector = defaultdict(list)
 
+        is_denormalized_run = self.scaling_wrapper.apply_inverse
+
         if not self.unit_metrics:
+            # Fallback for empty metrics
             return {f"{name}_mean": 0.0 for name in self.metric_names}
 
+        # --- 1. Compute and Collect Denormalized Results (Primary Metric Set) ---
         for unit_id, metrics in self.unit_metrics.items():
             for name, metric in metrics.items():
-                value = metric.compute()
-                flat_results[f"{name}_{unit_id}"] = value
-                average_collector[name].append(value)
 
-        for name, values in average_collector.items():
-            flat_results[f"{name}_mean"] = np.mean(values)
+                denorm_value = metric.compute()
+
+                # A. Conditionally Log Per-Unit Result (Denormalized)
+                if self.log_per_unit_metrics:
+                    per_unit_key = f"{name}_{unit_id}_denormalized"
+                    flat_results[per_unit_key] = denorm_value
+
+                # B. Collect for Mean Aggregation
+                average_collector[f"{name}_denormalized"].append(denorm_value)
+
+        # --- 2. Compute and Collect Normalized Results (Secondary Metric Set) ---
+        if is_denormalized_run:
+            for unit_id, metrics in self.normalized_unit_metrics.items():
+                for name, metric in metrics.items():
+                    normalized_value = metric.compute()
+
+                    # C. Conditionally Log Per-Unit Result (Normalized)
+                    if self.log_per_unit_metrics:
+                        per_unit_key = f"{name}_{unit_id}_normalized"
+                        flat_results[per_unit_key] = normalized_value
+
+                    # D. Collect for Mean Aggregation
+                    average_collector[f"{name}_normalized"].append(normalized_value)
+
+        # --- 3. Calculate Final Aggregated Means ---
+        for name_or_key, values in average_collector.items():
+            # Final key examples: 'mse_denormalized_mean', 'mse_normalized_mean'
+            flat_results[f"{name_or_key}_mean"] = np.mean(values)
 
         return flat_results
 
@@ -193,19 +245,14 @@ class MultiUnitEvaluator(DefaultEvaluator):
     def compute(
         self, mode: str = "val", epoch: int = 0, step: int = 0
     ) -> Dict[str, float]:
-        """
-        Orchestrates plotting, saving, and metric computation.
-        """
+        """Orchestrates plotting, saving, and metric computation."""
 
-        # 1. MultiUnit Plotting Logic
         if self.log_fit_vs_target_curves:
-            # Note: Logic adjusted to use self._log_pred_vs_target_curves
             if mode != "train" or (
                 mode == "val" and epoch % self.log_image_every_n_epochs == 0
             ):
                 self._log_pred_vs_target_curves(mode, step)
 
-        # 2. Delegate to Parent for Saving + Metric Computation
         return super().compute(mode, epoch, step)
 
     # -------------------------------------------------------------------------
@@ -225,7 +272,7 @@ class MultiUnitEvaluator(DefaultEvaluator):
         if unit_ids.ndim == 1:
             unique_units = np.unique(unit_ids)
             get_indices = lambda unit: np.where(unit_ids == unit)[0]
-        else:  # unit_ids.ndim == 2
+        else:
             unique_units = np.unique(unit_ids, axis=0)
             get_indices = lambda unit: np.where((unit_ids == unit).all(axis=1))[0]
 
@@ -325,7 +372,6 @@ class MultiUnitEvaluator(DefaultEvaluator):
             ax.legend()
             ax.grid(True)
 
-            # FIX: Calling inherited public method 'log_plot'
             self.log_plot(
                 fig=fig,
                 title=f"pred_vs_target_unit_{unit_title}",
