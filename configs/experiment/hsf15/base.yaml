@@ -1,0 +1,16 @@
+#@package _global_
+
+defaults:
+  - override /evaluator: classification
+  - override /task_definition: diagnostics/hsf15
+
+evaluator:
+  train:
+    apply_inverse_scaling: false
+    save_predictions: false
+  val:
+    apply_inverse_scaling: false
+    save_predictions: false
+  test:
+    apply_inverse_scaling: false
+    save_predictions: false

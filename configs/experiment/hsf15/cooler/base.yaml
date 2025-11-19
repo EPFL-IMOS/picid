@@ -1,14 +1,3 @@
 #@package _global_
-
 defaults:
   - override /datasource: hsf15_cooler
-  - override /evaluator: classification
-  - override /task_definition: diagnostics/hsf15
-
-evaluator:
-  train:
-    apply_inverse_scaling: false
-  val:
-    apply_inverse_scaling: false
-  test:
-    apply_inverse_scaling: false

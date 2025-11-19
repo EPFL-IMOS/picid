@@ -1,0 +1,8 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/accumulator/base
+  - /model_configs/diagnostics/timeseries_transformer
+
+  - override /transforms: hsf15/default

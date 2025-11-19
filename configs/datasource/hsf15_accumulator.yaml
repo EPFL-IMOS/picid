@@ -8,7 +8,7 @@ data_name: HSF15
 # GT Compressor decay state coefficient (KMcompr) gcdsc
 # GT Turbine decay state coefficient (KMturb) gtdsc
 
-task_mode: cooler # cooler,valve,pump,accumulator
+task_mode: accumulator # cooler,valve,pump,accumulator
 auxiliary_tasks: [] # When we want to have fault as main task, we can use rul as auxiliary task
 cache_dir: ${paths.data_dir}/phmd_cache
 num_classes: 4 # Number of fault classes for accumulator
