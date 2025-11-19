@@ -13,4 +13,4 @@ model:
   data_requirements:
     input_tensors:
       - features
-      - target
+      - ${task_definition.task_type}
