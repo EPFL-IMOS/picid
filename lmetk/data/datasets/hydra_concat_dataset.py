@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
     """
+
+
+
+
     Initializes datasets based on the provided configuration and data using hydra's `instantiate` function.
 
     This function takes a dataset configuration, a dictionary of data, and a dictionary
@@ -89,6 +93,51 @@ def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
 
 
 class HydraConcatDataset(BaseVectorizedConcatDataset):
+    """
+    The Root Container: Orchestrates the Data Loading Hierarchy.
+
+    This class wraps PyTorch's `ConcatDataset` but handles the complex initialization
+    logic required for multi-unit time-series data. It takes a dictionary of *Lists of Arrays*
+    and converts them into a single, indexable dataset of sliding windows.
+
+    The Data Hierarchy:
+    -------------------
+    1.  **HydraConcatDataset (Root)**:
+        -   **Input**: `data_dict` containing Lists of Arrays (e.g., 100 engines).
+        -   **Role**: Iterates over the list of units and instantiates a child dataset for each.
+        -   **Output**: A concatenated view of all windows across all units.
+
+    2.  **Child Dataset (e.g., RULContextBatchDataset / ContextBatchDataset)**:
+        -   **Input**: A single unit's arrays (e.g., Engine 1's features & targets).
+        -   **Role**: Synchronizes different modalities. It ensures that if we grab
+            window `k`, we get the 'features' window and the 'target' window for the
+            same time steps.
+        -   **Mechanism**: Instantiates a `SlidingWindowBatchDataset` for context and another for targets.
+
+    3.  **SlidingWindowBatchDataset (Leaf Dataset)**:
+        -   **Input**: A single array for a single modality.
+        -   **Role**: Handles the mechanics of slicing (seq_len, stride).
+        -   **Mechanism**: Wraps the `Sequencer`.
+
+    4.  **Sequencer (e.g., RaggedArraySequencer)**:
+        -   **Input**: The raw array (Awkward or Numpy).
+        -   **Role**: Pre-computes valid start indices for every possible window.
+
+    Usage:
+    ------
+    This class is typically instantiated by Hydra in `run.py`. It allows you to
+    define your specific dataset logic (e.g., RUL vs Forecasting) in the `dataset_cfg`,
+    while `HydraConcatDataset` handles the boilerplate of applying that logic to
+    every unit in your dataset.
+
+    Args:
+        dataset_cfg (DictConfig): Hydra config describing the Child Dataset to instantiate
+            for each unit.
+        data_dict (dict[str, list[ndarray]]): The input data. Keys are modalities
+            (e.g., 'features'). Values are LISTS of arrays (one per unit).
+        meta_data_dict (dict): Metadata shared across all units (e.g., scalers, split info).
+    """
+
     def __init__(
         self,
         dataset_cfg,
@@ -131,6 +180,11 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
 
 
 class NonVectorizedHydraConcatDataset(ConcatDataset):
+    """
+    Deprecated: Use HydraConcatDataset instead.
+    Retained for backward compatibility during migration.
+    """
+
     def __init__(
         self,
         dataset_cfg,
