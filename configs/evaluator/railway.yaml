@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.default.ForecastingEvaluator
+  _target_: lmetk.evaluator.forecasting.ForecastingEvaluator
   metric_names: ["mae", "mse", "mae_railway", "mse_railway"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
 
   apply_inverse_scaling: True

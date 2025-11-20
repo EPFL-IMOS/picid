@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.default.ClassificationEvaluator
+  _target_: lmetk.evaluator.classification.ClassificationEvaluator
 
   metric_names: ["f1", "accuracy", "precision", "recall"]
 

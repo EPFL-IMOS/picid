@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.default.ReconstructionEvaluator
+  _target_: lmetk.evaluator.reconstruction.ReconstructionEvaluator
   metric_names: ["mae", "mse", "rmse"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
 
   apply_inverse_scaling: False
