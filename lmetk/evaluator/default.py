@@ -407,10 +407,15 @@ class DefaultEvaluator(AbstractEvaluator):
             # Now, remove the task-irrelevant suffixes:
             if key.endswith("_normalized"):
                 base_key = key.removesuffix("_normalized")
+<<<<<<< HEAD
             elif key.endswith("_denormalized"):
                 base_key = key.removesuffix("_denormalized")
             else:
                 raise ValueError(f"Unexpected metric key format: {key}")
+=======
+            if key.endswith("_denormalized"):
+                base_key = key.removesuffix("_denormalized")
+>>>>>>> 5770092 (Correct error from merge)
 
 #             # Final key is just the base name (e.g., 'accuracy')
 #             # If a base metric appears twice (e.g., normalized and denormalized),
