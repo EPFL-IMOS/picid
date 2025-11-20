@@ -1,6 +1,6 @@
 # Cache data or not
-use_cache_after_loading: True
-use_cache_after_transfroms: True
+use_cache_after_loading: True #True
+use_cache_after_transfroms: True #True
 
 # This file lock is ment to prevent multiple preprocessing processes to run at the same time.
 # This can happen if a shell script is used to start multiple training processes in parallel,

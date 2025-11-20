@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/accumulator/base
+  - /model_configs/diagnostics/patchtst
+
+  # - override /dataset: diagnostics/rul_multiunit_dataset
+  - override /transforms: hsf15/default

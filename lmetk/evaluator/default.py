@@ -1,23 +1,17 @@
-"""
-Transformer-specific evaluator implementation for time series forecasting.
-
-This module provides an evaluator class that inherits from AbstractEvaluator
-and implements evaluation logic for transformer-based forecasting models.
-"""
-
 import logging
-from pathlib import Path
 from typing import Any, Dict, List, Optional, override
+from pathlib import Path
+from collections import defaultdict
 
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
+# Assuming these imports are correct for your project structure:
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
-
-from .base import AbstractEvaluator
-import matplotlib
+from lmetk.metrics.base import AbstractMetric
+from .base import AbstractEvaluator  # Assuming AbstractEvaluator is in .base
 
 from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS
 
@@ -25,12 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 class DefaultEvaluator(AbstractEvaluator):
-    """Unified evaluator for regression and classification."""
+    """Unified evaluator for regression and classification with dual metric reporting."""
 
     def __init__(
         self,
         metric_names: List[str],
-        task_type: str = "regression",  # "regression" or "classification"
+        task_type: str = "regression",
         num_classes: Optional[int] = None,
         inverse_transform: Optional[InverseTransformMixin] = None,
         apply_inverse_scaling: bool = False,
@@ -52,27 +46,37 @@ class DefaultEvaluator(AbstractEvaluator):
         assert REGRESSION_TASKS, f"Unsupported task_type: {task_type}"
         assert FORECASTING_TASKS, f"Unsupported task_type: {task_type}"
 
-        self.metrics = {}
+        self.metrics = {}  # Primary metrics (will store DENORMALIZED if scaling is ON)
         self.paths = paths
         self.save_predictions = save_predictions
         self.out_path = None
         self.remote_logger = remote_logger
         self.collect_predictions = save_predictions or collect_predictions
+        self.metric_names = [name.lower() for name in metric_names]
         self.num_classes = num_classes
 
         if self.collect_predictions:
             self.preds, self.targets = [], []
             self.scaled_preds, self.scaled_targets = [], []
 
-        for name in metric_names:
+        # Helper to create metrics
+        def _create_metric(name):
             if self.task_type in CLASSIFICATION_TASKS:
-                metric = MetricFactory.create_classification_metric(
+                return MetricFactory.create_classification_metric(
                     name, num_classes=num_classes
                 )
             else:
-                metric = MetricFactory.create_metric(name, paths=paths)
-            self.metrics[name.lower()] = metric
-        self.metric_names = [name.lower() for name in metric_names]
+                return MetricFactory.create_metric(name, paths=paths)
+
+        # Initialize Primary Metrics
+        for name in self.metric_names:
+            self.metrics[name] = _create_metric(name)
+
+        # Initialize Secondary Metrics (Only if dual reporting is needed)
+        if self.scaling_wrapper.apply_inverse:
+            self.normalized_metrics = {}
+            for name in self.metric_names:
+                self.normalized_metrics[name] = _create_metric(name)
 
     @override
     def reset(self):
@@ -81,13 +85,21 @@ class DefaultEvaluator(AbstractEvaluator):
             self.targets.clear()
             self.scaled_preds.clear()
             self.scaled_targets.clear()
+
+        # Reset Primary Metrics
         for metric in self.metrics.values():
             metric.reset()
+
+        # Reset Secondary Metrics
+        if hasattr(self, "normalized_metrics"):
+            for metric in self.normalized_metrics.values():
+                metric.reset()
 
     @override
     def update(self, model_out: dict):
         """
-        Update metrics with new predictions and targets.
+        Update metrics, performing dual metric updates for normalized and
+        denormalized data when scaling is active.
         Regression: preds (N, T=1, 1), targets (N, T=1, 1)
         Classification: preds (N, T, C), targets (N, T, 1)
         Forecasting: preds (N, T, 1), targets (N, T, 1)
@@ -97,6 +109,7 @@ class DefaultEvaluator(AbstractEvaluator):
         targets = model_out["targets"]
 
         assert targets.ndim == 3 or targets.shape[2] == 1, f"Expected shape (N, T, 1), got {targets.shape}"
+        is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         if self.task_type in CLASSIFICATION_TASKS:
             assert self.scaling_wrapper.inverse_transform is None, "Scaling must be None for classification"
@@ -119,59 +132,106 @@ class DefaultEvaluator(AbstractEvaluator):
         else:
             raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
 
-        if self.collect_predictions:
+        # 1. Store Normalized Data (BEFORE inverse transform)
+        if is_denormalized_run:
+            # We need a copy of the normalized data for the secondary metric set
+            normalized_predictions = predictions.copy()
+            normalized_targets = targets.copy()
+
+            # Store original data for file saving later (self.preds/self.targets holds normalized)
+            if self.collect_predictions:
+                self.preds.append(predictions.copy())
+                self.targets.append(targets.copy())
+
+        elif self.collect_predictions:
+            # Store original data for file saving when scaling is OFF
             self.preds.append(predictions)
             self.targets.append(targets)
 
-        if self.collect_predictions and self.scaling_wrapper.apply_inverse:
+        # 2. Apply inverse scaling (MODIFIES predictions/targets)
+        predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+            predictions, targets
+        )
+
+        # 3. Store Denormalized Data
+        if self.collect_predictions and is_denormalized_run:
             self.scaled_preds.append(predictions)
             self.scaled_targets.append(targets)
 
-        # Update metrics
+        # 4. Metric Update (DUAL UPDATE LOGIC)
+
+        # 4a. Update PRIMARY Metrics (Will store DENORMALIZED results)
         for metric in self.metrics.values():
             metric.update(predictions, targets)
 
-    # TODO: I think this fucntion can be moved to the base evaluator class, it is also used in the MultiUnitEvaluator.
+        # 4b. Update SECONDARY Metrics (Will store NORMALIZED results)
+        if is_denormalized_run:
+            for metric in self.normalized_metrics.values():
+                metric.update(normalized_predictions, normalized_targets)
+
+    # FIX: Corrected indentation to class level
     def log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
 
-    @override
-    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+    def _prepare_predictions_for_save(self) -> Dict[str, Any]:
         """
-        Compute final metric values.
-
-        Returns
-        -------
-        Dict[str, float]
-            Dictionary with metric names as keys and computed values as values
+        Concatenates stored predictions/targets and prepares the dictionary
+        for saving using xarray.Dataset.
         """
         dict_to_save = {}
 
-        if self.save_predictions:
+        if not self.save_predictions or not self.collect_predictions:
+            return dict_to_save
+
+        is_denormalized_run = self.scaling_wrapper.apply_inverse
+
+        if is_denormalized_run:
+            # If scaling is ON: Primary save uses DENORMALIZED data
+            preds = np.concatenate(self.scaled_preds, axis=0)
+            targets = np.concatenate(self.scaled_targets, axis=0)
+
+            # Use self.preds/self.targets for the normalized data
+            normalized_preds = np.concatenate(self.preds, axis=0)
+            normalized_targets = np.concatenate(self.targets, axis=0)
+        else:
+            # If scaling is OFF: Primary save uses NORMALIZED data
             preds = np.concatenate(self.preds, axis=0)
             targets = np.concatenate(self.targets, axis=0)
-            d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
 
-            if self.task_type in CLASSIFICATION_TASKS and preds.shape[-1] > 1:
-                preds = np.argmax(preds, axis=-1, keepdims=True)
+        if self.task_type in CLASSIFICATION_TASKS and preds.shape[-1] > 1:
+            preds = np.argmax(preds, axis=-1, keepdims=True)
 
-            dict_to_save.update(
-                {"preds": (d_names, preds), "targets": (d_names, targets)}
-            )
-        elif self.save_predictions and self.scaling_wrapper.apply_inverse:
+        # Determine dimension names for xarray
+        d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
+
+        # 1. Save PRIMARY (Denormalized or Original) predictions
+        dict_to_save.update({"preds": (d_names, preds), "targets": (d_names, targets)})
+
+        # 2. Save SECONDARY (Normalized) predictions, if applicable
+        if is_denormalized_run:
             dict_to_save.update(
                 {
-                    "preds_denormalized": (
+                    "preds_normalized": (
                         d_names,
-                        np.concatenate(self.scaled_preds, axis=0),
+                        normalized_preds,
                     ),
-                    "targets_denormalized": (
+                    "targets_normalized": (
                         d_names,
-                        np.concatenate(self.scaled_targets, axis=0),
+                        normalized_targets,
                     ),
                 }
             )
+
+        return dict_to_save
+
+    def _save_predictions_to_file(self, dict_to_save: Dict[str, Any], mode: str):
+        """
+        Handles path setup and saves the prepared prediction data dictionary
+        to a netCDF file.
+        """
+        if not dict_to_save:
+            return
 
         if self.out_path is None:
             if self.paths and getattr(self.paths, "eval_details", None):
@@ -181,15 +241,54 @@ class DefaultEvaluator(AbstractEvaluator):
                 self.out_path is not None
             ), "Output path must be specified to save predictions."
 
-        if len(dict_to_save) > 0:
+        try:
             df = xr.Dataset(dict_to_save)
             df.to_netcdf(self.out_path / "predictions.nc")
+            logger.info(f"Predictions saved to {self.out_path / 'predictions.nc'}")
+        except Exception as e:
+            logger.error(
+                f"Failed to save predictions to netCDF at {self.out_path}: {e}"
+            )
 
+    @override
+    def _compute_metrics(self) -> Dict[str, float]:
+        """
+        Computes all collected metrics, including both normalized and denormalized results.
+        """
         results = {}
+        is_denormalized_run = self.scaling_wrapper.apply_inverse
+
+        # 1. Compute Primary Metrics (Denormalized or Original)
         for name, metric in self.metrics.items():
-            results[name] = metric.compute()
+            results[f"{name}_denormalized"] = metric.compute()
+
+        # 2. Compute Secondary Metrics (Normalized)
+        if is_denormalized_run:
+            for name, metric in self.normalized_metrics.items():
+                results[f"{name}_normalized"] = metric.compute()
+        else:
+            # FIX: If scaling is OFF, the primary metric is actually the normalized metric.
+            # We must rename the primary keys to reflect they are the normalized version.
+            results_renamed = {}
+            for key, value in results.items():
+                results_renamed[key.replace("_denormalized", "_normalized")] = value
+            results = results_renamed
 
         return results
+
+    @override
+    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+        """
+        Orchestrates the computation, saving, and reporting steps.
+        """
+        # 1. Prepare Data for Saving (Calls overridable method)
+        dict_to_save = self._prepare_predictions_for_save()
+
+        # 2. Handle Output Path and Saving (Isolated logic)
+        self._save_predictions_to_file(dict_to_save, mode)
+
+        # 3. Compute and Return Metrics (Isolated logic)
+        return self._compute_metrics()
 
 
 class ClassificationEvaluator(DefaultEvaluator):
@@ -227,6 +326,88 @@ class ClassificationEvaluator(DefaultEvaluator):
             paths=paths,
             **kwargs,
         )
+
+    @override
+    def _prepare_predictions_for_save(self) -> Dict[str, Any]:
+        """
+        Custom saving logic for classification: saves logits as predictions
+        and ensures targets are properly formatted (B, T, C).
+        """
+        dict_to_save = {}
+
+        if not self.save_predictions or not self.collect_predictions:
+            return dict_to_save
+
+        # Predictions are logits (B, T, L)
+        preds = np.concatenate(self.preds, axis=0)
+
+        # Targets are integer labels (B, T, 1) and must be converted to one-hot (B, T, C)
+        # Note: Targets are integer labels (B, T, 1) when collected in update(), but here
+        # we treat them as needing to match the pred dimension for consistency (B,T,L)
+
+        # Assuming targets are already (B, T, C) or (B, T, 1) and we need to match pred dims
+        targets = np.concatenate(self.targets, axis=0)
+
+        # Check if targets are 1D/2D and need an extra class dimension (C) for logging,
+        # although usually classification targets are saved as integers.
+        # Given your note: "preds are logits with dims (B,T,L) where L is logits
+        # and (B,T,C) for targets where C is classes," we'll assume the targets
+        # list contains the final, 3D target shape (B, T, C) or (B, T, L) for safety.
+
+        # Determine dimension names for xarray
+        # Use the dimensions of the predictions (logits)
+        d_names = ["sample"] + ["time"] + ["class_logits"]
+
+        # Save Logits
+        dict_to_save.update({"preds_logits": (d_names, preds)})
+
+        # Determine target dimension names (assuming they match prediction dimensions L=C for save)
+        t_names = ["sample"] + ["class_labels"]
+
+        # Save Targets (as collected, usually integer labels)
+        dict_to_save.update({"targets_labels": (t_names, targets)})
+
+        # Skip denormalized saving as scaling is usually not applied to logits/integer labels
+
+        return dict_to_save
+
+    @override
+    def _compute_metrics(self) -> Dict[str, float]:
+        """
+        Computes all collected metrics, then removes '_normalized' and
+        '_denormalized' suffixes, as they are nonsensical for classification.
+        """
+        # 1. Run the base computation logic
+        # This returns keys like: {'accuracy_normalized', 'precision_normalized'}
+        # OR (if scaling was on): {'accuracy_denormalized', 'accuracy_normalized'}
+        results = super()._compute_metrics()
+
+        # 2. Filter and Rename Metrics
+        final_results = {}
+
+        for key, value in results.items():
+            # Get the base metric name (e.g., 'accuracy', 'f1')
+
+            # Remove suffixes: '_normalized', '_denormalized'
+
+            # Now, remove the task-irrelevant suffixes:
+            if base_key.endswith("_normalized"):
+                base_key = base_key.removesuffix("_normalized")
+            if base_key.endswith("_denormalized"):
+                base_key = base_key.removesuffix("_denormalized")
+
+            # Final key is just the base name (e.g., 'accuracy')
+            # If a base metric appears twice (e.g., normalized and denormalized),
+            # we must decide which one to keep, or if both should be kept under
+            # different names (if scaling was actually applied).
+
+            # Since denormalized results are nonsensical in CLASSIFICATION,
+            # we prioritize the BASE result which implicitly uses the final labels.
+
+            # We will use the base name as the final key
+            final_results[base_key] = value
+
+        return final_results
 
 
 class ForecastingEvaluator(DefaultEvaluator):

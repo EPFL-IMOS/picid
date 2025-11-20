@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict
 
 from lmetk.data.data_objects.data import NamedTransformInput
+from lmetk.utils.decorators import check_transform_output_consistency
 
 
 class BaseTransform(ABC):
@@ -14,6 +15,7 @@ class BaseTransform(ABC):
         self.exclude_keys = exclude_keys if exclude_keys is not None else []
         self._init_kwargs = kwargs
 
+    @check_transform_output_consistency
     @abstractmethod
     def transform_data(
         self, data: NamedTransformInput, metadata: Dict[str, Any]

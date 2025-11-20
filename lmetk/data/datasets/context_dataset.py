@@ -36,6 +36,14 @@ class ContextBatchDataset(BaseDataset):
             required_keys = ["features", "target"]  # "time_features", "target"
             context_key = "features"
             target_key = "target"
+
+        elif task_type in ["fault_classification"]:
+            required_keys = [
+                "features",
+                "fault_classification",
+            ]  # "time_features", "target"
+            context_key = "features"
+            target_key = "fault_classification"
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
 
@@ -45,6 +53,7 @@ class ContextBatchDataset(BaseDataset):
 
         self.target_feature = data_dict[target_key]
         self.context_features = data_dict[context_key]
+        self.task_type = task_type
 
         # We batch two separate sequences in parallel (one for context, one for target)
         # They must have the same length (number of samples)

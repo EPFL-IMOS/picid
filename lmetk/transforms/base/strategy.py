@@ -13,6 +13,7 @@ from lmetk.data.data_objects.data import (
 import awkward as ak
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from lmetk.utils.decorators import inject_transform_context_to_strategy_apply
 
 
 def is_sequence(obj):
@@ -64,6 +65,7 @@ class TransformStrategy:
     with efficient copying and support for distinct single/multi-unit logic.
     """
 
+    @inject_transform_context_to_strategy_apply
     def apply(
         self,
         transform_instance: Any,
@@ -184,6 +186,20 @@ class TransformStrategy:
             # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
             # Mode 1: Assign results to a key defined by assign_to_keys
             for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
+                # Ensure the assign_to_keys_map exist in the transformed chunks
+                for chunk in transformed_chunks:
+                    if assign_to_map not in chunk:
+                        raise KeyError(
+                            f"Transformed chunk does not contain the expected key '{assign_to_map}'. "
+                            f"Available keys: {list(chunk.keys())}"
+                            f"Potential solution: In case the transform returns a dict and the metadata.assign_to is used,"
+                            f"Ensure assign_to is in the form of {{'key': 'value'}}."
+                            f"Example: metadata:"
+                            f"  apply_to: target"
+                            f"  assign_to:"
+                            f"    target: fault_classification"
+                        )
+
                 transformed_results_for_new_key[assign_to_key][split] = [
                     chunk[assign_to_map] for chunk in transformed_chunks
                 ]

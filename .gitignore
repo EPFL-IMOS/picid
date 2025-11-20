@@ -14,6 +14,8 @@ scripts/**/*.log
 #phmd/
 results/
 artifacts/
+lmetk_report_artifacts/
+csv_files/
 
 .DS_Store
 .venv

@@ -51,20 +51,17 @@ class HSF15Loader(PHMDMultiSourceLoader):
         features = ak.unflatten(df_features.values, counts)
         targets = ak.unflatten(df_target.values, counts)
 
-        # Not sure how we want to train here, by cycle or within cycle.
-        # I think within cycle is better due to limited data.
-        # for t in targets:
-        #     assert (
-        #         len(np.unique(t.to_numpy())) == 1
-        #     ), "Target values within a cycle should be identical."
-
-        # targets = targets[:, 0]
-
+        # Eventually features have N cycles, C cycle lengths, F features --> (N,C,F)  ["ce", "cp","eps1", "fs1", "fs2", "ps1", "ps2", "ps3", "ps4", "ps5", "ps6", "se", "ts1", "ts2", "ts3", "ts4", "vs1"]
+        # Targets have N cycles, C cycle lengths, 1 --> (N,C,1), where the last dim is a class, and the class is repeated C times
+        # CP,CE have 100Hz sampling.
+        # Cycle duration is 60 sec. --> 6000 (measurenents) * 100Hz = 60 samples per cycle, 1 per each second
+        # Hence every entry of features CP,CE populated to match the cycle length of 60 sec * 100Hz = 6000 measurements
+        # (EPS1, )
         return {
             "features": features,
             "time_features": np.array(df_features.index),
             "unit_id": "no_id_available",
-            "health_states": targets,
+            "target": targets,
             "metadata": {
                 "unit_id": "no_id_available",
                 "unit_name": unit_name,

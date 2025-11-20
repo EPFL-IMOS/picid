@@ -1,8 +1,8 @@
 #@package _global_
 
 defaults:
-  - override /dataset: prognostics/concept_rul_multiunit_dataset
-  - override /datamodule: base_datamodule_no_batch_sampler
+  - override /dataset: diagnostics/fault_classification_multiunit_dataset
+  - override /datamodule: base_datamodule
   - override /model: lstm
   - override /optimization: reduce_on_plateau
 

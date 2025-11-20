@@ -1,16 +1,16 @@
 # https://www.sciencedirect.com/science/article/pii/S0952197622005723
 
-seq_len: 50 # window size
+seq_len: 1 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
-task_type: health_state
+task_type: fault_classification
 
 stride: 1
 stride_train: 5
-num_classes: 2
+num_classes: ${datasource.num_classes}  # Number of fault classes
 
 model:
   data_requirements:
     input_tensors:
       - features
-      - health_states
+      - ${task_definition.task_type}

@@ -1,0 +1,10 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+    - hsf15/accumulator/base
+  - /model_configs/diagnostics/stf
+  - override /transforms: hsf15/default
+
+task_definition:
+  seq_len: 5

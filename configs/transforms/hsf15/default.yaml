@@ -5,3 +5,123 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+
+# # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+# ragged_regular_ragged_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+#   metadata:
+#     apply_to: features
+
+
+# This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
+take_last_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 1 
+    window_size: full
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: target
+    assign_to: 
+      target: fault_classification
+# Output shape is (N_cycles,1) 
+
+# Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+ragged_regular_ragged_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: fault_classification
+
+
+# Create time-domain and spectral-domain features
+time_domain_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+    hankel_window_size: 500
+    stats_to_compute: [
+        "mean",
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "abs_avg", # Defined as a wrapper for root_mean_square in the source
+        "peak_to_peak_value",
+        "standard_deviation",
+        #"skewness",
+        # "kurtosis",
+        "variance",
+        "peak_factor",
+        "change_coefficient", # Note: This is mean / std
+        "clearance_factor",
+        "abs_energy",
+        #"hankel_svd",
+      ]
+
+  metadata:
+    apply_to: "features"
+    assign_to: "time_domain_features"
+
+ragged2regular_time_domain_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: "time_domain_features"
+
+
+spectral_domain_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+
+    stats_to_compute: [
+        "mean",
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "peak_to_peak_value",
+        "variance",
+        #"skewness",
+        #"kurtosis",
+        "abs_energy",
+        # rul_features inspired
+        "peak_factor",
+        "change_coefficient",
+        "clearance_factor",
+        # Entropy stats
+        "spectral_entropy",
+        "shannon_entropy",
+        # "permutation_entropy",
+      ]
+
+  metadata:
+    apply_to: "features"
+    assign_to: "spectral_features"
+
+ragged2regular_spectral_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: "spectral_features"
+
+concatenate_features:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+
+  metadata:
+    apply_to: ["spectral_features", "time_domain_features"]
+    assign_to: features
+
+final_scaler_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+

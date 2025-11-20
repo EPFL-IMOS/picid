@@ -7,6 +7,7 @@ import numpy as np
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
 from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.utils.decorators import check_transform_output_consistency
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class WindowedAggregationTransform(DenseTransform, NoFitMultiSourceTransformMixi
         if self._agg_func is None:
             raise ValueError(f"Unsupported aggregation: {agg}")
 
+    @check_transform_output_consistency
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
         lengths = [len(segment) for segment in data.values()]
