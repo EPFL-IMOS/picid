@@ -391,10 +391,10 @@ class ClassificationEvaluator(DefaultEvaluator):
             # Remove suffixes: '_normalized', '_denormalized'
 
             # Now, remove the task-irrelevant suffixes:
-            if base_key.endswith("_normalized"):
-                base_key = base_key.removesuffix("_normalized")
-            if base_key.endswith("_denormalized"):
-                base_key = base_key.removesuffix("_denormalized")
+            if key.endswith("_normalized"):
+                base_key = key.removesuffix("_normalized")
+            if key.endswith("_denormalized"):
+                base_key = key.removesuffix("_denormalized")
 
             # Final key is just the base name (e.g., 'accuracy')
             # If a base metric appears twice (e.g., normalized and denormalized),
