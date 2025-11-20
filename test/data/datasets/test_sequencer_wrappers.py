@@ -1,0 +1,179 @@
+import pytest
+import numpy as np
+import torch
+import awkward as ak
+
+# Adjust imports to match your project structure
+from lmetk.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
+from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+
+# =========================================================================
+# === Fixtures ===
+# =========================================================================
+
+
+@pytest.fixture
+def numpy_dense_data():
+    """Standard (Time, Feat) numpy array."""
+    # 10 time steps, 2 features
+    return np.arange(20).reshape(10, 2).astype(np.float32)
+
+
+@pytest.fixture
+def torch_dense_data():
+    """Standard (Time, Feat) torch tensor."""
+    # 10 time steps, 2 features
+    return torch.arange(20, dtype=torch.float32).reshape(10, 2)
+
+
+@pytest.fixture
+def jagged_ak_data():
+    """
+    Standard jagged array: (Units, Time, Feat).
+    Unit 0: 5 steps
+    Unit 1: 3 steps
+    """
+    data = ak.Array(
+        [[[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]], [[10, 10], [11, 11], [12, 12]]]
+    )
+    # FIX: Regularize so Axis 2 (Feat) is recognized as fixed-size.
+    return ak_regularize_regular_axes(data)
+
+
+@pytest.fixture
+def regular_ak_data():
+    """
+    Awkward array that is technically regular (rectangular).
+    (2 Units, 2 Time, 2 Feat)
+    """
+    data = ak.Array([[[1, 1], [2, 2]], [[3, 3], [4, 4]]])
+    # FIX: Regularize this too.
+    return ak_regularize_regular_axes(data)
+
+
+# =========================================================================
+# === Tests: DenseArraySequencer ===
+# =========================================================================
+
+
+def test_dense_sequencer_numpy_init(numpy_dense_data):
+    """
+    Verifies DenseArraySequencer accepts Numpy arrays and initializes the driver.
+    """
+    seq = DenseArraySequencer(
+        array=numpy_dense_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    # Length check: 10 steps total. Req = 2+1 = 3.
+    # Valid starts: 0..7. Total 8 windows.
+    assert len(seq) == 8
+
+    # Fetch data to ensure conversion to Float32 and Torch worked
+    x, y = seq.sequences_batch([0])
+    assert isinstance(x, torch.Tensor)
+    assert isinstance(y, torch.Tensor)
+    assert x.dtype == torch.float32
+
+
+def test_dense_sequencer_torch_init(torch_dense_data):
+    """
+    Verifies DenseArraySequencer accepts Torch tensors.
+    """
+    seq = DenseArraySequencer(
+        array=torch_dense_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    # Logic should be identical to numpy path
+    assert len(seq) == 8
+    x, y = seq.sequences_batch([0])
+
+    # Verify content matches input
+    # Input row 0: [0, 1], row 1: [2, 3].
+    expected_x = torch.tensor([[[0.0, 1.0], [2.0, 3.0]]])
+    assert torch.allclose(x, expected_x)
+
+
+def test_dense_sequencer_invalid_input():
+    """
+    Verifies TypeError is raised for non-numpy/non-torch inputs (e.g., Lists).
+    """
+    invalid_data = [[1, 2], [3, 4]]
+
+    with pytest.raises(TypeError, match="must be np.ndarray or torch.Tensor"):
+        DenseArraySequencer(
+            array=invalid_data, seq_len=1, label_len=0, pred_len=1, stride=1
+        )
+
+
+def test_dense_sequencer_delegation(numpy_dense_data):
+    """
+    Verifies that __len__, get_index_array, and sequences_batch
+    are correctly delegated to the underlying driver.
+    """
+    seq = DenseArraySequencer(
+        array=numpy_dense_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    # Check __len__ delegation
+    assert len(seq) == len(seq.driver)
+
+    # Check get_index_array delegation
+    indices = seq.get_index_array()
+    assert isinstance(indices, np.ndarray)
+    np.testing.assert_array_equal(indices, seq.driver.get_index_array())
+
+
+# =========================================================================
+# === Tests: RaggedArraySequencer ===
+# =========================================================================
+
+
+def test_ragged_sequencer_standard_jagged(jagged_ak_data):
+    """
+    Verifies RaggedArraySequencer handles standard jagged awkward arrays.
+    """
+    seq = RaggedArraySequencer(
+        array=jagged_ak_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    # Unit 0 (Len 5, Req 3) -> 3 windows
+    # Unit 1 (Len 3, Req 3) -> 1 window
+    # Total = 4
+    assert len(seq) == 4
+
+    # Verify initialization created the driver
+    assert seq.driver is not None
+    # Verify jagged mode is active in driver (implicit check via len calculation)
+    assert seq.driver.is_ragged is True
+
+
+def test_ragged_sequencer_fallback_regular(regular_ak_data):
+    """
+    Verifies that if a regular awkward array is passed, the class
+    handles it (via the if ragged_dim is None block) and still works.
+    """
+    # This hits the "if ragged_dim is None" block in __init__
+    seq = RaggedArraySequencer(
+        array=regular_ak_data, seq_len=1, label_len=0, pred_len=1, stride=1
+    )
+
+    # Unit 0 (Len 2, Req 2) -> 1 window
+    # Unit 1 (Len 2, Req 2) -> 1 window
+    # Total = 2
+    assert len(seq) == 2
+
+    x, y = seq.sequences_batch([0])
+    assert x.shape == (1, 1, 2)  # (Batch, Time, Feat)
+
+
+def test_ragged_sequencer_type_casting(jagged_ak_data):
+    """
+    Verifies input data is cast to float32 automatically.
+    """
+    # Input fixture is integers
+    seq = RaggedArraySequencer(
+        array=jagged_ak_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    x, y = seq.sequences_batch([0])
+    assert x.dtype == torch.float32
