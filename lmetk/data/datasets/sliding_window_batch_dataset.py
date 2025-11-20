@@ -78,11 +78,36 @@ class SlidingWindowBatchDataset(BaseDataset):
     def __len__(self):
         return self._length or 0
 
+    # # Potential improvement: Ensure idx is always a list so the sequencer treats it as a batch
+    # def __getitem__(self, idx: Union[int, List[int]]) -> Dict[str, tuple]:
+    #     # FIX: Ensure idx is always a list for the sequencer
+    #     batch_idx = [idx] if isinstance(idx, int) else idx
+
+    #     out = {}
+    #     for k, drv in self.sequencers.items():
+    #         # Call with list
+    #         sequencer_output = drv.sequences_batch(batch_idx)
+    #         x, y = sequencer_output
+
+    #         # FIX: Squeeze if input was scalar int
+    #         if isinstance(idx, int):
+    #             x = x.squeeze(0)
+    #             y = y.squeeze(0)
+
+    #         out[f"{k}{self.suffixes[0]}"] = x
+    #         out[f"{k}{self.suffixes[1]}"] = y
+
+    #     return out
+
     def __getitem__(self, idx: Union[int, List[int]]) -> Dict[str, tuple]:
         """
         Returns a dict of {key: (x, y)}.
         For drivers without time features the last two entries are None.
         """
+        # Potential improvement: Ensure idx is always a list so the sequencer treats it as a batch
+        # If idx is int, wrap it. If list, keep it.
+        # batch_idx = [idx] if isinstance(idx, int) else idx
+
         out = {}
         for k, drv in self.sequencers.items():
 
