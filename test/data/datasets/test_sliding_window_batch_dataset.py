@@ -1,80 +1,162 @@
-from pprint import pprint
-
-import numpy as np
 import pytest
+import numpy as np
 import torch
-
-from torch.profiler import ProfilerActivity
-from torch.profiler import profile as profile_f
-from torch.profiler import record_function, schedule
-
-
+import awkward as ak
+from torch.utils.data import DataLoader
 from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+
+# =========================================================================
+# === Fixtures ===
+# =========================================================================
 
 
-def test_init_dataset():
-    data_dict = {
-        "feature1": np.random.rand(100, 10),
-        "feature2": np.random.rand(100, 5),
+@pytest.fixture
+def dense_data_dict():
+    """
+    Returns a dict with two synchronized dense features.
+    Time=20.
+    """
+    return {
+        "sensor_A": np.arange(20).reshape(20, 1),
+        "sensor_B": np.arange(20, 40).reshape(20, 1),
     }
-    seq_len = 10
-    label_len = 5
-    pred_len = 5
-    stride = 1
-
-    ds = SlidingWindowBatchDataset(
-        data_dict=data_dict,
-        seq_len=seq_len,
-        label_len=label_len,
-        pred_len=pred_len,
-        stride=stride,
-    )
-
-    assert False
-    assert ds is not None
-    assert len(ds) > 0
 
 
-def test_dataloader_profile(tmp_path):
-    # Create small dataset
-    data_dict = {
-        "feature1": np.random.rand(20000, 10),
-        "feature2": np.random.rand(20000, 5),
+@pytest.fixture
+def ragged_data_dict():
+    """
+    Returns a dict with jagged arrays (Cycles/Units structure).
+    Cycle 0: Len 10
+    Cycle 1: Len 15
+    """
+    # Manually creating ragged structure
+    c0 = [[x] for x in range(10)]
+    c1 = [[x] for x in range(15)]
+
+    arr = ak.Array([c0, c1])
+    arr = ak_regularize_regular_axes(arr)
+
+    return {
+        "jagged_feat": arr,
     }
+
+
+# =========================================================================
+# === Tests ===
+# =========================================================================
+
+
+def test_init_success_dense(dense_data_dict):
+    """Test initialization with standard dense arrays."""
     ds = SlidingWindowBatchDataset(
-        data_dict=data_dict,
-        seq_len=10,
-        label_len=5,
+        data_dict=dense_data_dict,
+        seq_len=5,
+        label_len=0,
         pred_len=5,
         stride=1,
     )
-    dl = torch.utils.data.DataLoader(ds, batch_size=16, num_workers=0)
-    pprint("len(dl): {}".format(len(dl)))
+    assert len(ds) == 11
+    assert "sensor_A" in ds.sequencers
 
-    prof = profile_f(
-        activities=[ProfilerActivity.CPU],
-        schedule=schedule(wait=1, warmup=1, active=3, repeat=1),
-        record_shapes=True,
-        with_stack=True,
-        profile_memory=True,
-        with_flops=True,
+
+def test_init_skips_none_values():
+    """Covers: 'if arr is None: continue'"""
+    data = {"valid": np.zeros((10, 1)), "empty": None}
+    ds = SlidingWindowBatchDataset(
+        data_dict=data, seq_len=2, label_len=0, pred_len=1, stride=1
     )
-    prof.start()
+    assert "valid" in ds.sequencers
+    assert "empty" not in ds.sequencers
 
-    for i, batch in enumerate(dl):
-        with record_function("dataloader_iteration"):
-            _ = batch
-        prof.step()  # advance profiler state
-        if i > 9:
-            break
 
-    prof.stop()
-    print(prof.key_averages().table(sort_by="self_cpu_memory_usage", row_limit=10))
-    # prof.export_chrome_trace(str(tmp_path / "trace.json"))
-    prof.export_chrome_trace("trace.json")
-    print("Profile finished")
-    trace_uri = "file://" + str(tmp_path / "trace.json")
-    print(f"Chrome trace file saved. Open in Finder: {trace_uri}")
+def test_init_raises_on_unsupported_type():
+    """Covers: 'raise NotImplementedError'"""
+    data = {"bad": [1, 2, 3]}
+    with pytest.raises(NotImplementedError, match="Unsupported type"):
+        SlidingWindowBatchDataset(
+            data_dict=data, seq_len=1, label_len=0, pred_len=1, stride=1
+        )
 
-    # Minimal assertion so test passes
-    assert len(ds) > 0
+
+def test_init_raises_on_length_mismatch():
+    """Covers: 'raise ValueError' on length mismatch"""
+    data = {"long": np.zeros((20, 1)), "short": np.zeros((10, 1))}
+    with pytest.raises(ValueError, match="mismatch at key 'short'"):
+        SlidingWindowBatchDataset(
+            data_dict=data, seq_len=5, label_len=0, pred_len=5, stride=1
+        )
+
+
+def test_getitem_structure_and_values(dense_data_dict):
+    """
+    Verifies the output dictionary structure and data correctness.
+    Checks Scalar Access (ds[0]).
+    """
+    ds = SlidingWindowBatchDataset(
+        data_dict=dense_data_dict,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        suffixes=["_X", "_Y"],
+    )
+
+    # Fetch index 0 (Scalar).
+    # Should return squeezed tensors (T, F), NOT (1, T, F).
+    sample = ds[0]
+
+    assert "sensor_A_X" in sample
+
+    # Check Values
+    # sensor_A window 0 -> [0, 1]
+    # Expected Shape: (2, 1)
+    expected_x = torch.tensor([[0], [1]], dtype=torch.float32)
+    assert torch.equal(sample["sensor_A_X"], expected_x)
+    assert sample["sensor_A_X"].ndim == 2
+
+    expected_y = torch.tensor([[2]], dtype=torch.float32)
+    assert torch.equal(sample["sensor_A_Y"], expected_y)
+
+
+def test_ragged_input_handling(ragged_data_dict):
+    """
+    Tests that the dataset correctly wraps RaggedArraySequencer.
+    Checks both Scalar and List access to verify dimensionality.
+    """
+    ds = SlidingWindowBatchDataset(
+        data_dict=ragged_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+
+    assert len(ds) == 21
+
+    # Case 1: Scalar Access ds[0]
+    # Should return (T, F) -> (2, 1)
+    sample = ds[0]
+    assert isinstance(sample["jagged_feat_seq_x"], torch.Tensor)
+    assert sample["jagged_feat_seq_x"].ndim == 2
+
+    # Case 2: List Access ds[[0]] (Simulating BatchSampler)
+    # Should return (Batch, T, F) -> (1, 2, 1)
+    batch_sample = ds[[0]]
+    assert batch_sample["jagged_feat_seq_x"].ndim == 3
+
+
+# def test_dataloader_integration_and_collation():
+#     """
+#     Verifies standard PyTorch DataLoader usage.
+#     """
+#     data = {"feat": np.random.randn(100, 5).astype(np.float32)}
+#     ds = SlidingWindowBatchDataset(
+#         data_dict=data, seq_len=10, label_len=0, pred_len=5, stride=1
+#     )
+
+#     # Standard DataLoader: fetches samples one by one (ds[i]) and stacks them.
+#     # ds[i] returns (10, 5). Stacking 16 of them -> (16, 10, 5).
+#     dl = DataLoader(ds, batch_size=16, collate_fn=ds.get_collate_fn())
+
+#     batch = next(iter(dl))
+
+#     # Check batch size and dimensions
+#     assert batch["feat_seq_x"].shape == (16, 10, 5)
+#     assert batch["feat_seq_y"].shape == (16, 5, 5)
