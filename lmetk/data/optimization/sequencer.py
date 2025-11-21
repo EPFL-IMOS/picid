@@ -80,10 +80,23 @@ class RaggedArraySequencer(BaseSequencer):
     ):
         array = ak.values_astype(array, np.float32)
         ragged_dim = find_singular_ragged_dim({"array": array})  # validate ragged dim
+
         if ragged_dim is None:
+            # TODO: Proposed fix to ensure we always have 3dim output of self.driver.sequences_batch(idx) as one dim is added within.
+            # if array.ndim == 2:
+            #     array = ak.from_regular(array, axis=0)  # ensure regularity
+            # elif array.ndim == 3:
+            #     array = ak.from_regular(array, axis=1)  # ensure regularity
+            # else:
+            #     raise ValueError(
+            #         "Input array do not have ragged dim and ndim is greater than 3. "
+            #         "This case has not been tested."
+            #     )
             array = ak.from_regular(array, axis=0)  # ensure regularity
-            # Creates a lot of noise in the logs, some way to reduce it?
-            # logger.warning("Input array do not have ragged dim.")
+
+            logger.warning(
+                "Input array do not have ragged dim. Considering 0th axis as ragged."
+            )
 
         self.driver = AkwardJaggedAutoregressiveSequencer(
             features=array,
