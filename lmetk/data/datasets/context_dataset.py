@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
@@ -83,7 +83,8 @@ class ContextBatchDataset(BaseDataset):
     def __len__(self):
         return len(self.target_dataset)
 
-    def __getitem__(self, batch_idx: List[int]):
+    def __getitem__(self, batch_idx: Union[int, List[int]]):
+
         d = AttributeDict(
             {
                 "batch_idx": batch_idx,
