@@ -2,12 +2,13 @@
 
 import logging
 from pathlib import Path
-from typing import override
+from typing import Literal, override
 
 import joblib
 from tabpfn import TabPFNRegressor
 
 from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
+import torch
 from .base import AbstractFitPredictWrapper
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
+        output_type: Literal["mean", "full"] = "mean",
+        full_outputs_path: str = None,
         **kwargs,
     ):
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
@@ -38,8 +41,10 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
 
         logger.info(f"Using TabPFN on device: {backbone.device}, kwargs: {kwargs}")
 
+        self.output_type = output_type
         self.model_cache_path = model_cache_path
         self.device = device
+        self.full_outputs_path = full_outputs_path
 
         super().__init__(
             backbone=backbone,
@@ -47,6 +52,19 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
             yield_batch_size=yield_batch_size,
             **kwargs,
         )
+
+    @override
+    def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        """Inner predict call to be potentially overridden by subclasses."""
+        output = self.backbone.predict(X, output_type=self.output_type)
+        if self.full_outputs_path is not None:
+            output["criterion"] = output["criterion"].cpu()
+            output["logits"] = output["logits"].cpu()
+            output_file = Path(self.full_outputs_path) / "predictions.pt"
+            torch.save(output, output_file)
+            if self.output_type == "full":
+                output = output["mean"]
+        return output
 
     @override
     def serialize_model(self, task_id: str | None = None):

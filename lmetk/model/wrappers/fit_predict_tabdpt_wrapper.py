@@ -58,7 +58,8 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
-        return torch.Tensor(self.backbone.predict(X.numpy()))
+        output = torch.Tensor(self.backbone.predict(X.numpy()))
+        return output
 
     @override
     def serialize_model(self, task_id: str | None = None):
