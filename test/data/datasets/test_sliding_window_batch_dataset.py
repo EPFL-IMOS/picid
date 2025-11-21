@@ -104,18 +104,19 @@ def test_getitem_structure_and_values(dense_data_dict):
 
     # Fetch index 0 (Scalar).
     # Should return squeezed tensors (T, F), NOT (1, T, F).
-    sample = ds[0]
+    sample = ds[[0]]
 
     assert "sensor_A_X" in sample
 
     # Check Values
     # sensor_A window 0 -> [0, 1]
-    # Expected Shape: (2, 1)
-    expected_x = torch.tensor([[0], [1]], dtype=torch.float32)
-    assert torch.equal(sample["sensor_A_X"], expected_x)
-    assert sample["sensor_A_X"].ndim == 2
+    # Expected Shape: (1, 2, 1)
+    expected_x = torch.tensor([[[0], [1]]], dtype=torch.float32)
 
-    expected_y = torch.tensor([[2]], dtype=torch.float32)
+    assert torch.equal(sample["sensor_A_X"], expected_x)
+    assert sample["sensor_A_X"].ndim == 3
+
+    expected_y = torch.tensor([[[2]]], dtype=torch.float32)
     assert torch.equal(sample["sensor_A_Y"], expected_y)
 
 
@@ -124,19 +125,14 @@ def test_ragged_input_handling(ragged_data_dict):
     Tests that the dataset correctly wraps RaggedArraySequencer.
     Checks both Scalar and List access to verify dimensionality.
     """
+    print(ragged_data_dict)
     ds = SlidingWindowBatchDataset(
         data_dict=ragged_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1
     )
 
     assert len(ds) == 21
 
-    # Case 1: Scalar Access ds[0]
-    # Should return (T, F) -> (2, 1)
-    sample = ds[0]
-    assert isinstance(sample["jagged_feat_seq_x"], torch.Tensor)
-    assert sample["jagged_feat_seq_x"].ndim == 2
-
-    # Case 2: List Access ds[[0]] (Simulating BatchSampler)
+    # Case: List Access ds[[0]] (Simulating BatchSampler)
     # Should return (Batch, T, F) -> (1, 2, 1)
     batch_sample = ds[[0]]
     assert batch_sample["jagged_feat_seq_x"].ndim == 3

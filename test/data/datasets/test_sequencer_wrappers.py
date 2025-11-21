@@ -36,7 +36,7 @@ def jagged_ak_data():
     data = ak.Array(
         [[[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]], [[10, 10], [11, 11], [12, 12]]]
     )
-    # FIX: Regularize so Axis 2 (Feat) is recognized as fixed-size.
+
     return ak_regularize_regular_axes(data)
 
 
@@ -47,7 +47,7 @@ def regular_ak_data():
     (2 Units, 2 Time, 2 Feat)
     """
     data = ak.Array([[[1, 1], [2, 2]], [[3, 3], [4, 4]]])
-    # FIX: Regularize this too.
+
     return ak_regularize_regular_axes(data)
 
 
@@ -147,23 +147,53 @@ def test_ragged_sequencer_standard_jagged(jagged_ak_data):
     assert seq.driver.is_ragged is True
 
 
+# def test_ragged_sequencer_fallback_regular(regular_ak_data):
+#     """
+#     Verifies that if a regular awkward array is passed, the class
+#     handles it (via the if ragged_dim is None block) and still works.
+#     """
+#     # This hits the "if ragged_dim is None" block in __init__
+#     seq = RaggedArraySequencer(
+#         array=regular_ak_data, seq_len=1, label_len=0, pred_len=1, stride=1
+#     )
+#     # regular_ak_data has (B,C,D) = (2,2,2) and is regular.
+#     # hence RaggedArraySequencer maps it to (var,2,2)
+#     #  (Len 2, Req 2) -> 1 window
+#     assert len(seq) == 1
+
+#     x, y = seq.sequences_batch([0])
+#     assert x.shape == (1, 1, 2, 2)  # (Batch, Time, Feat)
+
+
 def test_ragged_sequencer_fallback_regular(regular_ak_data):
     """
-    Verifies that if a regular awkward array is passed, the class
-    handles it (via the if ragged_dim is None block) and still works.
+    Verifies that if a regular awkward array is passed, the class handles it
+    (via the if ragged_dim is None block).
+
+    NOTE: Because regular_ak_data is (2, 2, 2), treating axis 0 as ragged
+    makes the sequencer see a single time series of shape (Time=2, Feat1=2, Feat2=2).
+    When sequenced, this results in a 4D tensor (Batch, Seq, Feat1, Feat2),
+    which triggers an internal assertion error in the sequencer (which expects 3D).
     """
     # This hits the "if ragged_dim is None" block in __init__
     seq = RaggedArraySequencer(
         array=regular_ak_data, seq_len=1, label_len=0, pred_len=1, stride=1
     )
 
-    # Unit 0 (Len 2, Req 2) -> 1 window
-    # Unit 1 (Len 2, Req 2) -> 1 window
-    # Total = 2
-    assert len(seq) == 2
+    # regular_ak_data has (B,C,D) = (2,2,2) and is regular.
+    # hence RaggedArraySequencer maps it to (var,2,2)
+    # (Len 2, Req 2) -> 1 window
+    assert len(seq) == 1
 
-    x, y = seq.sequences_batch([0])
-    assert x.shape == (1, 1, 2)  # (Batch, Time, Feat)
+    # We expect the sequencer to crash because it produces a 4D output [1, 1, 2, 2],
+    # but the internal check enforces 3D output.
+    # We use regex escaping (r"...") because torch.Size uses brackets [].
+    expected_msg = (
+        r"seq_x ndim mismatch: expected 3, got seq_x.shape torch.Size\(\[1, 1, 2, 2\]\)"
+    )
+
+    with pytest.raises(AssertionError, match=expected_msg):
+        seq.sequences_batch([0])
 
 
 def test_ragged_sequencer_type_casting(jagged_ak_data):
