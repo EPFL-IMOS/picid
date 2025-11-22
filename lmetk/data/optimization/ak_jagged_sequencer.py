@@ -144,21 +144,26 @@ class AkwardJaggedAutoregressiveSequencer:
 
         # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
         if not self.is_ragged:
+            # For a dense array, we treat it as a single time series.
             total_len = len(self.features)
 
             # Check if data is sufficient. End index of window must be <= total_len
             if (min_start + required_len) > total_len:
                 return []
 
+            # Directly calculate the valid start times.
             max_start = total_len - required_len + 1
             starts = range(min_start, max_start, self.stride)
 
             return [(t,) for t in starts]
 
         # --- Path 2: Logic for JAGGED arrays ---
+        # Get all parent prefixes (no t) for the ragged dimension
         prefixes = ragged_index_tuples(self.features, self.ragged_dim)
+        # Precompute segment lengths
         lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
 
+        # Helper to read length given a prefix tuple
         def get_length(prefix):
             if self.ragged_dim == 0:
                 # That is potentially dead piece of code.
@@ -168,6 +173,7 @@ class AkwardJaggedAutoregressiveSequencer:
                 out = out[p]
             return out
 
+        # Build valid tuples without generating every candidate
         valid: List[tuple] = []
         for prefix in prefixes:
             seg_len = get_length(prefix)
@@ -175,6 +181,7 @@ class AkwardJaggedAutoregressiveSequencer:
             # Check valid length against min_start
             if (min_start + required_len) <= seg_len:
                 max_start = seg_len - required_len + 1
+                # Generate only valid starts respecting stride
                 starts = range(min_start, max_start, stride)
                 valid.extend([(*prefix, t) for t in starts])
 
@@ -196,9 +203,12 @@ class AkwardJaggedAutoregressiveSequencer:
         # Efficient way to create a tuple of 1d arrays for selection
         idx_sel_t = tuple(idx_sel.T)
 
+        # In this case, we have no (ragged) trunk data, only one long time series
+        # so we do need to select in the first dimension
         select_in_d0 = len(idx_sel_t) == 1
 
-        # 'now_point' is the start index t for each batch item
+        # Now point is defined as the coordinate where the sequence starts
+        # in the last dimension of the tuple
         now_point = idx_sel_t[-1]
 
         # Generate relative indices
@@ -214,15 +224,23 @@ class AkwardJaggedAutoregressiveSequencer:
 
         # --- Data Fetching with Padding Support ---
 
+        # if there is no trunk, we need to select in the
+        # first dimension and introduce the batch dimension
         if select_in_d0:
+            # In this case we want to introduce a new batch dimension, therefore,
+            # we keep all dimensions regular (see next comment below)
             leaf_data = self.features
         else:
             sel_dims = idx_sel_t[:-1]
             leaf_data = self.features[sel_dims]
+            # ak_from regular transforms the regular dim -1 into a ragged dim (of the selection index).
+            # This way, it selects properly the segments in the var dim of trunk data
+            # if the dim remains singular, a new dimension is created
+            # e.g. (var, 1) -> (B, var, 1)
             x_range = ak.from_regular(x_range, axis=-1)
             y_range = ak.from_regular(y_range, axis=-1)
 
-        # 1. Clamp negative indices to 0 for safe fetching
+        # 1. Clamp negative indices to 0 for safe fetching. TODO: doublecheck it works as intended
         if self.padding_left_flag:
             # Use numpy max since x_range is structured to support it at this stage
             safe_x_range = np.maximum(x_range, 0)
@@ -237,7 +255,7 @@ class AkwardJaggedAutoregressiveSequencer:
         seq_x = torch.from_numpy(raw_x_numpy)
         seq_y = torch.from_numpy(raw_y_numpy)
 
-        # 3. Apply Zero Padding (Masking)
+        # 3. Apply Zero Padding (Masking). TODO: doublecheck it works as intended
         if self.padding_left_flag:
             # Create boolean mask where original indices were valid (>= 0)
             valid_mask_x = x_range >= 0
