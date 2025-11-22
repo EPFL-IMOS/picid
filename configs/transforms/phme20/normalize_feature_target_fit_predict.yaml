@@ -59,6 +59,8 @@ tabularize_unit_id_train:
   transform:
     <<: *__tabularize_unit_id_transform
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
   metadata:
     <<: *__tabularize_unit_id_metadata
     transform_on_keys: ["train"]
@@ -67,6 +69,8 @@ tabularize_x_train:
   transform:
     <<: *__tabularize_x_transform
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
   metadata:
     <<: *__tabularize_x_metadata
     transform_on_keys: ["train"]
@@ -75,6 +79,8 @@ tabularize_y_train:
   transform:
     <<: *__tabularize_y_transform
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
   metadata:
     <<: *__tabularize_y_metadata
     transform_on_keys: ["train"]
