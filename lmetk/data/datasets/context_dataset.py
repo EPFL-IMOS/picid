@@ -37,6 +37,11 @@ class ContextBatchDataset(BaseDataset):
             context_key = "features"
             target_key = "target"
 
+        elif task_type in ["health_states"]:
+            required_keys = ["features", "health_states"]
+            context_key = "features"
+            target_key = "health_states"
+
         elif task_type in ["fault_classification"]:
             required_keys = [
                 "features",
