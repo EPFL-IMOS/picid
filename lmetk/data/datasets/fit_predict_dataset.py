@@ -140,9 +140,6 @@ class FitPredictTaskDataset(BaseDataset):
             else:
                 return input_data
 
-        # y[0][:, 0:5, :] = 10  # only for debugging purposes TODO Delete
-        y[:, 0:5, :] = 10
-        # y[:, 10:20, :] = 1
         self.X = handle_multi_units(X, "X")
         self.y = handle_multi_units(y, "y")
         self.meta_data_dict = meta_data_dict
