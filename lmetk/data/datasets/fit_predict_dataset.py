@@ -57,7 +57,7 @@ class FitPredictTaskDataset(BaseDataset):
 
         # Make sure that the data_dict contains the required keys
         if task_type in ["rul", "ahrul", "soc"]:
-            required_keys = ["features", "rul"]  # "time_features", "target"
+            required_keys = ["features", task_type]  # "time_features", "target"
             context_key = "features"
             target_key = task_type
 
@@ -66,15 +66,15 @@ class FitPredictTaskDataset(BaseDataset):
             context_key = "features"
             target_key = "target"
 
-        elif task_type in ["health_state"]:
-            required_keys = ["features", "health_states"]
+        elif task_type in ["health_states"]:
+            required_keys = ["features", task_type]
             context_key = "features"
-            target_key = "health_states"
+            target_key = task_type
 
-        elif task_type in ["classification"]:
-            required_keys = ["features", "target"]
+        elif task_type in ["fault_classification"]:
+            required_keys = ["features", task_type]
             context_key = "features"
-            target_key = "target"
+            target_key = task_type
 
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
@@ -140,8 +140,8 @@ class FitPredictTaskDataset(BaseDataset):
             else:
                 return input_data
 
-        # y[0][:, 0:10, :] = 10  # only for debugging purposes TODO Delete
-        # y[:, 0:5, :] = 10
+        # y[0][:, 0:5, :] = 10  # only for debugging purposes TODO Delete
+        y[:, 0:5, :] = 10
         # y[:, 10:20, :] = 1
         self.X = handle_multi_units(X, "X")
         self.y = handle_multi_units(y, "y")

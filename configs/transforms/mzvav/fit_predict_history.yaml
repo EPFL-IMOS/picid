@@ -56,8 +56,8 @@ tabularize_y_train:
       - target: present
 
   metadata:
-    apply_to: ["target"]
-    assign_to: target
+    apply_to: target
+    assign_to: fault_classification
     transform_on_keys: ["train"]
 
 tabularize_y_val_test:
@@ -74,6 +74,6 @@ tabularize_y_val_test:
       - target: present
 
   metadata:
-    apply_to: ["target"]
-    assign_to: target
+    apply_to: target
+    assign_to: fault_classification
     transform_on_keys: ["val", "test"]
