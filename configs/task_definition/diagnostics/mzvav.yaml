@@ -3,7 +3,7 @@
 seq_len: 50 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
-task_type: classification
+task_type: fault_classification
 
 stride: 1
 stride_train: 5
@@ -13,4 +13,4 @@ model:
   data_requirements:
     input_tensors:
       - features
-      - target
+      - ${task_definition.task_type}
