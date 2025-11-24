@@ -2,6 +2,7 @@ from typing import List, Dict, Union
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
+from lmetk.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS, CLASSIFICATION_TASKS
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import (
     collate_key_value_batch,
@@ -27,28 +28,21 @@ class ContextBatchDataset(BaseDataset):
     ):
 
         # Make sure that the data_dict contains the required keys
-        if task_type in ["rul", "ahrul", "soc"]:
-            required_keys = ["features", "rul"]  # "time_features", "target"
+        if task_type in REGRESSION_TASKS:
+            required_keys = ["features", task_type]  # "time_features", "target"
             context_key = "features"
             target_key = task_type
 
-        elif task_type in ["forecasting"]:
+        elif task_type in FORECASTING_TASKS:
             required_keys = ["features", "target"]  # "time_features", "target"
             context_key = "features"
             target_key = "target"
 
-        elif task_type in ["health_states"]:
-            required_keys = ["features", "health_states"]
+        elif task_type in CLASSIFICATION_TASKS:
+            required_keys = ["features", task_type]
             context_key = "features"
             target_key = "health_states"
 
-        elif task_type in ["fault_classification"]:
-            required_keys = [
-                "features",
-                "fault_classification",
-            ]  # "time_features", "target"
-            context_key = "features"
-            target_key = "fault_classification"
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
 
