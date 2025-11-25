@@ -1,7 +1,0 @@
-# @package __global__
-
-dm:
-  data_module:
-    reader:
-      fd: 4
-    batch_size: 64
