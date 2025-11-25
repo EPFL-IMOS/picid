@@ -69,7 +69,7 @@ class DefaultEvaluator(AbstractEvaluator):
 
         # Helper to create metrics
         def _create_metric(name):
-            if self.task_type == CLASSIFICATION_TASKS:
+            if self.task_type in CLASSIFICATION_TASKS:
                 return MetricFactory.create_classification_metric(
                     name, num_classes=num_classes
                 )
@@ -118,7 +118,6 @@ class DefaultEvaluator(AbstractEvaluator):
         targets = model_out["targets"]
 
         assert targets.ndim == 3 or targets.shape[2] == 1, f"Expected shape (N, T, 1), got {targets.shape}"
-
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         if self.task_type in CLASSIFICATION_TASKS:
@@ -142,7 +141,6 @@ class DefaultEvaluator(AbstractEvaluator):
         else:
             raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
 
-
         # 1. Store Normalized Data (BEFORE inverse transform)
         if is_denormalized_run:
             # We need a copy of the normalized data for the secondary metric set
@@ -158,9 +156,6 @@ class DefaultEvaluator(AbstractEvaluator):
             # Store original data for file saving when scaling is OFF
             self.preds.append(predictions)
             self.targets.append(targets)
-
-        else:
-            raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
 
         # 2. Apply inverse scaling (MODIFIES predictions/targets)
         predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
@@ -213,11 +208,11 @@ class DefaultEvaluator(AbstractEvaluator):
             preds = np.concatenate(self.preds, axis=0)
             targets = np.concatenate(self.targets, axis=0)
 
-        # Determine dimension names for xarray
-        d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
-
         if self.task_type in CLASSIFICATION_TASKS and preds.shape[-1] > 1:
             preds = np.argmax(preds, axis=-1, keepdims=True)
+
+        # Determine dimension names for xarray
+        d_names = ["sample"] + [f"dim{i}" for i in range(1, preds.ndim)]
 
         # 1. Save PRIMARY (Denormalized or Original) predictions
         dict_to_save.update({"preds": (d_names, preds), "targets": (d_names, targets)})
@@ -407,15 +402,8 @@ class DefaultEvaluator(AbstractEvaluator):
             # Now, remove the task-irrelevant suffixes:
             if key.endswith("_normalized"):
                 base_key = key.removesuffix("_normalized")
-<<<<<<< HEAD
-            elif key.endswith("_denormalized"):
-                base_key = key.removesuffix("_denormalized")
-            else:
-                raise ValueError(f"Unexpected metric key format: {key}")
-=======
             if key.endswith("_denormalized"):
                 base_key = key.removesuffix("_denormalized")
->>>>>>> 5770092 (Correct error from merge)
 
 #             # Final key is just the base name (e.g., 'accuracy')
 #             # If a base metric appears twice (e.g., normalized and denormalized),
