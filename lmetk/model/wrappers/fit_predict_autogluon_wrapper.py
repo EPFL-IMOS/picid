@@ -8,6 +8,7 @@ from autogluon.tabular import TabularPredictor
 
 from .base import AbstractFitPredictWrapper
 from ..autogluon.autogluon_wrapper import AutoGluonWrapper
+from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 
 class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
@@ -16,7 +17,16 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
     This wrapper defines the forward pass of the TimePFN model.
     """
 
-    def __init__(self, model_cache_path: str = None, **kwargs):
+    def __init__(self, task_type: str, model_cache_path: str = None, **kwargs):
+        # Define supported tasks based on your new categories
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for FitPredictAutoGluonWrapper.")
+
+        self.task_type = task_type
         backbone = AutoGluonWrapper(**kwargs)
 
         self.model_cache_path = model_cache_path

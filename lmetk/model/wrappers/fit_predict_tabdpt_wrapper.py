@@ -8,8 +8,9 @@ from typing import override
 import torch
 import cloudpickle
 
-from tabdpt import TabDPTRegressor
+from tabdpt import TabDPTRegressor, TabDPTClassifier
 from .base import AbstractFitPredictWrapper
+from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -23,19 +24,38 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
     def __init__(
         self,
         device: str,
+        task_type: str,
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
         **kwargs,
     ):
+
+        # Define supported tasks based on your new categories
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
+        self.supported_types = self.regression_tasks + self.classification_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for FitPredictTabDPTWrapper.")
+
+        self.task_type = task_type
+
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
         logger.info(f"Using TabDPT on device: {device}, kwargs: {kwargs}")
 
-        backbone = partial(
-            TabDPTRegressor,
-            inf_batch_size=yield_batch_size,
-            device=device,
-        )
+        if task_type in self.classification_tasks:
+            backbone = partial(
+                TabDPTClassifier,
+                inf_batch_size=yield_batch_size,
+                device=device,
+            )
+        else:
+            backbone = partial(
+                TabDPTRegressor,
+                inf_batch_size=yield_batch_size,
+                device=device,
+            )
 
         self.model_cache_path = model_cache_path
         self.device = device
@@ -58,8 +78,10 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
-        output = torch.Tensor(self.backbone.predict(X.numpy()))
-        return output
+        if self.task_type in CLASSIFICATION_TASKS:
+            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+        else:
+            return torch.Tensor(self.backbone.predict(X.numpy()))
 
     @override
     def serialize_model(self, task_id: str | None = None):

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from typing import List
 
+from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 # Import your new model class
 from lmetk.model.methods.cnn_1d import EncoderModel
 from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
@@ -34,8 +35,8 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
     def __init__(self, task_type: str, seq_len: int, **kwargs):
 
         # Define supported tasks based on your new categories
-        self.regression_tasks = ["rul", "ahrul", "soc"]
-        self.classification_tasks = ["classification"]
+        self.regression_tasks = REGRESSION_TASKS
+        self.classification_tasks = CLASSIFICATION_TASKS
         self.supported_types = self.regression_tasks + self.classification_tasks
 
         if task_type not in self.supported_types:

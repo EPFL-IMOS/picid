@@ -7,6 +7,7 @@ from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 from torch.utils.data._utils.collate import default_collate
 
+from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.utils.assertions import assert_list_of_ndarray_or_nd_array_for_dims
 
@@ -56,15 +57,21 @@ class FitPredictTaskDataset(BaseDataset):
         self.get_unit_id = False
 
         # Make sure that the data_dict contains the required keys
-        if task_type in ["rul", "ahrul", "soc"]:
-            required_keys = ["features", "rul"]  # "time_features", "target"
+        if task_type in REGRESSION_TASKS:
+            required_keys = ["features", task_type]  # "time_features", "target"
             context_key = "features"
             target_key = task_type
 
-        elif task_type in ["forecasting"]:
+        elif task_type in FORECASTING_TASKS:
             required_keys = ["features", "target"]  # "time_features", "target"
             context_key = "features"
             target_key = "target"
+
+        elif task_type in CLASSIFICATION_TASKS:
+            required_keys = ["features", task_type]
+            context_key = "features"
+            target_key = task_type
+
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
 

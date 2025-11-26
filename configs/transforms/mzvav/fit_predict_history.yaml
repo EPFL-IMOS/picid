@@ -1,0 +1,79 @@
+defaults:
+  - mzvav/default@_here_
+
+# kj
+#
+
+tabularize_x_train:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+    timestep_dimension: 1
+
+    select_features:
+      - features: history
+
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+    transform_on_keys: ["train"]
+
+tabularize_x_val_test:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride}
+    timestep_dimension: 1
+
+    select_features:
+      - features: history
+
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+    transform_on_keys: ["val", "test"]
+
+tabularize_y_train:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride_train}
+    timestep_dimension: 1
+
+    select_features:
+      - target: present
+
+  metadata:
+    apply_to: target
+    assign_to: fault_classification
+    transform_on_keys: ["train"]
+
+tabularize_y_val_test:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride}
+    timestep_dimension: 1
+
+    select_features:
+      - target: present
+
+  metadata:
+    apply_to: target
+    assign_to: fault_classification
+    transform_on_keys: ["val", "test"]

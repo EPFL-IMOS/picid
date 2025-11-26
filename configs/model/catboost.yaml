@@ -1,2 +1,3 @@
 _target_: catboost.CatBoostRegressor
+task_type: ${task_definition.task_type}
 verbose: 0

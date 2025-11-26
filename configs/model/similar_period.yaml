@@ -1,1 +1,3 @@
 _target_: lmetk.models.similar_period.SimilarPeriod
+
+task_type: ${task_definition.task_type}

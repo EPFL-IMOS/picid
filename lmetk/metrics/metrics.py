@@ -386,7 +386,7 @@ class MulticlassAccuracyMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
         )
         self.metric.update(preds, targets)
 
@@ -407,7 +407,7 @@ class MulticlassPrecisionMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
         )
         self.metric.update(preds, targets)
 
@@ -428,7 +428,7 @@ class MulticlassRecallMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
         )
         self.metric.update(preds, targets)
 
@@ -449,7 +449,27 @@ class MulticlassF1Metric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1) if predictions.ndim > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+        )
+        self.metric.update(preds, targets)
+
+    def compute(self):
+        return self.metric.compute().item()
+
+class MulticlassAUROCMetric(AbstractMetric):
+    def __init__(self, num_classes: int):
+        self.metric = MulticlassAUROCMetric(num_classes=num_classes, average="micro")
+        super().__init__("AUROC")
+
+    def reset(self):
+        self.metric.reset()
+
+    def update(self, predictions, targets):
+        predictions = torch.from_numpy(predictions)
+        targets = torch.from_numpy(targets)
+
+        preds = (
+            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
         )
         self.metric.update(preds, targets)
 

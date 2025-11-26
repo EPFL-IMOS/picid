@@ -1,4 +1,5 @@
 _target_: lmetk.model.wrappers.drift_model_wrapper.DriftModelWrapper
+task_type: ${task_definition.task_type}
 
 seq_len: ${task_definition.seq_len} # window size
 label_len: ${task_definition.label_len} # overlap size

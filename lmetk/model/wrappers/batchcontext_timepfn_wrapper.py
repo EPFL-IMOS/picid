@@ -6,6 +6,7 @@ from lightning_fabric.utilities.data import AttributeDict
 from lmetk.model.time_pfn.TimePFN import TimePFN
 
 from .base import AbstractFeedForwardWrapper
+from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 
 class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
@@ -14,7 +15,17 @@ class BatchContextTimePFNWrapper(AbstractFeedForwardWrapper):
     This wrapper defines the forward pass of the TimePFN model.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, task_type: str, **kwargs):
+
+        # Define supported tasks based on your new categories
+        self.regression_tasks = FORECASTING_TASKS
+        self.classification_tasks = []
+        self.supported_types = self.regression_tasks
+
+        if task_type not in self.supported_types:
+            raise ValueError(f"Task {task_type} not supported for BatchContextTimePFNWrapper.")
+
+        self.task_type = task_type
         backbone = TimePFN(AttributeDict(kwargs))
         super().__init__(backbone=backbone, **kwargs)
 
