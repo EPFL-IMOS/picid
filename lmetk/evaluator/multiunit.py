@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 # Assuming these imports are correct for your project structure:
+from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.base import AbstractMetric
 from lmetk.evaluator.default import DefaultEvaluator  # Assumed base class
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,10 @@ class MultiUnitEvaluator(DefaultEvaluator):
             collect_predictions=collect_predictions,
             **kwargs,
         )
+
+        assert (
+            self.task_type in REGRESSION_TASKS
+        ), f"Unsupported task_type: {self.task_type}"
 
         # 2. MultiUnit Specific Params
         self.log_image_every_n_epochs = log_image_every_n_epochs
@@ -105,6 +111,14 @@ class MultiUnitEvaluator(DefaultEvaluator):
         unit_ids = model_out["unit_id"]
 
         is_denormalized_run = self.scaling_wrapper.apply_inverse
+
+        if self.task_type in REGRESSION_TASKS:
+            assert (
+                predictions.ndim == 3 and predictions.shape[2] == 1
+            ), f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
 
         # Data BEFORE inverse scaling (normalized data) - Must copy before modification
         if is_denormalized_run:

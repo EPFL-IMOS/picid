@@ -211,9 +211,9 @@ class TiDE_Forecaster(TransformerForecaster):
         *_, y_t = batch
 
         stats = {
-            "predictions": forecast_out.squeeze(2).detach().cpu().numpy(),
-            "targets": y_t.squeeze(2).detach().cpu().numpy(),
-            "mask": forecast_mask.squeeze(2),
+            "predictions": forecast_out.detach().cpu().numpy(),
+            "targets": y_t.detach().cpu().numpy(),
+            "mask": forecast_mask,
         }
 
         stats["forecast_loss"] = loss_dict["forecast_loss"]

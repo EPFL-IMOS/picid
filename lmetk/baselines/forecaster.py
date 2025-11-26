@@ -6,7 +6,8 @@ import torch
 from lmetk.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
-    REGRESSION_TASKS, FORECASTING_TASKS,
+    REGRESSION_TASKS,
+    FORECASTING_TASKS,
 )
 from lmetk.baselines.linear_model.linear_ar import LinearModel
 from lmetk.evaluator.base import AbstractEvaluator
@@ -304,7 +305,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         # Here we squeeze 2 because this class handles multiple tasks
         # and some tasks produce just one feature,
         # which should go into the 2D evaluator,
-        # squeeze(2) does nothing if there are multiple features in dim 2
         return {
             "loss": loss.mean(),
             # This is needed because evaluator works over the numpy arrays

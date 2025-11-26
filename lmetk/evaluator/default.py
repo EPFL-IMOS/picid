@@ -16,12 +16,16 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 # Assuming these imports are correct for your project structure:
+from lmetk.evaluator.base import AbstractEvaluator
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
-from lmetk.metrics.base import AbstractMetric
-from .base import AbstractEvaluator  # Assuming AbstractEvaluator is in .base
 
-from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS, ALL_TASKS
+from lmetk.baselines.definitions import (
+    CLASSIFICATION_TASKS,
+    REGRESSION_TASKS,
+    FORECASTING_TASKS,
+    ALL_TASKS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,23 +119,32 @@ class DefaultEvaluator(AbstractEvaluator):
         predictions = model_out["predictions"]
         targets = model_out["targets"]
 
-        assert targets.ndim == 3 or targets.shape[2] == 1, f"Expected shape (N, T, 1), got {targets.shape}"
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         if self.task_type in CLASSIFICATION_TASKS:
-            assert self.scaling_wrapper.inverse_transform is None, "Scaling must be None for classification"
-            assert predictions.ndim == 3, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
-            assert predictions.shape[2] == self.num_classes, f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+            assert (
+                self.scaling_wrapper.inverse_transform is None
+            ), "Scaling must be None for classification"
+            assert (
+                predictions.ndim == 3
+            ), f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+            assert (
+                predictions.shape[2] == self.num_classes
+            ), f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
             targets = targets.astype(int)  # ensure integer labels
 
         elif self.task_type in REGRESSION_TASKS:
-            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            assert (
+                predictions.ndim == 3 and predictions.shape[2] == 1
+            ), f"Expected shape (N, T, 1), got {targets.shape}"
             predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
                 predictions, targets
             )
 
         elif self.task_type in FORECASTING_TASKS:
-            assert predictions.ndim == 3, f"Expected shape (N, T, 1), got {targets.shape}"
+            assert (
+                predictions.ndim == 3 and predictions.shape[2] == 1
+            ), f"Expected shape (N, T, 1), got {targets.shape}"
             predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
                 predictions, targets
             )
