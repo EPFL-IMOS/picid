@@ -69,7 +69,13 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         logger.info(f"Using {RUL} RUL.")
         self.mode = load_arguments.mode
         self.n_DS = load_arguments.n_DS
-        self.selected_units = load_arguments.units
+
+        self.selected_units = load_arguments.get("units", None)
+        self.selected_fc = load_arguments.get("fc", None)
+
+        assert self.selected_fc in (1, 2, 3, None), "fc must be 1, 2, 3 or None"
+        if not ((self.selected_units is None) ^ (self.selected_fc is None)):
+            raise ValueError("Specify exactly one of fc or units")
 
         self.RUL = RUL
         self.path = path
@@ -174,6 +180,14 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             self.df_X = self.df_X.loc[self.df_A["unit"].isin(self.selected_units)]
             self.df_Y = self.df_Y.loc[self.df_A["unit"].isin(self.selected_units)]
             self.df_A = self.df_A.loc[self.df_A["unit"].isin(self.selected_units)]
+
+        if self.selected_fc is not None:
+            # select only flight class data
+            self.df_W = self.df_W.loc[self.df_A["Fc"] == self.selected_fc]
+            self.df_T = self.df_T.loc[self.df_A["Fc"] == self.selected_fc]
+            self.df_X = self.df_X.loc[self.df_A["Fc"] == self.selected_fc]
+            self.df_Y = self.df_Y.loc[self.df_A["Fc"] == self.selected_fc]
+            self.df_A = self.df_A.loc[self.df_A["Fc"] == self.selected_fc]
 
         if self.subsampling_rate > 1:
             # subsample
