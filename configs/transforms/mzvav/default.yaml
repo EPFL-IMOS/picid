@@ -9,7 +9,7 @@ clean_data:
 
 binary_to_multiclass:
   transform:
-    _target_: lmetk.transforms.building.label_converter.BinaryToMultiClassTransform
+    _target_: lmetk.transforms.building.mzvav_label_converter.MZVAVLabelConverter
 
   metadata:
     apply_to: ["timestamps", "target"]

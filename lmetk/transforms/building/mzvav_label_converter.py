@@ -13,7 +13,7 @@ from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransfor
 logger = logging.getLogger(__name__)
 
 
-class BinaryToMultiClassTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class MZVAVLabelConverter(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
 
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs
