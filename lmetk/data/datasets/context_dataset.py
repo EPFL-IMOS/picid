@@ -41,7 +41,7 @@ class ContextBatchDataset(BaseDataset):
         elif task_type in CLASSIFICATION_TASKS:
             required_keys = ["features", task_type]
             context_key = "features"
-            target_key = "health_states"
+            target_key = task_type
 
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
