@@ -3,4 +3,4 @@
 defaults:
   - mzvav/diagnostics/base
   - /model_configs/diagnostics/tabdpt_fit_predict
-  - override /transforms: mzvav/base
+  - override /transforms: mzvav/fit_predict_history
