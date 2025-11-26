@@ -61,15 +61,32 @@ class ClassificationEvaluator(DefaultEvaluator):
         final_results = {}
 
         for key, value in results.items():
-            # 1. Remove aggregation suffix
+            # 1. Remove aggregation suffix (does nothing if suffix is not present)
             base_key = key.removesuffix("_mean")
 
             # 2. Remove status suffixes
-            if base_key.endswith("_normalized"):
-                base_key = base_key.removesuffix("_normalized")
-            if base_key.endswith("_denormalized"):
-                base_key = base_key.removesuffix("_denormalized")
+            if key.endswith("_normalized"):
+                base_key = key.removesuffix("_normalized")
+            elif key.endswith("_denormalized"):
+                base_key = key.removesuffix("_denormalized")
+            else:
+                raise ValueError(f"Unexpected metric key format: {key}")
 
-            final_results[base_key] = value
+            # Final key is just the base name (e.g., 'accuracy')
+            # If a base metric appears twice (e.g., normalized and denormalized),
+            # we must decide which one to keep, or if both should be kept under
+            # different names (if scaling was actually applied).
+
+            # Since denormalized results are nonsensical in CLASSIFICATION,
+            # we prioritize the BASE result which implicitly uses the final labels.
+
+            # We will use the base name as the final key
+
+            if base_key in final_results:
+                assert (
+                    final_results[base_key] == value
+                ), f"Conflict in metric values for {base_key}: {final_results[base_key]} vs {value}"
+            else:
+                final_results[base_key] = value
 
         return final_results

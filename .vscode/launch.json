@@ -1179,7 +1179,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=phme20/prognostics/lstm",
+                "experiment=phme20/prognostics/raw/lstm",
                 "debug=pronostia",
                 "logger=wandb"
             ],
@@ -1197,7 +1197,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=hsf15/prognostics/lstm",
+                "experiment=hsf15/accumulator/prognostics/lstm",
                 "debug=pronostia"
             ],
             "env": {

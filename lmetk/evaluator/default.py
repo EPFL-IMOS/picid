@@ -216,7 +216,7 @@ class DefaultEvaluator(AbstractEvaluator):
         try:
             df = xr.Dataset(dict_to_save)
             df.to_netcdf(self.out_path / "predictions.nc")
-            logger.info(f"Predictions saved to {self.out_path / 'predictions.nc'}")
+            logger.debug(f"Predictions saved to {self.out_path / 'predictions.nc'}")
         except Exception as e:
             logger.error(
                 f"Failed to save predictions to netCDF at {self.out_path}: {e}"
@@ -362,13 +362,13 @@ class DefaultEvaluator(AbstractEvaluator):
 
 #             # Remove suffixes: '_normalized', '_denormalized'
 
-            # Now, remove the task-irrelevant suffixes:
-            if key.endswith("_normalized"):
-                base_key = key.removesuffix("_normalized")
-            elif key.endswith("_denormalized"):
-                base_key = key.removesuffix("_denormalized")
-            else:
-                raise ValueError(f"Unexpected metric key format: {key}")
+#             # Now, remove the task-irrelevant suffixes:
+#             if key.endswith("_normalized"):
+#                 base_key = key.removesuffix("_normalized")
+#             elif key.endswith("_denormalized"):
+#                 base_key = key.removesuffix("_denormalized")
+#             else:
+#                 raise ValueError(f"Unexpected metric key format: {key}")
 
 #             # Final key is just the base name (e.g., 'accuracy')
 #             # If a base metric appears twice (e.g., normalized and denormalized),
@@ -378,14 +378,14 @@ class DefaultEvaluator(AbstractEvaluator):
 #             # Since denormalized results are nonsensical in CLASSIFICATION,
 #             # we prioritize the BASE result which implicitly uses the final labels.
 
-            # We will use the base name as the final key
+#             # We will use the base name as the final key
 
-            if base_key in final_results:
-                assert (
-                    final_results[base_key] == value
-                ), f"Conflict in metric values for {base_key}: {final_results[base_key]} vs {value}"
-            else:
-                final_results[base_key] = value
+#             if base_key in final_results:
+#                 assert (
+#                     final_results[base_key] == value
+#                 ), f"Conflict in metric values for {base_key}: {final_results[base_key]} vs {value}"
+#             else:
+#                 final_results[base_key] = value
 
 #         return final_results
 
