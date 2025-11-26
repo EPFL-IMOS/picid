@@ -21,7 +21,7 @@ from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.base import AbstractMetric
 from .base import AbstractEvaluator  # Assuming AbstractEvaluator is in .base
 
-from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS
+from ..baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS, FORECASTING_TASKS, ALL_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +50,7 @@ class DefaultEvaluator(AbstractEvaluator):
         )
 
         self.task_type = task_type.lower()
-        assert CLASSIFICATION_TASKS, f"Unsupported task_type: {task_type}"
-        assert REGRESSION_TASKS, f"Unsupported task_type: {task_type}"
-        assert FORECASTING_TASKS, f"Unsupported task_type: {task_type}"
+        assert self.task_type in ALL_TASKS, f"Unsupported task_type: {self.task_type}"
 
         self.metrics = {}  # Primary metrics (will store DENORMALIZED if scaling is ON)
         self.paths = paths
