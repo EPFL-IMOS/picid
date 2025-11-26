@@ -207,7 +207,7 @@ class TransformStrategy:
         self._merge_transformed_data(
             base_data=transformed_data,
             transformed_results=transformed_results_for_new_key,
-            available_splits=available_splits
+            available_splits=available_splits,
         )
 
         return transformed_data, transform_log
@@ -222,8 +222,11 @@ class TransformStrategy:
                     ][split]
             else:
                 base_data[assign_to_key] = {
-                    split: transformed_results[assign_to_key].get(split)
+                    split: transformed_results[assign_to_key][split]
                     for split in available_splits
+                    # "train": transformed_results[assign_to_key].get("train"),
+                    # "val": transformed_results[assign_to_key].get("val"),
+                    # "test": transformed_results[assign_to_key].get("test"),
                 }
 
     def _prepare_chunks_for_split(
