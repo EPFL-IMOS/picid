@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Union, Dict
+from typing import Any, Callable, Union, Dict, override
 
 import numpy as np
 import torch
@@ -107,7 +107,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
 
         self.evaluators[mode].reset()
 
-    def training_step(self, batch, batch_idx: int) -> torch.Tensor:
+    def training_step(
+        self, batch, batch_idx: int, _evaluate: bool = True
+    ) -> torch.Tensor:
         """Perform a single training step on a batch of data.
 
         Parameters
@@ -124,7 +126,9 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         """
         model_outs = self._training_step(batch, batch_idx)
         model_outs = self.process_outputs(model_out=model_outs, batch=batch)
-        # Don't update evaluator due to compute error with dummy prediction
+        if _evaluate:
+            self.evaluators["train"].update(model_outs)
+
         self.log(
             "train/loss",
             model_outs["loss"].detach().cpu(),
@@ -617,6 +621,12 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         # Add a dummy loss
         model_out["loss"] = torch.tensor([1])
         return model_out
+
+    @override
+    def training_step(self, batch, batch_idx, _evaluate: bool = True):
+        # Don't evaluate during training step because we only record dummy values.
+        # This is to make fit / predict work with lightning.
+        return super().training_step(batch, batch_idx, _evaluate=False)
 
     def _training_step(self, batch, batch_idx: int) -> torch.Tensor:
         """Perform a single training step on a batch of data.
