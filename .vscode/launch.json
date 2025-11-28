@@ -369,6 +369,40 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (DS03 DA): LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds03_da/prognostics/lstm",
+                "debug=default",
+                "task_definition.subset_ratio=0.1"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS03 DA): Crossformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds03_da/prognostics/crossformer",
+                "debug=default",
+                "task_definition.subset_ratio=0.1"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Concepts N-CMAPSS (DS02): TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
@@ -1113,8 +1147,8 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=unibo/prognostics/statistics/xgboost_fit_predict",
-                // "debug=nb14"
+                "experiment=unibo/prognostics/statistics/lstm",
+                "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -1145,7 +1179,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=unibo/prognostics/stf",
+                "experiment=unibo/prognostics/statistics/stf",
                 "debug=default"
             ],
             "env": {
@@ -1180,7 +1214,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/lstm",
-                "debug=pronostia",
+                "debug=default",
                 "logger=wandb"
             ],
             "env": {
