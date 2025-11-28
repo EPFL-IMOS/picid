@@ -375,7 +375,7 @@ class MASEMetric(AbstractMetric):
 
 class MulticlassAccuracyMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassAccuracy(num_classes=num_classes, average="macro")
+        self.metric = MulticlassAccuracy(num_classes=num_classes, average="micro")
         super().__init__("accuracy")
 
     def reset(self):
