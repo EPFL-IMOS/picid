@@ -386,7 +386,9 @@ class MulticlassAccuracyMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True)
+            if predictions.shape[-1] > 1
+            else predictions
         )
         self.metric.update(preds, targets)
 
@@ -407,7 +409,9 @@ class MulticlassPrecisionMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True)
+            if predictions.shape[-1] > 1
+            else predictions
         )
         self.metric.update(preds, targets)
 
@@ -428,7 +432,9 @@ class MulticlassRecallMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True)
+            if predictions.shape[-1] > 1
+            else predictions
         )
         self.metric.update(preds, targets)
 
@@ -447,14 +453,17 @@ class MulticlassF1Metric(AbstractMetric):
     def update(self, predictions, targets):
         predictions = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
-
+        # Convert logits to class predictions with argmax if necessary
         preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True)
+            if predictions.shape[-1] > 1
+            else predictions
         )
         self.metric.update(preds, targets)
 
     def compute(self):
         return self.metric.compute().item()
+
 
 class MulticlassAUROCMetric(AbstractMetric):
     def __init__(self, num_classes: int):
@@ -469,7 +478,9 @@ class MulticlassAUROCMetric(AbstractMetric):
         targets = torch.from_numpy(targets)
 
         preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True) if predictions.shape[-1] > 1 else predictions
+            torch.argmax(predictions, dim=-1, keepdim=True)
+            if predictions.shape[-1] > 1
+            else predictions
         )
         self.metric.update(preds, targets)
 

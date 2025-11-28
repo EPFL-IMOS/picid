@@ -11,6 +11,7 @@ from lmetk.data.optimization.sequencer import (
     DenseArraySequencer,
     RaggedArraySequencer,
 )
+import omegaconf
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
 
@@ -60,9 +61,15 @@ class SlidingWindowBatchDataset(BaseDataset):
             elif isinstance(arr, ak.Array):
                 driver = RaggedArraySequencer(arr, **sequencer_params)
             else:
-                raise NotImplementedError(
-                    f"Unsupported type for key '{key}': {type(arr)}"
-                )
+                if isinstance(arr, omegaconf.ListConfig):
+                    raise NotImplementedError(
+                        f"Unsupported type for key '{key}': {type(arr)}. "
+                        "Most likely you should use HydraConcat to instantiate a separate iterator for each unit, as it looks like you are trying to past multiunit data into the single unit dataset class."
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported type for key '{key}': {type(arr)}"
+                    )
 
             self.sequencers[key] = driver
 
