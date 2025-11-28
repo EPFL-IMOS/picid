@@ -13,7 +13,7 @@ from lmetk.baselines.definitions import REGRESSION_TASKS
 from lmetk.metrics.metric_factory import MetricFactory
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.base import AbstractMetric
-from lmetk.evaluator.default import DefaultEvaluator  # Assumed base class
+from lmetk.evaluator.default import DefaultEvaluator
 
 
 logger = logging.getLogger(__name__)
