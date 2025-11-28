@@ -63,9 +63,9 @@ class AbstractEvaluator(ABC):
                 raise ValueError(f"Unexpected keyword argument: {k}")
 
     def __repr__(self):
-        cls_name = self.__class__.__name__
-        attrs = {k: v for k, v in self.__dict__.items()}
-        return f"<{cls_name}({attrs})>"
+        simple = int, float, str, bool, type(None)
+        attrs = {k: v for k, v in vars(self).items() if isinstance(v, simple)}
+        return f"<{self.__class__.__name__}({attrs})>"
 
     @abstractmethod
     def update(self, model_out: dict):
