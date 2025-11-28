@@ -1,7 +1,7 @@
 _evaluator_defaults: &evaluator_defaults
   _target_: lmetk.evaluator.classification.ClassificationEvaluator
 
-  metric_names: ["f1", "accuracy", "precision", "recall"]
+  metric_names: ["f1", "accuracy", "precision", "recall"] #f1
 
   apply_inverse_scaling: False
   inverse_transform_name: null
