@@ -4,6 +4,7 @@ import numpy as np
 import awkward as ak
 
 from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from lmetk.utils.awkward_utils import ak_flatten_variable_dims
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,13 @@ class HSF15Loader(PHMDMultiSourceLoader):
 
         # We can make it work anyways, but better fail above and make the user check.
         counts = counts[order]
-        features = ak.unflatten(df_features.values, counts)
-        targets = ak.unflatten(df_target.values, counts)
+        features = ak.unflatten(df_features.values, counts)  # eventually (N, 6000, F)
+        # targets = ak.unflatten(df_target.values, counts)
+
+        targets = ak.Array(
+            [i for i in df_target.values.reshape(-1, 6000, 1)]
+        )  # df_target.values.reshape(-1, 6000, 1) --> (N,6000,1)
+        targets = ak.to_regular(targets, axis=-1)
 
         # Eventually features have N cycles, C cycle lengths, F features --> (N,C,F)  ["ce", "cp","eps1", "fs1", "fs2", "ps1", "ps2", "ps3", "ps4", "ps5", "ps6", "se", "ts1", "ts2", "ts3", "ts4", "vs1"]
         # Targets have N cycles, C cycle lengths, 1 --> (N,C,1), where the last dim is a class, and the class is repeated C times

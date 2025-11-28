@@ -3,6 +3,7 @@ import numpy as np
 from typing import List
 
 from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+
 # Import your new model class
 from lmetk.model.methods.cnn_1d import EncoderModel
 from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
@@ -133,7 +134,7 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
 
         else:  # self.task_type in self.classification_tasks
             # Model output is (batch_size, num_classes)
-            predictions = outputs
+            predictions = outputs.unsqueeze(1)
             targets = batch_y
 
             # Basic shape check for classification

@@ -24,10 +24,10 @@ take_last_target:
     aggregation: last
     dim: 0
   metadata:
-    apply_to: target
+    apply_to: target # (N,6000,1) --> (N,1,1) but actually we have (N,var,1) 
     assign_to: 
       target: fault_classification
-# Output shape is (N_cycles,1) 
+# Output shape is (N,var,1) 
 
 # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
 ragged_regular_ragged_target:
@@ -36,6 +36,16 @@ ragged_regular_ragged_target:
 
   metadata:
     apply_to: fault_classification
+# Output shape is (N,1,1) 
+
+# Reduce target dim
+reshape_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a 1 1 -> a 1"
+  metadata:
+    apply_to: fault_classification
+# Output shape is (N,1) 
 
 
 # Create time-domain and spectral-domain features

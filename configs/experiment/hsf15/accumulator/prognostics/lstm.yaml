@@ -8,7 +8,7 @@ defaults:
 
 
 task_definition:
-  seq_len: 1
+  seq_len: 16
 
 
 

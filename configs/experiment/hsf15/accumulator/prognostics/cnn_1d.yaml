@@ -2,10 +2,19 @@
 
 defaults:
   - hsf15/base
-    - hsf15/accumulator/base
+  - hsf15/accumulator/base
   - /model_configs/diagnostics/cnn_1d
   - override /transforms: hsf15/default
 
 
 task_definition:
-  seq_len: 1
+  seq_len: 32
+
+
+model:
+  output_channels: [64]
+  kernels: [1]
+  strides: [1]
+  dilations: [1]
+  latent_dim: 128
+  dropout_prob: 0.2

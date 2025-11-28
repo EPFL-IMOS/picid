@@ -20,5 +20,12 @@ callbacks:
 
 model:
   seq_len: ${task_definition.seq_len}
-  in_channels: ${infer_data_dim:features,-1} 
-  base_lr: 0.001
+  input_channels: ${infer_data_dim:features,-1}
+  num_classes: ${datasource.num_classes}
+  # CNN_1D_DILATED, Receptive Field is 65
+  output_channels: [16,32,64,64,64]
+  kernels: [5,5,5,5,5]
+  strides: [1,1,1,1,1]
+  dilations: [1,2,4,8,1]
+  latent_dim: 32
+  dropout_prob: 0.2
