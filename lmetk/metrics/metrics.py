@@ -375,7 +375,7 @@ class MASEMetric(AbstractMetric):
 
 class MulticlassAccuracyMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassAccuracy(num_classes=num_classes, average="micro")
+        self.metric = MulticlassAccuracy(num_classes=num_classes, average="macro")
         super().__init__("accuracy")
 
     def reset(self):
@@ -398,7 +398,7 @@ class MulticlassAccuracyMetric(AbstractMetric):
 
 class MulticlassPrecisionMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassPrecision(num_classes=num_classes, average="micro")
+        self.metric = MulticlassPrecision(num_classes=num_classes, average="macro")
         super().__init__("precision")
 
     def reset(self):
@@ -421,7 +421,7 @@ class MulticlassPrecisionMetric(AbstractMetric):
 
 class MulticlassRecallMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassRecall(num_classes=num_classes, average="micro")
+        self.metric = MulticlassRecall(num_classes=num_classes, average="macro")
         super().__init__("recall")
 
     def reset(self):
@@ -444,7 +444,7 @@ class MulticlassRecallMetric(AbstractMetric):
 
 class MulticlassF1Metric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassF1Score(num_classes=num_classes, average="micro")
+        self.metric = MulticlassF1Score(num_classes=num_classes, average="macro")
         super().__init__("f1")
 
     def reset(self):
@@ -467,7 +467,7 @@ class MulticlassF1Metric(AbstractMetric):
 
 class MulticlassAUROCMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassAUROCMetric(num_classes=num_classes, average="micro")
+        self.metric = MulticlassAUROCMetric(num_classes=num_classes, average="macro")
         super().__init__("AUROC")
 
     def reset(self):

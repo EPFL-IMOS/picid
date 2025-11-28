@@ -1,12 +1,19 @@
 import warnings
+from typing import override
+import logging
 
 import numpy as np
 import pandas as pd
 
+from sklearn.model_selection import train_test_split
+
+from lmetk.data.data_objects.data import SplitDatasetContainer
 from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
 
 
 warnings.filterwarnings("ignore")
+logger = logging.getLogger(__name__)
+
 
 
 class MZVAVLoader(SingleSourceLoader):
@@ -19,46 +26,93 @@ class MZVAVLoader(SingleSourceLoader):
             **kwargs,
         )
 
+    @override
+    def load_data(self):
+        """Load data from the data source."""
+        self.data_dict = self._load_data()
+        self._is_loaded = True
+        self._is_isplitted = True
+
+    @override
+    def get_data(self) -> dict | list[dict]:
+        """Return data sources.
+
+        Returns:
+            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
+
+        """
+        assert self._is_loaded is True, "Data must be loaded before getting data."
+        assert self._is_isplitted is True, "Data must be splitted before getting data."
+
+        return SplitDatasetContainer(**self.data_dict)
+
     def _load_data(self):
         # Read raw CSV
-        df, df_target, df_stamp = self.read_data()
-        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
-        self.mask = self.extract_mask(df)
+        df, df_target, df_stamp, days_to_fault = self.read_data()
 
-        assert (
-            all(self.mask) == False
-        ), "For the datasets that potentially can have context, avoid placing the target in features, as it should be done with the preprocessing as an transformation."
+        train_val_days, test_days = train_test_split(
+            days_to_fault,
+            test_size=0.2,
+            stratify=days_to_fault.values
+        )
 
-        return {
-            "features": df,
-            "target": df_target,
-            "timestamps": df_stamp,
-            "initial_dates": df_stamp,
-        }
+        train_days, val_days = train_test_split(
+            train_val_days,
+            test_size=0.25,
+            stratify=train_val_days.values
+        )
 
-    def get_meta_data(self) -> dict[str, any]:
-        meta_data = super().get_meta_data()
+        split_dict = {"train": train_days,
+                      "val": val_days,
+                      "test": test_days}
+        data_dict = {"features": df,
+                     "target": df_target,
+                     "timestamps": df_stamp,
+                     "initial_dates": df_stamp}
 
-        return {
-            **meta_data,
-            "mask": self.mask,
-        }
+        out_dict = {name: {} for name, _ in data_dict.items()}
+        for split_key, split_series in split_dict.items():
+            for name, data in data_dict.items():
+                split_mask = data.index.normalize().isin(split_series.index.normalize())
+                out_dict[name][split_key] = data[split_mask].sort_index()
 
-    def extract_mask(self, df: pd.DataFrame) -> np.ndarray:
-        # Extract the mask of target, i.e., a mask where all ones are the target the rest is zero
-        mask = np.array((df.columns == self.target_name))
-        return mask
+        return out_dict
 
     def read_data(self):
         # Read raw CSV
-        df = pd.read_csv(self.data_path, sep=",")
+        df = pd.read_csv(self.data_path, sep=",", index_col=self.timestamp_name, date_format="%m/%d/%Y %H:%M")
+
+        # Fill data
+        df = df.ffill()
+
+        assert df.isna().sum().sum() == 0
+
+        # Make labels
+        fault_number_by_dates = {"2/12/2008": 1, "5/7/2008": 1, "5/8/2008": 1, "9/5/2007": 1, "9/6/2007": 1,  # Damper
+                                 "8/28/2007": 2, "8/29/2007": 2, "8/30/2007": 2,                           # Heating Coil
+                                 "5/6/2008": 3, "8/31/2007": 3, "5/15/2008": 3, "9/1/2007": 3, "9/2/2007": 3} # Cooling Coil
+
+        # fault_number_by_dates = {"2/12/2008": 1, "5/7/2008": 1, "5/8/2008": 2, "9/5/2007": 3, "9/6/2007": 4,  # Damper
+        #                          "8/28/2007": 5, "8/29/2007": 6, "8/30/2007": 7,                           # Heating Coil
+        #                          "5/6/2008": 8, "8/31/2007": 9, "5/15/2008": 9, "9/1/2007": 10, "9/2/2007": 11} # Cooling Coil
+
+        for date, number in fault_number_by_dates.items():
+            assert date in df.index
+            df.loc[date, self.target_name] = number
+
+        days_to_fault = df[self.target_name].resample('D').first().dropna()
 
         # Get timestamps
-        df_stamp = df[self.timestamp_name].copy()
-        df.drop(columns=[self.timestamp_name], inplace=True)
+        df_stamp = df.index.to_series().copy()
 
         # Extract target and drop it from the dataframe and ensure to have dataframe, hence the conversion .values returns shape (-1, 1)
-        df_target = pd.DataFrame(df[self.target_name].copy())
+        df_target = df[self.target_name].to_frame().copy()
         df.drop(columns=[self.target_name], inplace=True)
 
-        return df, df_target, df_stamp
+        return df, df_target, df_stamp, days_to_fault
+
+    @override
+    def split_data(self):
+        logger.warning(
+            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
+        )

@@ -1,22 +1,9 @@
 _target_: lmetk.data.datasources.MZVAV.MZVAVLoader
 data_name: MZVAV-2-2
 task_mode: fault # rul, fault
-cache_dir: ${paths.data_dir}/mzvav_cache
+#cache_dir: ${paths.data_dir}/mzvav_cache
 data_folder: building
 data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
 target_name: Fault_Detection_Ground_Truth
 timestamp_name: Datetime
-
-data_splitter:
-  _target_: lmetk.data.preprocessing.TimeSplitter
-  splitter_type: TimeSplitter
-  train: 0.6
-  val: 0.2
-  create_splits_for: [features, timestamps, target, initial_dates]
-
-  # There values will be read from the model parameters similarly to how we deal with data_path.
-  seq_len: ${oc.select:task_definition.seq_len,null} # 96   # 384  # window size
-  label_len: ${oc.select:task_definition.label_len,null} # 48 # 96  # overlap size
-  pred_len: ${oc.select:task_definition.pred_len,null} #96  # prediction size
-  apply_lookback: True

@@ -121,22 +121,23 @@ class DefaultEvaluator(AbstractEvaluator):
 
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
+        assert (
+                targets.ndim == 3 and targets.shape[2] == 1
+        ), f"Expected target shape (N, T, 1), got {targets.shape}"
+
         if self.task_type in CLASSIFICATION_TASKS:
             assert (
                 self.scaling_wrapper.inverse_transform is None
             ), "Scaling must be None for classification"
             assert (
-                predictions.ndim == 3
-            ), f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
-            assert (
-                predictions.shape[2] == self.num_classes
-            ), f"Expected shape (N, T, {self.num_classes}), got {targets.shape}"
+                predictions.ndim == 3 and predictions.shape[2] == self.num_classes
+            ), f"Expected prediction shape (N, T, {self.num_classes}), got {predictions.shape}"
             targets = targets.astype(int)  # ensure integer labels
 
         elif self.task_type in REGRESSION_TASKS:
             assert (
                 predictions.ndim == 3 and predictions.shape[2] == 1
-            ), f"Expected shape (N, T, 1), got {targets.shape}"
+            ), f"Expected prediction shape (N, T, 1), got {predictions.shape}"
             predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
                 predictions, targets
             )
@@ -144,7 +145,7 @@ class DefaultEvaluator(AbstractEvaluator):
         elif self.task_type in FORECASTING_TASKS:
             assert (
                 predictions.ndim == 3 and predictions.shape[2] == 1
-            ), f"Expected shape (N, T, 1), got {targets.shape}"
+            ), f"Expected prediction shape (N, T, 1), got {predictions.shape}"
             predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
                 predictions, targets
             )
