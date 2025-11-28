@@ -38,10 +38,10 @@ wandb_log_folder="n_cmapss_ds03_da_full"
     # "concepts_n_cmapss/prognostics" \
 # )
 datasets=("concepts_n_cmapss_ds03_da/prognostics")
-model_names=(tabdpt_fit_predict tabpfn_fit_predict xgboost_fit_predict)
+model_names=(tabpfn_fit_predict tabdpt_fit_predict xgboost_fit_predict)
 
 # Careful here because of oom issues with long context lengths / short strides
-context_lengths=(5)
+context_lengths=(1 10 20)
 train_set_strides=(1 5)
 
 # ========================================================================
