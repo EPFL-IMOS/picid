@@ -56,7 +56,7 @@ def inject_transform_context_to_strategy_apply(func):
             logger.error(context_msg)
 
             # 3. Re-raise with the new context
-            raise RuntimeError(context_msg) from e
+            raise
 
     return wrapper
 
