@@ -110,6 +110,8 @@ tabularize_y_train_health_states:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
     timestep_dimension: 1
 
     select_features:
@@ -137,3 +139,9 @@ tabularize_y_val_test_health_states:
     apply_to: ["health_states"]
     assign_to: health_states
     transform_on_keys: ["val", "test"]
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, rul, health_states]

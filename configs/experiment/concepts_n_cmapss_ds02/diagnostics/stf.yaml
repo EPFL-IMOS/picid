@@ -3,4 +3,4 @@
 defaults:
   - concepts_n_cmapss_ds02/diagnostics/base
   - /model_configs/diagnostics/stf
-  - override /transforms: concepts_n_cmapss_ds02/depater2023_default
+  - override /transforms: concepts_n_cmapss_ds02/depater2023_default_deep_learning

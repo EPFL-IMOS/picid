@@ -474,31 +474,53 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
                     for k, v in out_segment.items():
                         # Example <Array [[[0.458, -1.28], ..., [...]], ...] type='870 * var * var * float64'>
-                        if index_depth == 1:
-                            # v maps integer indices to NumPy arrays (ragged)
-                            # convert directly using offsets and concatenation
-                            subarrays = [np.asarray(arr) for arr in v.values()]
-                            lengths = np.fromiter(
-                                (len(a) for a in subarrays), dtype=np.int64
-                            )
-                            offsets = np.concatenate([[0], np.cumsum(lengths)])
-                            if len(subarrays) == 0:
-                                aka = ak.Array([])
-                            else:
-                                content = ak.from_numpy(np.concatenate(subarrays))
-                                layout = ak.contents.ListOffsetArray(
-                                    ak.index.Index64(offsets), content.layout
+                        try:
+                            if index_depth == 1:
+                                # v maps integer indices to NumPy arrays (ragged)
+                                # convert directly using offsets and concatenation
+                                subarrays = [np.asarray(arr) for arr in v.values()]
+                                lengths = np.fromiter(
+                                    (len(a) for a in subarrays), dtype=np.int64
                                 )
-                                aka = ak.Array(layout)
-                        else:
+                                offsets = np.concatenate([[0], np.cumsum(lengths)])
+                                if len(subarrays) == 0:
+                                    aka = ak.Array([])
+                                else:
+                                    content = ak.from_numpy(np.concatenate(subarrays))
+                                    layout = ak.contents.ListOffsetArray(
+                                        ak.index.Index64(offsets), content.layout
+                                    )
+                                    aka = ak.Array(layout)
+                            else:
+                                aka = ak.Array(tolist(v))
+                        except:
+                            logging.error(
+                                f"{self.__class__.__name__} Fast reconstruction of ragged array from dense transform output failed."
+                            )
                             aka = ak.Array(tolist(v))
 
                         regularized = ak_regularize_regular_axes(aka)
 
-                        # FIX: if the output is 1D we need to add an irregular axis
-                        # explicitly, otherwise the array is considered regular
-                        # and in subsequent transforms it is fed into the "regular" branch.
-                        out_segment[k] = ak.from_regular(regularized, axis=var_dim)
+                        # There are two cases here:
+                        # 1. the reconstructed data is not ragged anymore.
+                        # in this case we need to restore the ragged axis explicitly
+                        # 2. the reconstructed data is still ragged, in this case we can keep
+                        # the array as is.
+                        # find singular ragged dim crashes if there are more than one ragged dim
+                        var_dims = ak_find_var_dims(regularized)
+                        if len(var_dims) == 0:
+                            # FIX: if the output is 1D we need to add an irregular axis
+                            # explicitly, otherwise the array is considered regular
+                            # and in subsequent transforms it is fed into the "regular" branch.
+                            out_segment[k] = ak.from_regular(regularized, axis=var_dim)
+                        elif len(var_dims) > 1:
+                            # Currently we do not support more than one ragged dim after reconstruction
+                            raise ValueError(
+                                f"Expected at most one variable-length dimension after reconstruction, found {len(var_dims)}: {var_dims}"
+                            )
+                        elif len(var_dims) == 1:
+                            out_segment[k] = regularized
+
                     out.append(out_segment)
 
             elif data_is_ragged and transform_supports_ragged:

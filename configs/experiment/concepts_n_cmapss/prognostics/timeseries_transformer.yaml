@@ -3,4 +3,4 @@
 defaults:
   - concepts_n_cmapss/base
   - /model_configs/concepts_prognostics/timeseries_transformer
-  - override /transforms: concepts_n_cmapss/depater2023_default
+  - override /transforms: concepts_n_cmapss/depater2023_default_deep_learning

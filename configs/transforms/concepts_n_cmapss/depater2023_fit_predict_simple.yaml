@@ -1,5 +1,5 @@
 defaults:
-  - concepts_n_cmapss_ds02/depater2023_default@_here_
+  - concepts_n_cmapss/depater2023_default@_here_
 
 # Introduce the task dimension to X, y. We
 reshape_X:
@@ -17,3 +17,9 @@ reshape_y:
   metadata:
     apply_to: rul
     assign_to: rul
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, rul]
