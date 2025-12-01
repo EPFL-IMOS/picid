@@ -7,3 +7,4 @@ data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
 target_name: Fault_Detection_Ground_Truth
 timestamp_name: Datetime
+group_by_days: True

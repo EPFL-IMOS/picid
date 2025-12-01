@@ -3,4 +3,4 @@
 defaults:
   - mzvav/diagnostics/base
   - /model_configs/diagnostics/lstm
-  - override /transforms: mzvav/window_history
+  - override /transforms: mzvav/default

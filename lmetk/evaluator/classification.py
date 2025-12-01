@@ -47,7 +47,7 @@ class ClassificationEvaluator(DefaultEvaluator):
         d_names = ["sample"] + ["time"] + ["class_logits"]
         dict_to_save.update({"preds_logits": (d_names, preds)})
 
-        t_names = ["sample"] + ["class_labels"]
+        t_names = ["sample"] + ["time"] + ["class_label"]
         dict_to_save.update({"targets_labels": (t_names, targets)})
 
         return dict_to_save

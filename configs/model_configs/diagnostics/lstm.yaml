@@ -18,7 +18,6 @@ callbacks:
   early_stopping:
     monitor: val/loss
     mode: min
-    patience: 0
 
   model_checkpoint:
     monitor: val/loss

@@ -122,7 +122,7 @@ class DefaultEvaluator(AbstractEvaluator):
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         assert (
-                targets.ndim == 3 and targets.shape[2] == 1
+            targets.ndim == 3 and targets.shape[2] == 1
         ), f"Expected target shape (N, T, 1), got {targets.shape}"
 
         if self.task_type in CLASSIFICATION_TASKS:
@@ -262,14 +262,9 @@ class DefaultEvaluator(AbstractEvaluator):
                 self.out_path is not None
             ), "Output path must be specified to save predictions."
 
-        try:
-            df = xr.Dataset(dict_to_save)
-            df.to_netcdf(self.out_path / "predictions.nc")
-            logger.info(f"Predictions saved to {self.out_path / 'predictions.nc'}")
-        except Exception as e:
-            logger.error(
-                f"Failed to save predictions to netCDF at {self.out_path}: {e}"
-            )
+        df = xr.Dataset(dict_to_save)
+        df.to_netcdf(self.out_path / "predictions.nc")
+        logger.info(f"Predictions saved to {self.out_path / 'predictions.nc'}")
 
     @override
     def _compute_metrics(self) -> Dict[str, float]:
