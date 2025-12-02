@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - mzvav/diagnostics/base
+  - /model_configs/diagnostics/cnn_1d
+  - override /transforms: mzvav/default_deep_learning

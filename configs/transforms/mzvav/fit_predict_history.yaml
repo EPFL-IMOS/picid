@@ -74,3 +74,9 @@ tabularize_y_val_test:
     apply_to: fault_classification
     assign_to: fault_classification
     transform_on_keys: ["val", "test"]
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, fault_classification]

@@ -68,25 +68,28 @@ class MZVAVLoader(SingleSourceLoader):
             "target": df_target,
             "timestamps": df_stamp,
             "initial_dates": df_stamp,
+            "days": df.groupby(df.index.date).ngroup(),
         }
 
         out_dict = {name: {} for name, _ in data_dict.items()}
         for split_key, split_series in split_dict.items():
             for name, data in data_dict.items():
                 split_mask = data.index.normalize().isin(split_series.index.normalize())
-                out_dict[name][split_key] = data[split_mask].sort_index().values
+                out_dict[name][split_key] = data[split_mask].sort_index()
 
         if self.group_by_days:
-            outs_ak = {k: ak.from_numpy(v) for k, v in outs.items()}
             outs_ak = {
-                k: ak_unflatten_discontinous_groups(v, outs["unit"])
-                for k, v in outs_ak.items()
+                k1: {
+                    k2: ak_unflatten_discontinous_groups(
+                        ak.from_numpy(v2.values), data_dict["days"].loc[v2.index].values
+                    )
+                    for k2, v2 in v1.items()
+                }
+                for k1, v1 in out_dict.items()
             }
             return outs_ak
         else:
             return out_dict
-
-        return out_dict
 
     def read_data(self):
         # Read raw CSV

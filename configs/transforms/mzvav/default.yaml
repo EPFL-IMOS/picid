@@ -2,7 +2,7 @@
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: lmetk.transforms.building.mzvav_scaler.MinMaxScalerMZVAV
 
   metadata:
     apply_to: features
