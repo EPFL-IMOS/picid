@@ -16,3 +16,13 @@ rename_target_to_fault_classification:
     apply_to: target
     assign_to:
       target: fault_classification
+
+# Not necessary, but interestingly converts to numpy
+#concatenate_features:
+#  # Concatenate time-features to the feature set
+#  transform:
+#    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+#
+#  metadata:
+#    apply_to: ["features"]
+#    assign_to: features
