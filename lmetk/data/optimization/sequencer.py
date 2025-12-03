@@ -42,8 +42,6 @@ class DenseArraySequencer(BaseSequencer):
             array = ak.Array(array.numpy())
         elif isinstance(array, pd.DataFrame):
             array = ak.Array(array.to_numpy())
-        elif isinstance(array, ak.Array):
-            pass
         else:
             raise TypeError(
                 f"array must be np.ndarray, torch.Tensor or pd.DataFrame but got {type(array)}."
