@@ -1,3 +1,4 @@
+from einops import rearrange
 import torch
 import numpy as np
 from typing import List
@@ -54,7 +55,9 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
             # num_classes is 1 for regression; pop it if user provided it
             num_classes = 1
             kwargs.pop("num_classes", None)
-        else:  # task_type in self.classification_tasks
+        elif (
+            self.task_type in self.classification_tasks
+        ):  # task_type in self.classification_tasks
             model_task_type = "classification"
             # For classification, we *require* num_classes from kwargs
             if "num_classes" not in kwargs:
@@ -122,7 +125,7 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
             # Model output is (batch_size,)
             # Target is (batch_size, 1)
             # .unsqueeze(1) changes shape to (batch_size, 1)
-            predictions = outputs.unsqueeze(1)
+            predictions = rearrange(outputs, "b -> b 1 1")
             targets = batch_y
 
             # Shape check for regression
@@ -132,10 +135,10 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
                     f"and targets {targets.shape}."
                 )
 
-        else:  # self.task_type in self.classification_tasks
+        elif self.task_type in self.classification_tasks:
             # Model output is (batch_size, num_classes)
-            predictions = outputs.unsqueeze(1)
-            targets = batch_y
+            predictions = rearrange(outputs, "b c -> b 1 c")
+            targets = batch_y.unsqueeze(1)
 
             # Basic shape check for classification
             if predictions.shape[0] != targets.shape[0]:
@@ -145,6 +148,8 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
                 )
             # Note: We don't check full shape, as targets can be
             # (batch_size,) for CrossEntropy or (batch_size, num_classes) for BCE.
+        else:
+            raise ValueError(f"Unsupported task type: {self.task_type}")
 
         model_out = {
             "predictions": predictions,
