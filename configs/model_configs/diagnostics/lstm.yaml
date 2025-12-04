@@ -1,7 +1,7 @@
 #@package _global_
 
 defaults:
-  - override /dataset: diagnostics/fault_classification_dataset
+  - override /dataset: diagnostics/fault_classification_multiunit_dataset
   - override /datamodule: base_datamodule
   - override /model: lstm
   - override /optimization: reduce_on_plateau
