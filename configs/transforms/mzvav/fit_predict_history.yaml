@@ -75,9 +75,18 @@ tabularize_y_val_test:
     assign_to: fault_classification
     transform_on_keys: ["val", "test"]
 
-# Not necessary since its single unit
-#concatenate_units:
-#  transform:
-#    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
-#  metadata:
-#    apply_to: [features, fault_classification]
+rugged_dimension_swap:
+  transform:
+    _target_: lmetk.transforms.building.rugged_dimension_swap.RuggedDimensionSwap
+    axis_to_regularize: 1
+    axis_to_irregularize: 2
+
+  metadata:
+    apply_to: ["features", "fault_classification"]
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, fault_classification]
+
