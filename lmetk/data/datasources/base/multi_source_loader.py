@@ -164,13 +164,25 @@ class MultiSourceLoader(AbstractDataSourceLoader):
             data_dict, _ = self.multisource_data_splitter(data_lst, source_names)
             self.container = SplitDatasetContainer(**data_dict)
         else:
+            instance_clss = {
+                v for chunk in data_lst for v in chunk.get_instance_cls().values()
+            }
 
-            raise NotImplementedError(
-                "Not yet completely implemented. Please provide a multisource_data_splitter."
-            )
-            # self.container = SplitDatasetContainer(
-            #     *self.data_lst, instance_cls=instance_clss.pop()
-            # )
+            data_names = list(data_lst[0].keys())
+            inner_split = list(data_lst[0][data_names[0]].keys())
+            data_dict = {
+                data_name: {split_name: [] for split_name in inner_split}
+                for data_name in data_names
+            }
+
+            for data in data_lst:
+                for split_name in inner_split:
+                    for data_name in data_names:
+                        data_dict[data_name][split_name].extend(
+                            data[data_name][split_name]
+                        )
+
+            self.container = SplitDatasetContainer(**data_dict)
 
         self._is_loaded = True
 
