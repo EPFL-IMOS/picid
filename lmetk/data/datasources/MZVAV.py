@@ -19,13 +19,20 @@ logger = logging.getLogger(__name__)
 
 class MZVAVLoader(SingleSourceLoader):
     def __init__(
-        self, data_path, timestamp_name, target_name, group_by_days=False, **kwargs
+        self,
+        data_path,
+        timestamp_name,
+        target_name,
+        random_state,
+        group_by_days=False,
+        **kwargs,
     ):
 
         self.data_path = data_path
         self.timestamp_name = timestamp_name
         self.target_name = target_name
         self.group_by_days = group_by_days
+        self.random_state = random_state
         super().__init__(
             **kwargs,
         )
@@ -55,11 +62,17 @@ class MZVAVLoader(SingleSourceLoader):
         df, df_target, df_stamp, days_to_fault = self.read_data()
 
         train_val_days, test_days = train_test_split(
-            days_to_fault, test_size=0.2, stratify=days_to_fault.values
+            days_to_fault,
+            test_size=0.2,
+            stratify=days_to_fault.values,
+            random_state=self.random_state,
         )
 
         train_days, val_days = train_test_split(
-            train_val_days, test_size=0.25, stratify=train_val_days.values
+            train_val_days,
+            test_size=0.25,
+            stratify=train_val_days.values,
+            random_state=self.random_state,
         )
 
         split_dict = {"train": train_days, "val": val_days, "test": test_days}
