@@ -1,5 +1,5 @@
 import warnings
-from typing import override
+from typing import override, Dict, Any
 import logging
 
 import numpy as np
@@ -80,9 +80,12 @@ class MZVAVLoader(SingleSourceLoader):
         if self.group_by_days:
             outs_ak = {
                 k1: {
-                    k2: ak_unflatten_discontinous_groups(
-                        ak.from_numpy(v2.values), data_dict["days"].loc[v2.index].values
-                    )
+                    k2: [
+                        ak_unflatten_discontinous_groups(
+                            ak.from_numpy(v2.values),
+                            data_dict["days"].loc[v2.index].values,
+                        )
+                    ]
                     for k2, v2 in v1.items()
                 }
                 for k1, v1 in out_dict.items()
@@ -146,3 +149,15 @@ class MZVAVLoader(SingleSourceLoader):
         logger.warning(
             f"{self.data_name} does not support data splitting. The project relies on predefined splits."
         )
+
+    def get_data_name(self):
+        """Return data name."""
+        return self.data_name
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """
+        Return metadata about the data source.
+        This can include information like data source name, version, etc.
+        """
+        assert self._is_loaded, "Data must be loaded before getting metadata."
+        return {}
