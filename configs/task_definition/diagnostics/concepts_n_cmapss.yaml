@@ -3,7 +3,7 @@
 seq_len: 50 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
-task_type: health_states
+task_type: concepts
 
 stride: 1
 stride_train: 5

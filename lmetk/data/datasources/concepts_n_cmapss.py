@@ -84,7 +84,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         self.include_healthy = include_healthy
         self.subsampling_rate = subsampling_rate
         self.cruise = cruise
-        self.concepts = concepts
+        self.concepts = load_arguments.concepts
         self.binary_concepts = binary_concepts
         self.combined_concepts = combined_concepts
         self.scaling = scaling

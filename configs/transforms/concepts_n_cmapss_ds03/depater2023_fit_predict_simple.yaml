@@ -1,0 +1,34 @@
+defaults:
+  - concepts_n_cmapss_ds03/depater2023_default@_here_
+
+# Introduce the task dimension to X, y. We
+reshape_X:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: features
+    assign_to: features
+
+reshape_y:
+  transform:
+    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: rul
+    assign_to: rul
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, rul, concepts]
+
+rename_target_to_fault_classification:
+  transform:
+    _target_: lmetk.transforms.base_transforms.identity.IdentityPassThrough
+
+  metadata:
+    apply_to: concepts
+    assign_to:
+      target: fault_classification

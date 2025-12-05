@@ -16,8 +16,9 @@ cruise: false
 units: null
 subsampling_rate: 1
 concepts:
-  - "HPC"
-  - "Fan"
+    - "LPT-E"
+    - "LPT-F"
+    - "HPT-E"
 combined_concepts: false
 binary_concepts: true
 RUL: "linear"

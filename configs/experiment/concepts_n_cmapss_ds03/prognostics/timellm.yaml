@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds03/prognostics/base
+  - /model_configs/concepts_prognostics/timellm
+  - override /transforms: concepts_n_cmapss_ds03/depater2023_default_deep_learning
