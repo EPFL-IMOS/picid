@@ -22,4 +22,4 @@ concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
   metadata:
-    apply_to: [features, rul]
+    apply_to: [features, rul, concepts]

@@ -50,14 +50,15 @@ subsample_others:
     window_size: 60
     aggregation: last
   metadata:
-    apply_to: [unit, timestamps, health_states, rul]
+    apply_to: [unit, timestamps, health_states, rul, n_DS]
 
 
 build_concept_classes:
   transform:
     _target_: lmetk.transforms.n_cmapss.concept_classes_builder.ConceptClassesBuilder
   metadata:
-    apply_to: [concepts, features, rul]
+    apply_to: [concepts, features, rul, n_DS]
+    fit_on_key: train
 
 
 concatenate_features:
