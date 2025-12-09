@@ -280,6 +280,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             "timestamps": self.df_X.index.values.reshape(-1, 1),  # cycle numbers
             "health_states": self.df_A["hs"].values.reshape(-1, 1),
             "unit": self.df_A["unit"].values,
+            "n_DS": np.ones(self.df_A["unit"].shape) * int(self.n_DS),
             "descriptors": self.df_W.values,  # operating conditions
             "concepts": self.concepts.values,
             "rul": self.df_Y.values,  # RUL

@@ -6,21 +6,45 @@ import numpy as np
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import (
+    NoFitMultiSourceTransformMixin,
+    ConcatinatedFitMultiSourceTransformMixin,
+)
 from lmetk.utils.decorators import check_transform_output_consistency
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ConceptClassesBuilder(DenseTransform, NoFitMultiSourceTransformMixin):
+class ClassLabelLookup:
+    def __init__(self):
+        self.table = {}
+        self.counter = 1
 
+    def get(self, key):
+        """Return the integer ID for the key, or None if not present."""
+        return self.table.get(key, None)
+
+    def set(self, key):
+        """Assign next integer if key not present, return its ID."""
+        if key not in self.table:
+            self.table[key] = self.counter
+            self.counter += 1
+        return self.table[key]
+
+
+class ConceptClassesBuilder(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
     def __init__(
         self,
         **kwargs,
     ):
-
         super().__init__()
+        self.lookup = ClassLabelLookup()
+        self.place_key_holder = "n_DS_{key}"
+
+    def fit_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
+        class_key = self.place_key_holder.format(key=int(data["n_DS"][0]))
+        self.lookup.set(class_key)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
@@ -32,6 +56,7 @@ class ConceptClassesBuilder(DenseTransform, NoFitMultiSourceTransformMixin):
                 "Non-binary concept was detected and is now rounded to 0 or 1"
             )
 
+        print("sum:", np.unique(np.sum(concepts, axis=1)))
         assert np.isin(
             concepts, [0, 1]
         ).all(), "Non-binary concept is remaining and not supported"
@@ -43,6 +68,14 @@ class ConceptClassesBuilder(DenseTransform, NoFitMultiSourceTransformMixin):
         all_zero = np.all(concepts == 0, axis=1)
         classes = max_index + 1
         classes[all_zero] = 0
+
+        # Consider unit id
+        class_key = self.place_key_holder.format(key=int(data["n_DS"][0]))
+        self.lookup.set(class_key)
+        class_id = self.lookup.get(class_key)
+        assert class_id is not None, "Class index was not found in lookup table"
+        classes *= class_id
+        print(np.unique(classes))
 
         data["concepts"] = classes[:, None]
 
