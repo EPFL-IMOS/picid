@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss/diagnostics/base
+  - /model_configs/diagnostics/crossformer
+  - override /transforms: concepts_n_cmapss_ds03/depater2023_default_deep_learning
