@@ -75,7 +75,6 @@ class ConceptClassesBuilder(DenseTransform, ConcatinatedFitMultiSourceTransformM
         class_id = self.lookup.get(class_key)
         assert class_id is not None, "Class index was not found in lookup table"
         classes *= class_id
-        print(np.unique(classes))
 
         data["concepts"] = classes[:, None]
 
