@@ -52,14 +52,13 @@ subsample_others:
   metadata:
     apply_to: [unit, timestamps, health_states, rul, n_DS]
 
-
 build_concept_classes:
   transform:
     _target_: lmetk.transforms.n_cmapss.concept_classes_builder.ConceptClassesBuilder
   metadata:
     apply_to: [concepts, features, rul, n_DS]
-    fit_on_key: train
-
+    fit_on_key: n_DS
+    fit_on: train
 
 concatenate_features:
   # Concatenate time-features to the feature set

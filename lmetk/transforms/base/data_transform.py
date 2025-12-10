@@ -162,7 +162,7 @@ class DataTransform:
                 raise ValueError(
                     f"Metadata for transform '{transform_name}' has 'apply_to' "
                     "as a list but 'fit_on_key' is not specified. "
-                    "Please specify 'fit_on_key' to avoid ambiguity."
+                    "Please specify 'fit_on_key' in addition to 'fit_on' to avoid ambiguity."
                 )
             self.fit_on_key = self.apply_to
 
