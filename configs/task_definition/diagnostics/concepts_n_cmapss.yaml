@@ -7,7 +7,7 @@ task_type: concepts
 
 stride: 1
 stride_train: 5
-num_classes: 5
+num_classes: 2
 
 model:
   data_requirements:

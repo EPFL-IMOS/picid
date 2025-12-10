@@ -43,8 +43,9 @@ class ConceptClassesBuilder(DenseTransform, ConcatinatedFitMultiSourceTransformM
         self.place_key_holder = "n_DS_{key}"
 
     def fit_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-        class_key = self.place_key_holder.format(key=int(data["n_DS"][0]))
-        self.lookup.set(class_key)
+        for id in np.unique(data["n_DS"]):
+            class_key = self.place_key_holder.format(key=int(id))
+            self.lookup.set(class_key)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
@@ -71,7 +72,6 @@ class ConceptClassesBuilder(DenseTransform, ConcatinatedFitMultiSourceTransformM
 
         # Consider unit id
         class_key = self.place_key_holder.format(key=int(data["n_DS"][0]))
-        self.lookup.set(class_key)
         class_id = self.lookup.get(class_key)
         assert class_id is not None, "Class index was not found in lookup table"
         classes *= class_id

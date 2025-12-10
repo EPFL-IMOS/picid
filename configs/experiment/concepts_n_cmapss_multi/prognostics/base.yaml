@@ -1,0 +1,19 @@
+#@package _global_
+
+defaults:
+  - override /datasource: concepts_n_cmapss_multi_source
+  - override /evaluator: rul
+  - override /task_definition: prognostics/concepts_n_cmapss_rul_prediction
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_rul
+    apply_inverse_scaling: True
+
+  val:
+    inverse_transform_name: scaler_rul
+    apply_inverse_scaling: True
+
+  test:
+    inverse_transform_name: scaler_rul
+    apply_inverse_scaling: True
