@@ -125,6 +125,23 @@ class DefaultEvaluator(AbstractEvaluator):
             targets.ndim == 3 and targets.shape[2] == 1
         ), f"Expected target shape (N, T, 1), got {targets.shape}"
 
+        # 1. Store Normalized Data (BEFORE inverse transform)
+        if is_denormalized_run:
+            # We need a copy of the normalized data for the secondary metric set
+            normalized_predictions = predictions.copy()
+            normalized_targets = targets.copy()
+
+            # Store original data for file saving later (self.preds/self.targets holds normalized)
+            if self.collect_predictions:
+                self.preds.append(predictions.copy())
+                self.targets.append(targets.copy())
+
+        elif self.collect_predictions:
+            # Store original data for file saving when scaling is OFF
+            self.preds.append(predictions)
+            self.targets.append(targets)
+
+        # 2. Apply inverse scaling (MODIFIES predictions/targets)
         if self.task_type in CLASSIFICATION_TASKS:
             assert (
                 self.scaling_wrapper.inverse_transform is None
@@ -152,27 +169,6 @@ class DefaultEvaluator(AbstractEvaluator):
 
         else:
             raise ValueError(f"Evaluation does not support task_type: {self.task_type}")
-
-        # 1. Store Normalized Data (BEFORE inverse transform)
-        if is_denormalized_run:
-            # We need a copy of the normalized data for the secondary metric set
-            normalized_predictions = predictions.copy()
-            normalized_targets = targets.copy()
-
-            # Store original data for file saving later (self.preds/self.targets holds normalized)
-            if self.collect_predictions:
-                self.preds.append(predictions.copy())
-                self.targets.append(targets.copy())
-
-        elif self.collect_predictions:
-            # Store original data for file saving when scaling is OFF
-            self.preds.append(predictions)
-            self.targets.append(targets)
-
-        # 2. Apply inverse scaling (MODIFIES predictions/targets)
-        predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
-            predictions, targets
-        )
 
         # 3. Store Denormalized Data
         if self.collect_predictions and is_denormalized_run:

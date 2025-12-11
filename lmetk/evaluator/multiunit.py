@@ -112,14 +112,6 @@ class MultiUnitEvaluator(DefaultEvaluator):
 
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
-        if self.task_type in REGRESSION_TASKS:
-            assert (
-                predictions.ndim == 3 and predictions.shape[2] == 1
-            ), f"Expected shape (N, T, 1), got {targets.shape}"
-            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
-                predictions, targets
-            )
-
         # Data BEFORE inverse scaling (normalized data) - Must copy before modification
         if is_denormalized_run:
             normalized_predictions = predictions.copy()
@@ -132,9 +124,13 @@ class MultiUnitEvaluator(DefaultEvaluator):
             self.unit_ids.append(unit_ids)
 
         # Apply inverse scaling (MODIFIES predictions/targets in place)
-        predictions, targets = self._inverse_transform_per_unit(
-            predictions, targets, unit_ids
-        )
+        if self.task_type in REGRESSION_TASKS:
+            assert (
+                predictions.ndim == 3 and predictions.shape[2] == 1
+            ), f"Expected shape (N, T, 1), got {targets.shape}"
+            predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
+                predictions, targets
+            )
 
         # Collect scaled data (if inverse scaling was applied)
         if self.collect_predictions and is_denormalized_run:
