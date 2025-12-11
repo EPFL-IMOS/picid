@@ -85,7 +85,7 @@ for model_name in "${model_names[@]}"; do
                 command_to_run=(
                     python lmetk/run.py \
                     paths=runai \
-                    experiment=${dataset}/prognostics/${model_name} \
+                    experiment=${dataset}/diagnostics/${model_name} \
                     datamodule.train_batch_size=${batch_size} \
                     datamodule.val_batch_size=1024 \
                     datamodule.test_batch_size=1024 \
