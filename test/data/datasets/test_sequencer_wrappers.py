@@ -95,11 +95,14 @@ def test_dense_sequencer_torch_init(torch_dense_data):
 
 def test_dense_sequencer_invalid_input():
     """
-    Verifies TypeError is raised for non-numpy/non-torch inputs (e.g., Lists).
+    Verifies TypeError is raised for non-numpy/non-torch/non-dataframe inputs.
     """
     invalid_data = [[1, 2], [3, 4]]
 
-    with pytest.raises(TypeError, match="must be np.ndarray or torch.Tensor"):
+    # Update match string to include 'pd.DataFrame'
+    with pytest.raises(
+        TypeError, match="must be np.ndarray, torch.Tensor or pd.DataFrame"
+    ):
         DenseArraySequencer(
             array=invalid_data, seq_len=1, label_len=0, pred_len=1, stride=1
         )

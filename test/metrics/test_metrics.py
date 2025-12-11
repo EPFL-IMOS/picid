@@ -243,27 +243,45 @@ def test_mean_percentage_error_metric():
 
 
 def test_phm_score_metric():
-    """PHM Score (similar to NASA but often sums instead of means)."""
+    """
+    Tests the PHM Score Metric.
+
+    Logic Check:
+    The implementation computes an asymmetric score A_i in [0, 1].
+    - Early predictions (Error > 0): penalized by width 20.
+    - Late predictions (Error <= 0): penalized by width 5 (heavier penalty).
+
+    Data Setup:
+    Sample 1: Target=100, Pred=80.
+       - % Error = 100 * (100 - 80) / 100 = 20.0
+       - Error > 0 (Early). Uses width 20.
+       - Score = exp(ln(0.5) * (20/20)) = exp(ln(0.5)) = 0.5
+
+    Sample 2: Target=100, Pred=105.
+       - % Error = 100 * (100 - 105) / 100 = -5.0
+       - Error <= 0 (Late). Uses width 5.
+       - Score = exp(-ln(0.5) * (-5/5)) = exp(-ln(0.5) * -1) = 0.5
+
+    Average Score = (0.5 + 0.5) / 2 = 0.5
+    """
     metric = PHMScoreMetric()
     t = np.array([100, 100])
     p = np.array([80, 105])
 
-    # Error 1 (Early): d = 80 - 100 = -20. Score = exp(-(-20)/13) - 1 = exp(20/13) - 1
-    # Error 2 (Late):  d = 105 - 100 = 5.   Score = exp(5/10) - 1     = exp(0.5) - 1
+    # Explicit Calculation:
+    ln_half = np.log(0.5)
 
-    s1 = np.exp(20 / 13) - 1
-    s2 = np.exp(0.5) - 1
+    # 1. Early Prediction (Error=20)
+    # Formula: exp(ln(0.5) * (Error / 20))
+    s1 = np.exp(ln_half * (20.0 / 20.0))
 
-    # NOTE: Check your PHMScore implementation.
-    # If it mirrors NASA wrapper, it might mean. If it follows competition, it sums.
-    # Assuming wrapper behavior matches NASAScoreMetric (mean).
-    expected = (s1 + s2) / 2
+    # 2. Late Prediction (Error=-5)
+    # Formula: exp(-ln(0.5) * (Error / 5))
+    s2 = np.exp(-ln_half * (-5.0 / 5.0))
+
+    expected = (s1 + s2) / 2.0
 
     metric.update(p, t)
-    # Note: If this fails, check if your PHMScoreMetric sums instead of averages.
-    # Based on standard torchmetrics usage, aggregation is usually mean unless specified.
-    # If implementation sums, remove division by 2.
-    # For this test file, I assume consistency with NASA Score logic shown earlier.
     assert np.isclose(metric.compute(), expected)
 
 

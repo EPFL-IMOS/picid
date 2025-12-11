@@ -37,26 +37,25 @@ def test_validate_input_returns_array_for_valid_input():
     assert_array_equal(returned, valid)
 
 
-def test_transform_data_produces_feature_vector_and_handles_nans():
-    # Two signals (columns), two stats -> output length 4
+def test_transform_data_raises_error_on_nans():
+    """
+    Verifies that the transform strictly raises a ValueError when NaNs are present
+    in the input signal, rather than producing NaN features.
+    """
+    # Arrange
     stats = ["mean", "maximum"]
     t = SpectralStatsTransform(stats_to_compute=stats)
     data = {
-        # Column 0: valid signal [1,3,5]
-        # Column 1: contains NaN -> stats for this signal should be NaN
+        # Column 0: valid signal [1, 3, 5]
+        # Column 1: contains NaN [NaN, 4, 6] -> This should trigger the error
         "features": np.array([[1.0, np.nan], [3.0, 4.0], [5.0, 6.0]])
     }
 
-    result = t.transform_data(data, metadata={})
-    assert result.shape == (len(stats) * 2,)
-
-    # First two values correspond to column 0 and should be finite
-    assert not np.isnan(result[0])
-    assert not np.isnan(result[1])
-
-    # Last two values correspond to column 1 (contains NaN) and should be NaN
-    assert np.isnan(result[2])
-    assert np.isnan(result[3])
+    # Act & Assert
+    # We expect a ValueError because the signal in column 1 has NaNs,
+    # which causes the computed stats to be NaN.
+    with pytest.raises(ValueError, match="Stat 'mean' for signal 1 is NaN"):
+        t.transform_data(data, metadata={})
 
 
 def test_transform_data_with_named_transform_input():

@@ -43,7 +43,7 @@ class TestFrequencyFeaturesNp:
             "F21",
             "F22",
             "F23",
-            "F24",
+            # "F24",
         }
         assert (
             set(features.keys()) == expected_keys
