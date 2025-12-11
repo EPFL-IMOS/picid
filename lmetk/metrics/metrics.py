@@ -8,6 +8,7 @@ from torchmetrics.classification import (
     MulticlassF1Score,
     MulticlassPrecision,
     MulticlassRecall,
+    MulticlassAUROC,
 )
 
 from .base import AbstractFileSystemMetric, AbstractMetric
@@ -467,21 +468,26 @@ class MulticlassF1Metric(AbstractMetric):
 
 class MulticlassAUROCMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        self.metric = MulticlassAUROCMetric(num_classes=num_classes, average="macro")
+        # 1. Use the library class (MulticlassAUROC)
+        self.metric = MulticlassAUROC(num_classes=num_classes, average="macro")
         super().__init__("AUROC")
 
     def reset(self):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        predictions = torch.from_numpy(predictions)
+        preds = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
 
-        preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True)
-            if predictions.shape[-1] > 1
-            else predictions
-        )
+        # 2. Permute Preds: (Batch, Time, Class) -> (Batch, Class, Time)
+        if preds.ndim == 3:
+            preds = preds.permute(0, 2, 1)
+
+        # 3. Squeeze Targets: (Batch, Time, 1) -> (Batch, Time)
+        if targets.ndim == 3 and targets.shape[-1] == 1:
+            targets = targets.squeeze(-1)
+
+        targets = targets.long()
         self.metric.update(preds, targets)
 
     def compute(self):
