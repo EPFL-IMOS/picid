@@ -60,6 +60,7 @@ class ClassificationEvaluator(DefaultEvaluator):
         results = super()._compute_metrics()
         final_results = {}
 
+        print(results, "results in classification evaluator")
         for key, value in results.items():
             # 1. Remove aggregation suffix (does nothing if suffix is not present)
             base_key = key.removesuffix("_mean")
