@@ -305,6 +305,22 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (Diagnostics): lstm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss/diagnostics/lstm",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "Concepts N-CMAPSS: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
@@ -429,6 +445,23 @@
             "args": [
                 "paths=rt_local",
                 "experiment=concepts_n_cmapss_ds02/prognostics/lstm",
+                "debug=default",
+                "task_definition.subset_ratio=0.1"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "Concepts N-CMAPSS (DS02): CNN_1D",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_ds02/prognostics/cnn_1d",
                 "debug=default",
                 "task_definition.subset_ratio=0.1"
             ],
@@ -1147,7 +1180,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=unibo/prognostics/statistics/lstm",
+                "experiment=unibo/prognostics/statistics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -1205,7 +1238,7 @@
             "justMyCode": true
         },
         {
-            "name": "PHM20: lstm",
+            "name": "PHM20: CNN_1D",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -1213,7 +1246,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=phme20/prognostics/raw/lstm",
+                "experiment=phme20/prognostics/raw/cnn_1d",
                 "debug=default",
                 "logger=wandb"
             ],
@@ -1274,7 +1307,7 @@
             }
         },
         {
-            "name": "MZVAV: xgboost",
+            "name": "MZVAV: CNN_1D",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -1282,8 +1315,8 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=mzvav/diagnostics/xgboost_fit_predict",
-                // "debug=default"
+                "experiment=mzvav/diagnostics/cnn_1d",
+                "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
