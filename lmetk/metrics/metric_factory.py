@@ -5,6 +5,7 @@ from .base import AbstractMetric
 from lmetk.metrics.metrics import (
     MAEMetric,
     MSEMetric,
+    MulticlassAUROCMetric,
     MulticlassAccuracyMetric,
     MulticlassPrecisionMetric,
     MulticlassRecallMetric,
@@ -44,6 +45,7 @@ class MetricFactory:
         "precision": MulticlassPrecisionMetric,
         "recall": MulticlassRecallMetric,
         "f1": MulticlassF1Metric,
+        "auroc": MulticlassAUROCMetric,
     }
 
     @classmethod
