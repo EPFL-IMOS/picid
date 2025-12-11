@@ -126,8 +126,8 @@ def test_update_splits_data_by_unit_1d(multiunit_evaluator_fixture):
     eval = multiunit_evaluator_fixture
 
     # Batch of 3 samples: Unit 1, Unit 2, Unit 1
-    preds = np.array([[10.0], [20.0], [30.0]])  # Shape (3, 1)
-    targets = np.array([[10.0], [20.0], [30.0]])
+    preds = np.array([[[10.0]], [[20.0]], [[30.0]]])  # Shape (3, 1, 1)
+    targets = np.array([[[10.0]], [[20.0]], [[30.0]]])  # Shape (3, 1, 1)
     unit_ids = np.array([1, 2, 1])  # Shape (3,)
 
     model_out = {"predictions": preds, "targets": targets, "unit_id": unit_ids}
@@ -156,7 +156,7 @@ def test_update_dual_metrics_when_scaling_on(multiunit_evaluator_fixture):
     eval.normalized_unit_metrics = defaultdict(eval._create_metric_dict)
 
     # One sample for Unit 5. Value = 10.0.
-    preds = np.array([[10.0]])
+    preds = np.array([[[10.0]]])  # Shape (1, 1, 1)
     targets = preds
     unit_ids = np.array([5])
 

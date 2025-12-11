@@ -132,9 +132,9 @@ def default_evaluator_regression_fixture_saving(default_evaluator_regression_fix
 # === 2. Helper Data and Functions ===
 # =========================================================================
 
-# Use 2D Arrays (N, 1) to satisfy Shape Checks in Scaling/Metrics
-P_NORM = np.array([[1.0], [3.0]])
-T_NORM = np.array([[2.0], [4.0]])
+# Use 3D Arrays (N, 1, 1) to satisfy Shape Checks in Scaling/Metrics
+P_NORM = np.array([[[1.0]], [[3.0]]])
+T_NORM = np.array([[[2.0]], [[4.0]]])
 
 
 def _update_evaluator(evaluator: DefaultEvaluator, predictions, targets):
@@ -214,7 +214,7 @@ def test_update_collection_logic(
     # Ensure collections are clean before test
     evaluator.reset()
 
-    P_IN_SAFE = np.array([[5.0], [6.0]])
+    P_IN_SAFE = np.array([[[5.0]], [[6.0]]])
 
     # ACT
     _update_evaluator(evaluator, P_IN_SAFE, P_IN_SAFE)
