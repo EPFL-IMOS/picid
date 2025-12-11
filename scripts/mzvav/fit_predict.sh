@@ -37,8 +37,8 @@ wandb_log_folder="mzvav"
     # "concepts_n_cmapss_ds02/prognostics" \
     # "concepts_n_cmapss/prognostics" \
 # )
-datasets=("mzvav/prognostics")
-model_names=(tabpfn_fit_predict xgboost_fit_predict tabdpt_fit_predict)
+datasets=("mzvav/diagnostics")
+model_names=(xgboost_fit_predict tabdpt_fit_predict tabpfn_fit_predict)
 
 # Careful here because of oom issues with long context lengths / short strides
 context_lengths=(1 10 20)
