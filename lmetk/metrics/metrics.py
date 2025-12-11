@@ -383,14 +383,29 @@ class MulticlassAccuracyMetric(AbstractMetric):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        predictions = torch.from_numpy(predictions)
+        preds = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
 
-        preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True)
-            if predictions.shape[-1] > 1
-            else predictions
-        )
+        # 1. ARGMAX Logic: Convert (N, C) -> (N,) or (N, T, C) -> (N, T)
+        if preds.is_floating_point():
+            preds = torch.argmax(preds, dim=-1)
+
+        # 2. SQUEEZE Logic: Ensure targets match preds shape
+        # Convert (N, 1) -> (N,) or (N, T, 1) -> (N, T)
+        if targets.ndim == preds.ndim + 1:
+            targets = targets.squeeze(-1)
+        elif targets.ndim == preds.ndim and targets.shape[-1] == 1:
+            # Case where preds is already argmaxed elsewhere but target is (N, 1)
+            # vs preds (N, 1) -> This usually implies preds is not argmaxed,
+            # but if preds IS argmaxed (N,), target might still be (N, 1).
+            # Safe bet: squeeze target if it has dim 1 at end and preds doesn't match shape exactly
+            if preds.shape != targets.shape:
+                targets = targets.squeeze(-1)
+
+        # Ensure types are correct for labels
+        preds = preds.long()
+        targets = targets.long()
+
         self.metric.update(preds, targets)
 
     def compute(self):
@@ -406,14 +421,26 @@ class MulticlassPrecisionMetric(AbstractMetric):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        predictions = torch.from_numpy(predictions)
+        preds = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
 
-        preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True)
-            if predictions.shape[-1] > 1
-            else predictions
-        )
+        # 1. ARGMAX Logic
+        if preds.is_floating_point():
+            preds = torch.argmax(preds, dim=-1)
+
+        # 2. SQUEEZE Logic
+        if targets.ndim > preds.ndim:
+            targets = targets.squeeze(-1)
+        elif (
+            targets.ndim == preds.ndim
+            and targets.shape[-1] == 1
+            and preds.shape != targets.shape
+        ):
+            targets = targets.squeeze(-1)
+
+        preds = preds.long()
+        targets = targets.long()
+
         self.metric.update(preds, targets)
 
     def compute(self):
@@ -429,14 +456,26 @@ class MulticlassRecallMetric(AbstractMetric):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        predictions = torch.from_numpy(predictions)
+        preds = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
 
-        preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True)
-            if predictions.shape[-1] > 1
-            else predictions
-        )
+        # 1. ARGMAX Logic
+        if preds.is_floating_point():
+            preds = torch.argmax(preds, dim=-1)
+
+        # 2. SQUEEZE Logic
+        if targets.ndim > preds.ndim:
+            targets = targets.squeeze(-1)
+        elif (
+            targets.ndim == preds.ndim
+            and targets.shape[-1] == 1
+            and preds.shape != targets.shape
+        ):
+            targets = targets.squeeze(-1)
+
+        preds = preds.long()
+        targets = targets.long()
+
         self.metric.update(preds, targets)
 
     def compute(self):
@@ -452,14 +491,26 @@ class MulticlassF1Metric(AbstractMetric):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        predictions = torch.from_numpy(predictions)
+        preds = torch.from_numpy(predictions)
         targets = torch.from_numpy(targets)
-        # Convert logits to class predictions with argmax if necessary
-        preds = (
-            torch.argmax(predictions, dim=-1, keepdim=True)
-            if predictions.shape[-1] > 1
-            else predictions
-        )
+
+        # 1. ARGMAX Logic
+        if preds.is_floating_point():
+            preds = torch.argmax(preds, dim=-1)
+
+        # 2. SQUEEZE Logic
+        if targets.ndim > preds.ndim:
+            targets = targets.squeeze(-1)
+        elif (
+            targets.ndim == preds.ndim
+            and targets.shape[-1] == 1
+            and preds.shape != targets.shape
+        ):
+            targets = targets.squeeze(-1)
+
+        preds = preds.long()
+        targets = targets.long()
+
         self.metric.update(preds, targets)
 
     def compute(self):
@@ -468,27 +519,149 @@ class MulticlassF1Metric(AbstractMetric):
 
 class MulticlassAUROCMetric(AbstractMetric):
     def __init__(self, num_classes: int):
-        # 1. Use the library class (MulticlassAUROC)
         self.metric = MulticlassAUROC(num_classes=num_classes, average="macro")
-        super().__init__("AUROC")
+        super().__init__("auroc")
 
     def reset(self):
         self.metric.reset()
 
     def update(self, predictions, targets):
-        preds = torch.from_numpy(predictions)
-        targets = torch.from_numpy(targets)
+        preds = torch.from_numpy(predictions).float()
+        targets = torch.from_numpy(targets).long()
 
-        # 2. Permute Preds: (Batch, Time, Class) -> (Batch, Class, Time)
+        # AUROC needs Probabilities, so NO argmax here.
+
+        # 1. Permute 3D inputs: (Batch, Time, Class) -> (Batch, Class, Time)
         if preds.ndim == 3:
             preds = preds.permute(0, 2, 1)
 
-        # 3. Squeeze Targets: (Batch, Time, 1) -> (Batch, Time)
+        # 2. Squeeze Targets: (Batch, Time, 1) -> (Batch, Time)
         if targets.ndim == 3 and targets.shape[-1] == 1:
             targets = targets.squeeze(-1)
+        elif targets.ndim == 2 and targets.shape[-1] == 1:
+            targets = targets.squeeze(-1)
 
-        targets = targets.long()
         self.metric.update(preds, targets)
 
     def compute(self):
         return self.metric.compute().item()
+
+
+# class MulticlassAccuracyMetric(AbstractMetric):
+#     def __init__(self, num_classes: int):
+#         self.metric = MulticlassAccuracy(num_classes=num_classes, average="micro")
+#         super().__init__("accuracy")
+
+#     def reset(self):
+#         self.metric.reset()
+
+#     def update(self, predictions, targets):
+#         predictions = torch.from_numpy(predictions)
+#         targets = torch.from_numpy(targets)
+
+#         preds = (
+#             torch.argmax(predictions, dim=-1, keepdim=True)
+#             if predictions.shape[-1] > 1
+#             else predictions
+#         )
+#         self.metric.update(preds, targets)
+
+#     def compute(self):
+#         return self.metric.compute().item()
+
+
+# class MulticlassPrecisionMetric(AbstractMetric):
+#     def __init__(self, num_classes: int):
+#         self.metric = MulticlassPrecision(num_classes=num_classes, average="macro")
+#         super().__init__("precision")
+
+#     def reset(self):
+#         self.metric.reset()
+
+#     def update(self, predictions, targets):
+#         predictions = torch.from_numpy(predictions)
+#         targets = torch.from_numpy(targets)
+
+#         preds = (
+#             torch.argmax(predictions, dim=-1, keepdim=True)
+#             if predictions.shape[-1] > 1
+#             else predictions
+#         )
+#         self.metric.update(preds, targets)
+
+#     def compute(self):
+#         return self.metric.compute().item()
+
+
+# class MulticlassRecallMetric(AbstractMetric):
+#     def __init__(self, num_classes: int):
+#         self.metric = MulticlassRecall(num_classes=num_classes, average="macro")
+#         super().__init__("recall")
+
+#     def reset(self):
+#         self.metric.reset()
+
+#     def update(self, predictions, targets):
+#         predictions = torch.from_numpy(predictions)
+#         targets = torch.from_numpy(targets)
+
+#         preds = (
+#             torch.argmax(predictions, dim=-1, keepdim=True)
+#             if predictions.shape[-1] > 1
+#             else predictions
+#         )
+#         self.metric.update(preds, targets)
+
+#     def compute(self):
+#         return self.metric.compute().item()
+
+
+# class MulticlassF1Metric(AbstractMetric):
+#     def __init__(self, num_classes: int):
+#         self.metric = MulticlassF1Score(num_classes=num_classes, average="macro")
+#         super().__init__("f1")
+
+#     def reset(self):
+#         self.metric.reset()
+
+#     def update(self, predictions, targets):
+#         predictions = torch.from_numpy(predictions)
+#         targets = torch.from_numpy(targets)
+#         # Convert logits to class predictions with argmax if necessary
+#         preds = (
+#             torch.argmax(predictions, dim=-1, keepdim=True)
+#             if predictions.shape[-1] > 1
+#             else predictions
+#         )
+#         self.metric.update(preds, targets)
+
+#     def compute(self):
+#         return self.metric.compute().item()
+
+
+# class MulticlassAUROCMetric(AbstractMetric):
+#     def __init__(self, num_classes: int):
+#         # 1. Use the library class (MulticlassAUROC)
+#         self.metric = MulticlassAUROC(num_classes=num_classes, average="macro")
+#         super().__init__("AUROC")
+
+#     def reset(self):
+#         self.metric.reset()
+
+#     def update(self, predictions, targets):
+#         preds = torch.from_numpy(predictions)
+#         targets = torch.from_numpy(targets)
+
+#         # 2. Permute Preds: (Batch, Time, Class) -> (Batch, Class, Time)
+#         if preds.ndim == 3:
+#             preds = preds.permute(0, 2, 1)
+
+#         # 3. Squeeze Targets: (Batch, Time, 1) -> (Batch, Time)
+#         if targets.ndim == 3 and targets.shape[-1] == 1:
+#             targets = targets.squeeze(-1)
+
+#         targets = targets.long()
+#         self.metric.update(preds, targets)
+
+#     def compute(self):
+#         return self.metric.compute().item()
