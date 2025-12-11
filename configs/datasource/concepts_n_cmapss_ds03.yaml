@@ -1,0 +1,233 @@
+# Setup taken from https://www.sciencedirect.com/science/article/pii/S0952197622005723
+
+_target_: lmetk.data.datasources.base.multi_source_loader.MultiSourceLoader
+_recursive_: False
+
+# Must have keys for the pipeline
+data_name: MultiSource_concepts_N-CMAPSS
+task_mode: fault
+
+defaults:
+  - /datasource@train1: concepts_n_cmapss
+  - /datasource@test1: concepts_n_cmapss
+  - /datasource@val1: concepts_n_cmapss
+
+source_list:
+  train1: ${..train1}
+  test1: ${..test1}
+  val1: ${..val1}
+
+multisource_data_splitter:
+  _target_: lmetk.data.preprocessing.BySourceSplitter
+  sources_train: [train1]
+  sources_test: [test1]
+  sources_val: [val1]
+
+###### 01 -- one error
+#train1:
+#  load_arguments:
+#    n_DS: "01"
+#    units: [1, 2, 3, 4, 6]
+#    mode: "train"
+#    concepts:
+#      - "HPT"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "01"
+#    units: [7, 8, 9, 10]
+#    mode: "test"
+#    concepts:
+#      - "HPT"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "01"
+#    units: [5]
+#    mode: "train"
+#    concepts:
+#      - "HPT"
+#  group_by_unit: True
+
+##### 02  -- combined errors
+#train1:
+#  load_arguments:
+#    n_DS: "02"
+#    units: [ 2, 5, 10, 16, 20 ]
+#    mode: "train"
+#    concepts:
+#      - "HPT"
+#      - "LPT"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "02"
+#    units: [ 11, 14, 15 ]
+#    mode: "test"
+#    concepts:
+#      - "HPT"
+#      - "LPT"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "02"
+#    units: [ 18 ]
+#    mode: "train"
+#    concepts:
+#      - "HPT"
+#      - "LPT"
+#  group_by_unit: True
+
+
+#### 03 -- combined errors
+train1:
+  load_arguments:
+    n_DS: "03"
+    units: [1, 2, 3, 4, 5, 6, 8, 9]
+    mode: "train"
+    concepts:
+      - "HPT"
+      - "LPT"
+  group_by_unit: True
+
+test1:
+  load_arguments:
+    n_DS: "03"
+    units: [10, 11, 12, 13, 14, 15]
+    mode: "test"
+    concepts:
+      - "HPT"
+      - "LPT"
+  group_by_unit: True
+
+val1:
+  load_arguments:
+    n_DS: "03"
+    units: [7]
+    mode: "train"
+    concepts:
+      - "HPT"
+      - "LPT"
+  group_by_unit: True
+
+
+#### 04 -- one error
+#train1:
+#  load_arguments:
+#    n_DS: "04"
+#    units: [1, 2, 3, 4, 6]
+#    mode: "train"
+#    concepts:
+#      - "Fan"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "04"
+#    units: [7, 8, 9, 10]
+#    mode: "test"
+#    concepts:
+#      - "Fan"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "04"
+#    units: [5]
+#    mode: "train"
+#    concepts:
+#      - "Fan"
+#  group_by_unit: True
+
+
+#### 05  -- one error
+#train1:
+#  load_arguments:
+#    n_DS: "05"
+#    units: [1, 2, 3, 4, 6]
+#    mode: "train"
+#    concepts:
+#      - "HPC"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "05"
+#    units: [7, 8, 9, 10]
+#    mode: "test"
+#    concepts:
+#      - "HPC"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "05"
+#    units: [5]
+#    mode: "train"
+#    concepts:
+#      - "HPC"
+#  group_by_unit: True
+
+### 06 -- combined errors
+#train1:
+#  load_arguments:
+#    n_DS: "06"
+#    units: [1, 2, 3, 4, 6]
+#    mode: "train"
+#    concepts:
+#      - "HPC"
+#      - "LPC"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "06"
+#    units: [7, 8, 9, 10]
+#    mode: "test"
+#    concepts:
+#      - "HPC"
+#      - "LPC"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "06"
+#    units: [5]
+#    mode: "train"
+#    concepts:
+#      - "HPC"
+#      - "LPC"
+#  group_by_unit: True
+
+
+##### 07 -- one error
+#train1:
+#  load_arguments:
+#    n_DS: "07"
+#    units: [1, 2, 3, 4, 6]
+#    mode: "train"
+#    concepts:
+#      - "LPT"
+#  group_by_unit: True
+#
+#test1:
+#  load_arguments:
+#    n_DS: "07"
+#    units: [7, 8, 9, 10]
+#    mode: "test"
+#    concepts:
+#      - "LPT"
+#  group_by_unit: True
+#
+#val1:
+#  load_arguments:
+#    n_DS: "07"
+#    units: [5]
+#    mode: "train"
+#    concepts:
+#      - "LPT"
+#  group_by_unit: True

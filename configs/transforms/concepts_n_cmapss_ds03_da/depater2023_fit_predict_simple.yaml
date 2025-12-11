@@ -17,3 +17,9 @@ reshape_y:
   metadata:
     apply_to: rul
     assign_to: rul
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, rul]

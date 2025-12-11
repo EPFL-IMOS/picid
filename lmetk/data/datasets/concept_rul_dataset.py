@@ -96,7 +96,7 @@ class ConceptRULDataset(BaseDataset):
         return AttributeDict(
             {
                 "features": torch.Tensor(x).squeeze(),
-                "rul": torch.Tensor([self.df_Y[i * self.stride]]).squeeze(),
+                "rul": torch.Tensor([self.df_Y[i * self.stride]]).reshape(-1, 1),
                 "concepts": torch.Tensor(self.concepts[i * self.stride]),
                 "health_states": torch.Tensor(
                     [self.health_states[i * self.stride]]

@@ -1,9 +1,16 @@
-_target_: lmetk.data.datasources.MZVAV.MZVAVLoader
-data_name: MZVAV-2-2
+_target_: lmetk.data.datasources.base.multi_source_loader.MultiSourceLoader
+_recursive_: False
+
+data_name: MultiSource_MZVAV
 task_mode: fault # rul, fault
 #cache_dir: ${paths.data_dir}/mzvav_cache
-data_folder: building
-data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
 
-target_name: Fault_Detection_Ground_Truth
-timestamp_name: Datetime
+defaults:
+  - /datasource@set1: mzvav_2-2
+
+source_list:
+  set1: ${..set1}
+
+set1:
+  load_arguments:
+    unit_number: "2-2"

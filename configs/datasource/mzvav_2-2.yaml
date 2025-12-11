@@ -1,0 +1,14 @@
+_target_: lmetk.data.datasources.MZVAV.MZVAVLoader
+
+data_folder: building
+data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv
+data_name: MZVAV-${.unit_number}
+task_mode: fault
+
+target_name: Fault_Detection_Ground_Truth
+timestamp_name: Datetime
+group_by_days: True
+random_state: ${seed}
+
+unit_number: "2-2"
+

@@ -1,9 +1,6 @@
 defaults:
   - mzvav/default@_here_
 
-# kj
-#
-
 tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
@@ -53,10 +50,10 @@ tabularize_y_train:
     timestep_dimension: 1
 
     select_features:
-      - target: present
+      - fault_classification: present
 
   metadata:
-    apply_to: target
+    apply_to: fault_classification
     assign_to: fault_classification
     transform_on_keys: ["train"]
 
@@ -71,9 +68,25 @@ tabularize_y_val_test:
     timestep_dimension: 1
 
     select_features:
-      - target: present
+      - fault_classification: present
 
   metadata:
-    apply_to: target
+    apply_to: fault_classification
     assign_to: fault_classification
     transform_on_keys: ["val", "test"]
+
+rugged_dimension_swap:
+  transform:
+    _target_: lmetk.transforms.building.rugged_dimension_swap.RuggedDimensionSwap
+    axis_to_regularize: 1
+    axis_to_irregularize: 2
+
+  metadata:
+    apply_to: ["features", "fault_classification"]
+
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to: [features, fault_classification]
+

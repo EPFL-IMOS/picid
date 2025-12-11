@@ -83,24 +83,32 @@ _test_load_args: &test_args
 train1:
   load_arguments:
     n_DS: "01"
+    concepts:
+      - "HPT"
     <<: *train_args
   group_by_unit: True
 
 train2:
   load_arguments:
     n_DS: "04"
+    concepts:
+      - "Fan"
     <<: *train_args
   group_by_unit: True
 
 train3:
   load_arguments:
     n_DS: "05"
+    concepts:
+      - "HPC"
     <<: *train_args
   group_by_unit: True
 
 train4:
   load_arguments:
     n_DS: "07"
+    concepts:
+      - "LPT"
     <<: *train_args
   group_by_unit: True
 ########## Val Sources ##########
@@ -108,24 +116,32 @@ train4:
 val1:
   load_arguments:
     n_DS: "01"
+    concepts:
+      - "HPT"
     <<: *val_args
   group_by_unit: True
 
 val2:
   load_arguments:
     n_DS: "04"
+    concepts:
+      - "Fan"
     <<: *val_args
   group_by_unit: True
 
 val3:
   load_arguments:
     n_DS: "05"
+    concepts:
+      - "HPC"
     <<: *val_args
   group_by_unit: True
 
 val4:
   load_arguments:
     n_DS: "07"
+    concepts:
+      - "LPT"
     <<: *val_args
   group_by_unit: True
 
@@ -133,23 +149,31 @@ val4:
 test1:
   load_arguments:
     n_DS: "01"
+    concepts:
+      - "HPT"
     <<: *test_args
   group_by_unit: True
 
 test2:
   load_arguments:
     n_DS: "04"
+    concepts:
+      - "Fan"
     <<: *test_args
   group_by_unit: True
 
 test3:
   load_arguments:
     n_DS: "05"
+    concepts:
+      - "HPC"
     <<: *test_args
   group_by_unit: True
 
 test4:
   load_arguments:
     n_DS: "07"
+    concepts:
+      - "LPT"
     <<: *test_args
   group_by_unit: True

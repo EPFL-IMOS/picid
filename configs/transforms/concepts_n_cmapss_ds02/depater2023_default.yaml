@@ -52,6 +52,14 @@ subsample_others:
   metadata:
     apply_to: [unit, timestamps, health_states, rul]
 
+
+build_concept_classes:
+  transform:
+    _target_: lmetk.transforms.n_cmapss.concept_classes_builder.ConceptClassesBuilder
+  metadata:
+    apply_to: [concepts]
+
+
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
@@ -60,12 +68,3 @@ concatenate_features:
   metadata:
     apply_to: ["features", "descriptors"]
     assign_to: features
-
-# TODO: we should ditch this transform and handle change the dataset to one
-# that supports rugged data properly. (currently units are padded in the dataset)
-concatenate_units:
-  transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
-  metadata:
-    apply_to:
-      [features, descriptors, rul, unit, concepts, timestamps, health_states]

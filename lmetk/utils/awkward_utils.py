@@ -29,7 +29,7 @@ def ak_unflatten_discontinous_groups(
     return batched
 
 
-def ak_find_var_dims(arr: ak.Array):
+def ak_find_var_dims(arr: ak.Array) -> List[int]:
     """
     Find variable-length dimensions in an Awkward Array.
     in 4 * var * var * 3 it would return [1, 2]

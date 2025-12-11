@@ -3,4 +3,4 @@
 defaults:
   - concepts_n_cmapss_ds03_da/prognostics/base
   - /model_configs/concepts_prognostics/lstm
-  - override /transforms: concepts_n_cmapss_ds03_da/depater2023_default
+  - override /transforms: concepts_n_cmapss_ds03_da/depater2023_default_deep_learning

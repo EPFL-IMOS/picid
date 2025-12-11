@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - mzvav/diagnostics/base
+  - /model_configs/diagnostics/carte_fit_predict
+  - override /transforms: mzvav/fit_predict_history

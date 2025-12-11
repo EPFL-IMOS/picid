@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import override
+from typing import Optional, override
 import joblib
 import torch
 
@@ -13,7 +13,14 @@ from lmetk.model.wrappers.base import AbstractFitPredictWrapper
 class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     """Wrapper for the XGboost model for regression and classification."""
 
-    def __init__(self, task_type: str, model_cache_path: str = None, **kwargs):
+    def __init__(
+        self,
+        task_type: str,
+        n_estimators: int = 100,
+        model_cache_path: str = None,
+        random_state: Optional[int] = 42,
+        **kwargs,
+    ):
 
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
@@ -22,14 +29,20 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         self.task_type = task_type
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for FitPredictXGBoostWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for FitPredictXGBoostWrapper."
+            )
 
         # --- Model Configuration ---
         # 1. Determine the model's task_type and num_classes
         if task_type in self.classification_tasks:
-            backbone= GradientBoostingClassifier(n_estimators=3, random_state=42, verbose=2)
+            backbone = GradientBoostingClassifier(
+                n_estimators=n_estimators, random_state=random_state, verbose=2
+            )
         else:
-            backbone = GradientBoostingRegressor(random_state=42, verbose=2)
+            backbone = GradientBoostingRegressor(
+                n_estimators=n_estimators, random_state=random_state, verbose=2
+            )
 
         self.model_cache_path = model_cache_path
         super().__init__(backbone=backbone, task_type=task_type, **kwargs)
