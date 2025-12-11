@@ -5,8 +5,8 @@ defaults:
   - default
   - override /logger: csv
 
-trainer:
-  max_epochs: 5
+# trainer:
+#   max_epochs: 5
 
 # We aim to shorten the dataset for debugging purposes.
 # We do that by using torch Subset which is configured in the datamodule.

@@ -480,8 +480,11 @@
             "justMyCode": false,
             "args": [
                 "paths=runai",
-                "experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict",
-                "debug=default"
+                // "experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_fit_predict",
+                "experiment=phme20/prognostics/raw/tabpfn_fit_predict",
+                "debug=default",
+                "+model.full_outputs_path='${paths.output_dir}'",
+                "+model.output_type='full'"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -1249,6 +1252,42 @@
                 "experiment=phme20/prognostics/raw/cnn_1d",
                 "debug=default",
                 "logger=wandb"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "PHM20: XGBoost",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/raw/xgboost_fit_predict",
+                "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "PHM20: TabPFN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/raw/tabdpt_fit_predict",
+                "debug=pronostia",
+                "+model.full_outputs_path='${paths.output_dir}'",
+                "+model.output_type='full'"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
