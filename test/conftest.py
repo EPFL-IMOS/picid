@@ -7,6 +7,14 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 import pytest
 
+from omegaconf import OmegaConf
+
+N_FEATURES = 5
+BATCH_SIZE = 2
+
+OmegaConf.register_new_resolver("infer_dataloader_length", lambda key: 10)
+OmegaConf.register_new_resolver("infer_data_dim", lambda key, dim: N_FEATURES)
+
 
 def pytest_configure(config):
     """Called after command line options have been parsed."""

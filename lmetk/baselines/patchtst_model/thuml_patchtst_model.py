@@ -81,12 +81,20 @@ class PatchTST_Forecaster(TransformerForecaster):
             "activation": activation,
         }
 
-        if task_type not in CLASSIFICATION_TASKS:
+        if task_type not in CLASSIFICATION_TASKS + REGRESSION_TASKS:
             extra_configs = {
                 "task_name": "long_term_forecast",
                 "enc_in": 1,
             }
-        else:
+
+        elif task_type in REGRESSION_TASKS:
+            extra_configs = {
+                "task_name": "regression",
+                "num_reg_targets": 1,
+                "enc_in": d_yc + d_x,
+            }
+
+        elif task_type in CLASSIFICATION_TASKS:
             extra_configs = {
                 "task_name": "classification",
                 "num_class": d_yt,

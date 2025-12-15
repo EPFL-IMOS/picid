@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - model: null
+  - dataset: null
+  - datamodule: null
+  - optimization: reduce_on_plateau
+  - paths: null
+  - task_definition: null
