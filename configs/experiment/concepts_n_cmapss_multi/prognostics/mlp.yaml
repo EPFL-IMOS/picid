@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_multi/prognostics/base
+  - /model_configs/prognostics/mlp
+  - override /transforms: battery/concepts_n_cmapss_multi/statistics
