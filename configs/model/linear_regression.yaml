@@ -1,14 +1,15 @@
-_target_: lmetk.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper
+_target_: lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper
 task_type: ${task_definition.task_type}
 
 # There values will be read from the model parameters similarly to how we deal with data_path.
 seq_len: ${task_definition.seq_len} # window size
 label_len: ${task_definition.label_len} # overlap size
-
-# Model parameters
-lag_features: 5
 pred_len: ${task_definition.pred_len} # prediction size
 
+# Model parameters
+input_channels: null
+num_targets: null
+
 # Additional params needed for wrapper to run:
-features_mode: ${datasource.load_arguments.features_mode}
+model_type: linear
 device: "${trainer.accelerator}"

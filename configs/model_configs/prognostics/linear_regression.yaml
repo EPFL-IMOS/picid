@@ -1,0 +1,23 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /model: linear_regression
+  - override /optimization: reduce_on_plateau
+
+task_definition:
+  requires_training: true
+
+model:
+  num_targets: ${infer_data_dim:${task_definition.task_type},-1}
+  input_channels: ${infer_data_dim:features,-1}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min

@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss/prognostics/base
+  - /model_configs/prognostics/exponential_regression
+  - override /transforms: battery/concepts_n_cmapss/statistics

@@ -1,0 +1,7 @@
+defaults:
+  - linear_regression@_here_
+
+# Additional params needed for wrapper to run:
+model_type: exponential
+
+
