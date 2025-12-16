@@ -4,6 +4,7 @@ defaults:
   - override /dataset: diagnostics/fault_classification_multiunit_dataset
   - override /datamodule: base_datamodule
   - override /model: mlp
+  - override /loss: CrossEntropy
   - override /optimization: reduce_on_plateau
 
 
