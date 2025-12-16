@@ -82,7 +82,7 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
 
         config = {
             "input_channels": kwargs.pop("input_channels"),
-            "input_seq_len": seq_len,
+            "seq_len": seq_len,
             "poly_degree": kwargs.pop("poly_degree", 2),
         }
 
@@ -166,6 +166,12 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         else:
             raise ValueError(f"Unsupported task type: {self.task_type}")
 
+        # Allign output format
+        targets = targets.unsqueeze(1)
+
+        assert (
+            predictions.shape == targets.shape
+        ), f"Final shape mismatch: Predictions {predictions.shape} vs Targets {targets.shape}."
         model_out = {
             "predictions": predictions,
             "targets": targets,

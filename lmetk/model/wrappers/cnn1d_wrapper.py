@@ -126,7 +126,7 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
             # Target is (batch_size, 1)
             # .unsqueeze(1) changes shape to (batch_size, 1)
             predictions = rearrange(outputs, "b -> b 1 1")
-            targets = batch_y
+            targets = batch_y.unsqueeze(1)  # rearrange(batch_y, "b -> b 1 1")
 
             # Shape check for regression
             if predictions.shape != targets.shape:

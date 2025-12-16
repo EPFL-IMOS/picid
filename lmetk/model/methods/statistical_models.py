@@ -29,7 +29,7 @@ class LinearBaseline(nn.Module):
 
         Args:
             config (Dict[str, int]): Configuration dictionary containing:
-                - 'input_seq_len': Length of the input time series.
+                - 'seq_len': Length of the input time series.
                 - 'input_channels': Number of sensor channels.
             task_type (str): The type of task ('regression' or 'classification').
             num_targets (int, optional): The output dimension.
@@ -43,7 +43,7 @@ class LinearBaseline(nn.Module):
         self.task_type = task_type
 
         # Flatten inputs: (Seq_Len * Channels)
-        self.input_dim = int(config["input_seq_len"]) * int(config["input_channels"])
+        self.input_dim = int(config["seq_len"]) * int(config["input_channels"])
         self.output_dim = num_targets
 
         # The core model
@@ -104,7 +104,7 @@ class PolynomialBaseline(nn.Module):
 
         Args:
             config (Dict[str, Any]): Configuration dictionary. Must contain:
-                - 'input_seq_len': Length of the input time series.
+                - 'seq_len': Length of the input time series.
                 - 'input_channels': Number of sensor channels.
                 - 'poly_degree' (optional): The degree of the polynomial expansion (default: 2).
             task_type (str): The type of task ('regression' or 'classification').
@@ -116,7 +116,7 @@ class PolynomialBaseline(nn.Module):
         self.output_dim = num_targets
 
         self.degree = int(config.get("poly_degree", 2))
-        base_input_dim = int(config["input_seq_len"]) * int(config["input_channels"])
+        base_input_dim = int(config["seq_len"]) * int(config["input_channels"])
 
         # Feature Expansion: base_dim * degree
         # We concatenate powers side-by-side
@@ -190,7 +190,7 @@ class ExponentialBaseline(nn.Module):
 
         self.task_type = task_type
         self.output_dim = num_targets
-        self.input_dim = int(config["input_seq_len"]) * int(config["input_channels"])
+        self.input_dim = int(config["seq_len"]) * int(config["input_channels"])
 
         self.linear = nn.Linear(self.input_dim, self.output_dim)
         self.apply(self._init_weights)
