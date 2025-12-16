@@ -1,0 +1,24 @@
+#@package _global_
+
+defaults:
+  - override /dataset: diagnostics/fault_classification_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /model: mlp
+  - override /optimization: reduce_on_plateau
+
+
+task_definition:
+  requires_training: true
+
+model:
+  input_channels: ${infer_data_dim:features,-1}
+  num_classes: ${task_definition.num_classes}
+
+callbacks:
+  early_stopping:
+    monitor: val/loss
+    mode: min
+
+  model_checkpoint:
+    monitor: val/loss
+    mode: min
