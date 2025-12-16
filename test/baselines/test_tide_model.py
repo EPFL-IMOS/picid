@@ -234,6 +234,45 @@ def test_step_train_mode(hydra_model, test_batch_reg_class, monkeypatch):
     [
         {
             "task": "prognostics/rul",
+            "model_cfg": "prognostics/patchtst.yaml",
+        },
+        {
+            "task": "diagnostics/concepts_n_cmapss_multi",
+            "model_cfg": "diagnostics/patchtst.yaml",
+        },
+    ],
+    ids=["rul", "diagnostics"],
+    indirect=True,
+)
+def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
+    cfg = hydra_cfg
+
+    batch_size = BATCH_SIZE
+    ts = cfg.model.ts_in
+    d_x = cfg.model.d_x
+
+    x_t = torch.randn(batch_size, ts, d_x)
+
+    if hydra_model.task_type in REGRESSION_TASKS:
+        y_t = torch.randn(batch_size, ts, 1)
+    elif hydra_model.task_type in CLASSIFICATION_TASKS:
+        y_t = torch.randint(0, 2, (batch_size, ts, 1))
+    else:
+        raise ValueError("Unknown task type")
+
+    (out,) = hydra_model.forward_model_pass(
+        x_c=None,
+        y_c=None,
+        x_t=x_t,
+        y_t=y_t,
+    )
+
+
+@pytest.mark.parametrize(
+    "hydra_cfg",
+    [
+        {
+            "task": "prognostics/rul",
             "model_cfg": "prognostics/tide.yaml",
         },
         {

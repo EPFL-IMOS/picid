@@ -150,9 +150,6 @@ class PatchTST_Forecaster(TransformerForecaster):
             if self.mask_y_c:
                 y_c = torch.zeros_like(y_c)
 
-        if not self.include_x_t and x_t is not None:
-            x_t = torch.zeros_like(x_t, device=self.device)
-
         # In the regresssion case, we show x_t as additional features
         # to the encoder.
         if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
@@ -160,9 +157,9 @@ class PatchTST_Forecaster(TransformerForecaster):
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
             x_c = x_t
-            y_c = torch.zeros(
-                (x_t.shape[0], x_t.shape[1], self.d_yt), device=x_c.device
-            )
+
+        if not self.include_x_t and x_t is not None:
+            x_t = torch.zeros_like(x_t, device=self.device)
 
         if self.include_x_t:
 
@@ -171,7 +168,8 @@ class PatchTST_Forecaster(TransformerForecaster):
 
             batch_x = torch.cat([y_c, x_c], dim=2)
             batch_y = torch.cat([torch.zeros_like(y_t), x_t], dim=2)
-            # outputs = self.model(x=torch.cat([batch_x, batch_y], dim=1))
+
+            # PatchTST only uses x_enc
             outputs = self.model(
                 x_enc=torch.cat([batch_x, batch_y], dim=1),
                 x_mark_enc=x_c,
@@ -179,21 +177,22 @@ class PatchTST_Forecaster(TransformerForecaster):
                 x_mark_dec=x_t,
             )
         else:
-            if x_c is not None:
+            if x_c is not None and y_c is not None:
                 batch_x = torch.cat([y_c, x_c], dim=2)
             else:
-                batch_x = y_c
+                batch_x = y_c if y_c is not None else x_c
 
+            # PatchTST only uses x_enc
             outputs = self.model(
                 x_enc=batch_x, x_mark_enc=x_c, x_dec=None, x_mark_dec=x_t
             )
 
-            if self.task_type not in CLASSIFICATION_TASKS:
-                # outputs are 3d tensor [B, L, D]
-                outputs = outputs[:, :, : y_t.shape[2]]
-            else:
-                # 2d tensor [B, num_class]
-                outputs = outputs.unsqueeze(1)
+        if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
+            # 2d tensor [B, num_class] -> [B, 1, num_class]
+            outputs = outputs.unsqueeze(1)
+        else:
+            # outputs are 3d tensor [B, L, D]
+            outputs = outputs[:, :, : y_t.shape[2]]
 
         return (outputs,)
 
