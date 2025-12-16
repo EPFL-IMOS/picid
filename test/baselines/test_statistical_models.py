@@ -18,7 +18,7 @@ from lmetk.model.methods.statistical_models import (
 @pytest.fixture
 def base_config():
     """Basic config: 2 time steps, 2 channels."""
-    return {"input_seq_len": 2, "input_channels": 2, "poly_degree": 2}
+    return {"seq_len": 2, "input_channels": 2, "poly_degree": 2}
 
 
 # -------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def test_polynomial_math_correctness(base_config):
     3. Inputs x=4.0.
     4. Expects y = (0.5 * 4) + (0.1 * 4^2) + 1.0 = 2.0 + 1.6 + 1.0 = 4.6.
     """
-    config = {"input_seq_len": 1, "input_channels": 1, "poly_degree": 2}
+    config = {"seq_len": 1, "input_channels": 1, "poly_degree": 2}
     model = PolynomialBaseline(config, task_type="regression", num_targets=1)
 
     # 2. Set Weights for [x, x^2]
@@ -123,7 +123,7 @@ def test_exponential_math_correctness(base_config):
     1. Case A: Weights=1, Bias=0, Input=1. Expects exp(1).
     2. Case B: Bias=2, Input=0. Expects exp(2).
     """
-    config = {"input_seq_len": 1, "input_channels": 1}
+    config = {"seq_len": 1, "input_channels": 1}
     model = ExponentialBaseline(config, task_type="regression", num_targets=1)
 
     # Case 1: Simple e^1
@@ -163,7 +163,7 @@ def test_classification_logits_deterministic(base_config):
     5. Expects Logits: [10.0, -5.0].
     """
     # 1. Init Model for Classification (2 Classes)
-    config = {"input_seq_len": 1, "input_channels": 1}
+    config = {"seq_len": 1, "input_channels": 1}
 
     # Use 'num_targets' as the generic output dimension for the backbone
     model = LinearBaseline(config, task_type="classification", num_targets=2)

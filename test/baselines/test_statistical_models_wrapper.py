@@ -180,7 +180,7 @@ def test_regression_shape_mismatch_warning(caplog):
     batch_size = 2
     features = torch.randn(batch_size, 10, 2)
     # Target shape (B, 2) vs Prediction (B, 1, 1)
-    targets = torch.randn(batch_size, 2)
+    targets = torch.randn(batch_size, 1, 2)
     batch = {"features": features, task: targets}
 
     with caplog.at_level(logging.DEBUG):
