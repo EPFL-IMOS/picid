@@ -136,7 +136,11 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
             # Standardize regression output to: (Batch, 1, num_targets)
             # This handles both Univariate (num_targets=1) and Multivariate (num_targets>1)
             predictions = rearrange(outputs, "b c -> b 1 c")
-            targets = batch_y
+            targets = batch_y.unsqueeze(1)
+
+            assert (
+                predictions.shape == targets.shape
+            ), f"Final shape mismatch: Predictions {predictions.shape} vs Targets {targets.shape}."
 
             # --- Shape Safety Check ---
             pred_dim = predictions.shape[-1]
@@ -158,6 +162,11 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
             # We unsqueeze to ensure time-dimension consistency.
             targets = batch_y.unsqueeze(1)
 
+            # Check that first two dims are matching
+            assert (
+                predictions.shape[0] == targets.shape[0]
+            ), f"Batch size mismatch: Predictions {predictions.shape[0]} vs Targets {targets.shape[0]}."
+
             if predictions.shape[0] != targets.shape[0]:
                 raise ValueError(
                     f"[Classification] Batch size mismatch: Predictions {predictions.shape[0]} "
@@ -166,12 +175,6 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         else:
             raise ValueError(f"Unsupported task type: {self.task_type}")
 
-        # Allign output format
-        targets = targets.unsqueeze(1)
-
-        assert (
-            predictions.shape == targets.shape
-        ), f"Final shape mismatch: Predictions {predictions.shape} vs Targets {targets.shape}."
         model_out = {
             "predictions": predictions,
             "targets": targets,
