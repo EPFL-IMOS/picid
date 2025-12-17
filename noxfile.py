@@ -54,19 +54,30 @@ TABULAR_STYLE_MODELS = [
     # "xgboost_fit_predict",
 ]
 
+# additional remarks
+# - we select 2 "raw" datasets: one bearing and one battery.
+# - phme20 is also "raw", so we can say it works for smaller datasets.
+
+# - TSFM and PFN finetuning is done on top of these datasets
+# - test missing values and irregular sampling
+
 
 DATASETS_PROGNOSTICS = [
-    Info(ds="nb1", subexp="", type="prognostics"),
+    # Info(ds="nb1", subexp="", type="prognostics"),
+    # We want to test raw for nb14 to show that it is basically impossible
+    # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     Info(ds="nb14", subexp="raw", type="prognostics"),
     Info(ds="nb14", subexp="statistics", type="prognostics"),
-    Info(ds="unibo", subexp="raw", type="prognostics"),
+    # Info(ds="unibo", subexp="raw", type="prognostics"),
     Info(ds="unibo", subexp="statistics", type="prognostics"),
     Info(ds="phme20", subexp="raw", type="prognostics"),
     Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
     Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
+    # We want to test raw for pronostia to show that it is basically impossible
+    # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     Info(ds="pronostia", subexp="raw", type="prognostics"),
     Info(ds="pronostia", subexp="statistics", type="prognostics"),
-    Info(ds="xjtu", subexp="raw", type="prognostics"),
+    # Info(ds="xjtu", subexp="raw", type="prognostics"),
     Info(ds="xjtu", subexp="statistics", type="prognostics"),
     # "concepts_n_cmapss",
     # "concepts_n_cmapss_ds02",
@@ -74,7 +85,7 @@ DATASETS_PROGNOSTICS = [
 
 DATASETS_DIAGNOSTICS = [
     Info(ds="mzvav", subexp="", type="diagnostics"),
-    Info(ds="hsf15/accumulator", subexp="", type="diagnostics"),
+    Info(ds="hsf15/accumulator", subexp="", type="diagnostics"),  # hardest task
     Info(ds="hsf15/cooler", subexp="", type="diagnostics"),
     Info(ds="hsf15/pump", subexp="", type="diagnostics"),
     Info(ds="hsf15/valve", subexp="", type="diagnostics"),
