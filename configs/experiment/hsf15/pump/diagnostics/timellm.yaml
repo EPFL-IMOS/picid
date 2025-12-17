@@ -1,0 +1,7 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/pump/base
+  - /model_configs/concepts_diagnostics/timellm
+  - override /transforms: hsf15/default

@@ -2,6 +2,7 @@
 
 defaults:
   - hsf15/base
-  - hsf15/pump/base
-  - /model_configs/diagnostics/lstm
+  - hsf15/cooler/base
+  - /model_configs/diagnostics/timeseries_transformer
+
   - override /transforms: hsf15/default

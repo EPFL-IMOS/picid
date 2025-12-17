@@ -1,0 +1,17 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/pump/base
+  - /model_configs/concepts_diagnostics/carte_fit_predict
+  - override /transforms: hsf15/default_fit_predict
+
+task_definition:
+  #stride_train: 5
+  
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul 
+        - unit_id
