@@ -110,6 +110,13 @@ class MultiUnitEvaluator(DefaultEvaluator):
         targets = model_out["targets"]
         unit_ids = model_out["unit_id"]
 
+        # For PRONOSTIA/XJTU_SY we have to perform inverse scaling per unit, hence we should provide unit_ids
+        metadata = (
+            {"unit_id": model_out.get("unit_id")}
+            if model_out.get("unit_id") is not None
+            else {}
+        )
+
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         # Data BEFORE inverse scaling (normalized data) - Must copy before modification
@@ -128,8 +135,9 @@ class MultiUnitEvaluator(DefaultEvaluator):
             assert (
                 predictions.ndim == 3 and predictions.shape[2] == 1
             ), f"Expected shape (N, T, 1), got {targets.shape}"
+
             predictions, targets = self.scaling_wrapper.inverse_transform_if_needed(
-                predictions, targets
+                predictions, targets, metadata=metadata
             )
 
         # Collect scaled data (if inverse scaling was applied)

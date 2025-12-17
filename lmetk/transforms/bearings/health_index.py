@@ -148,32 +148,76 @@ class HealthIndexTransform(
             f"dataset_name='{self.dataset_name}'"
         )
 
-    def _get_total_life(self, unit_id: UnitKey) -> float:
-        """Helper function to look up and validate the Total_Life."""
+    # def _get_total_life(self, unit_id: UnitKey) -> float:
+    #     """Helper function to look up and validate the Total_Life."""
+    #     if unit_id not in self.dataset_unit_lives:
+    #         raise KeyError(
+    #             f"Unit ID '{unit_id}' not found in total_life_lookup "
+    #             f"for dataset '{self.dataset_name}'. "
+    #             f"Available unit keys: {self.dataset_unit_lives.keys()}"
+    #         )
+
+    #     total_life = self.dataset_unit_lives[unit_id]
+
+    #     if total_life <= 0:
+    #         raise ValueError(
+    #             f"Total_Life for dataset '{self.dataset_name}', unit '{unit_id}' "
+    #             f"must be a positive number, but got {total_life}"
+    #         )
+
+    #     return total_life
+
+    def _get_total_life_from_metadata(
+        self, unit_id: Union[np.ndarray, List, Tuple]
+    ) -> Union[float, np.ndarray]:
+        """
+        Safely extracts unit_id and gets Total_Life.
+        Handles both single unit_id (tuple/list) and vectorized unit_id (2D numpy array).
+        """
+
+        # --- VECTORIZED CASE (2D NumPy Array) ---
+        if isinstance(unit_id, np.ndarray) and unit_id.ndim == 2:
+            # Convert [[1,2], [1,2]] -> [(1,2), (1,2)]
+            unit_keys = [tuple(row) for row in unit_id]
+
+            # 1. Validate all keys exist first (No try/except)
+            missing_keys = [k for k in unit_keys if k not in self.dataset_unit_lives]
+
+            if missing_keys:
+                # Log first few missing keys to avoid spamming logs
+                unique_missing = list(set(missing_keys))[:5]
+                raise KeyError(
+                    f"Vectorized lookup failed. The following units were not found in "
+                    f"dataset '{self.dataset_name}': {unique_missing}..."
+                    f"(Total missing: {len(missing_keys)})"
+                )
+
+            # 2. Retrieve values
+            lives = [self.dataset_unit_lives[k] for k in unit_keys]
+            return np.array(lives)
+
+        # --- SINGLE CASE (1D Array, List, or Tuple) ---
+
+        # Convert 1D array to tuple
+        if isinstance(unit_id, np.ndarray):
+            unit_id = tuple(unit_id)
+        # Convert list to tuple
+        elif isinstance(unit_id, list):
+            unit_id = tuple(unit_id)
+
+        # Standard dictionary check
         if unit_id not in self.dataset_unit_lives:
             raise KeyError(
-                f"Unit ID '{unit_id}' not found in total_life_lookup "
-                f"for dataset '{self.dataset_name}'. "
-                f"Available unit keys: {self.dataset_unit_lives.keys()}"
+                f"Unit ID '{unit_id}' not found in dataset '{self.dataset_name}'. "
+                f"Available keys: {list(self.dataset_unit_lives.keys())}"
             )
 
         total_life = self.dataset_unit_lives[unit_id]
 
         if total_life <= 0:
-            raise ValueError(
-                f"Total_Life for dataset '{self.dataset_name}', unit '{unit_id}' "
-                f"must be a positive number, but got {total_life}"
-            )
+            raise ValueError(f"Total_Life must be positive, got {total_life}")
 
         return total_life
-
-    def _get_total_life_from_metadata(self, unit_id) -> float:
-        """Safely extracts the unit_id from metadata and gets Total_Life."""
-
-        if isinstance(unit_id, np.ndarray):
-            unit_id = tuple(unit_id)
-
-        return self._get_total_life(unit_id)
 
     @override
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
