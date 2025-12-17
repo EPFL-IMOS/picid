@@ -91,7 +91,6 @@ DATASETS_DIAGNOSTICS = [
     Info(ds="hsf15/pump", subexp="", type="diagnostics"),
     Info(ds="hsf15/valve", subexp="", type="diagnostics"),
     Info(ds="concepts_n_cmapss_multi", subexp="", type="diagnostics"),
-    Info(ds="concepts_n_cmapss_ds02_multi", subexp="", type="diagnostics"),
 ]
 
 
