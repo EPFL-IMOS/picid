@@ -58,6 +58,7 @@ TABULAR_STYLE_MODELS = [
 # - we select 2 "raw" datasets: one bearing and one battery.
 # - phme20 is also "raw", so we can say it works for smaller datasets.
 
+# For final publication
 # - TSFM and PFN finetuning is done on top of these datasets
 # - test missing values and irregular sampling
 
