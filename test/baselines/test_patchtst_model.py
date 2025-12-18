@@ -246,7 +246,7 @@ def test_step_train_mode(hydra_model, test_batch_reg_class, monkeypatch):
     ids=["rul", "diagnostics"],
     indirect=True,
 )
-def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
+def test_forward_model_including_model(hydra_model, hydra_cfg):
     cfg = hydra_cfg
 
     batch_size = BATCH_SIZE
@@ -268,6 +268,15 @@ def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
         x_t=x_t,
         y_t=y_t,
     )
+
+    assert isinstance(out, torch.Tensor)
+
+    if hydra_model.task_type in REGRESSION_TASKS:
+        assert out.shape == (batch_size, 1, 1)
+    elif hydra_model.task_type in CLASSIFICATION_TASKS:
+        assert out.shape == (batch_size, 1, cfg.task_definition.num_classes)
+    else:
+        raise ValueError("Unknown task type")
 
 
 @pytest.mark.parametrize(
@@ -291,7 +300,7 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
     # the model should initialize a zero vector for y_c
 
     assert hydra_model.task_type in CLASSIFICATION_TASKS + REGRESSION_TASKS
-    assert hydra_model.include_x_t is True
+    assert hydra_model.include_x_t is False
 
     cfg = hydra_cfg
     called = {}
@@ -304,9 +313,9 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
         called["x_mark_dec"] = x_mark_dec
 
         if hydra_model.task_type in REGRESSION_TASKS:
-            return torch.randn_like(x_enc)
+            return torch.randn(batch_size, 1)
         elif hydra_model.task_type in CLASSIFICATION_TASKS:
-            return torch.randn(batch_size, ts, cfg.task_definition.num_classes)
+            return torch.randn(batch_size, cfg.task_definition.num_classes)
         else:
             raise ValueError("Unknown task type")
 
@@ -320,10 +329,10 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
 
     if hydra_model.task_type in REGRESSION_TASKS:
         assert hydra_model.model.task_name == "regression"
-        y_t = torch.randn(batch_size, ts, d_x)
+        y_t = torch.randn(batch_size, d_x)
     elif hydra_model.task_type in CLASSIFICATION_TASKS:
         assert hydra_model.model.task_name == "classification"
-        y_t = torch.randint(0, 2, (batch_size, ts, 1))
+        y_t = torch.randint(0, 2, (batch_size, 1))
     else:
         raise ValueError("Unknown task type")
 
@@ -334,29 +343,15 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
         y_t=y_t,
     )
 
-    # for now x_enc is zeroed out in classification mode
-    assert torch.all(called["x_enc"] == 0)
+    assert called["x_enc"].shape == (batch_size, ts, d_x)
 
-    # nake sure x_t is not a zero vector
-    assert not torch.all(torch.isclose(called["x_mark_enc"], 0.0))
-
-    if hydra_model.task_type in REGRESSION_TASKS:
-        assert called["x_enc"].shape == (batch_size, ts, d_x)
-    elif hydra_model.task_type in CLASSIFICATION_TASKS:
-        assert called["x_enc"].shape == (
-            batch_size,
-            ts,
-            cfg.task_definition.num_classes,
-        )
-    else:
-        raise ValueError("Unknown task type")
-
-    # batch_y_mark is just x_t in classification mode
-    # x_mark_enc is x_t as well
-    assert called["x_mark_enc"] is x_t
-    assert called["batch_y_mark"] is x_t
-
-    # We set x_dec to None in classification mode
+    assert called["x_mark_enc"] is None
+    assert called["x_mark_dec"] is None
     assert called["x_dec"] is None
 
-    assert out.shape == called["x_enc"].shape
+    if hydra_model.task_type in REGRESSION_TASKS:
+        assert out.shape == (batch_size, 1, 1)
+    elif hydra_model.task_type in CLASSIFICATION_TASKS:
+        assert out.shape == (batch_size, 1, cfg.task_definition.num_classes)
+    else:
+        raise ValueError("Unknown task type")

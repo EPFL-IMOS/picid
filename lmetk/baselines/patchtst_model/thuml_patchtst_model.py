@@ -172,19 +172,20 @@ class PatchTST_Forecaster(TransformerForecaster):
             # PatchTST only uses x_enc
             outputs = self.model(
                 x_enc=torch.cat([batch_x, batch_y], dim=1),
-                x_mark_enc=x_c,
+                x_mark_enc=None,
                 x_dec=None,
-                x_mark_dec=x_t,
+                x_mark_dec=None,
             )
         else:
             if x_c is not None and y_c is not None:
                 batch_x = torch.cat([y_c, x_c], dim=2)
             else:
+                # Take one or the other if only one of them is not none.
                 batch_x = y_c if y_c is not None else x_c
 
-            # PatchTST only uses x_enc
+            # PatchTST only uses x_enc, the other tensors are unused
             outputs = self.model(
-                x_enc=batch_x, x_mark_enc=x_c, x_dec=None, x_mark_dec=x_t
+                x_enc=batch_x, x_mark_enc=None, x_dec=None, x_mark_dec=None
             )
 
         if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
