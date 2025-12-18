@@ -19,6 +19,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         n_estimators: int = 100,
         model_cache_path: str = None,
         random_state: Optional[int] = 42,
+        num_classes: Optional[int] = None,
         **kwargs,
     ):
 
@@ -27,6 +28,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         self.classification_tasks = CLASSIFICATION_TASKS
         self.supported_types = self.regression_tasks + self.classification_tasks
         self.task_type = task_type
+        self.num_classes = num_classes
 
         if task_type not in self.supported_types:
             raise ValueError(
@@ -36,6 +38,10 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         # --- Model Configuration ---
         # 1. Determine the model's task_type and num_classes
         if task_type in self.classification_tasks:
+            assert (
+                self.num_classes is not None
+            ), "num_classes must be provided for classification tasks."
+
             backbone = GradientBoostingClassifier(
                 n_estimators=n_estimators, random_state=random_state, verbose=2
             )
@@ -50,7 +56,11 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
         if self.task_type in CLASSIFICATION_TASKS:
-            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+            result = torch.Tensor(self.backbone.predict_proba(X.numpy()))
+            assert (
+                result.shape[-1] == self.num_classes
+            ), "Predicted probabilities do not match number of expected classes."
+            return result
         else:
             return torch.Tensor(self.backbone.predict(X.numpy()))
 

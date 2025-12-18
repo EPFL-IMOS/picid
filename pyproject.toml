@@ -49,6 +49,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "nox>=2025.11.12",
     "pytest",
     "pytest-cov",
     "coverage",
