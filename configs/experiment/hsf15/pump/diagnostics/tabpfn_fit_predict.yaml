@@ -5,8 +5,5 @@ defaults:
   - hsf15/pump/base
   - /model_configs/diagnostics/tabpfn_fit_predict
   - override /transforms: hsf15/statistics_fit_predict
-
-# task_definition:
-#   #stride_train: 5
   
   

@@ -5,6 +5,4 @@ defaults:
   - hsf15/accumulator/base
   - /model_configs/diagnostics/tabdpt_fit_predict
   - override /transforms: hsf15/statistics_fit_predict
-
-# task_definition:
-#   #stride_train: 5
+  - override /dataset: diagnostics/fault_classification_multiunit_dataset
