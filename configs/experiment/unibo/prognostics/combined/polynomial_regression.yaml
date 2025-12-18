@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - unibo/prognostics/base
+  - /model_configs/prognostics/polynomial_regression
+  - override /transforms: battery/unibo/combined

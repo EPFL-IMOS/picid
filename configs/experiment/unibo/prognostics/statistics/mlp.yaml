@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - unibo/prognostics/base
-  - /model_configs/prognostics/mlp
-  - override /transforms: battery/unibo/statistics

@@ -1,7 +1,0 @@
-#@package _global_
-
-defaults:
-  - nb14/prognostics/base
-  - /model_configs/prognostics/tide
-  
-  - override /transforms: battery/nb14/statistics

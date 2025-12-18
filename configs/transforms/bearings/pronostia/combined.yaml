@@ -80,7 +80,7 @@ ragged2regular_cumsum_feature:
 time_domain_features:
   transform:
     _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
-    hankel_window_size: 10
+    hankel_window_size: 200
     stats_to_compute: [
         "mean",
         "maximum",
@@ -96,7 +96,7 @@ time_domain_features:
         "change_coefficient", # Note: This is mean / std
         "clearance_factor",
         "abs_energy",
-        # "hankel_svd",
+        "hankel_svd",
       ]
 
   metadata:

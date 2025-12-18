@@ -1,0 +1,7 @@
+#@package _global_
+
+defaults:
+  - nb14/prognostics/base
+  - /model_configs/prognostics/timeseries_transformer
+
+  - override /transforms: battery/nb14/combined

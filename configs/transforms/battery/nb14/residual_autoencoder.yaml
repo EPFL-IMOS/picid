@@ -21,9 +21,9 @@ scaler_target:
     fit_on: train
     assign_to: rul
 
-# sequence2statistics:
+# sequence2combined:
 #   transform:
-#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+#     _target_: lmetk.transforms.battery.sequence2combined.Sequence2combined
 #     padding_value: null
 
 #   metadata:

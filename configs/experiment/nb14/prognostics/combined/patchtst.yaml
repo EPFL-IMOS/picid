@@ -1,0 +1,8 @@
+#@package _global_
+
+defaults:
+  - nb14/prognostics/base
+  - /model_configs/prognostics/patchtst
+
+  # - override /dataset: prognostics/rul_multiunit_dataset
+  - override /transforms: battery/nb14/combined

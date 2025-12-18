@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - nb14/prognostics/base
+  - /model_configs/prognostics/cnn_1d
+  - override /transforms: battery/nb14/combined
