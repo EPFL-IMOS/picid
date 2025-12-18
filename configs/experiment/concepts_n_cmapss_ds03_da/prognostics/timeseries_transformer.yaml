@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss_ds03_da/prognostics/base
-  - /model_configs/concepts_prognostics/timeseries_transformer
-  - override /transforms: concepts_n_cmapss_ds03_da/depater2023_default_deep_learning
+  - /model_configs/prognostics/timeseries_transformer
+  - override /transforms: concepts_n_cmapss_ds03_da/depater2023_default

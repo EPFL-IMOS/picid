@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss/base
-  - /model_configs/concepts_prognostics/cnn_1d
+  - /model_configs/prognostics/cnn_1d
   - override /transforms: concepts_n_cmapss/depater2023_default_deep_learning

@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss_ds02/prognostics/base
-  - /model_configs/concepts_prognostics/tabpfn_fit_predict
+  - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms: concepts_n_cmapss_ds02/depater2023_fit_predict_history

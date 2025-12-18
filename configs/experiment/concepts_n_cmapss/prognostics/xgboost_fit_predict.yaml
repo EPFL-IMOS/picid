@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss/base
-  - /model_configs/concepts_prognostics/xgboost_fit_predict
+  - /model_configs/prognostics/xgboost_fit_predict
   - override /transforms: concepts_n_cmapss/depater2023_fit_predict_history

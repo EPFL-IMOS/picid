@@ -4,7 +4,7 @@ defaults:
   - hsf15/base
   - hsf15/pump/base
   - /model_configs/concepts_diagnostics/xgboost_fit_predict
-  - override /transforms: hsf15/default_fit_predict
+  - override /transforms: hsf15/statistics_fit_predict
 task_definition:
   #stride_train: 5
   

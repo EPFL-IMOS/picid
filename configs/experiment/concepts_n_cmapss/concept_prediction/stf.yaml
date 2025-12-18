@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - concepts_n_cmapss/base
-  - /model_configs/prognostics/stf
-  - override /transforms: concepts_n_cmapss/predict_concepts
