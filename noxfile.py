@@ -37,22 +37,26 @@ class Info:
 
 
 DEEP_LEARNING_MODELS = [
-    # "stf",
-    # "crossformer",
-    # "timeseries_transformer",
-    # "tide",
-    # "patchtst",
+    "stf",
+    "crossformer",
+    "timeseries_transformer",
+    "tide",
+    "patchtst",
     "lstm",
-    # "cnn_1d",
-    # "exponential_regression",
-    # "linear_regression",
+    "cnn_1d",
+    "exponential_regression",
     "mlp",
 ]
+
+
 TABULAR_STYLE_MODELS = [
     # "tabpfn_fit_predict",
     # "tabdpt_fit_predict",
     # "xgboost_fit_predict",
 ]
+
+PROGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_regression"] + TABULAR_STYLE_MODELS
+DIAGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_classifier"] + TABULAR_STYLE_MODELS
 
 # additional remarks
 # - we select 2 "raw" datasets: one bearing and one battery.
@@ -94,7 +98,7 @@ DATASETS_DIAGNOSTICS = [
 ]
 
 
-ALL_MODELS = DEEP_LEARNING_MODELS + TABULAR_STYLE_MODELS
+ALL_MODELS = DEEP_LEARNING_MODELS
 VENV_PYTHON = Path(".venv/bin/python")
 RESULTS_FILE = Path(
     f"{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}_experiment_results.jsonl"
@@ -155,7 +159,7 @@ def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 30
 
 
 @nox.session(venv_backend="none")
-@nox.parametrize("model_name,info", product(ALL_MODELS, DATASETS_DIAGNOSTICS))
+@nox.parametrize("model_name,info", product(DIAGNOSTICS_MODELS, DATASETS_DIAGNOSTICS))
 def experiments_diagnostics(session, model_name, info):
     dataset_key = info.ds
     subexp = info.subexp
@@ -174,7 +178,7 @@ def experiments_diagnostics(session, model_name, info):
 
 
 @nox.session(venv_backend="none")
-@nox.parametrize("model_name,info", product(ALL_MODELS, DATASETS_PROGNOSTICS))
+@nox.parametrize("model_name,info", product(PROGNOSTICS_MODELS, DATASETS_PROGNOSTICS))
 def experiments_prognostics(session, model_name, info):
     dataset_key = info.ds
     subexp = info.subexp

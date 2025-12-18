@@ -903,7 +903,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb14/prognostics/tabpfn_fit_predict",
+                "experiment=nb14/prognostics/statistics/tabpfn_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -1151,7 +1151,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=nb14/prognostics/statistics/xgboost_fit_predict",
+                "experiment=nb14/prognostics/raw/lstm",
                 // "debug=nb14"
             ],
             "env": {
@@ -1339,6 +1339,23 @@
                 "paths=rt_local",
                 "experiment=mzvav/diagnostics/lstm",
                 // "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "MZVAV: tabpfn",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=mzvav/diagnostics/tabpfn_fit_predict",
+                "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
