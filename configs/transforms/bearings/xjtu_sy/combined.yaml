@@ -77,47 +77,6 @@ ragged2regular_cumsum_feature:
   metadata:
     apply_to: "cumsum_feature"
 
-############# STFT Feature #################
-# stft:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.stfft.STFTTransform
-#     win_len: 512
-#     hop: 256
-#     fs: 25600
-
-#     # up to Nyquist frequency
-#     subbands:
-#       - [0, 4267]
-#       - [4267, 8533]
-#       - [8533, 12800]
-
-#   metadata:
-#     apply_to: "features"
-#     assign_to: "features_stft"
-
-# # Reduce target dim
-# reshape_stft:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
-#     pattern: "a b  -> (a b)"
-#   metadata:
-#     apply_to: features_stft
-
-# sequence2statistics:
-#   transform:
-#     _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
-#     padding_value: null
-
-#   metadata:
-#     apply_to: "features_stft"
-
-# ragged2regularragged:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
-
-#   metadata:
-#     apply_to: "features_stft"
-
 ############# Time Domain Features #################
 
 time_domain_features:
@@ -204,14 +163,6 @@ concatenate_features:
       ]
     assign_to: features
 
-# moving_average:
-#   transform:
-#     _target_: lmetk.transforms.base_transforms.moving_average.MovingAverageTransform
-#     window_size: 32
-#     causal: True
-#   metadata:
-#     apply_to: features
-
 final_scaler_features:
   transform:
     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
@@ -219,6 +170,7 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+
 # plot_features_final:
 #   transform:
 #     unit_key: unit_id
