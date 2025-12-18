@@ -8,8 +8,7 @@ defaults:
   - override /dataset: diagnostics/fault_classification_multiunit_dataset
 
 
-task_definition:
-  seq_len: 32
+
 
 
 model:

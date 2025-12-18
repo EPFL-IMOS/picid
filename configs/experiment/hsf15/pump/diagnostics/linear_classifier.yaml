@@ -7,5 +7,3 @@ defaults:
   - override /transforms: hsf15/default
   - override /dataset: diagnostics/fault_classification_multiunit_dataset
 
-task_definition:
-  seq_len: 16
