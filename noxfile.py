@@ -44,7 +44,6 @@ DEEP_LEARNING_MODELS = [
     "patchtst",
     "lstm",
     "cnn_1d",
-    "exponential_regression",
     "mlp",
 ]
 
@@ -55,7 +54,14 @@ TABULAR_STYLE_MODELS = [
     # "xgboost_fit_predict",
 ]
 
-PROGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_regression"] + TABULAR_STYLE_MODELS
+PROGNOSTICS_MODELS = (
+    DEEP_LEARNING_MODELS
+    + [
+        "linear_regression",
+        "exponential_regression",
+    ]
+    + TABULAR_STYLE_MODELS
+)
 DIAGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_classifier"] + TABULAR_STYLE_MODELS
 
 # additional remarks
