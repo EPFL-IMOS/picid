@@ -5,6 +5,7 @@ import hydra
 import torch
 
 from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
+from lmetk.baselines.tide_model.tide_model import TiDE_Forecaster
 from test.conftest import BATCH_SIZE
 from test.utils import ProjectSearchPathPlugin
 from collections.abc import Mapping
@@ -137,6 +138,7 @@ def test_batch_reg_class(hydra_cfg):
 )
 def test_initialize_model(hydra_model):
     assert hydra_model.task_type in CLASSIFICATION_TASKS + REGRESSION_TASKS
+    assert isinstance(hydra_model, TiDE_Forecaster)
 
 
 @pytest.mark.parametrize(
@@ -234,17 +236,17 @@ def test_step_train_mode(hydra_model, test_batch_reg_class, monkeypatch):
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
     indirect=True,
 )
-def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
+def test_forward_model_including_model(hydra_model, hydra_cfg):
     cfg = hydra_cfg
 
     batch_size = BATCH_SIZE
@@ -267,6 +269,15 @@ def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
         y_t=y_t,
     )
 
+    assert isinstance(out, torch.Tensor)
+
+    if hydra_model.task_type in REGRESSION_TASKS:
+        assert out.shape == (batch_size, 1, 1)
+    elif hydra_model.task_type in CLASSIFICATION_TASKS:
+        assert out.shape == (batch_size, 1, cfg.task_definition.num_classes)
+    else:
+        raise ValueError("Unknown task type")
+
 
 @pytest.mark.parametrize(
     "hydra_cfg",
@@ -285,6 +296,7 @@ def test_forward_model_including_model(hydra_model, hydra_cfg, monkeypatch):
 )
 def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
     assert hydra_model.task_type in CLASSIFICATION_TASKS + REGRESSION_TASKS
+    assert hydra_model.include_x_t is True
 
     cfg = hydra_cfg
     called = {}
@@ -293,13 +305,13 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
         assert mask is None
         called["x_enc"] = x_enc
         called["x_mark_enc"] = x_mark_enc
-        called["batch_y_mark"] = batch_y_mark
         called["x_dec"] = x_dec
+        called["batch_y_mark"] = batch_y_mark
 
         if hydra_model.task_type in REGRESSION_TASKS:
-            return torch.randn_like(x_enc)
+            return torch.randn(batch_size, 1, 1)
         elif hydra_model.task_type in CLASSIFICATION_TASKS:
-            return torch.randn(batch_size, ts, cfg.task_definition.num_classes)
+            return torch.randn(batch_size, 1, cfg.task_definition.num_classes)
         else:
             raise ValueError("Unknown task type")
 
@@ -312,9 +324,11 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
     x_t = torch.randn(batch_size, ts, d_x)
 
     if hydra_model.task_type in REGRESSION_TASKS:
-        y_t = torch.randn(batch_size, ts, d_x)
+        assert hydra_model.model.task_name == "regression"
+        y_t = torch.randn(batch_size, d_x)
     elif hydra_model.task_type in CLASSIFICATION_TASKS:
-        y_t = torch.randint(0, 2, (batch_size, ts, 1))
+        assert hydra_model.model.task_name == "classification"
+        y_t = torch.randint(0, 2, (batch_size, 1))
     else:
         raise ValueError("Unknown task type")
 
@@ -325,26 +339,14 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
         y_t=y_t,
     )
 
-    # for now x_enc is zeroed out in classification mode
-    assert torch.all(called["x_enc"] == 0)
-
-    if hydra_model.task_type in REGRESSION_TASKS:
-        assert called["x_enc"].shape == (batch_size, ts, d_x)
-    elif hydra_model.task_type in CLASSIFICATION_TASKS:
-        assert called["x_enc"].shape == (
-            batch_size,
-            ts,
-            cfg.task_definition.num_classes,
-        )
-    else:
-        raise ValueError("Unknown task type")
-
-    # batch_y_mark is just x_t in classification mode
-    # x_mark_enc is x_t as well
-    assert called["x_mark_enc"] is x_t
-    assert called["batch_y_mark"] is x_t
-
-    # We set x_dec to None in classification mode
+    assert called["x_enc"].shape == (batch_size, ts, 1)
+    assert called["batch_y_mark"].shape == (batch_size, ts, d_x)
+    assert called["x_mark_enc"].shape == (batch_size, ts, d_x)
     assert called["x_dec"] is None
 
-    assert out.shape == called["x_enc"].shape
+    if hydra_model.task_type in REGRESSION_TASKS:
+        assert out.shape == (batch_size, 1, 1)
+    elif hydra_model.task_type in CLASSIFICATION_TASKS:
+        assert out.shape == (batch_size, 1, cfg.task_definition.num_classes)
+    else:
+        raise ValueError("Unknown task type")

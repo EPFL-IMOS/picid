@@ -84,7 +84,12 @@ class TiDE_Forecaster(TransformerForecaster):
                 "num_class": d_yt,
                 "c_out": 1,
             }
-        elif task_type in STATE_FORECASTING_TASKS + REGRESSION_TASKS:
+        elif task_type in REGRESSION_TASKS:
+            extra_configs = {
+                "task_name": "regression",
+                "c_out": 1,
+            }
+        elif task_type in STATE_FORECASTING_TASKS:
             extra_configs = {
                 "task_name": "state_forecasting",
                 "c_out": d_yt,
@@ -142,9 +147,12 @@ class TiDE_Forecaster(TransformerForecaster):
 
         if not self.include_x_t:
             x_t = torch.zeros_like(x_t, device=self.device)
-
-        if self.d_x_mask is not None:
-            x_t[:, :, self.mask_tt] = 0
+            assert (
+                self.d_x_mask is None
+            ), "d_x_mask should be None if include_x_t is False"
+        else:
+            if self.d_x_mask is not None:
+                x_t[:, :, self.mask_tt] = 0
 
         # In the regresssion case, we show x_t as additional features
         # to the encoder TODO: now we show a small slice or regression targets
