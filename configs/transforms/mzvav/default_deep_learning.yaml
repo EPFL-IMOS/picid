@@ -1,10 +1,10 @@
 defaults:
   - mzvav/default@_here_
 
-## The ConceptRULDataset applies padding by unit, so we can concatenate all units here.
-#concatenate_units:
-#  transform:
-#    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
-#  metadata:
-#    apply_to:
-#      [features, fault_classification]
+# The ConceptRULDataset applies padding by unit, so we can concatenate all units here.
+concatenate_units:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+  metadata:
+    apply_to:
+      [features, fault_classification]
