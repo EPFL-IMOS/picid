@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/cooler/base
+  - /model_configs/diagnostics/tabpfn_fit_predict
+  - override /transforms: hsf15/statistics_fit_predict
+  
+  

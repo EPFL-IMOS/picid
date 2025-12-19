@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss_multi/prognostics/base
-  - /model_configs/concepts_prognostics/timellm
-  - override /transforms: concepts_n_cmapss_multi/depater2023_default_deep_learning
+  - /model_configs/prognostics/timellm
+  - override /transforms: concepts_n_cmapss_multi/depater2023_default

@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_multi/diagnostics/base
+  - /model_configs/diagnostics/mlp
+  - override /transforms: concepts_n_cmapss_multi/depater2023_default

@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - mzvav/diagnostics/base
+  - /model_configs/diagnostics/mlp
+  - override /transforms: mzvav/default

@@ -3,4 +3,4 @@
 defaults:
   - concepts_n_cmapss/prognostics/base
   - /model_configs/prognostics/exponential_regression
-  - override /transforms: concepts_n_cmapss/depater2023_default_deep_learning
+  - override /transforms: concepts_n_cmapss/depater2023_default

@@ -2,5 +2,5 @@
 
 defaults:
   - concepts_n_cmapss/base
-  - /model_configs/concepts_prognostics/crossformer
-  - override /transforms: concepts_n_cmapss/depater2023_default_deep_learning
+  - /model_configs/prognostics/crossformer
+  - override /transforms: concepts_n_cmapss/depater2023_default

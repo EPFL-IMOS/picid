@@ -16,7 +16,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     def __init__(
         self,
         task_type: str,
-        n_estimators: int = 100,
+        n_estimators: int = 1000,
         model_cache_path: str = None,
         random_state: Optional[int] = 42,
         num_classes: Optional[int] = None,

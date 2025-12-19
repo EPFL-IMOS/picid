@@ -1,0 +1,8 @@
+#@package _global_
+
+defaults:
+  - hsf15/base
+  - hsf15/accumulator/base
+  - /model_configs/concepts_diagnostics/carte_fit_predict
+  - override /transforms: hsf15/statistics_fit_predict
+  - override /dataset: diagnostics/fault_classification_multiunit_dataset

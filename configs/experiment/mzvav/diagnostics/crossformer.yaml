@@ -3,5 +3,5 @@
 defaults:
   - mzvav/diagnostics/base
   - /model_configs/diagnostics/crossformer
-  - override /transforms: mzvav/default_deep_learning
+  - override /transforms: mzvav/default
 
