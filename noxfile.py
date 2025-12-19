@@ -73,25 +73,26 @@ DIAGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_classifier"] + TABULAR_STYL
 # - test missing values and irregular sampling
 
 
+# Excluded for now
+# Info(ds="nb1", subexp="", type="prognostics"),
+# Info(ds="unibo", subexp="raw", type="prognostics"),
+# Info(ds="xjtu", subexp="raw", type="prognostics"),
+
+
 DATASETS_PROGNOSTICS = [
-    # Info(ds="nb1", subexp="", type="prognostics"),
     # We want to test raw for nb14 to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     Info(ds="nb14", subexp="raw", type="prognostics"),
-    Info(ds="nb14", subexp="statistics", type="prognostics"),
-    # Info(ds="unibo", subexp="raw", type="prognostics"),
-    Info(ds="unibo", subexp="statistics", type="prognostics"),
+    Info(ds="nb14", subexp="combined", type="prognostics"),
+    Info(ds="unibo", subexp="combined", type="prognostics"),
     Info(ds="phme20", subexp="raw", type="prognostics"),
     Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
     Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
     # We want to test raw for pronostia to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     Info(ds="pronostia", subexp="raw", type="prognostics"),
-    Info(ds="pronostia", subexp="statistics", type="prognostics"),
-    # Info(ds="xjtu", subexp="raw", type="prognostics"),
-    Info(ds="xjtu", subexp="statistics", type="prognostics"),
-    # "concepts_n_cmapss",
-    # "concepts_n_cmapss_ds02",
+    Info(ds="pronostia", subexp="combined", type="prognostics"),
+    Info(ds="xjtu_sy", subexp="combined", type="prognostics"),
 ]
 
 DATASETS_DIAGNOSTICS = [
