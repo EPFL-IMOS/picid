@@ -130,7 +130,7 @@ class PatchTST_Forecaster(TransformerForecaster):
             # We only support this case so far
             assert (
                 self.include_x_t is False
-            ), "include_x_t must be False for regression tasks"
+            ), "include_x_t must be False for regression and classification tasks"
 
     @property
     def train_step_forward_kwargs(self):
@@ -157,9 +157,7 @@ class PatchTST_Forecaster(TransformerForecaster):
             assert x_c is None, "x_c should be None for regression tasks"
             assert y_c is None, "y_c should be None for regression tasks"
             x_c = x_t
-
-        if not self.include_x_t and x_t is not None:
-            x_t = torch.zeros_like(x_t, device=self.device)
+            x_t = None
 
         if self.include_x_t:
 
@@ -177,6 +175,9 @@ class PatchTST_Forecaster(TransformerForecaster):
                 x_mark_dec=None,
             )
         else:
+            if x_t is not None:
+                x_t = torch.zeros_like(x_t, device=self.device)
+
             if x_c is not None and y_c is not None:
                 batch_x = torch.cat([y_c, x_c], dim=2)
             else:
