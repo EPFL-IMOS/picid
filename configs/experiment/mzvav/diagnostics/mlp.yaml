@@ -3,4 +3,4 @@
 defaults:
   - mzvav/diagnostics/base
   - /model_configs/diagnostics/mlp
-  - override /transforms: mzvav/default_deep_learning
+  - override /transforms: mzvav/default
