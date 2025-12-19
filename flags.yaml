@@ -1,9 +1,0 @@
-glob:
-  seed: 0
-
-working_dir: None
-dataset_dir: None
-exp_name: None
-
-logging:
-  wandb_enabled: false
