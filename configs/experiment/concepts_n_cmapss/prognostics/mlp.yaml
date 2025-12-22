@@ -1,6 +1,6 @@
 #@package _global_
 
 defaults:
-  - concepts_n_cmapss/prognostics/base
+  - concepts_n_cmapss/base
   - /model_configs/prognostics/mlp
   - override /transforms: concepts_n_cmapss/depater2023_default
