@@ -3,3 +3,6 @@ data_name: airbus_helicopter
 task_mode: detection # rul, fault
 data_dir: ${paths.data_dir}
 cache_dir: ${paths.data_dir}/phmd_cache
+
+
+num_classes: 2  # Healthy or Not healthy

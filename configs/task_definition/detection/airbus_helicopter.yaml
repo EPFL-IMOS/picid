@@ -1,0 +1,15 @@
+seq_len: 1 # window size
+label_len: 0 # overlap size
+pred_len: 1 # prediction size
+task_type: anomaly_detection
+
+
+stride: 1
+stride_train: 5
+num_classes: ${datasource.num_classes}  # Number of fault classes
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - ${task_definition.task_type}
