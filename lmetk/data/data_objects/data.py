@@ -24,35 +24,6 @@ T = TypeVar("T", bound=(np.ndarray | ak.Array))
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
 
-# class ImplicitTypeDataObject(BaseDataObjectWithMetadata):
-
-#     def __init__(self, **kwargs):
-
-#         # assume instance_cls from set of kwargs values
-#         if not kwargs:
-#             raise ValueError(
-#                 "TransformInput requires at least one value. "
-#                 "At least one keyword argument is required to infer type."
-#             )
-
-#         # Exclude "metadata" key to allow for passing metadata into transform explicitly
-#         if "metadata" in kwargs:
-#             # If metadata is present, it's not part of the data values for type inference
-#             temp_kwargs = {k: v for k, v in kwargs.items() if k != "metadata"}
-#             instance_types = {type(v) for v in temp_kwargs.values()}
-#         else:
-#             instance_types = {type(v) for v in kwargs.values()}
-
-#         if len(instance_types) != 1:
-#             raise ValueError(
-#                 f"All values must be of the same type to infer instance_cls, got: {instance_types}"
-#             )
-#         else:
-#             instance_cls = instance_types.pop()
-
-#         super().__init__(instance_cls, **kwargs)
-
-
 class NamedTransformInput(BaseDataObjectWithMetadata):
     """
     A data object that holds inputs for a transformation and can sanitize them.
