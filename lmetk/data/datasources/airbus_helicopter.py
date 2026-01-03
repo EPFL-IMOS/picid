@@ -5,7 +5,6 @@ import warnings
 from typing import Any, Dict, override
 
 import awkward as ak
-import h5py
 import numpy as np
 import pandas as pd
 import requests
@@ -28,7 +27,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
     Loads data in a ragged representation:
     - Features: (N, 60, 1024, 1) corresponding to (Seq, Seconds, Hz, Channels)
-    - Targets: (N, 60, 1024, 1) broadcasted label
+    - Targets: (N, 60, 1, 1) broadcasted label (Optimized mask: 1 label per second)
 
     Expected file structure in `data_dir`:
       - training_healthy.h5 (1677 samples)
@@ -49,7 +48,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         data_name: str,
         task_mode: str,
         multisource_data_splitter: Any = None,
-        download: bool = True,  # Added flag
+        download: bool = True,
         **kwargs,
     ):
         """
@@ -199,7 +198,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
                 },
                 "dims_explanation": (
                     "Ragged representation: Features shape (60, 1024, 1) -> 60 seconds, 1024 Hz, 1 Feature. "
-                    "Targets are broadcasted to match features shape."
+                    "Targets (60, 1, 1) -> 1 label per second."
                 ),
             }
         )
@@ -287,13 +286,12 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
             unit_id = idx
 
-            target_np = np.full(
-                (DURATION_SEC, SAMPLING_FREQ, 1), label, dtype=np.float32
-            )
+            # Optimized Target: (60, 1, 1)
+            target_np = np.full((DURATION_SEC, 1, 1), label, dtype=np.float32)
 
             assert target_np.shape == (
                 DURATION_SEC,
-                SAMPLING_FREQ,
+                1,
                 1,
             ), "Target shape mismatch"
 
