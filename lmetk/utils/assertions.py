@@ -7,7 +7,9 @@ def assert_list_of_ndarray_or_nd_array_for_dims(input_data, dims):
 
     if isinstance(input_data, (list, ListConfig)):
         for arr in input_data:
-            assert isinstance(arr, np.ndarray), "Element is not a numpy ndarray."
+            assert isinstance(
+                arr, np.ndarray
+            ), f"Element is not a numpy ndarray. arr type: {type(arr)}"
             assert arr.ndim == dims, f"Array does not have {dims} dimensions."
     elif isinstance(input_data, np.ndarray):
         assert input_data.ndim == dims, f"Array does not have {dims} dimensions."
