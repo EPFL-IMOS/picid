@@ -67,23 +67,26 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
         """
-        Returns anomaly scores.
+        Returns 'logits' for a binary classification task.
+        Shape: (N_samples, 2)
 
-        Standard IsolationForest.decision_function output:
-           > 0 : Inlier (Normal)
-           < 0 : Outlier (Anomaly)
-
-        We typically negate this for Anomaly Detection tasks so that:
-           Higher Score = More Anomalous
+        Column 0: Score for Class 0 (Normal)
+        Column 1: Score for Class 1 (Anomaly)
         """
-        # Get decision function scores
-        scores = self.backbone.decision_function(X.numpy())
+        # 1. Get raw scores from Isolation Forest
+        # Sklearn rule: > 0 is Normal (Inlier), < 0 is Anomaly (Outlier)
+        # Therefore, this raw score is already a "Logit for Class 0"
+        raw_scores = self.backbone.decision_function(X.numpy())
 
-        # Invert sign so higher value == higher anomaly score
-        # (Standard practice for AUC calculation in anomaly detection)
-        anomaly_scores = -scores
+        # 2. Convert to PyTorch
+        score_normal = torch.from_numpy(raw_scores)  # Higher = More Normal
+        score_anomaly = torch.from_numpy(-raw_scores)  # Higher = More Anomalous
 
-        return torch.Tensor(anomaly_scores)
+        # 3. Stack to create a (N, 2) tensor mimicking a classifier's output
+        # [ [Prob_Normal, Prob_Anomaly], ... ]
+        logits = torch.stack([score_normal, score_anomaly], dim=1)
+
+        return logits.float()
 
     @override
     def serialize_model(self, task_id):
