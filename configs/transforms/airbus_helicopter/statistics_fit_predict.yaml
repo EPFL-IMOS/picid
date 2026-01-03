@@ -19,15 +19,15 @@ __tabularize_y_transform: &__tabularize_y_transform
   pred_len: 1
   timestep_dimension: 1
   select_features:
-    - fault_classification: present
+    - anomaly_detection: present
 
 __tabularize_x_metadata: &__tabularize_x_metadata
   apply_to: ["features"]
   assign_to: features
 
 __tabularize_y_metadata: &__tabularize_y_metadata
-  apply_to: ["fault_classification"]
-  assign_to: fault_classification
+  apply_to: ["anomaly_detection"]
+  assign_to: anomaly_detection
 
 
 # --- Derived transforms -------------------------------------------------
