@@ -19,5 +19,8 @@ time_emb_dim: 32
 use_x_dim: true
 include_x_t: true
 
+patch_len: 16
+stride: 8
+
 use_revin: false
 use_seasonal_decomp: false

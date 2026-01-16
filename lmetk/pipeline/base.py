@@ -529,15 +529,15 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
         if self.debug:
             unique_y = y.unique()
-            X = X[:100, :]
-            y = y[:100, :]
-            if len(y.unique()) == 1:
-                # Generator to cyclically return items from unique_y up to the length of y
-                y = torch.tensor(
-                    list(itertools.islice(itertools.cycle(unique_y), len(y))),
-                    dtype=y.dtype,
-                    device=y.device,
-                ).unsqueeze(1)
+            X = X[:10, :]
+            y = y[:10, :]
+
+            # Generator to cyclically return items from unique_y up to the length of y
+            y = torch.tensor(
+                list(itertools.islice(itertools.cycle(unique_y), len(y))),
+                dtype=y.dtype,
+                device=y.device,
+            ).unsqueeze(1)
 
         logger.info(f"Fitting: {self.get_task_info(batch)}")
         logger.info(
@@ -594,8 +594,16 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
         X, y = self.__batch_to_fit_predict(batch)
         if self.debug:
+            unique_y = y.unique()
             X = X[:10, :]
             y = y[:10, :]
+
+            # Generator to cyclically return items from unique_y up to the length of y
+            y = torch.tensor(
+                list(itertools.islice(itertools.cycle(unique_y), len(y))),
+                dtype=y.dtype,
+                device=y.device,
+            ).unsqueeze(1)
 
         allows_multi_target = self.backbone.allows_multi_target
         n_targets = y.shape[1]

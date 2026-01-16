@@ -49,9 +49,9 @@ DEEP_LEARNING_MODELS = [
 
 
 TABULAR_STYLE_MODELS = [
-    # "tabpfn_fit_predict",
-    # "tabdpt_fit_predict",
-    # "xgboost_fit_predict",
+    "tabpfn_fit_predict",
+    "tabdpt_fit_predict",
+    "xgboost_fit_predict",
 ]
 
 PROGNOSTICS_MODELS = (

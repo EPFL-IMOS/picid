@@ -3,6 +3,7 @@
 import os
 import yaml
 from pathlib import Path
+from collections.abc import Iterable
 
 
 def _preload_thread_env() -> None:
@@ -127,6 +128,19 @@ os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
 
 
 def safe_div(a, b):
+    # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
+    if isinstance(b, Iterable) and not isinstance(b, (str, bytes)):
+        bs = list(b)
+        if len(bs) == 0:
+            raise ValueError("empty list of divisors")
+        last_err = None
+        for bi in bs:
+            try:
+                return safe_div(a, bi)
+            except Exception as e:
+                last_err = e
+        raise ValueError(f"{a} is not divisible by any candidate in {bs}") from last_err
+
     if b == 0:
         raise ZeroDivisionError("division by zero")
     if a % b != 0:
