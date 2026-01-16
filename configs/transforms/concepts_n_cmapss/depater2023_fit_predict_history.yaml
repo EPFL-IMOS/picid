@@ -117,6 +117,44 @@ tabularize_y_val_test_health_states:
     assign_to: health_states
     transform_on_keys: ["val", "test"]
 
+tabularize_y_train_concepts:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+    timestep_dimension: 1
+
+    select_features:
+      - concepts: present
+
+  metadata:
+    apply_to: ["concepts"]
+    assign_to: concepts
+    transform_on_keys: ["train"]
+
+tabularize_y_val_test_concepts:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    seq_len: ${task_definition.seq_len}
+    label_len: 0
+    pred_len: 1
+    stride: ${task_definition.stride}
+    timestep_dimension: 1
+
+    select_features:
+      - concepts: present
+
+  metadata:
+    apply_to: ["concepts"]
+    assign_to: concepts
+    transform_on_keys: ["val", "test"]
+
 concatenate_units:
   transform:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
