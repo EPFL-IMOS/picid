@@ -2,21 +2,13 @@
 
 defaults:
   - pronostia/prognostics/base
-  - /model_configs/concepts_prognostics/xgboost_fit_predict
+  - /model_configs/prognostics/xgboost_fit_predict
   - override /transforms: bearings/pronostia/stftt_fit_predict
 
-
 task_definition:
-  stride_train: 5
-  
   model:
     data_requirements:
       input_tensors:
         - features
-        - rul 
+        - rul
         - unit_id
-
-datamodule: 
-  train_batch_size: 1
-  val_batch_size: 1
-  test_batch_size: 1

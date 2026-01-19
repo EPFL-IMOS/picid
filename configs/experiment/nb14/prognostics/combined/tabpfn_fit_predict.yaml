@@ -4,9 +4,8 @@ defaults:
   - nb14/prognostics/base
   - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms: battery/nb14/combined_fit_predict
-task_definition:
-  #stride_train: 5
 
+task_definition:
   model:
     data_requirements:
       input_tensors:
