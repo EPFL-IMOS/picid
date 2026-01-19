@@ -7,14 +7,10 @@ defaults:
   - override /transforms: hsf15/default
   - override /dataset: diagnostics/fault_classification_multiunit_dataset
 
-
-
-
-
 model:
-  output_channels: [64]
-  kernels: [1]
-  strides: [1]
-  dilations: [1]
-  latent_dim: 128
-  dropout_prob: 0.2
+  output_channels: [32, 64, 64, 64, 128]
+  kernels: [5, 5, 5, 3, 3]
+  strides: [1, 1, 1, 1, 1]
+  dilations: [1, 1, 1, 1, 1]
+  latent_dim: 64
+  dropout_prob: 0.1
