@@ -5,14 +5,14 @@
 #     saving_path: ${paths.log_dir}/images
 #     features_key: features
 #     target_key: target
-  
+
 #   metadata:
-#     apply_to: ["features", "target", "unit_id"]    
+#     apply_to: ["features", "target", "unit_id"]
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
-    
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -20,9 +20,8 @@ scaler_features:
 scaler_target:
   transform:
     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
+
   metadata:
     apply_to: target
     fit_on: train
     assign_to: rul
-
