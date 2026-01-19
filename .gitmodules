@@ -1,20 +1,17 @@
-[submodule "rul-datasets"]
-	path = local_packages/rul-datasets
-	url = https://github.com/tilman151/rul-datasets
-[submodule "TabPFN"]
+[submodule "local_packages/TabPFN"]
 	path = local_packages/TabPFN
 	url = https://github.com/EPFL-IMOS/TabPFN-IMOS.git
 	branch = collab_lalr
-[submodule "phmd"]
-    path = local_packages/phmd
-    url = https://github.com/EPFL-IMOS/imos_phmd.git
-    branch = collab_lalr
-[submodule "TabDPT"]
+[submodule "local_packages/phmd"]
+	path = local_packages/phmd
+	url = https://github.com/EPFL-IMOS/imos_phmd.git
+	branch = collab_lalr
+[submodule "local_packages/rul-datasets"]
+	path = local_packages/rul-datasets
+	url = https://github.com/tilman151/rul-datasets
+[submodule "local_packages/TabDPT"]
 	path = local_packages/TabDPT
 	url = git@github.com:layer6ai-labs/TabDPT.git
-[submodule "carte"]
+[submodule "local_packages/carte-ai"]
 	path = local_packages/carte-ai
 	url = git@github.com:soda-inria/carte.git
-# [submodule "local_packages/TimeLLM"]
-# 	path = local_packages/TimeLLM
-# 	url = git@gitlab.epfl.ch:acoutinh/timellm-imos.git
