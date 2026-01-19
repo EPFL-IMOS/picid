@@ -4,6 +4,7 @@ import os
 import yaml
 from pathlib import Path
 from collections.abc import Iterable
+import json
 
 
 def _preload_thread_env() -> None:
@@ -697,12 +698,25 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         loader_lengths[split] = len(loader)
         batch = next(iter(loader))
         log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
+
+        nox_shapes_dict = {}
+
         for key, value in batch.items():
             # TODO: handle nested structures (attributedict, list, etc)
             if isinstance(value, torch.Tensor):
                 log.info(f"  {key}: {value.shape}")
+                nox_shapes_dict[key] = str(value.shape)
             else:
                 log.info(f"  {key}: Non-tensor value of type {type(value)}")
+
+        out_path = os.environ.get("NOX_RUN_DETAILS_JSON")
+        if out_path is not None:
+            # Save the shapes to a json file for nox to pick up
+            out_path = Path(out_path)
+            if out_path.parent.exists():
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(nox_shapes_dict, f)
+
     register_infer_dataloader_length_resolver(loader_lengths)
 
     evaluators = {}
