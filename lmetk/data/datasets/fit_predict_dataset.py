@@ -1,5 +1,7 @@
+import itertools
 import logging
 from collections.abc import Sequence
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -55,6 +57,9 @@ class FitPredictTaskDataset(BaseDataset):
         task_type: str,
         meta_data_dict: dict[str, any],
         convert_units_to_tasks: bool = False,
+        subset_range: Optional[
+            Tuple[int, int, int]
+        ] = None,  # Used for debugging purposes
         **kwargs,
     ):
         # Additional default values
@@ -93,6 +98,7 @@ class FitPredictTaskDataset(BaseDataset):
         y = data_dict[target_key]
 
         self.convert_units_to_tasks = convert_units_to_tasks
+        self.subset_range = subset_range  # Used for debugging purposes
 
         # make sure target is 3 dimensional and context features 3
         # This is because its a standard multi-target fit predict task (2) and 2 dimensional,
@@ -181,6 +187,15 @@ class FitPredictTaskDataset(BaseDataset):
         X = np.expand_dims(self.X[task], axis=0)  # (1, n_samples, n_features)
         y = np.expand_dims(self.y[task], axis=0)  # (1, n_samples, n_outputs)
 
+        if self.subset_range is not None:
+            unique_y = np.unique(y)
+            X = X[:, slice(*self.subset_range), :]
+            y = y[:, slice(*self.subset_range), :]
+            y = np.asarray(
+                list(itertools.islice(itertools.cycle(unique_y), len(y.flatten()))),
+                dtype=y.dtype,
+            ).reshape(y.shape)
+
         d = AttributeDict(
             {
                 "task_idx": torch.tensor(task),
@@ -192,10 +207,10 @@ class FitPredictTaskDataset(BaseDataset):
         )
 
         if self.get_unit_id:
-            # unit_id = np.expand_dims(
-            #     self.unit_id[task], axis=0
-            # )  # (1, n_samples, n_features)
             unit_id = self.unit_id[task]
+            # TODO: potential bug here when tasks > 1, check!
+            if self.subset_range is not None:
+                unit_id = unit_id[slice(*self.subset_range), :]
             d["unit_id"] = torch.from_numpy(unit_id)
 
         return AttributeDict(d)
