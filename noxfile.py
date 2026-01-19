@@ -4,6 +4,8 @@ from pathlib import Path
 import nox
 from itertools import product
 from dataclasses import dataclass
+from rich.console import Console
+from rich.table import Table
 
 
 # For later with UV:
@@ -82,7 +84,7 @@ DIAGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_classifier"] + TABULAR_STYL
 DATASETS_PROGNOSTICS = [
     # We want to test raw for nb14 to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
-    Info(ds="nb14", subexp="raw", type="prognostics"),
+    # Info(ds="nb14", subexp="raw", type="prognostics"),
     Info(ds="nb14", subexp="combined", type="prognostics"),
     Info(ds="unibo", subexp="combined", type="prognostics"),
     Info(ds="phme20", subexp="raw", type="prognostics"),
@@ -90,7 +92,7 @@ DATASETS_PROGNOSTICS = [
     Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
     # We want to test raw for pronostia to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
-    Info(ds="pronostia", subexp="raw", type="prognostics"),
+    # Info(ds="pronostia", subexp="raw", type="prognostics"),
     Info(ds="pronostia", subexp="combined", type="prognostics"),
     Info(ds="xjtu_sy", subexp="combined", type="prognostics"),
 ]
@@ -122,10 +124,13 @@ TABULAR_STYLE_ARGS = [
     "debug=nox_testing_fit_predict",
     "num_threads=1",
     "seed=50",
+    "task_definition.seq_len=10",
 ]
 
 
 def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 300):
+    out = Path(session.create_tmp()) / "result.json"
+
     status = "success"
     error = None
     model_name = metadata.get("model_name", "")
@@ -139,6 +144,7 @@ def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 30
             {
                 "HYDRA_FULL_ERROR": "1",
                 "PYTHONFAULTHANDLER": "1",
+                "NOX_RUN_DETAILS_JSON": str(out),
             }
         )
 
@@ -149,6 +155,10 @@ def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 30
             f"experiment={exp_name}",
             *additional_args,
         )
+
+        run_data = json.loads(out.read_text(encoding="utf-8"))
+        session.log("GOT RESULTS: %s", run_data)
+
     except nox.command.CommandFailed as e:
         status = "failed"
         error = str(e).replace("\n", " ")[:max_err_len]
@@ -159,6 +169,7 @@ def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 30
             "status": status,
             "experiment": exp_name,
             **metadata,
+            **(run_data if status == "success" else {}),
             "error": error,
         }
         with RESULTS_FILE.open("a") as f:
@@ -201,3 +212,67 @@ def experiments_prognostics(session, model_name, info):
         exp_name,
         metadata={"model_name": model_name, "dataset_key": dataset_key},
     )
+
+
+@nox.session(venv_backend="none")
+def analyze_results(session):
+    """Analyze the most recent experiment results and display tensor size table."""
+
+    # Find the most recent results file
+    results_files = sorted(Path(".").glob("*_experiment_results.jsonl"), reverse=True)
+
+    if not results_files:
+        session.log("No results files found.")
+        return
+
+    most_recent = results_files[0]
+    session.log(f"Reading results from: {most_recent}")
+
+    # Collect tensor size information
+    tensor_data = []
+
+    with most_recent.open("r") as f:
+        for line in f:
+            record = json.loads(line)
+
+            print(record)
+
+            # Extract torch.Size fields
+            torch_sizes = {}
+            for key, value in record.items():
+                if isinstance(value, str) and value.startswith("torch.Size("):
+                    torch_sizes[key] = value
+
+            tensor_data.append(
+                {
+                    "experiment": record.get("experiment", ""),
+                    "model": record.get("model_name", ""),
+                    "dataset": record.get("dataset_key", ""),
+                    "status": record.get("status", ""),
+                    **(torch_sizes if torch_sizes else {}),
+                }
+            )
+
+    if not tensor_data:
+        session.log("No tensor size data found in results.")
+        return
+
+    # Create and populate Rich table
+    console = Console()
+    table = Table(title=f"Experiment Results - {most_recent.name}")
+
+    if tensor_data:
+        # Collect all unique headers from all records
+        headers = list({key for row in tensor_data for key in row.keys()})
+
+        # Add columns
+        for header in headers:
+            table.add_column(header, style="cyan", no_wrap=False)
+
+        # Add rows
+        for row in tensor_data:
+            status = row.get("status", "")
+            style = "red" if status == "failed" else None
+            table.add_row(*[str(row.get(h, "")) for h in headers], style=style)
+
+        console.print(table)
