@@ -20,7 +20,7 @@ debug:
   raise_inner_exception: true
 
 dataset:
-  subset_range: [0, 100, 1] # Use only first 20 samples per task for faster model testing
+  subset_range: [0, 5, 1] # Use only first 20 samples per task for faster model testing
 
 # Due to artificially reduced dataset sizes, we cannot use the inverse scaling in the per-unit evaluator.
 # So we disable it here for all of nox testing.
