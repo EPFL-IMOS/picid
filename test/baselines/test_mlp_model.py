@@ -78,14 +78,13 @@ def test_mlp_model_deep_layers_loop():
 
 def test_mlp_initialization_logic():
     """
-    [Coverage: MLP Lines 80-89 (_init_weights)]
     Verifies that weights are initialized non-default.
     - Linear Bias should be 0.
     - LayerNorm Weight should be 1.0.
     - LayerNorm Bias should be 0.0.
     """
     config = {"seq_len": 2, "input_channels": 2, "num_layers": 2}
-    model = MLP(config, task_type="regression")
+    model = MLP(config, task_type="regression", num_targets=1)
 
     # Check LayerNorm (index 1)
     ln = model.net[1]
