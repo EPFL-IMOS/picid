@@ -1,0 +1,16 @@
+#@package _global_
+
+defaults:
+  - pronostia/prognostics/base
+  - /model_configs/concepts_prognostics/xgboost_fit_predict
+  - override /transforms: bearings/pronostia/combined_fit_predict
+
+task_definition:
+  #stride_train: 50
+  
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul 
+        - unit_id
