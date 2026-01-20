@@ -349,3 +349,148 @@ def test_padding_mode_validation(dense_data):
             padding_left_flag=True,
             padding_mode="invalid_mode",
         )
+
+
+# =========================================================================
+# === PART 3: Offset Logic Tests ===
+# Verifies pred_offset behavior with and without padding
+# Updated to fit dense_data length = 5
+# =========================================================================
+
+
+def test_offset_no_padding(dense_data):
+    """
+    Scenario: Strict Mode (No Padding).
+    Data: [10, 11, 12, 13, 14] (Len 5)
+    Seq: 2, Offset: 2, Pred: 1
+
+    Structure: [Input] --gap-- [Target]
+    Input Length: 2
+    Gap Length: 2 (pred_offset)
+    Target Length: 1
+    Total Length Required: 2 + 2 + 1 = 5
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        pred_offset=2,
+        padding_left_flag=False,  # Strict
+    )
+
+    # Valid Windows:
+    # Only 1 window fits in length 5.
+    # Window 1: Input [10, 11] (Idx 0,1).
+    # Gap (Idx 2,3 -> Values 12, 13).
+    # Target needs idx 1 (end of input) + 2 (offset) + 1 = 4 -> Val 14.
+
+    assert len(seq) == 1
+
+    # Check Window 0
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array([10, 11], dtype=np.float32).reshape(1, 2, 1)
+    expected_y = np.array([14], dtype=np.float32).reshape(1, 1, 1)  # Value at index 4
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+
+def test_offset_with_padding_zero(dense_data):
+    """
+    Scenario: Padding Mode (Zero) with Offset 2.
+    Data: [10, 11, 12, 13, 14] (Len 5)
+    Seq: 3, Offset: 2, Pred: 1, Warmup: 1
+    """
+    # Logic:
+    # First Target: Index 1 (Value 11).
+    # Formula: Start_Idx + Seq_Len + Offset = Target_Idx
+    # Start_Idx + 3 + 2 = 1
+    # Start_Idx = 1 - 5 = -4
+
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=3,
+        pred_len=1,
+        label_len=0,
+        pred_offset=2,
+        padding_left_flag=True,
+        padding_mode="zero",
+        warmup_steps=1,
+    )
+
+    # We can produce targets for indices: 1, 2, 3, 4.
+    # Total 4 windows.
+    assert len(seq) == 4
+
+    # Window 1 (Index 0):
+    # Target: 11 (Index 1).
+    # Input Indices: [-4, -3, -2]. All padded.
+    # Data: [0, 0, 0]
+
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array([0, 0, 0], dtype=np.float32).reshape(1, 3, 1)
+    expected_y = np.array([11], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+    # Window 4 (Index 3 - The last window):
+    # Target: Index 4 (Value 14).
+    # Eq: Start + 3 + 2 = 4 -> Start = -1.
+    # Input Indices: [-1, 0, 1].
+    # Zero Padding logic: [-1] -> 0. [0, 1] -> [10, 11].
+    # Expected X: [0, 10, 11]
+
+    x_last, y_last = seq.sequences_batch([3])
+    expected_x_last = np.array([0, 10, 11], dtype=np.float32).reshape(1, 3, 1)
+    expected_y_last = np.array([14], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x_last.numpy(), expected_x_last)
+    np.testing.assert_array_equal(y_last.numpy(), expected_y_last)
+
+
+def test_offset_with_padding_edge(dense_data):
+    """
+    Scenario: Padding Mode (Edge) with Offset 2.
+    Data: [10, 11, 12, 13, 14]
+    Seq: 3, Offset: 2, Pred: 1, Warmup: 1
+    """
+    # Same config as above, but padded values are clamped to index 0 (Val 10).
+
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=3,
+        pred_len=1,
+        label_len=0,
+        pred_offset=2,
+        padding_left_flag=True,
+        padding_mode="edge",
+        warmup_steps=1,
+    )
+
+    # Window 1 (Index 0):
+    # Target: 11. Input Indices [-4, -3, -2].
+    # Clamped to [0, 0, 0] -> [10, 10, 10].
+
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array([10, 10, 10], dtype=np.float32).reshape(1, 3, 1)
+    expected_y = np.array([11], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+    # Optional Check: Last Window (Index 3)
+    # Target: 14. Start: -1. Input Indices: [-1, 0, 1].
+    # Edge Logic: [-1] -> 10. [0, 1] -> [10, 11].
+    # Expected X: [10, 10, 11]
+
+    x_last, y_last = seq.sequences_batch([3])
+    expected_x_last = np.array([10, 10, 11], dtype=np.float32).reshape(1, 3, 1)
+    expected_y_last = np.array([14], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x_last.numpy(), expected_x_last)
+    np.testing.assert_array_equal(y_last.numpy(), expected_y_last)
