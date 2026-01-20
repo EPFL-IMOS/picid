@@ -27,7 +27,7 @@ class AkwardJaggedAutoregressiveSequencer:
     2.  **Strict Windowing (Default)**: Ensures input sequences consist entirely of
         real data. Short units are dropped.
     3.  **Left Padding (Warmup)**: Allows predictions to start earlier in the time
-        series by padding the input history with zeros.
+        series by padding the input history with zeros or edge values.
 
     Sequence Structure:
     -------------------
@@ -50,7 +50,11 @@ class AkwardJaggedAutoregressiveSequencer:
             - ``False`` (Strict): A window is valid only if the unit is long enough
               to provide a full ``seq_len`` history without padding.
             - ``True`` (Padding): Allows windows to start before index 0. Negative
-              indices are filled with zeros (Zero-Padding).
+              indices are filled according to ``padding_mode``.
+        padding_mode (str, optional): Defines the padding strategy when ``padding_left_flag=True``.
+            - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
+              This effectively repeats the first time step.
+            - ``"zero"``: Fills padded indices with zeros.
         warmup_steps (int, optional): The index in the time series where the **first prediction target**
             should align.
             - If ``None`` (Default): Defaults to ``seq_len``. This implies the first prediction
@@ -72,14 +76,13 @@ class AkwardJaggedAutoregressiveSequencer:
     Data: ``[A, B, C, D, E]``
     Config: ``seq_len=3``, ``pred_len=1``, ``padding_left_flag=True``, ``warmup_steps=1``
 
+    *If padding_mode="zero":*
+    - Window 1: Input ``[0, 0, A]`` -> Target ``[B]``
+    - Window 2: Input ``[0, A, B]`` -> Target ``[C]``
 
-
-    - **Goal:** First target should be at index 1 ('B').
-    - **Logic:** Input ends at index 1. Input starts at ``1 - 3 = -2``.
-    - Window 1: Input ``[0, 0, A]`` -> Target ``[B]`` (Padded)
-    - Window 2: Input ``[0, A, B]`` -> Target ``[C]`` (Padded)
-    - Window 3: Input ``[A, B, C]`` -> Target ``[D]`` (Full Data)
-    - Result: Valid windows start earlier, preserving data utility for long-context models.
+    *If padding_mode="edge" (Default):*
+    - Window 1: Input ``[A, A, A]`` -> Target ``[B]``
+    - Window 2: Input ``[A, A, B]`` -> Target ``[C]``
     """
 
     def __init__(
@@ -91,6 +94,7 @@ class AkwardJaggedAutoregressiveSequencer:
         stride: int = 1,
         pred_offset: int = 0,
         padding_left_flag: int = 0,
+        padding_mode: str = "edge",
         warmup_steps: int = None,
     ):
         self.features = features
@@ -100,6 +104,12 @@ class AkwardJaggedAutoregressiveSequencer:
         self.stride = stride
         self.pred_offset = pred_offset
         self.padding_left_flag = padding_left_flag
+
+        if padding_mode not in ["zero", "edge"]:
+            raise ValueError(
+                f"padding_mode must be 'zero' or 'edge', got '{padding_mode}'"
+            )
+        self.padding_mode = padding_mode
 
         # Initialize Warmup Steps
         if warmup_steps is None:
@@ -240,7 +250,9 @@ class AkwardJaggedAutoregressiveSequencer:
             x_range = ak.from_regular(x_range, axis=-1)
             y_range = ak.from_regular(y_range, axis=-1)
 
-        # 1. Clamp negative indices to 0 for safe fetching. TODO: doublecheck it works as intended
+        # 1. Clamp negative indices to 0 for safe fetching.
+        #    If padding_mode='edge', this step ALONE achieves the result:
+        #    negative indices fetch index 0 (repeating the first value).
         if self.padding_left_flag:
             # Use numpy max since x_range is structured to support it at this stage
             safe_x_range = np.maximum(x_range, 0)
@@ -255,8 +267,10 @@ class AkwardJaggedAutoregressiveSequencer:
         seq_x = torch.from_numpy(raw_x_numpy)
         seq_y = torch.from_numpy(raw_y_numpy)
 
-        # 3. Apply Zero Padding (Masking). TODO: doublecheck it works as intended
-        if self.padding_left_flag:
+        # 3. Apply Zero Padding (Masking)
+        #    Only run this if mode is "zero".
+        #    If mode is "edge", we keep the values clamped in step 1.
+        if self.padding_left_flag and self.padding_mode == "zero":
             # Create boolean mask where original indices were valid (>= 0)
             valid_mask_x = x_range >= 0
 
