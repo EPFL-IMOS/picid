@@ -55,34 +55,28 @@ class AkwardJaggedAutoregressiveSequencer:
             - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
               This effectively repeats the first time step.
             - ``"zero"``: Fills padded indices with zeros.
-        warmup_steps (int, optional): The index in the time series where the **first prediction target**
-            should align.
-            - If ``None`` (Default): Defaults to ``seq_len``. This implies the first prediction
-              occurs immediately after the first full sequence of real data is available.
-            - If ``< seq_len`` (and ``padding_left_flag=True``): Inputs will be padded to allow
-              predictions to start earlier.
+        warmup_steps (int, optional): Controls the start index of the first window.
+            - **If padding_left_flag=True**: Represents the **number of padded steps** to include in the first window.
+              - Default: ``seq_len - 1``. This maximizes padding such that the first window contains
+                only **1 real observation** at the end.
+              - Value ``0``: Starts at index 0 (no padding).
+            - **If padding_left_flag=False**: Represents the **index offset** for the start of the first sequence.
+              - Default: ``0``. This means the window starts at index 0 (capturing the first full valid sequence `0:seq_len`).
 
     Examples:
     ---------
-    **Scenario 1: Strict Mode (No Padding)**
-    Data: ``[A, B, C, D, E]`` (Len 5)
-    Config: ``seq_len=3``, ``pred_len=1``, ``padding_left_flag=False``
+    **Scenario 1: Default Padding (Edge)**
+    Data: ``[A, B, C, D]``, ``seq_len=3``
+    Default ``warmup_steps = seq_len - 1 = 2``.
 
-    - Window 1: Input ``[A, B, C]`` -> Target ``[D]``
-    - Window 2: Input ``[B, C, D]`` -> Target ``[E]``
-    - Result: 2 valid windows.
+    - Window 1 (Start -2): ``[A, A, A]`` (2 pads, 1 real) -> Target ``[B]``
+    - Window 2 (Start -1): ``[A, A, B]`` (1 pad, 2 real) -> Target ``[C]``
+    - Window 3 (Start 0):  ``[A, B, C]`` (0 pads, 3 real) -> Target ``[D]``
 
-    **Scenario 2: Padding Mode (Warmup)**
-    Data: ``[A, B, C, D, E]``
-    Config: ``seq_len=3``, ``pred_len=1``, ``padding_left_flag=True``, ``warmup_steps=1``
+    **Scenario 2: Manual Warmup**
+    Config: ``warmup_steps=0`` (padding_left_flag=True)
 
-    *If padding_mode="zero":*
-    - Window 1: Input ``[0, 0, A]`` -> Target ``[B]``
-    - Window 2: Input ``[0, A, B]`` -> Target ``[C]``
-
-    *If padding_mode="edge" (Default):*
-    - Window 1: Input ``[A, A, A]`` -> Target ``[B]``
-    - Window 2: Input ``[A, A, B]`` -> Target ``[C]``
+    - Window 1 (Start 0): ``[A, B, C]`` -> Target ``[D]`` (Padding is skipped)
     """
 
     def __init__(
@@ -121,12 +115,24 @@ class AkwardJaggedAutoregressiveSequencer:
             )
         self.padding_mode = padding_mode
 
-        # Initialize Warmup Steps
-        if warmup_steps is None:
-            # Default Strict behavior: First target is immediately after the first full sequence.
-            self.warmup_steps = seq_len
+        # Initialize Warmup Steps (Indices Logic)
+        if self.padding_left_flag:
+            if warmup_steps is None:
+                # Default: Start with maximum padding (just 1 real data point)
+                self.warmup_steps = seq_len - 1
+            else:
+                self.warmup_steps = warmup_steps
+                logger.info(
+                    f"Padding enabled with explicit warmup_steps={self.warmup_steps}. "
+                    f"This defines the number of padded steps. "
+                    f"The first input window will start at index -{self.warmup_steps}."
+                )
         else:
-            self.warmup_steps = warmup_steps
+            # Strict mode: Default to 0 (Start at first full sequence)
+            if warmup_steps is None:
+                self.warmup_steps = 0
+            else:
+                self.warmup_steps = warmup_steps
 
         self.device = torch.device("cpu")
         self._checked_output_shapes = False
@@ -155,12 +161,13 @@ class AkwardJaggedAutoregressiveSequencer:
 
         # --- Logic for Padding ---
         if self.padding_left_flag:
-            # Allow negative starts.
-            # Logic: start + seq_len + pred_offset = warmup_steps
-            min_start = self.warmup_steps - self.seq_len - self.pred_offset
+            # warmup_steps now represents the MAGNITUDE of the negative start.
+            # E.g. warmup_steps=2 -> min_start = -2.
+            min_start = -self.warmup_steps
         else:
             # Strict mode: Input window must be fully inside data boundaries (>= 0).
-            min_start = 0
+            # warmup_steps here acts as an additional positive offset if set.
+            min_start = self.warmup_steps
 
         # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
         if not self.is_ragged:
