@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 import awkward as ak
-import torch
 
 from lmetk.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
@@ -36,7 +35,8 @@ def jagged_data():
 
 
 # =========================================================================
-# === Tests ===
+# === PART 1: Original Tests (Zero Padding) ===
+# Updated with `padding_mode="zero"` to preserve original assertions
 # =========================================================================
 
 
@@ -53,7 +53,7 @@ def test_padding_activates_for_short_sequences(dense_data):
     )
     assert len(seq_strict) == 0
 
-    # 2. Padding Mode
+    # 2. Padding Mode (Zero)
     # We want to predict starting at index 1 (2nd element, value 11).
     # History needed: 6. Available before index 1: 1 (value 10). Padding needed: 5.
     seq_pad = AkwardJaggedAutoregressiveSequencer(
@@ -62,6 +62,7 @@ def test_padding_activates_for_short_sequences(dense_data):
         pred_len=1,
         label_len=0,
         padding_left_flag=True,
+        padding_mode="zero",  # <--- UPDATED: Explicitly test zero padding
         warmup_steps=1,  # Start predicting at index 1
     )
 
@@ -97,6 +98,7 @@ def test_padding_jagged_rescues_short_units(jagged_data):
         pred_len=1,
         label_len=0,
         padding_left_flag=True,
+        padding_mode="zero",  # <--- UPDATED
         warmup_steps=1,
     )
 
@@ -139,6 +141,7 @@ def test_warmup_steps_logic(dense_data):
         pred_len=1,
         label_len=0,
         padding_left_flag=True,
+        padding_mode="zero",  # <--- UPDATED
         warmup_steps=0,
     )
     # Targets: 0, 1, 2, 3, 4 (5 windows)
@@ -191,6 +194,7 @@ def test_padding_with_stride(dense_data):
         pred_len=1,
         label_len=0,
         padding_left_flag=True,
+        padding_mode="zero",  # <--- UPDATED
         warmup_steps=1,
         stride=2,
     )
@@ -237,6 +241,7 @@ def test_padding_with_offset(dense_data):
         label_len=0,
         pred_offset=1,
         padding_left_flag=True,
+        padding_mode="zero",  # <--- UPDATED
         warmup_steps=1,
     )
 
@@ -253,3 +258,94 @@ def test_padding_with_offset(dense_data):
     np.testing.assert_array_equal(
         y.numpy(), np.array([11], dtype=np.float32).reshape(1, 1, 1)
     )
+
+
+# =========================================================================
+# === PART 2: New Tests (Edge Padding) ===
+# Explicit tests for padding_mode="edge"
+# =========================================================================
+
+
+def test_edge_padding_repeats_first_value(dense_data):
+    """
+    Scenario: Validate that padding_mode="edge" repeats the first available value (index 0).
+    Data: [10, 11, 12, 13, 14]
+    Config: Seq 4, Warmup 1.
+    """
+    # Target: Index 1 (Value 11).
+    # Input ends at Index 0 (Value 10).
+    # Input Start: 1 - 4 = -3.
+    # Indices: [-3, -2, -1, 0].
+    # Clamping Logic:
+    #   -3 -> 0 (Val 10)
+    #   -2 -> 0 (Val 10)
+    #   -1 -> 0 (Val 10)
+    #    0 -> 0 (Val 10)
+
+    seq_edge = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=4,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="edge",  # <--- NEW MODE
+        warmup_steps=1,
+    )
+
+    # Check Window 0
+    x, y = seq_edge.sequences_batch([0])
+
+    # Expected X: [10, 10, 10, 10]
+    # Note difference from Zero Padding which would be [0, 0, 0, 10]
+    expected_x = np.array([10, 10, 10, 10], dtype=np.float32).reshape(1, 4, 1)
+    # Expected Y: [11]
+    expected_y = np.array([11], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+
+def test_edge_padding_jagged_unit(jagged_data):
+    """
+    Scenario: Validate edge padding on a short unit in a jagged array.
+    Unit 0: [10, 11, 12] (Len 3)
+    Config: Seq 5. Warmup 1.
+    """
+    # Target: Index 1 (Value 11).
+    # Input needs 5 steps, ending at index 0.
+    # Start: 1 - 5 = -4.
+    # Indices: [-4, -3, -2, -1, 0].
+    # Clamping Logic: All negatives become index 0 (Value 10).
+
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_data,
+        seq_len=5,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="edge",
+        warmup_steps=1,
+    )
+
+    # Unit 0 is the first unit, so batch_idx=[0] should fetch it.
+    x, y = seq.sequences_batch([0])
+
+    # Expected X: [10, 10, 10, 10, 10]
+    expected_x = np.array([10, 10, 10, 10, 10], dtype=np.float32).reshape(1, 5, 1)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+
+
+def test_padding_mode_validation(dense_data):
+    """
+    Verifies that providing an invalid padding mode raises an error.
+    """
+    with pytest.raises(ValueError, match="padding_mode must be 'zero' or 'edge'"):
+        AkwardJaggedAutoregressiveSequencer(
+            features=dense_data,
+            seq_len=2,
+            label_len=0,
+            pred_len=1,
+            padding_left_flag=True,
+            padding_mode="invalid_mode",
+        )
