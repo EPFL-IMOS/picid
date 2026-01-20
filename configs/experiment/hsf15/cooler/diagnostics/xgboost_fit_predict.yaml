@@ -3,5 +3,5 @@
 defaults:
   - hsf15/base
   - hsf15/cooler/base
-  - /model_configs/concepts_diagnostics/xgboost_fit_predict
+  - /model_configs/diagnostics/xgboost_fit_predict
   - override /transforms: hsf15/statistics_fit_predict

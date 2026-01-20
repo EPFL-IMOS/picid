@@ -2,5 +2,5 @@
 
 defaults:
   - unibo/prognostics/base
-  - /model_configs/concepts_prognostics/xgboost_fit_predict
+  - /model_configs/prognostics/xgboost_fit_predict
   - override /transforms: battery/unibo/statistics

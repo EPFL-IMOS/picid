@@ -1,3 +1,10 @@
+# subsample_features:
+#   transform:
+#     _target_: lmetk.transforms.base_transforms.subsample.SubsampleTransform
+#     step: 10
+#   metadata:
+#     apply_to: features
+
 scaler_features:
   transform:
     _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
@@ -168,7 +175,6 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
-    
 # plot_features_final:
 #   transform:
 #     unit_key: unit_id

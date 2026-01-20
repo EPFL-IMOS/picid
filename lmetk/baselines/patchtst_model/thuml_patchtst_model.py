@@ -25,6 +25,8 @@ class PatchTST_Forecaster(TransformerForecaster):
         ts_out: int,
         task_type: str,
         dropout: float = 0.1,
+        patch_len: int = 16,
+        stride: int = 8,
         e_layers: int = 3,
         d_layers: int = 3,
         d_ff: int = 64,
@@ -108,7 +110,7 @@ class PatchTST_Forecaster(TransformerForecaster):
             }
         )
 
-        self.model = PatchTST(configs)
+        self.model = PatchTST(configs, patch_len=patch_len, stride=stride)
 
         self.target_mask = None
         self.transformer_args = transformer_args

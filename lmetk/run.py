@@ -3,6 +3,8 @@
 import os
 import yaml
 from pathlib import Path
+from collections.abc import Iterable
+import json
 
 
 def _preload_thread_env() -> None:
@@ -127,6 +129,19 @@ os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
 
 
 def safe_div(a, b):
+    # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
+    if isinstance(b, Iterable) and not isinstance(b, (str, bytes)):
+        bs = list(b)
+        if len(bs) == 0:
+            raise ValueError("empty list of divisors")
+        last_err = None
+        for bi in bs:
+            try:
+                return safe_div(a, bi)
+            except Exception as e:
+                last_err = e
+        raise ValueError(f"{a} is not divisible by any candidate in {bs}") from last_err
+
     if b == 0:
         raise ZeroDivisionError("division by zero")
     if a % b != 0:
@@ -683,12 +698,25 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         loader_lengths[split] = len(loader)
         batch = next(iter(loader))
         log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
+
+        nox_shapes_dict = {}
+
         for key, value in batch.items():
             # TODO: handle nested structures (attributedict, list, etc)
             if isinstance(value, torch.Tensor):
                 log.info(f"  {key}: {value.shape}")
+                nox_shapes_dict[key] = str(value.shape)
             else:
                 log.info(f"  {key}: Non-tensor value of type {type(value)}")
+
+        out_path = os.environ.get("NOX_RUN_DETAILS_JSON")
+        if out_path is not None:
+            # Save the shapes to a json file for nox to pick up
+            out_path = Path(out_path)
+            if out_path.parent.exists():
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(nox_shapes_dict, f)
+
     register_infer_dataloader_length_resolver(loader_lengths)
 
     evaluators = {}

@@ -19,6 +19,7 @@ csv_files/
 
 .DS_Store
 .venv
+.nox
 *.egg-info
 build
 /data/*

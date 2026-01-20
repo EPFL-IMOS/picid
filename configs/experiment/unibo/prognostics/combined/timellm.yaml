@@ -2,5 +2,5 @@
 
 defaults:
   - unibo/prognostics/base
-  - /model_configs/concepts_prognostics/timellm
+  - /model_configs/prognostics/timellm
   - override /transforms: battery/unibo/combined_fit_predict

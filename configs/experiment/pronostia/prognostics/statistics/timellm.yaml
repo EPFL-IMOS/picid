@@ -1,7 +1,6 @@
 #@package _global_
 
-
 defaults:
   - pronostia/prognostics/base
-  - /model_configs/concepts_prognostics/timellm
+  - /model_configs/prognostics/timellm
   - override /transforms: bearings/pronostia/statistics_fit_predict
