@@ -24,9 +24,9 @@ class AkwardJaggedAutoregressiveSequencer:
     -------------
     1.  **Jagged Support**: Iterates over the first dimension (Units) and slices time
         windows relative to the start of each unit.
-    2.  **Strict Windowing (Default)**: Ensures input sequences consist entirely of
+    2.  **Strict Windowing**: Ensures input sequences consist entirely of
         real data. Short units are dropped.
-    3.  **Left Padding (Warmup)**: Allows predictions to start earlier in the time
+    3.  **Left Padding (Warmup - Default)**: Allows predictions to start earlier in the time
         series by padding the input history with zeros or edge values.
 
     Sequence Structure:
@@ -46,10 +46,10 @@ class AkwardJaggedAutoregressiveSequencer:
         stride (int, optional): Step size between consecutive windows. Defaults to 1.
         pred_offset (int, optional): Temporal gap between the end of the input sequence
             and the start of the prediction. Defaults to 0 (continuous).
-        padding_left_flag (bool, optional):
-            - ``False`` (Strict): A window is valid only if the unit is long enough
+        padding_left_flag (Union[bool, int], optional):
+            - ``False`` or ``0`` (Strict): A window is valid only if the unit is long enough
               to provide a full ``seq_len`` history without padding.
-            - ``True`` (Padding): Allows windows to start before index 0. Negative
+            - ``True`` or ``1`` (Padding - Default): Allows windows to start before index 0. Negative
               indices are filled according to ``padding_mode``.
         padding_mode (str, optional): Defines the padding strategy when ``padding_left_flag=True``.
             - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
@@ -93,7 +93,7 @@ class AkwardJaggedAutoregressiveSequencer:
         pred_len: int,
         stride: int = 1,
         pred_offset: int = 0,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         padding_mode: str = "edge",
         warmup_steps: int = None,
     ):
@@ -103,7 +103,17 @@ class AkwardJaggedAutoregressiveSequencer:
         self.pred_len = pred_len
         self.stride = stride
         self.pred_offset = pred_offset
-        self.padding_left_flag = padding_left_flag
+
+        # Validate and Normalize padding_left_flag
+        # Check strict 0/1 constraint if it is an integer (bools are ints in Python,
+        # so True/False pass "in [0, 1]" check automatically)
+        if isinstance(padding_left_flag, int) and padding_left_flag not in [0, 1]:
+            raise ValueError(
+                f"padding_left_flag must be boolean or int (0 or 1), got {padding_left_flag}"
+            )
+
+        # Normalize to boolean
+        self.padding_left_flag = bool(padding_left_flag)
 
         if padding_mode not in ["zero", "edge"]:
             raise ValueError(
