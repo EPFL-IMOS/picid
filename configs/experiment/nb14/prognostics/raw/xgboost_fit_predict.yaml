@@ -1,0 +1,14 @@
+#@package _global_
+
+defaults:
+  - nb14/prognostics/base
+  - /model_configs/prognostics/xgboost_fit_predict
+  - override /transforms: battery/nb14/raw_fit_predict
+
+task_definition:
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul
+        - unit_id

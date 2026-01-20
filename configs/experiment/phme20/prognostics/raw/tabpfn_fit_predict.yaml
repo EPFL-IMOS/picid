@@ -2,7 +2,7 @@
 
 defaults:
   - phme20/prognostics/base
-  - /model_configs/concepts_prognostics/tabpfn_fit_predict
+  - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms: phme20/normalize_feature_target_fit_predict
 
 task_definition:

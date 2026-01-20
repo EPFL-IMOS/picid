@@ -6,8 +6,6 @@ defaults:
   - override /transforms: bearings/xjtu_sy/combined_fit_predict
 
 task_definition:
-  stride_train: 1
-
   model:
     data_requirements:
       input_tensors:

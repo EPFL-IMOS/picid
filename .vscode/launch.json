@@ -1284,7 +1284,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=phme20/prognostics/raw/tabdpt_fit_predict",
+                "experiment=unibo/prognostics/combined/tabpfn_fit_predict",
                 "debug=pronostia",
                 "+model.full_outputs_path='${paths.output_dir}'",
                 "+model.output_type='full'"
@@ -1295,7 +1295,7 @@
             }
         },
         {
-            "name": "HSF15: lstm",
+            "name": "NOX debugging",
             "type": "debugpy",
             "request": "launch",
             "program": "lmetk/run.py",
@@ -1303,8 +1303,11 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=hsf15/accumulator/prognostics/lstm",
-                "debug=pronostia"
+                "experiment=xjtu_sy/prognostics/combined/xgboost_fit_predict",
+                "debug=nox_testing_fit_predict",
+                "num_threads=1",
+                "seed=50",
+                "trainer.max_epochs=1",
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -1372,6 +1375,23 @@
             "args": [
                 "paths=rt_local",
                 "experiment=mzvav/diagnostics/cnn_1d",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "TESTER",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=nb14/prognostics/combined/crossformer",
                 "debug=default"
             ],
             "env": {

@@ -2,5 +2,5 @@
 
 defaults:
   - nb14/prognostics/base
-  - /model_configs/concepts_prognostics/timellm
+  - /model_configs/prognostics/timellm
   - override /transforms: battery/nb14/combined
