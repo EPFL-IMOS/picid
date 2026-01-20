@@ -5,7 +5,7 @@ defaults:
   - /model_configs/concepts_prognostics/tabpfn_fit_predict
   - override /transforms: battery/nb14/combined_fit_predict
 task_definition:
-  #stride_train: 5
+  #stride_train: 20
   
   model:
     data_requirements:
