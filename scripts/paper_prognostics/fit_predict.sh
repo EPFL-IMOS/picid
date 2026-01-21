@@ -71,16 +71,16 @@ MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
 
 # Function to run and log commands
-run_and_log() {
-    local command_to_run="$1"
-    local run_name="$2"
+# run_and_log() {
+#     local command_to_run="$1"
+#     local run_name="$2"
 
-    # For debugging, just print the command and run name
-    echo "DEBUG: Run Name: $run_name"
-    echo "DEBUG: Command: $command_to_run"
-    # Run the command and log its output
-    eval "sleep 5"
-}
+#     # For debugging, just print the command and run name
+#     echo "DEBUG: Run Name: $run_name"
+#     echo "DEBUG: Command: $command_to_run"
+#     # Run the command and log its output
+#     eval "sleep 5"
+# }
 
 build_exp_name() {
   local dataset_key="$1"
@@ -108,8 +108,9 @@ for model_name in "${model_names[@]}"; do
             IFS=':' read -r context_length train_set_stride <<< "$cs_pair"
             IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
             exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
-            run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_key" "$task_type" "$subexp" "$seed" )
-            final_log_folder="${wandb_log_folder}_${dataset_key}"_"${task_type}"_"${subexp}"
+            dataset_run_name="${dataset_key//\//_}"
+            run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$task_type" "$subexp" "$seed" )
+            final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
 
 
             # --- 4. Build the full command as a single string ---
