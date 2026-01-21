@@ -9,15 +9,6 @@ defaults:
 task_definition:
   requires_training: true
 
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
 model:
   max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
   d_yc: ${infer_data_dim:features,-1}

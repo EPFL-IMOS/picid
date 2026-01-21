@@ -24,10 +24,10 @@ class AkwardJaggedAutoregressiveSequencer:
     -------------
     1.  **Jagged Support**: Iterates over the first dimension (Units) and slices time
         windows relative to the start of each unit.
-    2.  **Strict Windowing (Default)**: Ensures input sequences consist entirely of
+    2.  **Strict Windowing**: Ensures input sequences consist entirely of
         real data. Short units are dropped.
-    3.  **Left Padding (Warmup)**: Allows predictions to start earlier in the time
-        series by padding the input history with zeros.
+    3.  **Left Padding (Warmup - Default)**: Allows predictions to start earlier in the time
+        series by padding the input history with zeros or edge values.
 
     Sequence Structure:
     -------------------
@@ -46,40 +46,37 @@ class AkwardJaggedAutoregressiveSequencer:
         stride (int, optional): Step size between consecutive windows. Defaults to 1.
         pred_offset (int, optional): Temporal gap between the end of the input sequence
             and the start of the prediction. Defaults to 0 (continuous).
-        padding_left_flag (bool, optional):
-            - ``False`` (Strict): A window is valid only if the unit is long enough
+        padding_left_flag (Union[bool, int], optional):
+            - ``False`` or ``0`` (Strict): A window is valid only if the unit is long enough
               to provide a full ``seq_len`` history without padding.
-            - ``True`` (Padding): Allows windows to start before index 0. Negative
-              indices are filled with zeros (Zero-Padding).
-        warmup_steps (int, optional): The index in the time series where the **first prediction target**
-            should align.
-            - If ``None`` (Default): Defaults to ``seq_len``. This implies the first prediction
-              occurs immediately after the first full sequence of real data is available.
-            - If ``< seq_len`` (and ``padding_left_flag=True``): Inputs will be padded to allow
-              predictions to start earlier.
+            - ``True`` or ``1`` (Padding - Default): Allows windows to start before index 0. Negative
+              indices are filled according to ``padding_mode``.
+        padding_mode (str, optional): Defines the padding strategy when ``padding_left_flag=True``.
+            - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
+              This effectively repeats the first time step.
+            - ``"zero"``: Fills padded indices with zeros.
+        warmup_steps (int, optional): Controls the start index of the first window.
+            - **If padding_left_flag=True**: Represents the **number of padded steps** to include in the first window.
+              - Default: ``seq_len - 1``. This maximizes padding such that the first window contains
+                only **1 real observation** at the end.
+              - Value ``0``: Starts at index 0 (no padding).
+            - **If padding_left_flag=False**: Represents the **index offset** for the start of the first sequence.
+              - Default: ``0``. This means the window starts at index 0 (capturing the first full valid sequence `0:seq_len`).
 
     Examples:
     ---------
-    **Scenario 1: Strict Mode (No Padding)**
-    Data: ``[A, B, C, D, E]`` (Len 5)
-    Config: ``seq_len=3``, ``pred_len=1``, ``padding_left_flag=False``
+    **Scenario 1: Default Padding (Edge)**
+    Data: ``[A, B, C, D]``, ``seq_len=3``
+    Default ``warmup_steps = seq_len - 1 = 2``.
 
-    - Window 1: Input ``[A, B, C]`` -> Target ``[D]``
-    - Window 2: Input ``[B, C, D]`` -> Target ``[E]``
-    - Result: 2 valid windows.
+    - Window 1 (Start -2): ``[A, A, A]`` (2 pads, 1 real) -> Target ``[B]``
+    - Window 2 (Start -1): ``[A, A, B]`` (1 pad, 2 real) -> Target ``[C]``
+    - Window 3 (Start 0):  ``[A, B, C]`` (0 pads, 3 real) -> Target ``[D]``
 
-    **Scenario 2: Padding Mode (Warmup)**
-    Data: ``[A, B, C, D, E]``
-    Config: ``seq_len=3``, ``pred_len=1``, ``padding_left_flag=True``, ``warmup_steps=1``
+    **Scenario 2: Manual Warmup**
+    Config: ``warmup_steps=0`` (padding_left_flag=True)
 
-
-
-    - **Goal:** First target should be at index 1 ('B').
-    - **Logic:** Input ends at index 1. Input starts at ``1 - 3 = -2``.
-    - Window 1: Input ``[0, 0, A]`` -> Target ``[B]`` (Padded)
-    - Window 2: Input ``[0, A, B]`` -> Target ``[C]`` (Padded)
-    - Window 3: Input ``[A, B, C]`` -> Target ``[D]`` (Full Data)
-    - Result: Valid windows start earlier, preserving data utility for long-context models.
+    - Window 1 (Start 0): ``[A, B, C]`` -> Target ``[D]`` (Padding is skipped)
     """
 
     def __init__(
@@ -90,7 +87,8 @@ class AkwardJaggedAutoregressiveSequencer:
         pred_len: int,
         stride: int = 1,
         pred_offset: int = 0,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
+        padding_mode: str = "edge",
         warmup_steps: int = None,
     ):
         self.features = features
@@ -99,14 +97,48 @@ class AkwardJaggedAutoregressiveSequencer:
         self.pred_len = pred_len
         self.stride = stride
         self.pred_offset = pred_offset
-        self.padding_left_flag = padding_left_flag
 
-        # Initialize Warmup Steps
-        if warmup_steps is None:
-            # Default Strict behavior: First target is immediately after the first full sequence.
-            self.warmup_steps = seq_len
+        # Validate and Normalize padding_left_flag
+        # Check strict 0/1 constraint if it is an integer (bools are ints in Python,
+        # so True/False pass "in [0, 1]" check automatically)
+        if isinstance(padding_left_flag, int) and padding_left_flag not in [0, 1]:
+            raise ValueError(
+                f"padding_left_flag must be boolean or int (0 or 1), got {padding_left_flag}"
+            )
+
+        # Normalize to boolean
+        self.padding_left_flag = bool(padding_left_flag)
+
+        if padding_mode not in ["zero", "edge"]:
+            raise ValueError(
+                f"padding_mode must be 'zero' or 'edge', got '{padding_mode}'"
+            )
+        self.padding_mode = padding_mode
+
+        # --- Logic for Padding ---
+        # Initialize Warmup Steps (Indices Logic)
+        if self.padding_left_flag:
+            if warmup_steps is None:
+                # index_start_offset represents the MAGNITUDE of the index start.
+                # E.g. warmup_steps=-2 -> min_start = -2. in _build_indices()
+
+                # Default: Start with maximum padding (just 1 real data point)
+                self.index_start_offset = -(seq_len - 1)
+            else:
+                self.index_start_offset = -warmup_steps
+                logger.info(
+                    f"Padding enabled with explicit warmup_steps={-self.index_start_offset}. "
+                    f"This defines the number of padded steps. "
+                    f"The first input window will start at index -{self.index_start_offset}."
+                )
         else:
-            self.warmup_steps = warmup_steps
+            # Strict mode: Input window must be fully inside data boundaries (>= 0).
+            # warmup_steps here acts as an additional positive offset if set.
+            # Strict mode: Default to 0 (Start at first full sequence)
+            if warmup_steps is None:
+                self.index_start_offset = 0
+            else:
+                self.index_start_offset = warmup_steps
 
         self.device = torch.device("cpu")
         self._checked_output_shapes = False
@@ -133,14 +165,7 @@ class AkwardJaggedAutoregressiveSequencer:
         required_len = self.seq_len + self.pred_len + self.pred_offset
         stride = int(self.stride)
 
-        # --- Logic for Padding ---
-        if self.padding_left_flag:
-            # Allow negative starts.
-            # Logic: start + seq_len + pred_offset = warmup_steps
-            min_start = self.warmup_steps - self.seq_len - self.pred_offset
-        else:
-            # Strict mode: Input window must be fully inside data boundaries (>= 0).
-            min_start = 0
+        min_start = self.index_start_offset
 
         # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
         if not self.is_ragged:
@@ -150,42 +175,43 @@ class AkwardJaggedAutoregressiveSequencer:
             # Check if data is sufficient. End index of window must be <= total_len
             if (min_start + required_len) > total_len:
                 return []
+            else:
+                # Directly calculate the valid start times.
+                max_start = total_len - required_len + 1
+                starts = range(min_start, max_start, self.stride)
 
-            # Directly calculate the valid start times.
-            max_start = total_len - required_len + 1
-            starts = range(min_start, max_start, self.stride)
+                return [(t,) for t in starts]
 
-            return [(t,) for t in starts]
+        else:
+            # --- Path 2: Logic for JAGGED arrays ---
+            # Get all parent prefixes (no t) for the ragged dimension
+            prefixes = ragged_index_tuples(self.features, self.ragged_dim)
+            # Precompute segment lengths
+            lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
 
-        # --- Path 2: Logic for JAGGED arrays ---
-        # Get all parent prefixes (no t) for the ragged dimension
-        prefixes = ragged_index_tuples(self.features, self.ragged_dim)
-        # Precompute segment lengths
-        lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
+            # Helper to read length given a prefix tuple
+            def get_length(prefix):
+                if self.ragged_dim == 0:
+                    # That is potentially dead piece of code.
+                    return lengths[prefix[0]] if prefix else lengths
+                out = lengths
+                for p in prefix:
+                    out = out[p]
+                return out
 
-        # Helper to read length given a prefix tuple
-        def get_length(prefix):
-            if self.ragged_dim == 0:
-                # That is potentially dead piece of code.
-                return lengths[prefix[0]] if prefix else lengths
-            out = lengths
-            for p in prefix:
-                out = out[p]
-            return out
+            # Build valid tuples without generating every candidate
+            valid: List[tuple] = []
+            for prefix in prefixes:
+                seg_len = get_length(prefix)
 
-        # Build valid tuples without generating every candidate
-        valid: List[tuple] = []
-        for prefix in prefixes:
-            seg_len = get_length(prefix)
+                # Check valid length against min_start
+                if (min_start + required_len) <= seg_len:
+                    max_start = seg_len - required_len + 1
+                    # Generate only valid starts respecting stride
+                    starts = range(min_start, max_start, stride)
+                    valid.extend([(*prefix, t) for t in starts])
 
-            # Check valid length against min_start
-            if (min_start + required_len) <= seg_len:
-                max_start = seg_len - required_len + 1
-                # Generate only valid starts respecting stride
-                starts = range(min_start, max_start, stride)
-                valid.extend([(*prefix, t) for t in starts])
-
-        return valid
+            return valid
 
     def __len__(self) -> int:
         return len(self._indices)
@@ -240,7 +266,9 @@ class AkwardJaggedAutoregressiveSequencer:
             x_range = ak.from_regular(x_range, axis=-1)
             y_range = ak.from_regular(y_range, axis=-1)
 
-        # 1. Clamp negative indices to 0 for safe fetching. TODO: doublecheck it works as intended
+        # 1. Clamp negative indices to 0 for safe fetching.
+        #    If padding_mode='edge', this step ALONE achieves the result:
+        #    negative indices fetch index 0 (repeating the first value).
         if self.padding_left_flag:
             # Use numpy max since x_range is structured to support it at this stage
             safe_x_range = np.maximum(x_range, 0)
@@ -255,8 +283,10 @@ class AkwardJaggedAutoregressiveSequencer:
         seq_x = torch.from_numpy(raw_x_numpy)
         seq_y = torch.from_numpy(raw_y_numpy)
 
-        # 3. Apply Zero Padding (Masking). TODO: doublecheck it works as intended
-        if self.padding_left_flag:
+        # 3. Apply Zero Padding (Masking)
+        #    Only run this if mode is "zero".
+        #    If mode is "edge", we keep the values clamped in step 1.
+        if self.padding_left_flag and self.padding_mode == "zero":
             # Create boolean mask where original indices were valid (>= 0)
             valid_mask_x = x_range >= 0
 

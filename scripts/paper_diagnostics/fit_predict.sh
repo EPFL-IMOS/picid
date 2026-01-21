@@ -33,11 +33,11 @@ wandb_log_folder="01_2026"
 
 datasets=(
   "mzvav||diagnostics"
-#   "hsf15/accumulator||diagnostics"
-#   "hsf15/cooler||diagnostics"
-#   "hsf15/pump||diagnostics"
-#   "hsf15/valve||diagnostics"
-#   "concepts_n_cmapss_multi||diagnostics"
+  "hsf15/accumulator||diagnostics"
+  "hsf15/cooler||diagnostics"
+  "hsf15/pump||diagnostics"
+  "hsf15/valve||diagnostics"
+  "concepts_n_cmapss_multi||diagnostics"
 )
 
 model_names=(
@@ -47,8 +47,15 @@ model_names=(
 )
 
 # Careful here because of oom issues with long context lengths / short strides
-context_lengths=(1 10 20)
-train_set_strides=(1 5)
+# Pairs: "seq_len:stride_train"
+context_stride_pairs=(
+  "1:1"
+  "5:1"
+  "10:5"
+  "20:5"
+  "50:50"
+  "100:100"
+)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -92,46 +99,46 @@ trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2
 
 for model_name in "${model_names[@]}"; do
     for dataset in "${datasets[@]}"; do
-        for context_length in "${context_lengths[@]}"; do
-            for train_set_stride in "${train_set_strides[@]}"; do
-                # --- 3. Create a unique and descriptive name for this specific run ---
-                # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
+        for cs_pair in "${context_stride_pairs[@]}"; do
+            # --- 3. Create a unique and descriptive name for this specific run ---
+            # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
+            IFS=':' read -r context_length train_set_stride <<< "$cs_pair"
+            IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
 
-                IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
-                exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
-                run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_key" "$task_type" "$subexp" "$seed" )
-                final_log_folder="${wandb_log_folder}_${dataset_key}"_"${task_type}"_"${subexp}"
+            exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
+            dataset_run_name="${dataset_key//\//_}"
+            run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$task_type" "$subexp" "$seed" )
+            final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
 
 
-                # --- 4. Build the full command as a single string ---
-                # Note the escaped quotes \"...\" for parameters that are lists.
-                command_to_run=(
-                    python lmetk/run.py \
-                    paths=runai \
-                    experiment=${exp_name} \
-                    # trainer.devices=[${device}] \
-                    logger.wandb.project=${final_log_folder} \
-                    task_definition.seq_len=${context_length} \
-                    task_definition.stride_train=${train_set_stride} \
-                    cache.use_cache_after_loading=True \
-                    cache.use_cache_after_transfroms=True
-                )
-                # debug=train_debug
-                # --- 5. Execute using the logger and run in the background (&) ---
-                run_and_log "${command_to_run[*]}" "$run_name" &
-                pid=$!
-                pids+=($pid)
-                # --- 6. Increment counters and manage parallel jobs ---
-                ((run_counter++))
-                ((job_counter++))
-                # First, check if all our "slots" are full.
-                if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
-                    # If they are, wait for any single job to finish.
-                    wait -n
-                    # Decrement the counter because a slot just opened up.
-                    ((job_counter--))
-                fi
-            done
+            # --- 4. Build the full command as a single string ---
+            # Note the escaped quotes \"...\" for parameters that are lists.
+            command_to_run=(
+                python lmetk/run.py \
+                paths=runai \
+                experiment=${exp_name} \
+                # trainer.devices=[${device}] \
+                logger.wandb.project=${final_log_folder} \
+                task_definition.seq_len=${context_length} \
+                task_definition.stride_train=${train_set_stride} \
+                cache.use_cache_after_loading=True \
+                cache.use_cache_after_transfroms=True
+            )
+            # debug=train_debug
+            # --- 5. Execute using the logger and run in the background (&) ---
+            run_and_log "${command_to_run[*]}" "$run_name" &
+            pid=$!
+            pids+=($pid)
+            # --- 6. Increment counters and manage parallel jobs ---
+            ((run_counter++))
+            ((job_counter++))
+            # First, check if all our "slots" are full.
+            if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
+                # If they are, wait for any single job to finish.
+                wait -n
+                # Decrement the counter because a slot just opened up.
+                ((job_counter--))
+            fi
         done
     done
 done

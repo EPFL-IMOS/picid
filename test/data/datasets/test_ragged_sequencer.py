@@ -60,6 +60,7 @@ def test_fetch_one_item_per_sequence_dense_values(dense_features_ak):
         label_len=0,
         pred_len=1,
         stride=2,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # L=7. Req = 2+1 = 3.
@@ -93,6 +94,7 @@ def test_fetch_array_of_indices_dense_overlap(dense_features_ak):
         label_len=1,
         pred_len=2,
         stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # L=7. Req = 3 + 2 = 5 (offset=0).
@@ -128,6 +130,7 @@ def test_jagged_structure_strict_windowing_and_mapping(jagged_features_ak):
         label_len=1,
         pred_len=2,
         stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # Req = 3 + 2 = 5.
@@ -173,6 +176,7 @@ def test_pred_offset_logic(dense_features_ak):
         pred_len=1,
         pred_offset=1,  # Skip 1 step
         stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # L=7. Req = seq(2) + offset(1) + pred(1) = 4.
@@ -207,7 +211,12 @@ def test_edge_case_single_step_jagged():
     data = ak_regularize_regular_axes(data)
 
     seq = AkwardJaggedAutoregressiveSequencer(
-        features=data, seq_len=1, label_len=0, pred_len=1, stride=1
+        features=data,
+        seq_len=1,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # Unit 0 is valid. Len 2. Req 2.
@@ -217,8 +226,6 @@ def test_edge_case_single_step_jagged():
     assert len(seq) == 1
 
     x, y = seq.sequences_batch([0])
-
-    #
 
     # Now shape should be correct (Batch, Time, Feat) -> (1, 1, 1)
     assert x.shape == (1, 1, 1)
@@ -243,7 +250,12 @@ def test_edge_case_single_step_multi_feature():
     data = ak_regularize_regular_axes(data)  # Type: 2 * var * 3 * int64
 
     seq = AkwardJaggedAutoregressiveSequencer(
-        features=data, seq_len=1, label_len=0, pred_len=1, stride=1
+        features=data,
+        seq_len=1,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # Unit 0 is valid. Start 0.
@@ -279,6 +291,7 @@ def test_jagged_with_large_stride(jagged_features_ak):
         pred_len=1,
         label_len=0,
         stride=2,  # Stride > 1
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # Required Length = 2 + 1 = 3.
@@ -321,11 +334,6 @@ def test_jagged_with_large_stride(jagged_features_ak):
     # Data: 20, 21, 22, 23, 24, 25
     # Start 2 -> Input [22, 23], Pred [24]
 
-    # We need to find the batch index that corresponds to Unit 2, Start 2.
-    # Since we can't guarantee order without sorting, we filter by logic or just search.
-    # For this test, we can just loop or trust the get_index_array order if deterministic.
-    # Let's use the sequencer to fetch based on the raw index known from the array.
-
     # Find the index in the master list where Unit=2 and Start=2
     target_row = np.where((indices[:, 0] == 2) & (indices[:, -1] == 2))[0][0]
 
@@ -350,6 +358,7 @@ def test_dense_array_too_short():
         label_len=0,
         pred_len=3,
         stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     assert len(seq) == 0
@@ -363,7 +372,12 @@ def test_ragged_dim_zero_coverage(dense_features_ak):
     """
     # Initialize with dense data (will effectively treat as 1 unit)
     seq = AkwardJaggedAutoregressiveSequencer(
-        features=dense_features_ak, seq_len=2, label_len=0, pred_len=1, stride=1
+        features=dense_features_ak,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,  # <--- : Enforce Strict Mode
     )
 
     # FORCE ragged_dim to 0.
@@ -371,26 +385,184 @@ def test_ragged_dim_zero_coverage(dense_features_ak):
 
     # We need to mock 'ragged_index_tuples' to return a list containing an empty tuple [()].
     # This simulates the root level iteration.
-    # We patch it where it is IMPORTED in the source file, not where it is defined.
     with patch(
         "lmetk.data.optimization.ak_jagged_sequencer.ragged_index_tuples"
     ) as mock_tuples:
         mock_tuples.return_value = [()]  # List containing one empty tuple
 
-        # We also need to ensure 'ak.num' returns a valid length (int) for axis 0
-        # The dense_features_ak has length 7. ak.num(..., axis=0) -> 7.
-        # ak.to_list(7) -> 7. So 'lengths' will be 7.
-
-        # Now run _build_indices.
-        # It calls prefixes = [()]
-        # Loop runs for prefix = ()
-        # Calls get_length(())
-        # Inside get_length: ragged_dim==0 is True.
-        # 'if prefix' is False (empty tuple).
-        # Returns 'lengths' (7).
-
         # This successfully executes the 'else lengths' branch of line 115.
         indices = seq._build_indices()
 
-        # Optional: Verify we got some indices back (Length 7. Req 3. Valid 0,1,2,3,4. 5 windows?)
+        # Optional: Verify we got some indices back
         assert len(indices) > 0
+
+
+# =========================================================================
+# === PART 4: Strict Mode Warmup & Offset Tests ===
+# =========================================================================
+
+
+def test_strict_mode_warmup_steps_dense(dense_features_ak):
+    """
+    Test warmup_steps behavior in Strict Mode (padding_left_flag=False).
+    In Strict Mode, warmup_steps acts as a POSITIVE index offset for the start of the first window.
+
+    Data: 7 steps [t0...t6].
+    Seq: 2, Pred: 1. Required: 3.
+    """
+    # 1. Default Behavior (warmup_steps=0 or None)
+    # Start indices: 0, 1, 2, 3, 4. (Max start = 7 - 3 = 4)
+    seq_default = AkwardJaggedAutoregressiveSequencer(
+        features=dense_features_ak,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=False,
+        warmup_steps=0,  # Default
+    )
+    assert len(seq_default) == 5
+    # First window starts at index 0
+    assert seq_default.get_index_array()[0][-1] == 0
+
+    # 2. Explicit Warmup (warmup_steps=2)
+    # Skips indices 0 and 1. First valid window starts at index 2.
+    # Valid starts: 2, 3, 4.
+    seq_warmup = AkwardJaggedAutoregressiveSequencer(
+        features=dense_features_ak,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=False,
+        warmup_steps=2,
+    )
+    assert len(seq_warmup) == 3
+
+    # Check first window
+    # Should start at index 2. Input [t2, t3], Pred [t4]
+    x, y = seq_warmup.sequences_batch([0])
+
+    expected_x = np.array([[[2.0, 2.1, 2.2], [3.0, 3.1, 3.2]]], dtype=np.float32)
+    expected_y = np.array([[[4.0, 4.1, 4.2]]], dtype=np.float32)
+
+    np.testing.assert_allclose(x.numpy(), expected_x, rtol=1e-5)
+    np.testing.assert_allclose(y.numpy(), expected_y, rtol=1e-5)
+
+
+def test_strict_mode_warmup_steps_jagged(jagged_features_ak):
+    """
+    Test strict mode warmup on jagged data. The offset should apply to EACH unit independently.
+
+    Unit 0: Len 5.
+    Unit 1: Len 3.
+    Unit 2: Len 6.
+
+    Config: Seq 2, Pred 1. Req 3.
+    Warmup: 1 (Skip first possible start index).
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_features_ak,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=False,
+        warmup_steps=1,
+    )
+
+    indices = seq.get_index_array()
+
+    # --- Unit 0 (Len 5) ---
+    # Max start = 5 - 3 = 2. Valid range [0, 1, 2].
+    # With warmup=1 -> Valid [1, 2]. (2 windows)
+    u0_starts = indices[indices[:, 0] == 0][:, -1]
+    np.testing.assert_array_equal(u0_starts, [1, 2])
+
+    # --- Unit 1 (Len 3) ---
+    # Max start = 3 - 3 = 0. Valid range [0].
+    # With warmup=1 -> Valid []. (Start 1 > Max 0).
+    # Should be dropped entirely.
+    u1_starts = indices[indices[:, 0] == 1][:, -1]
+    assert len(u1_starts) == 0
+
+    # --- Unit 2 (Len 6) ---
+    # Max start = 6 - 3 = 3. Valid range [0, 1, 2, 3].
+    # With warmup=1 -> Valid [1, 2, 3]. (3 windows)
+    u2_starts = indices[indices[:, 0] == 2][:, -1]
+    np.testing.assert_array_equal(u2_starts, [1, 2, 3])
+
+
+def test_strict_mode_pred_offset(dense_features_ak):
+    """
+    Test pred_offset logic in Strict Mode.
+    Ensures that the gap between input and target consumes available data length.
+
+    Data: 7 steps.
+    Seq: 2. Offset: 2. Pred: 1.
+    Required Length = 2 + 2 + 1 = 5.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_features_ak,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        pred_offset=2,
+        padding_left_flag=False,
+    )
+
+    # Max start = 7 - 5 = 2.
+    # Valid starts: 0, 1, 2. (3 windows)
+    assert len(seq) == 3
+
+    # Check Window 0
+    # Input starts at 0: [t0, t1]
+    # Offset gap: [t2, t3] (2 steps)
+    # Target starts at 0 + 2 (seq) + 2 (offset) = 4: [t4]
+
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array([[[0.0, 0.1, 0.2], [1.0, 1.1, 1.2]]], dtype=np.float32)
+    expected_y = np.array([[[4.0, 4.1, 4.2]]], dtype=np.float32)  # t4
+
+    np.testing.assert_allclose(x.numpy(), expected_x, rtol=1e-5)
+    np.testing.assert_allclose(y.numpy(), expected_y, rtol=1e-5)
+
+
+def test_combined_warmup_and_offset_strict(dense_features_ak):
+    """
+    Combined test: Strict Mode + Warmup + Offset.
+
+    Data: 7 steps.
+    Seq: 2, Offset: 1, Pred: 1. Req = 4.
+    Warmup: 2.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_features_ak,
+        seq_len=2,
+        pred_len=1,
+        label_len=0,
+        pred_offset=1,
+        padding_left_flag=False,
+        warmup_steps=2,
+    )
+
+    # 1. Calculate Max Start:
+    # Total Len 7. Req 4. Max Index = 7 - 4 = 3.
+    # Available raw starts: 0, 1, 2, 3.
+
+    # 2. Apply Warmup:
+    # Skip first 2 indices.
+    # Valid starts: 2, 3.
+
+    assert len(seq) == 2
+
+    # Check first valid window (Start index 2)
+    # Input starts at 2: [t2, t3]
+    # Offset 1 (t4 skipped)
+    # Target starts at 2 + 2 + 1 = 5: [t5]
+
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array([[[2.0, 2.1, 2.2], [3.0, 3.1, 3.2]]], dtype=np.float32)
+    expected_y = np.array([[[5.0, 5.1, 5.2]]], dtype=np.float32)  # t5
+
+    np.testing.assert_allclose(x.numpy(), expected_x, rtol=1e-5)
+    np.testing.assert_allclose(y.numpy(), expected_y, rtol=1e-5)

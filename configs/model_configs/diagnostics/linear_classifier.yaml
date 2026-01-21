@@ -13,12 +13,3 @@ task_definition:
 model:
   input_channels: ${infer_data_dim:features,-1}
   num_classes: ${task_definition.num_classes}
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
