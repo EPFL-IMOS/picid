@@ -4,21 +4,9 @@ defaults:
   - override /dataset: reconstruction/autoencoder
   - override /datamodule: base_datamodule
   - override /model: residual_autoencoder
-  
+
 model:
-  input_channels: ${infer_data_dim:features,-1} 
+  input_channels: ${infer_data_dim:features,-1}
 
 task_definition:
   requires_training: true
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
-
-  

@@ -23,12 +23,3 @@ model:
     enc_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
     dec_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
     embed_type: 5
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min

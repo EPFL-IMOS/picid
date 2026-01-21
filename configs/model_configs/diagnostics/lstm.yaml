@@ -13,12 +13,3 @@ model:
   d_yc: 0
   d_yt: ${task_definition.num_classes}
   d_x: ${infer_data_dim:features,-1}
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min

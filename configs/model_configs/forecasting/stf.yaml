@@ -17,15 +17,6 @@ model:
   # TODO: replace with actual timefeatures when available
   n_timefeatures: ${infer_data_dim:time_features,-1}
 
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
 optimization:
   scheduler:
     factor: 0.95

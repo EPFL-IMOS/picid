@@ -17,3 +17,6 @@ model:
       - health_states
       - unit
       - concepts
+
+target_metric: val/loss
+target_metric_mode: min

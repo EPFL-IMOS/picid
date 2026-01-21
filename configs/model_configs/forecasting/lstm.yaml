@@ -13,12 +13,3 @@ model:
   d_yc: ${infer_data_dim:target,-1}
   d_yt: ${infer_data_dim:target,-1}
   d_x: ${infer_data_dim:features,-1}
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min

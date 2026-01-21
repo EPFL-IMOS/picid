@@ -14,3 +14,6 @@ model:
     input_tensors:
       - features
       - ${task_definition.task_type}
+
+target_metric: val/f1
+target_metric_mode: max

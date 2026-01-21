@@ -8,12 +8,3 @@ defaults:
 
 task_definition:
   requires_training: true
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min

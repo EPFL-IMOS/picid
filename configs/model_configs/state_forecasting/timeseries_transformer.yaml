@@ -9,15 +9,6 @@ defaults:
 task_definition:
   requires_training: true
 
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
 model:
   d_yc: ${infer_data_dim:features,-1}
   d_yt: ${infer_data_dim:features,-1}
