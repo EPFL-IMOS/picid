@@ -17,3 +17,9 @@ evaluator:
   test:
     inverse_transform_name: scaler_rul
     apply_inverse_scaling: True
+
+callbacks:
+  early_stopping:
+    monitor: val/rul_rmse
+    patience: 15
+    mode: min

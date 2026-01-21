@@ -1,6 +1,6 @@
 #@package _global_
 
 defaults:
-  - concepts_n_cmapss/base
+  - concepts_n_cmapss/prognostics/base
   - /model_configs/prognostics/tabpfn_fit_predict
   - override /transforms: concepts_n_cmapss/depater2023_fit_predict_history
