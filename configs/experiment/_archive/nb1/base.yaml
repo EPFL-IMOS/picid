@@ -1,0 +1,32 @@
+#@package _global_
+
+defaults:
+  - override /datasource: nb1
+  - override /evaluator: default
+  - override /task_definition: prognostics/battery_phmd
+
+evaluator:
+  train:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+
+  val:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+
+  test:
+    inverse_transform_name: scaler_target
+    apply_inverse_scaling: True
+
+transforms:
+  filter_features:
+    transform:
+      columns_to_keep:
+        [
+          "voltage_mean",
+          "voltage_var",
+          "current_mean",
+          "current_var",
+          "temperature_mean",
+          "temperature_var",
+        ]

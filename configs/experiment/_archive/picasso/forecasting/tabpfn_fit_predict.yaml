@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - picasso/forecasting/base
+  - /model_configs/forecasting/tabpfn_fit_predict
+  - override /transforms: picasso/default

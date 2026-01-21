@@ -1,0 +1,26 @@
+# @package _global_
+defaults:
+  - override /datasource: ETTh1
+  - override /dataset: sliding_window_batch
+  - override /datamodule: base_datamodule
+  - override /model: timepfn_batch_context
+  - override /evaluator: default
+  - override /task_definition: forecasting/etth_timepfn
+  - override /transforms: etth/timepfn_paper
+
+  
+evaluator:
+  train: 
+    task_mode: univariate
+    target_dim_position: ${oc.select:datasource.target_dim_position}
+    
+  val:
+    task_mode: univariate
+    target_dim_position: ${oc.select:datasource.target_dim_position}
+
+  test:
+    task_mode: univariate
+    target_dim_position: ${oc.select:datasource.target_dim_position}
+
+datasource: 
+  mode_mode: other
