@@ -33,13 +33,13 @@ wandb_log_folder="01_2026"
 # Define a list of datasets to run
 
 datasets=(
-  "nb14|raw|prognostics"
+#   "nb14|raw|prognostics"
   "nb14|combined|prognostics"
   "unibo|combined|prognostics"
   "phme20|raw|prognostics"
   "concepts_n_cmapss||prognostics"
   "concepts_n_cmapss_ds02||prognostics"
-  "pronostia|raw|prognostics"
+#   "pronostia|raw|prognostics"
   "pronostia|combined|prognostics"
   "xjtu_sy|combined|prognostics"
 )
@@ -59,6 +59,8 @@ model_names=(
 
 BATCH_SIZES=(16 512)
 SEEDS=(72 88 101 666 226688)
+SEQ_LEN=(1 10 50 100)
+MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -71,16 +73,16 @@ MAX_PARALLEL=3 # Set the max number of jobs to run at once
 
 
 # Function to run and log commands
-run_and_log() {
-    local command_to_run="$1"
-    local run_name="$2"
+# run_and_log() {
+#     local command_to_run="$1"
+#     local run_name="$2"
 
-    # For debugging, just print the command and run name
-    echo "DEBUG: Run Name: $run_name"
-    echo "DEBUG: Command: $command_to_run"
-    # Run the command and log its output
-    eval "sleep 5"
-}
+#     # For debugging, just print the command and run name
+#     echo "DEBUG: Run Name: $run_name"
+#     echo "DEBUG: Command: $command_to_run"
+#     # Run the command and log its output
+#     eval "sleep 5"
+# }
 
 
 build_exp_name() {
@@ -103,72 +105,78 @@ trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2
 for model_name in "${model_names[@]}"; do
     for dataset in "${datasets[@]}"; do
         for batch_size in "${BATCH_SIZES[@]}"; do
-            for seed in "${SEEDS[@]}"; do
-                # --- 3. Create a unique and descriptive name for this specific run ---
-                # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
+            for seq_len in "${SEQ_LEN[@]}"; do
+                for max_learning_rate in "${MAX_LEARNING_RATE[@]}"; do
+                    for seed in "${SEEDS[@]}"; do
+                        # --- 3. Create a unique and descriptive name for this specific run ---
+                        # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
 
-                IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
-                exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
-                run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_key" "$task_type" "$subexp" "$seed" )
-                final_log_folder="${wandb_log_folder}_${dataset_key}"_"${task_type}"_"${subexp}"
+                        IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
+                        exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
+                        run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_key" "$task_type" "$subexp" "$seed" )
+                        final_log_folder="${wandb_log_folder}_${dataset_key}"_"${task_type}"_"${subexp}"
 
-                # --- 4. Build the full command as a single string ---
-                # Note the escaped quotes \"...\" for parameters that are lists.
+                        # --- 4. Build the full command as a single string ---
+                        # Note the escaped quotes \"...\" for parameters that are lists.
 
-                # Use file lock only for the first run to avoid deadlocks once cache is built
-                if (( run_counter == 1 )); then
-                    use_preprocessing_file_lock=True
-                else
-                    use_preprocessing_file_lock=False
-                fi
+                        # Use file lock only for the first run to avoid deadlocks once cache is built
+                        if (( run_counter == 1 )); then
+                            use_preprocessing_file_lock=True
+                        else
+                            use_preprocessing_file_lock=False
+                        fi
 
-                command_to_run=(
-                    python lmetk/run.py \
-                    paths=runai \
-                    experiment=${exp_name} \
-                    datamodule.train_batch_size=${batch_size} \
-                    datamodule.val_batch_size=1024 \
-                    datamodule.test_batch_size=1024 \
-                    trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
-                    trainer.max_epochs=${max_epochs} \
-                    trainer.devices=[${device}] \
-                    logger.wandb.project=${final_log_folder} \
-                    cache.use_cache_after_loading=True \
-                    cache.use_cache_after_transfroms=True \
-                    cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
-                    cache.preprocessing_file_lock_path=/tmp/lmetk_preprocess.lock \
-                    enable_progress_bar=False \
-                    seed=${seed}
-                )
+                        command_to_run=(
+                            python lmetk/run.py \
+                            paths=runai \
+                            experiment=${exp_name} \
+                            datamodule.train_batch_size=${batch_size} \
+                            datamodule.val_batch_size=1024 \
+                            datamodule.test_batch_size=1024 \
+                            task_definition.seq_len=${seq_len} \
+                            optimization.lr=${max_learning_rate} \
+                            trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
+                            trainer.max_epochs=${max_epochs} \
+                            trainer.devices=[${device}] \
+                            logger.wandb.project=${final_log_folder} \
+                            cache.use_cache_after_loading=True \
+                            cache.use_cache_after_transfroms=True \
+                            cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
+                            cache.preprocessing_file_lock_path=/tmp/lmetk_preprocess.lock \
+                            enable_progress_bar=False \
+                            seed=${seed}
+                        )
 
-                # Random sleep only for runs 2 and 3
-                if (( run_counter > 1 && run_counter <= $MAX_PARALLEL )); then
-                    sleep_time=$((60 * (RANDOM % 3 + 1)))  # 1–3 minutes
-                    echo "Delaying launch of run ${run_name} by ${sleep_time}s..."
-                    sleep $sleep_time
-                fi
+                        # Random sleep only for runs 2 and 3
+                        if (( run_counter > 1 && run_counter <= $MAX_PARALLEL )); then
+                            sleep_time=$((60 * (RANDOM % 3 + 1)))  # 1–3 minutes
+                            echo "Delaying launch of run ${run_name} by ${sleep_time}s..."
+                            sleep $sleep_time
+                        fi
 
-                # Block all processes except the first one here to prevent multiple preprocessings at once
-                if (( run_counter > 1 )); then
-                (
-                    flock 200
-                ) 200>/tmp/lmetk_preprocess.lock
-                echo "Python lock released, continuing..."
-                fi
-                # --- 5. Execute using the logger and run in the background (&) ---
-                run_and_log "${command_to_run[*]}" "$run_name" &
-                pid=$!
-                pids+=($pid)
-                # --- 6. Increment counters and manage parallel jobs ---
-                ((run_counter++))
-                ((job_counter++))
-                # First, check if all our "slots" are full.
-                if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
-                    # If they are, wait for any single job to finish.
-                    wait -n
-                    # Decrement the counter because a slot just opened up.
-                    ((job_counter--))
-                fi
+                        # Block all processes except the first one here to prevent multiple preprocessings at once
+                        if (( run_counter > 1 )); then
+                        (
+                            flock 200
+                        ) 200>/tmp/lmetk_preprocess.lock
+                        echo "Python lock released, continuing..."
+                        fi
+                        # --- 5. Execute using the logger and run in the background (&) ---
+                        run_and_log "${command_to_run[*]}" "$run_name" &
+                        pid=$!
+                        pids+=($pid)
+                        # --- 6. Increment counters and manage parallel jobs ---
+                        ((run_counter++))
+                        ((job_counter++))
+                        # First, check if all our "slots" are full.
+                        if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
+                            # If they are, wait for any single job to finish.
+                            wait -n
+                            # Decrement the counter because a slot just opened up.
+                            ((job_counter--))
+                        fi
+                    done
+                done
             done
         done
     done
