@@ -115,24 +115,30 @@ class AkwardJaggedAutoregressiveSequencer:
             )
         self.padding_mode = padding_mode
 
+        # --- Logic for Padding ---
         # Initialize Warmup Steps (Indices Logic)
         if self.padding_left_flag:
             if warmup_steps is None:
+                # index_start_offset represents the MAGNITUDE of the index start.
+                # E.g. warmup_steps=-2 -> min_start = -2. in _build_indices()
+
                 # Default: Start with maximum padding (just 1 real data point)
-                self.warmup_steps = seq_len - 1
+                self.index_start_offset = -(seq_len - 1)
             else:
-                self.warmup_steps = warmup_steps
+                self.index_start_offset = -warmup_steps
                 logger.info(
-                    f"Padding enabled with explicit warmup_steps={self.warmup_steps}. "
+                    f"Padding enabled with explicit warmup_steps={-self.index_start_offset}. "
                     f"This defines the number of padded steps. "
-                    f"The first input window will start at index -{self.warmup_steps}."
+                    f"The first input window will start at index -{self.index_start_offset}."
                 )
         else:
+            # Strict mode: Input window must be fully inside data boundaries (>= 0).
+            # warmup_steps here acts as an additional positive offset if set.
             # Strict mode: Default to 0 (Start at first full sequence)
             if warmup_steps is None:
-                self.warmup_steps = 0
+                self.index_start_offset = 0
             else:
-                self.warmup_steps = warmup_steps
+                self.index_start_offset = warmup_steps
 
         self.device = torch.device("cpu")
         self._checked_output_shapes = False
@@ -159,15 +165,7 @@ class AkwardJaggedAutoregressiveSequencer:
         required_len = self.seq_len + self.pred_len + self.pred_offset
         stride = int(self.stride)
 
-        # --- Logic for Padding ---
-        if self.padding_left_flag:
-            # warmup_steps now represents the MAGNITUDE of the negative start.
-            # E.g. warmup_steps=2 -> min_start = -2.
-            min_start = -self.warmup_steps
-        else:
-            # Strict mode: Input window must be fully inside data boundaries (>= 0).
-            # warmup_steps here acts as an additional positive offset if set.
-            min_start = self.warmup_steps
+        min_start = self.index_start_offset
 
         # --- Path 1: Logic for DENSE arrays (is_ragged=False) ---
         if not self.is_ragged:
@@ -177,42 +175,43 @@ class AkwardJaggedAutoregressiveSequencer:
             # Check if data is sufficient. End index of window must be <= total_len
             if (min_start + required_len) > total_len:
                 return []
+            else:
+                # Directly calculate the valid start times.
+                max_start = total_len - required_len + 1
+                starts = range(min_start, max_start, self.stride)
 
-            # Directly calculate the valid start times.
-            max_start = total_len - required_len + 1
-            starts = range(min_start, max_start, self.stride)
+                return [(t,) for t in starts]
 
-            return [(t,) for t in starts]
+        else:
+            # --- Path 2: Logic for JAGGED arrays ---
+            # Get all parent prefixes (no t) for the ragged dimension
+            prefixes = ragged_index_tuples(self.features, self.ragged_dim)
+            # Precompute segment lengths
+            lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
 
-        # --- Path 2: Logic for JAGGED arrays ---
-        # Get all parent prefixes (no t) for the ragged dimension
-        prefixes = ragged_index_tuples(self.features, self.ragged_dim)
-        # Precompute segment lengths
-        lengths = ak.to_list(ak.num(self.features, axis=self.ragged_dim))
+            # Helper to read length given a prefix tuple
+            def get_length(prefix):
+                if self.ragged_dim == 0:
+                    # That is potentially dead piece of code.
+                    return lengths[prefix[0]] if prefix else lengths
+                out = lengths
+                for p in prefix:
+                    out = out[p]
+                return out
 
-        # Helper to read length given a prefix tuple
-        def get_length(prefix):
-            if self.ragged_dim == 0:
-                # That is potentially dead piece of code.
-                return lengths[prefix[0]] if prefix else lengths
-            out = lengths
-            for p in prefix:
-                out = out[p]
-            return out
+            # Build valid tuples without generating every candidate
+            valid: List[tuple] = []
+            for prefix in prefixes:
+                seg_len = get_length(prefix)
 
-        # Build valid tuples without generating every candidate
-        valid: List[tuple] = []
-        for prefix in prefixes:
-            seg_len = get_length(prefix)
+                # Check valid length against min_start
+                if (min_start + required_len) <= seg_len:
+                    max_start = seg_len - required_len + 1
+                    # Generate only valid starts respecting stride
+                    starts = range(min_start, max_start, stride)
+                    valid.extend([(*prefix, t) for t in starts])
 
-            # Check valid length against min_start
-            if (min_start + required_len) <= seg_len:
-                max_start = seg_len - required_len + 1
-                # Generate only valid starts respecting stride
-                starts = range(min_start, max_start, stride)
-                valid.extend([(*prefix, t) for t in starts])
-
-        return valid
+            return valid
 
     def __len__(self) -> int:
         return len(self._indices)
