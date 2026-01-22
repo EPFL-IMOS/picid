@@ -9,22 +9,13 @@ defaults:
 task_definition:
   requires_training: true
 
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min
-
 model:
   seq_len: ${task_definition.seq_len}
   input_channels: ${infer_data_dim:features,-1}
   # CNN_1D_DILATED, Receptive Field is 65
-  output_channels: [16,32,64,64,64]
-  kernels: [5,5,5,5,5]
-  strides: [1,1,1,1,1]
-  dilations: [1,2,4,8,1]
+  output_channels: [16, 32, 64, 64, 64]
+  kernels: [5, 5, 5, 5, 5]
+  strides: [1, 1, 1, 1, 1]
+  dilations: [1, 2, 4, 8, 1]
   latent_dim: 128
   dropout_prob: 0.2

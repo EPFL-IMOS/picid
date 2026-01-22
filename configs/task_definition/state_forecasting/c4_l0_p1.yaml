@@ -9,3 +9,6 @@ model:
   data_requirements:
     input_tensors:
       - features
+
+target_metric: val/loss
+target_metric_mode: min

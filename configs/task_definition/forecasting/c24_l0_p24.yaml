@@ -11,3 +11,6 @@ model:
       - features
       - time_features
       - target
+
+target_metric: val/loss
+target_metric_mode: min

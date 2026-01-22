@@ -24,12 +24,3 @@ model:
     embed_type: 5
     dec_in: ${task_definition.num_classes}
     c_out: ${task_definition.num_classes}
-
-callbacks:
-  early_stopping:
-    monitor: val/loss
-    mode: min
-
-  model_checkpoint:
-    monitor: val/loss
-    mode: min

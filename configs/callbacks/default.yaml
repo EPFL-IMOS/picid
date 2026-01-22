@@ -8,17 +8,18 @@ defaults:
 model_checkpoint:
   dirpath: ${paths.ckpt_dir}/checkpoints
   filename: "epoch{epoch:03d}-val_loss{val/loss:.8f}"
-  monitor: MSE
-  mode: min
+  monitor: ${task_definition.target_metric}
+  mode: ${task_definition.target_metric_mode}
   auto_insert_metric_name: False
   save_weights_only: False
   save_top_k: 1
   save_last: False
 
 early_stopping:
-  monitor: MSE
-  patience: ${trainer.max_epochs} #${trainer.min_epochs}
-  mode: min
+  # patience: ${trainer.max_epochs} #${trainer.min_epochs}
+  patience: 15
+  mode: ${task_definition.target_metric_mode}
+  monitor: ${task_definition.target_metric}
 
 model_summary:
   max_depth: -1

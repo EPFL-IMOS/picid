@@ -13,3 +13,6 @@ model:
     input_tensors:
       - features
       - ahrul # infere from somewhere
+
+target_metric: val/loss
+target_metric_mode: min

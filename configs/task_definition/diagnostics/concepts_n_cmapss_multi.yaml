@@ -18,3 +18,6 @@ model:
       - health_states
       - unit
       - concepts
+
+target_metric: val/f1
+target_metric_mode: max
