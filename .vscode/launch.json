@@ -935,7 +935,7 @@
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/prognostics/lstm",
+                "experiment=xjtu_sy/prognostics/combined/lstm",
                 "debug=default"
             ],
             "env": {
@@ -1303,7 +1303,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=xjtu_sy/prognostics/combined/xgboost_fit_predict",
+                "experiment=concepts_n_cmapss/prognostics/stf",
                 "debug=nox_testing_fit_predict",
                 "num_threads=1",
                 "seed=50",
@@ -1393,6 +1393,23 @@
                 "paths=rt_local",
                 "experiment=nb14/prognostics/combined/crossformer",
                 "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "simplified run",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/simplified_run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                // "paths=rt_local",
+                // "experiment=nb14/prognostics/combined/crossformer",
+                // "debug=default"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
