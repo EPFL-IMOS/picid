@@ -17,40 +17,45 @@ jobs:
         python-version: ["3.11"] 
 
     steps:
-      # 1. Checkout Code & Submodules
-      # We enable recursive submodules as required by your setup doc.
+      # 1. Setup SSH Agent with BOTH keys
+      # This loads your two private keys so Git can clone both private submodules.
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_KEY_PHMD }}
+            ${{ secrets.SSH_KEY_TABPFN }}
+
+      # 2. Checkout Code & Submodules
+      # We use recursive submodules. Authentication is handled by the agent above.
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          # If submodules are public or in the same repo, this works.
-          # If they are private external repos, see the "Important Note" below.
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Install uv
+      # 3. Install uv
       # This official action installs uv and handles caching automatically.
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      # 3. Set up Python (managed by uv)
+      # 4. Set up Python (managed by uv)
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      # 4. Install Dependencies
-      # Mimics your "Update" section: Syncs lock file and installs dev dependencies.
+      # 5. Install Dependencies
+      # Syncs lock file and installs dev dependencies.
       - name: Install dependencies
         run: |
           uv sync
           uv pip install -e ".[dev]"
 
-      # 5. Run Tests
-      # 'uv run' automatically loads the .venv environment, so you don't need 'source .venv/bin/activate'
+      # 6. Run Tests
+      # 'uv run' automatically loads the .venv environment
       - name: Test with pytest
         run: |
           uv run pytest --cov --cov-report=xml:coverage.xml test/
 
-      # 6. Upload Coverage
+      # 7. Upload Coverage
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
