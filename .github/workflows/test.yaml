@@ -14,47 +14,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"] 
+        python-version: ["3.11"]
 
     steps:
-      # 1. Setup SSH Agent with ONLY the TabPFN key
-      # Since phmd is public/HTTPS, we don't need a key for it.
-      # This ensures the ONLY key available is the one that opens TabPFN.
+      # 1. Load ONLY the TabPFN key
+      # Since phmd is now HTTPS (public), we do NOT need a key for it.
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: |
-            ${{ secrets.SSH_KEY_TABPFN }}
+          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
       # 2. Checkout Code
+      # The agent handles the SSH auth for TabPFN.
+      # HTTPS repos (phmd, etc) will be cloned without auth.
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          
-      # 3. Install uv
-      # This official action installs uv and handles caching automatically.
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
-      # 4. Set up Python (managed by uv)
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      # 5. Install Dependencies
-      # Syncs lock file and installs dev dependencies.
       - name: Install dependencies
         run: |
           uv sync
           uv pip install -e ".[dev]"
 
-      # 6. Run Tests
-      # 'uv run' automatically loads the .venv environment
       - name: Test with pytest
         run: |
           uv run pytest --cov --cov-report=xml:coverage.xml test/
 
-      # 7. Upload Coverage
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
