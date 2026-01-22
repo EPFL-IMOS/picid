@@ -93,7 +93,6 @@ def test_padding_jagged_rescues_short_units(jagged_data):
         label_len=0,
         padding_left_flag=True,
         padding_mode="zero",
-        warmup_steps=3,  # <--- CHANGED
     )
 
     indices = seq.get_index_array()
