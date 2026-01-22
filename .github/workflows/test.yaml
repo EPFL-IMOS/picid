@@ -17,41 +17,45 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      # 1. Load the Private Key
+      # 1. Load the Private Key (For the submodule)
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. Test Connection (Standard Port 22)
-      - name: Test SSH Connection
-        run: ssh -T git@github.com || true
+      # 2. Add GitHub to known_hosts (Your new step!)
+      # This prevents "Host key verification failed" errors
+      - name: Add GitHub to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      # 3. Checkout (Stop GitHub from forcing HTTPS)
+      # 3. Checkout Code
+      # We use 'submodules: recursive' combined with 'persist-credentials: false'
+      # This stops GitHub from forcing HTTPS so your SSH key actually gets used.
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
+          fetch-depth: 0
           persist-credentials: false
-          submodules: false
 
-      # 4. Manual Update (Uses standard SSH)
-      - name: Update Submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
-
-      # ... (Install uv, Python, Tests) ...
+      # 4. Install uv
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
           uv sync
           uv pip install -e ".[dev]"
+
       - name: Test with pytest
         run: |
           uv run pytest --cov --cov-report=xml:coverage.xml test/
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
