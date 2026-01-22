@@ -22,17 +22,28 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. DEBUG: Check if key is loaded
-      # This will print the key fingerprint to the logs. 
-      # If this step fails or prints nothing, the secret is empty.
-      - name: Debug SSH Keys
-        run: ssh-add -l
-
-      # 3. Checkout Code
+      # 2. Checkout Main Repo ONLY
+      # persist-credentials: false -> Prevents the action from forcing HTTPS
+      # submodules: false -> We will do this manually to ensure SSH is used
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          persist-credentials: false
+          submodules: false
 
+      # 3. DEBUG: Verify Connection
+      # This confirms GitHub accepts your key before we try cloning
+      - name: Test SSH Connection
+        run: ssh -T git@github.com || true
+        # '|| true' prevents the workflow from crashing if the welcome message returns exit code 1 (common)
+
+      # 4. Manually Update Submodules
+      # This forces Git to use the URL exactly as it is in .gitmodules (SSH)
+      - name: Update Submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      # 5. Install uv
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
