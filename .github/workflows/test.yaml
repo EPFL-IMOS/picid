@@ -22,28 +22,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. Checkout Main Repo ONLY
-      # persist-credentials: false -> Prevents the action from forcing HTTPS
-      # submodules: false -> We will do this manually to ensure SSH is used
+      # 2. Checkout Main Repo ONLY (Disable automatic submodules)
+      # We set 'persist-credentials: false' so the action doesn't override our SSH key
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: false
 
-      # 3. DEBUG: Verify Connection
-      # This confirms GitHub accepts your key before we try cloning
-      - name: Test SSH Connection
-        run: ssh -T git@github.com || true
-        # '|| true' prevents the workflow from crashing if the welcome message returns exit code 1 (common)
-
-      # 4. Manually Update Submodules
-      # This forces Git to use the URL exactly as it is in .gitmodules (SSH)
+      # 3. Manually Update Submodules
+      # This ensures we use the SSH URL from .gitmodules, bypassing the HTTPS forced by the checkout action
       - name: Update Submodules
         run: |
           git submodule sync --recursive
           git submodule update --init --recursive
 
-      # 5. Install uv
+      # 4. Install uv
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
