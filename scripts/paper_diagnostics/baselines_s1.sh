@@ -110,7 +110,7 @@ for model_name in "${model_names[@]}"; do
                         IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
                         exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
                         dataset_run_name="${dataset_key//\//_}"
-                        run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$task_type" "$subexp" "$seed" )
+                        run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
                         final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
 
                         # --- 4. Build the full command as a single string ---

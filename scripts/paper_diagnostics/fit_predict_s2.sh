@@ -41,7 +41,7 @@ datasets=(
 )
 
 model_names=(
-    xgboost_fit_predict
+    # xgboost_fit_predict
     tabdpt_fit_predict
     tabpfn_fit_predict
 )
@@ -56,6 +56,7 @@ context_stride_pairs=(
   "50:50"
   "100:100"
 )
+seed=72
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -107,7 +108,7 @@ for model_name in "${model_names[@]}"; do
             
             exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
             dataset_run_name="${dataset_key//\//_}"
-            run_name=$(printf "%03d_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$task_type" "$subexp" "$seed" )
+            run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
             final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
 
 
