@@ -22,41 +22,36 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. DEBUG: Test connection (Standard Port 22)
+      # 2. Test Connection (Standard Port 22)
       - name: Test SSH Connection
         run: ssh -T git@github.com || true
 
-      # 3. Checkout Main Repo (Disable auto-submodules)
-      # We KEEP 'persist-credentials: false' to stop the HTTPS error.
+      # 3. Checkout (Stop GitHub from forcing HTTPS)
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: false
 
-      # 4. Manually Update Submodules (Standard SSH)
+      # 4. Manual Update (Uses standard SSH)
       - name: Update Submodules
         run: |
           git submodule sync --recursive
           git submodule update --init --recursive
 
-      # 5. Install uv
+      # ... (Install uv, Python, Tests) ...
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
-
       - name: Install dependencies
         run: |
           uv sync
           uv pip install -e ".[dev]"
-
       - name: Test with pytest
         run: |
           uv run pytest --cov --cov-report=xml:coverage.xml test/
-
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
