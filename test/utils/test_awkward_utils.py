@@ -13,7 +13,6 @@ from lmetk.utils.awkward_utils import (
     blocks_to_ragged_array,
     ak_regularize_regular_axes,
     get_ak_shape,
-    ak_pad_and_regularize_dim,
 )
 
 
