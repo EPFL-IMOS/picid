@@ -17,15 +17,18 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      # 1. Load ONLY the TabPFN key
-      # Since phmd is now HTTPS (public), we do NOT need a key for it.
+      # 1. Load the Private Key
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. Checkout Code
-      # The agent handles the SSH auth for TabPFN.
-      # HTTPS repos (phmd, etc) will be cloned without auth.
+      # 2. DEBUG: Check if key is loaded
+      # This will print the key fingerprint to the logs. 
+      # If this step fails or prints nothing, the secret is empty.
+      - name: Debug SSH Keys
+        run: ssh-add -l
+
+      # 3. Checkout Code
       - uses: actions/checkout@v4
         with:
           submodules: recursive
