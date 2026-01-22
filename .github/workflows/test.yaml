@@ -17,20 +17,19 @@ jobs:
         python-version: ["3.11"] 
 
     steps:
-      # 1. Setup SSH Agent with BOTH keys
-      # This loads your two private keys so Git can clone both private submodules.
+      # 1. Setup SSH Agent with ONLY the TabPFN key
+      # Since phmd is public/HTTPS, we don't need a key for it.
+      # This ensures the ONLY key available is the one that opens TabPFN.
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{ secrets.SSH_KEY_PHMD }}
             ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. Checkout Code & Submodules
-      # We use recursive submodules. Authentication is handled by the agent above.
+      # 2. Checkout Code
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-
+          
       # 3. Install uv
       # This official action installs uv and handles caching automatically.
       - name: Install uv
