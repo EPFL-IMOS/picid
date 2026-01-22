@@ -17,26 +17,44 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      # 1. Load the Private Key
+      # 1. Load the Private Key for TabPFN
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
 
-      # 2. Checkout Main Repo ONLY (Disable automatic submodules)
-      # We set 'persist-credentials: false' so the action doesn't override our SSH key
+      # 2. Configure SSH to use Port 443
+      # This bypasses firewall blocks on Port 22 that cause "Connection refused"
+      - name: Configure SSH over Port 443
+        run: |
+          mkdir -p ~/.ssh
+          echo "Host github.com" >> ~/.ssh/config
+          echo "  Hostname ssh.github.com" >> ~/.ssh/config
+          echo "  Port 443" >> ~/.ssh/config
+          echo "  User git" >> ~/.ssh/config
+          # Scan keys for ssh.github.com so we don't get "Host key verification failed"
+          ssh-keyscan -p 443 ssh.github.com >> ~/.ssh/known_hosts
+
+      # 3. DEBUG: Test the SSH connection explicitly
+      # If this prints "Hi [user]!", your key works. If "Permission denied", key is wrong.
+      - name: Test SSH Connection
+        run: ssh -T git@github.com || true
+
+      # 4. Checkout Main Repo (Disable auto-submodules)
+      # persist-credentials: false -> STOPS GitHub from overriding your SSH setup
+      # submodules: false -> We will do this manually below
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: false
 
-      # 3. Manually Update Submodules
-      # This ensures we use the SSH URL from .gitmodules, bypassing the HTTPS forced by the checkout action
+      # 5. Manually Update Submodules
+      # This ensures Git uses the exact URLs from your .gitmodules file
       - name: Update Submodules
         run: |
           git submodule sync --recursive
           git submodule update --init --recursive
 
-      # 4. Install uv
+      # 6. Install uv
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
