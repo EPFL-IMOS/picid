@@ -21,6 +21,7 @@ COLUMN_CONFIG = {
 # Names of nested dictionary columns from wandb to be flattened into separate columns.
 COLUMNS_TO_NORMALIZE = [
     "optimizer",
+    "optimization",
     "datasource",
     "task_definition",
     "model",
@@ -28,6 +29,11 @@ COLUMNS_TO_NORMALIZE = [
     "datamodule",
     "callbacks",
     "paths",
+    "evaluator",
+    "cache",
+    "logger",
+    "trainer",
+    "_wandb",
 ]
 
 # Columns to exclude from being considered as varying hyperparameters, even if they vary.
@@ -57,9 +63,27 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "AvgTime/",  # Ignore all timing metrics
     "plots/",  # Ignore all plot outputs
     "callbacks.model_checkpoint.",
+    "model.model_cache_path",
+    # Repeated config parameters
+    "model.max_seq_len",
+    "dataset.dataset_cfg.seq_len",
+    "optimization.optimizer.lr",
+    "optimization.scheduler.peak_lr",
+    # Logger-specific columns
+    "logger.wandb.id",
+    "logger.wandb.save_dir",
+    # Trainer-specific columns
+    "trainer.default_root_dir",
 ]
 
 # The column name in the DataFrame that holds the path to the best checkpoint for a run.
 # The script will try this name first before searching for common alternatives.
 # UPDATE THIS if you know the exact column name in your logs.
 CHECKPOINT_PATH_COLUMN = "callbacks.model_checkpoint.dirpath"
+
+# Default column for Data Seeds (e.g., shuffling, splits)
+DEFAULT_DATA_SEED_COL = "datasource.parameters.data_seed"
+
+# Default column for Model/Training Seeds (e.g., initialization)
+# UPDATE THIS to match your specific log column (often just "seed" or "model.seed")
+DEFAULT_MODEL_SEED_COL = "seed"

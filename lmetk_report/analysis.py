@@ -1,19 +1,44 @@
 # lmetk_report/analysis.py
 """
 Core analysis module for processing experiment results.
-
-This module contains functions to group data, identify varying hyperparameters,
-aggregate results, and find the best-performing configurations.
 """
+
 from collections import defaultdict
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 import pandas as pd
-from lmetk_report import config
+
+from lmetk_report import config, validators
 
 
-def find_checkpoint_path(best_runs_df: pd.DataFrame) -> str | None:
-    """Attempts to find the best checkpoint path from the runs of a best-performing group."""
-    # 1. Try the primary column name specified in the config file.
+def _trace_nans(df: pd.DataFrame, stage: str, prev_count: int) -> int:
+    """Debug helper to track the introduction or removal of NaNs."""
+    current_count = int(df.isna().sum().sum())
+    diff = current_count - prev_count
+
+    if diff != 0:
+        if diff > 0:
+            msg = f"🚨 [NaN TRACE] '{stage}' INTRODUCED {diff} NaNs!"
+        else:
+            msg = f"✅ [NaN TRACE] '{stage}' CLEANED {abs(diff)} NaNs."
+
+        print(f"\n{msg}")
+        print(f"    Total NaNs: {prev_count} -> {current_count}")
+        print(f"    DataFrame Shape: {df.shape}")
+
+        if diff > 0:
+            nan_series = df.isna().sum()
+            new_nan_cols = nan_series[nan_series > 0].sort_values(ascending=False)
+            if not new_nan_cols.empty:
+                top_3 = new_nan_cols.head(3).to_dict()
+                print(f"    Top Columns with NaNs: {top_3}")
+        print("-" * 40)
+
+    return current_count
+
+
+def find_checkpoint_path(best_runs_df: pd.DataFrame) -> Optional[str]:
+    """Attempt to find the best checkpoint path from the best performing group."""
     configured_col = config.CHECKPOINT_PATH_COLUMN
     if (
         configured_col in best_runs_df.columns
@@ -21,7 +46,6 @@ def find_checkpoint_path(best_runs_df: pd.DataFrame) -> str | None:
     ):
         return best_runs_df[configured_col].dropna().iloc[0]
 
-    # 2. If not found, try searching other common alternative names as a fallback.
     common_alternatives = ["ckpt_path", "checkpoint_path"]
     for col in common_alternatives:
         if col in best_runs_df.columns and not best_runs_df[col].dropna().empty:
@@ -29,44 +53,100 @@ def find_checkpoint_path(best_runs_df: pd.DataFrame) -> str | None:
             return best_runs_df[col].dropna().iloc[0]
 
     print(
-        f"Warning: Could not find a valid checkpoint path. Checked '{configured_col}' and alternatives."
+        "Warning: Could not find a valid checkpoint path. "
+        f"Checked '{configured_col}' and alternatives."
     )
     return None
 
 
 def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
-    """Extracts unique values from a column, correctly handling lists and scalars."""
+    """Extract unique values from a column."""
     if column not in df.columns:
         return []
     series = df[column].dropna()
     unique_items = set()
     for item in series:
         if isinstance(item, list):
-            unique_items.update(item)  # Unpack list items
+            unique_items.update(item)
         else:
-            unique_items.add(item)  # Add scalar items
+            unique_items.add(item)
     return list(unique_items)
 
 
 def get_optimized_metric(
     df_subset: pd.DataFrame, model_name: str, dataset_name: str
 ) -> str:
-    """Finds and returns the full name of the metric used for optimization (e.g., 'val/loss')."""
+    """
+    Find and return the name of the metric used for optimization.
+    Includes robust fallback logic if the configured metric is missing or NaN.
+    """
+    # 1. Try to get the metric defined in the config (e.g. 'val/loss')
     metric_series = get_unique_values(
         df_subset, config.COLUMN_CONFIG["optimization_metric"]
     )
-    if not metric_series:
-        raise ValueError(f"No metric found for {model_name} on {dataset_name}.")
-    assert len(metric_series) == 1, "There should be only one metric to optimize"
-    full_metric_name = metric_series[0]
-    print(f"Optimized metric for {model_name} on {dataset_name} is {full_metric_name}")
-    return full_metric_name
+
+    candidate = None
+    if len(metric_series) == 1:
+        candidate = metric_series[0]
+    elif len(metric_series) > 1:
+        print(
+            f"Warning: Multiple optimization metrics found for {model_name}. "
+            f"Picking first: {metric_series[0]}"
+        )
+        candidate = metric_series[0]
+
+    # 2. Check if this candidate is valid (exists and has non-NaN values)
+    if candidate and candidate in df_subset.columns:
+        valid_count = df_subset[candidate].count()
+        if valid_count > 0:
+            print(
+                f"Optimized metric for {model_name} on {dataset_name} "
+                f"is {candidate}"
+            )
+            return candidate
+        else:
+            print(
+                f"Warning: Configured metric '{candidate}' contains only NaNs "
+                f"for {model_name}. Attempting fallback..."
+            )
+
+    # 3. Fallback Heuristics: Look for common metrics that actually have data
+    # Priority: val/loss -> test/loss -> val/mse -> test/mse -> train/loss
+    fallback_candidates = [
+        "val/loss",
+        "test/loss",
+        "test/mse",
+        "test/mae",
+        "train/loss",
+    ]
+
+    for fb in fallback_candidates:
+        if fb in df_subset.columns and df_subset[fb].count() > 0:
+            print(
+                f"Fallback: Switching optimization metric to '{fb}' "
+                "(found valid data)."
+            )
+            return fb
+
+    # 4. Final Hail Mary: Pick *any* numeric column with 'loss' or 'mse'
+    for col in df_subset.columns:
+        if ("loss" in col or "mse" in col) and df_subset[col].count() > 0:
+            print(f"Fallback: Switching optimization metric to '{col}'.")
+            return col
+
+    # 5. If we reach here, we truly have no data to sort by
+    raise ValueError(
+        f"No valid metric found for {model_name} on {dataset_name}. "
+        f"(Checked config '{candidate}' and common fallbacks)"
+    )
 
 
 def get_varying_hyperparameters(
-    df_subset: pd.DataFrame, config_cols: List[str], special_cols_to_exclude: List[str]
+    df_subset: pd.DataFrame,
+    config_cols: List[str],
+    special_cols_to_exclude: List[str],
 ) -> Dict[str, List[Any]]:
-    """Identifies hyperparameters with >1 unique value, handling list-based configs correctly."""
+    """Identify hyperparameters that have more than one unique value."""
     varying_params = {}
     for col in config_cols:
         if col not in df_subset.columns:
@@ -78,19 +158,18 @@ def get_varying_hyperparameters(
 
             is_list_like = isinstance(cleaned_series.iloc[0], (list, tuple))
             if is_list_like:
-                # For lists, convert to tuples to make them hashable for uniqueness checks.
                 series_of_tuples = cleaned_series.apply(
                     lambda x: tuple(x) if isinstance(x, list) else x
                 )
                 if series_of_tuples.nunique() > 1:
                     varying_params[col] = [list(t) for t in series_of_tuples.unique()]
             else:
-                # For scalar values, use nunique() directly.
                 if cleaned_series.nunique() > 1:
                     varying_params[col] = cleaned_series.unique().tolist()
         except Exception as e:
             print(
-                f"Warning: Could not process column '{col}' for varying hyperparameters. Error: {e}"
+                f"Warning: Could not process column '{col}' for varying HPs. "
+                f"Error: {e}"
             )
             continue
 
@@ -106,15 +185,10 @@ def aggregate_and_find_best(
     optimization_col: str,
     optimization_mode: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Perform groupby aggregation and find the best run."""
+    assert optimization_mode in ["min", "max"], "mode must be 'min' or 'max'"
 
-    assert optimization_mode in [
-        "min",
-        "max",
-    ], "optimization_mode must be 'min' or 'max'"
-
-    """Performs groupby aggregation and finds the best run based on the optimization metric."""
     subset_copy = df_subset.copy()
-    # Convert list columns to tuples to allow for grouping.
     for col in aggregation_cols:
         if (
             col in subset_copy.columns
@@ -125,7 +199,6 @@ def aggregate_and_find_best(
                 lambda x: tuple(x) if isinstance(x, list) else x
             )
 
-    # Define aggregations: mean/std for metrics, and collect run names into a list.
     agg_dict = {
         col: ["mean", "std", "count"]
         for col in all_performance_cols
@@ -155,8 +228,14 @@ def analyze_results(
     metric_prefixes: List[str],
     optimization_col: Optional[str] = None,
     optimization_mode: Optional[str] = None,
+    required_data_seeds: Optional[Set[int]] = None,
+    data_seed_col: str = config.DEFAULT_DATA_SEED_COL,
+    required_model_seeds: Optional[Set[int]] = None,
+    model_seed_col: str = config.DEFAULT_MODEL_SEED_COL,
+    additional_ignored_cols: Optional[List[str]] = None,
 ) -> defaultdict:
-    """Main function to orchestrate the analysis of experiment results."""
+    """Orchestrate the full analysis pipeline for experiment results."""
+
     config_columns = [col for col in config_columns if col not in dropped_columns]
     unique_models = get_unique_values(df, config.COLUMN_CONFIG["model_target"])
     unique_datasets = get_unique_values(df, config.COLUMN_CONFIG["dataset_name"])
@@ -164,10 +243,23 @@ def analyze_results(
 
     for dataset in unique_datasets:
         for model in unique_models:
+
+            # --- SUBSETTING ---
+            subset_start_shape = df.shape
             subset = df[
                 (df[config.COLUMN_CONFIG["dataset_name"]] == dataset)
                 & (df[config.COLUMN_CONFIG["model_target"]] == model)
             ].copy()
+
+            validators.log_modification(
+                action="Selecting Data for Analysis",
+                reason=f"Isolating Model='{model}' and Dataset='{dataset}'",
+                input_shape=subset_start_shape,
+                output_shape=subset.shape,
+            )
+
+            nan_count = int(subset.isna().sum().sum())
+
             if subset.empty:
                 print(f"---------\nNo results for {model} on {dataset}\n---------")
                 continue
@@ -178,11 +270,7 @@ def analyze_results(
                 try:
                     optimization_col = get_optimized_metric(subset, model, dataset)
                 except Exception as e:
-                    print(
-                        f"Warning: Could not determine optimization column for {model} on {dataset}. Error: {e}"
-                    )
-
-                    print("Falling back to default optimization metric 'test/mse'.")
+                    print(f"Warning: {e}. Falling back to default 'test/mse'.")
                     optimization_col = "test/mse"
 
             all_performance_cols = [
@@ -192,6 +280,7 @@ def analyze_results(
                 if f"{p}{m}" in subset.columns
             ]
 
+            # 1. Identify Varying Hyperparameters.
             hp_search_columns = [
                 col
                 for col in config_columns
@@ -204,6 +293,66 @@ def analyze_results(
             )
             aggregation_cols = ["Model"] + list(varying_hyperparams.keys())
 
+            nan_count = _trace_nans(subset, "HP Extraction", nan_count)
+
+            # --- VALIDATION 1: DATA SEEDS ---
+            subset = validators.validate_seeds(
+                subset,
+                aggregation_cols,
+                data_seed_col,
+                required_data_seeds,
+                allow_fallback=False,  # Strict
+            )
+
+            nan_count = _trace_nans(subset, "Data Seed Filter", nan_count)
+
+            # --- VALIDATION 2: MODEL SEEDS ---
+            subset = validators.validate_seeds(
+                subset,
+                aggregation_cols,
+                model_seed_col,
+                required_model_seeds,
+                allow_fallback=True,  # Flexible
+            )
+
+            nan_count = _trace_nans(subset, "Model Seed Filter", nan_count)
+
+            if subset.empty:
+                print(
+                    f"Skipping {model} on {dataset}: "
+                    "No configs matched seed requirements."
+                )
+                continue
+
+            # --- CAPTURE SEED INFO ---
+            def get_seeds_str(column_name):
+                if column_name in subset.columns:
+                    try:
+                        s_vals = subset[column_name].dropna().unique()
+                        s_list = sorted([int(float(x)) for x in s_vals])
+                        return ", ".join(map(str, s_list))
+                    except Exception:
+                        return "Error"
+                return "Not Found"
+
+            data_seeds_str = get_seeds_str(data_seed_col)
+            model_seeds_str = get_seeds_str(model_seed_col)
+
+            # --- VALIDATION 3: HIDDEN VARIATIONS ---
+            ignore_vars = config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH + [
+                data_seed_col,
+                model_seed_col,
+            ]
+            validators.check_hidden_variations(
+                subset,
+                aggregation_cols,
+                base_ignored_cols=ignore_vars,
+                additional_ignored_cols=additional_ignored_cols,
+            )
+
+            nan_count = _trace_nans(subset, "Variation Check", nan_count)
+
+            # --- STANDARD LOGIC ---
             print(f"Hyperparameters that vary for {model} on {dataset}:")
             if not varying_hyperparams:
                 print("None.")
@@ -213,10 +362,16 @@ def analyze_results(
             print("---------")
 
             if optimization_mode is None:
-                # Determine sorting direction based on 'min' or 'max' optimization mode.
-                optimization_mode = subset[
-                    config.COLUMN_CONFIG["optimization_mode"]
-                ].unique()[0]
+                modes = (
+                    subset[config.COLUMN_CONFIG["optimization_mode"]].dropna().unique()
+                )
+                if len(modes) > 0:
+                    optimization_mode = modes[0]
+                else:
+                    print("Warning: Optimization mode not found. Defaulting to 'min'.")
+                    optimization_mode = "min"
+
+            nan_count = _trace_nans(subset, "Pre-Aggregation", nan_count)
 
             sorted_aggregated, best_result = aggregate_and_find_best(
                 subset,
@@ -229,8 +384,7 @@ def analyze_results(
             if best_result.empty:
                 continue
 
-            # --- Step 4: Collect and structure the final results ---
-
+            # --- COLLECT RESULTS ---
             best_params = {}
             for hp_name in varying_hyperparams.keys():
                 best_params[hp_name] = best_result[hp_name].item()
@@ -238,17 +392,10 @@ def analyze_results(
             if "run_name" in best_result.columns:
                 best_params["run_names"] = best_result["run_name"].iloc[0, 0]
 
-            # <<< MODIFIED: Simplified logic to get the checkpoint path >>>
             best_checkpoint_path = None
-            # 1. Check if we have the run names for the best configuration.
             if "run_names" in best_params and best_params["run_names"]:
-                # 2. Take the first run name as a representative for this best group.
                 best_run_name = best_params["run_names"][0]
-
-                # 3. Use the unique run_name to look up the exact row in the original subset.
                 run_row = subset[subset["run_name"] == best_run_name]
-
-                # 4. Extract the path from the column specified in config.py for that single row.
                 if not run_row.empty:
                     path_col = config.CHECKPOINT_PATH_COLUMN
                     if (
@@ -257,7 +404,7 @@ def analyze_results(
                     ):
                         best_checkpoint_path = run_row[path_col].iloc[0]
 
-            mode = subset[config.COLUMN_CONFIG["optimization_mode"]].unique()[0]
+            mode = optimization_mode
             performance_results = defaultdict(dict)
             for metric in reporting_metrics:
                 for prefix in metric_prefixes:
@@ -267,33 +414,46 @@ def analyze_results(
                         mean_val = best_result[(col_name, "mean")].values[0]
                         std_val = best_result[(col_name, "std")].values[0]
                         count_val = best_result[(col_name, "count")].values[0]
+
+                        # Scale Max metrics to % (heuristic).
                         if col_name == optimization_col and mode == "max":
-                            mean_val, std_val = mean_val * 100, std_val * 100
+                            mean_val = mean_val * 100
+                            std_val = std_val * 100
+
                         performance_results[metric][prefix_key] = {
                             "mean": mean_val,
                             "std": std_val,
                             "count": count_val,
                         }
 
-            all_results[dataset][model]["best_hyperparameters"] = best_params
-            all_results[dataset][model]["best_performance"] = {
+            res_entry = all_results[dataset][model]
+            res_entry["best_hyperparameters"] = best_params
+            res_entry["best_performance"] = {
                 "optimized_on": {"metric": optimization_col, "strategy": mode},
                 "metrics": performance_results,
             }
             if "run_names" in best_params:
-                all_results[dataset][model]["best_run_names"] = best_params["run_names"]
+                res_entry["best_run_names"] = best_params["run_names"]
 
-            all_results[dataset][model]["best_checkpoint_path"] = best_checkpoint_path
+            res_entry["best_checkpoint_path"] = best_checkpoint_path
 
-            all_results[dataset][model]["avg_epoch_time"] = {
-                "mean": subset["AvgTime/train_epoch_mean"].mean(),
-                "std": subset["AvgTime/train_epoch_mean"].std(),
+            if "AvgTime/train_epoch_mean" in subset.columns:
+                res_entry["avg_epoch_time"] = {
+                    "mean": subset["AvgTime/train_epoch_mean"].mean(),
+                    "std": subset["AvgTime/train_epoch_mean"].std(),
+                }
+
+            if "_runtime" in subset.columns:
+                res_entry["avg_runtime"] = {
+                    "mean": subset["_runtime"].mean(),
+                    "std": subset["_runtime"].std(),
+                }
+
+            res_entry["sorted_aggregated_results"] = sorted_aggregated
+            res_entry["non_aggregated_df"] = subset.copy()
+            res_entry["seeds_info"] = {
+                "data": data_seeds_str,
+                "model": model_seeds_str,
             }
-            all_results[dataset][model]["avg_runtime"] = {
-                "mean": subset["_runtime"].mean(),
-                "std": subset["_runtime"].std(),
-            }
-            all_results[dataset][model]["sorted_aggregated_results"] = sorted_aggregated
-            all_results[dataset][model]["non_aggregated_df"] = subset.copy()
 
     return all_results
