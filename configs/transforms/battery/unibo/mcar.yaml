@@ -11,8 +11,8 @@ mcar_corruption:
 
   metadata:
     apply_to: features
-    assign_to: 
-      features: features_corrupted
+    # assign_to: 
+    #   features: features_corrupted
 
 
 imputation:
@@ -20,10 +20,11 @@ imputation:
     _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "mean"
   metadata:
-    apply_to: features_corrupted
-    assign_to:
-      features_corrupted: features_imputed
+    apply_to: features
     fit_on: train
+    #apply_to: features_corrupted
+    # assign_to:
+    #   features_corrupted: features_imputed
 
 # plotter:
 #   transform:
