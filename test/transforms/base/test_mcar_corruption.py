@@ -61,6 +61,10 @@ class TestMCARCorruptor:
         MCARCorruptorTransform(
             ratios=[0.1], mode="block", block_params={"min_size": 2, "max_size": 5}
         )
+        # Valid Proportional
+        MCARCorruptorTransform(
+            ratios=[0.1], mode="block", block_params={"min_size": 0.05, "max_size": 0.1}
+        )
 
         # Invalid Mode
         with pytest.raises(ValueError, match="Invalid mode"):
@@ -72,10 +76,18 @@ class TestMCARCorruptor:
                 ratios=[0.1], mode="block", block_params={"min_size": 5}
             )
 
-        # Invalid Block Params (min > max)
+        # Invalid Block Params (min > max for int)
         with pytest.raises(ValueError, match="cannot be greater"):
             MCARCorruptorTransform(
                 ratios=[0.1], mode="block", block_params={"min_size": 10, "max_size": 5}
+            )
+
+        # Invalid Block Params (min > max for float)
+        with pytest.raises(ValueError, match="cannot be greater"):
+            MCARCorruptorTransform(
+                ratios=[0.1],
+                mode="block",
+                block_params={"min_size": 0.5, "max_size": 0.1},
             )
 
     def test_corrupt_ratio_accuracy(self, sample_data_3d):
@@ -130,9 +142,41 @@ class TestMCARCorruptor:
             assert np.all(
                 run_lengths >= min_s
             ), f"Found blocks smaller than {min_s}: {run_lengths}"
-            # Note: Max size isn't strictly enforced on the *resulting* gaps because two blocks
-            # might randomly land next to each other, merging into a larger gap.
-            # We strictly test min_size.
+
+    def test_corrupt_block_constraints_proportional(self, sample_data_3d):
+        """
+        Test that in 'block' mode with proportional sizes, gaps respect T * proportion.
+        """
+        # T = 100. Min prop 0.05 -> 5 steps. Max prop 0.1 -> 10 steps.
+        min_p, max_p = 0.05, 0.1
+        t = MCARCorruptorTransform(
+            ratios=[0.3, 0.0, 0.0],
+            mode="block",
+            block_params={"min_size": min_p, "max_size": max_p},
+            seed=123,
+            apply_to=["features"],
+        )
+        out = t.transform_data(sample_data_3d, metadata={})
+
+        # Expected min size in absolute steps
+        T = sample_data_3d["features"].shape[1]  # 100
+        expected_min_s = int(T * min_p)
+
+        # Analyze Batch 0, Channel 0
+        signal = out["features"][0, :, 0]
+        mask = np.isnan(signal).astype(int)
+
+        # Run Length Encoding on the mask
+        bounded = np.concatenate(([0], mask, [0]))
+        diffs = np.diff(bounded)
+        starts = np.where(diffs == 1)[0]
+        ends = np.where(diffs == -1)[0]
+        run_lengths = ends - starts
+
+        if len(run_lengths) > 0:
+            assert np.all(
+                run_lengths >= expected_min_s
+            ), f"Found blocks smaller than {expected_min_s}: {run_lengths}"
 
     def test_corrupt_integrity(self, sample_data_3d):
         """Ensure keys not in 'apply_to' are untouched."""
