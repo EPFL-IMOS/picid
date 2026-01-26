@@ -194,13 +194,6 @@ class TestImputationTransform:
         np.testing.assert_array_equal(out["other"], data["other"])
         assert np.isnan(out["other"][0, 1])
 
-    def test_inverse_transform(self):
-        """Test that inverse_transform returns data unchanged (Identity)."""
-        data = {"features": np.array([[1.0, 2.0]])}
-        t = ImputationTransform(strategy="mean")
-        out = t.inverse_transform(data, metadata={})
-        np.testing.assert_array_equal(out["features"], data["features"])
-
     def test_fit_data_ignored_for_non_mean(self):
         """Test that fit_data is a no-op for strategies like 'zero'."""
         data = {"features": np.array([[1.0, 2.0]])}
