@@ -1,11 +1,6 @@
 # lmetk_report/validators.py
 """
 Module for validating experiment consistency and scientific rigor.
-
-This module provides tools to:
-1. Filter experiments based on required seeds (Data or Model).
-2. Detect "hidden variations" (non-hyperparameters that change silently).
-3. Log explicit modifications to the DataFrame for transparency.
 """
 
 import warnings
@@ -19,6 +14,7 @@ def log_modification(
     reason: str,
     input_shape: Tuple[int, int],
     output_shape: Tuple[int, int],
+    context: Optional[str] = None,  # <--- NEW ARGUMENT
 ) -> None:
     """
     Print an explicit notice about a DataFrame modification to stdout.
@@ -28,6 +24,7 @@ def log_modification(
         reason: The justification for the modification.
         input_shape: The (rows, cols) of the DataFrame before the operation.
         output_shape: The (rows, cols) of the DataFrame after the operation.
+        context: Optional string to describe the scope (e.g., Model/Dataset).
     """
     rows_dropped = input_shape[0] - output_shape[0]
     cols_dropped = input_shape[1] - output_shape[1]
@@ -37,8 +34,13 @@ def log_modification(
         return
 
     print(f"\n  [DATAFRAME MODIFICATION] {action}")
-    print(f"    Reason: {reason}")
-    print(f"    Input Shape: {input_shape} -> Output Shape: {output_shape}")
+
+    # New: Print context separately if provided
+    if context:
+        print(f"    Context: {context}")
+
+    print(f"    Reason:  {reason}")
+    print(f"    Shape:   {input_shape} -> {output_shape}")
 
     changes = []
     if rows_dropped > 0:
@@ -46,8 +48,8 @@ def log_modification(
     if cols_dropped > 0:
         changes.append(f"{cols_dropped} cols dropped")
 
-    print(f"    Change: {', '.join(changes)}")
-    print("  " + "-" * 30)
+    print(f"    Change:  {', '.join(changes)}")
+    print("  " + "-" * 40)
 
 
 def validate_seeds(
@@ -59,24 +61,12 @@ def validate_seeds(
 ) -> pd.DataFrame:
     """
     Filter the DataFrame to ensure experiment groups contain required seeds.
-
-    Args:
-        df: The DataFrame containing experiment results.
-        group_cols: Columns defining a unique configuration.
-        seed_col: The column name containing the random seed.
-        required_seeds: A set of integers (e.g., {0, 1, 2}).
-        allow_fallback: If True, reverts filter if result is empty.
-
-    Returns:
-        pd.DataFrame: A filtered DataFrame.
     """
-    # Case 1: Flexible mode (no strict requirement) -> Return data as is.
     if not required_seeds:
         return df
 
     start_shape = df.shape
 
-    # Case 2: Strict mode.
     if seed_col not in df.columns:
         print(
             f"[Validator] Warning: Seed column '{seed_col}' not found. "
@@ -86,17 +76,13 @@ def validate_seeds(
 
     def has_required_seeds(group):
         try:
-            # Drop NaNs and get unique seeds present in this group.
             current = set(group[seed_col].dropna().unique())
-            # Robust conversion to int to handle 1.0 vs 1.
             current_int = {int(float(x)) for x in current}
             req_int = {int(x) for x in required_seeds}
-            # Check if current seeds are a superset of required seeds.
             return req_int.issubset(current_int)
         except Exception:
             return False
 
-    # Ensure grouping cols are strings to avoid pandas bugs with list objects.
     temp_df = df.copy()
     for col in group_cols:
         temp_df[col] = temp_df[col].astype(str)
@@ -109,20 +95,14 @@ def validate_seeds(
 
     filtered_df = df.loc[valid_subset.index].copy()
 
-    # --- FALLBACK LOGIC ---
-    # If the filter removed EVERYTHING, and fallback is allowed:
     if filtered_df.empty and not df.empty and allow_fallback:
         print(f"  [Validator] NOTE: Strict filter on '{seed_col}' removed all rows.")
-        print(
-            "  [Validator] Fallback triggered: Ignoring seed filter for this model "
-            "(assuming it does not use seeds)."
-        )
+        print("  [Validator] Fallback triggered: Ignoring seed filter for this model.")
         return df
 
-    # Log the explicit modification.
     log_modification(
         action=f"Strict Seed Filter applied on '{seed_col}'",
-        reason=f"Ensuring groups contain required seeds: {required_seeds}",
+        reason=f"Dropping groups that do not contain all required seeds: {required_seeds}",
         input_shape=start_shape,
         output_shape=filtered_df.shape,
     )
@@ -136,9 +116,7 @@ def check_hidden_variations(
     base_ignored_cols: List[str],
     additional_ignored_cols: Optional[List[str]] = None,
 ) -> None:
-    """
-    Check for non-hyperparameters that vary silently within a single group.
-    """
+    """Check for non-hyperparameters that vary silently within a single group."""
     ignored = set()
     if additional_ignored_cols:
         ignored.update(additional_ignored_cols)

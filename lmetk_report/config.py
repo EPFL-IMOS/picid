@@ -16,6 +16,10 @@ COLUMN_CONFIG = {
     "optimization_metric": "callbacks.early_stopping.monitor",
     # Column for the optimization mode ('min' or 'max')
     "optimization_mode": "callbacks.early_stopping.mode",
+    # --- Explicit Task Definition Columns ---
+    "target_metric": "task_definition.target_metric",
+    "target_metric_mode": "task_definition.target_metric_mode",
+    "evaluator_metrics": "evaluator.train.metric_names",
 }
 
 # Names of nested dictionary columns from wandb to be flattened into separate columns.
@@ -74,6 +78,7 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "logger.wandb.save_dir",
     # Trainer-specific columns
     "trainer.default_root_dir",
+    "_wandb.runtime",
 ]
 
 # The column name in the DataFrame that holds the path to the best checkpoint for a run.
