@@ -29,7 +29,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=100
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="01_2026"
+wandb_log_folder="26_01_2026"
 # Define a list of datasets to run
 
 datasets=(
