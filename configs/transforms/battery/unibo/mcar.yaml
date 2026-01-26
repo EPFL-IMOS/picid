@@ -7,20 +7,38 @@ mcar_corruption:
     mode: "block"
     block_params:
       min_size: 0.01
-      min_size: 0.2
-
+      max_size: 0.2
 
   metadata:
     apply_to: features
-    #fit_on: train
+    assign_to: 
+      features: features_corrupted
+
 
 imputation:
   transform:
     _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "mean"
   metadata:
-    apply_to: features
+    apply_to: features_corrupted
+    assign_to:
+      features_corrupted: features_imputed
     fit_on: train
+
+# plotter:
+#   transform:
+#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+#     saving_path: ${paths.log_dir}/images_imputed
+#     unit_key: unit_id
+#     imputed_key: features_imputed
+#     corrupted_key: features_corrupted
+#     original_key: features
+#     n_channels_to_plot: 3
+  
+#   metadata:
+#     apply_to: ["features_imputed", "features_corrupted", "features", "unit_id"]
+
+
 
 scaler_features:
   transform:
