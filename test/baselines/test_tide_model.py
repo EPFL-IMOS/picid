@@ -11,6 +11,7 @@ from test.utils import ProjectSearchPathPlugin
 from collections.abc import Mapping
 from typing import Any
 from lmetk.evaluator.base import AbstractEvaluator
+from hydra.core.global_hydra import GlobalHydra
 
 
 ProjectSearchPathPlugin.register()
@@ -40,6 +41,8 @@ class MockEvaluator(AbstractEvaluator):
 
 @pytest.fixture(scope="module", autouse=True)
 def hydra_context(request):
+    # Ensure any previous initialization is cleared before starting
+    GlobalHydra.instance().clear()
     with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
         yield
 

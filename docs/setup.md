@@ -12,12 +12,6 @@ uv sync
 uv pip install -e ".[dev]"
 ```
 
-In case some submodules are not initialized add them manually, f.e.
-```
-git submodule add -b collab_lalr https://github.com/EPFL-IMOS/imos_phmd phmd
-git submodule add https://github.com/tilman151/rul-datasets rul-datasets
-```
-
 Now you can try to fit your first model:
 
 either by using VSCode run config in `.vscode/launch.json`

@@ -2,6 +2,7 @@ import numpy as np
 from omegaconf import OmegaConf
 import pytest
 import hydra
+from hydra.core.global_hydra import GlobalHydra
 import torch
 
 from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
@@ -40,6 +41,8 @@ class MockEvaluator(AbstractEvaluator):
 
 @pytest.fixture(scope="module", autouse=True)
 def hydra_context(request):
+    # Ensure any previous initialization is cleared before starting
+    GlobalHydra.instance().clear()
     with hydra.initialize(version_base="1.3", config_path="configs", job_name="run"):
         yield
 
