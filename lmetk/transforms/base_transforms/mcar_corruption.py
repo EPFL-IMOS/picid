@@ -1,14 +1,12 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
+
 import numpy as np
 
-
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import (
-    NoFitMultiSourceTransformMixin,
-)
 from lmetk.data.data_objects.utils import convert_to_numpy
+from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +34,13 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
               Each point is dropped independently with probability proportional to the ratio.
             - ``"block"``: Simulates sensor outages or reboots. Missingness occurs
               in contiguous chunks of time.
-        block_params (Optional[Dict[str, int]]): Configuration for block sizes when
-            ``mode="block"``. Must contain keys:
-            - ``"min_size"`` (int): Minimum duration of an outage block.
-            - ``"max_size"`` (int): Maximum duration of an outage block.
+        block_params (Optional[Dict[str, Union[int, float]]]): Configuration for block sizes
+            when ``mode="block"``. Must contain keys:
+            - ``"min_size"`` (int | float): Minimum duration of an outage block.
+              If float (0.0 to 1.0), it represents a proportion of the total signal length.
+              If int, it represents an absolute number of time steps.
+            - ``"max_size"`` (int | float): Maximum duration of an outage block.
+              If float, it represents a proportion. If int, it represents absolute steps.
             Defaults to ``{"min_size": 5, "max_size": 20}`` if not provided.
         seed (int): Seed for the NumPy random number generator to ensure
             deterministic reproducibility of the corruption patterns.
@@ -52,30 +53,28 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         >>> # Setup: 1 Batch, 100 Time steps, 2 Channels
         >>> data = {"features": np.ones((1, 100, 2))}
         >>>
-        >>> # Scenario: Corrupt Channel 0 by 50% using random point drops
-        >>> corruptor = MCARCorruptorTransform(
+        >>> # Scenario 1: Corrupt Channel 0 by 50% using random point drops
+        >>> corruptor_point = MCARCorruptorTransform(
         ...     ratios=[0.5, 0.0],
         ...     mode="point",
         ...     seed=42,
         ...     apply_to=["features"]
         ... )
-        >>> # Apply transformation
-        >>> out = corruptor.transform_data(data, metadata={})
-        >>>
-        >>> # Verify results: Channel 0 has NaNs, Channel 1 is clean
-        >>> count_nan = np.isnan(out["features"][:, :, 0]).sum()
-        >>> print(count_nan)
-        50
-        >>> count_clean = np.isnan(out["features"][:, :, 1]).sum()
-        >>> print(count_clean)
-        0
+        >>> # Scenario 2: Corrupt Channel 0 by 30% using proportional block drops
+        >>> # Blocks will be between 5% and 10% of the signal length
+        >>> corruptor_block = MCARCorruptorTransform(
+        ...     ratios=[0.3, 0.0],
+        ...     mode="block",
+        ...     block_params={"min_size": 0.05, "max_size": 0.1},
+        ...     seed=42
+        ... )
     """
 
     def __init__(
         self,
         ratios: List[float],
-        mode: str = "point",
-        block_params: Optional[Dict[str, int]] = None,
+        mode: str = "block",
+        block_params: Optional[Dict[str, Union[int, float]]] = None,
         seed: int = 42,
         apply_to: Optional[List[str]] = None,
         **kwargs,
@@ -87,9 +86,10 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
             ratios: A list of floats defining the target missingness ratio for each
                 channel (e.g., ``[0.1, 0.5]``).
             mode: The corruption mode, either ``"point"`` or ``"block"``.
-                Defaults to ``"point"``.
+                Defaults to ``"block"``.
             block_params: A dictionary defining ``"min_size"`` and ``"max_size"``
-                for block outages. Required only if ``mode="block"``.
+                for block outages. Values can be integers (absolute length) or
+                floats (proportion of signal length). Required only if ``mode="block"``.
                 Defaults to ``None``.
             seed: Random seed for reproducibility. Defaults to 42.
             apply_to: List of dictionary keys to transform. If ``None``, all keys
@@ -126,10 +126,43 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
                 or "max_size" not in self.block_params
             ):
                 raise ValueError("block_params must contain 'min_size' and 'max_size'.")
-            if self.block_params["min_size"] > self.block_params["max_size"]:
+
+            # Check logical consistency if types allow straightforward comparison
+            min_p = self.block_params["min_size"]
+            max_p = self.block_params["max_size"]
+
+            if type(min_p) == type(max_p) and min_p > max_p:
                 raise ValueError(
                     "block_params['min_size'] cannot be greater than ['max_size']."
                 )
+
+    def _resolve_block_size(
+        self, size_param: Union[int, float], total_length: int
+    ) -> int:
+        """
+        Resolves the block size parameter to an absolute integer length.
+
+        This handles the logic for proportional sizing (float inputs) vs
+        absolute sizing (integer inputs).
+
+        Args:
+            size_param: The parameter value, either an int (absolute size) or
+                float (proportion of total_length).
+            total_length: The length of the time series cycle.
+
+        Returns:
+            int: The resolved block size in time steps.
+
+        Raises:
+            ValueError: If a float parameter is not between 0.0 and 1.0.
+        """
+        if isinstance(size_param, float):
+            if not 0.0 <= size_param <= 1.0:
+                raise ValueError(
+                    f"Proportion value {size_param} must be between 0.0 and 1.0"
+                )
+            return int(total_length * size_param)
+        return int(size_param)
 
     def _corrupt_array(self, X: np.ndarray) -> np.ndarray:
         """
@@ -183,6 +216,12 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
 
             target_missing = int(T * ratio)
 
+            # Optimization: If ratio is 1.0, drop everything immediately
+            if ratio == 1.0:
+                X_corrupted[:, :, c] = np.nan
+                Mask[:, :, c] = True
+                continue
+
             # Apply corruption independently per batch
             for b in range(B):
                 if self.mode == "point":
@@ -194,13 +233,25 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
 
                 elif self.mode == "block":
                     # --- BLOCK MODE ---
-                    # Iteratively drop blocks until the target missing count is reached.
                     current_missing = 0
                     attempts = 0
 
-                    # Clamp block sizes to the actual time dimension if T is very small
-                    min_block = min(self.block_params["min_size"], T)
-                    max_block = min(self.block_params["max_size"], T)
+                    # Resolve min/max sizes dynamically based on T (cycle length)
+                    # This handles both int (absolute) and float (proportion) params
+                    min_block_param = self.block_params["min_size"]
+                    max_block_param = self.block_params["max_size"]
+
+                    raw_min_size = self._resolve_block_size(min_block_param, T)
+                    raw_max_size = self._resolve_block_size(max_block_param, T)
+
+                    # Clamp block sizes to the actual time dimension
+                    # Ensure min_size is at least 1, but not larger than T
+                    min_block = max(1, min(raw_min_size, T))
+                    max_block = max(1, min(raw_max_size, T))
+
+                    # Ensure consistency after clamping/resolving
+                    if min_block > max_block:
+                        min_block = max_block
 
                     if min_block == 0:
                         continue
