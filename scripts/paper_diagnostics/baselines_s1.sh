@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=100
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="26_01_2026"
+wandb_log_folder="28_01_2026"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
