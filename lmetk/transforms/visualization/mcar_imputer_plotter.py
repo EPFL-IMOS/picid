@@ -167,6 +167,7 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
     ):
         """
         Creates and saves a plot for a single sample (Time, Channels).
+        Handles filename collisions by appending an incrementing ID.
         """
         T, C = imputed.shape
         channels_to_plot = min(C, self.n_channels_to_plot)
@@ -197,7 +198,6 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
                 )
 
             # 2. Plot Imputed Signal - Blue line
-            # This covers the whole timeline, including filled gaps
             ax.plot(
                 time_steps,
                 imputed[:, c],
@@ -208,7 +208,6 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
             )
 
             # 3. Highlight Observed Points - Green Dots
-            # We use the 'corrupted' array to find where data was NOT NaN
             mask_observed = ~np.isnan(corrupted[:, c])
             if np.any(mask_observed):
                 ax.scatter(
@@ -221,10 +220,8 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
                 )
 
             # 4. Highlight Missing/Imputed Regions - Red 'x'
-            # These are points where 'corrupted' IS NaN
             mask_missing = np.isnan(corrupted[:, c])
             if np.any(mask_missing):
-                # We plot the *imputed* values at these locations
                 ax.scatter(
                     time_steps[mask_missing],
                     imputed[mask_missing, c],
@@ -244,12 +241,21 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
         fig.suptitle(f"Imputation Analysis: {unit_id}", y=1.02, fontsize=12)
         plt.tight_layout()
 
-        # Save
+        # Save Logic with Collision Handling
         save_dir = os.path.join(self.saving_path, "imputation_plots")
         os.makedirs(save_dir, exist_ok=True)
 
-        filename = f"{unit_id}.png"
+        base_name = unit_id
+        extension = ".png"
+        filename = f"{base_name}{extension}"
         filepath = os.path.join(save_dir, filename)
+
+        # Check if file exists and append incremental ID if it does
+        counter = 1
+        while os.path.exists(filepath):
+            filename = f"{base_name}_{counter}{extension}"
+            filepath = os.path.join(save_dir, filename)
+            counter += 1
 
         try:
             fig.savefig(filepath, dpi=150, bbox_inches="tight")
