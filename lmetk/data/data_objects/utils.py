@@ -35,7 +35,6 @@ def check_for_nans(
     for value, key in zip(values, keys):
         has_nan = False
 
-        # --- FIX STARTS HERE ---
         # Handle pandas DataFrames
         if isinstance(value, pd.DataFrame):
             # Check only numeric columns for NaNs
@@ -48,7 +47,6 @@ def check_for_nans(
             # Check Series only if it's a numeric type
             if pd.api.types.is_numeric_dtype(value.dtype):
                 has_nan = value.isnull().any()
-        # --- FIX ENDS HERE ---
 
         # Handle numpy arrays
         elif isinstance(value, np.ndarray):
