@@ -2,8 +2,7 @@
 mcar_corruption:
   transform:
     _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
-    missing_fraction: 0.1
-    ratios: [0.5, 0.3, 0.4]
+    ratios: [0.5, 0.3, 0.1]
     mode: "block"
     block_params:
       min_size: 0.01
@@ -11,33 +10,40 @@ mcar_corruption:
 
   metadata:
     apply_to: features
-    # assign_to: 
-    #   features: features_corrupted
+    assign_to: 
+      features: features_corrupted
 
+missing_values_analytics:
+  transform:
+    _target_: lmetk.transforms.analytics.missing_values.MissingValuesStatsLogger
+    saving_path: ${paths.log_dir}/missing_values_stats
+
+  metadata:
+    apply_to: features_corrupted
 
 imputation:
   transform:
     _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
-    strategy: "mean"
+    strategy: "locf"
   metadata:
-    apply_to: features
+    #apply_to: features
     fit_on: train
-    #apply_to: features_corrupted
-    # assign_to:
-    #   features_corrupted: features_imputed
+    apply_to: features_corrupted
+    assign_to:
+      features_corrupted: features_imputed
 
-# plotter:
-#   transform:
-#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
-#     saving_path: ${paths.log_dir}/images_imputed
-#     unit_key: unit_id
-#     imputed_key: features_imputed
-#     corrupted_key: features_corrupted
-#     original_key: features
-#     n_channels_to_plot: 3
+plotter:
+  transform:
+    _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+    saving_path: ${paths.log_dir}/images_imputed
+    unit_key: unit_id
+    imputed_key: features_imputed
+    corrupted_key: features_corrupted
+    original_key: features
+    n_channels_to_plot: 3
   
-#   metadata:
-#     apply_to: ["features_imputed", "features_corrupted", "features", "unit_id"]
+  metadata:
+    apply_to: ["features_imputed", "features_corrupted", "features"]
 
 
 
