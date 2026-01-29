@@ -4,8 +4,6 @@ Module for creating presentation-ready summaries and visualizations.
 """
 
 from collections import defaultdict
-from typing import Optional
-
 import pandas as pd
 from IPython.display import display
 
@@ -30,11 +28,15 @@ def create_summary_table(all_results: defaultdict, precision: int = 4) -> pd.Dat
                             f"{mean:.{precision}f} ± "
                             f"{std:.{precision}f} (n={count})"
                         )
+
+                        # Fix: Explicitly add '/' separator for display
+                        metric_display = f"{prefix}/{metric_name}"
+
                         records.append(
                             {
                                 "Dataset": dataset,
                                 "Model": model,
-                                "Metric": f"{prefix}{metric_name}",
+                                "Metric": metric_display,
                                 "Value": fmt_val,
                             }
                         )
@@ -107,7 +109,8 @@ def display_performance_tables(all_results: defaultdict, precision: int = 2) -> 
             metrics_dict = res.get("best_performance", {}).get("metrics", {})
             for m_name, prefixes in metrics_dict.items():
                 for prefix in prefixes:
-                    found_metrics.add(f"{prefix}{m_name}")
+                    # Fix: Explicitly add '/' separator
+                    found_metrics.add(f"{prefix}/{m_name}")
 
     sorted_metrics = sorted(list(found_metrics))
 
@@ -124,13 +127,19 @@ def display_performance_tables(all_results: defaultdict, precision: int = 2) -> 
                 metrics_data = res.get("best_performance", {}).get("metrics", {})
 
                 val_str = "-"
-                for m_name, prefixes in metrics_data.items():
-                    for prefix, vals in prefixes.items():
-                        current_full = f"{prefix}{m_name}"
-                        if current_full == full_metric:
-                            mean = vals.get("mean", 0)
-                            std = vals.get("std", 0)
-                            val_str = f"{mean:.{precision}f} ± {std:.{precision}f}"
+                # Parse "val/loss" back to "val" and "loss"
+                parts = full_metric.split("/")
+                # Handle standard case (prefix/metric)
+                if len(parts) >= 2:
+                    p_lookup = parts[0]
+                    # Rejoin rest in case metric name has slashes
+                    m_lookup = "/".join(parts[1:])
+
+                    if m_lookup in metrics_data and p_lookup in metrics_data[m_lookup]:
+                        vals = metrics_data[m_lookup][p_lookup]
+                        mean = vals.get("mean", 0)
+                        std = vals.get("std", 0)
+                        val_str = f"{mean:.{precision}f} ± {std:.{precision}f}"
 
                 records.append({"Dataset": dataset, "Model": model, "Value": val_str})
 
@@ -143,10 +152,7 @@ def display_performance_tables(all_results: defaultdict, precision: int = 2) -> 
 
 
 def display_hp_impact(all_results: defaultdict) -> None:
-    """
-    Display aggregated leaderboard for every model/dataset combination.
-    Shows the mean of ALL available metrics.
-    """
+    """Display aggregated leaderboard for every model/dataset combination."""
     print(f"\n{'=' * 40}\n  HYPERPARAMETER IMPACT ANALYSIS\n{'=' * 40}")
 
     for dataset, models in all_results.items():
@@ -158,13 +164,13 @@ def display_hp_impact(all_results: defaultdict) -> None:
             if df.empty:
                 continue
 
-            # Flatten MultiIndex columns (col, stat) -> col_stat.
+            # Flatten MultiIndex columns
             new_cols = []
             for col in df.columns:
                 if isinstance(col, tuple):
                     col_name, stat = col
                     if stat == "":
-                        new_cols.append(col_name)  # Grouping key
+                        new_cols.append(col_name)
                     else:
                         new_cols.append(f"{col_name}_{stat}")
                 else:
@@ -174,11 +180,7 @@ def display_hp_impact(all_results: defaultdict) -> None:
             opt_info = res.get("best_performance", {}).get("optimized_on", {})
             opt_metric = opt_info.get("metric", "")
 
-            # --- UPDATED SELECTION LOGIC ---
-            # Include:
-            # 1. The specific optimized metric columns (including std, count)
-            # 2. ANY column ending in '_mean' (to show all other metrics)
-
+            # Include optimized metric and any column ending in _mean
             metric_cols = [
                 c for c in df.columns if (opt_metric in c) or c.endswith("_mean")
             ]
@@ -196,7 +198,6 @@ def display_hp_impact(all_results: defaultdict) -> None:
             ]
 
             final_cols = hp_cols + metric_cols
-            # Filter to ensure columns actually exist in this specific DF
             final_cols = [c for c in final_cols if c in df.columns]
 
             print(f"\n>>> {model} on {dataset}")

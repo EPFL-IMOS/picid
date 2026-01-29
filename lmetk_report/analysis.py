@@ -5,6 +5,7 @@ Core analysis module for processing experiment results.
 
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple
+import re  # Added regex for cleaner filtering
 
 import pandas as pd
 import numpy as np
@@ -34,25 +35,16 @@ def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
 
 
 def get_dynamic_metrics(df_subset: pd.DataFrame) -> List[str]:
-    """
-    Extracts the list of metric names (e.g., ['f1', 'accuracy']) from the
-    'evaluator.train.metric_names' column, which contains lists of strings.
-    """
+    """Extracts the list of metric names from evaluator config."""
     col_name = config.COLUMN_CONFIG["evaluator_metrics"]
     if col_name not in df_subset.columns:
         return []
 
-    # Get all unique lists from the column
-    # The column contains lists like ['f1', 'acc'], so we need to unpack them
     found_metrics = set()
-
-    # Drop NAs and iterate
     for entry in df_subset[col_name].dropna():
         if isinstance(entry, (list, tuple, np.ndarray)):
             found_metrics.update(entry)
         elif isinstance(entry, str):
-            # Handle case where it might be a string representation of a list
-            # or a single string
             import ast
 
             try:
@@ -63,31 +55,19 @@ def get_dynamic_metrics(df_subset: pd.DataFrame) -> List[str]:
                     found_metrics.add(entry)
             except:
                 found_metrics.add(entry)
-
     return sorted(list(found_metrics))
 
 
 def get_optimized_metric(
     df_subset: pd.DataFrame, model_name: str, dataset_name: str
 ) -> str:
-    """
-    Finds the metric used for optimization.
-    Priority:
-    1. task_definition.target_metric (Your new request)
-    2. callbacks.early_stopping.monitor (Legacy)
-    3. Fallback heuristics
-    """
-
-    # --- PRIORITY 1: Task Definition ---
+    """Finds the metric used for optimization."""
+    # Priority 1: Task Definition
     target_col = config.COLUMN_CONFIG["target_metric"]
     if target_col in df_subset.columns:
         targets = get_unique_values(df_subset, target_col)
         if len(targets) == 1:
-            # The config usually just says "f1", but the column in DF is "val/f1"
-            # We need to find the matching column.
             metric_base = targets[0]
-
-            # Try to find the actual column in the DF (prefer validation)
             candidates = [
                 f"val/{metric_base}",
                 f"test/{metric_base}",
@@ -97,12 +77,10 @@ def get_optimized_metric(
                 if c in df_subset.columns and df_subset[c].count() > 0:
                     print(f"Optimized metric (from task def) for {model_name}: {c}")
                     return c
-
-            # If no prefix match, return base if it exists
             if metric_base in df_subset.columns:
                 return metric_base
 
-    # --- PRIORITY 2: Early Stopping Config ---
+    # Priority 2: Early Stopping
     metric_series = get_unique_values(
         df_subset, config.COLUMN_CONFIG["optimization_metric"]
     )
@@ -114,7 +92,7 @@ def get_optimized_metric(
             )
             return candidate
 
-    # --- PRIORITY 3: Fallbacks ---
+    # Priority 3: Fallbacks
     fallback_candidates = [
         "val/loss",
         "test/loss",
@@ -133,8 +111,12 @@ def get_optimized_metric(
     raise ValueError(f"No valid metric found for {model_name}.")
 
 
-# ... (Keep get_varying_hyperparameters and aggregate_and_find_best as they were) ...
-def get_varying_hyperparameters(df_subset, config_cols, special_cols_to_exclude):
+def get_varying_hyperparameters(
+    df_subset: pd.DataFrame,
+    config_cols: List[str],
+    special_cols_to_exclude: List[str],
+) -> Dict[str, List[Any]]:
+    """Identify hyperparameters that have more than one unique value."""
     varying_params = {}
     for col in config_cols:
         if col not in df_subset.columns:
@@ -158,12 +140,13 @@ def get_varying_hyperparameters(df_subset, config_cols, special_cols_to_exclude)
 
 
 def aggregate_and_find_best(
-    df_subset,
-    aggregation_cols,
-    all_performance_cols,
-    optimization_col,
-    optimization_mode,
-):
+    df_subset: pd.DataFrame,
+    aggregation_cols: List[str],
+    all_performance_cols: List[str],
+    optimization_col: str,
+    optimization_mode: str,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Perform groupby aggregation and find the best run."""
     subset_copy = df_subset.copy()
     for col in aggregation_cols:
         if (
@@ -191,9 +174,7 @@ def aggregate_and_find_best(
 
     is_ascending = optimization_mode == "min"
 
-    # Ensure optimization column exists
     if (optimization_col, "mean") not in aggregated_df.columns:
-        # Fallback to first available metric if specific opt metric is missing
         if len(all_performance_cols) > 0:
             optimization_col = all_performance_cols[0]
         else:
@@ -249,30 +230,22 @@ def analyze_results(
             subset["Model"] = model
 
             # --- 1. DYNAMIC METRIC DISCOVERY ---
-            # Extract metrics from 'evaluator.train.metric_names'
+            # Extract metrics for logging/info
             dynamic_metrics = get_dynamic_metrics(subset)
-
-            # Combine hardcoded metrics with dynamically discovered ones
-            # Use set to avoid duplicates
-            all_metrics_to_report = list(set(reporting_metrics + dynamic_metrics))
-
-            if not dynamic_metrics:
-                print(
-                    f"Info: No dynamic metrics found in '{config.COLUMN_CONFIG['evaluator_metrics']}'. Using defaults."
-                )
-            else:
+            if dynamic_metrics:
                 print(f"Dynamic metrics found for {model}: {dynamic_metrics}")
 
-            # --- 2. DETERMINE OPTIMIZATION METRIC ---
+            # --- 2. OPTIMIZATION METRIC ---
             if optimization_col is None:
                 try:
+                    from lmetk_report.analysis import get_optimized_metric
+
                     optimization_col = get_optimized_metric(subset, model, dataset)
                 except Exception as e:
                     print(f"Warning: {e}. Fallback to test/mse")
                     optimization_col = "test/mse"
 
-            # --- 3. DETERMINE OPTIMIZATION MODE ---
-            # Check task_definition.target_metric_mode first
+            # --- 3. OPTIMIZATION MODE ---
             if optimization_mode is None:
                 target_mode_col = config.COLUMN_CONFIG["target_metric_mode"]
                 if target_mode_col in subset.columns:
@@ -280,7 +253,6 @@ def analyze_results(
                     if len(modes) > 0:
                         optimization_mode = modes[0]
 
-                # Fallback to early stopping mode
                 if optimization_mode is None:
                     es_mode_col = config.COLUMN_CONFIG["optimization_mode"]
                     if es_mode_col in subset.columns:
@@ -288,28 +260,58 @@ def analyze_results(
                         if len(modes) > 0:
                             optimization_mode = modes[0]
 
-                # Final default
                 if optimization_mode is None:
                     optimization_mode = "min"
 
-            # Build list of all columns to calculate (Mean/Std/Count) for
+            # --- 4. ROBUST & CLEAN COLUMN COLLECTION ---
             all_performance_cols = []
 
-            # Ensure the optimization column is ALWAYS calculated
-            if optimization_col not in all_performance_cols:
+            # 1. Always include optimization col
+            if optimization_col in subset.columns:
                 all_performance_cols.append(optimization_col)
 
-            # Add all other metrics with prefixes
-            for metric in all_metrics_to_report:
-                for prefix in metric_prefixes:
-                    col_name = f"{prefix}{metric}"
-                    if col_name in subset.columns:
-                        all_performance_cols.append(col_name)
+            # 2. Scan numeric columns, but FILTER for high-level aggregates
+            numeric_cols = subset.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                # Must start with a known prefix
+                if not any(col.startswith(p) for p in metric_prefixes):
+                    continue
 
-            # Deduplicate list
+                # --- NEW FILTER: "Mean" Rule ---
+                # You explicitly asked for metrics that "mean" something global.
+                # We can use a heuristic:
+                # 1. Include if it literally contains "mean" (some loggers do this: val/loss_mean)
+                # 2. Exclude if it looks like a specific index (e.g., mape_41, loss_step_100)
+
+                is_aggregate = False
+
+                # Case A: Explicitly requested in REPORTING_METRICS? Keep it.
+                # (e.g. 'loss', 'mse', 'f1')
+                metric_part = col
+                for p in metric_prefixes:
+                    if col.startswith(p):
+                        metric_part = col[len(p) :]
+                        break
+
+                if metric_part in reporting_metrics:
+                    is_aggregate = True
+
+                # Case B: Contains "mean" substring (as requested)
+                elif "mean" in col.lower():
+                    is_aggregate = True
+
+                # Case C: Is a "simple" metric (no numbers/underscores indicating splits)
+                # e.g. "val/f1" -> OK. "val/f1_class_0" -> SKIP.
+                elif not re.search(r"\d", metric_part):
+                    is_aggregate = True
+
+                if is_aggregate:
+                    all_performance_cols.append(col)
+
+            # Deduplicate
             all_performance_cols = list(set(all_performance_cols))
 
-            # --- 4. IDENTIFY HPs ---
+            # --- 5. HP & VALIDATION ---
             hp_search_columns = [
                 col
                 for col in config_columns
@@ -322,7 +324,6 @@ def analyze_results(
             )
             aggregation_cols = ["Model"] + list(varying_hyperparams.keys())
 
-            # --- 5. VALIDATION (Seeds & Vars) ---
             subset = validators.validate_seeds(
                 subset, aggregation_cols, data_seed_col, required_data_seeds, False
             )
@@ -363,35 +364,38 @@ def analyze_results(
             performance_results = defaultdict(dict)
             mode = optimization_mode
 
-            # Structure results for report: metrics[metric_name][prefix]
-            # Use the combined list of all discovered metrics
-            for col_full in all_performance_cols:
-                # Reverse engineer: split "val/f1" into "val" and "f1"
-                # This is imperfect if metric name has '/', so we rely on prefixes
-                matched_prefix = None
-                metric_name = None
+            # Sort prefixes by length (longest first) to prevent partial matching bugs
+            sorted_prefixes = sorted(metric_prefixes, key=len, reverse=True)
 
-                for p in metric_prefixes:
+            for col_full in all_performance_cols:
+                matched_prefix = ""
+                metric_name = ""
+
+                # Reverse engineer the prefix and metric name
+                for p in sorted_prefixes:
                     if col_full.startswith(p):
                         matched_prefix = p.strip("/")
-                        metric_name = col_full[len(p) :]  # remainder is metric name
+                        metric_name = col_full[len(p) :]
                         break
 
-                if matched_prefix and metric_name:
-                    if (col_full, "mean") in best_result.columns:
-                        mean = best_result[(col_full, "mean")].values[0]
-                        std = best_result[(col_full, "std")].values[0]
-                        cnt = best_result[(col_full, "count")].values[0]
+                # If we couldn't match a known prefix, skip
+                if not matched_prefix:
+                    continue
 
-                        # Scale if it's the target metric and we are maximizing (e.g. accuracy)
-                        if col_full == optimization_col and mode == "max":
-                            mean, std = mean * 100, std * 100
+                if (col_full, "mean") in best_result.columns:
+                    mean = best_result[(col_full, "mean")].values[0]
+                    std = best_result[(col_full, "std")].values[0]
+                    cnt = best_result[(col_full, "count")].values[0]
 
-                        performance_results[metric_name][matched_prefix] = {
-                            "mean": mean,
-                            "std": std,
-                            "count": cnt,
-                        }
+                    # Scale if it's the target metric and we are maximizing
+                    if col_full == optimization_col and mode == "max":
+                        mean, std = mean * 100, std * 100
+
+                    performance_results[metric_name][matched_prefix] = {
+                        "mean": mean,
+                        "std": std,
+                        "count": cnt,
+                    }
 
             res_entry = all_results[dataset][model]
             res_entry["best_hyperparameters"] = best_params
@@ -402,7 +406,6 @@ def analyze_results(
             res_entry["sorted_aggregated_results"] = sorted_aggregated
             res_entry["non_aggregated_df"] = subset.copy()
 
-            # Seed info
             try:
                 d_seeds = sorted(subset[data_seed_col].dropna().unique().astype(int))
                 m_seeds = sorted(subset[model_seed_col].dropna().unique().astype(int))
