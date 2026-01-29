@@ -1,6 +1,7 @@
 """Main entry point for training and testing models."""
 
 import os
+import time
 import yaml
 from pathlib import Path
 from collections.abc import Iterable
@@ -417,6 +418,10 @@ def rerun_best_model_checkpoint(
     logger: list[Logger],
 ) -> None:
 
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+            lgr.experiment.log({}, commit=True)
+
     checkpoint_model = None
     for callback in callbacks:
         if isinstance(callback, ModelCheckpoint):
@@ -461,6 +466,8 @@ def rerun_best_model_checkpoint(
         for lgr in logger:
             if isinstance(lgr, WandbLogger):
                 lgr.log_metrics(logged)
+                lgr.experiment.log({}, commit=True)
+                time.sleep(1.5)
 
     log.info("Re-testing best model checkpoint on test set!")
     test_loader = datamodule.test_dataloader()
@@ -474,6 +481,8 @@ def rerun_best_model_checkpoint(
         for lgr in logger:
             if isinstance(lgr, WandbLogger):
                 lgr.log_metrics(logged)
+                lgr.experiment.log({}, commit=True)
+                time.sleep(1.5)
 
 
 @task_wrapper
@@ -831,6 +840,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     if cfg.task_definition.get("requires_training", False) and (
         cfg.trainer.max_epochs > 1
     ):
+        time.sleep(1.5)
         rerun_best_model_checkpoint(
             cfg=cfg,
             datamodule=datamodule,
@@ -840,6 +850,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             loss=loss,
             logger=logger,
         )
+
+    for lgr in logger:
+        if isinstance(lgr, WandbLogger):
+            lgr.experiment.finish()
 
     return None, None  # metric_dict, object_dict
 
