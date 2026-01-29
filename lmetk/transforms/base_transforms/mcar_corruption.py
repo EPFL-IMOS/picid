@@ -260,9 +260,19 @@ class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
                     while current_missing < target_missing and attempts < 200:
                         # 1. Sample a random block size
                         if min_block == max_block:
-                            block_size = min_block
+                            raw_block_size = min_block
                         else:
-                            block_size = self.rng.integers(min_block, max_block)
+                            raw_block_size = self.rng.integers(min_block, max_block)
+
+                        remaining = target_missing - current_missing
+
+                        # If the block is larger than what we have left, truncate it
+                        # (Optional: or skip it if you strictly enforce min_size)
+                        block_size = min(raw_block_size, remaining)
+
+                        # Edge case: If clamping makes it smaller than 1, we are done
+                        if block_size < 1:
+                            break
 
                         # 2. Sample a valid start position
                         # Ensure we don't index out of bounds
