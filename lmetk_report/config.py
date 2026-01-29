@@ -81,6 +81,12 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "_wandb.runtime",
 ]
 
+ADDITIONAL_COLUMNS_TO_SHOW = [
+    "epoch",
+    "AvgTime/train_epoch_mean",
+    "AvgTime/val_epoch_mean",
+]
+
 # The column name in the DataFrame that holds the path to the best checkpoint for a run.
 # The script will try this name first before searching for common alternatives.
 # UPDATE THIS if you know the exact column name in your logs.
