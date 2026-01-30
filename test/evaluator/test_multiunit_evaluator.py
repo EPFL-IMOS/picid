@@ -1170,6 +1170,9 @@ def test_init_creates_normalized_unit_metrics_when_scaling_on(mocker, mock_path_
                 return preds * 2.0, targets * 2.0
             return preds, targets
 
+        def inverse_transform(self, data, metadata=None):
+            return data * 2.0
+
     scaler = SimpleScaler()
 
     evaluator = MultiUnitEvaluator(
