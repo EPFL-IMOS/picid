@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=100
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="26_01_2026"
+wandb_log_folder="29_01_2026"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -39,15 +39,15 @@ datasets=(
 )
 
 model_names=(
+    lstm
+    cnn_1d
+    mlp
+    linear_classifier
     stf
     crossformer
     timeseries_transformer
     tide
     patchtst
-    lstm
-    cnn_1d
-    mlp
-    linear_classifier
 )
 
 BATCH_SIZES=(16 512)
@@ -84,8 +84,8 @@ pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
 
 
-for model_name in "${model_names[@]}"; do
-    for dataset in "${datasets[@]}"; do
+for dataset in "${datasets[@]}"; do
+    for model_name in "${model_names[@]}"; do
         for batch_size in "${BATCH_SIZES[@]}"; do
             for seq_len in "${SEQ_LEN[@]}"; do
                 for max_learning_rate in "${MAX_LEARNING_RATE[@]}"; do
