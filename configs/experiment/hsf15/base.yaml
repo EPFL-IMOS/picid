@@ -9,7 +9,5 @@ evaluator:
     apply_inverse_scaling: false
   val:
     apply_inverse_scaling: false
-    save_predictions: true
   test:
     apply_inverse_scaling: false
-    save_predictions: true
