@@ -17,7 +17,7 @@ model_checkpoint:
 
 early_stopping:
   # patience: ${trainer.max_epochs} #${trainer.min_epochs}
-  patience: 15
+  patience: 25
   mode: ${task_definition.target_metric_mode}
   monitor: ${task_definition.target_metric}
 

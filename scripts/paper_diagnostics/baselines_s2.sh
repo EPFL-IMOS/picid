@@ -21,7 +21,7 @@ export HYDRA_FULL_ERROR=1
 # Source the logging.sh file using the script's directory as an anchor.
 source "$SCRIPT_DIR/../base/logging.sh"
 
-max_epochs=100
+max_epochs=200
 check_val_every_n_epoch=1
 device=0
 wandb_log_folder="29_01_2026"
@@ -50,7 +50,7 @@ model_names=(
     patchtst
 )
 
-BATCH_SIZES=(16 512)
+BATCH_SIZES=(512)
 SEEDS=(72 88 101 666 226688)
 SEQ_LEN=(1 10 50 100)
 MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
