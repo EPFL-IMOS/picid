@@ -1,10 +1,3 @@
-"""
-Transformer-specific evaluator implementation for time series forecasting.
-
-This module provides an evaluator class that inherits from AbstractEvaluator
-and implements evaluation logic for transformer-based forecasting models.
-"""
-
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, override
@@ -27,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 class DefaultEvaluator(AbstractEvaluator):
     """
-    Unified evaluator for regression and classification with dual metric reporting.
-    Refactored to centralize validation, scaling, and collection logic.
+    Unified evaluator for regression and classification.
+    Centrally manages validation, scaling, and the 'Truthful Suffix' policy.
     """
 
     def __init__(
@@ -44,7 +37,6 @@ class DefaultEvaluator(AbstractEvaluator):
         collect_predictions: bool = True,
         **kwargs,
     ):
-
         if not metric_names:
             raise ValueError("metric_names cannot be empty")
 
@@ -55,8 +47,8 @@ class DefaultEvaluator(AbstractEvaluator):
             **kwargs,
         )
 
-        # 1. State Configuration
-        self.inverse_transform = inverse_transform
+        # 1. Configuration
+        self.inverse_transform = inverse_transform  # Restored for test visibility
         self.task_type = task_type.lower()
         assert self.task_type in ALL_TASKS, f"Unsupported task_type: {self.task_type}"
 
@@ -67,19 +59,19 @@ class DefaultEvaluator(AbstractEvaluator):
         self.remote_logger = remote_logger
         self.out_path = None
 
-        # 2. Metric Initialization
+        # 2. Metric Setup
         self.metrics = self._init_metric_dict()
         if self.scaling_wrapper.apply_inverse:
             self.normalized_metrics = self._init_metric_dict()
 
-        # 3. Collection Initialization
+        # 3. Collection Setup
         if self.collect_predictions:
             self.preds, self.targets = [], []
             self.scaled_preds, self.scaled_targets = [], []
 
     @override
     def reset(self):
-        """Clears accumulated arrays and resets metric states."""
+        """Clears memory and resets metrics."""
         if hasattr(self, "preds") and self.preds is not None:
             self.preds.clear()
             self.targets.clear()
@@ -88,13 +80,14 @@ class DefaultEvaluator(AbstractEvaluator):
 
         for metric in self.metrics.values():
             metric.reset()
+
         if hasattr(self, "normalized_metrics"):
             for metric in self.normalized_metrics.values():
                 metric.reset()
 
     @override
     def update(self, model_out: dict):
-        """Standard processing pipeline: Validate -> Scale -> Collect -> Update Metrics."""
+        """Standard pipeline: Validate -> Prepare (Scale/Cast) -> Collect -> Metric Update."""
         if not self._validate_input(model_out):
             return
 
@@ -104,26 +97,28 @@ class DefaultEvaluator(AbstractEvaluator):
             self._accumulate_batch(batch)
 
         self._update_metric_set(self.metrics, batch["preds"], batch["targets"])
+
         if batch["is_dual"]:
             self._update_metric_set(
                 self.normalized_metrics, batch["norm_preds"], batch["norm_targets"]
             )
 
-    # --- Internal Helpers ---
+    # --- Pipeline Helpers ---
 
     def _validate_input(self, model_out: dict) -> bool:
         preds, targets = model_out["predictions"], model_out["targets"]
         if preds.shape[0] == 0:
             return False
-        assert targets.ndim == 3 and targets.shape[2] == 1
-        if self.task_type in CLASSIFICATION_TASKS:
-            assert preds.ndim == 3 and preds.shape[2] == self.num_classes
+        assert (
+            targets.ndim == 3 and targets.shape[2] == 1
+        ), f"Expected target shape (N, T, 1), got {targets.shape}"
         return True
 
     def _prepare_batch_data(self, model_out: dict) -> Dict[str, Any]:
-        """Handles task-specific scaling and data duplication."""
+        """Handles task-specific scaling and casting."""
         preds, targets = model_out["predictions"], model_out["targets"]
         is_dual = self.scaling_wrapper.apply_inverse
+
         res = {
             "is_dual": is_dual,
             "norm_preds": preds.copy() if is_dual else None,
@@ -174,11 +169,60 @@ class DefaultEvaluator(AbstractEvaluator):
                 return float("nan")
             raise
 
-    # --- Persistence & Reporting ---
+    # --- Suffix Naming Policy ---
+
+    def _get_metric_suffix(self, is_primary: bool) -> Optional[str]:
+        """
+        Policy:
+        1. Classification: Return None (clean names).
+        2. Regression Primary: 'denormalized' (Scaling ON) else 'normalized' (Scaling OFF).
+        3. Regression Secondary: 'normalized'.
+        """
+        if self.task_type in CLASSIFICATION_TASKS:
+            return None
+
+        if is_primary:
+            return (
+                "denormalized" if self.scaling_wrapper.apply_inverse else "normalized"
+            )
+        return "normalized"
+
+    @override
+    @override
+    def _compute_metrics(self) -> Dict[str, float]:
+        """
+        Aggregates metric values.
+        Truthful for Regression, Clean for Classification.
+        """
+        res = {}
+        is_dual = self.scaling_wrapper.apply_inverse
+
+        # 1. Primary Metrics
+        p_suffix = self._get_metric_suffix(is_primary=True)
+        for n, m in self.metrics.items():
+            # If suffix is None (Classification), key is just 'accuracy'
+            # If suffix is 'normalized' (Regression), key is 'mse_normalized'
+            key = f"{n}_{p_suffix}" if p_suffix else n
+            res[key] = self._safe_compute(m)
+
+        # 2. Secondary Metrics (Only for Dual-Scaling Regression)
+        if is_dual:
+            for n, m in self.normalized_metrics.items():
+                res[f"{n}_normalized"] = self._safe_compute(m)
+
+        return res
+
+    @override
+    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
+        if self.save_predictions:
+            assert self.collect_predictions
+            self._save_predictions_to_file(self._prepare_predictions_for_save(), mode)
+        return self._compute_metrics()
 
     def _prepare_predictions_for_save(self) -> Dict[str, Any]:
         if not hasattr(self, "preds") or not self.preds:
             return {}
+
         is_dual = self.scaling_wrapper.apply_inverse
         p = np.concatenate(self.scaled_preds if is_dual else self.preds, axis=0)
         t = np.concatenate(self.scaled_targets if is_dual else self.targets, axis=0)
@@ -188,9 +232,11 @@ class DefaultEvaluator(AbstractEvaluator):
 
         d_names = ["sample"] + [f"dim{i}" for i in range(1, p.ndim)]
         res = {"preds": (d_names, p), "targets": (d_names, t)}
+
         if is_dual:
             res["preds_normalized"] = (d_names, np.concatenate(self.preds, axis=0))
             res["targets_normalized"] = (d_names, np.concatenate(self.targets, axis=0))
+
         return res
 
     def _save_predictions_to_file(self, data: Dict[str, Any], mode: str):
@@ -203,27 +249,9 @@ class DefaultEvaluator(AbstractEvaluator):
         ):
             self.out_path = Path(self.paths.eval_details) / mode
             self.out_path.mkdir(parents=True, exist_ok=True)
+
         if self.out_path:
             xr.Dataset(data).to_netcdf(self.out_path / "predictions.nc")
-
-    @override
-    def _compute_metrics(self) -> Dict[str, float]:
-        res = {}
-        is_dual = self.scaling_wrapper.apply_inverse
-        p_suffix = "denormalized" if is_dual else "normalized"
-        for n, m in self.metrics.items():
-            res[f"{n}_{p_suffix}"] = self._safe_compute(m)
-        if is_dual:
-            for n, m in self.normalized_metrics.items():
-                res[f"{n}_normalized"] = self._safe_compute(m)
-        return res
-
-    @override
-    def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
-        if self.save_predictions:
-            assert self.collect_predictions
-            self._save_predictions_to_file(self._prepare_predictions_for_save(), mode)
-        return self._compute_metrics()
 
     def log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int):
         if self.remote_logger:

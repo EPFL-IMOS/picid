@@ -25,7 +25,7 @@ def mock_path_obj():
 @pytest.fixture
 def reconstruction_evaluator_fixture(mocker):
     """Provides an instance of ReconstructionEvaluator with mocked dependencies.
-    
+
     apply_inverse_scaling=False (default, no scaling).
     """
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
@@ -49,21 +49,21 @@ def reconstruction_evaluator_fixture(mocker):
 @pytest.fixture
 def reconstruction_evaluator_with_scaling_fixture(mocker):
     """ReconstructionEvaluator with apply_inverse_scaling=True.
-    
+
     Tests scenarios where predictions need to be converted to physical units.
     """
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
     mock_paths = MagicMock()
     mock_paths.plot_dir = "/mock/plots"
     mock_logger = MagicMock()
-    
+
     # Create mock scaler that applies 100x scaling
     mock_scaler = MagicMock(spec=InverseTransformMixin)
     mock_scaler.apply_inverse = True
-    
+
     def mock_inverse(preds, targets, **kwargs):
         return preds * 100, targets * 100
-    
+
     mock_scaler.inverse_transform_if_needed = MagicMock(side_effect=mock_inverse)
 
     evaluator = ReconstructionEvaluator(
@@ -78,7 +78,7 @@ def reconstruction_evaluator_with_scaling_fixture(mocker):
     )
     # Replace scaling_wrapper with our mock
     evaluator.scaling_wrapper = mock_scaler
-    
+
     return evaluator
 
 
@@ -111,7 +111,7 @@ def test_plot_reconstructions_handles_2d_inputs(
     """
     Verifies the fix for IndexError.
     Ensures 2D Univariate data (N, T) is expanded to (N, T, 1) internally.
-    
+
     **Uses fixture**: forecasting_data_multi_step - realistic multi-step data
     (converted to 2D for this edge case test).
     """
@@ -147,7 +147,7 @@ def test_plot_reconstructions_internals_full_coverage(
 ):
     """
     Tests the internal plotting logic deeply to ensure 100% coverage.
-    
+
     **Uses fixture**: forecasting_data_multi_step - realistic multi-step data
     with degradation curves.
     """
@@ -171,7 +171,7 @@ def test_plot_reconstructions_internals_full_coverage(
     # ACT: Use realistic fixture data (Batch > 10)
     preds = forecasting_data_multi_step["predictions"][:12]  # 12 samples
     targets = forecasting_data_multi_step["targets"][:12]
-    
+
     evaluator._plot_reconstructions(preds, targets, mode="val", epoch=1, step=1)
 
     # ASSERT
@@ -188,17 +188,20 @@ def test_plot_reconstructions_internals_full_coverage(
 @patch("lmetk.evaluator.reconstruction.plt")
 @patch("lmetk.evaluator.reconstruction.Path")
 def test_compute_plots_denormalized_if_scaling_on(
-    mock_path_cls, mock_plt, reconstruction_evaluator_with_scaling_fixture, mock_path_obj
+    mock_path_cls,
+    mock_plt,
+    reconstruction_evaluator_with_scaling_fixture,
+    mock_path_obj,
 ):
     """
     Verifies plotting uses SCALED data if apply_inverse_scaling=True.
-    
+
     **Methodology**: Use fixture with scaling enabled, feed data through update().
     """
     mock_path_cls.return_value = mock_path_obj
 
     evaluator = reconstruction_evaluator_with_scaling_fixture
-    
+
     # Verify scaling is enabled at init
     assert evaluator.scaling_wrapper.apply_inverse is True
 
@@ -209,7 +212,7 @@ def test_compute_plots_denormalized_if_scaling_on(
     evaluator._plot_reconstructions = MagicMock()
 
     # ACT: Mock only file operations, not orchestration
-    with patch.object(evaluator, '_save_predictions_to_file'):
+    with patch.object(evaluator, "_save_predictions_to_file"):
         results = evaluator.compute(mode="val", epoch=1, step=1)
 
     # ASSERT: Verify plotting was called and compute() returns metrics
@@ -224,12 +227,12 @@ def test_compute_plots_normalized_if_scaling_off(
 ):
     """
     Verifies plotting uses STANDARD data if apply_inverse_scaling=False.
-    
+
     **Methodology**: Use fixture with scaling disabled (default), feed through update().
     """
     mock_path_cls.return_value = mock_path_obj
     evaluator = reconstruction_evaluator_fixture
-    
+
     # Verify scaling is disabled (fixture default)
     assert evaluator.scaling_wrapper.apply_inverse is False
 
@@ -240,7 +243,7 @@ def test_compute_plots_normalized_if_scaling_off(
     evaluator._plot_reconstructions = MagicMock()
 
     # ACT: Mock only file operations, not orchestration
-    with patch.object(evaluator, '_save_predictions_to_file'):
+    with patch.object(evaluator, "_save_predictions_to_file"):
         results = evaluator.compute(mode="val", epoch=1, step=1)
 
     # ASSERT: Verify plotting was called with correct data and compute() returns metrics
@@ -258,7 +261,7 @@ def test_compute_orchestration_saving(
 ):
     """
     Verifies full flow: Path creation, Logging, Saving.
-    
+
     **Methodology**: Feed data through update() instead of direct manipulation.
     """
     mock_path_cls.return_value = mock_path_obj
@@ -273,7 +276,7 @@ def test_compute_orchestration_saving(
     evaluator.log_plot = MagicMock()
 
     # ACT: Mock only file operations, not orchestration
-    with patch.object(evaluator, '_save_predictions_to_file'):
+    with patch.object(evaluator, "_save_predictions_to_file"):
         results = evaluator.compute(mode="test", epoch=10, step=100)
 
     # ASSERT: Verify full orchestration including plotting, saving, and metrics
@@ -294,17 +297,17 @@ def test_compute_orchestration_saving(
 def test_plot_reconstructions_no_logger_step_zero_warning(mock_logger, mocker):
     """
     Tests _plot_reconstructions logs warning at step 0 when no logger.
-    
+
     **PHM Logic**: Warning logged only on first step to avoid spam.
-    
+
     **Methodology**: Call with step=0 and no remote_logger.
-    
+
     **Expected**: Warning logged.
-    
+
     Validates: Requirement RE-PLOT-1 - Step 0 warning
     """
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    
+
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
         inverse_transform=None,
@@ -320,7 +323,7 @@ def test_plot_reconstructions_no_logger_step_zero_warning(mock_logger, mocker):
     targets = np.zeros((5, 10, 1))
 
     result = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=0)
-    
+
     assert result is None
     mock_logger.warning.assert_called_once()
     assert "Remote logger is not configured" in str(mock_logger.warning.call_args)
@@ -330,17 +333,17 @@ def test_plot_reconstructions_no_logger_step_zero_warning(mock_logger, mocker):
 def test_plot_reconstructions_no_logger_step_nonzero_no_warning(mock_logger, mocker):
     """
     Tests _plot_reconstructions does not log warning when step > 0.
-    
+
     **PHM Logic**: Warning logged only on first step to avoid spam.
-    
+
     **Methodology**: Call with step > 0 and no remote_logger.
-    
+
     **Expected**: No warning logged.
-    
+
     Validates: Requirement RE-PLOT-2 - No warning after step 0
     """
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    
+
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
         inverse_transform=None,
@@ -356,28 +359,30 @@ def test_plot_reconstructions_no_logger_step_nonzero_no_warning(mock_logger, moc
     targets = np.zeros((5, 10, 1))
 
     result = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=5)
-    
+
     assert result is None
     mock_logger.warning.assert_not_called()
 
 
 @patch("lmetk.evaluator.reconstruction.plt")
-def test_plot_reconstructions_small_batch(mock_plt, reconstruction_evaluator_fixture, regression_data_basic):
+def test_plot_reconstructions_small_batch(
+    mock_plt, reconstruction_evaluator_fixture, regression_data_basic
+):
     """
     Tests _plot_reconstructions handles small batches (< 10 samples).
-    
+
     **PHM Logic**: Plotting adapts to available samples.
-    
+
     **Methodology**: Pass batch smaller than 10, use realistic data.
-    
+
     **Uses fixture**: regression_data_basic - realistic RUL predictions (5 samples).
-    
+
     **Expected**: Plots created for available samples.
-    
+
     Validates: Requirement RE-PLOT-3 - Small batch handling
     """
     evaluator = reconstruction_evaluator_fixture
-    
+
     # Create proper mock axes array
     mock_axes = np.empty((5, 2), dtype=object)
     for i in range(5):
@@ -385,11 +390,11 @@ def test_plot_reconstructions_small_batch(mock_plt, reconstruction_evaluator_fix
             mock_axes[i, j] = MagicMock()
     mock_plt.subplots.return_value = (MagicMock(), mock_axes)
     mock_plt.get_cmap.return_value.colors = ["red", "blue", "green"]
-    
+
     # ACT: Use realistic fixture data (5 samples - small batch)
     preds = regression_data_basic["predictions"]
     targets = regression_data_basic["targets"]
-    
+
     # Expand to 3D if needed (add time dimension)
     if preds.ndim == 3 and preds.shape[1] == 1:
         # Already 3D, use as-is
@@ -398,32 +403,34 @@ def test_plot_reconstructions_small_batch(mock_plt, reconstruction_evaluator_fix
         # Ensure 3D shape
         preds = preds.reshape(-1, 1, 1)
         targets = targets.reshape(-1, 1, 1)
-    
+
     fig = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=0)
-    
+
     # ASSERT
     assert fig is not None
     mock_plt.subplots.assert_called_once()
 
 
 @patch("lmetk.evaluator.reconstruction.plt")
-def test_plot_reconstructions_multivariate(mock_plt, reconstruction_evaluator_fixture, forecasting_data_multivariate):
+def test_plot_reconstructions_multivariate(
+    mock_plt, reconstruction_evaluator_fixture, forecasting_data_multivariate
+):
     """
     Tests _plot_reconstructions handles multivariate data (multiple features).
-    
+
     **PHM Logic**: Multiple sensor channels visualized together.
-    
+
     **Methodology**: Pass realistic multivariate data with multiple feature dimensions.
-    
+
     **Uses fixture**: forecasting_data_multivariate - realistic multivariate forecasting
     data with 5 sensor channels.
-    
+
     **Expected**: All features plotted.
-    
+
     Validates: Requirement RE-PLOT-4 - Multivariate handling
     """
     evaluator = reconstruction_evaluator_fixture
-    
+
     # Create proper mock axes array
     mock_axes = np.empty((5, 2), dtype=object)
     mock_ax_list = []
@@ -434,13 +441,13 @@ def test_plot_reconstructions_multivariate(mock_plt, reconstruction_evaluator_fi
             mock_ax_list.append(ax)
     mock_plt.subplots.return_value = (MagicMock(), mock_axes)
     mock_plt.get_cmap.return_value.colors = ["red", "blue", "green", "purple"]
-    
+
     # ACT: Use realistic multivariate fixture data (5 features)
     preds = forecasting_data_multivariate["predictions"]
     targets = forecasting_data_multivariate["targets"]
-    
+
     fig = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=0)
-    
+
     # ASSERT
     assert fig is not None
     # First axis should have plot called multiple times for different features
@@ -448,60 +455,61 @@ def test_plot_reconstructions_multivariate(mock_plt, reconstruction_evaluator_fi
 
 
 @patch("lmetk.evaluator.reconstruction.Path")
-def test_compute_handles_empty_preds(mock_path_cls, reconstruction_evaluator_fixture, mock_path_obj):
+def test_compute_handles_empty_preds(
+    mock_path_cls, reconstruction_evaluator_fixture, mock_path_obj
+):
     """
     Tests compute handles empty predictions gracefully.
-    
+
     **PHM Logic**: Early epochs may have no data yet.
-    
+
     **Methodology**: Use reset() to ensure collections are empty.
-    
+
     **Expected**: No plotting error.
-    
+
     Validates: Requirement RE-COMP-1 - Empty data handling
     """
     mock_path_cls.return_value = mock_path_obj
-    
+
     evaluator = reconstruction_evaluator_fixture
-    
+
     # Use reset() to clear collections (not manual assignment)
     evaluator.reset()
-    
+
     # Verify collections are empty
     assert len(evaluator.preds) == 0
     assert len(evaluator.targets) == 0
-    
+
     evaluator._plot_reconstructions = MagicMock()
-    
+
     # ACT: Mock only file operations, not orchestration
-    with patch.object(evaluator, '_save_predictions_to_file'):
+    with patch.object(evaluator, "_save_predictions_to_file"):
         result = evaluator.compute(mode="val", epoch=1, step=0)
-    
+
     # ASSERT: Should not have called plotting (empty check in compute), but should return metrics
     evaluator._plot_reconstructions.assert_not_called()
-    assert isinstance(result, dict)  # Verify compute() returns metrics even with empty data
+    assert isinstance(
+        result, dict
+    )  # Verify compute() returns metrics even with empty data
 
 
 @patch("lmetk.evaluator.reconstruction.plt")
-@patch("lmetk.evaluator.reconstruction.Path")
-def test_compute_no_plot_dir_path(mock_path_cls, mock_plt, mocker, mock_path_obj):
+def test_compute_no_plot_dir_path(mock_plt, mocker):
     """
     Tests compute handles missing plot_dir in paths.
-    
-    **PHM Logic**: Paths may not always have plot_dir configured.
-    
-    **Methodology**: Set paths.plot_dir to None.
-    
-    **Expected**: plots_out_path remains None.
-    
-    Validates: Requirement RE-COMP-2 - Missing plot_dir handling
     """
-    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    mock_path_cls.return_value = mock_path_obj
-    
+    # 1. Setup Metric Mock
+    mocker.patch(
+        "lmetk.metrics.metric_factory.MetricFactory.create_metric",
+        return_value=MagicMock(),
+    )
+
+    # 2. Setup paths mock with explicit None values
+    # We must explicitly set eval_details to None because MagicMocks are "truthy"
     mock_paths = MagicMock()
-    mock_paths.plot_dir = None  # No plot_dir
-    
+    mock_paths.plot_dir = None
+    mock_paths.eval_details = None
+
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
         inverse_transform=None,
@@ -513,21 +521,24 @@ def test_compute_no_plot_dir_path(mock_path_cls, mock_plt, mocker, mock_path_obj
         remote_logger=MagicMock(),
     )
 
-    # Feed data through proper interface
+    # 3. Feed dummy data
     data = np.zeros((2, 5, 1))
     evaluator.update({"predictions": data, "targets": data})
-    
+
+    # 4. Setup plotting mocks
     mock_axes = np.empty((5, 2), dtype=object)
     for i in range(5):
         for j in range(2):
             mock_axes[i, j] = MagicMock()
     mock_plt.subplots.return_value = (MagicMock(), mock_axes)
     mock_plt.get_cmap.return_value.colors = ["red", "blue"]
-    
-    # ACT: Mock only file operations, not orchestration
-    with patch.object(evaluator, '_save_predictions_to_file'):
+
+    # ACT: We don't need to patch Path here anymore because
+    # isinstance(None, (str, Path)) will now correctly return False
+    # using the real Path class.
+    with patch.object(evaluator, "_save_predictions_to_file"):
         results = evaluator.compute(mode="val", epoch=1, step=0)
-    
-    # ASSERT: plots_out_path should remain None, but compute() should return metrics
+
+    # ASSERT
     assert evaluator.plots_out_path is None
-    assert isinstance(results, dict)  # Verify compute() returns metrics
+    assert isinstance(results, dict)
