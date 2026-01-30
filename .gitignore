@@ -16,7 +16,9 @@ results/
 artifacts/
 lmetk_report_artifacts/
 csv_files/
+MagicMock/
 
+*.jsonl
 .DS_Store
 .venv
 .nox

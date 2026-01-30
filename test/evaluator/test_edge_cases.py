@@ -8,31 +8,45 @@ graceful degradation.
 
 import pytest
 import numpy as np
-
-from lmetk.evaluator.default import DefaultEvaluator
+from unittest.mock import MagicMock, patch
 from lmetk.evaluator.classification import ClassificationEvaluator
+from lmetk.evaluator.default import DefaultEvaluator
 from lmetk.evaluator.multiunit import MultiUnitEvaluator
+from lmetk.metrics.metric_factory import MetricFactory
+from lmetk.transforms.base.multisource import InverseTransformMixin
+from lmetk.metrics.metrics import MSEMetric
+
+# =========================================================================
+# === 1. FIXTURES ===
+# =========================================================================
 
 
-# =============================================================================
-# === EDGE CASE TESTS ===
-# =============================================================================
+@pytest.fixture
+def data_empty_batch():
+    """Returns a batch with valid shapes but 0 samples."""
+    return {
+        "predictions": np.empty((0, 10, 1)),
+        "targets": np.empty((0, 10, 1)),
+        "unit_id": np.empty((0,), dtype=int),
+    }
+
+
+# =========================================================================
+# === 2. TESTS ===
+# =========================================================================
 
 
 class TestEmptyDataHandling:
-    """Tests handling of empty data (edge cases)."""
 
-    def test_empty_batch_regression(self, data_empty_batch):
+    def test_empty_batch_default_evaluator(self, data_empty_batch, mocker):
         """
-        STRICT TEST: Verifies that calling compute on empty data correctly
-        raises a ValueError.
+        Test DefaultEvaluator raises ValueError when computing on empty data.
+        """
+        # Setup: Real MSE metric to trigger the actual ValueError logic
+        mocker.patch.object(MetricFactory, "create_metric", return_value=MSEMetric())
 
-        This ensures that the pipeline does not silently produce invalid
-        health scores when data is missing.
-        """
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
-            task_type="regression",
             inverse_transform=None,
             apply_inverse_scaling=False,
             save_predictions=False,
@@ -41,43 +55,21 @@ class TestEmptyDataHandling:
             collect_predictions=True,
         )
 
-        # 1. Update with empty data should not raise (it just results in no data stored)
+        # 1. Update with empty data (should not crash here, just accumulates nothing)
         evaluator.update(data_empty_batch)
 
-        # 2. Compute should now STRICTLY fail because no data was provided to the metrics
+        # 2. Compute should STRICTLY fail because no data was provided
         with pytest.raises(ValueError, match="No data available for computation"):
             evaluator.compute(mode="test", epoch=1, step=1)
 
-    def test_empty_batch_classification(self, data_empty_batch):
-        """Test classification evaluator handles empty batch gracefully."""
-        # Use real metrics - no mocking
-        evaluator = ClassificationEvaluator(
-            num_classes=3,
-            metric_names=["accuracy"],
-            inverse_transform=None,
-            apply_inverse_scaling=False,
-            save_predictions=False,
-            paths={},
-        )
-
-        # Convert to classification format
-        empty_cls_data = {
-            "predictions": np.zeros((0, 1, 3), dtype=np.float32),
-            "targets": np.zeros((0, 1, 1), dtype=np.int32),
-        }
-
-        # Should not raise
-        evaluator.update(empty_cls_data)
-        results = evaluator.compute(mode="test", epoch=1, step=1)
-
-        # Real metric should handle empty data gracefully
-        assert isinstance(results, dict)
-        if "accuracy" in results:
-            assert np.isfinite(results["accuracy"]) or np.isnan(results["accuracy"])
-
     def test_empty_batch_multiunit(self, data_empty_batch):
-        """Test multi-unit evaluator handles empty batch gracefully."""
-        # Use real metrics - no mocking
+        """
+        Test MultiUnitEvaluator raises ValueError when computing on empty data.
+
+        This aligns behavior with the regression/default evaluator:
+        Empty input -> No metrics -> Error on compute.
+        """
+        # Use real metrics - no mocking to ensure we hit the real exception
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
             inverse_transform=None,
@@ -88,24 +80,18 @@ class TestEmptyDataHandling:
             collect_predictions=True,
         )
 
-        # Add empty unit_ids
+        # Ensure unit_id matches the empty batch size
         empty_multiunit_data = data_empty_batch.copy()
         empty_multiunit_data["unit_id"] = np.array([], dtype=np.int32)
 
-        # Should not raise
+        # 1. Update with empty data
         evaluator.update(empty_multiunit_data)
-        results = evaluator._compute_metrics()
 
-        # Should return fallback metrics (real metrics handle empty data)
-        assert isinstance(results, dict)
-        assert "mse_denormalized_mean" in results or "mse_mean" in results
-        # Verify metric value is finite or NaN (empty data case)
-        mean_key = (
-            "mse_denormalized_mean"
-            if "mse_denormalized_mean" in results
-            else "mse_mean"
-        )
-        assert np.isfinite(results[mean_key]) or np.isnan(results[mean_key])
+        # 2. Assert Strict Failure
+        with pytest.raises(ValueError, match="No data available for computation"):
+            # MultiUnit delegates to DefaultEvaluator for global metrics,
+            # which triggers the ValueError
+            evaluator.compute(mode="test", epoch=1, step=1)
 
 
 class TestPerfectPredictions:

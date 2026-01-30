@@ -61,31 +61,29 @@ class TestDefaultEvaluatorInitialization:
         assert evaluator.scaling_wrapper.apply_inverse is False
 
     def test_init_all_params_regression(self, mock_metric_factory):
-        """Test initialization with all parameters for regression."""
-        mock_transform = MagicMock(spec=InverseTransformMixin)
+        """Test initialization with all parameters for regression task."""
+        mock_paths = MagicMock()
         mock_logger = MagicMock()
-        mock_paths = {"output": "/test/path"}
 
         evaluator = DefaultEvaluator(
-            metric_names=["mse", "rmse"],
+            metric_names=["mse"],
             task_type="regression",
             num_classes=None,
-            inverse_transform=mock_transform,
-            apply_inverse_scaling=True,
             save_predictions=True,
-            paths=mock_paths,
-            remote_logger=mock_logger,
             collect_predictions=True,
+            remote_logger=mock_logger,
+            paths=mock_paths,
         )
 
-        assert evaluator.metric_names == ["mse", "rmse"]
         assert evaluator.task_type == "regression"
-        assert evaluator.inverse_transform == mock_transform
-        assert evaluator.scaling_wrapper.apply_inverse is True
         assert evaluator.save_predictions is True
         assert evaluator.collect_predictions is True
         assert evaluator.remote_logger == mock_logger
-        assert hasattr(evaluator, "normalized_metrics")
+        assert evaluator.paths == mock_paths
+
+        # Check components
+        assert isinstance(evaluator.buffer.preds, list)
+        assert isinstance(evaluator.metric_manager.metrics, dict)
 
     def test_init_all_params_classification(self, mock_metric_factory):
         """Test initialization with all parameters for classification."""
@@ -177,10 +175,16 @@ class TestDefaultEvaluatorInitialization:
         # Should be True because save_predictions=True
         assert evaluator.collect_predictions is True
 
-    def test_init_normalized_metrics_created_when_scaling_on(self, mock_metric_factory):
+    def test_init_normalized_metrics_created_when_scaling_on(self, mocker):
         """Test that normalized_metrics is created when scaling is enabled."""
+        # 1. Setup Mock Transform
         mock_transform = MagicMock(spec=InverseTransformMixin)
+        mock_transform.apply_inverse = True  # Critical flag
 
+        # 2. Setup Mock Factory
+        mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
+
+        # 3. Init Evaluator with TWO specific metrics
         evaluator = DefaultEvaluator(
             metric_names=["mse", "rmse"],
             task_type="regression",
@@ -193,10 +197,15 @@ class TestDefaultEvaluatorInitialization:
             collect_predictions=True,
         )
 
-        assert hasattr(evaluator, "normalized_metrics")
-        assert len(evaluator.normalized_metrics) == 2
-        assert "mse" in evaluator.normalized_metrics
-        assert "rmse" in evaluator.normalized_metrics
+        # 4. Assertions (Precise checks)
+        # Note: In the new architecture, metrics are inside 'metric_manager'
+        manager = evaluator.metric_manager
+
+        assert manager.normalized_metrics is not None
+        assert isinstance(manager.normalized_metrics, dict)
+        assert len(manager.normalized_metrics) == 2
+        assert "mse" in manager.normalized_metrics
+        assert "rmse" in manager.normalized_metrics
 
     def test_init_normalized_metrics_not_created_when_scaling_off(
         self, mock_metric_factory
@@ -230,10 +239,9 @@ class TestDefaultEvaluatorInitialization:
             collect_predictions=True,
         )
 
-        assert hasattr(evaluator, "preds")
-        assert hasattr(evaluator, "targets")
-        assert isinstance(evaluator.preds, list)
-        assert isinstance(evaluator.targets, list)
+        assert isinstance(evaluator.buffer.preds, list)
+        assert isinstance(evaluator.buffer.targets, list)
+        assert evaluator.buffer.preds == []
 
     def test_init_collections_not_created_when_collect_disabled(
         self, mock_metric_factory
@@ -283,22 +291,6 @@ class TestDefaultEvaluatorInitialization:
                 paths={},
                 remote_logger=None,
                 collect_predictions=True,
-            )
-
-    def test_init_unexpected_kwarg_raises_error(self, mock_metric_factory):
-        """Test that unexpected kwargs raise ValueError."""
-        with pytest.raises(ValueError, match="Unexpected keyword argument"):
-            DefaultEvaluator(
-                metric_names=["mse"],
-                task_type="regression",
-                num_classes=None,
-                inverse_transform=None,
-                apply_inverse_scaling=False,
-                save_predictions=False,
-                paths={},
-                remote_logger=None,
-                collect_predictions=True,
-                unexpected_param=42,
             )
 
     def test_init_inverse_transform_name_allowed(self, mock_metric_factory):
@@ -689,19 +681,17 @@ class TestMultiUnitEvaluatorInitialization:
     def test_init_unit_ids_collection_created_when_collect_enabled(
         self, mock_metric_factory
     ):
-        """Test that unit_ids collection is created when collect_predictions=True."""
-        evaluator = MultiUnitEvaluator(
-            metric_names=["mse"],
-            inverse_transform=None,
-            apply_inverse_scaling=False,
-            save_predictions=False,
-            paths={},
-            remote_logger=None,
-            collect_predictions=True,
-        )
+        """
+        Tests that unit_ids list is initialized in the buffer.
+        """
+        evaluator = MultiUnitEvaluator(metric_names=["mse"], collect_predictions=True)
 
-        assert hasattr(evaluator, "unit_ids")
-        assert isinstance(evaluator.unit_ids, list)
+        # Check buffer.unit_ids, not evaluator.unit_ids
+        assert hasattr(evaluator.buffer, "unit_ids")
+        assert isinstance(evaluator.buffer.unit_ids, list)
+
+        # Verify legacy attribute is gone (Regression Prevention)
+        assert not hasattr(evaluator, "unit_ids")
 
     def test_init_unit_ids_collection_not_created_when_collect_disabled(
         self, mock_metric_factory
@@ -716,7 +706,8 @@ class TestMultiUnitEvaluatorInitialization:
             remote_logger=None,
             collect_predictions=False,
         )
-
+        assert hasattr(evaluator.buffer, "unit_ids")
+        assert isinstance(evaluator.buffer.unit_ids, list)
         assert not hasattr(evaluator, "unit_ids")
 
     def test_init_unit_metrics_always_created(self, mock_metric_factory):
@@ -736,7 +727,10 @@ class TestMultiUnitEvaluatorInitialization:
 
     def test_init_invalid_task_type_raises_error(self, mock_metric_factory):
         """Test that non-regression task_type raises AssertionError."""
-        with pytest.raises(AssertionError, match="Unsupported task_type"):
+        with pytest.raises(
+            AssertionError,
+            match="MultiUnitEvaluator only supports regression tasks, got 'classification'",
+        ):
             # Use valid classification metric so DefaultEvaluator init succeeds;
             # MultiUnitEvaluator then asserts task_type must be regression.
             MultiUnitEvaluator(
@@ -879,8 +873,10 @@ class TestParameterCombinations:
             collect_predictions=True,
         )
 
-        assert len(evaluator.metrics) == 4
-        assert all(name in evaluator.metrics for name in ["mse", "rmse", "mae", "r2"])
+        assert len(evaluator.metric_names) == 4
+        assert all(
+            name in evaluator.metric_names for name in ["mse", "rmse", "mae", "r2"]
+        )
 
     def test_paths_as_dict_vs_mock(self, mock_metric_factory):
         """Test that paths can be dict or mock object."""

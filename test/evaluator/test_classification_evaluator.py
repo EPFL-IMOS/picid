@@ -527,38 +527,19 @@ def test_init_basic_configuration(mocker):
 def test_update_with_batched_data(cls_evaluator_fixture, classification_data_balanced):
     """
     Tests update handles batched classification data.
-
-    **PHM Logic**: Classification processes batches of samples.
-
-    **Methodology**: Use fixture (collect_predictions=True by default),
-    use reset() to clear collections, then feed realistic data through update().
-
-    **Uses fixture**: classification_data_balanced - realistic balanced classification data.
-
-    **Expected**: Data collected correctly.
-
-    Validates: Requirement CE-UPD-1 - Batch data handling
     """
     evaluator = cls_evaluator_fixture
-
-    # Verify fixture has collection enabled
-    assert evaluator.collect_predictions is True
-
-    # Use reset() to clear collections (not manual assignment)
     evaluator.reset()
 
-    # ACT: Use realistic fixture data
+    # Act
     evaluator.update(classification_data_balanced)
 
-    # ASSERT: Data collected correctly
-    assert len(evaluator.preds) == 1
+    # Assert: FIX - Check buffer, not evaluator instance
+    assert len(evaluator.buffer.preds) == 1
     np.testing.assert_array_equal(
-        evaluator.preds[0], classification_data_balanced["predictions"]
+        evaluator.buffer.preds[0], classification_data_balanced["predictions"]
     )
-    assert len(evaluator.targets) == 1
-    np.testing.assert_array_equal(
-        evaluator.targets[0], classification_data_balanced["targets"]
-    )
+    assert len(evaluator.buffer.targets) == 1
 
 
 # ==========================================

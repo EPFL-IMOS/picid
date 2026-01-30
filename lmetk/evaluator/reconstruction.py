@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 class ReconstructionEvaluator(DefaultEvaluator):
     """
-    Refactored Reconstruction Evaluator.
-    Maintains legacy plotting and path logic while integrating with the updated
-    DefaultEvaluator architecture.
+    Evaluator for reconstruction tasks (e.g., Autoencoders).
+
+    Extends DefaultEvaluator to add specific plotting capabilities for
+    comparing original signals vs reconstructed signals.
     """
 
     def __init__(
@@ -26,11 +27,26 @@ class ReconstructionEvaluator(DefaultEvaluator):
         save_predictions: bool = False,
         plot_reconstructions: bool = False,
         paths: Optional[Any] = None,
+        collect_predictions: bool = False,  # Made explicit
+        remote_logger: Optional[Any] = None,  # Made explicit
         **kwargs,
     ):
-        # FIX 1: Prevent double-passing collect_predictions to super()
-        collect_arg = kwargs.pop("collect_predictions", False)
-        collect_predictions = collect_arg or plot_reconstructions
+        """
+        Initializes the ReconstructionEvaluator.
+
+        Args:
+            metric_names: List of metrics.
+            inverse_transform: Scaler for denormalization.
+            apply_inverse_scaling: Whether to report metrics in physical units.
+            save_predictions: Whether to save NetCDF.
+            plot_reconstructions: Whether to generate comparison plots.
+            paths: Configuration object containing 'plot_dir'.
+            collect_predictions: Whether to store data (forced True if plotting).
+            remote_logger: Logger for tracking experiments.
+            **kwargs: Additional args for DefaultEvaluator.
+        """
+        # Logic: We must collect predictions if we want to plot them
+        should_collect = collect_predictions or plot_reconstructions
 
         # Non-interactive backend for headless environments
         matplotlib.use("Agg")
@@ -43,16 +59,17 @@ class ReconstructionEvaluator(DefaultEvaluator):
             inverse_transform=inverse_transform,
             apply_inverse_scaling=apply_inverse_scaling,
             save_predictions=save_predictions,
-            collect_predictions=collect_predictions,
+            collect_predictions=should_collect,
             paths=paths,
             task_type="regression",  # Reconstruction follows regression naming policy
+            remote_logger=remote_logger,
             **kwargs,
         )
 
     def _plot_reconstructions(
         self, preds: np.ndarray, targets: np.ndarray, mode: str, epoch: int, step: int
     ) -> Optional[plt.Figure]:
-        """Legacy plotting logic maintained for visualization and test coverage."""
+        """Generates a comparison plot of Target vs Reconstruction."""
         if not self.remote_logger:
             if step == 0:
                 logger.warning(
@@ -109,20 +126,23 @@ class ReconstructionEvaluator(DefaultEvaluator):
     def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
         """Orchestrates truthful plotting followed by base metric computation."""
 
-        # 1. Path Resolution - Matches test expectation for plot_dir
+        # 1. Path Resolution
         if self.plots_out_path is None and self.paths:
             p_dir = getattr(self.paths, "plot_dir", None)
-            # Robust check to avoid MagicMock auto-generation issues in tests
             if isinstance(p_dir, (str, Path)):
                 self.plots_out_path = Path(p_dir) / mode
                 self.plots_out_path.mkdir(parents=True, exist_ok=True)
 
         # 2. Plot Generation Logic (Side Effect)
-        if self.plot_reconstructions and hasattr(self, "preds") and self.preds:
-            # Use Truthful Scaling: Sourced from base class lists
+        # FIX: Check self.buffer.preds, not self.preds
+        if self.plot_reconstructions and self.collect_predictions and self.buffer.preds:
+
             is_dual = self.scaling_wrapper.apply_inverse
-            source_preds = self.scaled_preds if is_dual else self.preds
-            source_targets = self.scaled_targets if is_dual else self.targets
+            # FIX: Access data from buffer
+            source_preds = self.buffer.scaled_preds if is_dual else self.buffer.preds
+            source_targets = (
+                self.buffer.scaled_targets if is_dual else self.buffer.targets
+            )
 
             if source_preds and len(source_preds) > 0:
                 preds_concat = np.concatenate(source_preds, axis=0)
@@ -143,5 +163,5 @@ class ReconstructionEvaluator(DefaultEvaluator):
                         )
                     plt.close(fig_recons)
 
-        # 3. Delegate to Base for Metrics and NetCDF Saving
+        # 3. Delegate to Base
         return super().compute(mode, epoch=epoch, step=step)
