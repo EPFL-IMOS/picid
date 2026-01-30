@@ -863,9 +863,9 @@ def test_compute_metrics_disabled_per_unit_logging(
     results = eval._compute_metrics()
 
     # ASSERT: Should have mean but not per-unit (real MSE metrics)
-    assert "mse_denormalized_mean" in results
-    assert results["mse_denormalized_mean"] >= 0.0
-    assert np.isfinite(results["mse_denormalized_mean"])
+    assert "mse_normalized_mean" in results
+    assert results["mse_normalized_mean"] >= 0.0
+    assert np.isfinite(results["mse_normalized_mean"])
 
     # Verify no per-unit metrics in results
     unit_ids = np.unique(multiunit_data_1d_units["unit_id"])
