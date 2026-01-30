@@ -32,7 +32,23 @@ class TestPlotFeatures:
         transform.fit_data(data, metadata)
     
     def test_transform_data_two_keys(self):
-        """Test transform_data with two keys."""
+        """Test transform_data with two keys.
+        
+        **Assumption**: PlotFeatures should generate plots when provided with exactly
+        two data keys (typically features and target). The transform creates visualization
+        plots and saves them to disk, then returns the input data unchanged. It requires
+        exactly two keys to create meaningful plots comparing two variables.
+        
+        **Action**: Create a PlotFeatures transform and provide input data with two keys
+        ("features" and "target"). The transform should create plots and return the data
+        unchanged.
+        
+        **Expected Result**: The result should be a NamedTransformInput with the same
+        keys as the input, and plots should be generated (though we don't verify file
+        existence here). This validates that the plotting functionality works with the
+        expected two-key input format, which is essential for visualization and debugging
+        of feature-target relationships in the data pipeline.
+        """
         transform = PlotFeatures()
         # Create plot_dir if it doesn't exist
         os.makedirs("plot_dir", exist_ok=True)

@@ -56,7 +56,23 @@ class TestExpandScalarToReferenceFeatureSize:
         assert transform.scalar_key == "target"
     
     def test_transform_data_scalar(self):
-        """Test transform_data with scalar value."""
+        """Test transform_data with scalar value.
+        
+        **Assumption**: ExpandScalarToReferenceFeatureSize should expand a scalar or
+        1D array value to match the length of a reference feature array. This is useful
+        when a scalar target needs to be expanded to match the number of samples in
+        the features array, ensuring consistent shapes for downstream processing.
+        
+        **Action**: Create an ExpandScalarToReferenceFeatureSize with scalar_key="target".
+        Provide input data where "features" has 3 rows and "target" is a 1D array with
+        a single value [5.0]. The transform should expand target to match features length.
+        
+        **Expected Result**: The result should be a numpy array with shape (3, 1), where
+        the scalar value 5.0 is repeated 3 times to match the 3 rows in features. This
+        validates that scalar expansion works correctly, which is essential for handling
+        cases where targets are provided as single values per unit but need to be
+        expanded to match feature dimensions.
+        """
         transform = ExpandScalarToReferenceFeatureSize(scalar_key="target")
         # The transform expects scalar_key to be a scalar or array in the data
         # But NamedTransformInput requires arrays, so we'll test with a 1D array

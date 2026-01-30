@@ -30,7 +30,23 @@ class TestFillTransform:
         assert "freq=" in repr_str
     
     def test_transform_data_with_dataframe(self):
-        """Test transform_data with DataFrame (forward fill)."""
+        """Test transform_data with DataFrame (forward fill).
+        
+        **Assumption**: FillTransform should use pandas' forward fill (ffill) method to
+        fill missing values (NaN) by propagating the last valid observation forward. This
+        is a common data cleaning technique for time-series data where missing values
+        should be replaced with the most recent known value.
+        
+        **Action**: Create a FillTransform and provide input data as a DataFrame with
+        NaN values in columns "a" and "b". The transform should fill these NaNs using
+        forward fill.
+        
+        **Expected Result**: The result should be a NamedTransformInput with no NaN
+        values remaining in the features DataFrame. All NaN values should be replaced
+        with the previous non-NaN value in each column. This validates that the forward
+        fill operation works correctly, which is essential for handling missing data
+        in time-series or sequential data where forward propagation is appropriate.
+        """
         transform = FillTransform()
         df = pd.DataFrame({
             "a": [1.0, np.nan, 3.0, np.nan, 5.0],

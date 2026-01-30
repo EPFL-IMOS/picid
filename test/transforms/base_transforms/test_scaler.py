@@ -13,7 +13,19 @@ class TestConstantScaler:
     """Tests for ConstantScaler."""
     
     def test_init_default(self):
-        """Test initialization with default factor."""
+        """Test initialization with default factor.
+        
+        **Assumption**: ConstantScaler should initialize with a default factor of 1.0
+        when no factor is specified. A factor of 1.0 means no scaling (multiply by 1),
+        which is a sensible default for a scaling transform.
+        
+        **Action**: Create a ConstantScaler instance without providing a factor parameter.
+        
+        **Expected Result**: The transform should be created successfully and the factor
+        attribute should be 1.0. This validates that the default initialization works
+        correctly and provides a no-op scaling behavior by default, which is useful for
+        optional scaling in pipelines.
+        """
         transform = ConstantScaler()
         assert transform.factor == 1.0
     
@@ -32,7 +44,20 @@ class TestConstantScaler:
         assert result is transform
     
     def test_transform_data(self):
-        """Test transform_data multiplies by factor."""
+        """Test transform_data multiplies by factor.
+        
+        **Assumption**: ConstantScaler should multiply all values in the input array by
+        the scaling factor. This is a simple linear scaling operation that doesn't depend
+        on the data distribution (unlike MinMaxScaler or StandardScaler).
+        
+        **Action**: Create a ConstantScaler with factor=2.0 and provide input data with
+        values [[1.0, 2.0], [3.0, 4.0]]. Call transform_data to apply the scaling.
+        
+        **Expected Result**: The result should be [[2.0, 4.0], [6.0, 8.0]] (each value
+        multiplied by 2.0). This validates the core scaling functionality, which is
+        essential for unit conversion, normalization by known constants, or simple
+        feature scaling when the scaling factor is known a priori.
+        """
         transform = ConstantScaler(factor=2.0)
         data = NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0]]))
         metadata = {}
@@ -55,7 +80,22 @@ class TestConstantScaler:
             transform.transform_data(data, metadata)
     
     def test_inverse_transform(self):
-        """Test inverse_transform divides by factor."""
+        """Test inverse_transform divides by factor.
+        
+        **Assumption**: ConstantScaler should support inverse transformation by dividing
+        by the factor (the inverse of multiplication). This allows recovering the original
+        data from scaled data, which is important for interpreting model predictions or
+        converting scaled features back to their original units.
+        
+        **Action**: Create a ConstantScaler with factor=2.0 and provide scaled data
+        [[2.0, 4.0], [6.0, 8.0]] (which was originally [[1.0, 2.0], [3.0, 4.0]] scaled
+        by 2.0). Call inverse_transform to reverse the scaling.
+        
+        **Expected Result**: The result should be [[1.0, 2.0], [3.0, 4.0]] (each value
+        divided by 2.0). This validates that the inverse transformation correctly undoes
+        the scaling, which is crucial for maintaining data integrity when scaling needs
+        to be reversed (e.g., converting predictions back to original scale).
+        """
         transform = ConstantScaler(factor=2.0)
         data = NamedTransformInput(features=np.array([[2.0, 4.0], [6.0, 8.0]]))
         metadata = {}
@@ -99,7 +139,22 @@ class TestMinMaxScalerSklearn:
         assert transform.scaler is not None
     
     def test_fit_data_2d(self):
-        """Test fit_data with 2D array."""
+        """Test fit_data with 2D array.
+        
+        **Assumption**: MinMaxScalerSklearn should fit on training data to compute the
+        minimum and maximum values for each feature column. These statistics are stored
+        in the underlying sklearn scaler and used during transformation to scale data
+        to the [0, 1] range.
+        
+        **Action**: Create a MinMaxScalerSklearn and call fit_data with a 2D array
+        containing 3 samples and 2 features. The scaler should compute data_min_ and
+        data_max_ for each feature column.
+        
+        **Expected Result**: After fitting, the scaler should have data_min_ and data_max_
+        attributes, indicating that it has learned the data range. This validates that
+        the fit process works correctly and stores the necessary statistics for scaling,
+        which is essential for proper normalization of features to a consistent range.
+        """
         transform = MinMaxScalerSklearn()
         data = NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
         metadata = {}
@@ -134,7 +189,22 @@ class TestMinMaxScalerSklearn:
             transform.fit_data(data, metadata)
     
     def test_transform_data_2d(self):
-        """Test transform_data with 2D array."""
+        """Test transform_data with 2D array.
+        
+        **Assumption**: MinMaxScalerSklearn should scale data to the [0, 1] range based
+        on the min/max values learned during fitting. The scaling formula is:
+        (x - min) / (max - min), which maps the original range to [0, 1].
+        
+        **Action**: Create a MinMaxScalerSklearn, fit it on data with range [1.0-5.0]
+        for first feature and [2.0-6.0] for second feature, then transform new data
+        [[2.0, 3.0], [4.0, 5.0]] using the learned statistics.
+        
+        **Expected Result**: The result should be a numpy array with shape (2, 2), and
+        all values should be in the [0, 1] range. This validates that MinMax scaling
+        works correctly and produces normalized features, which is essential for machine
+        learning algorithms that are sensitive to feature scales (e.g., neural networks,
+        distance-based methods).
+        """
         transform = MinMaxScalerSklearn()
         # Fit first
         fit_data = NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
@@ -180,7 +250,20 @@ class TestMinMaxScalerSklearn:
             transform.transform_data(data, metadata)
     
     def test_inverse_transform(self):
-        """Test inverse_transform."""
+        """Test inverse_transform.
+        
+        **Assumption**: MinMaxScalerSklearn should support inverse transformation that
+        recovers the original data from scaled data. The inverse formula is:
+        x = scaled * (max - min) + min, which reverses the scaling operation.
+        
+        **Action**: Create a MinMaxScalerSklearn, fit it on training data, transform
+        some data to the [0, 1] range, then apply inverse_transform to the scaled data.
+        
+        **Expected Result**: The inverse transformed result should match the original
+        data (within numerical precision). This validates that the scaling is reversible,
+        which is crucial for converting model predictions back to their original scale
+        or interpreting scaled features in their original units.
+        """
         transform = MinMaxScalerSklearn()
         # Fit first
         fit_data = NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))

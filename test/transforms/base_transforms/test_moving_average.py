@@ -9,7 +9,23 @@ class TestMovingAverageTransform:
     """Tests for MovingAverageTransform."""
     
     def test_init_continuous_mode(self):
-        """Test initialization in continuous mode."""
+        """Test initialization in continuous mode.
+        
+        **Assumption**: MovingAverageTransform should support continuous mode where the
+        moving average is applied over the entire signal without chunking. When chunk_size
+        is None, the transform operates in continuous mode. The default causal=False means
+        centered (non-causal) averaging, and apply_to_columns=True means the filter is
+        applied column-wise (across time for each feature).
+        
+        **Action**: Create a MovingAverageTransform with only window_size=3 specified
+        (no chunk_size), which should initialize in continuous mode.
+        
+        **Expected Result**: The transform should have window_size=3, chunk_size=None
+        (indicating continuous mode), causal=False (centered averaging), and
+        apply_to_columns=True. This validates that the default initialization creates
+        a continuous-mode transform, which is the most common use case for smoothing
+        time-series signals without discontinuities.
+        """
         transform = MovingAverageTransform(window_size=3)
         assert transform.window_size == 3
         assert transform.chunk_size is None
@@ -87,7 +103,24 @@ class TestMovingAverageTransform:
         assert result is not None
     
     def test_transform_data_continuous_mode(self):
-        """Test transform_data in continuous mode."""
+        """Test transform_data in continuous mode.
+        
+        **Assumption**: MovingAverageTransform in continuous mode should apply a moving
+        average filter across the entire signal, smoothing the data by averaging values
+        within a sliding window. With causal=False, the averaging is centered (non-causal),
+        meaning each output point is the average of surrounding points (past and future).
+        The output should have the same shape as the input.
+        
+        **Action**: Create a MovingAverageTransform with window_size=3 and causal=False
+        (continuous mode). Provide input data with 4 time steps and 2 features, then
+        apply the transform.
+        
+        **Expected Result**: The result should be a numpy array with the same shape as
+        the input (4, 2), and all values should be finite (no NaN or inf). The values
+        should be smoothed compared to the input (less variation). This validates that
+        the moving average filter works correctly in continuous mode, which is essential
+        for noise reduction and signal smoothing in time-series preprocessing.
+        """
         transform = MovingAverageTransform(window_size=3, causal=False)
         data = NamedTransformInput(features=np.array([
             [1.0, 2.0],

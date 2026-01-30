@@ -9,12 +9,41 @@ class TestReshapeTransform:
     """Tests for ReshapeTransform."""
     
     def test_init(self):
-        """Test initialization."""
+        """Test initialization.
+        
+        **Assumption**: ReshapeTransform should accept an einops-style pattern string
+        that describes how to rearrange array dimensions. The pattern uses named dimensions
+        (like "b" for batch, "h" for height, "w" for width) and allows grouping dimensions
+        with parentheses, making complex reshapes more readable than raw numpy reshape.
+        
+        **Action**: Create a ReshapeTransform instance with pattern "b h w -> (b h) w",
+        which reshapes a 3D array by flattening the first two dimensions.
+        
+        **Expected Result**: The transform should be created successfully and the pattern
+        should be stored correctly. This validates that the transform can be initialized
+        with einops patterns, which is important for flexible array manipulation in
+        deep learning workflows where tensor shapes need to be rearranged for different
+        model architectures.
+        """
         transform = ReshapeTransform(pattern="b h w -> (b h) w")
         assert transform.pattern == "b h w -> (b h) w"
     
     def test_transform_data_simple_reshape(self):
-        """Test transform_data with simple reshape pattern."""
+        """Test transform_data with simple reshape pattern.
+        
+        **Assumption**: ReshapeTransform should use einops.rearrange to reshape arrays
+        according to the specified pattern. A pattern like "h w -> (h w)" should flatten
+        a 2D array into a 1D array by combining the height and width dimensions.
+        
+        **Action**: Create a ReshapeTransform with pattern "h w -> (h w)" and provide
+        a 2D input array with shape (2, 2). The transform should flatten it to 1D.
+        
+        **Expected Result**: The result should be a numpy array with shape (4,), which
+        is the flattened version of the 2x2 input. This validates that einops-based
+        reshaping works correctly, which is essential for tensor manipulation in neural
+        networks where arrays need to be reshaped between different layer requirements
+        (e.g., flattening before fully connected layers).
+        """
         transform = ReshapeTransform(pattern="h w -> (h w)")
         data = NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0]]))
         metadata = {}

@@ -15,17 +15,55 @@ class TestConcatenateTransform:
     """Tests for ConcatenateTransform."""
     
     def test_init_dim_1(self):
-        """Test initialization with dim=1."""
+        """Test initialization with dim=1.
+        
+        **Assumption**: ConcatenateTransform should accept dim=1 to concatenate arrays
+        along the second dimension (columns/features). This is the most common use case
+        for concatenating feature arrays horizontally.
+        
+        **Action**: Create a ConcatenateTransform instance with dim=1.
+        
+        **Expected Result**: The transform should be created successfully and the dim
+        attribute should be set to 1. This validates that the transform can be configured
+        for horizontal concatenation, which is essential for combining multiple feature
+        arrays into a single feature matrix.
+        """
         transform = ConcatenateTransform(dim=1)
         assert transform.dim == 1
     
     def test_init_dim_2(self):
-        """Test initialization with dim=2."""
+        """Test initialization with dim=2.
+        
+        **Assumption**: ConcatenateTransform should accept dim=2 to concatenate arrays
+        along the third dimension. This is useful for 3D arrays where we want to combine
+        features along the depth dimension (e.g., combining multiple time-series features).
+        
+        **Action**: Create a ConcatenateTransform instance with dim=2.
+        
+        **Expected Result**: The transform should be created successfully and the dim
+        attribute should be set to 2. This validates that the transform supports
+        3D concatenation, which is important for time-series or multi-dimensional
+        feature combination scenarios.
+        """
         transform = ConcatenateTransform(dim=2)
         assert transform.dim == 2
     
     def test_init_invalid_dim(self):
-        """Test initialization with invalid dim."""
+        """Test initialization with invalid dim.
+        
+        **Assumption**: ConcatenateTransform should only support concatenation along
+        dimensions 1 or 2 (not 0 or 3+). Dimension 0 would concatenate along samples
+        (rows), which doesn't make sense for this transform's use case. Dimensions
+        3+ are not supported to keep the implementation manageable.
+        
+        **Action**: Attempt to create ConcatenateTransform instances with invalid dim
+        values: dim=0 (concatenate along samples) and dim=3 (unsupported dimension).
+        
+        **Expected Result**: Both should raise AssertionError with appropriate error
+        messages. This validates that the transform enforces its constraints and
+        prevents misuse, which is important for catching configuration errors early
+        rather than producing incorrect results.
+        """
         with pytest.raises(AssertionError, match="supports concatination along dim 1 or 2"):
             ConcatenateTransform(dim=0)
         
@@ -173,7 +211,22 @@ class TestConcatenateTransform:
             transform._check_for_nans(arrays, keys)
     
     def test_transform_data_dim_1(self):
-        """Test transform_data with dim=1."""
+        """Test transform_data with dim=1.
+        
+        **Assumption**: ConcatenateTransform with dim=1 should concatenate multiple
+        feature arrays horizontally (along columns), combining them into a single
+        feature matrix. The number of rows (samples) must match across all arrays.
+        
+        **Action**: Create a ConcatenateTransform with dim=1 and provide input data
+        with two feature arrays (feat1: shape (2,2) and feat2: shape (2,2)). Both
+        have the same number of rows, so they can be concatenated horizontally.
+        
+        **Expected Result**: The result should be a numpy array with shape (2, 4),
+        where the first 2 columns come from feat1 and the last 2 columns come from
+        feat2. This validates the core concatenation functionality, which is essential
+        for combining multiple feature sets (e.g., combining different sensor readings
+        or feature types) into a unified feature matrix for machine learning models.
+        """
         transform = ConcatenateTransform(dim=1)
         data = NamedTransformInput(
             feat1=np.array([[1.0, 2.0], [3.0, 4.0]]),

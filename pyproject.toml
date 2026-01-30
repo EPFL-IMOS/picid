@@ -76,6 +76,26 @@ packages = ["lmetk"]
 [tool.pylint."messages control"]
 disable = ["logging-fstring-interpolation"]
 
+[tool.coverage.run]
+# Only measure coverage for your own code
+source = ["lmetk"]
+omit = [
+    "local_packages/*",
+    "*/local_packages/*",
+]
+
+[tool.coverage.report]
+# Exclude local_packages from reports
+omit = [
+    "local_packages/*",
+    "*/local_packages/*",
+]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
 
 [tool.uv.sources]
 phmd = { path = "./local_packages/phmd", editable = true }
