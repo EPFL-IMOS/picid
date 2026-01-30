@@ -15,3 +15,7 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
     docs/
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
+
+## Documentation sections
+
+- [Evaluators](evaluators/index.md) — Evaluator subsystem: base, default, classification, forecasting, multi-unit, reconstruction; logic, methods, attributes, inputs and outputs.
