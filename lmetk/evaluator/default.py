@@ -43,7 +43,7 @@ class DefaultEvaluator(AbstractEvaluator):
         save_predictions: bool = False,
         paths: Optional[str] = None,
         remote_logger: Optional[Any] = None,
-        collect_predictions: bool = False,
+        collect_predictions: bool = True,
         **kwargs,
     ):
         if not metric_names:
@@ -205,9 +205,6 @@ class DefaultEvaluator(AbstractEvaluator):
         """
         dict_to_save = {}
 
-        if not self.save_predictions or not self.collect_predictions:
-            return dict_to_save
-
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
         if is_denormalized_run:
@@ -312,11 +309,18 @@ class DefaultEvaluator(AbstractEvaluator):
         """
         Orchestrates the computation, saving, and reporting steps.
         """
-        # 1. Prepare Data for Saving (Calls overridable method)
-        dict_to_save = self._prepare_predictions_for_save()
 
-        # 2. Handle Output Path and Saving (Isolated logic)
-        self._save_predictions_to_file(dict_to_save, mode)
+        if self.save_predictions:
+            assert self.collect_predictions, (
+                "To save predictions, they must be collected during evaluation. "
+                "Set collect_predictions=True."
+            )
+
+            # 1. Prepare Data for Saving (Calls overridable method)
+            dict_to_save = self._prepare_predictions_for_save()
+
+            # 2. Handle Output Path and Saving (Isolated logic)
+            self._save_predictions_to_file(dict_to_save, mode)
 
         # 3. Compute and Return Metrics (Isolated logic)
         return self._compute_metrics()

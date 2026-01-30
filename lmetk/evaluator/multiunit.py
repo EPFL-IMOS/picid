@@ -35,7 +35,7 @@ class MultiUnitEvaluator(DefaultEvaluator):
         save_predictions: bool = False,
         paths: Optional[str] = None,
         remote_logger: Optional[Any] = None,
-        collect_predictions: bool = False,
+        collect_predictions: bool = True,
         log_image_every_n_epochs: bool = 10,
         log_image: bool = True,
         enable_plot_subsampling: bool = True,
