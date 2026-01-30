@@ -23,8 +23,13 @@ class TestEmptyDataHandling:
     """Tests handling of empty data (edge cases)."""
 
     def test_empty_batch_regression(self, data_empty_batch):
-        """Test regression evaluator handles empty batch gracefully."""
-        # Use real metrics - no mocking
+        """
+        STRICT TEST: Verifies that calling compute on empty data correctly
+        raises a ValueError.
+
+        This ensures that the pipeline does not silently produce invalid
+        health scores when data is missing.
+        """
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
             task_type="regression",
@@ -36,17 +41,12 @@ class TestEmptyDataHandling:
             collect_predictions=True,
         )
 
-        # Should not raise
+        # 1. Update with empty data should not raise (it just results in no data stored)
         evaluator.update(data_empty_batch)
-        results = evaluator.compute(mode="test", epoch=1, step=1)
 
-        # Should return metrics (may be zero or NaN for empty data)
-        assert isinstance(results, dict)
-        # Real metric should handle empty data gracefully
-        if "mse_normalized" in results:
-            assert np.isfinite(results["mse_normalized"]) or np.isnan(
-                results["mse_normalized"]
-            )
+        # 2. Compute should now STRICTLY fail because no data was provided to the metrics
+        with pytest.raises(ValueError, match="No data available for computation"):
+            evaluator.compute(mode="test", epoch=1, step=1)
 
     def test_empty_batch_classification(self, data_empty_batch):
         """Test classification evaluator handles empty batch gracefully."""

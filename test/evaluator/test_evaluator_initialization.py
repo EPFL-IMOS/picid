@@ -684,7 +684,7 @@ class TestMultiUnitEvaluatorInitialization:
             collect_predictions=True,
         )
 
-        assert not hasattr(evaluator, "normalized_unit_metrics")
+        assert evaluator.normalized_unit_metrics is None
 
     def test_init_unit_ids_collection_created_when_collect_enabled(
         self, mock_metric_factory
