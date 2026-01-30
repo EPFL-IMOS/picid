@@ -17,6 +17,10 @@ class ClassificationEvaluator(DefaultEvaluator):
         paths: Optional[str] = None,
         **kwargs,
     ):
+        if num_classes is not None and num_classes < 1:
+            raise ValueError(
+                f"num_classes must be a positive integer, got {num_classes}"
+            )
         super().__init__(
             metric_names=metric_names,
             num_classes=num_classes,

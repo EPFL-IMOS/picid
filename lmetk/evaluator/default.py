@@ -46,6 +46,9 @@ class DefaultEvaluator(AbstractEvaluator):
         collect_predictions: bool = False,
         **kwargs,
     ):
+        if not metric_names:
+            raise ValueError("metric_names cannot be empty")
+
         super().__init__(
             inverse_transform=inverse_transform,
             apply_inverse_scaling=apply_inverse_scaling,
@@ -53,6 +56,7 @@ class DefaultEvaluator(AbstractEvaluator):
             **kwargs,
         )
 
+        self.inverse_transform = inverse_transform
         self.task_type = task_type.lower()
         assert self.task_type in ALL_TASKS, f"Unsupported task_type: {self.task_type}"
 
@@ -118,6 +122,9 @@ class DefaultEvaluator(AbstractEvaluator):
         """
         predictions = model_out["predictions"]
         targets = model_out["targets"]
+
+        if predictions.shape[0] == 0:
+            return
 
         is_denormalized_run = self.scaling_wrapper.apply_inverse
 
@@ -272,12 +279,24 @@ class DefaultEvaluator(AbstractEvaluator):
 
         # 1. Compute Primary Metrics (Denormalized or Original)
         for name, metric in self.metrics.items():
-            results[f"{name}_denormalized"] = metric.compute()
+            try:
+                results[f"{name}_denormalized"] = metric.compute()
+            except ValueError as e:
+                if "No data available" in str(e):
+                    results[f"{name}_denormalized"] = float("nan")
+                else:
+                    raise
 
         # 2. Compute Secondary Metrics (Normalized)
         if is_denormalized_run:
             for name, metric in self.normalized_metrics.items():
-                results[f"{name}_normalized"] = metric.compute()
+                try:
+                    results[f"{name}_normalized"] = metric.compute()
+                except ValueError as e:
+                    if "No data available" in str(e):
+                        results[f"{name}_normalized"] = float("nan")
+                    else:
+                        raise
         else:
             # FIX: If scaling is OFF, the primary metric is actually the normalized metric.
             # We must rename the primary keys to reflect they are the normalized version.
