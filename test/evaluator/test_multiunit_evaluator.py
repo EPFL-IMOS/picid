@@ -1176,10 +1176,13 @@ def test_init_creates_normalized_unit_metrics_when_scaling_on(mocker, mock_path_
     scaler = SimpleScaler()
 
     evaluator = MultiUnitEvaluator(
-        metric_names=["mse"],  # Use real MSE metric
+        metric_names=["mse"],
         inverse_transform=scaler,
         apply_inverse_scaling=True,
+        save_predictions=False,
         paths=MagicMock(eval_details=mock_path_obj),
+        remote_logger=None,
+        collect_predictions=True,
     )
 
     # Verify that __init__ created normalized_unit_metrics because apply_inverse_scaling=True

@@ -27,7 +27,13 @@ class TestEmptyDataHandling:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should not raise
@@ -48,6 +54,9 @@ class TestEmptyDataHandling:
         evaluator = ClassificationEvaluator(
             num_classes=3,
             metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -71,7 +80,12 @@ class TestEmptyDataHandling:
         # Use real metrics - no mocking
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Add empty unit_ids
@@ -102,7 +116,13 @@ class TestPerfectPredictions:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse", "mae", "rmse"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         evaluator.update(data_perfect_predictions)
@@ -124,7 +144,12 @@ class TestPerfectPredictions:
         # Use real metrics - no mocking
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Add unit IDs
@@ -150,7 +175,13 @@ class TestExtremeValues:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse", "mae"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should not raise
@@ -185,9 +216,13 @@ class TestExtremeValues:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
             inverse_transform=scaler,
             apply_inverse_scaling=True,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should handle extreme values correctly
@@ -211,7 +246,13 @@ class TestLargeBatchHandling:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse", "rmse"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should handle large batch without issues
@@ -245,7 +286,12 @@ class TestLargeBatchHandling:
         # Use real metrics - no mocking
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Create unit IDs for large batch
@@ -274,7 +320,13 @@ class TestSingleSampleHandling:
         # Use real metrics - no mocking
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         evaluator.update(regression_data_single_sample)
@@ -292,7 +344,12 @@ class TestSingleSampleHandling:
         """Test multi-unit evaluator with single sample."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         single_multiunit_data = regression_data_single_sample.copy()
@@ -314,7 +371,12 @@ class TestFaultOnsetScenarios:
         evaluator = DefaultEvaluator(
             metric_names=["mse", "mae"],
             task_type="forecasting",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should handle fault onset data correctly
@@ -344,6 +406,9 @@ class TestImbalancedClassification:
         evaluator = ClassificationEvaluator(
             num_classes=3,
             metric_names=["accuracy", "f1", "precision", "recall"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -378,6 +443,9 @@ class TestImbalancedClassification:
         evaluator = ClassificationEvaluator(
             num_classes=3,
             metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -401,7 +469,12 @@ class TestManyUnitsScenario:
         # Use real metrics - no mocking
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         # Should handle many units efficiently
@@ -435,7 +508,12 @@ class TestManyUnitsScenario:
         """Test many units with time series data."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         evaluator.update(multiunit_data_time_series)

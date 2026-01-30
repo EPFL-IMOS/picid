@@ -16,9 +16,12 @@ def forecasting_evaluator_fixture(mocker):
         metric_names=["mse"],
         model_seq_len=10,
         model_label_len=5,
-        model_pred_len=5,  # Total output length
         effective_pred_len=2,  # Only evaluate last 2 steps
-        collect_predictions=True,
+        model_pred_len=5,  # Total output length
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
     )
 
 
@@ -122,7 +125,12 @@ def test_init_raises_without_model_pred_len(mocker):
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
+            effective_pred_len=None,
             model_pred_len=None,  # Missing!
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
         )
 
 
@@ -146,8 +154,12 @@ def test_init_raises_effective_greater_than_model_pred_len(mocker):
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
-            model_pred_len=5,
             effective_pred_len=10,  # > model_pred_len!
+            model_pred_len=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
         )
 
 
@@ -171,10 +183,14 @@ def test_update_raises_shape_mismatch(mocker):
         metric_names=["mse"],
         model_seq_len=10,
         model_label_len=5,
-        model_pred_len=5,
         effective_pred_len=None,  # No slicing
+        model_pred_len=5,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
     )
-    
+
     # Mismatched shapes
     preds = np.zeros((1, 5, 1))
     targets = np.zeros((1, 3, 1))  # Different time dimension!
@@ -211,8 +227,13 @@ def test_update_no_dimension_selection_multivariate(mocker, forecasting_data_mul
         metric_names=["mse"],
         model_seq_len=10,
         model_label_len=5,
+        effective_pred_len=None,
         model_pred_len=forecasting_data_multivariate["predictions"].shape[1],
-        task_mode="multivariate",  # Not univariate
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        task_mode="multivariate",
     )
     
     # ACT: Use realistic multivariate fixture data
@@ -252,10 +273,14 @@ def test_update_no_effective_pred_len_slicing(mocker, forecasting_data_multi_ste
         metric_names=["mse"],
         model_seq_len=10,
         model_label_len=5,
-        model_pred_len=horizon,
         effective_pred_len=None,  # No slicing
+        model_pred_len=horizon,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
     )
-    
+
     # ACT: Use realistic fixture data
     evaluator.update(forecasting_data_multi_step)
     
@@ -288,10 +313,15 @@ def test_update_univariate_no_dim_selection_when_none(mocker):
         metric_names=["mse"],
         model_seq_len=10,
         model_label_len=5,
+        effective_pred_len=None,
         model_pred_len=5,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
         task_mode="univariate",
     )
-    
+
     preds = np.ones((1, 5, 3))
     targets = np.ones((1, 5, 3))
     

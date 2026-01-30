@@ -40,6 +40,7 @@ def reconstruction_evaluator_fixture(mocker):
         save_predictions=False,
         plot_reconstructions=True,
         paths=mock_paths,
+        collect_predictions=True,
         remote_logger=mock_logger,
     )
     return evaluator
@@ -68,10 +69,11 @@ def reconstruction_evaluator_with_scaling_fixture(mocker):
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
         inverse_transform=mock_scaler,
-        apply_inverse_scaling=True,  # Enable scaling at init
+        apply_inverse_scaling=True,
         save_predictions=False,
         plot_reconstructions=True,
         paths=mock_paths,
+        collect_predictions=True,
         remote_logger=mock_logger,
     )
     # Replace scaling_wrapper with our mock
@@ -91,9 +93,12 @@ def test_init_forces_collection_and_handles_kwargs(mocker):
 
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         plot_reconstructions=True,
-        collect_predictions=False,
         paths=MagicMock(),
+        collect_predictions=False,
     )
     assert evaluator.collect_predictions is True
     assert evaluator.plot_reconstructions is True
@@ -302,14 +307,18 @@ def test_plot_reconstructions_no_logger_step_zero_warning(mock_logger, mocker):
     
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         plot_reconstructions=True,
         paths=MagicMock(),
-        remote_logger=None,  # No logger
+        collect_predictions=True,
+        remote_logger=None,
     )
-    
+
     preds = np.zeros((5, 10, 1))
     targets = np.zeros((5, 10, 1))
-    
+
     result = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=0)
     
     assert result is None
@@ -334,14 +343,18 @@ def test_plot_reconstructions_no_logger_step_nonzero_no_warning(mock_logger, moc
     
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         plot_reconstructions=True,
         paths=MagicMock(),
-        remote_logger=None,  # No logger
+        collect_predictions=True,
+        remote_logger=None,
     )
-    
+
     preds = np.zeros((5, 10, 1))
     targets = np.zeros((5, 10, 1))
-    
+
     result = evaluator._plot_reconstructions(preds, targets, "val", epoch=1, step=5)
     
     assert result is None
@@ -491,11 +504,15 @@ def test_compute_no_plot_dir_path(mock_path_cls, mock_plt, mocker, mock_path_obj
     
     evaluator = ReconstructionEvaluator(
         metric_names=["mse"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         plot_reconstructions=True,
         paths=mock_paths,
+        collect_predictions=True,
         remote_logger=MagicMock(),
     )
-    
+
     # Feed data through proper interface
     data = np.zeros((2, 5, 1))
     evaluator.update({"predictions": data, "targets": data})

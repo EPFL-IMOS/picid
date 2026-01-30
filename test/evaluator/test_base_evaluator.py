@@ -87,6 +87,7 @@ class TestAbstractEvaluatorInitialization:
             paths={"output": "/test/path"},
             inverse_transform=None,
             apply_inverse_scaling=False,
+            task_mode=False,
         )
         
         assert isinstance(evaluator.scaling_wrapper, ScalingWrapper)
@@ -111,6 +112,7 @@ class TestAbstractEvaluatorInitialization:
             paths={"output": "/test/path"},
             inverse_transform=mock_transform,
             apply_inverse_scaling=True,
+            task_mode=False,
         )
         
         assert evaluator.scaling_wrapper.inverse_transform == mock_transform
@@ -157,6 +159,8 @@ class TestAbstractEvaluatorInitialization:
         for task_mode in [False, None, "regression", "forecasting"]:
             evaluator = ConcreteEvaluator(
                 paths={},
+                inverse_transform=None,
+                apply_inverse_scaling=False,
                 task_mode=task_mode,
             )
             
@@ -177,6 +181,9 @@ class TestAbstractEvaluatorInitialization:
         with pytest.raises(ValueError, match="Unexpected keyword argument"):
             ConcreteEvaluator(
                 paths={},
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                task_mode=False,
                 unknown_param=42,
             )
     
@@ -195,6 +202,9 @@ class TestAbstractEvaluatorInitialization:
         # Should not raise
         evaluator = ConcreteEvaluator(
             paths={},
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
             inverse_transform_name="StandardScaler",
         )
         
@@ -220,6 +230,8 @@ class TestAbstractEvaluatorRepr:
         """
         evaluator = ConcreteEvaluator(
             paths={"output": "/test"},
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             task_mode="regression",
         )
         
@@ -245,6 +257,8 @@ class TestAbstractEvaluatorRepr:
         evaluator = ConcreteEvaluator(
             paths={"output": "/test"},
             inverse_transform=mock_transform,
+            apply_inverse_scaling=False,
+            task_mode=False,
         )
         
         repr_str = repr(evaluator)
@@ -265,7 +279,9 @@ class TestAbstractEvaluatorRepr:
         """
         evaluator = ConcreteEvaluator(
             paths={"output": "/test"},
-            task_mode=False,  # bool
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
         )
         
         # Add some simple attributes manually for test
@@ -320,8 +336,13 @@ class TestAbstractEvaluatorAbstractMethods:
         
         Validates: Requirement AE-ABS-2 - Update implementation
         """
-        evaluator = ConcreteEvaluator(paths={})
-        
+        evaluator = ConcreteEvaluator(
+            paths={},
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
+        )
+
         model_out = {"predictions": np.array([1.0]), "targets": np.array([1.0])}
         evaluator.update(model_out)
         
@@ -339,8 +360,13 @@ class TestAbstractEvaluatorAbstractMethods:
         
         Validates: Requirement AE-ABS-3 - Compute implementation
         """
-        evaluator = ConcreteEvaluator(paths={})
-        
+        evaluator = ConcreteEvaluator(
+            paths={},
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
+        )
+
         result = evaluator.compute()
         
         assert evaluator._compute_called is True
@@ -358,8 +384,13 @@ class TestAbstractEvaluatorAbstractMethods:
         
         Validates: Requirement AE-ABS-4 - Reset implementation
         """
-        evaluator = ConcreteEvaluator(paths={})
-        
+        evaluator = ConcreteEvaluator(
+            paths={},
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
+        )
+
         evaluator.reset()
         
         assert evaluator._reset_called is True
@@ -388,8 +419,13 @@ class TestAbstractEvaluatorPathHandling:
             "eval_details": "/results/run_001/eval",
         }
         
-        evaluator = ConcreteEvaluator(paths=paths)
-        
+        evaluator = ConcreteEvaluator(
+            paths=paths,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
+        )
+
         assert evaluator.paths == paths
     
     def test_paths_can_be_mock_object(self):
@@ -407,7 +443,12 @@ class TestAbstractEvaluatorPathHandling:
         mock_paths.output = "/results/run_001"
         mock_paths.eval_details = "/results/run_001/eval"
         
-        evaluator = ConcreteEvaluator(paths=mock_paths)
-        
+        evaluator = ConcreteEvaluator(
+            paths=mock_paths,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            task_mode=False,
+        )
+
         assert evaluator.paths == mock_paths
         assert evaluator.paths.output == "/results/run_001"

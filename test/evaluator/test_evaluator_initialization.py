@@ -44,7 +44,14 @@ class TestDefaultEvaluatorInitialization:
         """Test initialization with minimal required parameters."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.metric_names == ["mse"]
@@ -62,6 +69,7 @@ class TestDefaultEvaluatorInitialization:
         evaluator = DefaultEvaluator(
             metric_names=["mse", "rmse"],
             task_type="regression",
+            num_classes=None,
             inverse_transform=mock_transform,
             apply_inverse_scaling=True,
             save_predictions=True,
@@ -87,8 +95,12 @@ class TestDefaultEvaluatorInitialization:
             metric_names=["accuracy", "f1"],
             task_type="classification",
             num_classes=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             save_predictions=True,
             paths=mock_paths,
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.task_type == "classification"
@@ -98,13 +110,34 @@ class TestDefaultEvaluatorInitialization:
     def test_init_task_type_case_insensitive(self, mock_metric_factory):
         """Test that task_type is case-insensitive."""
         evaluator1 = DefaultEvaluator(
-            metric_names=["mse"], task_type="REGRESSION", paths={}
+            metric_names=["mse"],
+            task_type="REGRESSION",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
         evaluator2 = DefaultEvaluator(
-            metric_names=["mse"], task_type="Regression", paths={}
+            metric_names=["mse"],
+            task_type="Regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
         evaluator3 = DefaultEvaluator(
-            metric_names=["mse"], task_type="regression", paths={}
+            metric_names=["mse"],
+            task_type="regression",
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator1.task_type == "regression"
@@ -115,7 +148,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that metric_names are case-insensitive."""
         evaluator = DefaultEvaluator(
             metric_names=["MSE", "RMSE", "mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.metric_names == ["mse", "rmse", "mse"]
@@ -124,9 +164,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that collect_predictions is auto-enabled when save_predictions=True."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             save_predictions=True,
-            collect_predictions=False,  # Explicitly False
             paths={},
+            remote_logger=None,
+            collect_predictions=False,  # Explicitly False
         )
 
         # Should be True because save_predictions=True
@@ -138,9 +183,14 @@ class TestDefaultEvaluatorInitialization:
 
         evaluator = DefaultEvaluator(
             metric_names=["mse", "rmse"],
+            task_type="regression",
+            num_classes=None,
             inverse_transform=mock_transform,
             apply_inverse_scaling=True,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert hasattr(evaluator, "normalized_metrics")
@@ -154,8 +204,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that normalized_metrics is NOT created when scaling is disabled."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
             apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert not hasattr(evaluator, "normalized_metrics")
@@ -164,8 +220,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that collections are created when collect_predictions=True."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
-            collect_predictions=True,
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert hasattr(evaluator, "preds")
@@ -179,9 +241,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that collections are NOT created when collect_predictions=False."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             save_predictions=False,
-            collect_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=False,
         )
 
         # Should not have collections
@@ -194,7 +261,13 @@ class TestDefaultEvaluatorInitialization:
             DefaultEvaluator(
                 metric_names=["mse"],
                 task_type="invalid_task",
+                num_classes=None,
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
                 paths={},
+                remote_logger=None,
+                collect_predictions=True,
             )
 
     def test_init_empty_metric_names_raises_error(self, mock_metric_factory):
@@ -202,7 +275,14 @@ class TestDefaultEvaluatorInitialization:
         with pytest.raises((ValueError, IndexError, KeyError)):
             DefaultEvaluator(
                 metric_names=[],
+                task_type="regression",
+                num_classes=None,
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
                 paths={},
+                remote_logger=None,
+                collect_predictions=True,
             )
 
     def test_init_unexpected_kwarg_raises_error(self, mock_metric_factory):
@@ -210,7 +290,14 @@ class TestDefaultEvaluatorInitialization:
         with pytest.raises(ValueError, match="Unexpected keyword argument"):
             DefaultEvaluator(
                 metric_names=["mse"],
+                task_type="regression",
+                num_classes=None,
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
                 paths={},
+                remote_logger=None,
+                collect_predictions=True,
                 unexpected_param=42,
             )
 
@@ -218,7 +305,14 @@ class TestDefaultEvaluatorInitialization:
         """Test that inverse_transform_name kwarg is allowed."""
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
             inverse_transform_name="StandardScaler",
         )
 
@@ -244,6 +338,9 @@ class TestClassificationEvaluatorInitialization:
         evaluator = ClassificationEvaluator(
             num_classes=3,
             metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -258,7 +355,7 @@ class TestClassificationEvaluatorInitialization:
             num_classes=5,
             metric_names=["accuracy", "f1", "precision"],
             inverse_transform=mock_transform,
-            apply_inverse_scaling=False,  # Usually False for classification
+            apply_inverse_scaling=False,
             save_predictions=True,
             paths={"output": "/test"},
         )
@@ -270,16 +367,51 @@ class TestClassificationEvaluatorInitialization:
     def test_init_num_classes_validation(self, mock_metric_factory):
         """Test num_classes validation (should be positive integer)."""
         # Valid cases
-        ClassificationEvaluator(num_classes=1, metric_names=["accuracy"], paths={})
-        ClassificationEvaluator(num_classes=10, metric_names=["accuracy"], paths={})
-        ClassificationEvaluator(num_classes=100, metric_names=["accuracy"], paths={})
+        ClassificationEvaluator(
+            num_classes=1,
+            metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+        )
+        ClassificationEvaluator(
+            num_classes=10,
+            metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+        )
+        ClassificationEvaluator(
+            num_classes=100,
+            metric_names=["accuracy"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+        )
 
         # Invalid cases (if validation exists)
         with pytest.raises((ValueError, AssertionError), match="num_classes|positive"):
-            ClassificationEvaluator(num_classes=0, metric_names=["accuracy"], paths={})
+            ClassificationEvaluator(
+                num_classes=0,
+                metric_names=["accuracy"],
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
+                paths={},
+            )
 
         with pytest.raises((ValueError, AssertionError), match="num_classes|positive"):
-            ClassificationEvaluator(num_classes=-1, metric_names=["accuracy"], paths={})
+            ClassificationEvaluator(
+                num_classes=-1,
+                metric_names=["accuracy"],
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
+                paths={},
+            )
 
 
 # =============================================================================
@@ -301,7 +433,11 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
+            effective_pred_len=None,
             model_pred_len=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -320,8 +456,8 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse", "mae"],
             model_seq_len=96,
             model_label_len=48,
-            model_pred_len=24,
             effective_pred_len=12,
+            model_pred_len=24,
             inverse_transform=mock_transform,
             apply_inverse_scaling=True,
             save_predictions=True,
@@ -344,7 +480,11 @@ class TestForecastingEvaluatorInitialization:
                 metric_names=["mse"],
                 model_seq_len=10,
                 model_label_len=5,
+                effective_pred_len=None,
                 model_pred_len=None,  # Missing!
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
                 paths={},
             )
 
@@ -358,8 +498,11 @@ class TestForecastingEvaluatorInitialization:
                 metric_names=["mse"],
                 model_seq_len=10,
                 model_label_len=5,
-                model_pred_len=5,
                 effective_pred_len=10,  # > model_pred_len!
+                model_pred_len=5,
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
                 paths={},
             )
 
@@ -370,8 +513,11 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
-            model_pred_len=5,
             effective_pred_len=5,  # Equal is OK
+            model_pred_len=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -384,8 +530,11 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
-            model_pred_len=10,
             effective_pred_len=5,  # Less is OK
+            model_pred_len=10,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -398,7 +547,11 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
+            effective_pred_len=None,
             model_pred_len=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -411,7 +564,11 @@ class TestForecastingEvaluatorInitialization:
             metric_names=["mse"],
             model_seq_len=10,
             model_label_len=5,
+            effective_pred_len=None,
             model_pred_len=5,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
         )
 
@@ -434,7 +591,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test initialization with minimal required parameters."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.metric_names == ["mse"]
@@ -475,7 +637,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test default values for plotting parameters."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.log_image_every_n_epochs == 10
@@ -494,7 +661,10 @@ class TestMultiUnitEvaluatorInitialization:
             metric_names=["mse"],
             inverse_transform=mock_transform,
             apply_inverse_scaling=True,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert hasattr(evaluator, "normalized_unit_metrics")
@@ -506,8 +676,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test that normalized_unit_metrics is NOT created when scaling is disabled."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
             apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert not hasattr(evaluator, "normalized_unit_metrics")
@@ -518,8 +692,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test that unit_ids collection is created when collect_predictions=True."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
-            collect_predictions=True,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert hasattr(evaluator, "unit_ids")
@@ -531,9 +709,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test that unit_ids collection is NOT created when collect_predictions=False."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             save_predictions=False,
-            collect_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=False,
         )
 
         assert not hasattr(evaluator, "unit_ids")
@@ -542,7 +723,12 @@ class TestMultiUnitEvaluatorInitialization:
         """Test that unit_metrics is always created."""
         evaluator = MultiUnitEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert hasattr(evaluator, "unit_metrics")
@@ -555,9 +741,14 @@ class TestMultiUnitEvaluatorInitialization:
             # MultiUnitEvaluator then asserts task_type must be regression.
             MultiUnitEvaluator(
                 metric_names=["accuracy"],
+                inverse_transform=None,
+                apply_inverse_scaling=False,
+                save_predictions=False,
+                paths={},
+                remote_logger=None,
+                collect_predictions=True,
                 task_type="classification",
                 num_classes=3,
-                paths={},
             )
 
 
@@ -577,6 +768,10 @@ class TestReconstructionEvaluatorInitialization:
         """Test initialization with minimal required parameters."""
         evaluator = ReconstructionEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            plot_reconstructions=False,
             paths={},
         )
 
@@ -596,6 +791,7 @@ class TestReconstructionEvaluatorInitialization:
             save_predictions=True,
             plot_reconstructions=True,
             paths=mock_paths,
+            collect_predictions=True,
             remote_logger=mock_logger,
         )
 
@@ -608,9 +804,12 @@ class TestReconstructionEvaluatorInitialization:
         """Test that plot_reconstructions=True forces collect_predictions=True."""
         evaluator = ReconstructionEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             plot_reconstructions=True,
-            collect_predictions=False,  # Explicitly False
             paths={},
+            collect_predictions=False,  # Explicitly False
         )
 
         # Should be True because plot_reconstructions=True
@@ -622,9 +821,12 @@ class TestReconstructionEvaluatorInitialization:
         """Test that plot_reconstructions=False allows collect_predictions=False."""
         evaluator = ReconstructionEvaluator(
             metric_names=["mse"],
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             plot_reconstructions=False,
-            collect_predictions=False,
             paths={},
+            collect_predictions=False,
         )
 
         assert evaluator.collect_predictions is False
@@ -650,9 +852,14 @@ class TestParameterCombinations:
         # This should work (scaling wrapper handles None transform)
         evaluator = DefaultEvaluator(
             metric_names=["mse"],
-            apply_inverse_scaling=True,
+            task_type="regression",
+            num_classes=None,
             inverse_transform=None,
+            apply_inverse_scaling=True,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert evaluator.scaling_wrapper.apply_inverse is True
@@ -662,7 +869,14 @@ class TestParameterCombinations:
         """Test initialization with multiple metrics."""
         evaluator = DefaultEvaluator(
             metric_names=["mse", "rmse", "mae", "r2"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
 
         assert len(evaluator.metrics) == 4
@@ -673,7 +887,14 @@ class TestParameterCombinations:
         # Dict paths
         evaluator1 = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={"output": "/test"},
+            remote_logger=None,
+            collect_predictions=True,
         )
         assert isinstance(evaluator1.paths, dict)
 
@@ -681,7 +902,14 @@ class TestParameterCombinations:
         mock_paths = MagicMock()
         evaluator2 = DefaultEvaluator(
             metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths=mock_paths,
+            remote_logger=None,
+            collect_predictions=True,
         )
         assert evaluator2.paths == mock_paths
 
@@ -690,8 +918,14 @@ class TestParameterCombinations:
         # None logger
         evaluator1 = DefaultEvaluator(
             metric_names=["mse"],
-            remote_logger=None,
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=None,
+            collect_predictions=True,
         )
         assert evaluator1.remote_logger is None
 
@@ -699,7 +933,13 @@ class TestParameterCombinations:
         mock_logger = MagicMock()
         evaluator2 = DefaultEvaluator(
             metric_names=["mse"],
-            remote_logger=mock_logger,
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
             paths={},
+            remote_logger=mock_logger,
+            collect_predictions=True,
         )
         assert evaluator2.remote_logger == mock_logger

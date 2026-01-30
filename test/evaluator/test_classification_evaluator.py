@@ -33,8 +33,9 @@ def cls_evaluator_fixture(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
         save_predictions=True,
-        collect_predictions=True,
         paths=MagicMock(),
     )
     return evaluator
@@ -52,8 +53,9 @@ def cls_evaluator_no_save_fixture(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
-        save_predictions=False,  # Disabled at init
-        collect_predictions=True,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         paths=MagicMock(),
     )
     return evaluator
@@ -74,9 +76,11 @@ def cls_evaluator_no_collect_fixture(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
-        save_predictions=False,  # Must be False to allow collect_predictions=False
-        collect_predictions=False,  # Disabled at init
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
         paths=MagicMock(),
+        collect_predictions=False,
     )
     return evaluator
 
@@ -115,8 +119,9 @@ def real_metric_evaluator(mocker):
         return ClassificationEvaluator(
             num_classes=3,
             metric_names=metric_names,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
             save_predictions=False,
-            collect_predictions=True,
             paths=MagicMock(),
         )
 
@@ -498,7 +503,10 @@ def test_init_basic_configuration(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=5,
         metric_names=["accuracy"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
         save_predictions=True,
+        paths={},
     )
     
     assert evaluator.num_classes == 5
@@ -568,8 +576,10 @@ def test_compute_metrics_handles_denormalized_suffix(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
+        inverse_transform=None,
+        apply_inverse_scaling=True,
         save_predictions=False,
-        apply_inverse_scaling=True,  # Enable scaling to get _denormalized suffix
+        paths={},
     )
     
     # Create data and update evaluator
@@ -611,9 +621,12 @@ def test_compute_metrics_raises_on_unexpected_suffix(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
         save_predictions=False,
+        paths={},
     )
-    
+
     # Patch the parent's _compute_metrics to return unexpected key format
     # This tests the child's error handling for malformed parent output
     original_parent_compute = DefaultEvaluator._compute_metrics
@@ -652,9 +665,12 @@ def test_compute_metrics_conflict_raises_assertion(mocker):
     evaluator = ClassificationEvaluator(
         num_classes=3,
         metric_names=["accuracy"],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
         save_predictions=False,
+        paths={},
     )
-    
+
     # Patch parent's _compute_metrics to return same metric with different values
     # This simulates a bug where normalized and denormalized metrics differ
     original_parent_compute = DefaultEvaluator._compute_metrics

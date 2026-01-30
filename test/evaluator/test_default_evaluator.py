@@ -96,11 +96,13 @@ def default_evaluator_regression_fixture(mocker, mock_inverse_transform_mixin):
     evaluator = DefaultEvaluator(
         metric_names=["mse", "rmse"],
         task_type="regression",
+        num_classes=None,
         inverse_transform=mock_inverse_transform_mixin,
         apply_inverse_scaling=False,
         save_predictions=False,
-        collect_predictions=False,
         paths=MagicMock(),
+        remote_logger=None,
+        collect_predictions=False,
     )
     # Note: scaling_wrapper assignment is needed to override the real ScalingWrapper
     # created during init with our mock. This is acceptable as it's replacing a
@@ -148,11 +150,13 @@ def default_evaluator_with_scaling_fixture(mocker):
     evaluator = DefaultEvaluator(
         metric_names=["mse", "rmse"],
         task_type="regression",
+        num_classes=None,
         inverse_transform=mock_scaler,
-        apply_inverse_scaling=True,  # Enable at init
+        apply_inverse_scaling=True,
         save_predictions=True,
-        collect_predictions=True,
         paths=MagicMock(),
+        remote_logger=None,
+        collect_predictions=True,
     )
     evaluator.scaling_wrapper = mock_scaler
 
@@ -177,11 +181,13 @@ def default_evaluator_regression_fixture_saving(mocker, mock_inverse_transform_m
     evaluator = DefaultEvaluator(
         metric_names=["mse", "rmse"],
         task_type="regression",
+        num_classes=None,
         inverse_transform=mock_inverse_transform_mixin,
         apply_inverse_scaling=False,
-        save_predictions=True,  # Enable at init
-        collect_predictions=True,  # Enable at init
+        save_predictions=True,
         paths=mock_paths,
+        remote_logger=None,
+        collect_predictions=True,
     )
     evaluator.scaling_wrapper = mock_inverse_transform_mixin
 
@@ -220,9 +226,14 @@ def test_evaluator_init_initializes_collections_and_secondary_metrics(
     # Case A: Scaling OFF
     evaluator_a = DefaultEvaluator(
         metric_names=["mse"],
-        apply_inverse_scaling=False,
-        collect_predictions=True,
+        task_type="regression",
+        num_classes=None,
         inverse_transform=mock_inverse_transform_mixin,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
+        collect_predictions=True,
     )
     assert isinstance(evaluator_a.preds, list)
     assert not hasattr(evaluator_a, "normalized_metrics")
@@ -230,9 +241,14 @@ def test_evaluator_init_initializes_collections_and_secondary_metrics(
     # Case B: Scaling ON
     evaluator_b = DefaultEvaluator(
         metric_names=["mse"],
-        apply_inverse_scaling=True,
-        collect_predictions=True,
+        task_type="regression",
+        num_classes=None,
         inverse_transform=mock_inverse_transform_mixin,
+        apply_inverse_scaling=True,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
+        collect_predictions=True,
     )
     assert hasattr(evaluator_b, "normalized_metrics")
     assert len(evaluator_b.normalized_metrics) == 1
@@ -493,8 +509,11 @@ def test_update_classification_task(
         metric_names=["accuracy"],
         task_type="classification",
         num_classes=classification_data_balanced["predictions"].shape[-1],
-        inverse_transform=None,  # No scaling for classification
+        inverse_transform=None,
         apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
         collect_predictions=True,
     )
 
@@ -534,9 +553,14 @@ def test_update_forecasting_task(
 
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
-        task_type="forecasting",  # Set at init, not after
-        collect_predictions=True,
+        task_type="forecasting",
+        num_classes=None,
+        inverse_transform=mock_inverse_transform_mixin,
+        apply_inverse_scaling=False,
         save_predictions=True,
+        paths={},
+        remote_logger=None,
+        collect_predictions=True,
     )
     evaluator.scaling_wrapper = mock_inverse_transform_mixin
 
@@ -568,7 +592,13 @@ def test_update_unsupported_task_raises_error(mocker, mock_inverse_transform_mix
 
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
-        task_type="regression",  # Valid at init
+        task_type="regression",
+        num_classes=None,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
         collect_predictions=True,
     )
 
@@ -603,7 +633,13 @@ def test_log_plot_with_remote_logger(mocker, mock_inverse_transform_mixin):
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
         task_type="regression",
-        remote_logger=mock_logger,  # Set at init
+        num_classes=None,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        remote_logger=mock_logger,
+        collect_predictions=True,
     )
 
     mock_fig = MagicMock()
@@ -631,7 +667,13 @@ def test_log_plot_without_remote_logger(mocker, mock_inverse_transform_mixin):
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
         task_type="regression",
-        remote_logger=None,  # Explicitly no logger at init
+        num_classes=None,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
+        collect_predictions=True,
     )
 
     mock_fig = MagicMock()
@@ -662,7 +704,11 @@ def test_prepare_predictions_classification_argmax(
         metric_names=["accuracy"],
         task_type="classification",
         num_classes=3,
+        inverse_transform=None,
+        apply_inverse_scaling=False,
         save_predictions=True,
+        paths={},
+        remote_logger=None,
         collect_predictions=True,
     )
 
