@@ -1,18 +1,13 @@
 #!/bin/bash
 
 # ==========================================================
-# SETUP: Clean and prepare the logs directory for a fresh run
+# SETUP: Prepare the logs directory (keep past runs for resume)
 # ==========================================================
 LOG_DIR="./logs"
-echo "Preparing a clean log directory at: $LOG_DIR"
-
-# If the log directory exists, delete it and everything inside it
-if [ -d "$LOG_DIR" ]; then
-    rm -r "$LOG_DIR"
-fi
-
-# Create a new, empty log directory
+echo "Ensuring log directory exists at: $LOG_DIR (existing logs preserved)"
 mkdir -p "$LOG_DIR"
+# Clean up any stale FIFO pipes from previous runs
+find "$LOG_DIR" -maxdepth 1 -type p -name "*.pipe.*" -delete 2>/dev/null || true
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -28,7 +23,9 @@ source "$SCRIPT_DIR/../base/logging.sh"
 
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="01_2026"
+wandb_log_folder="29_01_2026"
+# Set DEBUG_SKIP to any non-empty value to log runs without executing commands
+DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
 
 datasets=(
@@ -70,18 +67,8 @@ run_counter=1
 job_counter=0
 MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
+SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"
 
-# Function to run and log commands
-# run_and_log() {
-#     local command_to_run="$1"
-#     local run_name="$2"
-
-#     # For debugging, just print the command and run name
-#     echo "DEBUG: Run Name: $run_name"
-#     echo "DEBUG: Command: $command_to_run"
-#     # Run the command and log its output
-#     eval "sleep 5"
-# }
 
 build_exp_name() {
   local dataset_key="$1"
@@ -96,13 +83,12 @@ build_exp_name() {
   fi
 }
 
-
 pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
 
 
-for model_name in "${model_names[@]}"; do
-    for dataset in "${datasets[@]}"; do
+for dataset in "${datasets[@]}"; do
+    for model_name in "${model_names[@]}"; do
         for cs_pair in "${context_stride_pairs[@]}"; do
             # --- 3. Create a unique and descriptive name for this specific run ---
             # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
@@ -112,7 +98,6 @@ for model_name in "${model_names[@]}"; do
             dataset_run_name="${dataset_key//\//_}"
             run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
             final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
-
 
             # --- 4. Build the full command as a single string ---
             # Note the escaped quotes \"...\" for parameters that are lists.
@@ -128,8 +113,21 @@ for model_name in "${model_names[@]}"; do
                 cache.use_cache_after_transfroms=True
             )
             # debug=train_debug
+
+            final_command="${command_to_run[*]}"
+
+            success_key="${run_name}|${final_command}"
+
+            # Skip if this exact run/command pair already succeeded in a previous attempt
+            if [ -f "${SUCCESS_LOG}" ]; then
+                if grep -Fq "${success_key}" "${SUCCESS_LOG}"; then
+                    echo "Skipping ${run_name} (command already recorded as successful)."
+                    ((run_counter++))
+                    continue
+                fi
+            fi
             # --- 5. Execute using the logger and run in the background (&) ---
-            run_and_log "${command_to_run[*]}" "$run_name" &
+            run_and_log "${command_to_run[*]}" "$run_name" "$DEBUG_SKIP" &
             pid=$!
             pids+=($pid)
             # --- 6. Increment counters and manage parallel jobs ---
