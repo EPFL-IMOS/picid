@@ -8,7 +8,7 @@ task_mode: fault
 target_name: Fault_Detection_Ground_Truth
 timestamp_name: Datetime
 group_by_days: True
-random_state: ${seed}
+random_state: 0
 
 unit_number: "2-2"
 
