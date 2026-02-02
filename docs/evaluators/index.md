@@ -1,6 +1,6 @@
 # Evaluators
 
-This document describes the evaluator subsystem in `lmetk.evaluator`: the abstract base, scaling utilities, and all concrete evaluators (default, classification, forecasting, multi-unit, reconstruction). For each component we explain **purpose**, **attributes**, **methods** (signatures, inputs, outputs), and **logic** in as explicit a form as possible.
+This document describes the evaluator subsystem in `lmetk.evaluator`: the abstract base, scaling utilities, buffer, hooks, metric management, and all concrete evaluators. For each component we explain **purpose**, **architecture**, **attributes**, **methods** (signatures, inputs, outputs), and **logic** in explicit form.
 
 ---
 
@@ -10,12 +10,17 @@ This document describes the evaluator subsystem in `lmetk.evaluator`: the abstra
 2. [Task types](#task-types)
 3. [AbstractEvaluator (base)](#abstractevaluator-base)
 4. [Scaling wrappers](#scaling-wrappers)
-5. [DefaultEvaluator](#defaultevaluator)
-6. [ClassificationEvaluator](#classificationevaluator)
-7. [ForecastingEvaluator](#forecastingevaluator)
-8. [MultiUnitEvaluator](#multiunitevaluator)
-9. [ReconstructionEvaluator](#reconstructionevaluator)
-10. [Utils](#utils)
+5. [PredictionBuffer](#predictionbuffer)
+6. [MetricManager](#metricmanager)
+7. [Evaluation hooks](#evaluation-hooks)
+8. [DefaultEvaluator](#defaultevaluator)
+9. [ClassificationEvaluator](#classificationevaluator)
+10. [ForecastingEvaluator](#forecastingevaluator)
+11. [MultiUnitEvaluator](#multiunitevaluator)
+12. [ReconstructionEvaluator](#reconstructionevaluator)
+13. [Utils](#utils)
+14. [Configuration examples](#configuration-examples)
+15. [Summary table](#summary-table)
 
 ---
 
@@ -23,28 +28,26 @@ This document describes the evaluator subsystem in `lmetk.evaluator`: the abstra
 
 **Location:** `lmetk/evaluator/`
 
-**Role:** Evaluators consume model outputs (predictions and targets), optionally apply inverse scaling, update internal metrics, and at the end of an evaluation phase return a dictionary of metric values. Some evaluators also save predictions to disk (e.g. netCDF) and/or log plots to a remote logger (e.g. WandB, MLflow).
+**Role:** Evaluators consume model outputs (predictions and targets), optionally apply inverse scaling via the scaling wrapper, update internal metrics via a `MetricManager`, accumulate data in a `PredictionBuffer` for saving and plotting, and invoke pluggable **hooks** for side effects (saving to disk, logging plots). At the end of an evaluation phase, they return a dictionary of metric values.
 
-**Inheritance:**
+**Architecture (post-refactor):**
 
-- **AbstractEvaluator** (ABC) — defines `update`, `compute`, `reset` and sets up the scaling wrapper and paths.
-- **DefaultEvaluator** (extends AbstractEvaluator) — generic regression/classification/forecasting evaluator with optional dual reporting (normalized + denormalized) and optional prediction saving.
-- **ClassificationEvaluator** — thin wrapper over DefaultEvaluator with `task_type="classification"`, custom save format (logits), and metric keys without `_normalized`/`_denormalized` suffixes.
-- **ForecastingEvaluator** — extends DefaultEvaluator with slicing by `effective_pred_len` and optional `target_dim_position` for univariate forecasting.
-- **MultiUnitEvaluator** — extends DefaultEvaluator; **regression-only**; maintains per-unit metrics and optional pred-vs-target plots per unit; requires `unit_id` in `model_out`.
-- **ReconstructionEvaluator** — extends DefaultEvaluator; adds optional reconstruction plots and local/remote plot logging.
+- **AbstractEvaluator** (ABC) — selects scaling strategy (univariate vs multivariate), defines `update`, `compute`, `reset`.
+- **DefaultEvaluator** — orchestrates a `PredictionBuffer`, `MetricManager`, and pluggable `BaseEvalHook` instances. Supports dual reporting (normalized + denormalized) when inverse scaling is enabled.
+- **ClassificationEvaluator** — thin wrapper over `DefaultEvaluator` with `task_type="classification"` and required `num_classes`.
+- **ForecastingEvaluator** — extends `DefaultEvaluator` with slicing by `effective_pred_len` and optional `target_dim_position` for univariate forecasting.
+- **MultiUnitEvaluator** — extends `DefaultEvaluator`; maintains per-unit metrics via separate `MetricManager` instances per unit; requires `unit_id` in `model_out`.
+- **ReconstructionEvaluator** — extends `DefaultEvaluator` with `task_type="regression"`; reconstruction plots and saving are handled by hooks.
 
 **Data flow (typical):**
 
-1. **Training/validation loop** calls `evaluator.update(model_out)` for each batch. `model_out` contains at least `"predictions"` and `"targets"`; MultiUnit also requires `"unit_id"`.
-2. At end of epoch/split, the loop calls `evaluator.compute(mode, epoch, step)`, which:
-   - Prepares data for saving (overridable),
-   - Saves predictions to file if configured,
-   - Computes and returns a `Dict[str, float]` of metric names to values.
+1. Training/validation loop calls `evaluator.update(model_out)` for each batch. `model_out` contains at least `"predictions"` and `"targets"`; `MultiUnitEvaluator` also requires `"unit_id"`.
+2. `DefaultEvaluator.update` validates input, prepares batch data (scaling, task branching), accumulates into the buffer (if `collect_predictions`), updates the `MetricManager`, and runs `on_update_end` on each hook.
+3. At end of epoch/split, the loop calls `evaluator.compute(mode, epoch, step)`, which computes metrics via `MetricManager`, runs `on_compute_end` on each hook (e.g. save predictions, log plots), and returns a `Dict[str, float]`.
 
-**Shape conventions (throughout the doc):**
+**Shape conventions:**
 
-- **Regression / forecasting:** predictions and targets are 3D: `(N, T, 1)` (single target). `N` = batch size, `T` = time steps (often 1 for point-wise RUL).
+- **Regression / forecasting:** predictions and targets are 3D: `(N, T, 1)`. `N` = batch size, `T` = time steps (often 1 for point-wise RUL).
 - **Classification:** predictions `(N, T, C)` (logits), targets `(N, T, 1)` (integer class indices).
 - **Single-target:** targets always have last dimension 1 in the evaluator contract.
 
@@ -52,7 +55,7 @@ This document describes the evaluator subsystem in `lmetk.evaluator`: the abstra
 
 ## Task types
 
-Task types are defined in `lmetk.baselines.definitions` and used by evaluators to branch logic (e.g. scaling vs no scaling, metric factory):
+Task types are defined in `lmetk.baselines.definitions` and used by evaluators to branch logic (scaling, metric factory):
 
 | Constant | Values |
 |----------|--------|
@@ -63,9 +66,10 @@ Task types are defined in `lmetk.baselines.definitions` and used by evaluators t
 | `ALL_TASKS` | Union of all above |
 
 - **DefaultEvaluator** accepts any `task_type` in `ALL_TASKS`.
-- **MultiUnitEvaluator** accepts only `task_type` in `REGRESSION_TASKS` (assertion in `__init__`).
 - **ClassificationEvaluator** fixes `task_type="classification"`.
-- **ForecastingEvaluator** does not override `task_type` in the base; it is typically used with forecasting tasks and slices predictions/targets by length and optionally by target dimension.
+- **ForecastingEvaluator** fixes `task_type="forecasting"` and slices predictions/targets by length and optionally by target dimension.
+- **MultiUnitEvaluator** accepts any `task_type` passed to `DefaultEvaluator`; typical usage is regression (RUL) with per-unit metrics.
+- **ReconstructionEvaluator** fixes `task_type="regression"`.
 
 ---
 
@@ -73,17 +77,17 @@ Task types are defined in `lmetk.baselines.definitions` and used by evaluators t
 
 **Module:** `lmetk.evaluator.base`
 
-**Purpose:** Abstract base for all evaluators. It sets up the scaling wrapper (univariate or multivariate) and paths, and declares the interface: `update`, `compute`, `reset`.
+**Purpose:** Abstract base for all evaluators. It selects the scaling strategy (univariate vs multivariate) and declares the interface: `update`, `compute`, `reset`.
 
 ### Constructor
 
-```text
+```python
 __init__(
     self,
-    paths: dict[str, str],
+    paths: Optional[Dict[str, str]] = None,
     inverse_transform: Optional[InverseTransformMixin] = None,
     apply_inverse_scaling: bool = False,
-    task_mode: Optional[Any] = False,
+    task_mode: Optional[Any] = None,
     **kwargs,
 )
 ```
@@ -92,11 +96,11 @@ __init__(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `paths` | `dict[str, str]` | Path configuration (e.g. output dirs); stored as `self.paths`. |
+| `paths` | `Optional[Dict[str, str]]` | Path configuration (e.g. output dirs); stored as `self.paths`. May be a dict or an object with attributes like `eval_details`, `plot_dir`. |
 | `inverse_transform` | `Optional[InverseTransformMixin]` | Scaler used for inverse transform; passed to the scaling wrapper. |
 | `apply_inverse_scaling` | `bool` | Whether to apply inverse scaling when requested by the wrapper. |
 | `task_mode` | `Optional[Any]` | Passed to the scaling wrapper; e.g. `"univariate"`, `"multivariate"`, `"forecasting"`. |
-| `**kwargs` | | Only `inverse_transform_name` is allowed; any other key raises `ValueError`. |
+| `**kwargs` | | Additional arguments absorbed (no restriction). |
 
 **Attributes set:**
 
@@ -106,9 +110,9 @@ __init__(
 
 ### Abstract methods
 
-- **`update(self, model_out: dict)`** — Update internal state (e.g. metrics, collected predictions) with one batch. No return value.
-- **`compute(self, ...)`** — Compute and return metrics (and possibly trigger saving/logging). Return type is implementation-defined (typically `Dict[str, float]`).
-- **`reset(self)`** — Reset all accumulated state (metrics, collected lists) so the evaluator can be reused for another run/epoch.
+- **`update(self, model_out: dict) -> None`** — Update internal state (buffer, metrics) with one batch. No return value.
+- **`compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`** — Compute and return metrics; may trigger hooks (saving, plotting).
+- **`reset(self) -> None`** — Reset all accumulated state for reuse in another run/epoch.
 
 ### Other
 
@@ -128,7 +132,7 @@ Two wrappers delegate inverse scaling to an `InverseTransformMixin` instance and
 
 **Constructor:**
 
-```text
+```python
 __init__(
     self,
     inverse_transform: Optional[InverseTransformMixin] = None,
@@ -143,7 +147,7 @@ __init__(
 
 - **Inputs:**
   - `predictions`, `targets`: `torch.Tensor` or `np.ndarray`. Converted to numpy if needed.
-  - `kwargs`: Optional `metadata` (e.g. `unit_id`) passed to the scaler’s `inverse_transform`.
+  - `kwargs`: Optional `metadata` (e.g. `{"unit_id": array}`) passed to the scaler’s `inverse_transform`.
 - **Behavior:**
   - If `inverse_transform` is None or `apply_inverse` is False, returns `(predictions, targets)` unchanged.
   - For **3D** `(B, T, C)`:
@@ -151,15 +155,177 @@ __init__(
     - If `task_mode == "forecasting"`, asserts `C == 1`.
     - Flattens to `(B*T, C)` via `rearrange("b t c -> (b t) c")`, calls `inverse_transform` on `NamedTransformInput(predictions=...)` and `NamedTransformInput(targets=...)`, then reshapes back to original shape.
   - For **2D**, calls `inverse_transform` without reshaping.
-- **Output:** `(predictions_transformed, targets_transformed)` same shape as input (after possible tensor→numpy conversion).
+- **Output:** `(predictions_transformed, targets_transformed)` same shape as input.
 
 ### MultivariateTimeseriesScalingWrapper
 
-**Purpose:** Used when `task_mode == "multivariate"`. Constructor asserts `task_mode == "multivariate"`. Flattens 3D to 2D, applies inverse transform, then unflattens back to 3D. Intended for multivariate time series (e.g. multiple channels).
+**Purpose:** Used when `task_mode == "multivariate"`. Constructor asserts `task_mode == "multivariate"`. Flattens 3D to 2D, applies inverse transform, then unflattens back to 3D. Intended for multivariate time series.
 
 **Constructor:** Same signature as `ScalingWrapper`; asserts `task_mode == "multivariate"`.
 
-**Method: `inverse_transform_if_needed(predictions, targets)`** — No `metadata` in the current implementation. Converts to numpy, flattens `(B, T, C)` to `(B*T, C)`, applies `inverse_transform`, then reshapes back to `(B, T, C)`.
+**Method: `inverse_transform_if_needed(predictions, targets)`** — Does not accept `metadata` in the current implementation. Converts to numpy, flattens `(B, T, C)` to `(B*T, C)`, applies `inverse_transform`, then reshapes back to `(B, T, C)`.
+
+---
+
+## PredictionBuffer
+
+**Module:** `lmetk.evaluator.buffer`
+
+**Purpose:** Handles raw data accumulation for saving and plotting. Stores predictions, targets, optional normalized variants, and unit IDs.
+
+### Constructor
+
+```python
+__init__(self) -> None
+```
+
+**Attributes:**
+
+- `self.data: Dict[str, List[np.ndarray]]` — Keys: `"preds"`, `"targets"`, `"norm_preds"`, `"norm_targets"`, `"unit_ids"`. Each value is a list of numpy arrays appended per batch.
+
+### Properties (backward compatibility)
+
+- `self.preds` — `self.data["preds"]`
+- `self.targets` — `self.data["targets"]`
+- `self.unit_ids` — `self.data["unit_ids"]`
+
+### Methods
+
+- **`accumulate(self, batch: Dict[str, Any], unit_id: Optional[np.ndarray] = None) -> None`**  
+  Appends `batch["preds"]` and `batch["targets"]` to internal lists. If `batch.get("is_dual")` is true, also appends `batch["norm_preds"]` and `batch["norm_targets"]`. If `unit_id` is provided, appends it to `unit_ids`.
+
+- **`get_all(self) -> Dict[str, np.ndarray]`**  
+  Concatenates all buffered lists along axis 0 and returns a dict. Returns `{}` if buffer is empty.
+
+- **`clear(self) -> None`**  
+  Clears all lists for a new epoch.
+
+---
+
+## MetricManager
+
+**Module:** `lmetk.metrics.manager`
+
+**Purpose:** Orchestrates multiple metric instances. Handles dual-scaling (normalized/denormalized) and task-specific aggregation. Used by evaluators to avoid direct metric management.
+
+### Constructor
+
+```python
+__init__(
+    self,
+    metric_names: List[str],
+    task_type: str,
+    paths: Optional[Dict[str, str]] = None,
+    num_classes: Optional[int] = None,
+    is_dual: bool = False,
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `metric_names` | `List[str]` | Non-empty list of metric names (e.g. `["mse", "mae"]`). Stored lowercased. |
+| `task_type` | `str` | `"regression"` or `"classification"` (or other `ALL_TASKS` values). |
+| `paths` | `Optional[Dict[str, str]]` | Required for file-based metrics (e.g. Railway metrics). |
+| `num_classes` | `Optional[int]` | Required for classification metrics. |
+| `is_dual` | `bool` | If True, tracks both normalized and denormalized metrics. |
+
+### Methods
+
+- **`update(predictions, targets, norm_preds=None, norm_targets=None) -> None`**  
+  Updates all primary metrics with `predictions` and `targets`. If `is_dual` and `norm_preds`/`norm_targets` are provided, updates normalized metrics with them.
+
+- **`compute() -> Dict[str, float]`**  
+  For **classification**: returns `{name: metric.compute()}` (no suffix).  
+  For **regression/PHM**: primary metrics use `_denormalized` suffix when `is_dual`; otherwise `_normalized`. If dual, normalized metrics use `_normalized` suffix.
+
+- **`reset() -> None`**  
+  Resets all metric states.
+
+**Available metrics (via MetricFactory):**
+
+- **Regression:** `mae`, `mse`, `rmse`, `mape`, `mspe`, `rse`, `corr`, `mae_railway`, `mse_railway`, `nasa_score`, `mpe`, `phm_score`
+- **Classification:** `accuracy`, `precision`, `recall`, `f1`, `auroc`
+
+---
+
+## Evaluation hooks
+
+**Module:** `lmetk.evaluator.hooks`
+
+**Purpose:** Pluggable lifecycle hooks for side effects during evaluation (saving, plotting). Hooks are invoked by `DefaultEvaluator` after each batch (`on_update_end`) and after metrics are computed (`on_compute_end`).
+
+### BaseEvalHook
+
+**Module:** `lmetk.evaluator.hooks.base`
+
+Abstract base for all evaluator hooks.
+
+**Methods:**
+
+- **`on_update_end(self, batch: Dict[str, Any], evaluator: Any) -> None`**  
+  Called after each batch is processed. Optional override for streaming or partial accumulation. Default implementation is no-op.
+
+- **`on_compute_end(self, results: Dict[str, float], evaluator: Any, mode: str, epoch: int, step: int) -> None`**  
+  Abstract. Called after all metrics are computed. Primary entry point for saving and plotting.
+
+### SavePredictionsHook
+
+**Module:** `lmetk.evaluator.hooks.save_predictions`
+
+**Purpose:** Handles NetCDF saving with standardized dimension naming. Resolves dimension size conflicts (e.g. classification: preds `(N, T, C)` vs targets `(N, T, 1)`).
+
+**Constructor:**
+
+```python
+__init__(self, dims: Optional[List[str]] = None)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dims` | `Optional[List[str]]` | Dimension names for 3D tensors. Required; typically `["sample", "time", "feature"]`. Must have exactly 3 elements. |
+
+**Behavior:** In `on_compute_end`, runs only if `evaluator.save_predictions` is True and the buffer has data. Formats data via `_format_xarray`, writes to `evaluator.paths.eval_details / mode / "predictions.nc"`. Maps internal `norm_preds`/`norm_targets` to `preds_normalized`/`targets_normalized` in the output. Handles `unit_ids` if present.
+
+### ReconstructionPlotHook
+
+**Module:** `lmetk.evaluator.hooks.reconstruction_plot`
+
+**Purpose:** Generates signal reconstruction comparison plots (e.g. for autoencoders). Plots target vs prediction for up to 10 evenly spaced samples.
+
+**Behavior:** In `on_compute_end`, runs only if `evaluator.plot_reconstructions` is True, `evaluator.remote_logger` is set, and the buffer has data. Uses `data["preds"]` and `data["targets"]`; plots first channel for each sample. Logs via `evaluator.log_plot(fig, "reconstructions_overview", mode, epoch, step)`.
+
+### UnitTrendPlotHook
+
+**Module:** `lmetk.evaluator.hooks.unit_trend_plot`
+
+**Purpose:** Plots degradation trends split by unit ID. Intended for multi-unit RUL evaluation.
+
+**Constructor:**
+
+```python
+__init__(
+    self,
+    log_every_n_epochs: int = 10,
+    enable_subsampling: bool = True,
+    subsample_threshold: int = 2000,
+    subsample_factor: int = 10,
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `log_every_n_epochs` | `int` | Epoch period for logging plots (e.g. only when `epoch % log_every_n_epochs == 0`). |
+| `enable_subsampling` | `bool` | Whether to subsample long series for plotting. |
+| `subsample_threshold` | `int` | Length above which subsampling is applied. |
+| `subsample_factor` | `int` | Subsampling step (plot every Nth point). |
+
+**Behavior:** In `on_compute_end`, skips if `mode == "train"` or (for `mode == "val"`) if `epoch % log_every_n_epochs != 0`. Requires `unit_ids` in buffer data. For each unique unit, plots pred vs target (with optional subsampling) and logs via `evaluator.log_plot(fig, f"unit_{unit_key}_trend", mode, epoch, step)`.
 
 ---
 
@@ -167,29 +333,24 @@ __init__(
 
 **Module:** `lmetk.evaluator.default`
 
-**Purpose:** Single evaluator for regression, classification, and forecasting. It supports:
-
-- **Dual reporting:** When inverse scaling is enabled, it keeps two sets of metrics: one on **normalized** (model) space and one on **denormalized** (inverse-scaled) space, and reports both with `_normalized` / `_denormalized` suffixes (except in ClassificationEvaluator, which strips them).
-- **Optional prediction saving:** Can concatenate collected predictions/targets and write them to a netCDF file.
-- **Optional remote logging:** Can pass a `remote_logger` for logging plots (e.g. via `log_plot`).
-
-**Task types:** Any in `ALL_TASKS`. Classification tasks do **not** use inverse scaling (assertion: `inverse_transform` must be None for classification).
+**Purpose:** Orchestrates data flow between a `PredictionBuffer`, a `MetricManager`, and pluggable hooks. Supports regression, classification, and forecasting with optional dual reporting (normalized + denormalized) when inverse scaling is enabled.
 
 ### Constructor
 
-```text
+```python
 __init__(
     self,
     metric_names: List[str],
     task_type: str = "regression",
-    num_classes: Optional[int] = None,
-    inverse_transform: Optional[InverseTransformMixin] = None,
-    apply_inverse_scaling: bool = False,
     save_predictions: bool = False,
-    paths: Optional[str] = None,
+    collect_predictions: Optional[bool] = None,
+    num_classes: Optional[int] = None,
+    paths: Optional[Any] = None,
     remote_logger: Optional[Any] = None,
-    collect_predictions: bool = False,
-    **kwargs,
+    hooks: Optional[List[BaseEvalHook]] = None,
+    metric_manager: Optional[MetricManager] = None,
+    buffer: Optional[PredictionBuffer] = None,
+    **kwargs: Any,
 )
 ```
 
@@ -197,87 +358,47 @@ __init__(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `metric_names` | `List[str]` | Non-empty list of metric names (e.g. `["mse", "mae"]`). Stored lowercased. Raises `ValueError` if empty. |
-| `task_type` | `str` | One of `ALL_TASKS` (lowercased). Determines metric factory (classification vs regression) and update logic. |
-| `num_classes` | `Optional[int]` | Required for classification tasks; used when creating classification metrics. |
-| `inverse_transform` | `Optional[InverseTransformMixin]` | Scaler for inverse transform; must be None for classification. |
-| `apply_inverse_scaling` | `bool` | Whether to apply inverse scaling and thus enable dual (normalized/denormalized) reporting. |
-| `save_predictions` | `bool` | Whether to write predictions to netCDF at compute time. |
-| `paths` | `Optional[str]` or path-like | Path config; may have `.eval_details` for output directory. |
+| `metric_names` | `List[str]` | Non-empty list of metric names. Raises `ValueError` if empty. |
+| `task_type` | `str` | One of `ALL_TASKS` (lowercased). |
+| `save_predictions` | `bool` | Whether to write predictions to disk (via `SavePredictionsHook`; hook must be registered). |
+| `collect_predictions` | `Optional[bool]` | If `None`, auto-enabled when `save_predictions` or any hook is present. If explicitly True/False, that choice is respected. |
+| `num_classes` | `Optional[int]` | Required for classification tasks. |
+| `paths` | `Optional[Any]` | Path config; should have `eval_details` (and optionally `plot_dir`) for hooks. |
 | `remote_logger` | `Optional[Any]` | Logger for plots (e.g. `experiment.log(...)`). |
-| `collect_predictions` | `bool` | Whether to accumulate predictions/targets in memory for saving and (if scaling) for normalized series. Effective collection is `save_predictions or collect_predictions`. |
-| `**kwargs` | | Forwarded to `AbstractEvaluator`; only `inverse_transform_name` allowed there. |
+| `hooks` | `Optional[List[BaseEvalHook]]` | Hooks for saving, plotting, etc. |
+| `metric_manager` | `Optional[MetricManager]` | Injected manager; if None, created from `metric_names`, `task_type`, etc. |
+| `buffer` | `Optional[PredictionBuffer]` | Injected buffer; if None, new instance. |
+| `**kwargs` | | Forwarded to `AbstractEvaluator` (e.g. `inverse_transform`, `apply_inverse_scaling`, `task_mode`). |
 
 **Attributes set:**
 
-- `self.inverse_transform` — Same as the constructor argument.
-- `self.task_type` — Lowercased `task_type`.
-- `self.metrics` — Dict mapping each metric name to a metric instance (e.g. from `MetricFactory.create_metric` or `create_classification_metric`). These are the **primary** metrics (denormalized when scaling is on).
-- `self.paths`, `self.save_predictions`, `self.out_path`, `self.remote_logger`, `self.collect_predictions`, `self.metric_names`, `self.num_classes`.
-- If `collect_predictions`: `self.preds`, `self.targets` (lists of arrays). If `apply_inverse_scaling`: also `self.scaled_preds`, `self.scaled_targets`; and `self.normalized_metrics` (same keys as `self.metrics`) for the normalized view.
+- `self.task_type`, `self.save_predictions`, `self.remote_logger`, `self.num_classes`, `self.hooks`, `self.collect_predictions`, `self.metric_manager`, `self.buffer`.
 
-### Method: `reset(self)`
+### Methods
 
-- Clears `preds`, `targets`, `scaled_preds`, `scaled_targets` if they exist.
-- Calls `metric.reset()` on every metric in `self.metrics` and, if present, `self.normalized_metrics`.
+- **`add_hook(self, hook: BaseEvalHook) -> None`**  
+  Registers a new hook. If `collect_predictions` was False, enables it automatically.
 
-### Method: `update(self, model_out: dict)`
+- **`update(self, model_out: Dict[str, Any]) -> None`**  
+  1. Validates via `_validate_input` (returns early if empty or invalid).
+  2. Prepares batch via `_prepare_batch_data` (scaling, task branching).
+  3. If `collect_predictions`, calls `buffer.accumulate(batch, model_out.get("unit_id"))`.
+  4. Calls `metric_manager.update(...)` with preds, targets, and optional norm_preds/norm_targets.
+  5. Calls `hook.on_update_end(batch, self)` for each hook.
 
-**Input:** `model_out` must contain:
+- **`compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`**  
+  Computes metrics via `metric_manager.compute()`, runs `hook.on_compute_end(...)` for each hook, returns the result dict.
 
-- `"predictions"`: array shape `(N, T, C)` with `C=1` for regression/forecasting, or `C=num_classes` for classification.
-- `"targets"`: array shape `(N, T, 1)`.
+- **`reset(self) -> None`**  
+  Clears buffer and resets metric manager.
 
-**Logic:**
+- **`log_plot(self, fig, title, mode, epoch, step) -> None`**  
+  If `remote_logger` is set, logs the figure as `plots/{mode}/{title}`.
 
-1. **Empty batch:** If `predictions.shape[0] == 0`, returns immediately (no update, no assert).
-2. **Target shape:** Asserts `targets.ndim == 3` and `targets.shape[2] == 1`.
-3. **Store normalized (if scaling on):** If `apply_inverse_scaling`, copies predictions/targets as normalized series; if `collect_predictions`, appends copies to `preds`/`targets`.
-4. **Store for save (no scaling):** If not applying inverse and `collect_predictions`, appends predictions/targets to `preds`/`targets`.
-5. **Inverse scaling / task branch:**
-   - **Classification:** Asserts `inverse_transform is None`, `predictions.shape[2] == num_classes`; casts targets to int.
-   - **Regression / forecasting:** Asserts predictions shape `(N, T, 1)`; calls `scaling_wrapper.inverse_transform_if_needed(predictions, targets)` and uses the returned arrays for the rest of the step.
-6. **Store denormalized (if scaling on and collect):** Appends to `scaled_preds` / `scaled_targets`.
-7. **Update primary metrics:** All metrics in `self.metrics` are updated with the (possibly denormalized) predictions and targets.
-8. **Update normalized metrics:** If dual reporting is on, all metrics in `self.normalized_metrics` are updated with the normalized copies.
+### Internal methods
 
-**Output:** None.
-
-### Method: `_prepare_predictions_for_save(self) -> Dict[str, Any]`
-
-- Returns empty dict if `save_predictions` is False or `collect_predictions` is False.
-- Otherwise concatenates along axis 0:
-  - If scaling on: primary save uses `scaled_preds`/`scaled_targets`, and adds `preds_normalized`/`targets_normalized` from `preds`/`targets`.
-  - If scaling off: primary save uses `preds`/`targets` only.
-- For classification with multiple logit dimensions, predictions are converted to class indices via `argmax(axis=-1, keepdims=True)` for the save dict.
-- Dimension names are `["sample"] + ["dim1", ...]`. Keys: `"preds"`, `"targets"`, and optionally `"preds_normalized"`, `"targets_normalized"`.
-
-**Output:** Dictionary suitable for building an `xarray.Dataset` (e.g. `(dims, array)` per key).
-
-### Method: `_save_predictions_to_file(self, dict_to_save: Dict[str, Any], mode: str)`
-
-- No-op if `dict_to_save` is empty.
-- Sets `self.out_path` from `paths.eval_details / mode` if not already set; creates directory; writes `xr.Dataset(dict_to_save).to_netcdf(out_path / "predictions.nc")`.
-
-### Method: `_compute_metrics(self) -> Dict[str, float]`
-
-- Computes each metric in `self.metrics`; key in result: `"{name}_denormalized"`. If a metric raises `ValueError` with "No data available", the value is set to `float("nan")`.
-- If dual reporting: computes each metric in `self.normalized_metrics`; key: `"{name}_normalized"` (same NaN fallback).
-- If **no** dual reporting (scaling off), renames all keys from `_denormalized` to `_normalized` so the single set of metrics is exposed under the normalized naming.
-
-**Output:** `Dict[str, float]` with keys like `mse_denormalized`, `mse_normalized`, etc. (or only `*_normalized` when scaling is off).
-
-### Method: `compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`
-
-1. Calls `_prepare_predictions_for_save()`.
-2. Calls `_save_predictions_to_file(dict_to_save, mode)`.
-3. Returns `_compute_metrics()`.
-
-**Output:** Same as `_compute_metrics()`.
-
-### Method: `log_plot(self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int)`
-
-- If `self.remote_logger` is set, logs the figure as `plots/{mode}/{title}` (implementation may vary slightly; see source).
+- **`_validate_input(model_out)`** — Returns False if predictions/targets missing or batch empty; asserts targets shape `(N, T, 1)`.
+- **`_prepare_batch_data(model_out)`** — Returns dict with `preds`, `targets`, optional `norm_preds`, `norm_targets`, `is_dual`. For classification, passes raw preds/targets (int cast); for regression/forecasting, applies `scaling_wrapper.inverse_transform_if_needed` with `metadata={"unit_id": model_out.get("unit_id")}`.
 
 ---
 
@@ -285,38 +406,19 @@ __init__(
 
 **Module:** `lmetk.evaluator.classification`
 
-**Purpose:** Evaluator for classification tasks. It is a thin wrapper around DefaultEvaluator with `task_type="classification"`, fixed save format (logits + labels), and metric keys without `_normalized`/`_denormalized` suffixes (since scaling is not used for classification).
+**Purpose:** Specialized evaluator for classification tasks. Thin wrapper over `DefaultEvaluator` with `task_type="classification"` and required `num_classes`.
 
 ### Constructor
 
-```text
-__init__(
-    self,
-    num_classes: int,
-    metric_names: List[str],
-    inverse_transform: Optional[InverseTransformMixin] = None,
-    apply_inverse_scaling: bool = False,
-    save_predictions: bool = False,
-    paths: Optional[str] = None,
-    **kwargs,
-)
+```python
+__init__(self, num_classes: int, metric_names: List[str], **kwargs: Any)
 ```
 
-- **Validation:** `num_classes` must be a positive integer; otherwise raises `ValueError`.
-- Calls `super().__init__(..., task_type="classification", num_classes=num_classes, ...)`.
+**Validation:** `num_classes` must be a positive integer; otherwise raises `ValueError`.
 
-### Override: `_prepare_predictions_for_save(self) -> Dict[str, Any]`
+**Behavior:** Calls `super().__init__(metric_names=..., task_type="classification", num_classes=num_classes, **kwargs)`.
 
-- Same conditions as base (save and collect enabled). Uses `self.preds` and `self.targets` (logits and labels).
-- Does **not** argmax logits; saves full logits. Dimension names: `["sample", "time", "class_logits"]` for predictions and `["sample", "time", "class_label"]` for targets.
-- Keys: `"preds_logits"`, `"targets_labels"`.
-
-### Override: `_compute_metrics(self) -> Dict[str, float]`
-
-- Calls `super()._compute_metrics()` to get the dict with `_normalized`/`_denormalized` keys.
-- Builds a new dict: for each key, strips `_mean` (if present), then strips `_normalized` or `_denormalized` to get a base name (e.g. `accuracy`). Values are stored under the base name; if both normalized and denormalized exist for the same base name, asserts equality (classification does not use scaling, so they should match). Returns this simplified dict.
-
-**Output:** `Dict[str, float]` with keys like `accuracy`, `f1`, etc. (no suffix).
+**Note:** Metric keys from `MetricManager` for classification have no `_normalized`/`_denormalized` suffixes. Inverse scaling is not used for classification.
 
 ---
 
@@ -324,24 +426,18 @@ __init__(
 
 **Module:** `lmetk.evaluator.forecasting`
 
-**Purpose:** Evaluator for forecasting tasks. It extends DefaultEvaluator by slicing predictions and targets to an optional effective prediction length and, for univariate mode, to an optional target dimension before calling the base `update`.
+**Purpose:** Forecasting evaluator with horizon slicing. Extends `DefaultEvaluator` by slicing predictions and targets to an optional effective prediction length and, for univariate mode, to an optional target dimension before calling the base `update`.
 
 ### Constructor
 
-```text
+```python
 __init__(
     self,
     target_dim_position: Optional[int],
     metric_names: List[str],
-    model_seq_len: int,
-    model_label_len: int,
     effective_pred_len: Optional[int] = None,
     model_pred_len: Optional[int] = None,
-    inverse_transform: Optional[InverseTransformMixin] = None,
-    apply_inverse_scaling: bool = False,
-    save_predictions: bool = False,
-    paths: Optional[str] = None,
-    **kwargs,
+    **kwargs: Any,
 )
 ```
 
@@ -349,24 +445,20 @@ __init__(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `target_dim_position` | `Optional[int]` | For univariate: index of the target dimension in the last axis; used to slice `predictions[:, :, f_dim]` and same for targets. |
-| `model_seq_len` | `int` | Stored; not used in this class for slicing. |
-| `model_label_len` | `int` | Stored; not used in this class for slicing. |
+| `target_dim_position` | `Optional[int]` | For univariate: index of the target dimension; used to slice `predictions[:, :, f:f+1]` and same for targets. |
 | `effective_pred_len` | `Optional[int]` | If set, predictions and targets are sliced to the last `effective_pred_len` steps: `[:, -effective_pred_len:, :]`. |
-| `model_pred_len` | `int` | Required. Must be ≥ `effective_pred_len` if that is set; otherwise raises `ValueError`. |
-| `**kwargs` | | May contain `task_mode`; default `"univariate"`. |
+| `model_pred_len` | `Optional[int]` | Required. Must be ≥ `effective_pred_len` if that is set. |
+| `**kwargs` | | May contain `task_mode` (default `"univariate"`), `model_seq_len`, `model_label_len` for compatibility. |
 
-**Attributes:** `model_label_len`, `model_pred_len`, `model_seq_len`, `effective_pred_len`, `target_dim_position`, `task_mode`.
+**Attributes:** `model_pred_len`, `effective_pred_len`, `target_dim_position`, `task_mode`, `model_seq_len`, `model_label_len`.
 
-### Override: `update(self, model_out: dict)`
+### Override: `update(self, model_out: Dict[str, Any])`
 
-1. Reads `predictions` and `targets` from `model_out`.
-2. If `effective_pred_len` is not None, slices both to `[:, -effective_pred_len:, :]`.
-3. Asserts `predictions.shape == targets.shape`.
-4. If `task_mode == "univariate"` and `target_dim_position` is not None, slices to `predictions[:, :, f_dim]` and `targets[:, :, f_dim]` (2D); these are then written back into `model_out["predictions"]` and `model_out["targets"]`.
-5. Calls `super().update(model_out)`.
-
-So the base sees either 3D `(N, T, 1)` or 2D `(N, T)` depending on the univariate slice; downstream metrics and scaling wrapper must support the resulting shape.
+1. Extracts `predictions` and `targets` from `model_out`.
+2. If both present and shapes match, applies slicing:
+   - If `effective_pred_len` is not None: `[:, -effective_pred_len:, :]`.
+   - If `task_mode == "univariate"` and `target_dim_position` is not None: slice to `[:, :, f:f+1]` (3D with one feature).
+3. Writes back into `model_out` and calls `super().update(model_out)`.
 
 ---
 
@@ -374,93 +466,50 @@ So the base sees either 3D `(N, T, 1)` or 2D `(N, T)` depending on the univariat
 
 **Module:** `lmetk.evaluator.multiunit`
 
-**Purpose:** Regression-only evaluator that maintains **per-unit** metrics (e.g. one MSE per unit). It requires a `unit_id` in every `model_out`, splits predictions/targets by unit, and updates separate metric instances per unit. It can optionally log pred-vs-target curves per unit to the remote logger and save unit IDs together with predictions.
+**Purpose:** Evaluator that calculates metrics individually per unit ID. Extends `DefaultEvaluator` with per-unit `MetricManager` instances and optional per-unit metric logging.
 
 ### Constructor
 
-```text
+```python
 __init__(
     self,
     metric_names: List[str],
-    inverse_transform: Optional[InverseTransformMixin] = None,
-    apply_inverse_scaling: bool = False,
-    save_predictions: bool = False,
-    paths: Optional[str] = None,
-    remote_logger: Optional[Any] = None,
-    collect_predictions: bool = False,
-    log_image_every_n_epochs: bool = 10,
-    log_image: bool = True,
-    enable_plot_subsampling: bool = True,
-    plot_subsample_threshold: int = 2000,
-    plot_subsample_factor: int = 10,
     log_per_unit_metrics: bool = True,
-    **kwargs,
+    **kwargs: Any,
 )
 ```
 
-- Calls `super().__init__(...)` (DefaultEvaluator). **Assertion:** `self.task_type` must be in `REGRESSION_TASKS` (e.g. regression, rul); otherwise raises `AssertionError` ("Unsupported task_type"). So MultiUnitEvaluator must be used with regression task types only.
-
-**Additional parameters:**
+**Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `log_image_every_n_epochs` | `int` | Epoch period for logging pred-vs-target plots. |
-| `log_image` | `bool` | Whether to log pred-vs-target curves at all. |
-| `enable_plot_subsampling` | `bool` | Whether to subsample long series for plotting. |
-| `plot_subsample_threshold` | `int` | Length above which subsampling is applied. |
-| `plot_subsample_factor` | `int` | Subsampling step (e.g. plot every Nth point). |
-| `log_per_unit_metrics` | `bool` | If True, the returned metric dict includes per-unit entries like `mse_{unit_id}_denormalized`. |
+| `log_per_unit_metrics` | `bool` | If True, the returned dict includes per-unit entries like `mse_{unit_id}` in addition to aggregated `mse_mean`. |
 
-**Attributes (in addition to base):** `log_image_every_n_epochs`, `log_fit_vs_target_curves` (= `log_image`), `enable_plot_subsampling`, `plot_subsample_threshold`, `plot_subsample_factor`, `log_per_unit_metrics`. If `collect_predictions`: `unit_ids` (list of arrays). **Per-unit storage:** `unit_metrics` and, if scaling on, `normalized_unit_metrics` — both are `defaultdict(_create_metric_dict)` mapping unit key (int or tuple of ints) to a dict of metric name → metric instance.
+**Attributes:** `log_per_unit_metrics`, `unit_managers: Dict[Any, MetricManager]` (created per unit on first update).
 
-### Method: `_create_metric_dict(self) -> Dict[str, AbstractMetric]`
+### Override: `update(self, model_out: Dict[str, Any])`
 
-- Returns `{name: MetricFactory.create_metric(name, self.paths) for name in self.metric_names}`. Used to create a fresh set of metrics per unit.
-
-### Override: `reset(self)`
-
-- Calls `super().reset()`, clears `unit_ids` if present, clears `unit_metrics` and `normalized_unit_metrics`.
-
-### Override: `update(self, model_out: dict)`
-
-**Input:** `model_out` must contain `"predictions"`, `"targets"`, and `"unit_id"`. `unit_id` can be 1D (e.g. shape `(N,)`) or 2D (e.g. shape `(N, 2)` for composite keys). Metadata for scaling: `metadata = {"unit_id": model_out["unit_id"]}` if present.
+**Input:** `model_out` must contain `"predictions"`, `"targets"`, and `"unit_id"`. `unit_id` can be 1D (e.g. shape `(N,)`) or 2D (e.g. `(N, 2)` for composite keys).
 
 **Logic:**
 
-1. If inverse scaling is on, keeps normalized copies of predictions/targets.
-2. If collect: appends predictions, targets, and unit_ids to `preds`, `targets`, `unit_ids`.
-3. Applies inverse scaling via `scaling_wrapper.inverse_transform_if_needed(..., metadata=metadata)` (predictions/targets in regression shape `(N, T, 1)`).
-4. If collect and scaling on: appends to `scaled_preds`/`scaled_targets`.
-5. **Per-unit update:** Infers unique units from `unit_ids` (1D or 2D). For each unit, indexes `predictions[indices]` and `targets[indices]`, then updates `unit_metrics[unit_key]` with the denormalized pair and, if dual reporting, `normalized_unit_metrics[unit_key]` with the normalized pair.
+1. Calls `super().update(model_out)` (validates, prepares batch, updates global metrics and buffer).
+2. Infers unique units and indices via `_get_unit_iteration_tools(unit_id)`.
+3. For each unit, ensures a `MetricManager` exists in `unit_managers`, then updates it with the corresponding slice of `batch["preds"]`, `batch["targets"]`, and optional normalized variants.
 
-**Output:** None.
+### Override: `compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`
 
-### Override: `_prepare_predictions_for_save(self) -> Dict[str, Any]`
+1. Calls `super().compute(...)` for global metrics.
+2. For each unit in `unit_managers`, computes unit metrics and, if `log_per_unit_metrics`, adds `{key}_{unit_id}` to the result.
+3. For each metric name, aggregates values across units and adds `{key}_mean`.
 
-- Calls `super()._prepare_predictions_for_save()` and, if non-empty, concatenates `self.unit_ids` and adds an `xr.DataArray` with key `"unit_ids"` and appropriate dims (`["sample"]` + `unit_dim1`, ...).
+### Override: `reset(self) -> None`
 
-### Override: `_compute_metrics(self) -> Dict[str, float]`
+Calls `super().reset()` and clears `unit_managers`.
 
-- If no units were ever updated, returns `{f"{name}_mean": 0.0 for name in self.metric_names}`.
-- Otherwise:
-  - For each unit and each metric: computes value; if `log_per_unit_metrics`, stores `f"{name}_{unit_id}_denormalized"`; appends value to a list for `f"{name}_denormalized"`.
-  - If dual reporting: same for normalized metrics and `f"{name}_{unit_id}_normalized"` / `f"{name}_normalized"`.
-  - For each collected list, sets `f"{name_or_key}_mean"` to `np.mean(values)`.
+### Helper: `_get_unit_iteration_tools(self, u_ids: np.ndarray)`
 
-**Output:** Dict with keys like `mse_denormalized_mean`, `mse_normalized_mean`, and optionally `mse_1_denormalized`, etc.
-
-### Override: `compute(self, mode: str = "val", epoch: int = 0, step: int = 0) -> Dict[str, float]`
-
-- If `log_fit_vs_target_curves` and (mode != "train" or (mode == "val" and epoch % log_image_every_n_epochs == 0)), calls `_log_pred_vs_target_curves(mode, step)`.
-- Then returns `super().compute(mode, epoch, step)`.
-
-### Helper: `_log_pred_vs_target_curves(self, mode: str, step: int)`
-
-- Concatenates `preds`, `targets`, `unit_ids`. For each unique unit, plots prediction vs target (with optional subsampling), builds a figure, and calls `log_plot(...)` then closes the figure.
-
-### Helper: `_inverse_transform_per_unit(self, predictions, targets, unit_ids)`
-
-- Applies inverse transform per unit when unit_ids are 1D or 2D; fills output arrays by unit; used for per-unit scaling when the scaler is unit-aware. Not used in the main `update` path above (which uses the wrapper’s single call with metadata).
+Returns `(unique_units, get_indices, get_key)` for 1D or 2D unit identifiers. `get_key` maps a unit to an int (1D) or tuple (2D) for dict keys.
 
 ---
 
@@ -468,40 +517,17 @@ __init__(
 
 **Module:** `lmetk.evaluator.reconstruction`
 
-**Purpose:** Evaluator for reconstruction tasks (e.g. autoencoders). Extends DefaultEvaluator with optional **reconstruction plots**: side-by-side targets vs predictions for a subset of samples, and optional local file save plus remote logging.
+**Purpose:** Specialized evaluator for reconstruction tasks (e.g. autoencoders). Thin wrapper over `DefaultEvaluator` with `task_type="regression"`. Reconstruction plots and prediction saving are handled by hooks (e.g. `ReconstructionPlotHook`, `SavePredictionsHook`).
 
 ### Constructor
 
-```text
-__init__(
-    self,
-    metric_names: List[str],
-    inverse_transform: Optional[InverseTransformMixin] = None,
-    apply_inverse_scaling: bool = False,
-    save_predictions: bool = False,
-    plot_reconstructions: bool = False,
-    paths: Optional[str] = None,
-    **kwargs,
-)
+```python
+__init__(self, metric_names: List[str], **kwargs: Any)
 ```
 
-- **Note:** `kwargs` may contain `collect_predictions`; it is popped. Effective collection is `collect_predictions = (popped value) or plot_reconstructions` so that enabling plots forces collection.
-- Uses matplotlib backend `"Agg"`.
-- **Attributes:** `plot_reconstructions`, `plots_out_path` (None until first compute).
+**Behavior:** Calls `super().__init__(metric_names=..., task_type="regression", **kwargs)`.
 
-### Method: `_plot_reconstructions(self, preds, targets, mode, epoch, step) -> Optional[plt.Figure]`
-
-- If no `remote_logger`, returns None (and logs a warning once at step 0).
-- Selects up to 10 evenly spaced sample indices. Builds a 5×2 subplot figure; for each index and each dimension (up to 10 dims), plots target (dashed) and prediction (solid). Handles 2D arrays by expanding to `(N, T, 1)`.
-- **Returns:** The matplotlib Figure, or None.
-
-### Override: `compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`
-
-1. Sets `plots_out_path` from `paths.plot_dir / mode` if not set and creates the directory.
-2. If `plot_reconstructions`: chooses data from `scaled_preds`/`scaled_targets` when inverse scaling is on, else `preds`/`targets`; concatenates; calls `_plot_reconstructions`; if a figure is returned, logs it via `log_plot(..., "reconstructions_overview", ...)`, saves to `plots_out_path / f"reconstructions_overview_{epoch}_{step}.png"`, and closes the figure.
-3. Returns `super().compute(mode, epoch=epoch, step=step)`.
-
-So reconstruction metrics and prediction saving behave like DefaultEvaluator; the only addition is the optional reconstruction plot and its file/remote logging.
+**Usage:** To enable reconstruction plots, register `ReconstructionPlotHook` and set `plot_reconstructions=True` on the evaluator. The hook checks `evaluator.plot_reconstructions` and `evaluator.remote_logger` before plotting. When using YAML configs, pass `plot_reconstructions: True` and ensure the evaluator stores this attribute (or set `evaluator.plot_reconstructions = True` after construction). Ensure `collect_predictions` is enabled—this happens automatically when hooks are present.
 
 ---
 
@@ -509,20 +535,90 @@ So reconstruction metrics and prediction saving behave like DefaultEvaluator; th
 
 **Module:** `lmetk.evaluator.utils`
 
-**Purpose:** Standalone scalar metric functions (not integrated into the evaluator class hierarchy). Useful for ad-hoc or external use.
+**Purpose:** Standalone scalar metric functions for ad-hoc or external use. Not integrated into the evaluator class hierarchy.
 
-**Functions:** Each takes `pred` and `true` (array-like) and returns a scalar (or in one case a tuple):
+**Functions:** Each takes `pred` and `true` (array-like) and returns a scalar (or tuple):
 
-- **`RSE(pred, true)`** — Relative squared error: `sqrt(sum((true-pred)^2)) / sqrt(sum((true - mean(true))^2))`.
-- **`CORR(pred, true)`** — Correlation-like statistic over the last axis.
-- **`MAE(pred, true)`** — Mean absolute error.
-- **`MSE(pred, true)`** — Mean squared error.
-- **`RMSE(pred, true)`** — Root mean squared error: `sqrt(MSE(pred, true))`.
-- **`MAPE(pred, true)`** — Mean absolute percentage error.
-- **`MSPE(pred, true)`** — Mean squared percentage error.
-- **`metric(pred, true)`** — Returns `(mae, mse, rmse, mape, mspe)`.
+| Function | Description |
+|----------|-------------|
+| `RSE(pred, true)` | Relative squared error: `sqrt(sum((true-pred)^2)) / sqrt(sum((true - mean(true))^2))` |
+| `CORR(pred, true)` | Correlation-like statistic over the last axis |
+| `MAE(pred, true)` | Mean absolute error |
+| `MSE(pred, true)` | Mean squared error |
+| `RMSE(pred, true)` | Root mean squared error |
+| `MAPE(pred, true)` | Mean absolute percentage error |
+| `MSPE(pred, true)` | Mean squared percentage error |
+| `metric(pred, true)` | Returns `(mae, mse, rmse, mape, mspe)` |
 
-These operate on raw arrays; they do not handle inverse scaling or the 3D (N, T, C) contract of the evaluators. The main regression metrics used inside evaluators come from `lmetk.metrics` (e.g. MetricFactory), not from this utils module.
+These operate on raw arrays and do not handle inverse scaling or the 3D `(N, T, C)` contract. The main regression/classification metrics used inside evaluators come from `lmetk.metrics` (MetricFactory, MetricManager).
+
+---
+
+## Configuration examples
+
+The evaluators are typically instantiated via Hydra/OmegaConf from YAML configs under `configs/evaluator/`. Key patterns:
+
+### Default regression (RUL)
+
+```yaml
+_evaluator_defaults: &evaluator_defaults
+  _target_: lmetk.evaluator.default.DefaultEvaluator
+  metric_names: ["mae", "mse", "rmse"]
+  apply_inverse_scaling: False
+  inverse_transform_name: null
+  save_predictions: False
+  task_mode: ${datasource.task_mode}
+  paths: ${paths}
+
+train: *evaluator_defaults
+val: *evaluator_defaults
+test:
+  <<: *evaluator_defaults
+  save_predictions: True
+```
+
+### Classification
+
+```yaml
+_target_: lmetk.evaluator.classification.ClassificationEvaluator
+metric_names: ["f1", "accuracy", "precision", "recall"]
+num_classes: ${task_definition.num_classes}
+task_mode: ${datasource.task_mode}
+paths: ${paths}
+hooks:
+  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    dims: ["sample", "time", "feature"]
+```
+
+### Multi-unit with unit trend plots
+
+```yaml
+_target_: lmetk.evaluator.multiunit.MultiUnitEvaluator
+metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
+paths: ${paths}
+hooks:
+  - _target_: lmetk.evaluator.hooks.unit_trend_plot.UnitTrendPlotHook
+    enable_subsampling: True
+    subsample_threshold: 1000
+    subsample_factor: 10
+  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    dims: ["sample", "time", "feature"]
+```
+
+### Reconstruction with plots
+
+```yaml
+_target_: lmetk.evaluator.reconstruction.ReconstructionEvaluator
+metric_names: ["mae", "mse", "rmse"]
+plot_reconstructions: True
+paths: ${paths}
+hooks:
+  - _target_: lmetk.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook
+  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    dims: ["sample", "time", "feature"]
+```
+
+**Note:** `paths` is typically resolved to an object or dict with `eval_details` (for SavePredictionsHook output) and optionally `plot_dir`. `remote_logger` is often injected at runtime for plot logging.
 
 ---
 
@@ -531,10 +627,10 @@ These operate on raw arrays; they do not handle inverse scaling or the 3D (N, T,
 | Evaluator | Task types | Inverse scaling | Per-unit metrics | Plots | Prediction save |
 |-----------|------------|-----------------|------------------|-------|------------------|
 | **AbstractEvaluator** | — | Via wrapper | No | No | No |
-| **DefaultEvaluator** | All | Yes (non-classification) | No | Via `log_plot` | Optional netCDF |
-| **ClassificationEvaluator** | Classification | No | No | Via base | Optional (logits) |
-| **ForecastingEvaluator** | Any (typically forecasting) | Yes | No | Via base | Optional |
-| **MultiUnitEvaluator** | Regression only | Yes | Yes | Pred vs target per unit | Optional (+ unit_ids) |
-| **ReconstructionEvaluator** | Any | Yes | No | Reconstruction overview | Optional |
+| **DefaultEvaluator** | All | Yes (non-classification) | No | Via hooks | Via SavePredictionsHook |
+| **ClassificationEvaluator** | Classification | No | No | Via hooks | Via SavePredictionsHook |
+| **ForecastingEvaluator** | Forecasting | Yes | No | Via hooks | Via SavePredictionsHook |
+| **MultiUnitEvaluator** | Any (typically regression) | Yes | Yes | Via UnitTrendPlotHook | Via SavePredictionsHook |
+| **ReconstructionEvaluator** | Regression | Yes | No | Via ReconstructionPlotHook | Via SavePredictionsHook |
 
-All concrete evaluators ultimately implement `update(model_out)`, `compute(mode, epoch, step)`, and `reset()`, with `compute` returning a dictionary of metric names to float values (and optionally writing files and logging figures).
+All concrete evaluators implement `update(model_out)`, `compute(mode, epoch, step)`, and `reset()`, with `compute` returning a dictionary of metric names to float values. Saving and plotting are delegated to hooks, which access the evaluator’s buffer, paths, and remote logger.
