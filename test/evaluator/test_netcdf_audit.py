@@ -6,6 +6,7 @@ from lmetk.evaluator.default import DefaultEvaluator
 from lmetk.evaluator.classification import ClassificationEvaluator
 from lmetk.evaluator.forecasting import ForecastingEvaluator
 from lmetk.evaluator.reconstruction import ReconstructionEvaluator
+from lmetk.evaluator.hooks.save_predictions import SavePredictionsHook
 
 
 @pytest.fixture
@@ -20,11 +21,13 @@ def mock_paths(temp_output_dir):
     return SimpleNamespace(eval_details=str(temp_output_dir))
 
 
-def test_classification_netcdf_schema(temp_output_dir, mock_paths):
-    """
-    Audit: Validates classification-specific naming convention.
-    Classification uses 'preds_logits' and 'targets_labels' keys.
-    """
+@pytest.fixture
+def standard_dims():
+    """Returns the standardized dimension names for PHM tasks."""
+    return ["sample", "time", "feature"]
+
+
+def test_classification_netcdf_schema(temp_output_dir, mock_paths, standard_dims):
     num_classes = 5
     evaluator = ClassificationEvaluator(
         metric_names=["accuracy"],
@@ -32,8 +35,8 @@ def test_classification_netcdf_schema(temp_output_dir, mock_paths):
         save_predictions=True,
         paths=mock_paths,
     )
+    evaluator.add_hook(SavePredictionsHook(dims=standard_dims))
 
-    # STRICT 3D: (N, T, C) and (N, T, 1)
     evaluator.update(
         {
             "predictions": np.random.rand(4, 1, num_classes),
@@ -44,23 +47,19 @@ def test_classification_netcdf_schema(temp_output_dir, mock_paths):
     evaluator.compute(mode="test", epoch=5, step=100)
 
     file_path = temp_output_dir / "test" / "predictions.nc"
-    assert file_path.exists(), f"NetCDF file was not created at {file_path}"
-
     with xr.open_dataset(file_path) as ds:
         assert "sample" in ds.dims
-        # Check for classification-specific variable naming found in previous crash
-        p_key = "preds_logits" if "preds_logits" in ds.data_vars else "preds"
-        t_key = "targets_labels" if "targets_labels" in ds.data_vars else "targets"
+        assert "time" in ds.dims
+        # 'feature' comes from preds (size 5)
+        assert ds.dims["feature"] == num_classes
+        # 'feature_label' comes from targets (size 1)
+        assert ds.dims["feature_label"] == 1
 
-        # Shape check: (Batch, Time, Feature) -> (4, 1, 1)
-        # Note: Argmax is applied internally for classification saving
-        print(ds[t_key])
-
-        assert ds[p_key].shape == (4, 1, 1)
-        assert ds[t_key].shape == (4, 1, 1)
+        assert ds["preds"].shape == (4, 1, 5)
+        assert ds["targets"].shape == (4, 1, 1)
 
 
-def test_default_regression_netcdf_schema(temp_output_dir, mock_paths):
+def test_default_regression_netcdf_schema(temp_output_dir, mock_paths, standard_dims):
     """Audit: Standard regression (N, T, 1) check."""
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
@@ -68,6 +67,9 @@ def test_default_regression_netcdf_schema(temp_output_dir, mock_paths):
         save_predictions=True,
         paths=mock_paths,
     )
+
+    # FIX: Initialize with mandatory dimensions
+    evaluator.add_hook(SavePredictionsHook(dims=standard_dims))
 
     # STRICT 3D: (N, T, 1)
     evaluator.update(
@@ -79,12 +81,12 @@ def test_default_regression_netcdf_schema(temp_output_dir, mock_paths):
     assert file_path.exists()
 
     with xr.open_dataset(file_path) as ds:
-        # Standard naming
         assert ds["preds"].shape == (5, 1, 1)
         assert ds["targets"].shape == (5, 1, 1)
+        assert "time" in ds.dims
 
 
-def test_forecasting_netcdf_schema(temp_output_dir, mock_paths):
+def test_forecasting_netcdf_schema(temp_output_dir, mock_paths, standard_dims):
     """Audit: Checks forecasting Horizon/Time dimension mapping."""
     evaluator = ForecastingEvaluator(
         target_dim_position=0,
@@ -97,6 +99,9 @@ def test_forecasting_netcdf_schema(temp_output_dir, mock_paths):
         paths=mock_paths,
     )
 
+    # FIX: Initialize with mandatory dimensions
+    evaluator.add_hook(SavePredictionsHook(dims=standard_dims))
+
     # STRICT 3D: (Batch=2, Horizon=24, Feature=1)
     evaluator.update(
         {"predictions": np.random.rand(2, 24, 1), "targets": np.random.rand(2, 24, 1)}
@@ -108,15 +113,18 @@ def test_forecasting_netcdf_schema(temp_output_dir, mock_paths):
 
     with xr.open_dataset(file_path) as ds:
         # Expecting (Batch, Time, Feature) -> (2, 12, 1)
-        # 12 comes from effective_pred_len
         assert ds["preds"].shape == (2, 12, 1)
+        assert "time" in ds.dims
 
 
-def test_reconstruction_netcdf_schema(temp_output_dir, mock_paths):
+def test_reconstruction_netcdf_schema(temp_output_dir, mock_paths, standard_dims):
     """Audit: Ensures T and D consistency for reconstruction tasks."""
     evaluator = ReconstructionEvaluator(
         metric_names=["mae"], save_predictions=True, paths=mock_paths
     )
+
+    # FIX: Initialize with mandatory dimensions
+    evaluator.add_hook(SavePredictionsHook(dims=standard_dims))
 
     # STRICT 3D: (Batch=2, Time=50, Feature=1)
     evaluator.update(
@@ -129,4 +137,5 @@ def test_reconstruction_netcdf_schema(temp_output_dir, mock_paths):
 
     with xr.open_dataset(file_path) as ds:
         assert ds["preds"].shape == (2, 50, 1)
-        assert "time" in ds.dims or "dim1" in ds.dims
+        assert "time" in ds.dims
+        assert "feature" in ds.dims
