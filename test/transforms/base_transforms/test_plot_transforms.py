@@ -1,9 +1,22 @@
 """Comprehensive tests for plot_transforms.py transform."""
 import numpy as np
 import pytest
-import os
+from pathlib import Path
+
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base_transforms.plot_transforms import PlotFeatures
+
+
+@pytest.fixture
+def plot_test_dir(tmp_path, monkeypatch):
+    """
+    Fixture that ensures plot output is written under a temp dir within test/.
+    The temp dir is automatically cleaned by pytest after each test.
+    """
+    plot_dir = tmp_path / "plot_dir"
+    plot_dir.mkdir(exist_ok=True)
+    monkeypatch.chdir(tmp_path)
+    yield plot_dir
 
 
 class TestPlotFeatures:
@@ -31,7 +44,7 @@ class TestPlotFeatures:
         # Should not raise
         transform.fit_data(data, metadata)
     
-    def test_transform_data_two_keys(self):
+    def test_transform_data_two_keys(self, plot_test_dir):
         """Test transform_data with two keys.
         
         **Assumption**: PlotFeatures should generate plots when provided with exactly
@@ -50,8 +63,6 @@ class TestPlotFeatures:
         of feature-target relationships in the data pipeline.
         """
         transform = PlotFeatures()
-        # Create plot_dir if it doesn't exist
-        os.makedirs("plot_dir", exist_ok=True)
         
         # PlotFeatures expects unit_id to be accessible via data.get()
         # But NamedTransformInput requires arrays, so we'll test with features and another array
@@ -73,7 +84,9 @@ class TestPlotFeatures:
         assert isinstance(result, NamedTransformInput)
         # Should return data unchanged
         assert "features" in result
-    
+        # Plot written under plot_test_dir (tmp_path), cleaned after test
+        assert (plot_test_dir / "unknown_unit.png").exists()
+
     def test_transform_data_single_key_error(self):
         """Test transform_data with single key raises error."""
         transform = PlotFeatures()
@@ -96,10 +109,9 @@ class TestPlotFeatures:
         with pytest.raises(AssertionError, match="only supports two key"):
             transform.transform_data(data, metadata)
     
-    def test_transform_data_1d_array(self):
+    def test_transform_data_1d_array(self, plot_test_dir):
         """Test transform_data with 1D array (reshaped to 2D)."""
         transform = PlotFeatures()
-        os.makedirs("plot_dir", exist_ok=True)
         
         data = NamedTransformInput(
             features=np.array([1.0, 2.0, 3.0, 4.0]),
@@ -111,10 +123,9 @@ class TestPlotFeatures:
         
         assert isinstance(result, NamedTransformInput)
     
-    def test_transform_data_multiple_features(self):
+    def test_transform_data_multiple_features(self, plot_test_dir):
         """Test transform_data with multiple features."""
         transform = PlotFeatures()
-        os.makedirs("plot_dir", exist_ok=True)
         
         # Create data with 5 features
         data = NamedTransformInput(
@@ -128,10 +139,9 @@ class TestPlotFeatures:
         assert isinstance(result, NamedTransformInput)
         # Should create subplot grid for 5 features
     
-    def test_transform_data_unit_id_tuple(self):
+    def test_transform_data_unit_id_tuple(self, plot_test_dir):
         """Test transform_data with tuple unit_id."""
         transform = PlotFeatures()
-        os.makedirs("plot_dir", exist_ok=True)
         
         # unit_id is accessed via data.get() which might not be in NamedTransformInput
         # Let's test the basic functionality
