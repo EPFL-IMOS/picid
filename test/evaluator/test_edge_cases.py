@@ -145,12 +145,13 @@ class TestPerfectPredictions:
         )
 
         evaluator.update(perfect_multiunit_data)
-        results = evaluator._compute_metrics()
+        # FIX: Use public compute() instead of deleted _compute_metrics()
+        results = evaluator.compute(mode="test", epoch=1, step=1)
 
         # Mean should be zero with real metrics
         assert (
             results["mse_normalized_mean"] < 1e-6
-        ), f"MSE mean should be near zero, got {results['mse_denormalized_mean']}"
+        ), f"MSE mean should be near zero, got {results['mse_normalized_mean']}"
 
 
 class TestExtremeValues:
@@ -290,7 +291,8 @@ class TestLargeBatchHandling:
 
         # Should handle efficiently
         evaluator.update(large_multiunit_data)
-        results = evaluator._compute_metrics()
+        # FIX: Use public compute() instead of deleted _compute_metrics()
+        results = evaluator.compute(mode="test", epoch=1, step=1)
 
         assert isinstance(results, dict)
         assert "mse_normalized_mean" in results
@@ -342,10 +344,12 @@ class TestSingleSampleHandling:
         single_multiunit_data["unit_id"] = np.array([1], dtype=np.int32)
 
         evaluator.update(single_multiunit_data)
-        results = evaluator._compute_metrics()
+        # FIX: Use public compute() instead of deleted _compute_metrics()
+        results = evaluator.compute(mode="test", epoch=1, step=1)
 
         assert isinstance(results, dict)
-        assert 1 in evaluator.unit_metrics
+        # FIX: Check unit_managers instead of deleted unit_metrics
+        assert 1 in evaluator.unit_managers
 
 
 class TestFaultOnsetScenarios:
@@ -465,7 +469,8 @@ class TestManyUnitsScenario:
 
         # Should handle many units efficiently
         evaluator.update(multiunit_data_many_units)
-        results = evaluator._compute_metrics()
+        # FIX: Use public compute() instead of deleted _compute_metrics()
+        results = evaluator.compute(mode="test", epoch=1, step=1)
 
         assert isinstance(results, dict)
         assert "mse_normalized_mean" in results
@@ -480,7 +485,8 @@ class TestManyUnitsScenario:
         unique_units = np.unique(multiunit_data_many_units["unit_id"])
         if evaluator.log_per_unit_metrics:
             for unit_id in unique_units[:5]:  # Check first 5 units
-                key = f"mse_{unit_id}_denormalized"
+                # FIX: Check for the normalized suffix which is active here
+                key = f"mse_normalized_{unit_id}"
                 if key in results:
                     assert results[key] >= 0.0
                     assert np.isfinite(results[key])
@@ -488,7 +494,8 @@ class TestManyUnitsScenario:
         # Verify all units have metrics
         unique_units = np.unique(multiunit_data_many_units["unit_id"])
         for unit_id in unique_units:
-            assert unit_id in evaluator.unit_metrics
+            # FIX: Check unit_managers instead of deleted unit_metrics
+            assert unit_id in evaluator.unit_managers
 
     def test_many_units_time_series(self, multiunit_data_time_series):
         """Test many units with time series data."""
@@ -503,7 +510,8 @@ class TestManyUnitsScenario:
         )
 
         evaluator.update(multiunit_data_time_series)
-        results = evaluator._compute_metrics()
+        # FIX: Use public compute() instead of deleted _compute_metrics()
+        results = evaluator.compute(mode="test", epoch=1, step=1)
 
         assert isinstance(results, dict)
         # Should aggregate correctly across units and time

@@ -56,7 +56,7 @@ def test_classification_netcdf_schema(temp_output_dir, mock_paths):
         # Note: Argmax is applied internally for classification saving
         print(ds[t_key])
 
-        assert ds[p_key].shape == (4, 1, num_classes)
+        assert ds[p_key].shape == (4, 1, 1)
         assert ds[t_key].shape == (4, 1, 1)
 
 

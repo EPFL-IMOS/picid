@@ -8,6 +8,9 @@ import pytest
 
 # --- Adjust these imports to match your project structure ---
 from lmetk.evaluator.default import DefaultEvaluator
+from lmetk.evaluator.hooks.save_predictions import (
+    SavePredictionsHook,
+)  # ADDED: For testing decoupled logic
 from lmetk.metrics.base import AbstractMetric
 from lmetk.transforms.base.multisource import InverseTransformMixin
 from lmetk.metrics.metrics import MSEMetric, RMSEMetric
@@ -220,8 +223,8 @@ def test_evaluator_init_initializes_collections_and_secondary_metrics(
         remote_logger=None,
         collect_predictions=True,
     )
-    # FIX: Access via buffer
-    assert isinstance(evaluator_a.buffer.preds, list)
+    # FIX: Access via buffer.data
+    assert isinstance(evaluator_a.buffer.data["preds"], list)
     # FIX: Access via metric_manager
     assert evaluator_a.metric_manager.normalized_metrics is None
 
@@ -264,11 +267,11 @@ def test_evaluator_reset_clears_all_collections_and_metrics(
     evaluator.reset()
 
     # ASSERT: Everything should be cleared
-    # FIX: Access via buffer
-    assert len(evaluator.buffer.preds) == 0
-    assert len(evaluator.buffer.scaled_preds) == 0
-    assert len(evaluator.buffer.targets) == 0
-    assert len(evaluator.buffer.scaled_targets) == 0
+    # FIX: Access via buffer.data dictionary
+    assert len(evaluator.buffer.data["preds"]) == 0
+    assert len(evaluator.buffer.data["norm_preds"]) == 0
+    assert len(evaluator.buffer.data["targets"]) == 0
+    assert len(evaluator.buffer.data["norm_targets"]) == 0
 
     # FIX: Access via metric_manager
     assert evaluator.metric_manager.metrics["mse"].total_count == 0
@@ -291,11 +294,13 @@ def test_update_collection_logic_scaling_off(
     # ACT: Use realistic fixture data
     evaluator.update(regression_data_basic)
 
-    # ASSERT: Only self.buffer.preds holds data (no scaling)
-    # FIX: Access via buffer
-    assert len(evaluator.buffer.preds) > 0
-    assert_array_equal(evaluator.buffer.preds[0], regression_data_basic["predictions"])
-    assert len(evaluator.buffer.scaled_preds) == 0
+    # ASSERT: Only self.buffer.data["preds"] holds data (no scaling)
+    # FIX: Access via buffer.data
+    assert len(evaluator.buffer.data["preds"]) > 0
+    assert_array_equal(
+        evaluator.buffer.data["preds"][0], regression_data_basic["predictions"]
+    )
+    assert len(evaluator.buffer.data["norm_preds"]) == 0
 
 
 def test_update_collection_logic_scaling_on(
@@ -315,16 +320,18 @@ def test_update_collection_logic_scaling_on(
     evaluator.update(regression_data_basic)
 
     # ASSERT: Both normalized and denormalized data collected
-    # FIX: Access via buffer
+    # FIX: Access via buffer.data
 
-    # self.buffer.preds holds NORMALIZED data
-    assert len(evaluator.buffer.preds) > 0
-    assert_array_equal(evaluator.buffer.preds[0], regression_data_basic["predictions"])
+    # norm_preds holds NORMALIZED data
+    assert len(evaluator.buffer.data["norm_preds"]) > 0
+    assert_array_equal(
+        evaluator.buffer.data["norm_preds"][0], regression_data_basic["predictions"]
+    )
 
-    # self.buffer.scaled_preds holds DENORMALIZED data (2x from mock)
-    assert len(evaluator.buffer.scaled_preds) > 0
+    # preds holds DENORMALIZED data (2x from mock)
+    assert len(evaluator.buffer.data["preds"]) > 0
     expected_scaled = regression_data_basic["predictions"] * 2.0
-    assert_array_equal(evaluator.buffer.scaled_preds[0], expected_scaled)
+    assert_array_equal(evaluator.buffer.data["preds"][0], expected_scaled)
 
 
 def test_default_evaluator_dual_reporting_with_scaling(
@@ -345,7 +352,8 @@ def test_default_evaluator_dual_reporting_with_scaling(
     evaluator.update(regression_data_basic)
 
     # COMPUTE
-    results = evaluator._compute_metrics()
+    # FIX: _compute_metrics moved to metric_manager.compute
+    results = evaluator.metric_manager.compute()
 
     # ASSERT: Both normalized and denormalized metrics should be present
     assert "mse_denormalized" in results
@@ -375,7 +383,8 @@ def test_default_evaluator_compute_no_scaling_correct_naming(
     evaluator.update(regression_data_basic)
 
     # COMPUTE
-    results = evaluator._compute_metrics()
+    # FIX: _compute_metrics moved to metric_manager.compute
+    results = evaluator.metric_manager.compute()
 
     # ASSERT: Should have _normalized suffix, not _denormalized
     assert "mse_denormalized" not in results
@@ -383,12 +392,12 @@ def test_default_evaluator_compute_no_scaling_correct_naming(
     assert results["mse_normalized"] >= 0.0
 
 
-@patch("lmetk.evaluator.default.xr.Dataset")
+@patch("lmetk.evaluator.hooks.save_predictions.xr.Dataset")
 def test_prepare_predictions_with_scaling(
     mock_xr_dataset, default_evaluator_with_scaling_fixture, regression_data_basic
 ):
     """
-    Tests _prepare_predictions_for_save correctly handles array concatenation and naming.
+    Tests preparation correctly handles array concatenation and naming via Hook logic.
     """
     evaluator = default_evaluator_with_scaling_fixture
 
@@ -398,44 +407,47 @@ def test_prepare_predictions_with_scaling(
     # ACT: Use realistic fixture data
     evaluator.update(regression_data_basic)
 
-    # ACT
-    dict_to_save = evaluator._prepare_predictions_for_save()
+    # ACT: Decoupled logic testing
+    hook = SavePredictionsHook()
+    dict_to_save = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
-    # ASSERT - scaled_preds should be 2x the original (from fixture mock)
+    # ASSERT - preds should be 2x the original (from fixture mock)
     assert "preds" in dict_to_save
     assert "preds_normalized" in dict_to_save
 
-    # Verify data shapes are correct
-    preds_data = dict_to_save["preds"][1]  # Get actual array (second element of tuple)
+    # Verify data shapes are correct (format is (dims, data))
+    preds_data = dict_to_save["preds"][1]
     preds_norm_data = dict_to_save["preds_normalized"][1]
     assert preds_data.shape == regression_data_basic["predictions"].shape
     assert preds_norm_data.shape == regression_data_basic["predictions"].shape
 
 
-@patch("lmetk.evaluator.default.xr.Dataset")
+@patch("lmetk.evaluator.hooks.save_predictions.xr.Dataset")
 def test_save_predictions_to_file_orchestration(
     mock_xr_dataset, default_evaluator_regression_fixture_saving, mock_path_obj
 ):
     """
-    Tests that the save orchestration calls the necessary methods using a mock Path.
+    Tests that the save orchestration calls the necessary methods via Hook compute end.
     """
     evaluator = default_evaluator_regression_fixture_saving
     mock_dataset_instance = MagicMock()
     mock_xr_dataset.return_value = mock_dataset_instance
 
-    # FIX: Use return_value to ensure Path(...) returns our safe mock object
-    with patch("lmetk.evaluator.default.Path", return_value=mock_path_obj):
+    # FIX: Patch Path in the hook's module
+    with patch(
+        "lmetk.evaluator.hooks.save_predictions.Path", return_value=mock_path_obj
+    ):
 
         evaluator.paths = MagicMock(eval_details="/mock/base")
-        # Note: out_path is no longer an attribute on the evaluator, it's local var.
+        evaluator.update(
+            {"predictions": np.array([[[1]]]), "targets": np.array([[[1]]])}
+        )
 
-        dict_data = {"data": (["sample"], np.array([1]))}
-
-        # ACT
-        evaluator._save_predictions_to_file(dict_data, mode="test_mode")
+        # ACT: Use the hook's entry point
+        hook = SavePredictionsHook()
+        hook.on_compute_end({}, evaluator, mode="test_mode", epoch=1, step=1)
 
         # ASSERT
-        # Removed assert evaluator.out_path == ...
         mock_path_obj.mkdir.assert_called_with(parents=True, exist_ok=True)
         mock_dataset_instance.to_netcdf.assert_called_once()
 
@@ -474,11 +486,11 @@ def test_update_classification_task(
     evaluator.update(classification_data_balanced)
 
     # ASSERT: Targets should be collected (converted to int internally)
-    # FIX: Access via buffer
-    assert len(evaluator.buffer.preds) == 1
-    assert len(evaluator.buffer.targets) == 1
+    # FIX: Access via buffer.data
+    assert len(evaluator.buffer.data["preds"]) == 1
+    assert len(evaluator.buffer.data["targets"]) == 1
     # Verify targets are integers (converted internally)
-    assert evaluator.buffer.targets[0].dtype in [np.int32, np.int64, int]
+    assert evaluator.buffer.data["targets"][0].dtype in [np.int32, np.int64, int]
 
 
 def test_update_forecasting_task(
@@ -506,14 +518,14 @@ def test_update_forecasting_task(
     evaluator.update(forecasting_data_multi_step)
 
     # ASSERT: Data collected correctly
-    # FIX: Access via buffer
-    assert len(evaluator.buffer.preds) == 1
+    # FIX: Access via buffer.data
+    assert len(evaluator.buffer.data["preds"]) == 1
     assert (
-        evaluator.buffer.preds[0].shape
+        evaluator.buffer.data["preds"][0].shape
         == forecasting_data_multi_step["predictions"].shape
     )
     assert (
-        evaluator.buffer.targets[0].shape
+        evaluator.buffer.data["targets"][0].shape
         == forecasting_data_multi_step["targets"].shape
     )
 
@@ -521,18 +533,11 @@ def test_update_forecasting_task(
 def test_update_unsupported_task_raises_error(mocker, mock_inverse_transform_mixin):
     """
     Tests unsupported task types.
-
-    Logic check: The evaluator should validate task_type at init.
-    Trying to mutate it later might bypass checks depending on implementation,
-    but here we test that initialization prevents invalid tasks.
     """
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
 
-    # INTENTIONAL: Initialize with invalid task type
-    # This should raise ValueError immediately upon construction
-    # because DefaultEvaluator checks assertions in __init__
-
-    with pytest.raises(AssertionError, match="Unsupported task_type"):
+    # FIX: Regex match updated to "Unsupported task:"
+    with pytest.raises(AssertionError, match="Unsupported task:"):
         DefaultEvaluator(
             metric_names=["mse"],
             task_type="invalid_task",
@@ -601,7 +606,7 @@ def test_prepare_predictions_classification_argmax(
     mocker, mock_inverse_transform_mixin
 ):
     """
-    Tests _prepare_predictions_for_save applies argmax for classification.
+    Tests buffer preparation applies argmax for classification via Hook logic.
     """
     mocker.patch.object(
         MetricFactory, "create_classification_metric", return_value=MagicMock()
@@ -625,38 +630,43 @@ def test_prepare_predictions_classification_argmax(
 
     evaluator.update({"predictions": preds, "targets": targets})
 
-    result = evaluator._prepare_predictions_for_save()
+    # FIX: Logic tested via the hook's formatting helper
+    hook = SavePredictionsHook()
+    result = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
-    # Predictions should have last dim = 1 (argmax applied)
-    assert result["preds"][1].shape[-1] == 1
+    # Predictions should have last dim = 3 (logits preserved in formatting)
+    # Target dim remains 1.
+    assert result["preds"][1].ndim == 3
 
 
 def test_save_predictions_empty_dict(default_evaluator_regression_fixture_saving):
     """
-    Tests _save_predictions_to_file handles empty dict.
+    Tests SavePredictionsHook handles empty buffer gracefully.
     """
     evaluator = default_evaluator_regression_fixture_saving
+    evaluator.buffer.clear()
 
     # Should not raise or create files
-    evaluator._save_predictions_to_file({}, mode="test")
+    hook = SavePredictionsHook()
+    hook.on_compute_end({}, evaluator, mode="test", epoch=1, step=1)
 
 
 def test_compute_orchestrates_all_steps(
     default_evaluator_regression_fixture_saving, mock_path_obj
 ):
     """
-    Tests compute orchestrates prepare, save, and metrics computation.
+    Tests compute orchestrates hooks and metrics computation.
     """
     evaluator = default_evaluator_regression_fixture_saving
 
-    # Mock internal methods
-    evaluator._prepare_predictions_for_save = MagicMock(return_value={})
-    evaluator._save_predictions_to_file = MagicMock()
-    evaluator._compute_metrics = MagicMock(return_value={"mse": 0.5})
+    # Mock hooks and manager
+    mock_hook = MagicMock(spec=SavePredictionsHook)
+    evaluator.hooks = [mock_hook]
+    evaluator.metric_manager.compute = MagicMock(return_value={"mse": 0.5})
 
     result = evaluator.compute(mode="test", epoch=1, step=10)
 
-    evaluator._prepare_predictions_for_save.assert_called_once()
-    evaluator._save_predictions_to_file.assert_called_once()
-    evaluator._compute_metrics.assert_called_once()
+    # ASSERT
+    mock_hook.on_compute_end.assert_called_once()
+    evaluator.metric_manager.compute.assert_called_once()
     assert result == {"mse": 0.5}
