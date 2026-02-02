@@ -16,6 +16,9 @@ _evaluator_defaults: &evaluator_defaults
 
   effective_pred_len: null #24
   paths: ${paths}
+  hooks:
+    - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+      dims: ["sample", "time", "feature"]
 
 train: *evaluator_defaults
 val: *evaluator_defaults

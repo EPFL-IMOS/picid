@@ -11,6 +11,9 @@ _evaluator_defaults: &evaluator_defaults
   task_mode: ${datasource.task_mode} # univariate/multivariate
   paths: ${paths}
   num_classes: ${task_definition.num_classes}
+  hooks:
+    - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+      dims: ["sample", "time", "feature"]
 
 train: *evaluator_defaults
 val: *evaluator_defaults
