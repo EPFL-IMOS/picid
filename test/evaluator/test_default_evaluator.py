@@ -408,7 +408,7 @@ def test_prepare_predictions_with_scaling(
     evaluator.update(regression_data_basic)
 
     # ACT: Decoupled logic testing
-    hook = SavePredictionsHook()
+    hook = SavePredictionsHook(dims=["sample", "time", "feature"])
     dict_to_save = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
     # ASSERT - preds should be 2x the original (from fixture mock)
@@ -444,7 +444,7 @@ def test_save_predictions_to_file_orchestration(
         )
 
         # ACT: Use the hook's entry point
-        hook = SavePredictionsHook()
+        hook = SavePredictionsHook(dims=["sample", "time", "feature"])
         hook.on_compute_end({}, evaluator, mode="test_mode", epoch=1, step=1)
 
         # ASSERT
@@ -631,7 +631,7 @@ def test_prepare_predictions_classification_argmax(
     evaluator.update({"predictions": preds, "targets": targets})
 
     # FIX: Logic tested via the hook's formatting helper
-    hook = SavePredictionsHook()
+    hook = SavePredictionsHook(dims=["sample", "time", "feature"])
     result = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
     # Predictions should have last dim = 3 (logits preserved in formatting)

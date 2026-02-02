@@ -186,21 +186,26 @@ def test_prepare_predictions_for_save_structure(
     # ACT: Use realistic classification fixture data
     evaluator.update(classification_data_balanced)
 
-    # ACT: Verification via the Hook logic
-    hook = SavePredictionsHook()
+    # ACT: Verification via the Hook logic - using our mandatoryPHM schema
+    standard_dims = ["sample", "time", "feature"]
+    hook = SavePredictionsHook(dims=standard_dims)
     output = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
-    # ASSERT: Verify structure (Hook uses generic 'preds' and 'targets' keys)
+    # ASSERT: Verify structure
     assert "preds" in output
     assert "targets" in output
 
-    # Dimension check: must include 'time' because input data is 3D
-    # Dimensions match the logic in SavePredictionsHook for classification tasks
-    assert output["preds"][0] == ["sample", "time", "class_logits"]
-    assert output["targets"][0] == ["sample", "time", "class_label"]
+    # ASSERT: Verify forced PHM dimension naming
+    # Predictions use the standard 'feature' name (which holds logits in classification)
+    assert output["preds"][0] == ["sample", "time", "feature"]
+
+    # Targets use 'feature_label' because the feature dimension size (1)
+    # differs from the prediction feature size (num_classes).
+    # This matches the conflict resolution logic in SavePredictionsHook.
+    assert output["targets"][0] == ["sample", "time", "feature_label"]
 
     # Verify data shapes match fixture
-    preds_data = output["preds"][1]  # Get actual array
+    preds_data = output["preds"][1]
     targets_data = output["targets"][1]
     assert preds_data.shape == classification_data_balanced["predictions"].shape
     assert targets_data.shape == classification_data_balanced["targets"].shape

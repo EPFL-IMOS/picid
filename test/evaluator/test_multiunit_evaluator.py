@@ -209,7 +209,7 @@ def test_prepare_predictions_adds_unit_ids(multiunit_evaluator_fixture):
     eval.update(data)
 
     # FIX: Logic moved to SavePredictionsHook
-    hook = SavePredictionsHook()
+    hook = SavePredictionsHook(dims=["sample", "time", "feature"])
     result = hook._format_xarray(eval.buffer.get_all(), eval)
 
     assert "unit_ids" in result
