@@ -1,4 +1,5 @@
 testwdir
+test/.pytest_tmp
 __pycache__
 *.pyc
 # TabPFN
