@@ -74,6 +74,10 @@ packages = ["lmetk"]
 # [tool.setuptools.packages.find]
 # where = ["src"]
 
+[tool.pytest.ini_options]
+# All test temp dirs (plot_dir, eval_details, etc.) go under test/ and are cleaned after runs
+addopts = "--basetemp=test/.pytest_tmp"
+
 [tool.pylint."messages control"]
 disable = ["logging-fstring-interpolation"]
 
