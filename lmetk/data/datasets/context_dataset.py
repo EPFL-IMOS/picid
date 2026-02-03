@@ -30,6 +30,7 @@ class ContextBatchDataset(BaseDataset):
         warmup_steps: int = None,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,
+        subset_blocks: Optional[int] = None,
         **kwargs,
     ):
 
@@ -72,6 +73,7 @@ class ContextBatchDataset(BaseDataset):
             pred_offset=pred_offset,
             subset_seed=subset_seed,
             subset_ratio=subset_ratio,
+            subset_blocks=subset_blocks,
         )
 
         self.target_dataset = SlidingWindowBatchDataset(

@@ -1251,6 +1251,7 @@
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/cnn_1d",
                 "task_definition.subset_ratio=0.1",
+                "+task_definition.subset_blocks=20",
                 "debug=default",
                 "logger=wandb"
             ],
@@ -1270,6 +1271,7 @@
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/xgboost_fit_predict",
                 "task_definition.subset_ratio=0.1",
+                "+task_definition.subset_blocks=20",
                 "debug=default"
                 // "debug=pronostia"
             ],

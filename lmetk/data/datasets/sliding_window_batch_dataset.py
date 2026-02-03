@@ -9,6 +9,7 @@ import torch
 
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import collate_key_value_batch
+from lmetk.data.datasets.subset_sampling import make_subset_blocks_indices
 from lmetk.data.optimization.sequencer import (
     BaseSequencer,
     DenseArraySequencer,
@@ -74,7 +75,23 @@ class SlidingWindowBatchDataset(BaseDataset):
                 and 0 < subset_ratio < 1
                 and self._seq_idx is None
             ):
-                self._seq_idx = self._create_sequence_subset(len(driver), subset_ratio)
+                if self.subset_blocks is not None:
+                    res = make_subset_blocks_indices(
+                        len_ds=len(driver),
+                        subset_ratio=subset_ratio,
+                        subset_seed=self.subset_seed,
+                        subset_blocks=self.subset_blocks,
+                    )
+                    self._seq_idx = res["seq_idx"]
+                else:
+                    self._seq_idx = self._create_sequence_subset(
+                        len(driver), subset_ratio
+                    )
+
+                logger.info(
+                    f"Subsetting sequences: using {len(self._seq_idx)} out of {len(driver)} sequences."
+                )
+                logger.info(f"Subset indices start with: {self._seq_idx[:100]}")
 
             self.sequencers[key] = driver
 
@@ -93,10 +110,6 @@ class SlidingWindowBatchDataset(BaseDataset):
         n_subset = int(sequence_length * subset_ratio)
         seq_idx = rng.sample(range(sequence_length), n_subset)
         seq_idx.sort()
-        logger.info(
-            f"Subsetting sequences: using {n_subset} out of {sequence_length} sequences."
-        )
-        logger.info(f"Subset indices start with: {seq_idx[:100]}")
         return np.array(seq_idx)
 
     def _create_sequencer(self, arr, sequencer_params, key):

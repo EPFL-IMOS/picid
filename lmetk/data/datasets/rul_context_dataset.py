@@ -90,6 +90,7 @@ class RULContextBatchDataset(ContextBatchDataset):
         warmup_steps: int = None,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,
+        subset_blocks: Optional[int] = None,
         **kwargs,
     ):
         assert pred_len == 1, "pred_len must be 1 for RUL prediction."
@@ -114,6 +115,7 @@ class RULContextBatchDataset(ContextBatchDataset):
             warmup_steps=warmup_steps,
             subset_ratio=subset_ratio,
             subset_seed=subset_seed,
+            subset_blocks=subset_blocks,
             **kwargs,
         )
 

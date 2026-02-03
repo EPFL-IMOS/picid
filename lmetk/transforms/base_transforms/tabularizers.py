@@ -24,6 +24,7 @@ from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
+from lmetk.data.datasets.subset_sampling import make_subset_blocks_indices
 from lmetk.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
@@ -141,10 +142,6 @@ class TimeseriesTabularizer(
         n_subset = int(sequence_length * subset_ratio)
         seq_idx = rng.sample(range(sequence_length), n_subset)
         seq_idx.sort()
-        logger.info(
-            f"Subsetting sequences: using {n_subset} out of {sequence_length} sequences."
-        )
-        logger.info(f"Subset indices start with: {seq_idx[:100]}")
         return np.array(seq_idx)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
@@ -193,7 +190,24 @@ class TimeseriesTabularizer(
 
                 subset_ratio = self.subset_ratio
                 if subset_ratio is not None and 0 < subset_ratio < 1:
-                    seq_idx = self._create_sequence_subset(len(seq), self.subset_ratio)
+
+                    if self.subset_blocks is not None:
+                        res = make_subset_blocks_indices(
+                            len_ds=len(seq),
+                            subset_ratio=subset_ratio,
+                            subset_seed=self.subset_seed,
+                            subset_blocks=self.subset_blocks,
+                        )
+                        seq_idx = res["seq_idx"]
+                    else:
+                        seq_idx = self._create_sequence_subset(
+                            len(seq), self.subset_ratio
+                        )
+
+                    logger.info(
+                        f"Subsetting sequences: using {len(seq_idx)} out of {len(seq)} sequences."
+                    )
+                    logger.info(f"Subset indices start with: {seq_idx[:100]}")
                 else:
                     seq_idx = np.arange(len(seq))
 
