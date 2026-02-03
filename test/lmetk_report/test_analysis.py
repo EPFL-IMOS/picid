@@ -887,3 +887,50 @@ class TestMeanStdCountAggregation:
         assert mse_test["count"] == 3
         assert abs(mse_test["mean"] - 0.5) < 1e-6
         assert mse_test["std"] >= 0
+
+
+# --- total_runs and configs_failed_not_full_seed_set (analyze_results) ---
+
+
+class TestTotalRunsAndConfigsFailed:
+    """
+    Validates that analyze_results stores total_runs and configs_failed_not_full_seed_set
+    after model-seed filtering (runs count and configs dropped for incomplete seed set).
+    """
+
+    def test_total_runs_and_configs_failed_when_seed_filter_drops_configs(
+        self, mock_df_partial_seed_config, default_analysis_kwargs
+    ):
+        """
+        When required_model_seeds is set and one config has only 2 of 3 seeds, that config
+        is dropped. total_runs = runs in retained configs; configs_failed = 1.
+        """
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                mock_df_partial_seed_config,
+                **{
+                    **default_analysis_kwargs,
+                    "required_model_seeds": {72, 88, 101},
+                },
+            )
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res["total_runs"] == 6  # 3 + 3 runs in the two retained configs
+        assert res["configs_failed_not_full_seed_set"] == 1  # seq_len=30 dropped
+        assert len(res["sorted_aggregated_results"]) == 2  # 2 configs completed
+
+    def test_total_runs_and_configs_failed_zero_when_no_seed_filter(
+        self, mock_df_multi_seed_runs, default_analysis_kwargs
+    ):
+        """
+        When required_model_seeds is None, no configs are dropped by seed filter.
+        total_runs = all runs (6); configs_failed_not_full_seed_set = 0.
+        """
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                mock_df_multi_seed_runs,
+                **default_analysis_kwargs,
+            )
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res["total_runs"] == 6
+        assert res["configs_failed_not_full_seed_set"] == 0
+        assert len(res["sorted_aggregated_results"]) == 2

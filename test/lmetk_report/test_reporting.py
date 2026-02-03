@@ -18,6 +18,8 @@ def _make_all_results(
     sorted_aggregated=None,
     seeds_info=None,
     optimized_on=None,
+    total_runs=None,
+    configs_failed_not_full_seed_set=None,
 ):
     """Build minimal all_results structure for reporting tests."""
     if metrics_data is None:
@@ -38,6 +40,12 @@ def _make_all_results(
         all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = sorted_aggregated
     if seeds_info is not None:
         all_results["DS1"]["ModelA"]["seeds_info"] = seeds_info
+    if total_runs is not None:
+        all_results["DS1"]["ModelA"]["total_runs"] = total_runs
+    if configs_failed_not_full_seed_set is not None:
+        all_results["DS1"]["ModelA"]["configs_failed_not_full_seed_set"] = (
+            configs_failed_not_full_seed_set
+        )
     return all_results
 
 
@@ -111,6 +119,62 @@ class TestCreateSummaryTable:
         df = reporting.create_summary_table(all_results)
         df = df.fillna("-")
         assert not df.empty
+
+
+# --- get_experiment_stats_df (reporting.get_experiment_stats_df) ---
+
+
+class TestGetExperimentStatsDf:
+    """Validates get_experiment_stats_df: columns and Runs / Configs Failed (not full seed set)."""
+
+    def test_table_has_runs_and_configs_failed_columns(self):
+        """
+        get_experiment_stats_df returns DataFrame with "Runs" and "Configs Failed (not full seed set)".
+        """
+        all_results = _make_all_results(
+            seeds_info={"data": "[1]", "model": "[72, 88, 101]"},
+            total_runs=75,
+            configs_failed_not_full_seed_set=2,
+        )
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        df = reporting.get_experiment_stats_df(all_results)
+        assert "Runs" in df.columns
+        assert "Configs Failed (not full seed set)" in df.columns
+        assert df.columns.tolist() == [
+            "Dataset",
+            "Model",
+            "Configs Completed",
+            "Runs",
+            "Configs Failed (not full seed set)",
+            "Seeds Found",
+        ]
+
+    def test_runs_and_configs_failed_values_present(self):
+        """
+        When total_runs and configs_failed_not_full_seed_set are in all_results, they appear in the table.
+        """
+        all_results = _make_all_results(
+            seeds_info={"model": "[72, 88, 101]"},
+            total_runs=75,
+            configs_failed_not_full_seed_set=1,
+        )
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        df = reporting.get_experiment_stats_df(all_results)
+        row = df.iloc[0]
+        assert row["Runs"] == 75
+        assert row["Configs Failed (not full seed set)"] == 1
+
+    def test_runs_empty_configs_failed_zero_when_keys_missing(self):
+        """
+        Legacy all_results without total_runs/configs_failed: Runs is empty, Configs Failed is 0.
+        """
+        all_results = _make_all_results(seeds_info={"model": "[1, 2, 3]"})
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        # Do not pass total_runs or configs_failed_not_full_seed_set
+        df = reporting.get_experiment_stats_df(all_results)
+        row = df.iloc[0]
+        assert row["Runs"] == ""
+        assert row["Configs Failed (not full seed set)"] == 0
 
 
 # --- display_experiment_stats (reporting.display_experiment_stats) ---

@@ -296,6 +296,36 @@ def mock_df_no_matching_metrics(base_config_columns):
 
 
 @pytest.fixture
+def mock_df_partial_seed_config(base_config_columns):
+    """
+    Three HP configs; one config has only 2 of 3 required model seeds (72, 88, 101).
+    Used to test total_runs and configs_failed_not_full_seed_set.
+    - Config (seq_len=10, lr=0.001): seeds 72, 88, 101 -> kept (3 runs).
+    - Config (seq_len=20, lr=0.001): seeds 72, 88, 101 -> kept (3 runs).
+    - Config (seq_len=30, lr=0.001): seeds 72, 88 only -> dropped (not full seed set).
+    After model-seed filter: 2 configs, 6 runs, configs_failed = 1.
+    """
+    data = []
+    for seq_len, seeds in [(10, (72, 88, 101)), (20, (72, 88, 101)), (30, (72, 88))]:
+        for seed in seeds:
+            data.append(
+                {
+                    MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+                    DATASET_COL: "DS1",
+                    MODEL_SEED_COL: seed,
+                    "run_name": f"run_{seq_len}_{seed}",
+                    OPT_METRIC_COL: "test/mse",
+                    OPT_MODE_COL: "min",
+                    "task_definition.seq_len": seq_len,
+                    "optimization.lr": 0.001,
+                    "test/mse": 0.4 + seq_len / 100,
+                    "val/mse": 0.42 + seq_len / 100,
+                }
+            )
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
 def default_analysis_kwargs():
     """Default kwargs for analyze_results matching typical pipeline usage."""
     return {
