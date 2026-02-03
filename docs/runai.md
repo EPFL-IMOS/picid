@@ -46,10 +46,4 @@ chmod +x runai.sh
 ./runai.sh debug=default experiment=railway_traction/autogluon_railway_fit_predict
 ```
 
-<!-- 
-# Several Debugging CMD Lines
-
-```bash
-python -c "from lmetk.data.datasources.base import phmd_loader; print(phmd_loader)"
-python -c "import pkgutil, lmetk; print([name for _, name, _ in pkgutil.iter_modules(lmetk.__path__)])"
-``` -->
+For local installation and running experiments without RunAI, see [Setup](setup.md).

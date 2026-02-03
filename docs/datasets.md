@@ -1,42 +1,38 @@
 # Datasets
 
-In this project, we keep the notation of a dataset from Pytorch.
-A PyTorch Dataset is an abstract class that provides a way to represent and load data for machine learning tasks. It allows you to define how data is accessed and transformed, enabling efficient iteration and preprocessing for training models.
+In this project we follow the **PyTorch** notion of a *Dataset*: an abstract class that defines how data is accessed and transformed for training and evaluation. Datasets are **task-centric** — they format data (from [datasources](datasources.md) and [data objects](dataobject.md)) into the shapes and keys expected by specific model types (e.g. sliding windows for RUL, fit-predict tables for AutoGluon).
 
-> Therefore, in this project, a datasource is data-centric, a dataset is therefore task-centric.
+> **Terminology:** A **datasource** is *data-centric* (raw files, I/O). A **dataset** is *task-centric* (formatting for model inputs).
 
-We provide several datasets for different tasks
+All dataset classes below live in **`lmetk.data.datasets`**. The following sections describe the main dataset types and their batch structures.
 
 ## ContextBatchDataset
 
-`ContextBatchDataset` is a dataset class designed for time series and sequence forecasting tasks where both target and context features are needed. It wraps two `SlidingWindowBatchDataset` instances—one for the target and one for the context—using shared time features and windowing parameters (sequence length, label length, prediction length, stride).
+`ContextBatchDataset` is designed for time-series and sequence tasks where both **target** (e.g. RUL or forecast target) and **context** (e.g. sensor features) are needed. It wraps two `SlidingWindowBatchDataset` instances—one for the target and one for the context—with shared windowing (sequence length, label length, prediction length, stride). The *keys* inside `target` and `context` depend on the `data_dict` passed at construction: they are the modality name plus the suffixes `_seq_x` (input window) and `_seq_y` (output window). For example, if the context key is `"features"` and the target key is `"rul"`, you get `context.features_seq_x`, `context.features_seq_y`, `target.rul_seq_x`, `target.rul_seq_y`.
 
+### Batch contents
 
-### Batch Contents
-
-Each batch from `ContextBatchDataset` is returned as an `AttributeDict` with the following structure:
+Each batch is an `AttributeDict` with this structure:
 
 ```
 {
 	'batch_idx': [indices],
 	'target': {
-		'x': <target input sequence>,
-		'y': <target output sequence>,
-		'x_mark': <target input time features>,
-		'y_mark': <target output time features>
+		'<target_key>_seq_x': Tensor (B, seq_len, C),   # target input window
+		'<target_key>_seq_y': Tensor (B, label_len+pred_len, C)  # target output window
 	},
 	'context': {
-		'x': <context input sequence>,
-		'y': <context output sequence>,
-		'x_mark': <context input time features>,
-		'y_mark': <context output time features>
+		'<context_key>_seq_x': Tensor (B, seq_len, C),  # context input window
+		'<context_key>_seq_y': Tensor (B, label_len+pred_len, C)
 	}
 }
 ```
 
-- `batch_idx`: List of indices for the batch.
-- `target`: Contains input/output sequences and time features for the target.
-- `context`: Contains input/output sequences and time features for the context.
+- **`batch_idx`:** List of indices for the batch.
+- **`target`:** Input/output windows for the target modality. Typical keys: `rul_seq_x`, `rul_seq_y` (RUL) or `target_seq_x`, `target_seq_y` (forecasting). Shapes: `_seq_x` is `(B, seq_len, C)`, `_seq_y` is `(B, label_len+pred_len, C)`.
+- **`context`:** Input/output windows for the context modality. Typical key: `features_seq_x`, `features_seq_y`. Same shape convention as `target`.
+
+So for RUL, the model typically reads `batch.context.features_seq_x` as input and `batch.target.rul_seq_x[:, -1, :]` (or the last step) as the scalar RUL target. For forecasting, `context.features_seq_x` is the history and `target.target_seq_y` is the future horizon to predict.
 
 
 ## FitPredictDataset
@@ -109,18 +105,14 @@ This structure enables models to learn from both raw features and high-level con
 
 Since it inherits from `ContextBatchDataset`, each batch is returned as an `AttributeDict` with a similar structure. For RUL, the operational **features** are typically treated as the `context` and the **RUL values** as the `target`.
 
--   `context['features_seq_x']`: The primary input for the model. This is a batch of `B` feature sequences, each with shape `(seq_len, C)`, where `C` is the number of features.
--   `target['rul_seq_x']`: The sequence of RUL values corresponding to the input. This sequence aligned with the `context['features_seq_x']`.
--   **Final RUL Target**: 💡 To get the single scalar RUL value to predict for each item in the batch, you would typically select the **very last element** from the `target['rul_seq_x']` tensor (e.g., `target['rul_seq_x'][:, -1, :]`). This represents the RUL at the end of the `seq_len` window.
+`RULContextBatchDataset` **overrides** `__getitem__` and returns a **flattened** batch (no nested `target`/`context`). You get top-level keys:
 
-The output batch is: 
-```
-{
-	'batch_idx': [indices],
-	'rul': target['rul_seq_x'][:, -1, :], shape (B, 1)>
-	'features': context['features_seq_x'], shape (B, seq_len, C)
-}
-```
+- **`batch_idx`:** Tensor of shape `(B, 1)` (batch indices).
+- **`features`:** Tensor of shape `(B, seq_len, C)` — the context input (sensor window). This is the primary model input.
+- **`rul`:** Tensor of shape `(B, C)` (typically `(B, 1)`) — the RUL value at the **last** time step of each window. The dataset already selects `target['rul_seq_x'][:, -1, :]` for you.
+- **`unit_id`:** (optional) Present if the dataset was constructed with `get_unit_id=True`; used for per-unit evaluation.
+
+So for RUL you do **not** need to read `target.rul_seq_x`; use `batch['rul']` and `batch['features']` directly.
 
 ***
 
@@ -133,5 +125,12 @@ The `pred_len` (prediction length) parameter is designed for forecasting tasks. 
 -   **Forecasting (`pred_len > 0`)**: If your input sequence ends at time `t`, setting `pred_len=5` means your target is the value at time `t+5`. You are predicting 5 steps *after* your input data ends.
 -   **RUL Prediction (`pred_len = 0`)**: By setting `pred_len=0`, you specify that there is **no future horizon**. The target you want to predict exists at the exact same time step where your input sequence ends (time `t`).
 
-This is why it's the correct setting for this task: it ensures the target RUL value is perfectly aligned with the end of the feature sequence you are feeding into the model. ⚙️
+This is why it's the correct setting for this task: it ensures the target RUL value is perfectly aligned with the end of the feature sequence you are feeding into the model.
 
+---
+
+## See also
+
+- [Datasets inner workings](datasets_inner_workings.md) — Full data-loading architecture: `HydraConcatDataset`, `SlidingWindowBatchDataset`, sequencers (Dense/Ragged), and collation.
+- [Data objects & containers](dataobject.md) — How datasource output becomes `SplitDatasetContainer` and feeds into these datasets.
+- [Datasources](datasources.md) — Available data loaders by domain.

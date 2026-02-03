@@ -6,7 +6,7 @@ The `lmetk.data.data_objects` module provides the fundamental data structures us
 
 In this framework, data is not passed around as loose tuples or plain dictionaries. It is encapsulated in **Containers**. This design ensures:
 
-1.  **Strict Typing:** Fields can only hold `pandas.DataFrame`, `numpy.ndarray`, or `awkward.Array`. Lists of other objects are rejected at runtime.
+1.  **Strict Typing:** Fields can only hold `pandas.DataFrame`, `pandas.Series`, `numpy.ndarray`, or `awkward.Array`—or lists of these (e.g. one list per unit). Other types raise `TypeError` at assignment.
 2.  **Structure Validation:** The container guarantees that if you have 100 engines in your training set, you also have 100 target labels.
 3.  **Metadata Persistence:** Column names and unit identifiers travel attached to the data, preventing "magic number" indexing bugs.
 
@@ -78,7 +78,7 @@ The data objects follow a strict inheritance ladder, each adding specific capabi
 ### `BaseDataObject` (The Enforcer)
 *Replaces standard Python `dict`.*
 * **Recursive Construction:** Nested dictionaries `{'a': {'b': 1}}` are automatically converted into nested objects, enabling `obj.a.b` access.
-* **Type Guarding:** Prevents assignment of invalid types. Fields must be numeric tensors or dataframes suitable for ML.
+* **Type Guarding:** Prevents assignment of invalid types. Fields must be one of: `pandas.DataFrame`, `pandas.Series`, `numpy.ndarray`, or `awkward.Array` (or lists of these). Other types raise `TypeError` at assignment.
 
 ### `BaseDataObjectWithMetadata` (The Archivist)
 *Inherits from `BaseDataObject`.*
@@ -103,29 +103,36 @@ The transition from raw files to a structured container follows a strict ETL (Ex
 ### The Flow Diagram
 
 ```text
-Raw Files (HDF5/CSV) 
+Raw Files (HDF5/CSV, etc.)
        ⬇
-[ DataSourceLoader ] .load_data()
-       ⬇ 
-  (Internal Dict) 
-  { 'features': {'train': [Array, ...]}, 'target': ... }
+[ DataSourceLoader ].load_data()     ← Populates internal state (e.g. self.data_dict)
        ⬇
-[ SplitDatasetContainer ] .get_data()
-       ⬇ 
-  (Validated Object)
-  container.features.train[0] -> ak.Array
+  (Internal dict)
+  { 'features': {'train': [Array, ...], 'val': ..., 'test': ...}, 'target': ... }
+       ⬇
+[ DataSourceLoader ].get_data()      ← Returns the container to the caller
+       ⬇
+  return SplitDatasetContainer(**self.data_dict)
+       ⬇
+  (Validated object)
+  container.features.train[0]  →  ak.Array  (e.g. one unit’s feature array)
 ```
 
-### Step-by-Step Interaction
-Ingestion (AbstractDataSourceLoader): The loader reads raw bytes and performs the heavy lifting of reshaping flat signals into the framework's standard 3D jagged structure (Time, Freq, Channel). It builds a standard Python dictionary.
+### Step-by-step interaction
 
-Encapsulation (SplitDatasetContainer): The loader instantiates the container with the internal dictionary.
+1. **Ingestion (`load_data()`):** The loader reads raw files and reshapes data into the framework’s standard structure (e.g. per-split, per-unit lists of arrays). It fills an internal dictionary (e.g. `self.data_dict`) but does not yet return a container.
+2. **Encapsulation (`get_data()`):** The loader instantiates `SplitDatasetContainer(**self.data_dict)` and returns it. Callers (e.g. the pipeline or a datamodule) typically call `load_data()` once, then `get_data()` to obtain the container.
+3. **Recursive parsing (`__init__`):** The container converts nested dicts into nested `BaseDataObject` instances, so you can use dot-notation (e.g. `container.features.train`).
+4. **Validation (`validate()`):** The container checks that, for each split, all fields (e.g. `features`, `target`) have the same number of units. If, for example, `features.train` has 50 units but `target.train` has 49, `validate()` raises `ValueError`.
 
-```Python
+---
 
-# Inside DataSourceLoader.get_data()
-return SplitDatasetContainer(**self.data_dict)
-```
-Recursive Parsing (__init__): The container instantly converts the nested dictionaries into nested BaseDataObjects, enabling dot-notation.
+## 5. Module location and API
 
-Validation (validate()): The container scans the structure. If the loader produced a ragged list where features has 50 units but target has 49, the container raises a ValueError immediately.
+All types above live in the package **`lmetk.data.data_objects`**:
+
+- **`base.py`** — `BaseDataObject`, `BaseDataObjectWithMetadata`, `ToNumpyMixin`, `ToDataFrameMixin`
+- **`data.py`** — `NamedTransformInput`, `DatasetContainer`, `SplitDatasetContainer`, and the generic return types (`ReturnObject`, `SimpleReturnObject`, etc.)
+- **`utils.py`** — `convert_to_numpy`, `check_length_consistency`, `check_for_nans`, `get_length`
+
+For method signatures and full API details, see the [API Reference](api.md).

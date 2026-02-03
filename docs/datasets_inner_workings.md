@@ -1,10 +1,11 @@
 # Datasets and Data Loading Architecture
 
-In this project, we adopt the notation of a **Dataset** from PyTorch. A PyTorch `Dataset` is an abstract class representing a collection of data samples. It defines *how* data is accessed and transformed, enabling efficient iteration for training models.
+In this project we adopt the **PyTorch** notion of a *Dataset*: an abstract class that defines how data is accessed and transformed for training. A **datasource** is *data-centric* (raw files, I/O); a **dataset** is *task-centric* (formatting data for specific model inputs). The hierarchy below is designed for complex, multi-unit time-series data (e.g. industrial fleets, sensor logs).
 
-> **Concept:** In this framework, a **Datasource** is data-centric (raw files, IO), whereas a **Dataset** is task-centric (formatting data for specific model inputs).
+**Module locations:**
 
-We provide a modular hierarchy of datasets designed to handle complex, multi-unit time-series data (e.g., industrial fleets, sensor logs).
+- **Datasets:** `lmetk.data.datasets` — `HydraConcatDataset`, `ContextBatchDataset`, `RULContextBatchDataset`, `SlidingWindowBatchDataset`, etc. For the **batch structure** (keys like `features_seq_x`, `rul_seq_x`, or the flattened `rul`/`features` in RUL), see [Datasets](datasets.md).
+- **Sequencers and engine:** `lmetk.data.optimization` — `DenseArraySequencer`, `RaggedArraySequencer`, and the core indexing engine **`AkwardJaggedAutoregressiveSequencer`** (the class name uses the spelling *Akward* for historical reasons; it operates on Awkward arrays).
 
 ---
 
@@ -548,3 +549,11 @@ This modular design ensures that no single class becomes a "God Object." Instead
 * **Robustness:** The system automatically handles edge cases like single-step sequences, univariate data, and irregular unit lengths, preventing common index errors during training.
 
 This architecture allows the system to scale seamlessly from simple single-variate forecasting on a laptop to complex, multi-modal industrial RUL estimation on large clusters.
+
+---
+
+## See also
+
+- [Datasets](datasets.md) — Task-centric dataset types and their batch structures (`ContextBatchDataset`, `RULContextBatchDataset`, `FitPredictDataset`, etc.).
+- [Data objects & containers](dataobject.md) — How datasource output is encapsulated and validated before being consumed by this pipeline.
+- [API Reference](api.md) — Data objects and utilities under `lmetk.data.data_objects`.
