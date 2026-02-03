@@ -25,6 +25,7 @@ MagicMock/
 .nox
 *.egg-info
 build
+site/
 /data/*
 /wandb/*
 /logs/*
