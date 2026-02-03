@@ -11,6 +11,20 @@ import pandas as pd
 import numpy as np
 
 from lmetk_report import config, validators
+import itertools
+
+
+def get_search_grid_df(search_space: dict) -> pd.DataFrame:
+    """Creates a DataFrame from the Cartesian product of all HP values."""
+    if not search_space:
+        return pd.DataFrame()
+
+    keys = list(search_space.keys())
+    values = list(search_space.values())
+
+    # Generate Cartesian product
+    grid = list(itertools.product(*values))
+    return pd.DataFrame(grid, columns=keys)
 
 
 def _trace_nans(df: pd.DataFrame, stage: str, prev_count: int) -> int:
@@ -132,7 +146,10 @@ def get_varying_hyperparameters(
             else:
                 if cleaned.nunique() > 1:
                     varying_params[col] = cleaned.unique().tolist()
-        except:
+        except Exception as e:
+            import logging
+
+            logging.warning(f"Could not analyze hyperparameter column '{col}': {e}")
             pass
     for col in special_cols_to_exclude:
         varying_params.pop(col, None)
@@ -148,21 +165,30 @@ def aggregate_and_find_best(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Perform groupby aggregation and find the best run."""
     subset_copy = df_subset.copy()
+
+    # --- BUG FIX: Ensure all performance columns are strictly numeric ---
+    for col in all_performance_cols:
+        if col in subset_copy.columns:
+            subset_copy[col] = pd.to_numeric(subset_copy[col], errors="coerce")
+
     for col in aggregation_cols:
         if (
             col in subset_copy.columns
             and not subset_copy[col].dropna().empty
-            and isinstance(subset_copy[col].dropna().iloc[0], list)
+            and isinstance(subset_copy[col].dropna().iloc[0], (list, np.ndarray))
         ):
             subset_copy[col] = subset_copy[col].apply(
-                lambda x: tuple(x) if isinstance(x, list) else x
+                lambda x: tuple(x) if isinstance(x, (list, np.ndarray)) else x
             )
 
+    # Only include valid numeric performance columns in aggregation
     agg_dict = {
         col: ["mean", "std", "count"]
         for col in all_performance_cols
         if col in subset_copy.columns
+        and pd.api.types.is_numeric_dtype(subset_copy[col])
     }
+
     if "run_name" in subset_copy.columns:
         agg_dict["run_name"] = list
     if not agg_dict:
@@ -176,7 +202,16 @@ def aggregate_and_find_best(
 
     if (optimization_col, "mean") not in aggregated_df.columns:
         if len(all_performance_cols) > 0:
-            optimization_col = all_performance_cols[0]
+            # Fallback to the first available mean column
+            valid_means = [
+                c
+                for c in aggregated_df.columns
+                if isinstance(c, tuple) and c[1] == "mean"
+            ]
+            if valid_means:
+                optimization_col = valid_means[0][0]
+            else:
+                return aggregated_df, pd.DataFrame()
         else:
             return pd.DataFrame(), pd.DataFrame()
 
@@ -240,53 +275,49 @@ def analyze_results(
                 try:
                     from lmetk_report.analysis import get_optimized_metric
 
-                    optimization_col = get_optimized_metric(subset, model, dataset)
+                    cur_optimization_col = get_optimized_metric(subset, model, dataset)
                 except Exception as e:
                     print(f"Warning: {e}. Fallback to test/mse")
-                    optimization_col = "test/mse"
+                    cur_optimization_col = "test/mse"
+            else:
+                cur_optimization_col = optimization_col
 
             # --- 3. OPTIMIZATION MODE ---
-            if optimization_mode is None:
+            cur_optimization_mode = optimization_mode
+            if cur_optimization_mode is None:
                 target_mode_col = config.COLUMN_CONFIG["target_metric_mode"]
                 if target_mode_col in subset.columns:
                     modes = subset[target_mode_col].dropna().unique()
                     if len(modes) > 0:
-                        optimization_mode = modes[0]
+                        cur_optimization_mode = modes[0]
 
-                if optimization_mode is None:
+                if cur_optimization_mode is None:
                     es_mode_col = config.COLUMN_CONFIG["optimization_mode"]
                     if es_mode_col in subset.columns:
                         modes = subset[es_mode_col].dropna().unique()
                         if len(modes) > 0:
-                            optimization_mode = modes[0]
+                            cur_optimization_mode = modes[0]
 
-                if optimization_mode is None:
-                    optimization_mode = "min"
+                if cur_optimization_mode is None:
+                    cur_optimization_mode = "min"
 
             # --- 4. ROBUST & CLEAN COLUMN COLLECTION ---
             all_performance_cols = []
 
             # 1. Always include optimization col
-            if optimization_col in subset.columns:
-                all_performance_cols.append(optimization_col)
+            if cur_optimization_col in subset.columns:
+                all_performance_cols.append(cur_optimization_col)
 
             # 2. Scan numeric columns, but FILTER for high-level aggregates
-            numeric_cols = subset.select_dtypes(include=[np.number]).columns
+            # include object type because it might contain coerced strings
+            numeric_cols = subset.select_dtypes(include=[np.number, "object"]).columns
             for col in numeric_cols:
                 # Must start with a known prefix
                 if not any(col.startswith(p) for p in metric_prefixes):
                     continue
 
-                # --- NEW FILTER: "Mean" Rule ---
-                # You explicitly asked for metrics that "mean" something global.
-                # We can use a heuristic:
-                # 1. Include if it literally contains "mean" (some loggers do this: val/loss_mean)
-                # 2. Exclude if it looks like a specific index (e.g., mape_41, loss_step_100)
-
                 is_aggregate = False
 
-                # Case A: Explicitly requested in REPORTING_METRICS? Keep it.
-                # (e.g. 'loss', 'mse', 'f1')
                 metric_part = col
                 for p in metric_prefixes:
                     if col.startswith(p):
@@ -301,7 +332,6 @@ def analyze_results(
                     is_aggregate = True
 
                 # Case C: Is a "simple" metric (no numbers/underscores indicating splits)
-                # e.g. "val/f1" -> OK. "val/f1_class_0" -> SKIP.
                 elif not re.search(r"\d", metric_part):
                     is_aggregate = True
 
@@ -334,24 +364,92 @@ def analyze_results(
             if subset.empty:
                 continue
 
+            # Updated ignore_vars to exclude val_best_rerun/ metrics from warnings
             ignore_vars = config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH + [
                 data_seed_col,
                 model_seed_col,
+                "val_best_rerun/",
             ]
             validators.check_hidden_variations(
                 subset, aggregation_cols, ignore_vars, additional_ignored_cols
             )
 
             # --- 6. AGGREGATION ---
-            print(f"Hyperparameters for {model}: {list(varying_hyperparams.keys())}")
-
             sorted_aggregated, best_result = aggregate_and_find_best(
                 subset,
                 aggregation_cols,
                 all_performance_cols,
-                optimization_col,
-                optimization_mode,
+                cur_optimization_col,
+                cur_optimization_mode,
             )
+
+            # --- NEW: PER-MODEL GRID INTEGRATION FIX ---
+            model_grid = None
+            if (
+                hasattr(config, "EXPECTED_SEARCH_SPACE")
+                and config.EXPECTED_SEARCH_SPACE
+            ):
+                model_grid = config.EXPECTED_SEARCH_SPACE.get(model)
+
+            # Flatten MultiIndex regardless of grid presence for downstream consistency
+            actual_results = sorted_aggregated.copy()
+            new_cols = []
+            for col in actual_results.columns:
+                if isinstance(col, tuple):
+                    col_name, stat = col
+                    new_cols.append(f"{col_name}_{stat}" if stat else col_name)
+                else:
+                    new_cols.append(col)
+            actual_results.columns = new_cols
+            opt_col_flattened = f"{cur_optimization_col}_mean"
+
+            if model_grid:
+                # FIX: Clear notification for Schema-First mode
+                print(f"\n[PIPELINE STATUS] Mode: SCHEMA-FIRST (Target Search Space)")
+                print(f"    - Merging results with expected grid for model: '{model}'")
+
+                grid_df = get_search_grid_df(model_grid)
+                grid_df["Model"] = model
+                join_keys = ["Model"] + list(model_grid.keys())
+
+                # Normalization: Ensure all join keys are the same type (string)
+                # This prevents '150' != '150.0' merge failures
+                grid_df_merged = grid_df.copy()
+                actual_results_merged = actual_results.copy()
+
+                for k in join_keys:
+                    if (
+                        k in grid_df_merged.columns
+                        and k in actual_results_merged.columns
+                    ):
+                        grid_df_merged[k] = grid_df_merged[k].astype(str)
+                        actual_results_merged[k] = actual_results_merged[k].astype(str)
+
+                # Join actual results onto the skeleton grid
+                merged_df = pd.merge(
+                    grid_df_merged, actual_results_merged, on=join_keys, how="left"
+                )
+
+                # Restore original types to hyperparameter columns for display
+                for k in list(model_grid.keys()):
+                    merged_df[k] = grid_df[k].values
+
+                sorted_aggregated = merged_df.sort_values(
+                    by=opt_col_flattened,
+                    ascending=(cur_optimization_mode == "min"),
+                    na_position="last",
+                )
+            else:
+                # FIX: Clear notification for Data-First mode
+                print(f"\n[PIPELINE STATUS] Mode: DATA-FIRST (Auto-Discovery)")
+                print(f"    - No grid defined in config for: '{model}'")
+                print(
+                    f"    - Auto-discovered varying HPs: {list(varying_hyperparams.keys())}"
+                )
+
+                sorted_aggregated = actual_results.sort_values(
+                    by=opt_col_flattened, ascending=(cur_optimization_mode == "min")
+                )
 
             if best_result.empty:
                 continue
@@ -362,7 +460,7 @@ def analyze_results(
                 best_params["run_names"] = best_result["run_name"].iloc[0, 0]
 
             performance_results = defaultdict(dict)
-            mode = optimization_mode
+            mode = cur_optimization_mode
 
             # Sort prefixes by length (longest first) to prevent partial matching bugs
             sorted_prefixes = sorted(metric_prefixes, key=len, reverse=True)
@@ -388,7 +486,7 @@ def analyze_results(
                     cnt = best_result[(col_full, "count")].values[0]
 
                     # Scale if it's the target metric and we are maximizing
-                    if col_full == optimization_col and mode == "max":
+                    if col_full == cur_optimization_col and mode == "max":
                         mean, std = mean * 100, std * 100
 
                     performance_results[metric_name][matched_prefix] = {
@@ -400,17 +498,27 @@ def analyze_results(
             res_entry = all_results[dataset][model]
             res_entry["best_hyperparameters"] = best_params
             res_entry["best_performance"] = {
-                "optimized_on": {"metric": optimization_col, "strategy": mode},
+                "optimized_on": {"metric": cur_optimization_col, "strategy": mode},
                 "metrics": performance_results,
             }
             res_entry["sorted_aggregated_results"] = sorted_aggregated
             res_entry["non_aggregated_df"] = subset.copy()
 
-            try:
-                d_seeds = sorted(subset[data_seed_col].dropna().unique().astype(int))
-                m_seeds = sorted(subset[model_seed_col].dropna().unique().astype(int))
-                res_entry["seeds_info"] = {"data": str(d_seeds), "model": str(m_seeds)}
-            except:
-                res_entry["seeds_info"] = {"data": "?", "model": "?"}
+            # Fix: Use native Python ints to avoid np.int64 wrappers in seed display
+            def get_formatted_seeds(col_name):
+                if col_name not in subset.columns:
+                    return "?"
+                try:
+                    unique_seeds = sorted(
+                        [int(x) for x in subset[col_name].dropna().unique()]
+                    )
+                    return str(unique_seeds) if unique_seeds else "?"
+                except (ValueError, TypeError):
+                    return "?"
+
+            res_entry["seeds_info"] = {
+                "data": get_formatted_seeds(data_seed_col),
+                "model": get_formatted_seeds(model_seed_col),
+            }
 
     return all_results

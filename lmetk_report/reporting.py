@@ -24,9 +24,14 @@ def create_summary_table(all_results: defaultdict, precision: int = 4) -> pd.Dat
                         mean = values.get("mean", float("nan"))
                         std = values.get("std", float("nan"))
                         count = values.get("count", "n/a")
+
+                        # Fix: handle nans for clean display
+                        std_val = std if not pd.isna(std) else 0.0
+                        cnt_val = int(count) if not isinstance(count, str) else count
+
                         fmt_val = (
                             f"{mean:.{precision}f} ± "
-                            f"{std:.{precision}f} (n={count})"
+                            f"{std_val:.{precision}f} (n={cnt_val})"
                         )
 
                         # Fix: Explicitly add '/' separator for display
@@ -101,7 +106,7 @@ def display_experiment_stats(all_results: defaultdict) -> None:
     display(df.style.set_properties(**{"text-align": "left"}))
 
 
-def display_performance_tables(all_results: defaultdict, precision: int = 2) -> None:
+def display_performance_tables(all_results: defaultdict, precision: int = 4) -> None:
     """Display separate pivot tables for each metric found in the results."""
     found_metrics = set()
     for dataset, models in all_results.items():
@@ -139,7 +144,13 @@ def display_performance_tables(all_results: defaultdict, precision: int = 2) -> 
                         vals = metrics_data[m_lookup][p_lookup]
                         mean = vals.get("mean", 0)
                         std = vals.get("std", 0)
-                        val_str = f"{mean:.{precision}f} ± {std:.{precision}f}"
+                        count = vals.get("count", 0)
+
+                        # Handle potential NaN in std (e.g., if n=1)
+                        std_val = std if not pd.isna(std) else 0.0
+
+                        # Fix: Standardized output with count for consistency
+                        val_str = f"{mean:.{precision}f} ± {std_val:.{precision}f} (n={int(count)})"
 
                 records.append({"Dataset": dataset, "Model": model, "Value": val_str})
 
@@ -151,8 +162,8 @@ def display_performance_tables(all_results: defaultdict, precision: int = 2) -> 
         display(pivot)
 
 
-def display_hp_impact(all_results: defaultdict) -> None:
-    """Display aggregated leaderboard for every model/dataset combination."""
+def display_hp_impact(all_results: defaultdict, precision: int = 4) -> None:
+    """Display aggregated leaderboard for every model/dataset combination with (n=count)."""
     print(f"\n{'=' * 40}\n  HYPERPARAMETER IMPACT ANALYSIS\n{'=' * 40}")
 
     for dataset, models in all_results.items():
@@ -164,43 +175,59 @@ def display_hp_impact(all_results: defaultdict) -> None:
             if df.empty:
                 continue
 
-            # Flatten MultiIndex columns
+            # 1. Flatten MultiIndex columns
             new_cols = []
             for col in df.columns:
                 if isinstance(col, tuple):
                     col_name, stat = col
-                    if stat == "":
-                        new_cols.append(col_name)
-                    else:
-                        new_cols.append(f"{col_name}_{stat}")
+                    new_cols.append(f"{col_name}_{stat}" if stat else col_name)
                 else:
                     new_cols.append(col)
             df.columns = new_cols
 
+            # 2. Identify and format metrics
+            metric_bases = set(
+                c.rsplit("_", 1)[0] for c in df.columns if c.endswith("_mean")
+            )
+            for base in metric_bases:
+                m_col, s_col, c_col = f"{base}_mean", f"{base}_std", f"{base}_count"
+                if m_col in df.columns and c_col in df.columns:
+
+                    def format_impact_row(row):
+                        if pd.isna(row[m_col]):
+                            return "-"  # Missing grid entries
+
+                        std_val = (
+                            row[s_col]
+                            if s_col in row and not pd.isna(row[s_col])
+                            else 0.0
+                        )
+                        return f"{row[m_col]:.{precision}f} ± {std_val:.{precision}f} (n={int(row[c_col])})"
+
+                    df[base] = df.apply(format_impact_row, axis=1)
+
+            # 3. Final display logic
             opt_info = res.get("best_performance", {}).get("optimized_on", {})
             opt_metric = opt_info.get("metric", "")
-
-            # Include optimized metric and any column ending in _mean
-            metric_cols = [
-                c for c in df.columns if (opt_metric in c) or c.endswith("_mean")
+            raw_stats, ignore = ["_mean", "_std", "_count"], [
+                "run_name",
+                "run_name_list",
+                "Model",
             ]
-
-            ignore_cols = ["run_name_list", "run_name", "Model"]
 
             hp_cols = [
                 c
                 for c in df.columns
-                if c not in metric_cols
-                and c not in ignore_cols
-                and "_std" not in c
-                and "_mean" not in c
-                and "_count" not in c
+                if not any(c.endswith(s) for s in raw_stats)
+                and c not in ignore
+                and c not in metric_bases
             ]
 
-            final_cols = hp_cols + metric_cols
-            final_cols = [c for c in final_cols if c in df.columns]
+            final_metrics = sorted(list(metric_bases))
+            if opt_metric in final_metrics:
+                final_metrics.remove(opt_metric)
+                final_metrics = [opt_metric] + final_metrics
 
             print(f"\n>>> {model} on {dataset}")
-            print(f"    (Sorted by {opt_metric})")
-
-            display(df[final_cols].head(10))
+            print(f"    (Sorted by optimization target: {opt_metric})")
+            display(df[hp_cols + final_metrics].fillna("-"))

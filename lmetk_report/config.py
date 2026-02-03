@@ -62,6 +62,7 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "_timestamp",
     "epoch",
     "val/",  # Ignore all validation metrics
+    "val_best_rerun/",
     "test/",  # Ignore all test metrics
     "train/",  # Ignore all training metrics
     "AvgTime/",  # Ignore all timing metrics
@@ -79,6 +80,7 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     # Trainer-specific columns
     "trainer.default_root_dir",
     "_wandb.runtime",
+    "cache.use_preprocessing_file_lock",
 ]
 
 ADDITIONAL_COLUMNS_TO_SHOW = [
@@ -98,3 +100,69 @@ DEFAULT_DATA_SEED_COL = "datasource.parameters.data_seed"
 # Default column for Model/Training Seeds (e.g., initialization)
 # UPDATE THIS to match your specific log column (often just "seed" or "model.seed")
 DEFAULT_MODEL_SEED_COL = "seed"
+
+
+# --- Pipeline Requirements ---
+# These columns MUST exist in the DataFrame after normalization for the
+# analysis and reporting to work correctly.
+REQUIRED_COLUMNS = [
+    COLUMN_CONFIG["model_target"],
+    COLUMN_CONFIG["dataset_name"],
+    # Seeds
+    # DEFAULT_DATA_SEED_COL, # For now we vary over the model instantiation seed only
+    DEFAULT_MODEL_SEED_COL,
+    # Checkpointing
+    CHECKPOINT_PATH_COLUMN,
+]
+
+
+#  Global Expected Search Space ---
+# If None, the script only shows completed experiments.
+# If provided, it creates a grid and shows gaps as NaNs.
+EXPECTED_SEARCH_SPACE = {
+    "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "baselines.patchtst_model.PatchTST_Forecaster": {
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+    },
+    "baselines.lstm_model.LSTM_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "model.wrappers.mlp_wrapper.MLPWrapper": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "baselines.tide_model.TiDE_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "baselines.crossformer_model.Crossformer_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
+        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+    # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
+    #     "task_definition.seq_len": [1, 10, 50, 100, 150],
+    #     'optimization.lr': [0.001, 0.0005, 0.0001],,
+    # },
+    # FitPredictTabPFNWrapper is omitted, so it will use automatic discovery
+}

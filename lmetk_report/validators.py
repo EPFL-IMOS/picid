@@ -9,6 +9,33 @@ from typing import List, Optional, Set, Tuple
 import pandas as pd
 
 
+def validate_schema(df: pd.DataFrame, required_cols: List[str]) -> None:
+    """
+    Check if all columns required for processing are present in the DataFrame.
+
+    Args:
+        df: The normalized DataFrame.
+        required_cols: List of column names that must be present.
+
+    Raises:
+        ValueError: If any required columns are missing.
+    """
+    missing = [col for col in required_cols if col not in df.columns]
+
+    if missing:
+        error_msg = (
+            f"\n[SCHEMA ERROR] Missing {len(missing)} required columns!\n"
+            f"The following columns were not found: {missing}\n"
+            "Please check your WandB config or update 'lmetk_report/config.py'."
+        )
+        print(error_msg)
+        raise ValueError(error_msg)
+
+    print(
+        f"✅ Schema Validation Passed: All {len(required_cols)} required columns present."
+    )
+
+
 def log_modification(
     action: str,
     reason: str,
