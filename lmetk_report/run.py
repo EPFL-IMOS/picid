@@ -35,6 +35,7 @@ from lmetk_report.reporting import (
     export_hp_impact_tables,
     get_experiment_stats_df,
     iter_hp_impact_tables,
+    write_tables_tex,
 )
 from lmetk_report.preprocess import clean_and_rename_models
 from lmetk_report.report_html import write_report_html
@@ -199,6 +200,15 @@ def _save_outputs(
 
     # Experiment stats
     export_experiment_stats(all_results, os.path.join(tables_dir, "experiment_stats.csv"))
+
+    # Single LaTeX file with all tables for pasting into paper
+    write_tables_tex(
+        os.path.join(output_dir, "tables_tex.tex"),
+        summary_df=summary_df,
+        stats_df=stats_df,
+        all_results=all_results,
+        precision=precision,
+    )
 
     # HP impact tables (CSV per model/dataset) and collect entries for report
     hp_impact_dir = os.path.join(tables_dir, "hp_impact")

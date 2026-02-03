@@ -41,3 +41,12 @@ scratch.ipynb
 /output
 /plot_dir
 /scripts/to_finish_large/
+
+# Generated report output (tables, plots, report.html)
+report_output/
+
+# Local packages / datasets (e.g. rul-datasets)
+local_packages/
+
+# Lock file (optional: remove this line if you want to commit uv.lock for reproducible installs)
+uv.lock

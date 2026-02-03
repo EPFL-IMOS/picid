@@ -72,8 +72,11 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "plots/",  # Ignore all plot outputs
     "callbacks.model_checkpoint.",
     "model.model_cache_path",
-    # Repeated config parameters
+    # Repeated config parameters (model.seq_len often mirrors task_definition.seq_len)
     "model.max_seq_len",
+    "model.ts_in", 
+    "model.transformer_args.seq_len",
+    "model.seq_len",
     "dataset.dataset_cfg.seq_len",
     "optimization.optimizer.lr",
     "optimization.scheduler.peak_lr",
