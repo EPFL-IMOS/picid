@@ -1250,6 +1250,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/cnn_1d",
+                "task_definition.subset_ratio=0.1",
                 "debug=default",
                 "logger=wandb"
             ],
@@ -1268,7 +1269,9 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/xgboost_fit_predict",
-                "debug=pronostia"
+                "task_definition.subset_ratio=0.1",
+                "debug=default"
+                // "debug=pronostia"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",

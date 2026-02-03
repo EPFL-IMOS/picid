@@ -1,8 +1,12 @@
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Union
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS, CLASSIFICATION_TASKS
+from lmetk.baselines.definitions import (
+    REGRESSION_TASKS,
+    FORECASTING_TASKS,
+    CLASSIFICATION_TASKS,
+)
 from lmetk.data.datasets.base import BaseDataset
 from lmetk.data.datasets.collate_functions import (
     collate_key_value_batch,
@@ -24,6 +28,8 @@ class ContextBatchDataset(BaseDataset):
         stride: int = 1,
         padding_left_flag: int = 0,
         warmup_steps: int = None,
+        subset_ratio: Optional[float] = None,
+        subset_seed: int = 42,
         **kwargs,
     ):
 
@@ -64,6 +70,8 @@ class ContextBatchDataset(BaseDataset):
             padding_left_flag=padding_left_flag,
             warmup_steps=warmup_steps,
             pred_offset=pred_offset,
+            subset_seed=subset_seed,
+            subset_ratio=subset_ratio,
         )
 
         self.target_dataset = SlidingWindowBatchDataset(

@@ -1,3 +1,6 @@
+import random
+import logging
+
 from typing import Dict, List, Optional, Union
 
 import awkward as ak
@@ -14,6 +17,8 @@ from lmetk.data.optimization.sequencer import (
 import omegaconf
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class SlidingWindowBatchDataset(BaseDataset):
@@ -33,12 +38,19 @@ class SlidingWindowBatchDataset(BaseDataset):
         suffixes=["_seq_x", "_seq_y"],
         padding_left_flag: int = 0,
         warmup_steps: int = None,
+        subset_ratio: Optional[float] = None,
+        subset_seed: int = 42,
+        subset_blocks: Optional[int] = None,
         **kwargs,
     ):
 
         self.sequencers: Dict[str, BaseSequencer] = {}
         self._length: Optional[int] = None
+        self._seq_idx = None
         self.suffixes = suffixes
+        self.subset_ratio = subset_ratio
+        self.subset_seed = subset_seed
+        self.subset_blocks = subset_blocks
 
         # Common params for all sequencers
         sequencer_params = dict(
@@ -55,21 +67,14 @@ class SlidingWindowBatchDataset(BaseDataset):
             if arr is None:
                 continue
 
-            if isinstance(arr, (np.ndarray, torch.Tensor)):
-                driver = DenseArraySequencer(arr, **sequencer_params)
+            driver = self._create_sequencer(arr, sequencer_params, key)
 
-            elif isinstance(arr, ak.Array):
-                driver = RaggedArraySequencer(arr, **sequencer_params)
-            else:
-                if isinstance(arr, omegaconf.ListConfig):
-                    raise NotImplementedError(
-                        f"Unsupported type for key '{key}': {type(arr)}. "
-                        "Most likely you should use HydraConcat to instantiate a separate iterator for each unit, as it looks like you are trying to past multiunit data into the single unit dataset class."
-                    )
-                else:
-                    raise NotImplementedError(
-                        f"Unsupported type for key '{key}': {type(arr)}"
-                    )
+            if (
+                subset_ratio is not None
+                and 0 < subset_ratio < 1
+                and self._seq_idx is None
+            ):
+                self._seq_idx = self._create_sequence_subset(len(driver), subset_ratio)
 
             self.sequencers[key] = driver
 
@@ -82,8 +87,47 @@ class SlidingWindowBatchDataset(BaseDataset):
                     f"(mismatch at key '{key}')"
                 )
 
+    def _create_sequence_subset(self, sequence_length, subset_ratio):
+        """Functionality to test reduced data scenarios."""
+        rng = random.Random(self.subset_seed)  # independent RNG
+        n_subset = int(sequence_length * subset_ratio)
+        seq_idx = rng.sample(range(sequence_length), n_subset)
+        seq_idx.sort()
+        logger.info(
+            f"Subsetting sequences: using {n_subset} out of {sequence_length} sequences."
+        )
+        logger.info(f"Subset indices start with: {seq_idx[:100]}")
+        return np.array(seq_idx)
+
+    def _create_sequencer(self, arr, sequencer_params, key):
+        """Create the sequencer object for an array based on the array type."""
+        if isinstance(arr, (np.ndarray, torch.Tensor)):
+            driver = DenseArraySequencer(arr, **sequencer_params)
+
+        elif isinstance(arr, ak.Array):
+            driver = RaggedArraySequencer(arr, **sequencer_params)
+        else:
+            if isinstance(arr, omegaconf.ListConfig):
+                raise NotImplementedError(
+                    f"Unsupported type for key '{key}': {type(arr)}. "
+                    "Most likely you should use HydraConcat to instantiate a separate iterator for each unit, as it looks like you are trying to past multiunit data into the single unit dataset class."
+                )
+            else:
+                raise NotImplementedError(
+                    f"Unsupported type for key '{key}': {type(arr)}"
+                )
+
+        return driver
+
     def __len__(self):
-        return self._length or 0
+        """
+        The length of this dataset is determined either by the number of sequences,
+        or if subset, by the length of that subset.
+        """
+        if self._seq_idx is None:
+            return self._length or 0
+        else:
+            return len(self._seq_idx)
 
     # # Potential improvement: Ensure idx is always a list so the sequencer treats it as a batch
     # def __getitem__(self, idx: Union[int, List[int]]) -> Dict[str, tuple]:
@@ -115,11 +159,11 @@ class SlidingWindowBatchDataset(BaseDataset):
         # If idx is int, wrap it. If list, keep it.
         # batch_idx = [idx] if isinstance(idx, int) else idx
 
+        if self._seq_idx is not None:
+            idx = self._seq_idx[idx]
+
         out = {}
         for k, drv in self.sequencers.items():
-
-            # OLD
-            # x, y = drv.sequences_batch(idx)
 
             sequencer_output = drv.sequences_batch(idx)
             x, y = sequencer_output

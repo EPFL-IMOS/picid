@@ -1,6 +1,6 @@
 # @override decorator
 import torch
-from typing import Dict, List, override
+from typing import Dict, List, Optional, override
 
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
@@ -88,11 +88,12 @@ class RULContextBatchDataset(ContextBatchDataset):
         get_unit_id: bool = False,
         padding_left_flag: int = 0,
         warmup_steps: int = None,
+        subset_ratio: Optional[float] = None,
+        subset_seed: int = 42,
         **kwargs,
     ):
         assert pred_len == 1, "pred_len must be 1 for RUL prediction."
         # It is makes sense in the context of RUL as we want to predict the RUL at the end of the sequence x, seq_y is not used in this dataset
-        pred_len = 0  # Force pred_len to 0 for RUL tasks
 
         self.meta_data_dict = kwargs["meta_data_dict"]
 
@@ -111,6 +112,8 @@ class RULContextBatchDataset(ContextBatchDataset):
             stride=stride,
             padding_left_flag=padding_left_flag,
             warmup_steps=warmup_steps,
+            subset_ratio=subset_ratio,
+            subset_seed=subset_seed,
             **kwargs,
         )
 

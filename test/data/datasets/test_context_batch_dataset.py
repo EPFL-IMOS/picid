@@ -136,6 +136,79 @@ def test_init_synchronization_mismatch():
 
 
 # =========================================================================
+# === Tests: Subset sampling (subset_ratio / subset_seed) ===
+# =========================================================================
+
+
+def test_subset_applied_consistently_to_context_and_target():
+    """subset_ratio should reduce length and use the same indices for context/target."""
+    base = np.arange(40, dtype=np.float32).reshape(40, 1)
+    data = {"features": base, "target": base}
+
+    ds = ContextBatchDataset(
+        data_dict=data,
+        task_type="forecasting",
+        seq_len=4,
+        label_len=0,
+        pred_len=1,
+        subset_ratio=0.25,
+        subset_seed=7,
+    )
+
+    # Both internal datasets should have identical subset indices
+    ctx_idx = ds.context_dataset._seq_idx
+    tgt_idx = ds.target_dataset._seq_idx
+    assert ctx_idx is not None and tgt_idx is not None
+    assert np.array_equal(ctx_idx, tgt_idx)
+
+    # Length reflects the subset size
+    expected_len = int(len(ds.target_dataset.sequencers["target"]) * 0.25)
+    assert len(ds) == expected_len
+
+
+def test_subset_seed_is_reproducible_and_seed_sensitive():
+    """Same seed -> same subset; different seed -> different subset."""
+    base = np.arange(30, dtype=np.float32).reshape(30, 1)
+    data = {"features": base, "target": base}
+
+    ds_a = ContextBatchDataset(
+        data_dict=data,
+        task_type="forecasting",
+        seq_len=3,
+        label_len=0,
+        pred_len=1,
+        subset_ratio=0.3,
+        subset_seed=99,
+    )
+    ds_b = ContextBatchDataset(
+        data_dict=data,
+        task_type="forecasting",
+        seq_len=3,
+        label_len=0,
+        pred_len=1,
+        subset_ratio=0.3,
+        subset_seed=99,
+    )
+    ds_c = ContextBatchDataset(
+        data_dict=data,
+        task_type="forecasting",
+        seq_len=3,
+        label_len=0,
+        pred_len=1,
+        subset_ratio=0.3,
+        subset_seed=100,
+    )
+
+    assert np.array_equal(
+        ds_a.context_dataset._seq_idx, ds_b.context_dataset._seq_idx
+    )
+    # Different seed should almost surely differ (len small but deterministic)
+    assert not np.array_equal(
+        ds_a.context_dataset._seq_idx, ds_c.context_dataset._seq_idx
+    )
+
+
+# =========================================================================
 # === Tests: Data Retrieval (Scalar vs Batch) ===
 # =========================================================================
 

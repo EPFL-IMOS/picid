@@ -15,6 +15,8 @@ import logging
 import random
 from typing import Any, Dict, Optional
 
+import omegaconf
+import awkward as ak
 import numpy as np
 import torch
 from einops import rearrange, repeat
@@ -22,15 +24,17 @@ from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.data.optimization.sequencer import DenseArraySequencer
-from lmetk.transforms.base.base_transform import DenseTransform
+from lmetk.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
+from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class TimeseriesTabularizer(
+    RaggedOrDenseTransform, ConcatinatedFitMultiSourceTransformMixin
+):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features
@@ -55,6 +59,10 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
         stride: int,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,
+        subset_blocks: Optional[int] = None,
+        pred_offset: int = 0,
+        padding_left_flag: int = 0,
+        warmup_steps: int = None,
         **kwargs,
     ):
 
@@ -84,6 +92,10 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
         self.stride = stride
         self.subset_ratio = subset_ratio
         self.subset_seed = subset_seed
+        self.pred_offset = pred_offset
+        self.padding_left_flag = padding_left_flag
+        self.warmup_steps = warmup_steps
+        self.subset_blocks = subset_blocks
 
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
         # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
@@ -103,6 +115,37 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
             args += f", select_features={self.select_features!r}"
 
         return f"{self.__class__.__name__}({args})"
+
+    def _create_sequencer(self, arr, sequencer_params, key):
+        """Create the sequencer object for an array based on the array type."""
+        if isinstance(arr, (np.ndarray, torch.Tensor)):
+            seq = DenseArraySequencer(arr, **sequencer_params)
+
+        elif isinstance(arr, ak.Array):
+            seq = RaggedArraySequencer(arr, **sequencer_params)
+        else:
+            if isinstance(arr, omegaconf.ListConfig):
+                raise NotImplementedError(
+                    f"Unsupported type for key '{key}': {type(arr)}. "
+                    "Most likely you should use HydraConcat to instantiate a separate iterator for each unit, as it looks like you are trying to past multiunit data into the single unit dataset class."
+                )
+            else:
+                raise NotImplementedError(
+                    f"Unsupported type for key '{key}': {type(arr)}"
+                )
+        return seq
+
+    def _create_sequence_subset(self, sequence_length, subset_ratio):
+        """Functionality to test reduced data scenarios."""
+        rng = random.Random(self.subset_seed)  # independent RNG
+        n_subset = int(sequence_length * subset_ratio)
+        seq_idx = rng.sample(range(sequence_length), n_subset)
+        seq_idx.sort()
+        logger.info(
+            f"Subsetting sequences: using {n_subset} out of {sequence_length} sequences."
+        )
+        logger.info(f"Subset indices start with: {seq_idx[:100]}")
+        return np.array(seq_idx)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         r"""Applies the tabularization to the input data.
@@ -135,29 +178,26 @@ class TimeseriesTabularizer(DenseTransform, ConcatinatedFitMultiSourceTransformM
                 ), f"Inconsistent number of features across segments: {N_samples} != {data.shape[0]}"
 
             def collect_sequences(collect_idx):
-                seq = DenseArraySequencer(
-                    array=data,
+
+                sequencer_params = dict(
                     seq_len=self.seq_len,
                     label_len=self.label_len,
                     pred_len=self.pred_len,
                     stride=self.stride,
+                    pred_offset=self.pred_offset,
+                    padding_left_flag=self.padding_left_flag,
+                    warmup_steps=self.warmup_steps,
                 )
+
+                seq = self._create_sequencer(data, sequencer_params, key)
 
                 subset_ratio = self.subset_ratio
                 if subset_ratio is not None and 0 < subset_ratio < 1:
-                    rng = random.Random(self.subset_seed)  # independent RNG
-                    len_ds = len(seq)
-                    n_subset = int(len_ds * subset_ratio)
-                    batch_idx = rng.sample(range(len_ds), n_subset)
-                    batch_idx.sort()
-                    logger.info(
-                        f"Subsetting {split} sequences: using {n_subset} out of {len_ds} sequences."
-                    )
-                    logger.info(f"Subset indices start with: {batch_idx[:100]}")
+                    seq_idx = self._create_sequence_subset(len(seq), self.subset_ratio)
                 else:
-                    batch_idx = np.arange(len(seq))
+                    seq_idx = np.arange(len(seq))
 
-                results = seq.sequences_batch(batch_idx)
+                results = seq.sequences_batch(seq_idx)
                 return results[collect_idx]
 
             if selection == "t":

@@ -7,6 +7,15 @@ stride: ${task_definition.stride}
 pred_offset: ${oc.select:task_definition.pred_offset,0}
 
 task_type: ${task_definition.task_type}
+subset_ratio: null
+subset_seed: 42
+subset_blocks: null
+
+_overrides:
+  train:
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
 # TODO: decide if its fair to compare same train strides with tabpfn.
 # _overrides:
 #   test:
