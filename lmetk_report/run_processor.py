@@ -8,14 +8,18 @@ it into a clean, flat pandas DataFrame ready for analysis.
 """
 import ast
 import json
+import logging
 import os
 import warnings
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import pandas as pd
 import wandb
 from lmetk_report import config
+from lmetk_report.config import PipelineConfig
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 # Suppress common pandas warnings for a cleaner output.
 warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
@@ -59,7 +63,10 @@ def _normalize_column(
 
 
 def load_runs_df(
-    project_name: str, user: str, csv_cache_dir: str = "csv_files"
+    project_name: str,
+    user: str,
+    csv_cache_dir: str = "csv_files",
+    pipeline_config: Optional[PipelineConfig] = None,
 ) -> Tuple[pd.DataFrame, List[str], List[str]]:
     """
     Loads wandb run data, using a local CSV file as a cache, and prepares the DataFrame.
@@ -85,10 +92,10 @@ def load_runs_df(
         # The CSV stores dicts as strings, so we convert them back to Python objects.
         for col in ["summary", "config"]:
             runs_df[col] = runs_df[col].apply(ast.literal_eval)
-        print(f"Loaded {len(runs_df)} runs from cached file: {csv_path}")
+        logger.info(f"Loaded {len(runs_df)} runs from cached file: {csv_path}")
     except FileNotFoundError:
         # If cache is not found, fetch fresh data from the wandb API.
-        print(f"Fetching runs from wandb project: {user}/{project_name}...")
+        logger.info(f"Fetching runs from wandb project: {user}/{project_name}...")
         runs = api.runs(f"{user}/{project_name}")
         summary_list, config_list, name_list = [], [], []
         for run in tqdm(runs):
@@ -99,41 +106,47 @@ def load_runs_df(
                 )
                 name_list.append(run.name)
             else:
-                print(f"Skipping run '{run.name}' with state '{run.state}'")
+                logger.info(f"Skipping run '{run.name}' with state '{run.state}'")
         runs_df = pd.DataFrame(
             {"summary": summary_list, "config": config_list, "run_name": name_list}
         )
         runs_df.to_csv(csv_path)
-        print(f"Saved {len(runs_df)} runs to cache: {csv_path}")
+        logger.info(f"Saved {len(runs_df)} runs to cache: {csv_path}")
 
     # Merge the 'summary' (results) and 'config' (hyperparameters) dictionaries for each run.
-    for i, row in runs_df.iterrows():
-        row["summary"].update(row["config"])
-
-    # Create the final, unified DataFrame from the merged records.
-    df = pd.DataFrame.from_records(
-        [
-            {**row["summary"], "run_name": row["run_name"]}
-            for _, row in runs_df.iterrows()
-        ]
-    )
+    # Build merged records without mutating rows in place (iterrows mutation is discouraged).
+    merged_records = [
+        {**row["summary"], **row["config"], "run_name": row["run_name"]}
+        for _, row in runs_df.iterrows()
+    ]
+    df = pd.DataFrame.from_records(merged_records)
 
     # --- Data Cleaning and Flattening from Config ---
+    cols_to_normalize = (
+        pipeline_config.columns_to_normalize
+        if pipeline_config is not None
+        else config.COLUMNS_TO_NORMALIZE
+    )
+    cols_to_drop_filter = (
+        pipeline_config.column_filters_to_drop
+        if pipeline_config is not None
+        else config.COLUMN_FILTERS_TO_DROP
+    )
     config_columns = []
-    for column in config.COLUMNS_TO_NORMALIZE:
+    for column in cols_to_normalize:
         df, new_cols = _normalize_column(df, column)
         config_columns.extend(new_cols)
 
     # Drop columns that are mostly empty (>90% NaN) to reduce noise.
     nan_cols_to_drop = df.columns[df.isna().mean() > 0.9].tolist()
     df = df.drop(columns=nan_cols_to_drop)
-    print(f"Dropped {len(nan_cols_to_drop)} columns with >90% NaN values.")
-    print(f"The columns were drropped: {nan_cols_to_drop}")
+    logger.info(f"Dropped {len(nan_cols_to_drop)} columns with >90% NaN values.")
+    logger.info(f"The columns were dropped: {nan_cols_to_drop}")
 
     # Drop columns based on specific name patterns defined in the config file.
-    cols_to_drop_by_filter = _filter_columns(df, config.COLUMN_FILTERS_TO_DROP)
+    cols_to_drop_by_filter = _filter_columns(df, cols_to_drop_filter)
     df = df.drop(columns=cols_to_drop_by_filter, errors="ignore")
-    print(
+    logger.info(
         f"Dropped {len(cols_to_drop_by_filter)} columns based on name filters (e.g., 'paths.')."
     )
 

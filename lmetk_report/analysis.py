@@ -3,15 +3,21 @@
 Core analysis module for processing experiment results.
 """
 
+import ast
+import itertools
+import logging
+import re
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple
-import re  # Added regex for cleaner filtering
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from lmetk_report import config, validators
-import itertools
+from lmetk_report.config import PipelineConfig
+from lmetk_report.utils import flatten_aggregated_columns
+
+logger = logging.getLogger(__name__)
 
 
 def get_search_grid_df(search_space: dict) -> pd.DataFrame:
@@ -48,9 +54,13 @@ def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
     return list(unique_items)
 
 
-def get_dynamic_metrics(df_subset: pd.DataFrame) -> List[str]:
+def get_dynamic_metrics(
+    df_subset: pd.DataFrame,
+    column_config: Optional[Dict[str, str]] = None,
+) -> List[str]:
     """Extracts the list of metric names from evaluator config."""
-    col_name = config.COLUMN_CONFIG["evaluator_metrics"]
+    col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
+    col_name = col_cfg["evaluator_metrics"]
     if col_name not in df_subset.columns:
         return []
 
@@ -59,25 +69,27 @@ def get_dynamic_metrics(df_subset: pd.DataFrame) -> List[str]:
         if isinstance(entry, (list, tuple, np.ndarray)):
             found_metrics.update(entry)
         elif isinstance(entry, str):
-            import ast
-
             try:
                 parsed = ast.literal_eval(entry)
                 if isinstance(parsed, (list, tuple)):
                     found_metrics.update(parsed)
                 else:
                     found_metrics.add(entry)
-            except:
+            except Exception:
                 found_metrics.add(entry)
     return sorted(list(found_metrics))
 
 
 def get_optimized_metric(
-    df_subset: pd.DataFrame, model_name: str, dataset_name: str
+    df_subset: pd.DataFrame,
+    model_name: str,
+    dataset_name: str,
+    column_config: Optional[Dict[str, str]] = None,
 ) -> str:
     """Finds the metric used for optimization."""
+    col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
     # Priority 1: Task Definition
-    target_col = config.COLUMN_CONFIG["target_metric"]
+    target_col = col_cfg["target_metric"]
     if target_col in df_subset.columns:
         targets = get_unique_values(df_subset, target_col)
         if len(targets) == 1:
@@ -89,19 +101,19 @@ def get_optimized_metric(
             ]
             for c in candidates:
                 if c in df_subset.columns and df_subset[c].count() > 0:
-                    print(f"Optimized metric (from task def) for {model_name}: {c}")
+                    logger.info(f"Optimized metric (from task def) for {model_name}: {c}")
                     return c
             if metric_base in df_subset.columns:
                 return metric_base
 
     # Priority 2: Early Stopping
     metric_series = get_unique_values(
-        df_subset, config.COLUMN_CONFIG["optimization_metric"]
+        df_subset, col_cfg["optimization_metric"]
     )
     if len(metric_series) >= 1:
         candidate = metric_series[0]
         if candidate in df_subset.columns and df_subset[candidate].count() > 0:
-            print(
+            logger.info(
                 f"Optimized metric (from early stopping) for {model_name}: {candidate}"
             )
             return candidate
@@ -119,7 +131,7 @@ def get_optimized_metric(
     ]
     for fb in fallback_candidates:
         if fb in df_subset.columns and df_subset[fb].count() > 0:
-            print(f"Fallback metric for {model_name}: {fb}")
+            logger.info(f"Fallback metric for {model_name}: {fb}")
             return fb
 
     raise ValueError(f"No valid metric found for {model_name}.")
@@ -147,10 +159,7 @@ def get_varying_hyperparameters(
                 if cleaned.nunique() > 1:
                     varying_params[col] = cleaned.unique().tolist()
         except Exception as e:
-            import logging
-
-            logging.warning(f"Could not analyze hyperparameter column '{col}': {e}")
-            pass
+            logger.warning("Could not analyze hyperparameter column '%s': %s", col, e)
     for col in special_cols_to_exclude:
         varying_params.pop(col, None)
     return varying_params
@@ -234,12 +243,50 @@ def analyze_results(
     required_model_seeds: Optional[Set[int]] = None,
     model_seed_col: str = config.DEFAULT_MODEL_SEED_COL,
     additional_ignored_cols: Optional[List[str]] = None,
+    column_config: Optional[Dict[str, str]] = None,
+    expected_search_space: Optional[Dict[str, Dict[str, List[Any]]]] = None,
+    pipeline_config: Optional[PipelineConfig] = None,
 ) -> defaultdict:
-    """Orchestrate the full analysis pipeline."""
+    """Orchestrate the full analysis pipeline.
+
+    Returns
+    -------
+    all_results : defaultdict(lambda: defaultdict(dict))
+        Nested structure: all_results[dataset][model] is a dict with keys:
+        - best_hyperparameters : dict
+            Best run's hyperparameters (from the row that achieved best on the
+            optimization metric).
+        - best_performance : dict
+            Contains "metrics" (dict of metric_name -> prefix -> mean/std/count),
+            "optimized_on" (dict with "metric", "value", etc.), and optionally
+            "run_name" or "run_name_list".
+        - sorted_aggregated_results : pd.DataFrame
+            Aggregated stats per HP configuration (mean/std/count for each
+            performance column), sorted by the optimization metric.
+        - non_aggregated_df : pd.DataFrame
+            Raw (non-aggregated) runs for this model/dataset subset.
+        - seeds_info : dict
+            Typically "data" and "model" keys with seed info (e.g. found seeds,
+            required seeds) for display.
+    """
 
     config_columns = [col for col in config_columns if col not in dropped_columns]
-    unique_models = get_unique_values(df, config.COLUMN_CONFIG["model_target"])
-    unique_datasets = get_unique_values(df, config.COLUMN_CONFIG["dataset_name"])
+    if pipeline_config is not None:
+        _col_cfg = pipeline_config.column_config
+        _search_space = pipeline_config.expected_search_space
+        _hp_filters = pipeline_config.column_filters_to_ignore_for_hp_search
+        _special_cols = pipeline_config.special_columns
+    else:
+        _col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
+        _search_space = (
+            expected_search_space
+            if expected_search_space is not None
+            else config.EXPECTED_SEARCH_SPACE
+        )
+        _hp_filters = config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH
+        _special_cols = config.SPECIAL_COLUMNS
+    unique_models = get_unique_values(df, _col_cfg["model_target"])
+    unique_datasets = get_unique_values(df, _col_cfg["dataset_name"])
     all_results = defaultdict(lambda: defaultdict(dict))
 
     for dataset in unique_datasets:
@@ -248,8 +295,8 @@ def analyze_results(
             # --- SUBSETTING ---
             subset_start_shape = df.shape
             subset = df[
-                (df[config.COLUMN_CONFIG["dataset_name"]] == dataset)
-                & (df[config.COLUMN_CONFIG["model_target"]] == model)
+                (df[_col_cfg["dataset_name"]] == dataset)
+                & (df[_col_cfg["model_target"]] == model)
             ].copy()
 
             if subset.empty:
@@ -266,18 +313,20 @@ def analyze_results(
 
             # --- 1. DYNAMIC METRIC DISCOVERY ---
             # Extract metrics for logging/info
-            dynamic_metrics = get_dynamic_metrics(subset)
+            dynamic_metrics = get_dynamic_metrics(subset, _col_cfg)
             if dynamic_metrics:
-                print(f"Dynamic metrics found for {model}: {dynamic_metrics}")
+                logger.info(f"Dynamic metrics found for {model}: {dynamic_metrics}")
 
             # --- 2. OPTIMIZATION METRIC ---
             if optimization_col is None:
                 try:
                     from lmetk_report.analysis import get_optimized_metric
 
-                    cur_optimization_col = get_optimized_metric(subset, model, dataset)
+                    cur_optimization_col = get_optimized_metric(
+                        subset, model, dataset, _col_cfg
+                    )
                 except Exception as e:
-                    print(f"Warning: {e}. Fallback to test/mse")
+                    logger.warning(f"Warning: {e}. Fallback to test/mse")
                     cur_optimization_col = "test/mse"
             else:
                 cur_optimization_col = optimization_col
@@ -285,14 +334,14 @@ def analyze_results(
             # --- 3. OPTIMIZATION MODE ---
             cur_optimization_mode = optimization_mode
             if cur_optimization_mode is None:
-                target_mode_col = config.COLUMN_CONFIG["target_metric_mode"]
+                target_mode_col = _col_cfg["target_metric_mode"]
                 if target_mode_col in subset.columns:
                     modes = subset[target_mode_col].dropna().unique()
                     if len(modes) > 0:
                         cur_optimization_mode = modes[0]
 
                 if cur_optimization_mode is None:
-                    es_mode_col = config.COLUMN_CONFIG["optimization_mode"]
+                    es_mode_col = _col_cfg["optimization_mode"]
                     if es_mode_col in subset.columns:
                         modes = subset[es_mode_col].dropna().unique()
                         if len(modes) > 0:
@@ -345,12 +394,10 @@ def analyze_results(
             hp_search_columns = [
                 col
                 for col in config_columns
-                if not any(
-                    f in col for f in config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH
-                )
+                if not any(f in col for f in _hp_filters)
             ]
             varying_hyperparams = get_varying_hyperparameters(
-                subset, hp_search_columns, config.SPECIAL_COLUMNS
+                subset, hp_search_columns, _special_cols
             )
             aggregation_cols = ["Model"] + list(varying_hyperparams.keys())
 
@@ -365,7 +412,7 @@ def analyze_results(
                 continue
 
             # Updated ignore_vars to exclude val_best_rerun/ metrics from warnings
-            ignore_vars = config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH + [
+            ignore_vars = _hp_filters + [
                 data_seed_col,
                 model_seed_col,
                 "val_best_rerun/",
@@ -385,28 +432,21 @@ def analyze_results(
 
             # --- NEW: PER-MODEL GRID INTEGRATION FIX ---
             model_grid = None
-            if (
-                hasattr(config, "EXPECTED_SEARCH_SPACE")
-                and config.EXPECTED_SEARCH_SPACE
-            ):
-                model_grid = config.EXPECTED_SEARCH_SPACE.get(model)
+            if _search_space:
+                model_grid = _search_space.get(model)
 
             # Flatten MultiIndex regardless of grid presence for downstream consistency
-            actual_results = sorted_aggregated.copy()
-            new_cols = []
-            for col in actual_results.columns:
-                if isinstance(col, tuple):
-                    col_name, stat = col
-                    new_cols.append(f"{col_name}_{stat}" if stat else col_name)
-                else:
-                    new_cols.append(col)
-            actual_results.columns = new_cols
+            actual_results = flatten_aggregated_columns(sorted_aggregated)
             opt_col_flattened = f"{cur_optimization_col}_mean"
+
+            # Skip if no metric column to sort by (e.g. zero matching performance cols)
+            if opt_col_flattened not in actual_results.columns:
+                continue
 
             if model_grid:
                 # FIX: Clear notification for Schema-First mode
-                print(f"\n[PIPELINE STATUS] Mode: SCHEMA-FIRST (Target Search Space)")
-                print(f"    - Merging results with expected grid for model: '{model}'")
+                logger.info("\n[PIPELINE STATUS] Mode: SCHEMA-FIRST (Target Search Space)")
+                logger.info(f"    - Merging results with expected grid for model: '{model}'")
 
                 grid_df = get_search_grid_df(model_grid)
                 grid_df["Model"] = model
@@ -441,9 +481,9 @@ def analyze_results(
                 )
             else:
                 # FIX: Clear notification for Data-First mode
-                print(f"\n[PIPELINE STATUS] Mode: DATA-FIRST (Auto-Discovery)")
-                print(f"    - No grid defined in config for: '{model}'")
-                print(
+                logger.info("\n[PIPELINE STATUS] Mode: DATA-FIRST (Auto-Discovery)")
+                logger.info(f"    - No grid defined in config for: '{model}'")
+                logger.info(
                     f"    - Auto-discovered varying HPs: {list(varying_hyperparams.keys())}"
                 )
 

@@ -3,10 +3,13 @@
 Module for validating experiment consistency and scientific rigor.
 """
 
+import logging
 import warnings
 from typing import List, Optional, Set, Tuple
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def validate_schema(df: pd.DataFrame, required_cols: List[str]) -> None:
@@ -28,10 +31,10 @@ def validate_schema(df: pd.DataFrame, required_cols: List[str]) -> None:
             f"The following columns were not found: {missing}\n"
             "Please check your WandB config or update 'lmetk_report/config.py'."
         )
-        print(error_msg)
+        logger.error(error_msg)
         raise ValueError(error_msg)
 
-    print(
+    logger.info(
         f"✅ Schema Validation Passed: All {len(required_cols)} required columns present."
     )
 
@@ -60,14 +63,14 @@ def log_modification(
     if rows_dropped == 0 and cols_dropped == 0:
         return
 
-    print(f"\n  [DATAFRAME MODIFICATION] {action}")
+    logger.info(f"\n  [DATAFRAME MODIFICATION] {action}")
 
     # New: Print context separately if provided
     if context:
-        print(f"    Context: {context}")
+        logger.info(f"    Context: {context}")
 
-    print(f"    Reason:  {reason}")
-    print(f"    Shape:   {input_shape} -> {output_shape}")
+    logger.info(f"    Reason:  {reason}")
+    logger.info(f"    Shape:   {input_shape} -> {output_shape}")
 
     changes = []
     if rows_dropped > 0:
@@ -75,8 +78,8 @@ def log_modification(
     if cols_dropped > 0:
         changes.append(f"{cols_dropped} cols dropped")
 
-    print(f"    Change:  {', '.join(changes)}")
-    print("  " + "-" * 40)
+    logger.info(f"    Change:  {', '.join(changes)}")
+    logger.info("  " + "-" * 40)
 
 
 def validate_seeds(
@@ -95,7 +98,7 @@ def validate_seeds(
     start_shape = df.shape
 
     if seed_col not in df.columns:
-        print(
+        logger.warning(
             f"[Validator] Warning: Seed column '{seed_col}' not found. "
             "Cannot filter by seeds."
         )
@@ -117,14 +120,14 @@ def validate_seeds(
     try:
         valid_subset = temp_df.groupby(group_cols).filter(has_required_seeds)
     except TypeError:
-        print("[Validator] Warning: Groupby filter failed. Skipping seed validation.")
+        logger.warning("[Validator] Warning: Groupby filter failed. Skipping seed validation.")
         return df
 
     filtered_df = df.loc[valid_subset.index].copy()
 
     if filtered_df.empty and not df.empty and allow_fallback:
-        print(f"  [Validator] NOTE: Strict filter on '{seed_col}' removed all rows.")
-        print("  [Validator] Fallback triggered: Ignoring seed filter for this model.")
+        logger.warning(f"  [Validator] NOTE: Strict filter on '{seed_col}' removed all rows.")
+        logger.warning("  [Validator] Fallback triggered: Ignoring seed filter for this model.")
         return df
 
     log_modification(
@@ -168,7 +171,7 @@ def check_hidden_variations(
     for col in candidates:
         try:
             if grouped[col].apply(lambda x: x.nunique() > 1).any():
-                print(
+                logger.warning(
                     f"  [WARNING] Hidden variation detected in '{col}'! "
                     "(Varies within grouped config)"
                 )

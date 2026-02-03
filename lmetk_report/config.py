@@ -6,6 +6,9 @@ This file contains constants and configurations that are used across the
 different modules, making it easy to update key parameters in one place.
 """
 
+from dataclasses import dataclass
+from typing import Any, Dict, List
+
 # Key column names from the wandb logs used to identify models, datasets, etc.
 COLUMN_CONFIG = {
     # Column for the model's class path or identifier
@@ -166,3 +169,36 @@ EXPECTED_SEARCH_SPACE = {
     # },
     # FitPredictTabPFNWrapper is omitted, so it will use automatic discovery
 }
+
+
+@dataclass(frozen=False)
+class PipelineConfig:
+    """
+    Bundled configuration for the analysis pipeline. Pass to analyze_results
+    (and optionally load_runs_df) to override module-level config without
+    mutating global state.
+    """
+
+    column_config: Dict[str, str]
+    expected_search_space: Dict[str, Dict[str, List[Any]]]
+    column_filters_to_ignore_for_hp_search: List[str]
+    special_columns: List[str]
+    columns_to_normalize: List[str]
+    column_filters_to_drop: List[str]
+
+    @classmethod
+    def from_default(cls) -> "PipelineConfig":
+        """Build a PipelineConfig from the current module-level config."""
+        return cls(
+            column_config=dict(COLUMN_CONFIG),
+            expected_search_space={
+                k: {kk: list(vv) for kk, vv in v.items()}
+                for k, v in EXPECTED_SEARCH_SPACE.items()
+            },
+            column_filters_to_ignore_for_hp_search=list(
+                COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH
+            ),
+            special_columns=list(SPECIAL_COLUMNS),
+            columns_to_normalize=list(COLUMNS_TO_NORMALIZE),
+            column_filters_to_drop=list(COLUMN_FILTERS_TO_DROP),
+        )
