@@ -96,13 +96,16 @@ def export_summary_table(
 
 
 def get_experiment_stats_df(all_results: defaultdict) -> pd.DataFrame:
-    """Build the experiment stats table (configs completed, seeds found). Returns empty DataFrame if no data."""
+    """Build the experiment stats table (configs completed, runs, configs failed, seeds found). Returns empty DataFrame if no data."""
     data = []
     for dataset, models in all_results.items():
         for model_name, res in models.items():
             count = 0
             if "sorted_aggregated_results" in res:
                 count = len(res["sorted_aggregated_results"])
+
+            total_runs = res.get("total_runs", None)
+            configs_failed = res.get("configs_failed_not_full_seed_set", 0)
 
             seeds_info = res.get("seeds_info", {})
             d_seeds = seeds_info.get("data", "N/A")
@@ -120,14 +123,15 @@ def get_experiment_stats_df(all_results: defaultdict) -> pd.DataFrame:
             if not seed_display:
                 seed_display = "Unknown"
 
-            data.append(
-                {
-                    "Dataset": dataset,
-                    "Model": model_name,
-                    "Configs Completed": count,
-                    "Seeds Found": seed_display,
-                }
-            )
+            row = {
+                "Dataset": dataset,
+                "Model": model_name,
+                "Configs Completed": count,
+                "Runs": total_runs if total_runs is not None else "",
+                "Configs Failed (not full seed set)": configs_failed,
+                "Seeds Found": seed_display,
+            }
+            data.append(row)
 
     return pd.DataFrame(data) if data else pd.DataFrame()
 

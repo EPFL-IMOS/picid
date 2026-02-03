@@ -404,9 +404,19 @@ def analyze_results(
             subset = validators.validate_seeds(
                 subset, aggregation_cols, data_seed_col, required_data_seeds, False
             )
+            n_configs_before_model_seed = (
+                subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
+            )
             subset = validators.validate_seeds(
                 subset, aggregation_cols, model_seed_col, required_model_seeds, True
             )
+            n_configs_after_model_seed = (
+                subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
+            )
+            configs_failed_not_full_seed_set = (
+                n_configs_before_model_seed - n_configs_after_model_seed
+            )
+            total_runs = len(subset)
 
             if subset.empty:
                 continue
@@ -543,6 +553,8 @@ def analyze_results(
             }
             res_entry["sorted_aggregated_results"] = sorted_aggregated
             res_entry["non_aggregated_df"] = subset.copy()
+            res_entry["total_runs"] = total_runs
+            res_entry["configs_failed_not_full_seed_set"] = configs_failed_not_full_seed_set
 
             # Fix: Use native Python ints to avoid np.int64 wrappers in seed display
             def get_formatted_seeds(col_name):
