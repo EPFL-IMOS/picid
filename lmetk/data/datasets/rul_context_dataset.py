@@ -1,6 +1,6 @@
 # @override decorator
 import torch
-from typing import Dict, List, Optional, override
+from typing import Dict, List, Union, Optional, override
 
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
@@ -86,7 +86,7 @@ class RULContextBatchDataset(ContextBatchDataset):
         pred_len: int,  # prediction size
         stride: int = 1,
         get_unit_id: bool = False,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         warmup_steps: int = None,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,

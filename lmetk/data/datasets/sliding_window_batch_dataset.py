@@ -37,7 +37,7 @@ class SlidingWindowBatchDataset(BaseDataset):
         stride: int,
         pred_offset: int = 0,
         suffixes=["_seq_x", "_seq_y"],
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         warmup_steps: int = None,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,

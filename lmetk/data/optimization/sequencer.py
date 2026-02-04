@@ -33,7 +33,7 @@ class DenseArraySequencer(BaseSequencer):
         pred_len: int,
         stride: int,
         pred_offset: int = 0,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         warmup_steps: int = None,
     ):
         if isinstance(array, np.ndarray):
@@ -78,7 +78,7 @@ class RaggedArraySequencer(BaseSequencer):
         pred_len: int,
         stride: int,
         pred_offset: int = 0,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         warmup_steps: int = None,
     ):
         array = ak.values_astype(array, np.float32)

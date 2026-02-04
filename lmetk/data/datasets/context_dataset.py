@@ -26,7 +26,7 @@ class ContextBatchDataset(BaseDataset):
         pred_len: int,  # prediction size
         pred_offset: int = 0,
         stride: int = 1,
-        padding_left_flag: int = 0,
+        padding_left_flag: Union[bool, int] = True,
         warmup_steps: int = None,
         subset_ratio: Optional[float] = None,
         subset_seed: int = 42,
