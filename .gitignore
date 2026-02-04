@@ -34,7 +34,7 @@ container/rt_*
 
 .coverage
 .artifacts
-
+*.jsonl
 trace.json
 scratch.ipynb
 /lmetk_report/csv_files/*
