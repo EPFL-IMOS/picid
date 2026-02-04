@@ -11,6 +11,7 @@ dataset_cfg:
   subset_ratio: null
   subset_seed: 42
   subset_blocks: null
+  padding_left_flag: ${task_definition.padding_left_flag}
 
 _overrides:
   train:

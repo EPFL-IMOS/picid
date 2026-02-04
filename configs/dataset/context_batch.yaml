@@ -5,7 +5,7 @@ label_len: ${task_definition.label_len}
 pred_len: ${task_definition.pred_len}
 stride: ${task_definition.stride}
 pred_offset: ${oc.select:task_definition.pred_offset,0}
-
+padding_left_flag: ${task_definition.padding_left_flag}
 task_type: ${task_definition.task_type}
 subset_ratio: null
 subset_seed: 42

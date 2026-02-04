@@ -3,6 +3,7 @@ label_len: 0 # overlap size
 pred_len: 1 # prediction size
 stride: 1
 pred_offset: 3
+padding_left_flag: True # Ensure sequences are left-padded to have enough history and consistent lengths of train/val/test regardless of seq_len
 
 task_type: forecasting
 

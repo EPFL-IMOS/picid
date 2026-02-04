@@ -2,6 +2,7 @@ seq_len: 50 # window size
 label_len: 0 # overlap size
 pred_len: 1 # prediction size
 task_type: ahrul
+padding_left_flag: True # Ensure sequences are left-padded to have enough history and consistent lengths of train/val/test regardless of seq_len
 
 stride: 1
 stride_train: 1 # TODO: why 5 for the concept
