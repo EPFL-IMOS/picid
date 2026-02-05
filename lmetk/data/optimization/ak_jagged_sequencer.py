@@ -174,6 +174,12 @@ class AkwardJaggedAutoregressiveSequencer:
 
             # Check if data is sufficient. End index of window must be <= total_len
             if (min_start + required_len) > total_len:
+                logger.warning(
+                    f"Attemting to create a sequencer with seq_len: {self.seq_len} pred_len: {self.pred_len} and pred_offset: {self.pred_offset}."
+                    f"This requires the length of the sequenced dimension to be at lest {required_len} "
+                    f"but the features you provided are of length: {total_len},"
+                    "resulting in an empty sequencer."
+                )
                 return []
             else:
                 # Directly calculate the valid start times.
@@ -201,7 +207,8 @@ class AkwardJaggedAutoregressiveSequencer:
 
             # Build valid tuples without generating every candidate
             valid: List[tuple] = []
-            for prefix in prefixes:
+            n_prefixes = len(prefixes)
+            for id_pfx, prefix in enumerate(prefixes):
                 seg_len = get_length(prefix)
 
                 # Check valid length against min_start
@@ -210,6 +217,14 @@ class AkwardJaggedAutoregressiveSequencer:
                     # Generate only valid starts respecting stride
                     starts = range(min_start, max_start, stride)
                     valid.extend([(*prefix, t) for t in starts])
+                else:
+                    logger.warning(
+                        f"Attemting to create a ragged sequencer for dense leaf data {id_pfx}/{n_prefixes} "
+                        f"(seq_len: {self.seq_len} pred_len: {self.pred_len} and pred_offset: {self.pred_offset})."
+                        f"This requires the length of the sequenced dimension to be at lest {required_len} "
+                        f"but the features you provided are of length: {total_len},"
+                        "resulting in an empty sequencer."
+                    )
 
             return valid
 

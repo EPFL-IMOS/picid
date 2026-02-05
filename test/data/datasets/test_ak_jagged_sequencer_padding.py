@@ -112,6 +112,59 @@ def test_padding_jagged_rescues_short_units(jagged_data):
     np.testing.assert_array_equal(x.numpy(), expected_x)
 
 
+def test_padding_jagged_long_seq_len(jagged_data):
+    """
+    Scenario: One unit is short, one is long.
+    Config: Seq 4, Pred 1. Req 5.
+    """
+    # Goal: Target Index 1 (Value 11).
+    # Math: Start = 1 - 4 = -3. WarmupSteps = 3.
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_data,
+        seq_len=200,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="zero",
+    )
+
+    assert len(seq) == 6
+    indices = seq.get_index_array()
+
+    # Verify Unit 0 is present
+    u0_indices = indices[indices[:, 0] == 0]
+    assert len(u0_indices) == 2
+
+    # Verify Unit 1 is present
+    u1_indices = indices[indices[:, 0] == 1]
+    assert len(u1_indices) == 4
+
+    # Check Data for Unit 0, first window
+    x, y = seq.sequences_batch([0])
+
+    expected_x = np.array(199 * [0] + [10], dtype=np.float32).reshape(1, 200, 1)
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+
+
+def test_padding_jagged_long_seq_len_pred_len_zero(jagged_data):
+    """
+    Scenario: One unit is short, one is long.
+    Config: Seq 4, Pred 1. Req 5.
+    """
+    # Goal: Target Index 1 (Value 11).
+    # Math: Start = 1 - 4 = -3. WarmupSteps = 3.
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_data,
+        seq_len=200,
+        pred_len=0,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="edge",
+    )
+
+    assert len(seq) == 8
+
+
 def test_warmup_steps_logic(dense_data):
     """
     Verifies how 'warmup_steps' controls the starting point.
