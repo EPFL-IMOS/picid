@@ -87,12 +87,15 @@ def task_wrapper(task_func: Callable) -> Callable:
         tuple[dict[str, Any], dict[str, Any]]
             The metric and object dictionaries returned by the task function.
         """
+        failed = False
+
         try:
             metric_dict, object_dict = task_func(cfg=cfg)
 
         # things to do if exception occurs
         except Exception as ex:
             # save exception to `.log` file
+            failed = True
             log.exception(f"Exception occurred while executing task: {ex}")
 
             if (
@@ -118,7 +121,7 @@ def task_wrapper(task_func: Callable) -> Callable:
 
                 if wandb.run:
                     log.info("Closing wandb!")
-                    wandb.finish()
+                    wandb.finish(exit_code=1 if failed else 0)
 
         return metric_dict, object_dict
 
