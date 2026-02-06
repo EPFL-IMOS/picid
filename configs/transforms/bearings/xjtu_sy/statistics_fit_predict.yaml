@@ -34,6 +34,7 @@ tabularize_x_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
     subset_blocks: ${oc.select:task_definition.subset_blocks,null}
@@ -55,6 +56,7 @@ tabularize_x_val_test:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride}
+    padding_left_flag: ${task_definition.padding_left_flag}
     timestep_dimension: 1
 
     select_features:
@@ -73,6 +75,7 @@ tabularize_y_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
     subset_blocks: ${oc.select:task_definition.subset_blocks,null}
@@ -91,6 +94,7 @@ tabularize_y_val_test:
   transform:
     _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
+    padding_left_flag: ${task_definition.padding_left_flag}
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride}

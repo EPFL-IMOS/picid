@@ -59,6 +59,7 @@ tabularize_unit_id_train:
   transform:
     <<: *__tabularize_unit_id_transform
     stride: ${task_definition.stride_train}
+    padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
     subset_blocks: ${oc.select:task_definition.subset_blocks,null}
@@ -70,6 +71,7 @@ tabularize_x_train:
   transform:
     <<: *__tabularize_x_transform
     stride: ${task_definition.stride_train}
+    padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
     subset_blocks: ${oc.select:task_definition.subset_blocks,null}
@@ -81,6 +83,7 @@ tabularize_y_train:
   transform:
     <<: *__tabularize_y_transform
     stride: ${task_definition.stride_train}
+    padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
     subset_blocks: ${oc.select:task_definition.subset_blocks,null}
@@ -92,6 +95,7 @@ tabularize_unit_id_test:
   transform:
     <<: *__tabularize_unit_id_transform
     stride: ${task_definition.stride}
+    padding_left_flag: ${task_definition.padding_left_flag}
   metadata:
     <<: *__tabularize_unit_id_metadata
     transform_on_keys: ["val", "test"]
@@ -100,6 +104,7 @@ tabularize_x_val_test:
   transform:
     <<: *__tabularize_x_transform
     stride: ${task_definition.stride}
+    padding_left_flag: ${task_definition.padding_left_flag}
   metadata:
     <<: *__tabularize_x_metadata
     transform_on_keys: ["val", "test"]
@@ -108,6 +113,7 @@ tabularize_y_val_test:
   transform:
     <<: *__tabularize_y_transform
     stride: ${task_definition.stride}
+    padding_left_flag: ${task_definition.padding_left_flag}
   metadata:
     <<: *__tabularize_y_metadata
     transform_on_keys: ["val", "test"]

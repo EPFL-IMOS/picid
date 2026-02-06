@@ -62,7 +62,7 @@ class TimeseriesTabularizer(
         subset_seed: int = 42,
         subset_blocks: Optional[int] = None,
         pred_offset: int = 0,
-        padding_left_flag: int = 0,
+        padding_left_flag: bool = True,
         warmup_steps: int = None,
         **kwargs,
     ):
