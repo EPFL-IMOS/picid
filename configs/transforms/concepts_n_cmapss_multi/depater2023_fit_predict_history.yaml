@@ -36,6 +36,7 @@ tabularize_x_train:
     stride: ${task_definition.stride_train}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: 1
 
     select_features:
@@ -74,6 +75,7 @@ tabularize_y_train:
     stride: ${task_definition.stride_train}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: 1
 
     select_features:
@@ -112,6 +114,7 @@ tabularize_y_train_health_states:
     stride: ${task_definition.stride_train}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: 1
 
     select_features:
@@ -140,7 +143,6 @@ tabularize_y_val_test_health_states:
     assign_to: health_states
     transform_on_keys: ["val", "test"]
 
-
 tabularize_y_train_concepts:
   # Concatenate time-features to the feature set
   transform:
@@ -151,6 +153,7 @@ tabularize_y_train_concepts:
     stride: ${task_definition.stride_train}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
     subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: 1
 
     select_features:
@@ -184,8 +187,6 @@ concatenate_units:
     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
   metadata:
     apply_to: [features, rul, health_states, concepts]
-
-
 #rename_target_to_fault_classification:
 #  transform:
 #    _target_: lmetk.transforms.base_transforms.identity.IdentityPassThrough

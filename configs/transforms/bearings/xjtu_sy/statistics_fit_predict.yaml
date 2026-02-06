@@ -26,7 +26,6 @@ defaults:
 
 # output from the model: full forecast (fc_0, fc_1)
 
-
 tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
@@ -35,6 +34,9 @@ tabularize_x_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: 5
 
     select_features:
@@ -71,6 +73,9 @@ tabularize_y_train:
     label_len: 0
     pred_len: 1
     stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+    subset_blocks: ${oc.select:task_definition.subset_blocks,null}
     timestep_dimension: ${transforms.tabularize_x_train.transform.timestep_dimension}
 
     select_features:
