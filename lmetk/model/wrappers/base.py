@@ -64,6 +64,7 @@ class AbstractFitPredictWrapper(ABC):
         profile_fit_cfg: OmegaConf = None,
         profile_predict_cfg: OmegaConf = None,
         reinit_on_fit: bool = False,
+        verbose: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -103,6 +104,7 @@ class AbstractFitPredictWrapper(ABC):
         self.profile_predict_cfg = profile_predict_cfg
         self.profile_started_flag = False
         self.reinit_on_fit = reinit_on_fit
+        self.verbose = verbose
 
         if self.profile_fit_cfg or self.profile_predict_cfg:
             assert not (
@@ -167,10 +169,13 @@ class AbstractFitPredictWrapper(ABC):
         if self.yield_strategy:
             outputs_list = []
 
-            iterator = tqdm(
-                self._iterate_batches(X),
-                desc=f"Predicting in batches of size {self.yield_batch_size}",
-            )
+            if self.verbose:
+                iterator = tqdm(
+                    self._iterate_batches(X),
+                    desc=f"Predicting in batches of size {self.yield_batch_size}",
+                )
+            else:
+                iterator = self._iterate_batches(X)
 
             for batch_X in iterator:
                 if self.profile_predict_cfg is not None:
