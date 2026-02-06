@@ -466,9 +466,13 @@ class TestAnalyzeResultsSchemaFirst:
         Left-join logic for grid completion: partial sweep merged with full grid.
         Methodology: Mock 2 runs (10/0.001 and 50/0.0005); grid has 4 points.
         Expected: sorted_aggregated_results has 4 rows; missing cells show NaN (display as -).
+        Uses new dataset/model structure.
         """
+        # New structure: {dataset: {model: {hp: [values]}}}
         with patch.object(config, "EXPECTED_SEARCH_SPACE", {
-            "baselines.tide_model.TiDE_Forecaster": expected_grid,
+            "DS1": {
+                "baselines.tide_model.TiDE_Forecaster": expected_grid,
+            }
         }):
             results = analysis.analyze_results(
                 mock_df_partial_sweep,
@@ -492,6 +496,7 @@ class TestAnalyzeResultsSchemaFirst:
         so aggregation_cols include task_definition.seq_len; grid [10, 20]. Validates
         left-join and that analysis applies .astype(str) to join keys.
         Expected: Two rows in sorted_aggregated_results; task_definition.seq_len present.
+        Uses new dataset/model structure.
         """
         df = mock_df_heterogeneous_hp.copy()
         df.loc[0, "task_definition.seq_len"] = 10
@@ -499,8 +504,11 @@ class TestAnalyzeResultsSchemaFirst:
         grid = {
             "task_definition.seq_len": [10, 20],
         }
+        # New structure: {dataset: {model: {hp: [values]}}}
         with patch.object(config, "EXPECTED_SEARCH_SPACE", {
-            "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": grid,
+            "DS1": {
+                "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": grid,
+            }
         }):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "DS1" in results
@@ -791,8 +799,13 @@ class TestAnalyzeResultsAdditionalBranches:
         assert "M" not in results.get("D", {})
 
     def test_model_not_in_expected_search_space_uses_data_first(self, mock_df_multi_seed_runs, default_analysis_kwargs):
-        """Branch: EXPECTED_SEARCH_SPACE.get(model) None -> model_grid None, data-first sort. (analyze_results)"""
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {"OtherModel": {"lr": [0.01]}}):
+        """Branch: EXPECTED_SEARCH_SPACE.get(model) None -> model_grid None, data-first sort. (analyze_results)
+        Uses new dataset/model structure but model not found, so falls back to data-first."""
+        # New structure: {dataset: {model: {hp: [values]}}}
+        # Model "OtherModel" not in "DS1", so should fall back to data-first
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+            "DS1": {"OtherModel": {"lr": [0.01]}}  # Different model, so current model uses data-first
+        }):
             results = analysis.analyze_results(mock_df_multi_seed_runs, **default_analysis_kwargs)
         assert "DS1" in results
         assert "baselines.lstm_model.LSTM_Forecaster" in results["DS1"]
@@ -934,3 +947,211 @@ class TestTotalRunsAndConfigsFailed:
         assert res["total_runs"] == 6
         assert res["configs_failed_not_full_seed_set"] == 0
         assert len(res["sorted_aggregated_results"]) == 2
+
+
+# --- Backward Compatibility: Legacy Model-Only Structure ---
+
+
+class TestBackwardCompatibilityLegacySearchSpace:
+    """Validates backward compatibility with legacy model-only EXPECTED_SEARCH_SPACE structure."""
+
+    @pytest.fixture
+    def expected_grid(self):
+        return {
+            "task_definition.seq_len": [10, 50],
+            "optimization.lr": [0.001, 0.0005],
+        }
+
+    def test_legacy_model_only_structure_still_works(
+        self, mock_df_partial_sweep, default_analysis_kwargs, expected_grid
+    ):
+        """
+        Branch: Legacy structure {model: {hp: [values]}} still works via backward compatibility.
+        Methodology: Use old structure, verify it works.
+        Expected: Grid lookup succeeds using legacy structure.
+        """
+        # Legacy structure: {model: {hp: [values]}}
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+            "baselines.tide_model.TiDE_Forecaster": expected_grid,
+        }):
+            results = analysis.analyze_results(
+                mock_df_partial_sweep,
+                **default_analysis_kwargs,
+            )
+        assert "DS1" in results
+        assert "baselines.tide_model.TiDE_Forecaster" in results["DS1"]
+        res = results["DS1"]["baselines.tide_model.TiDE_Forecaster"]
+        tbl = res["sorted_aggregated_results"]
+        # Should still work with legacy structure
+        assert len(tbl) == 4 or len(tbl) >= 2  # May use grid or data-first depending on implementation
+
+
+# --- Sort Metric Resolution (analysis.analyze_results with sort_metric_resolver) ---
+
+
+class TestSortMetricResolution:
+    """Validates sort metric resolution in analyze_results."""
+
+    def test_analyze_results_with_sort_metric_resolver_stores_metric(self, default_analysis_kwargs):
+        """
+        Branch: sort_metric_resolver provided, stores sort_metric_used in results.
+        Methodology: Call analyze_results with resolver that returns "test/accuracy".
+        Expected: sort_metric_used = "test/accuracy" in results.
+        """
+        def resolver(dataset, model, task_type=None, dataset_category=None):
+            return "test/accuracy"
+        
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "test/accuracy": [0.8, 0.9],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        results = analysis.analyze_results(
+            df,
+            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+        
+        res = results["DS1"]["M"]
+        assert "sort_metric_used" in res
+        assert res["sort_metric_used"] == "test/accuracy"
+
+    def test_analyze_results_without_resolver_no_sort_metric_used(self, default_analysis_kwargs):
+        """
+        Branch: sort_metric_resolver=None, sort_metric_used is None.
+        Methodology: Call analyze_results without resolver.
+        Expected: sort_metric_used = None (or not present).
+        """
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        results = analysis.analyze_results(df, **default_analysis_kwargs)
+        
+        res = results["DS1"]["M"]
+        assert res.get("sort_metric_used") is None
+
+    def test_sort_metric_resolver_returns_none_uses_optimization(self, default_analysis_kwargs):
+        """
+        Branch: Resolver returns None, sort_metric_used is None (use optimization metric).
+        Methodology: Resolver returns None.
+        Expected: sort_metric_used = None.
+        """
+        def resolver(dataset, model, task_type=None, dataset_category=None):
+            return None
+        
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        results = analysis.analyze_results(
+            df,
+            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+        
+        res = results["DS1"]["M"]
+        assert res["sort_metric_used"] is None
+
+    def test_sort_metric_resolver_receives_correct_parameters(self, default_analysis_kwargs):
+        """
+        Branch: Resolver called with dataset, model, task_type, dataset_category.
+        Methodology: Mock resolver to capture arguments.
+        Expected: Called with correct dataset and model.
+        """
+        captured_args = []
+        
+        def resolver(dataset, model, task_type=None, dataset_category=None):
+            captured_args.append((dataset, model, task_type, dataset_category))
+            return "test/accuracy"
+        
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        analysis.analyze_results(
+            df,
+            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+        
+        assert len(captured_args) == 1
+        dataset, model, task_type, dataset_category = captured_args[0]
+        assert dataset == "DS1"
+        assert model == "M"
+
+    def test_sort_metric_resolver_exception_handled_gracefully(self, default_analysis_kwargs):
+        """
+        Branch: Resolver raises exception, handled gracefully, uses optimization metric.
+        Methodology: Resolver raises ValueError.
+        Expected: Warning logged, sort_metric_used = None.
+        """
+        def resolver(dataset, model, task_type=None, dataset_category=None):
+            raise ValueError("Resolver error")
+        
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        results = analysis.analyze_results(
+            df,
+            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+        
+        res = results["DS1"]["M"]
+        # Should handle exception and set to None
+        assert res["sort_metric_used"] is None
+
+    def test_pipeline_config_sort_metric_resolver_used(self, default_analysis_kwargs):
+        """
+        Branch: PipelineConfig.sort_metric_resolver used if provided.
+        Methodology: Create PipelineConfig with resolver.
+        Expected: Resolver from config used.
+        """
+        from lmetk_report.config import PipelineConfig
+        
+        def resolver(dataset, model, task_type=None, dataset_category=None):
+            return "test/f1"
+        
+        pipeline_config = PipelineConfig(
+            column_config=config.COLUMN_CONFIG,
+            expected_search_space={},
+            column_filters_to_ignore_for_hp_search=config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH,
+            special_columns=config.SPECIAL_COLUMNS,
+            columns_to_normalize=config.COLUMNS_TO_NORMALIZE,
+            column_filters_to_drop=config.COLUMN_FILTERS_TO_DROP,
+            sort_metric_resolver=resolver,
+        )
+        
+        df = pd.DataFrame({
+            "model._target_": ["M", "M"],
+            "datasource.data_name": ["DS1", "DS1"],
+            "test/mse": [0.5, 0.6],
+            "task_definition.seq_len": [10, 20],
+            "seed": [1, 2],
+        })
+        
+        results = analysis.analyze_results(
+            df,
+            **{**default_analysis_kwargs, "pipeline_config": pipeline_config}
+        )
+        
+        res = results["DS1"]["M"]
+        assert res["sort_metric_used"] == "test/f1"

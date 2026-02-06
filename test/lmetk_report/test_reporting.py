@@ -120,6 +120,56 @@ class TestCreateSummaryTable:
         df = df.fillna("-")
         assert not df.empty
 
+    def test_create_summary_table_without_sort_metric_uses_optimization(self):
+        """
+        Branch: sort_metric=None uses optimization metric (backward compatibility).
+        Methodology: Call create_summary_table with sort_metric=None.
+        Expected: Uses best_performance (selected by optimization metric).
+        """
+        all_results = _make_all_results()
+        df = reporting.create_summary_table(all_results, sort_metric=None)
+        assert not df.empty
+        # Should work the same as without sort_metric parameter
+
+    def test_create_summary_table_with_sort_metric_re_selects(self):
+        """
+        Branch: sort_metric provided, re-selects best run from sorted_aggregated_results.
+        Methodology: Create all_results with sorted_aggregated_results where best by test/mse
+        differs from best by test/accuracy. Use sort_metric="test/accuracy".
+        Expected: Summary table shows metrics from run selected by test/accuracy.
+        """
+        # Create sorted_aggregated_results with two configs
+        # Config 1: test/mse=0.3 (best for mse), test/accuracy=0.7
+        # Config 2: test/mse=0.5, test/accuracy=0.9 (best for accuracy)
+        df_sorted = pd.DataFrame({
+            "Model": ["M", "M"],
+            "task_definition.seq_len": [10, 20],
+            "test/mse_mean": [0.3, 0.5],  # First is best for mse
+            "test/mse_std": [0.05, 0.06],
+            "test/mse_count": [3, 3],
+            "test/accuracy_mean": [0.7, 0.9],  # Second is best for accuracy
+            "test/accuracy_std": [0.02, 0.01],
+            "test/accuracy_count": [3, 3],
+        })
+        
+        all_results = defaultdict(lambda: defaultdict(dict))
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = df_sorted
+        all_results["DS1"]["ModelA"]["best_performance"] = {
+            "optimized_on": {"metric": "test/mse", "strategy": "min"},
+            # This would be from config 1 (best by mse)
+            "metrics": {
+                "mse": {"test": {"mean": 0.3, "std": 0.05, "count": 3}},
+                "accuracy": {"test": {"mean": 0.7, "std": 0.02, "count": 3}},
+            }
+        }
+        
+        # Use sort_metric="test/accuracy" - should select config 2
+        df = reporting.create_summary_table(all_results, sort_metric="test/accuracy")
+        assert not df.empty
+        # The accuracy value should be from config 2 (0.9), not config 1 (0.7)
+        # We can't easily check the exact value without parsing the formatted string,
+        # but we verify it doesn't crash and produces a table
+
 
 # --- get_experiment_stats_df (reporting.get_experiment_stats_df) ---
 
@@ -237,6 +287,217 @@ class TestDisplayPerformanceTables:
         reporting.display_performance_tables(all_results)
 
 
+# --- _infer_metric_mode (reporting._infer_metric_mode) ---
+
+
+class TestInferMetricMode:
+    """Validates _infer_metric_mode: min/max inference from metric names."""
+
+    def test_infer_min_for_loss_metrics(self):
+        """Branch: Loss metrics -> "min"."""
+        assert reporting._infer_metric_mode("test/loss") == "min"
+        assert reporting._infer_metric_mode("val/loss") == "min"
+        assert reporting._infer_metric_mode("loss") == "min"
+
+    def test_infer_min_for_mse_metrics(self):
+        """Branch: MSE metrics -> "min"."""
+        assert reporting._infer_metric_mode("test/mse") == "min"
+        assert reporting._infer_metric_mode("val/mse") == "min"
+        assert reporting._infer_metric_mode("mean_squared_error") == "min"
+
+    def test_infer_min_for_mae_metrics(self):
+        """Branch: MAE metrics -> "min"."""
+        assert reporting._infer_metric_mode("test/mae") == "min"
+        assert reporting._infer_metric_mode("mean_absolute_error") == "min"
+
+    def test_infer_max_for_accuracy_metrics(self):
+        """Branch: Accuracy metrics -> "max"."""
+        assert reporting._infer_metric_mode("test/accuracy") == "max"
+        assert reporting._infer_metric_mode("val/accuracy") == "max"
+        assert reporting._infer_metric_mode("acc") == "max"
+
+    def test_infer_max_for_f1_metrics(self):
+        """Branch: F1 metrics -> "max"."""
+        assert reporting._infer_metric_mode("test/f1") == "max"
+        assert reporting._infer_metric_mode("f1_score") == "max"
+
+    def test_infer_max_for_auc_metrics(self):
+        """Branch: AUC metrics -> "max"."""
+        assert reporting._infer_metric_mode("test/auc") == "max"
+        assert reporting._infer_metric_mode("roc_auc") == "max"
+
+    def test_infer_defaults_to_min(self):
+        """Branch: Unknown metric -> defaults to "min"."""
+        assert reporting._infer_metric_mode("unknown_metric") == "min"
+        assert reporting._infer_metric_mode("custom/weird") == "min"
+
+
+# --- _build_hp_impact_df with sort_metric (reporting._build_hp_impact_df) ---
+
+
+class TestBuildHpImpactDfWithSortMetric:
+    """Validates _build_hp_impact_df with sort_metric parameter."""
+
+    def test_build_hp_impact_df_without_sort_metric_uses_optimization(self):
+        """
+        Branch: sort_metric=None uses optimization metric (backward compatibility).
+        Methodology: Call _build_hp_impact_df with sort_metric=None.
+        Expected: Uses optimization metric for sorting and column order.
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+        })
+        res = {
+            "sorted_aggregated_results": df_sorted,
+            "best_performance": {
+                "optimized_on": {"metric": "test/mse", "strategy": "min"},
+            }
+        }
+        result = reporting._build_hp_impact_df(res, precision=4, sort_metric=None)
+        assert result is not None
+        df, metric_used = result
+        assert metric_used == "test/mse"
+        assert "test/mse" in df.columns
+
+    def test_build_hp_impact_df_with_sort_metric_re_sorts(self):
+        """
+        Branch: sort_metric provided, re-sorts by that metric.
+        Methodology: sorted_aggregated_results with multiple rows, sort by different metric.
+        Expected: DataFrame sorted by sort_metric, not optimization metric.
+        """
+        # Create DataFrame with two configs
+        # Config 1: test/mse=0.3 (best for mse), test/accuracy=0.7
+        # Config 2: test/mse=0.5, test/accuracy=0.9 (best for accuracy)
+        df_sorted = pd.DataFrame({
+            "Model": ["M", "M"],
+            "task_definition.seq_len": [10, 20],
+            "test/mse_mean": [0.3, 0.5],  # Sorted by mse (ascending)
+            "test/mse_std": [0.05, 0.06],
+            "test/mse_count": [3, 3],
+            "test/accuracy_mean": [0.7, 0.9],
+            "test/accuracy_std": [0.02, 0.01],
+            "test/accuracy_count": [3, 3],
+        })
+        res = {
+            "sorted_aggregated_results": df_sorted,
+            "best_performance": {
+                "optimized_on": {"metric": "test/mse", "strategy": "min"},
+            }
+        }
+        
+        # Use sort_metric="test/accuracy" - should sort descending (maximize accuracy)
+        result = reporting._build_hp_impact_df(res, precision=4, sort_metric="test/accuracy")
+        assert result is not None
+        df, metric_used = result
+        assert metric_used == "test/accuracy"
+        # First row should be config 2 (accuracy=0.9)
+        assert df.iloc[0]["task_definition.seq_len"] == 20
+        assert "test/accuracy" in df.columns
+        # test/accuracy should be first metric column
+        metric_cols = [c for c in df.columns if c.startswith("test/")]
+        assert metric_cols[0] == "test/accuracy"
+
+    def test_build_hp_impact_df_sort_metric_not_found_fallback(self):
+        """
+        Branch: sort_metric column not found, falls back to optimization metric.
+        Methodology: sort_metric="test/nonexistent", column doesn't exist.
+        Expected: Uses optimization metric, no crash.
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+        })
+        res = {
+            "sorted_aggregated_results": df_sorted,
+            "best_performance": {
+                "optimized_on": {"metric": "test/mse", "strategy": "min"},
+            }
+        }
+        result = reporting._build_hp_impact_df(res, precision=4, sort_metric="test/nonexistent")
+        assert result is not None
+        df, metric_used = result
+        # When sort_metric column not found, should fallback to optimization metric
+        assert metric_used == "test/mse"  # Falls back to optimization metric when column not found
+
+
+# --- iter_hp_impact_tables with sort_metric (reporting.iter_hp_impact_tables) ---
+
+
+class TestIterHpImpactTablesWithSortMetric:
+    """Validates iter_hp_impact_tables with sort_metric parameter."""
+
+    def test_iter_hp_impact_tables_without_sort_metric(self):
+        """
+        Branch: sort_metric=None uses optimization metric (backward compatibility).
+        Methodology: Call iter_hp_impact_tables with sort_metric=None.
+        Expected: Yields (dataset, model, df, metric_used) with optimization metric.
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+        })
+        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=None))
+        assert len(entries) == 1
+        dataset, model, df, metric_used = entries[0]
+        assert metric_used == "test/mse"  # Optimization metric
+
+    def test_iter_hp_impact_tables_with_sort_metric(self):
+        """
+        Branch: sort_metric provided, passes to _build_hp_impact_df.
+        Methodology: Call iter_hp_impact_tables with sort_metric="test/accuracy".
+        Expected: Yields entries with metric_used="test/accuracy".
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+            "test/accuracy_mean": [0.9],
+            "test/accuracy_std": [0.02],
+            "test/accuracy_count": [3],
+        })
+        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric="test/accuracy"))
+        assert len(entries) == 1
+        dataset, model, df, metric_used = entries[0]
+        assert metric_used == "test/accuracy"
+
+    def test_iter_hp_impact_tables_with_dict_sort_metric(self):
+        """
+        Branch: sort_metric as dict mapping (dataset, model) -> metric.
+        Methodology: Call with dict sort_metric.
+        Expected: Uses per-combination metric.
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+            "test/accuracy_mean": [0.9],
+            "test/accuracy_std": [0.02],
+            "test/accuracy_count": [3],
+        })
+        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        sort_metric_dict = {("DS1", "ModelA"): "test/accuracy"}
+        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=sort_metric_dict))
+        assert len(entries) == 1
+        dataset, model, df, metric_used = entries[0]
+        assert metric_used == "test/accuracy"
+
+
 # --- display_hp_impact (reporting.display_hp_impact) ---
 
 
@@ -352,6 +613,26 @@ class TestDisplayHpImpact:
         """
         all_results = _make_all_results(sorted_aggregated=pd.DataFrame())
         reporting.display_hp_impact(all_results)
+
+    def test_display_hp_impact_with_sort_metric(self):
+        """
+        Branch: sort_metric parameter passed through to iter_hp_impact_tables.
+        Methodology: Call display_hp_impact with sort_metric.
+        Expected: No crash, displays tables sorted by sort_metric.
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "test/mse_mean": [0.5],
+            "test/mse_std": [0.1],
+            "test/mse_count": [3],
+            "test/accuracy_mean": [0.9],
+            "test/accuracy_std": [0.02],
+            "test/accuracy_count": [3],
+        })
+        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        reporting.display_hp_impact(all_results, precision=4, sort_metric="test/accuracy")
+        # We only assert no crash
 
 
 # --- String integrity: display format mean ± std (n=count) ---

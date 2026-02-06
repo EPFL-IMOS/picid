@@ -57,13 +57,17 @@ class TestPipelineIntegration:
         Schema-first: merged grid has all points; display_hp_impact shows them (with - for missing).
         Methodology: Partial sweep (2 runs), grid of 4; run analysis then display_hp_impact.
         Expected: 4 rows in sorted_aggregated_results; display fills NaN with "-".
+        Uses new dataset/model structure.
         """
         grid = {
             "task_definition.seq_len": [10, 50],
             "optimization.lr": [0.001, 0.0005],
         }
+        # New structure: {dataset: {model: {hp: [values]}}}
         with patch.object(config, "EXPECTED_SEARCH_SPACE", {
-            "baselines.tide_model.TiDE_Forecaster": grid,
+            "DS1": {
+                "baselines.tide_model.TiDE_Forecaster": grid,
+            }
         }):
             results = analysis.analyze_results(
                 mock_df_partial_sweep,
