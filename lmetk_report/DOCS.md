@@ -69,6 +69,9 @@ Runs the full pipeline and optionally writes all outputs to disk.
 - `export_laTeX` — If True and `output_dir` set, also save the summary table as LaTeX.
 - `plot_metric` — Metric for bar chart and HP impact plots (e.g. `"test/mse"`).
 
+**Parameters (new):**
+- `sort_metric` — Optional metric to use for sorting/ranking/selecting best results (str or dict mapping `(dataset, model) -> metric`). If `None`, uses resolved metrics from analysis phase or optimization metric.
+
 **Returns:** `(df, all_results, summary_df)` — Raw DataFrame (after load and preprocess), `analyze_results` output, and summary table DataFrame.
 
 ### `main()`
@@ -82,8 +85,12 @@ CLI entry point. Arguments:
 - `--export-latex` — Also write summary table as LaTeX when using `-o`.
 - `--no-plots` — Skip generating plots.
 - `--performance-tables` — Print per-metric performance tables.
+- `-q` / `--quiet` — Do not print tables to terminal; only write report and files.
+- `-d` / `--debug` — Enable DEBUG logging (stage details, resolver in/out, grid source, per-dataset/model decisions).
 
 **Invocation:** `uv run python -m lmetk_report.run [options]`
+
+**Logging:** At startup, `main()` configures the package logger (`lmetk_report`). With default (INFO): stage headers, row/column counts, and one line per (dataset, model) summarizing optimization metric, grid source (configs/legacy/auto), sort metric, and run counts. With `--debug`: DEBUG-level messages from run_processor (columns normalized/dropped), analysis (varying HPs, performance cols, resolver result), configs (search_space/sort_metric resolution). See `lmetk_report/logging_config.py` to configure programmatically.
 
 ---
 
@@ -159,14 +166,19 @@ Warns when a non-numeric, non-ignored column varies within a group (by `group_co
 - **COLUMN_FILTERS_TO_DROP** — Name substrings for columns to drop at load (e.g. `paths.`).
 - **COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH** — Name substrings for columns to keep but not treat as HPs (metrics, timers, paths, etc.).
 - **REQUIRED_COLUMNS** — Columns that must exist after loading (used by `validate_schema`).
-- **EXPECTED_SEARCH_SPACE** — Optional per-model dict of HP name → list of values; used to show a full grid and gaps.
+- **EXPECTED_SEARCH_SPACE** — ⚠️ **DEPRECATED**: Legacy per-model dict of HP name → list of values. Use `configs/search_space.py` instead. Kept for backward compatibility.
 - **CHECKPOINT_PATH_COLUMN**, **DEFAULT_DATA_SEED_COL**, **DEFAULT_MODEL_SEED_COL** — Column names for checkpoint path and seeds.
+
+### Config modules (configs/)
+
+- **configs/search_space.py** — Defines the expected HP grid per (dataset, model). **Dict shape (preferred):** `{dataset: {model: {hp_name: [values]}}}` (e.g. `EXPECTED_SEARCH_SPACE["UNIBO21"]["baselines.lstm_model.LSTM_Forecaster"]`). **Legacy shape:** `{model: {hp_name: [values]}}` (still supported by `get_model_grid_from_search_space`). Analysis uses `get_model_grid_from_search_space(dataset, model, search_space)` so both shapes work; missing keys → auto-discovery from data.
+- **configs/sort_metrics.py** — Defines which metric is used for sorting/ranking best runs. **Resolution order:** (1) `SORT_METRIC_OVERRIDES[(dataset, model)]`, (2) `SORT_METRIC_BY_TASK_TYPE[task_type]`, (3) `SORT_METRIC_BY_DATASET_CATEGORY[category]`, (4) `DEFAULT_SORT_METRIC` (e.g. `"val_best_rerun/loss"`). Entry point: `get_sort_metric(dataset, model, task_type=None, dataset_category=None)`.
 
 ### `PipelineConfig` (dataclass)
 
-Bundles: `column_config`, `expected_search_space`, `column_filters_to_ignore_for_hp_search`, `special_columns`, `columns_to_normalize`, `column_filters_to_drop`.
+Bundles: `column_config`, `expected_search_space`, `column_filters_to_ignore_for_hp_search`, `special_columns`, `columns_to_normalize`, `column_filters_to_drop`, `sort_metric_resolver`.
 
-- **`PipelineConfig.from_default()`** — Builds an instance from the module-level constants above. Used to override config without mutating globals (e.g. for a different benchmark).
+- **`PipelineConfig.from_default()`** — Builds an instance from the module-level constants above. Automatically includes `sort_metric_resolver` using `get_sort_metric` from configs if available. Used to override config without mutating globals (e.g. for a different benchmark).
 
 ---
 
@@ -187,9 +199,11 @@ Bundles: `column_config`, `expected_search_space`, `column_filters_to_ignore_for
 - **non_aggregated_df** — Raw runs for this model/dataset.
 - **seeds_info** — Seed information (e.g. data/model seeds found) for display.
 
-**Main parameters:** `df`, `config_columns`, `dropped_columns`, `reporting_metrics`, `metric_prefixes`, optional `optimization_col`/`optimization_mode`, seed-related args, `additional_ignored_cols`, `column_config`, `expected_search_space`, `pipeline_config`.
+**Main parameters:** `df`, `config_columns`, `dropped_columns`, `reporting_metrics`, `metric_prefixes`, optional `optimization_col`/`optimization_mode`, seed-related args, `additional_ignored_cols`, `column_config`, `expected_search_space`, `pipeline_config`, `sort_metric_resolver`.
 
-**Flow (per dataset/model):** Subset → dynamic metric discovery → resolve optimization metric (task definition → early stopping → fallback) → seed validation → varying HP detection → aggregate by HP config → pick best run → store all of the above. If the resolved `opt_col_flattened` is missing in the data, that model/dataset is skipped.
+**Flow (per dataset/model):** Subset → dynamic metric discovery → resolve optimization metric (task definition → early stopping → fallback) → seed validation → varying HP detection → aggregate by HP config → pick best run → resolve sort metric (if resolver provided) → store all of the above. If the resolved `opt_col_flattened` is missing in the data, that model/dataset is skipped.
+
+**Sort Metric Resolution:** If `sort_metric_resolver` is provided (callable `(dataset, model, task_type, dataset_category) -> metric`), it is called for each dataset/model combination and the result is stored in `all_results[dataset][model]["sort_metric_used"]`. This metric can then be used by reporting functions to sort/rank by a different metric than the optimization metric.
 
 ### Helpers (used by analysis)
 
@@ -223,14 +237,14 @@ Bundles: `column_config`, `expected_search_space`, `column_filters_to_ignore_for
 
 ### HP impact
 
-- **_build_hp_impact_df(res, precision)** — Builds one HP impact DataFrame for a model/dataset result (flattened aggregates, formatted metric columns).
-- **iter_hp_impact_tables(all_results, precision=4)** — Yields `(dataset, model, df)` for each non-empty HP impact table.
-- **display_hp_impact(all_results, precision=4)** — Prints each HP impact table with a short header.
-- **export_hp_impact_tables(all_results, output_dir, precision=4)** — Saves one CSV per (dataset, model) with sanitized filenames; returns list of `(dataset, model, path)`.
+- **_build_hp_impact_df(res, precision, sort_metric=None)** — Builds one HP impact DataFrame for a model/dataset result (flattened aggregates, formatted metric columns). If `sort_metric` is provided, re-sorts by that metric. Returns `(df, metric_used)` tuple.
+- **iter_hp_impact_tables(all_results, precision=4, sort_metric=None)** — Yields `(dataset, model, df, metric_used)` for each non-empty HP impact table. Supports `sort_metric` parameter (str or dict).
+- **display_hp_impact(all_results, precision=4, sort_metric=None)** — Prints each HP impact table with a short header showing the metric used for sorting.
+- **export_hp_impact_tables(all_results, output_dir, precision=4, sort_metric=None)** — Saves one CSV per (dataset, model) with sanitized filenames; returns list of `(dataset, model, path)`. Supports `sort_metric` parameter.
 
 ### LaTeX
 
-- **write_tables_tex(path, summary_df, stats_df, all_results, precision=4)** — Writes one LaTeX file with: summary table, experiment stats, then one HP impact table per model/dataset. Comment lines indicate sections. Requires `\usepackage{booktabs}`.
+- **write_tables_tex(path, summary_df, stats_df, all_results, precision=4, sort_metric=None)** — Writes one LaTeX file with: summary table, experiment stats, then one HP impact table per model/dataset. Comment lines indicate sections and metric information. Requires `\usepackage{booktabs}`. Supports `sort_metric` parameter.
 
 ---
 
@@ -254,19 +268,21 @@ Horizontal bar plot of metric vs HP configuration (one bar per config, from `sor
 
 **Purpose:** Generate a single HTML report that embeds tables and plot images.
 
-### `write_report_html(output_dir, summary_df, stats_df, hp_impact_entries, global_plots, title="Experiment Report")`
+### `write_report_html(output_dir, summary_df, stats_df, hp_impact_entries, global_plots, title="Experiment Report", all_results=None, sort_metric=None)`
 
 **Parameters:**
 - `output_dir` — Directory containing `tables/` and `plots/`; report is written as `output_dir/report.html`.
 - `summary_df` — From `create_summary_table`.
 - `stats_df` — From `get_experiment_stats_df`.
-- `hp_impact_entries` — List of `(dataset, model, df, plot_rel_path)` for each HP impact section.
+- `hp_impact_entries` — List of `(dataset, model, df, plot_rel_path, metric_used)` for each HP impact section (5-tuple).
 - `global_plots` — List of `(label, rel_path)` for global figures (e.g. best-metric bar chart).
 - `title` — Page title.
+- `all_results` — Optional `all_results` dict for extracting metric information.
+- `sort_metric` — Optional sort metric (str or dict) for displaying metric information.
 
 **Returns:** Path to the written report file.
 
-**Behavior:** Renders HTML with inline CSS, experiment stats table, summary table, global plot images, then one section per (dataset, model) with HP impact table and optional plot image. Paths to images are relative to `output_dir`.
+**Behavior:** Renders HTML with inline CSS, experiment stats table, summary table (with metric information), global plot images, then one section per (dataset, model) with HP impact table (showing dataset name, model name, and metric used) and optional plot image. Paths to images are relative to `output_dir`.
 
 ---
 
@@ -319,3 +335,115 @@ Additional reporting helpers are in `lmetk_report.reporting`: `get_experiment_st
 7. If **output_dir**: export CSV/LaTeX, build plots, **write_report_html()** and **write_tables_tex()**
 
 See **README.md** for quick start, CLI options, output layout, and programmatic examples.
+
+---
+
+## Migration Guide
+
+### Migrating from Model-Only to Dataset/Model Search Space
+
+**Old structure (deprecated):**
+```python
+EXPECTED_SEARCH_SPACE = {
+    "baselines.lstm_model.LSTM_Forecaster": {
+        "task_definition.seq_len": [1, 10, 50, 100],
+        "optimization.lr": [0.001, 0.0005, 0.0001],
+    },
+}
+```
+
+**New structure (recommended):**
+```python
+# In lmetk_report/configs/search_space.py
+EXPECTED_SEARCH_SPACE = {
+    "nb14": {
+        "baselines.lstm_model.LSTM_Forecaster": {
+            "task_definition.seq_len": [1, 10, 50, 100],
+            "optimization.lr": [0.001, 0.0005, 0.0001],
+        },
+    },
+    "mzvav": {
+        "baselines.lstm_model.LSTM_Forecaster": {
+            "task_definition.seq_len": [1, 5, 10, 20],  # Different for diagnostics
+            "optimization.lr": [0.001, 0.0005],
+        },
+    },
+}
+```
+
+**Backward compatibility:** The old structure still works via automatic fallback. However, migrating to the new structure enables dataset-specific configurations.
+
+### Using Sort Metrics
+
+**Automatic resolution (recommended):**
+The pipeline automatically resolves sort metrics using the hierarchical config system:
+1. Check specific overrides in `SORT_METRIC_OVERRIDES[(dataset, model)]`
+2. Check task type defaults in `SORT_METRIC_BY_TASK_TYPE[task_type]`
+3. Check dataset category defaults in `SORT_METRIC_BY_DATASET_CATEGORY[category]`
+4. Fallback to `DEFAULT_SORT_METRIC` (e.g. `"val_best_rerun/loss"`)
+
+**Manual override:**
+```python
+from lmetk_report import run_pipeline
+
+# Use specific metric for all model/dataset combinations
+results = run_pipeline(
+    project_name="my_project",
+    user="my_user",
+    sort_metric="test/accuracy",
+)
+
+# Use different metric per combination
+results = run_pipeline(
+    project_name="my_project",
+    user="my_user",
+    sort_metric={
+        ("nb14", "baselines.lstm_model.LSTM_Forecaster"): "test/mse",
+        ("mzvav", "baselines.lstm_model.LSTM_Forecaster"): "test/accuracy",
+    },
+)
+```
+
+**In reporting functions:**
+```python
+from lmetk_report import reporting
+
+# Use resolved metrics automatically (from analysis phase)
+summary_df = reporting.create_summary_table(all_results)
+
+# Or override manually
+summary_df = reporting.create_summary_table(
+    all_results,
+    sort_metric="test/accuracy"
+)
+```
+
+### Configuring Sort Metrics
+
+**Add task type default:**
+```python
+# In lmetk_report/configs/sort_metrics.py
+SORT_METRIC_BY_TASK_TYPE = {
+    "regression": "test/mse",
+    "classification": "test/accuracy",
+    "custom_task": "test/f1",  # Add your task type
+}
+```
+
+**Add dataset category default:**
+```python
+# In lmetk_report/configs/sort_metrics.py
+SORT_METRIC_BY_DATASET_CATEGORY = {
+    "prognostics": "test/mse",
+    "diagnostics": "test/accuracy",
+    "custom_category": "test/mae",  # Add your category
+}
+```
+
+**Add specific override:**
+```python
+# In lmetk_report/configs/sort_metrics.py
+SORT_METRIC_OVERRIDES = {
+    ("nb14", "baselines.lstm_model.LSTM_Forecaster"): "test/mae",
+}
+```

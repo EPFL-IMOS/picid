@@ -1,6 +1,11 @@
 # lmetk_report/validators.py
 """
-Module for validating experiment consistency and scientific rigor.
+Validation helpers for experiment consistency and scientific rigor.
+
+- validate_schema: ensures required columns exist; raises ValueError if not.
+- validate_seeds: filters to groups that contain all required data/model seeds; logs drops.
+- log_modification: logs DataFrame shape changes (e.g. after seed filter).
+- check_hidden_variations: warns when a non-HP column varies within a (dataset, model) group.
 """
 
 import logging
@@ -44,10 +49,11 @@ def log_modification(
     reason: str,
     input_shape: Tuple[int, int],
     output_shape: Tuple[int, int],
-    context: Optional[str] = None,  # <--- NEW ARGUMENT
+    context: Optional[str] = None,
+    level: int = logging.INFO,
 ) -> None:
     """
-    Print an explicit notice about a DataFrame modification to stdout.
+    Log a DataFrame modification (shape change).
 
     Args:
         action: A short description of the operation (e.g., "Seed Filter").
@@ -55,6 +61,7 @@ def log_modification(
         input_shape: The (rows, cols) of the DataFrame before the operation.
         output_shape: The (rows, cols) of the DataFrame after the operation.
         context: Optional string to describe the scope (e.g., Model/Dataset).
+        level: Log level (default INFO). Use DEBUG for high-frequency notices (e.g. per-dataset/model subsetting).
     """
     rows_dropped = input_shape[0] - output_shape[0]
     cols_dropped = input_shape[1] - output_shape[1]
@@ -63,23 +70,20 @@ def log_modification(
     if rows_dropped == 0 and cols_dropped == 0:
         return
 
-    logger.info(f"\n  [DATAFRAME MODIFICATION] {action}")
+    logger.log(level, "\n  [DATAFRAME MODIFICATION] %s", action)
 
     # New: Print context separately if provided
     if context:
-        logger.info(f"    Context: {context}")
-
-    logger.info(f"    Reason:  {reason}")
-    logger.info(f"    Shape:   {input_shape} -> {output_shape}")
-
+        logger.log(level, "    Context: %s", context)
+    logger.log(level, "    Reason:  %s", reason)
+    logger.log(level, "    Shape:   %s -> %s", input_shape, output_shape)
     changes = []
     if rows_dropped > 0:
         changes.append(f"{rows_dropped} rows dropped")
     if cols_dropped > 0:
         changes.append(f"{cols_dropped} cols dropped")
-
-    logger.info(f"    Change:  {', '.join(changes)}")
-    logger.info("  " + "-" * 40)
+    logger.log(level, "    Change:  %s", ", ".join(changes))
+    logger.log(level, "  " + "-" * 40)
 
 
 def validate_seeds(
@@ -88,9 +92,26 @@ def validate_seeds(
     seed_col: str,
     required_seeds: Optional[Set[int]] = None,
     allow_fallback: bool = False,
+    context: Optional[str] = None,
 ) -> pd.DataFrame:
     """
-    Filter the DataFrame to ensure experiment groups contain required seeds.
+    Filter the DataFrame to groups that contain all required seeds.
+
+    Groups are defined by group_cols (e.g. dataset + model). If a group is
+    missing any required seed value in seed_col, that group is dropped.
+    When allow_fallback is True and the filter would remove all rows, the
+    original df is returned and a warning is logged.
+
+    Args:
+        df: DataFrame with seed_col and group_cols.
+        group_cols: Column names used to group runs (e.g. dataset, model).
+        seed_col: Column name for the seed (e.g. "seed", "datasource.parameters.data_seed").
+        required_seeds: Set of seed values that must all be present in each group; None skips filtering.
+        allow_fallback: If True, when no group has all required seeds, return df unchanged and log a warning.
+        context: Optional string (e.g. "dataset=X, model=Y") to include in warning messages for clarity.
+
+    Returns:
+        Filtered DataFrame (or original df if no required_seeds, seed_col missing, or fallback triggered).
     """
     if not required_seeds:
         return df
@@ -126,8 +147,9 @@ def validate_seeds(
     filtered_df = df.loc[valid_subset.index].copy()
 
     if filtered_df.empty and not df.empty and allow_fallback:
-        logger.warning(f"  [Validator] NOTE: Strict filter on '{seed_col}' removed all rows.")
-        logger.warning("  [Validator] Fallback triggered: Ignoring seed filter for this model.")
+        ctx_suffix = f" ({context})" if context else ""
+        logger.warning("  [Validator] NOTE: Strict filter on '%s' removed all rows.%s", seed_col, ctx_suffix)
+        logger.warning("  [Validator] Fallback triggered: Ignoring seed filter for this (dataset, model).%s", ctx_suffix)
         return df
 
     log_modification(
@@ -146,7 +168,19 @@ def check_hidden_variations(
     base_ignored_cols: List[str],
     additional_ignored_cols: Optional[List[str]] = None,
 ) -> None:
-    """Check for non-hyperparameters that vary silently within a single group."""
+    """
+    Warn when a non-HP column varies within a (dataset, model) group.
+
+    Columns that are not in group_cols and not in ignored lists are checked:
+    if any such column has more than one unique value within a group, a
+    warning is logged (hidden variation). Numeric columns are skipped.
+
+    Args:
+        df: DataFrame with group and candidate columns.
+        group_cols: Columns defining the group (e.g. dataset, model).
+        base_ignored_cols: Substrings; columns whose name contains any of these are ignored.
+        additional_ignored_cols: Extra column names to ignore (e.g. known HPs).
+    """
     ignored = set()
     if additional_ignored_cols:
         ignored.update(additional_ignored_cols)

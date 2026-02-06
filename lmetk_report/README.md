@@ -33,6 +33,8 @@ uv run python -m lmetk_report.run -o report_output --export-latex
 | `--cache-dir` | Directory for CSV cache (default: `csv_files`) |
 | `--no-plots` | Skip generating plot images |
 | `--performance-tables` | Print per-metric performance tables to stdout |
+| `-q`, `--quiet` | Do not print experiment stats or HP impact tables to terminal; only write report and files |
+| `-d`, `--debug` | Enable DEBUG logging (resolver in/out, shapes, grid source, per-dataset/model details) |
 
 ---
 
@@ -81,6 +83,7 @@ df, all_results, summary_df = run_pipeline(
     output_dir="report_output",   # optional: write all outputs here
     export_laTeX=True,
     plot_metric="test/mse",       # metric for bar chart and HP impact plots
+    sort_metric="test/accuracy",  # optional: metric for sorting/ranking (default: uses config or optimization metric)
 )
 
 # Optional: skip preprocessing (keep raw model names)
@@ -231,8 +234,10 @@ write_report_html(
 
 ## Configuration
 
-- **config.py** – Column names, expected search space (per model), filters, seed columns, required columns. Used by default; override via `PipelineConfig` or optional `column_config` / `expected_search_space` arguments to `analyze_results`.
-- **run.py** – Default project, user, metric prefixes, reporting metrics, required seeds, and additional ignored columns. Override by passing arguments to `run_pipeline()` or via CLI.
+- **config.py** – Column names, required columns, filters, seed columns. Used by default; override via `PipelineConfig` or optional arguments to `load_runs_df` / `analyze_results`.
+- **configs/search_space.py** – Expected HP grid per (dataset, model); supports dataset→model→hp dict or legacy model→hp dict. See DOCS.md for dict shapes and migration.
+- **configs/sort_metrics.py** – Sort/rank metric resolution (overrides → task type → category → default `val_best_rerun/loss`). See DOCS.md for hierarchy and examples.
+- **run.py** – Default project, user, metric prefixes, reporting metrics, required seeds. Override via `run_pipeline()` or CLI.
 
 ---
 
@@ -248,5 +253,6 @@ uv run pytest test/lmetk_report -v
 
 ## See also
 
+- **DOCS.md** – Full functionality reference: pipeline steps, config (search space, sort metrics), entry points, and migration guide.
 - **table.ipynb** – Reference notebook that mirrors the pipeline (load, clean_and_rename_models, validate, analyze, display).
 - **IMPROVEMENT_PLAN.md** – Refactoring and improvement log (logging, schema doc, exports, PipelineConfig, etc.).

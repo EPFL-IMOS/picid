@@ -1,6 +1,10 @@
 # lmetk_report/utils.py
 """
 Shared utilities for analysis and reporting.
+
+- format_mean_std_count: display string 'mean ± std (n=count)' for aggregate stats; NaN std -> 0.
+- flatten_aggregated_columns: turn MultiIndex columns (metric, 'mean'|'std'|'count') into
+  metric_mean, metric_std, metric_count so downstream code can sort/display by metric.
 """
 
 from typing import Union

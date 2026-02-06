@@ -1,13 +1,16 @@
 # lmetk_report/config.py
 """
-Central configuration file for the experiment analysis project.
+Central configuration for the experiment analysis pipeline.
 
-This file contains constants and configurations that are used across the
-different modules, making it easy to update key parameters in one place.
+- Column names and shapes: COLUMN_CONFIG (wandb field names), COLUMNS_TO_NORMALIZE,
+  SPECIAL_COLUMNS, COLUMN_FILTERS_*, REQUIRED_COLUMNS.
+- Optional legacy search space: EXPECTED_SEARCH_SPACE (deprecated; prefer configs.search_space).
+- PipelineConfig: dataclass to override config per run without mutating globals
+  (column_config, expected_search_space, sort_metric_resolver, etc.).
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 # Key column names from the wandb logs used to identify models, datasets, etc.
 COLUMN_CONFIG = {
@@ -122,56 +125,87 @@ REQUIRED_COLUMNS = [
 ]
 
 
-#  Global Expected Search Space ---
-# If None, the script only shows completed experiments.
-# If provided, it creates a grid and shows gaps as NaNs.
+#  Global Expected Search Space (legacy) ---
+# Shape: {model: {hp_name: [values]}}. If None, only completed experiments are shown.
+# If provided, analysis uses get_model_grid_from_search_space(..., this_dict), which
+# accepts this legacy shape; missing (dataset, model) -> auto-discovery from data.
+#
+# DEPRECATED: Prefer the dataset/model structure in
+# lmetk_report.configs.search_space.EXPECTED_SEARCH_SPACE ({dataset: {model: {hp: [values]}}}).
+# This module-level dict is kept for backward compatibility and may be removed in a future version.
 EXPECTED_SEARCH_SPACE = {
     "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "baselines.patchtst_model.PatchTST_Forecaster": {
         "optimization.lr": [0.001, 0.0005, 0.0001],
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
     },
     "baselines.lstm_model.LSTM_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "model.wrappers.mlp_wrapper.MLPWrapper": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "baselines.tide_model.TiDE_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "baselines.crossformer_model.Crossformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
     "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
-        "task_definition.seq_len": [1, 10, 50, 100, 150],
+        "task_definition.seq_len": [1, 10, 50, 100],
         "optimization.lr": [0.001, 0.0005, 0.0001],
     },
+    # "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": {
+    #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
+    #     "task_definition.stride_train": [1, 5, 50, 100],
+    # },
+    # "model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": {
+    #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
+    #     "task_definition.stride_train": [1, 5, 50, 100],
+    # },
+
     # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
     #     "task_definition.seq_len": [1, 10, 50, 100, 150],
     #     'optimization.lr': [0.001, 0.0005, 0.0001],,
     # },
     # FitPredictTabPFNWrapper is omitted, so it will use automatic discovery
 }
+
+# Import new config functions (backward compatible)
+try:
+    from lmetk_report.configs import (
+        get_search_space,
+        get_sort_metric,
+        SORT_METRIC_BY_TASK_TYPE,
+        SORT_METRIC_BY_DATASET_CATEGORY,
+        SORT_METRIC_OVERRIDES,
+    )
+except ImportError:
+    # Fallback if configs package not available (shouldn't happen, but be safe)
+    get_search_space = None
+    get_sort_metric = None
+    SORT_METRIC_BY_TASK_TYPE = {}
+    SORT_METRIC_BY_DATASET_CATEGORY = {}
+    SORT_METRIC_OVERRIDES = {}
 
 
 @dataclass(frozen=False)
@@ -188,10 +222,18 @@ class PipelineConfig:
     special_columns: List[str]
     columns_to_normalize: List[str]
     column_filters_to_drop: List[str]
+    sort_metric_resolver: Optional[Callable[[str, str, Optional[str], Optional[str]], Optional[str]]] = None
 
     @classmethod
     def from_default(cls) -> "PipelineConfig":
         """Build a PipelineConfig from the current module-level config."""
+        # Import get_sort_metric from configs if available
+        try:
+            from lmetk_report.configs import get_sort_metric
+            resolver = get_sort_metric
+        except ImportError:
+            resolver = None
+        
         return cls(
             column_config=dict(COLUMN_CONFIG),
             expected_search_space={
@@ -204,4 +246,5 @@ class PipelineConfig:
             special_columns=list(SPECIAL_COLUMNS),
             columns_to_normalize=list(COLUMNS_TO_NORMALIZE),
             column_filters_to_drop=list(COLUMN_FILTERS_TO_DROP),
+            sort_metric_resolver=resolver,
         )

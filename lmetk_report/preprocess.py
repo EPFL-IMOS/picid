@@ -1,13 +1,21 @@
 """
-Preprocessing helpers for the analysis pipeline (e.g. model name cleaning).
+Preprocessing helpers for the analysis pipeline.
+
+clean_and_rename_models: normalizes model names for display and grouping:
+- Strips a common package prefix (e.g. lmetk.baselines. -> baselines.) so names are short.
+- Appends (linear) or (exponential) from model.model_type when present (e.g. StatisticalBaselineWrapper).
+Defaults use config.COLUMN_CONFIG for column names; override via optional arguments.
 """
 
+import logging
 import os
 from typing import Optional
 
 import pandas as pd
 
 from lmetk_report import config
+
+logger = logging.getLogger(__name__)
 
 
 def clean_and_rename_models(
@@ -41,6 +49,7 @@ def clean_and_rename_models(
     df = df.copy()
     target_col = model_target_col or config.COLUMN_CONFIG["model_target"]
     type_col = model_type_col or "model.model_type"
+    logger.debug("Preprocess: target_col=%s, type_col=%s", target_col, type_col)
 
     unique_models = df[target_col].astype(str).unique()
     if len(unique_models) > 1:
@@ -58,5 +67,7 @@ def clean_and_rename_models(
                 + df.loc[mask, type_col].astype(str)
                 + ")"
             )
+            logger.debug("Preprocess: appended (linear)/(exponential) for %d rows", mask.sum())
 
+    logger.info("Preprocess: cleaned model names for %d unique models", len(unique_models))
     return df

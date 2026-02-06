@@ -1,6 +1,14 @@
 # lmetk_report/reporting.py
 """
-Module for creating presentation-ready summaries and visualizations.
+Presentation-ready summaries and tables from analysis results.
+
+- create_summary_table: pivoted table of best metric values per (dataset, model); optional
+  re-selection by sort_metric (e.g. val_best_rerun/loss) instead of optimization metric.
+- HP impact: per (dataset, model) tables of aggregated runs per HP config, with optional
+  re-sort by sort_metric; format is mean ± std (n=count).
+- Export: CSV/LaTeX and experiment stats; write_tables_tex for LaTeX tables.
+All functions that take sort_metric accept either a single metric name or a dict
+(dataset, model) -> metric for per-combination control.
 """
 
 import logging
@@ -17,17 +25,146 @@ from lmetk_report.utils import flatten_aggregated_columns, format_mean_std_count
 logger = logging.getLogger(__name__)
 
 
-def create_summary_table(all_results: defaultdict, precision: int = 4) -> pd.DataFrame:
-    """Create a single pivoted summary DataFrame for all results."""
+def _infer_metric_mode(metric_name: str) -> str:
+    """
+    Infer whether a metric should be minimized or maximized based on its name.
+    
+    Parameters
+    ----------
+    metric_name : str
+        Metric name (e.g., "test/mse", "val/accuracy", "loss")
+        
+    Returns
+    -------
+    str
+        "min" for metrics to minimize (loss, mse, mae, rmse, etc.)
+        "max" for metrics to maximize (accuracy, f1, auc, precision, recall, etc.)
+        Defaults to "min" if uncertain
+    """
+    metric_lower = metric_name.lower()
+    
+    # Metrics to maximize (higher is better)
+    maximize_keywords = [
+        "accuracy", "acc",
+        "f1", "f1_score", "f_score",
+        "auc", "roc_auc",
+        "precision", "recall",
+        "r2", "r_squared",
+        "spearman", "pearson",
+    ]
+    
+    # Metrics to minimize (lower is better)
+    minimize_keywords = [
+        "loss", "error",
+        "mse", "mean_squared_error",
+        "mae", "mean_absolute_error",
+        "rmse", "root_mean_squared_error",
+        "mape", "mean_absolute_percentage_error",
+        "log_loss", "cross_entropy",
+    ]
+    
+    # Check for maximize keywords
+    for keyword in maximize_keywords:
+        if keyword in metric_lower:
+            return "max"
+    
+    # Check for minimize keywords
+    for keyword in minimize_keywords:
+        if keyword in metric_lower:
+            return "min"
+    
+    # Default to minimize if uncertain
+    return "min"
+
+
+def create_summary_table(all_results: defaultdict, precision: int = 4, sort_metric: str = None) -> pd.DataFrame:
+    """
+    Create a single pivoted summary DataFrame for all results.
+    
+    Parameters
+    ----------
+    all_results : defaultdict
+        Result of analyze_results (dataset -> model -> result dict).
+    precision : int
+        Decimal precision for formatting.
+    sort_metric : str, optional
+        Metric to use for selecting best run (e.g., "test/mse"). If None, uses optimization metric.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
+        
+    Returns
+    -------
+    pd.DataFrame
+        Pivoted summary table with models as rows and (Dataset, Metric) as columns.
+    """
     records = []
 
     for dataset, models in all_results.items():
         for model, results in models.items():
-            if (
-                "best_performance" in results
-                and "metrics" in results["best_performance"]
-            ):
-                metrics_data = results["best_performance"]["metrics"]
+            # Get sort_metric for this specific combination if dict provided
+            if isinstance(sort_metric, dict):
+                combo_sort_metric = sort_metric.get((dataset, model), None)
+            else:
+                combo_sort_metric = sort_metric
+            
+            # Determine which metric was used for selection
+            opt_info = results.get("best_performance", {}).get("optimized_on", {})
+            opt_metric = opt_info.get("metric", "")
+            metric_used = combo_sort_metric if combo_sort_metric is not None else opt_metric
+            
+            # Get metrics data - either from best_performance or re-select from sorted_aggregated_results
+            if combo_sort_metric is not None and combo_sort_metric != opt_metric:
+                # Re-select best run based on sort_metric
+                if "sorted_aggregated_results" in results and not results["sorted_aggregated_results"].empty:
+                    df = results["sorted_aggregated_results"].copy()
+                    df = flatten_aggregated_columns(df)
+                    sort_col = f"{combo_sort_metric}_mean"
+                    if sort_col in df.columns:
+                        # Infer sort mode and select best row
+                        sort_mode = _infer_metric_mode(combo_sort_metric)
+                        ascending = sort_mode == "min"
+                        df_sorted = df.sort_values(by=sort_col, ascending=ascending, na_position="last")
+                        best_row = df_sorted.iloc[0] if not df_sorted.empty else None
+                        
+                        if best_row is not None:
+                            # Extract metrics from best row
+                            metrics_data = {}
+                            metric_bases = set(
+                                c.rsplit("_", 1)[0] for c in df.columns if c.endswith("_mean")
+                            )
+                            for base in metric_bases:
+                                m_col = f"{base}_mean"
+                                s_col = f"{base}_std"
+                                c_col = f"{base}_count"
+                                if m_col in best_row.index and c_col in best_row.index:
+                                    # Parse metric name (e.g., "test/mse" -> prefix="test", name="mse")
+                                    parts = base.split("/", 1)
+                                    if len(parts) == 2:
+                                        prefix, metric_name = parts
+                                        if metric_name not in metrics_data:
+                                            metrics_data[metric_name] = {}
+                                        mean_val = best_row[m_col]
+                                        std_val = best_row[s_col] if s_col in best_row.index and not pd.isna(best_row[s_col]) else 0.0
+                                        count_val = int(best_row[c_col]) if not pd.isna(best_row[c_col]) else 0
+                                        metrics_data[metric_name][prefix] = {
+                                            "mean": mean_val,
+                                            "std": std_val,
+                                            "count": count_val,
+                                        }
+                        else:
+                            # Fallback to best_performance if re-selection fails
+                            metrics_data = results.get("best_performance", {}).get("metrics", {})
+                    else:
+                        # Fallback to best_performance if sort_metric column not found
+                        metrics_data = results.get("best_performance", {}).get("metrics", {})
+                else:
+                    # Fallback to best_performance if no sorted_aggregated_results
+                    metrics_data = results.get("best_performance", {}).get("metrics", {})
+            else:
+                # Use best_performance (selected by optimization metric)
+                metrics_data = results.get("best_performance", {}).get("metrics", {})
+            
+            # Extract metrics for display
+            if metrics_data:
                 for metric_name, prefixes in metrics_data.items():
                     for prefix, values in prefixes.items():
                         mean = values.get("mean", float("nan"))
@@ -69,6 +206,7 @@ def export_summary_table(
     path: str,
     format: str = "csv",
     precision: int = 4,
+    sort_metric: str = None,
 ) -> None:
     """Build the summary table and write it to a file (CSV or LaTeX).
 
@@ -82,8 +220,11 @@ def export_summary_table(
         "csv" or "latex". Default "csv".
     precision : int, optional
         Decimal precision for numeric values. Default 4.
+    sort_metric : str, optional
+        Metric to use for selecting best run. If None, uses optimization metric.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
     """
-    df = create_summary_table(all_results, precision=precision)
+    df = create_summary_table(all_results, precision=precision, sort_metric=sort_metric)
     if df.empty:
         logger.warning("No data to export; summary table is empty.")
         return
@@ -208,12 +349,57 @@ def display_performance_tables(all_results: defaultdict, precision: int = 4) -> 
         display(pivot)
 
 
-def _build_hp_impact_df(res: dict, precision: int):
-    """Build the HP impact DataFrame for one model/dataset result. Returns None if no data."""
+def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
+    """
+    Build the HP impact DataFrame for one model/dataset result.
+    
+    Parameters
+    ----------
+    res : dict
+        Result dict for a model/dataset combination from all_results
+    precision : int
+        Decimal precision for formatting
+    sort_metric : str, optional
+        Metric to use for sorting (e.g., "test/mse"). If None, uses optimization metric.
+        
+    Returns
+    -------
+    tuple or None
+        (df, metric_used) if data exists, None otherwise
+        df: DataFrame with HP impact table
+        metric_used: str, the metric actually used for sorting
+    """
     if "sorted_aggregated_results" not in res or res["sorted_aggregated_results"].empty:
         return None
     df = res["sorted_aggregated_results"].copy()
     df = flatten_aggregated_columns(df)
+    
+    # Determine which metric to use for sorting
+    opt_info = res.get("best_performance", {}).get("optimized_on", {})
+    opt_metric = opt_info.get("metric", "")
+    
+    # Use sort_metric if provided, otherwise use optimization metric
+    metric_to_sort = sort_metric if sort_metric is not None else opt_metric
+    # Track which metric was actually used (may fallback if sort_metric column not found)
+    metric_used = metric_to_sort
+    
+    # Re-sort by sort_metric if different from optimization metric
+    if sort_metric is not None and sort_metric != opt_metric:
+        sort_col = f"{sort_metric}_mean"
+        if sort_col in df.columns:
+            # Infer sort mode (min/max)
+            sort_mode = _infer_metric_mode(sort_metric)
+            ascending = sort_mode == "min"
+            df = df.sort_values(by=sort_col, ascending=ascending, na_position="last")
+        else:
+            # Column not found, fallback to optimization metric
+            logger.warning(
+                f"Sort metric '{sort_metric}' requested but column '{sort_col}' not found. "
+                f"Available columns ending in '_mean': {[c for c in df.columns if c.endswith('_mean')]}. "
+                f"Falling back to optimization metric '{opt_metric}'."
+            )
+            metric_used = opt_metric
+    
     metric_bases = set(
         c.rsplit("_", 1)[0] for c in df.columns if c.endswith("_mean")
     )
@@ -235,8 +421,6 @@ def _build_hp_impact_df(res: dict, precision: int):
 
             df[base] = df.apply(format_impact_row, axis=1)
 
-    opt_info = res.get("best_performance", {}).get("optimized_on", {})
-    opt_metric = opt_info.get("metric", "")
     raw_stats, ignore = ["_mean", "_std", "_count"], [
         "run_name",
         "run_name_list",
@@ -250,48 +434,104 @@ def _build_hp_impact_df(res: dict, precision: int):
         and c not in metric_bases
     ]
     final_metrics = sorted(list(metric_bases))
-    if opt_metric in final_metrics:
+    # Put the metric used for sorting first
+    if metric_to_sort in final_metrics:
+        final_metrics.remove(metric_to_sort)
+        final_metrics = [metric_to_sort] + final_metrics
+    elif opt_metric in final_metrics:
+        # Fallback: if sort_metric not found, use opt_metric
         final_metrics.remove(opt_metric)
         final_metrics = [opt_metric] + final_metrics
-    return df[hp_cols + final_metrics].fillna("-")
+    
+    return df[hp_cols + final_metrics].fillna("-"), metric_used
 
 
-def iter_hp_impact_tables(all_results: defaultdict, precision: int = 4):
-    """Yield (dataset, model, df) for each model/dataset HP impact table."""
+def iter_hp_impact_tables(all_results: defaultdict, precision: int = 4, sort_metric: str = None):
+    """
+    Yield (dataset, model, df, metric_used) for each model/dataset HP impact table.
+    
+    Parameters
+    ----------
+    all_results : defaultdict
+        Result of analyze_results (dataset -> model -> result dict).
+    precision : int
+        Decimal precision for formatting.
+    sort_metric : str, optional
+        Metric to use for sorting. If None, uses optimization metric for each model/dataset.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
+        
+    Yields
+    ------
+    tuple
+        (dataset, model, df, metric_used) for each non-empty HP impact table
+    """
     for dataset, models in all_results.items():
         for model, res in models.items():
-            df = _build_hp_impact_df(res, precision)
-            if df is not None and not df.empty:
-                yield dataset, model, df
+            # Get sort_metric for this specific combination if dict provided
+            if isinstance(sort_metric, dict):
+                combo_sort_metric = sort_metric.get((dataset, model), None)
+            else:
+                combo_sort_metric = sort_metric
+            
+            result = _build_hp_impact_df(res, precision, sort_metric=combo_sort_metric)
+            if result is not None:
+                df, metric_used = result
+                if not df.empty:
+                    yield dataset, model, df, metric_used
 
 
-def display_hp_impact(all_results: defaultdict, precision: int = 4) -> None:
-    """Display aggregated leaderboard for every model/dataset combination with (n=count)."""
+def display_hp_impact(all_results: defaultdict, precision: int = 4, sort_metric: str = None) -> None:
+    """
+    Display aggregated leaderboard for every model/dataset combination with (n=count).
+    
+    Parameters
+    ----------
+    all_results : defaultdict
+        Result of analyze_results (dataset -> model -> result dict).
+    precision : int
+        Decimal precision for formatting.
+    sort_metric : str, optional
+        Metric to use for sorting. If None, uses optimization metric for each model/dataset.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
+    """
     logger.info(f"\n{'=' * 40}\n  HYPERPARAMETER IMPACT ANALYSIS\n{'=' * 40}")
 
-    for dataset, models in all_results.items():
-        for model, res in models.items():
-            df = _build_hp_impact_df(res, precision)
-            if df is None or df.empty:
-                continue
-            opt_metric = res.get("best_performance", {}).get("optimized_on", {}).get("metric", "")
-            logger.info(f"\n>>> {model} on {dataset}")
-            logger.info(f"    (Sorted by optimization target: {opt_metric})")
-            display(df)
+    for dataset, model, df, metric_used in iter_hp_impact_tables(all_results, precision, sort_metric):
+        logger.info(f"\n>>> {model} on {dataset}")
+        logger.info(f"    (Sorted by: {metric_used})")
+        display(df)
 
 
 def export_hp_impact_tables(
     all_results: defaultdict,
     output_dir: str,
     precision: int = 4,
+    sort_metric: str = None,
 ) -> List[Tuple[str, str, str]]:
     """
     Save one CSV per model/dataset HP impact table. Returns list of (dataset, model, path).
     Filenames are sanitized for the filesystem.
+    
+    Parameters
+    ----------
+    all_results : defaultdict
+        Result of analyze_results (dataset -> model -> result dict).
+    output_dir : str
+        Directory to save CSV files.
+    precision : int
+        Decimal precision for formatting.
+    sort_metric : str, optional
+        Metric to use for sorting. If None, uses optimization metric for each model/dataset.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
+        
+    Returns
+    -------
+    List[Tuple[str, str, str]]
+        List of (dataset, model, path) tuples for saved files.
     """
     os.makedirs(output_dir, exist_ok=True)
     out = []
-    for dataset, model, df in iter_hp_impact_tables(all_results, precision):
+    for dataset, model, df, metric_used in iter_hp_impact_tables(all_results, precision, sort_metric):
         safe_ds = re.sub(r"[^\w\-.]", "_", str(dataset))[:80]
         safe_m = re.sub(r"[^\w\-.]", "_", str(model))[:80]
         path = os.path.join(output_dir, f"hp_impact_{safe_ds}_{safe_m}.csv")
@@ -306,10 +546,27 @@ def write_tables_tex(
     stats_df: pd.DataFrame,
     all_results: defaultdict,
     precision: int = 4,
+    sort_metric: str = None,
 ) -> None:
     """
     Write a single LaTeX file containing all report tables for pasting into a paper.
     Sections: summary table, experiment stats, then one HP impact table per model/dataset.
+    
+    Parameters
+    ----------
+    path : str
+        Output file path.
+    summary_df : pd.DataFrame
+        Summary table DataFrame.
+    stats_df : pd.DataFrame
+        Experiment stats DataFrame.
+    all_results : defaultdict
+        Result of analyze_results (dataset -> model -> result dict).
+    precision : int
+        Decimal precision for formatting.
+    sort_metric : str, optional
+        Metric used for sorting (for comments). If None, uses optimization metric.
+        Can also be a dict mapping (dataset, model) -> metric for per-combination control.
     """
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     parts = [
@@ -319,6 +576,11 @@ def write_tables_tex(
 
     # Summary table
     parts.append("% --- Summary table (best metrics by model/dataset) ---\n")
+    if sort_metric is not None:
+        if isinstance(sort_metric, dict):
+            parts.append(f"% Metric used to select best results: varies by model/dataset\n")
+        else:
+            parts.append(f"% Metric used to select best results: {sort_metric}\n")
     if not summary_df.empty:
         parts.append(summary_df.to_latex(index=True, escape=False))
         parts.append("\n")
@@ -331,8 +593,8 @@ def write_tables_tex(
 
     # HP impact tables
     parts.append("% --- Hyperparameter impact (one table per model/dataset) ---\n")
-    for dataset, model, df in iter_hp_impact_tables(all_results, precision):
-        parts.append(f"% {model} on {dataset}\n")
+    for dataset, model, df, metric_used in iter_hp_impact_tables(all_results, precision, sort_metric):
+        parts.append(f"% Dataset name: {dataset}, Model name: {model}, Metric used to select best results: {metric_used}\n")
         parts.append(df.to_latex(index=True, escape=False))
         parts.append("\n")
 

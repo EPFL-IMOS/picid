@@ -1,6 +1,18 @@
 # lmetk_report/analysis.py
 """
 Core analysis module for processing experiment results.
+
+This module turns a flat DataFrame of runs (one row per run) into a nested structure
+all_results[dataset][model] with:
+- best_hyperparameters / best_performance: best run per (dataset, model) by optimization metric
+- sorted_aggregated_results: aggregated stats (mean/std/count) per HP config, sorted by optimization metric
+- optional sort_metric_used: metric used for ranking when different from optimization metric
+
+Two modes:
+- Schema-first: when a search space grid is provided, results are left-joined to the grid so
+  missing configs appear as rows with NaN; sorting uses the configured grid order.
+- Data-first: when no grid is found, varying hyperparameters are discovered from the data
+  and only completed configs are shown.
 """
 
 import ast
@@ -17,11 +29,36 @@ from lmetk_report import config, validators
 from lmetk_report.config import PipelineConfig
 from lmetk_report.utils import flatten_aggregated_columns
 
+# Import search space helper: one function handles both legacy and new structure
+try:
+    from lmetk_report.configs.search_space import get_model_grid_from_search_space
+except ImportError:
+    def get_model_grid_from_search_space(_dataset: str, _model: str, search_space):
+        if not search_space or not isinstance(search_space, dict):
+            return None
+        sample_val = next(iter(search_space.values()), None)
+        if not sample_val or not isinstance(sample_val, dict):
+            return None
+        sample_inner = next(iter(sample_val.values()), None)
+        if isinstance(sample_inner, list):
+            return search_space.get(_model)
+        if _dataset in search_space and _model in search_space[_dataset]:
+            return search_space[_dataset][_model]
+        return None
+
 logger = logging.getLogger(__name__)
 
 
 def get_search_grid_df(search_space: dict) -> pd.DataFrame:
-    """Creates a DataFrame from the Cartesian product of all HP values."""
+    """
+    Build a DataFrame whose rows are all combinations of HP values (Cartesian product).
+
+    Args:
+        search_space: Dict mapping HP column name -> list of values (e.g. {"lr": [0.01, 0.001], "seq_len": [10, 50]}).
+
+    Returns:
+        DataFrame with one column per HP and one row per combination; empty DataFrame if search_space is empty.
+    """
     if not search_space:
         return pd.DataFrame()
 
@@ -41,7 +78,16 @@ def _trace_nans(df: pd.DataFrame, stage: str, prev_count: int) -> int:
 
 
 def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
-    """Extract unique values from a column."""
+    """
+    Extract unique values from a column; list cells are flattened so each element counts as one value.
+
+    Args:
+        df: DataFrame containing the column.
+        column: Column name; if missing, returns [].
+
+    Returns:
+        Sorted list of unique values (lists in cells are expanded into individual items).
+    """
     if column not in df.columns:
         return []
     series = df[column].dropna()
@@ -58,7 +104,18 @@ def get_dynamic_metrics(
     df_subset: pd.DataFrame,
     column_config: Optional[Dict[str, str]] = None,
 ) -> List[str]:
-    """Extracts the list of metric names from evaluator config."""
+    """
+    Extract metric names from the evaluator config column (e.g. evaluator.train.metric_names).
+
+    Handles list/tuple/string values in that column and returns a sorted list of unique metric names.
+
+    Args:
+        df_subset: DataFrame slice (e.g. for one dataset/model).
+        column_config: Optional column config; uses config.COLUMN_CONFIG if None.
+
+    Returns:
+        Sorted list of metric name strings, or [] if the column is missing or empty.
+    """
     col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
     col_name = col_cfg["evaluator_metrics"]
     if col_name not in df_subset.columns:
@@ -86,7 +143,24 @@ def get_optimized_metric(
     dataset_name: str,
     column_config: Optional[Dict[str, str]] = None,
 ) -> str:
-    """Finds the metric used for optimization."""
+    """
+    Resolve the metric used for optimization (best-run selection) for this dataset/model.
+
+    Priority: (1) task_definition.target_metric, (2) early-stopping monitor,
+    (3) fallbacks (val/loss, test/mse, etc.). The first column that exists and has data is returned.
+
+    Args:
+        df_subset: DataFrame slice for this dataset/model.
+        model_name: Model identifier (for logging).
+        dataset_name: Dataset identifier (for logging).
+        column_config: Optional column config; uses config.COLUMN_CONFIG if None.
+
+    Returns:
+        Column name of the optimization metric (e.g. "val_best_rerun/loss", "test/mse").
+
+    Raises:
+        ValueError: If no valid metric column is found.
+    """
     col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
     # Priority 1: Task Definition
     target_col = col_cfg["target_metric"]
@@ -142,7 +216,20 @@ def get_varying_hyperparameters(
     config_cols: List[str],
     special_cols_to_exclude: List[str],
 ) -> Dict[str, List[Any]]:
-    """Identify hyperparameters that have more than one unique value."""
+    """
+    Identify config columns that vary (more than one unique value) in the subset.
+
+    Used for data-first mode when no search space grid is provided: these columns
+    become the aggregation dimensions and define the HP grid from the data.
+
+    Args:
+        df_subset: DataFrame slice (e.g. one dataset/model).
+        config_cols: Candidate column names (e.g. all config columns after filters).
+        special_cols_to_exclude: Column names to exclude from varying HPs (e.g. seeds).
+
+    Returns:
+        Dict mapping column name -> list of unique values for each varying column.
+    """
     varying_params = {}
     for col in config_cols:
         if col not in df_subset.columns:
@@ -172,7 +259,19 @@ def aggregate_and_find_best(
     optimization_col: str,
     optimization_mode: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Perform groupby aggregation and find the best run."""
+    """
+    Aggregate runs by HP config (mean/std/count per metric) and pick the best config row.
+
+    Args:
+        df_subset: Runs for one dataset/model.
+        aggregation_cols: Columns to group by (HP names).
+        all_performance_cols: Metric columns to aggregate (mean, std, count).
+        optimization_col: Metric column used to rank configs.
+        optimization_mode: "min" or "max" for ranking.
+
+    Returns:
+        (aggregated_df, best_row_df): Aggregated DataFrame and the single best row (by optimization_col).
+    """
     subset_copy = df_subset.copy()
 
     # --- BUG FIX: Ensure all performance columns are strictly numeric ---
@@ -246,8 +345,38 @@ def analyze_results(
     column_config: Optional[Dict[str, str]] = None,
     expected_search_space: Optional[Dict[str, Dict[str, List[Any]]]] = None,
     pipeline_config: Optional[PipelineConfig] = None,
+    sort_metric_resolver: Optional[callable] = None,
 ) -> defaultdict:
-    """Orchestrate the full analysis pipeline.
+    """Orchestrate the full analysis pipeline: validate, then for each (dataset, model) aggregate and rank.
+
+    Config can come from pipeline_config (overrides) or from module-level config. When
+    expected_search_space (or pipeline_config.expected_search_space) is set, grid is
+    resolved via get_model_grid_from_search_space (supports both dataset/model and legacy
+    model-only dict shape). Otherwise varying HPs are discovered from the data.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Flat DataFrame of runs (after load and optional preprocess).
+    config_columns, dropped_columns : list
+        Column lists from load_runs_df (used to determine config vs dropped).
+    reporting_metrics, metric_prefixes : list
+        Metric names and prefixes for performance columns.
+    optimization_col, optimization_mode : str, optional
+        Override for optimization metric; if None, inferred per dataset/model.
+    required_data_seeds, required_model_seeds : set, optional
+        If set, validate_seeds filters to groups containing all seeds.
+    data_seed_col, model_seed_col : str
+        Column names for seed columns.
+    additional_ignored_cols : list, optional
+        Extra columns to ignore when detecting varying HPs.
+    column_config, expected_search_space : dict, optional
+        Override column mapping and search space; ignored if pipeline_config is set.
+    pipeline_config : PipelineConfig, optional
+        If set, supplies column_config, expected_search_space, filters, and sort_metric_resolver.
+    sort_metric_resolver : callable, optional
+        Resolver(dataset, model, task_type=None, dataset_category=None) -> metric name or None.
+        If None, optimization metric is used for sorting/ranking.
 
     Returns
     -------
@@ -268,14 +397,18 @@ def analyze_results(
         - seeds_info : dict
             Typically "data" and "model" keys with seed info (e.g. found seeds,
             required seeds) for display.
+        - sort_metric_used : str, optional
+            Metric used for sorting/ranking (if sort_metric_resolver provided).
+            If None or not present, optimization metric is used.
     """
-
+    # Resolve config source: PipelineConfig overrides or module-level config
     config_columns = [col for col in config_columns if col not in dropped_columns]
     if pipeline_config is not None:
         _col_cfg = pipeline_config.column_config
         _search_space = pipeline_config.expected_search_space
         _hp_filters = pipeline_config.column_filters_to_ignore_for_hp_search
         _special_cols = pipeline_config.special_columns
+        _sort_metric_resolver = pipeline_config.sort_metric_resolver
     else:
         _col_cfg = column_config if column_config is not None else config.COLUMN_CONFIG
         _search_space = (
@@ -285,9 +418,13 @@ def analyze_results(
         )
         _hp_filters = config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH
         _special_cols = config.SPECIAL_COLUMNS
+        _sort_metric_resolver = sort_metric_resolver
+    
     unique_models = get_unique_values(df, _col_cfg["model_target"])
     unique_datasets = get_unique_values(df, _col_cfg["dataset_name"])
     all_results = defaultdict(lambda: defaultdict(dict))
+    logger.info("Analyze: %d dataset(s), %d model(s) -> %d (dataset, model) combinations",
+                len(unique_datasets), len(unique_models), len(unique_datasets) * len(unique_models))
 
     for dataset in unique_datasets:
         for model in unique_models:
@@ -308,14 +445,14 @@ def analyze_results(
                 reason="Filtering data to keep only runs matching the current target configuration.",
                 input_shape=subset_start_shape,
                 output_shape=subset.shape,
+                level=logging.DEBUG,
             )
             subset["Model"] = model
 
             # --- 1. DYNAMIC METRIC DISCOVERY ---
             # Extract metrics for logging/info
             dynamic_metrics = get_dynamic_metrics(subset, _col_cfg)
-            if dynamic_metrics:
-                logger.info(f"Dynamic metrics found for {model}: {dynamic_metrics}")
+            logger.debug("(%s | %s) dynamic_metrics: %s", dataset, model, dynamic_metrics)
 
             # --- 2. OPTIMIZATION METRIC ---
             if optimization_col is None:
@@ -389,6 +526,7 @@ def analyze_results(
 
             # Deduplicate
             all_performance_cols = list(set(all_performance_cols))
+            logger.debug("(%s | %s) all_performance_cols: %s", dataset, model, all_performance_cols[:10] if len(all_performance_cols) > 10 else all_performance_cols)
 
             # --- 5. HP & VALIDATION ---
             hp_search_columns = [
@@ -400,6 +538,7 @@ def analyze_results(
                 subset, hp_search_columns, _special_cols
             )
             aggregation_cols = ["Model"] + list(varying_hyperparams.keys())
+            logger.debug("(%s | %s) varying_hyperparams: %s", dataset, model, list(varying_hyperparams.keys()))
 
             subset = validators.validate_seeds(
                 subset, aggregation_cols, data_seed_col, required_data_seeds, False
@@ -407,8 +546,10 @@ def analyze_results(
             n_configs_before_model_seed = (
                 subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
             )
+            seed_context = f"dataset={dataset}, model={model}"
             subset = validators.validate_seeds(
-                subset, aggregation_cols, model_seed_col, required_model_seeds, True
+                subset, aggregation_cols, model_seed_col, required_model_seeds, True,
+                context=seed_context,
             )
             n_configs_after_model_seed = (
                 subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
@@ -440,10 +581,20 @@ def analyze_results(
                 cur_optimization_mode,
             )
 
-            # --- NEW: PER-MODEL GRID INTEGRATION FIX ---
+            # --- PER-MODEL GRID: config lookup or auto-discovery ---
+            # Prefer dataset-specific grid from configs.search_space when present (e.g. UNIBO21)
             model_grid = None
-            if _search_space:
-                model_grid = _search_space.get(model)
+            grid_from_configs = False
+            try:
+                from lmetk_report.configs.search_space import get_search_space
+                model_grid = get_search_space(dataset, model)
+                grid_from_configs = model_grid is not None
+            except ImportError:
+                pass
+            if model_grid is None:
+                model_grid = get_model_grid_from_search_space(dataset, model, _search_space)
+            grid_source = "configs" if grid_from_configs else ("legacy" if model_grid else "auto")
+            logger.debug("(%s | %s) model_grid source=%s, keys=%s", dataset, model, grid_source, list(model_grid.keys()) if model_grid else None)
 
             # Flatten MultiIndex regardless of grid presence for downstream consistency
             actual_results = flatten_aggregated_columns(sorted_aggregated)
@@ -454,10 +605,7 @@ def analyze_results(
                 continue
 
             if model_grid:
-                # FIX: Clear notification for Schema-First mode
-                logger.info("\n[PIPELINE STATUS] Mode: SCHEMA-FIRST (Target Search Space)")
-                logger.info(f"    - Merging results with expected grid for model: '{model}'")
-
+                logger.debug("(%s | %s) Mode: SCHEMA-FIRST (merging with expected grid)", dataset, model)
                 grid_df = get_search_grid_df(model_grid)
                 grid_df["Model"] = model
                 join_keys = ["Model"] + list(model_grid.keys())
@@ -490,13 +638,7 @@ def analyze_results(
                     na_position="last",
                 )
             else:
-                # FIX: Clear notification for Data-First mode
-                logger.info("\n[PIPELINE STATUS] Mode: DATA-FIRST (Auto-Discovery)")
-                logger.info(f"    - No grid defined in config for: '{model}'")
-                logger.info(
-                    f"    - Auto-discovered varying HPs: {list(varying_hyperparams.keys())}"
-                )
-
+                logger.debug("(%s | %s) Mode: DATA-FIRST, varying HPs: %s", dataset, model, list(varying_hyperparams.keys()))
                 sorted_aggregated = actual_results.sort_values(
                     by=opt_col_flattened, ascending=(cur_optimization_mode == "min")
                 )
@@ -555,6 +697,49 @@ def analyze_results(
             res_entry["non_aggregated_df"] = subset.copy()
             res_entry["total_runs"] = total_runs
             res_entry["configs_failed_not_full_seed_set"] = configs_failed_not_full_seed_set
+
+            # --- 8. RESOLVE SORT METRIC (if resolver provided) ---
+            # Use resolver from pipeline_config if available, otherwise use parameter
+            # Note: _sort_metric_resolver is already set from either pipeline_config or parameter at lines 303/313
+            active_resolver = _sort_metric_resolver
+            logger.debug(
+                f"Resolving sort metric for {model} on {dataset}: "
+                f"pipeline_config={'present' if pipeline_config is not None else 'None'}, "
+                f"_sort_metric_resolver={'present' if _sort_metric_resolver is not None else 'None'}, "
+                f"sort_metric_resolver param={'present' if sort_metric_resolver is not None else 'None'}"
+            )
+            if active_resolver is not None:
+                try:
+                    # Try to infer task type and dataset category from data
+                    task_type = None
+                    dataset_category = None
+                    
+                    # Attempt to infer task type from column config
+                    if _col_cfg.get("target_metric") in subset.columns:
+                        # Could extract task type from other columns if available
+                        pass
+                    
+                    # Call resolver to get sort metric
+                    resolved_sort_metric = active_resolver(
+                        dataset, model, task_type=task_type, dataset_category=dataset_category
+                    )
+                    res_entry["sort_metric_used"] = resolved_sort_metric
+                    logger.debug("(%s | %s) sort_metric resolved: %s", dataset, model, resolved_sort_metric)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to resolve sort metric for %s on %s: %s. Using optimization metric.",
+                        model, dataset, e,
+                    )
+                    res_entry["sort_metric_used"] = None
+            else:
+                res_entry["sort_metric_used"] = None
+
+            logger.info(
+                "  %s | %s: opt=%s mode=%s grid=%s sort=%s runs=%d configs_failed_seed=%s",
+                dataset, model, cur_optimization_col, cur_optimization_mode, grid_source,
+                res_entry.get("sort_metric_used") or cur_optimization_col,
+                total_runs, configs_failed_not_full_seed_set,
+            )
 
             # Fix: Use native Python ints to avoid np.int64 wrappers in seed display
             def get_formatted_seeds(col_name):

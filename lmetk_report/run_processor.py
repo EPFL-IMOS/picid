@@ -69,19 +69,24 @@ def load_runs_df(
     pipeline_config: Optional[PipelineConfig] = None,
 ) -> Tuple[pd.DataFrame, List[str], List[str]]:
     """
-    Loads wandb run data, using a local CSV file as a cache, and prepares the DataFrame.
+    Load wandb run data (or from CSV cache) and return a flat, cleaned DataFrame.
+
+    If pipeline_config is provided, its column_config, columns_to_normalize,
+    and column filters are used; otherwise module-level config is used.
 
     Args:
         project_name: The name of the wandb project (e.g., 'my-awesome-project').
         user: The wandb username or entity (e.g., 'my-team').
         csv_cache_dir: The directory to store and look for cached CSV files.
+        pipeline_config: Optional PipelineConfig to override column and filter config; None uses module config.
 
     Returns:
         A tuple containing:
         - pd.DataFrame: The prepared and cleaned DataFrame of all runs.
-        - List[str]: A list of all column names generated from the config.
-        - List[str]: A list of all column names that were dropped during cleaning.
+        - List[str]: All column names generated from the config (after normalization).
+        - List[str]: Column names that were dropped during cleaning.
     """
+    logger.info("Load: project=%s, user=%s, cache_dir=%s", project_name, user, csv_cache_dir)
     api = wandb.Api()
     os.makedirs(csv_cache_dir, exist_ok=True)
     csv_path = f"{csv_cache_dir}/{project_name}.csv"
@@ -132,25 +137,26 @@ def load_runs_df(
         if pipeline_config is not None
         else config.COLUMN_FILTERS_TO_DROP
     )
+    logger.debug("Normalizing columns: %s", cols_to_normalize)
     config_columns = []
     for column in cols_to_normalize:
         df, new_cols = _normalize_column(df, column)
         config_columns.extend(new_cols)
+    logger.debug("After normalize: shape=%s, config_columns count=%d", df.shape, len(config_columns))
 
     # Drop columns that are mostly empty (>90% NaN) to reduce noise.
     nan_cols_to_drop = df.columns[df.isna().mean() > 0.9].tolist()
     df = df.drop(columns=nan_cols_to_drop)
-    logger.info(f"Dropped {len(nan_cols_to_drop)} columns with >90% NaN values.")
-    logger.info(f"The columns were dropped: {nan_cols_to_drop}")
+    logger.info("Dropped %d columns with >90%% NaN", len(nan_cols_to_drop))
+    logger.debug("Columns dropped (NaN): %s", nan_cols_to_drop)
 
     # Drop columns based on specific name patterns defined in the config file.
     cols_to_drop_by_filter = _filter_columns(df, cols_to_drop_filter)
     df = df.drop(columns=cols_to_drop_by_filter, errors="ignore")
-    logger.info(
-        f"Dropped {len(cols_to_drop_by_filter)} columns based on name filters (e.g., 'paths.')."
-    )
+    logger.info("Dropped %d columns by name filters", len(cols_to_drop_by_filter))
+    logger.debug("Columns dropped (filter): %s", cols_to_drop_by_filter)
 
     # Keep track of all columns that have been dropped.
     all_dropped_columns = nan_cols_to_drop + cols_to_drop_by_filter
-
+    logger.debug("Load complete: final shape=%s, config_columns=%d, dropped=%d", df.shape, len(config_columns), len(all_dropped_columns))
     return df, config_columns, all_dropped_columns

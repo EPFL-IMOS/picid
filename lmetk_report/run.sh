@@ -12,7 +12,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-report_output}"
 PORT="${1:-8000}"
 
 echo "Running pipeline -> $OUTPUT_DIR ..."
-uv run python -m lmetk_report.run -o "$OUTPUT_DIR" --export-latex
+uv run python -m lmetk_report.run -o "$OUTPUT_DIR" --export-latex -q
 
 echo ""
 echo "Starting HTTP server at http://localhost:$PORT"
