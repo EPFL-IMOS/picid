@@ -800,8 +800,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     )
 
     additional_trainer_args = {}
-    if isinstance(model, FitPredictWrapperLightningModule):
-        additional_trainer_args["limit_val_batches"] = 0.0
+    # if isinstance(model, FitPredictWrapperLightningModule):
+    #     additional_trainer_args["limit_val_batches"] = 0.0
 
     trainer: Trainer = hydra.utils.instantiate(
         cfg.trainer,
