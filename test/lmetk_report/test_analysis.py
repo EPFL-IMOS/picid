@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.analysis.
+Test suite for lmetk_report.core.analysis.
 
 Validates result aggregation, hyperparameter grid-tracking, string normalization
 for merge, seed formatting, and edge cases (n=1, zero metrics, MultiIndex flattening).
@@ -11,7 +11,8 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from lmetk_report import analysis, config
+from lmetk_report import config
+from lmetk_report.core import analysis
 
 
 # --- _trace_nans (analysis._trace_nans) ---
@@ -722,7 +723,7 @@ class TestAnalyzeResultsAdditionalBranches:
             "run_name": ["r1"],
             "test/mse": [0.5],  # have so we can aggregate
         })
-        with patch("lmetk_report.analysis.get_optimized_metric", side_effect=ValueError("no metric")):
+        with patch("lmetk_report.core.analysis.get_optimized_metric", side_effect=ValueError("no metric")):
             with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
                 results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "D" in results and "M" in results["D"]

@@ -9,7 +9,9 @@ Does not modify lmetk_report or touch lmetk_report/not_used.
 from unittest.mock import patch
 import pytest
 
-from lmetk_report import analysis, config, reporting
+from lmetk_report import config
+from lmetk_report.core import analysis
+from lmetk_report.report import reporting
 
 
 class TestPipelineIntegration:

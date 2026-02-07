@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.run_processor.
+Test suite for lmetk_report.core.run_processor.
 
 Covers _filter_columns, _normalize_column, and load_runs_df with mocks (no real wandb or disk).
 """
@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from lmetk_report import run_processor
+from lmetk_report.core import run_processor
 
 
 class TestFilterColumns:
@@ -99,8 +99,8 @@ class TestLoadRunsDf:
         with tempfile.TemporaryDirectory() as tmp:
             cache_dir = os.path.join(tmp, "csv_cache")
             os.makedirs(cache_dir)
-            with patch("lmetk_report.run_processor.pd.read_csv", side_effect=FileNotFoundError):
-                with patch("lmetk_report.run_processor.wandb.Api") as MockApi:
+            with patch("lmetk_report.core.run_processor.pd.read_csv", side_effect=FileNotFoundError):
+                with patch("lmetk_report.core.run_processor.wandb.Api") as MockApi:
                     mock_api = MockApi.return_value
                     mock_api.runs.return_value = [mock_run]
                     df, config_cols, dropped = run_processor.load_runs_df(
@@ -124,8 +124,8 @@ class TestLoadRunsDf:
         with tempfile.TemporaryDirectory() as tmp:
             cache_dir = os.path.join(tmp, "csv_cache")
             os.makedirs(cache_dir)
-            with patch("lmetk_report.run_processor.pd.read_csv", side_effect=FileNotFoundError):
-                with patch("lmetk_report.run_processor.wandb.Api") as MockApi:
+            with patch("lmetk_report.core.run_processor.pd.read_csv", side_effect=FileNotFoundError):
+                with patch("lmetk_report.core.run_processor.wandb.Api") as MockApi:
                     mock_api = MockApi.return_value
                     mock_api.runs.return_value = [mock_run_finished, mock_run_crashed]
                     df, _, _ = run_processor.load_runs_df(

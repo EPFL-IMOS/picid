@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.reporting.
+Test suite for lmetk_report.report.reporting.
 
 Validates create_summary_table, display_experiment_stats, display_performance_tables,
 and display_hp_impact: string formatting (mean ± std (n=count)), NaN handling,
@@ -10,7 +10,7 @@ from collections import defaultdict
 import pandas as pd
 import pytest
 
-from lmetk_report import reporting
+from lmetk_report.report import reporting
 
 
 def _make_all_results(

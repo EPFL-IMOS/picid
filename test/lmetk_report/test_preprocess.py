@@ -1,5 +1,5 @@
 """
-Tests for lmetk_report.preprocess.
+Tests for lmetk_report.core.preprocess.
 
 Covers clean_and_rename_models.
 """
@@ -7,7 +7,8 @@ Covers clean_and_rename_models.
 import pandas as pd
 import pytest
 
-from lmetk_report import config, preprocess
+from lmetk_report import config
+from lmetk_report.core import preprocess
 
 
 class TestCleanAndRenameModels:

@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.report_html.
+Test suite for lmetk_report.report.report_html.
 
 Validates HTML report generation with metric information display.
 """
@@ -9,7 +9,7 @@ import os
 import tempfile
 import pytest
 
-from lmetk_report import report_html, reporting
+from lmetk_report.report import report_html, reporting
 
 
 def _make_all_results(
