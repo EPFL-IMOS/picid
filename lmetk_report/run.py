@@ -32,21 +32,19 @@ from lmetk_report import (
     display_hp_impact,
     display_performance_tables,
     export_summary_table,
-    load_runs_df,
-    plot_best_metric_bars,
-    plot_hp_impact,
-    validate_schema,
-)
-from lmetk_report.reporting import (
     export_experiment_stats,
     export_hp_impact_tables,
     get_experiment_stats_df,
     iter_hp_impact_tables,
     write_tables_tex,
+    write_report_html,
+    load_runs_df,
+    plot_best_metric_bars,
+    plot_hp_impact,
+    validate_schema,
+    clean_and_rename_models,
 )
 from lmetk_report.logging_config import configure_logging
-from lmetk_report.preprocess import clean_and_rename_models
-from lmetk_report.report_html import write_report_html
 
 
 # --- Default configuration (override via run_pipeline() or CLI) ---
