@@ -350,3 +350,69 @@ def test_full_mcar_workflow(sample_data_3d):
         # MSE should be small for linear interp on smooth sine wave
         # Sine wave amp 1.0.
         assert mse < 0.1, f"Imputation MSE too high: {mse}"
+
+
+def test_mixed_strategies_integration():
+    """
+    Test a complex scenario where 4 channels each use a different strategy.
+    Shape: (B=1, T=4, C=4)
+    Ch0: 'zero'   -> [NaN, 5] -> [0, 5]
+    Ch1: 'mean'   -> [NaN, 10, 20] -> [15, 10, 20] (Requires fit)
+    Ch2: 'locf'   -> [1, NaN, 2] -> [1, 1, 2]
+    Ch3: 'linear' -> [1, NaN, 3] -> [1, 2, 3]
+    """
+    # Setup Data
+    # B=1, T=4, C=4
+    x = np.full((1, 4, 4), np.nan)
+
+    # Ch0 (Zero): [NaN, 5.0, NaN, NaN]
+    x[0, :, 0] = [np.nan, 5.0, np.nan, np.nan]
+
+    # Ch1 (Mean): [10.0, 20.0, NaN, NaN] -> Mean is 15.0
+    x[0, :, 1] = [10.0, 20.0, np.nan, np.nan]
+
+    # Ch2 (LOCF): [1.0, NaN, NaN, 4.0] -> [1.0, 1.0, 1.0, 4.0]
+    x[0, :, 2] = [1.0, np.nan, np.nan, 4.0]
+
+    # Ch3 (Linear): [1.0, NaN, NaN, 4.0] -> [1.0, 2.0, 3.0, 4.0]
+    x[0, :, 3] = [1.0, np.nan, np.nan, 4.0]
+
+    data = {"features": x}
+    strategies = ["zero", "mean", "locf", "linear"]
+
+    # Run Transform
+    t = ImputationTransform(strategy=strategies)
+    t.fit_data(data, metadata={})  # Required for 'mean'
+    out = t.transform_data(data, metadata={})
+
+    res = out["features"][0]  # Shape (4, 4)
+
+    # 1. Verify Zero
+    np.testing.assert_array_equal(res[:, 0], [0.0, 5.0, 0.0, 0.0])
+
+    # 2. Verify Mean (Mean of 10 and 20 is 15)
+    np.testing.assert_array_equal(res[:, 1], [10.0, 20.0, 15.0, 15.0])
+
+    # 3. Verify LOCF
+    np.testing.assert_array_equal(res[:, 2], [1.0, 1.0, 1.0, 4.0])
+
+    # 4. Verify Linear
+    np.testing.assert_allclose(res[:, 3], [1.0, 2.0, 3.0, 4.0])
+
+
+def test_strategy_length_mismatch():
+    """Ensure error is raised if # strategies != # channels."""
+    x = np.zeros((1, 5, 3))  # 3 Channels
+    data = {"features": x}
+
+    # Provide 2 strategies for 3 channels
+    strategies = ["mean", "linear"]
+    t = ImputationTransform(strategy=strategies)
+
+    # Should fail at fit time (when shapes are known)
+    with pytest.raises(ValueError, match="does not match number of channels"):
+        t.fit_data(data, metadata={})
+
+    # Should also fail at transform time if fit wasn't called/didn't catch it
+    with pytest.raises(ValueError, match="does not match number of channels"):
+        t.transform_data(data, metadata={})
