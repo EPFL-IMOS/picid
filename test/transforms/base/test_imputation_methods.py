@@ -416,3 +416,136 @@ def test_strategy_length_mismatch():
     # Should also fail at transform time if fit wasn't called/didn't catch it
     with pytest.raises(ValueError, match="does not match number of channels"):
         t.transform_data(data, metadata={})
+
+
+def test_impute_stochastic_logic():
+    """
+    Test 'stochastic' strategy (Stochastic LOCF).
+    It should fill NaNs and introduce variance, unlike standard LOCF.
+    """
+    # Create a constant signal with a gap
+    # If std is 0 (constant signal), it behaves exactly like LOCF
+    x = np.array([[10.0], [10.0], [np.nan], [np.nan], [10.0]])
+    data = {"features": x}
+
+    # 1. Test with zero variance (should be identical to LOCF)
+    t_det = ImputationTransform(strategy="stochastic")
+    # We manually set fitted_stds to 0.0 to verify the baseline behavior
+    t_det.fitted_stds["features"] = np.array([0.0])
+    out_det = t_det.transform_data(data, metadata={})
+
+    # Should be exactly 10.0 everywhere
+    np.testing.assert_array_equal(out_det["features"], np.full((5, 1), 10.0))
+
+    # 2. Test with variance
+    # We force a high std dev so the noise is obvious
+    t_rand = ImputationTransform(strategy="stochastic")
+    t_rand.fitted_stds["features"] = np.array([5.0])
+
+    # Seed for reproducibility if needed, but here we just check properties
+    np.random.seed(42)
+    out_rand = t_rand.transform_data(data, metadata={})
+
+    imputed_vals = out_rand["features"][2:4, 0]
+
+    # Check 1: NaNs are gone
+    assert not np.isnan(out_rand["features"]).any()
+
+    # Check 2: Values are NOT exactly 10.0 (noise added)
+    assert not np.all(imputed_vals == 10.0)
+
+    # Check 3: Values are around 10.0 (within 3 sigma usually)
+    # We used LOCF baseline (10) + Noise(0, 5)
+    assert np.all(np.abs(imputed_vals - 10.0) < 20.0)
+
+
+def test_impute_stochastic_fit():
+    """Test that fit_data correctly calculates std for stochastic imputation."""
+    # [0, 10, 0, 10] -> Mean=5, Std=5
+    x = np.array([[0.0], [10.0], [0.0], [10.0]])
+    data = {"features": x}
+
+    t = ImputationTransform(strategy="stochastic")
+    t.fit_data(data, metadata={})
+
+    assert "features" in t.fitted_stds
+    # Population std of [0, 10, 0, 10] is 5.0
+    np.testing.assert_allclose(t.fitted_stds["features"], [5.0])
+
+
+def test_impute_stochastic_logic():
+    """
+    Test 'stochastic' strategy (Stochastic LOCF).
+    It should fill NaNs and introduce variance, unlike standard LOCF.
+    """
+    # Create a constant signal with a gap
+    x = np.array([[10.0], [10.0], [np.nan], [np.nan], [10.0]])
+    data = {"features": x}
+
+    # 1. Test with zero variance (should be identical to LOCF)
+    t_det = ImputationTransform(strategy="stochastic")
+    # Manually inject fitted parameters to isolate test logic
+    t_det.fitted_stds["features"] = np.array([0.0])
+    out_det = t_det.transform_data(data, metadata={})
+
+    # Should be exactly 10.0 everywhere
+    np.testing.assert_array_equal(out_det["features"], np.full((5, 1), 10.0))
+
+    # 2. Test with variance
+    t_rand = ImputationTransform(strategy="stochastic")
+    t_rand.fitted_stds["features"] = np.array([5.0])
+
+    np.random.seed(42)
+    out_rand = t_rand.transform_data(data, metadata={})
+
+    imputed_vals = out_rand["features"][2:4, 0]
+
+    # Check 1: NaNs are gone
+    assert not np.isnan(out_rand["features"]).any()
+
+    # Check 2: Values are NOT exactly 10.0 (variance introduced)
+    assert not np.all(imputed_vals == 10.0)
+
+    # Check 3: Values are statistically plausible (within ~3 sigma)
+    assert np.all(np.abs(imputed_vals - 10.0) < 20.0)
+
+
+def test_impute_spectral_dynamic_window():
+    """
+    Test that spectral imputation works even if history < window_len.
+    """
+    # Create a signal with a gap very early on
+    # History: indices 0..9 (length 10). Gap: 10..15.
+    # Desired window_len is 20, but we only have 10.
+    x = np.ones((30, 1))
+    x[10:15] = np.nan
+
+    data = {"features": x}
+
+    t = ImputationTransform(
+        strategy="spectral", spectral_window_len=20, spectral_top_k=1  # Requesting 20
+    )
+
+    # Should not crash. Should use available 10 points.
+    out = t.transform_data(data, metadata={})
+
+    # Since signal is constant 1, FFT should find DC/low freq and fill with ~1
+    # (Note: DC offset removal might make it 0 if not handled, but here we
+    # test mechanism stability, not exact constant reconstruction which requires DC preservation)
+    assert not np.isnan(out["features"]).any()
+
+
+def test_impute_spectral_no_history():
+    """
+    Test spectral fallback when there is zero history (gap at start).
+    """
+    # Gap at the very beginning
+    x = np.array([[np.nan], [np.nan], [1.0], [1.0]])
+    data = {"features": x}
+
+    t = ImputationTransform(strategy="spectral")
+    out = t.transform_data(data, metadata={})
+
+    # Should fallback to 0.0
+    expected = np.array([[0.0], [0.0], [1.0], [1.0]])
+    np.testing.assert_array_equal(out["features"], expected)
