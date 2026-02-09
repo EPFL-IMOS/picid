@@ -3,4 +3,4 @@
 defaults:
   - unibo/prognostics/base
   - /model_configs/prognostics/lstm
-  - override /transforms: battery/unibo/mcar
+  - override /transforms: battery/unibo/ablation_missing_values_combined
