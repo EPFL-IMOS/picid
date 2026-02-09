@@ -1421,5 +1421,17 @@
                 "PYTHONFAULTHANDLER": "1"
             }
         },
+        {
+            "name": "PHM20: Missing data experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "lmetk/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/ablation/lstm",
+            ],
+        },
     ]
 }

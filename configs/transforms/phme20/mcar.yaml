@@ -37,6 +37,7 @@ plotter:
     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
     saving_path: ${paths.log_dir}/images_imputed
     unit_key: unit_id
+    dataset_name: "PHME20"
     imputed_key: features_imputed
     corrupted_key: features_corrupted
     original_key: features
