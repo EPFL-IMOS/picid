@@ -1,10 +1,9 @@
 import logging
 import os
-import math
-from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 import matplotlib.pyplot as plt
-import awkward as ak
+from matplotlib.lines import Line2D
+from typing import Dict, Optional, Tuple
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
@@ -19,74 +18,55 @@ logger = logging.getLogger(__name__)
 
 class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
     """
-    Visualizes the results of MCAR corruption and subsequent imputation.
-
-    This transform generates plots comparing the Original (Clean) signal, the
-    Corrupted (Missing) signal, and the Imputed (Repaired) signal. It highlights
-    the specific points that were dropped and recovered to allow for visual
-    inspection of imputation quality.
-
-    It assumes the input dictionary contains keys for:
-    1. The fully processed (imputed) data (e.g., 'features').
-    2. The corrupted data with NaNs (e.g., 'features_corrupted').
-    3. The original clean data (e.g., 'features_original').
-
-    If 'features_original' is missing, it plots only the corrupted vs imputed comparison.
-
-    Attributes:
-        saving_path (str): Root directory to save the plots.
-        imputed_key (str): Key for the final imputed data (default: 'features').
-        corrupted_key (str): Key for the data with NaNs (default: 'features_corrupted').
-        original_key (Optional[str]): Key for the clean ground truth (default: 'features_original').
-        n_channels_to_plot (int): Max number of channels to plot per sample (default: 3).
-        unit_key (str): Metadata key to identify the sample unit (default: 'unit_id').
+    Visualizes MCAR imputation results with high-precision, publication-ready alignment.
     """
 
     def __init__(
         self,
         saving_path: str,
+        dataset_name: str = "Dataset",
         imputed_key: str = "features",
         corrupted_key: str = "features_corrupted",
         original_key: Optional[str] = "features_original",
         n_channels_to_plot: int = 3,
         unit_key: str = "unit_id",
+        legend_channel: int = 1,
         **kwargs,
     ):
-        """
-        Initializes the MCARImputationPlotter.
-
-        Args:
-            saving_path: Directory to save plots.
-            imputed_key: Data key for the repaired signal.
-            corrupted_key: Data key for the signal with NaNs.
-            original_key: Data key for the ground truth signal (optional).
-            n_channels_to_plot: Number of channels to visualize per sample.
-            unit_key: Metadata key for file naming.
-            **kwargs: Additional arguments for BaseTransform.
-        """
         super().__init__(**kwargs)
         self.saving_path = saving_path
+        self.dataset_name = dataset_name
         self.imputed_key = imputed_key
         self.corrupted_key = corrupted_key
         self.original_key = original_key
         self.n_channels_to_plot = n_channels_to_plot
         self.unit_key = unit_key
+        self.legend_channel = legend_channel
 
-        # Standard plot settings
+        # --- Compact Publication Settings (Larger Fonts) ---
         plt.rcParams.update(
             {
-                "figure.dpi": 150,
-                "font.size": 10,
+                "figure.dpi": 300,
+                "font.family": "serif",
+                "font.size": 14,  # Base font
+                "axes.labelsize": 14,  # Axis labels
+                "axes.titlesize": 14,  # Subplot titles
+                "xtick.labelsize": 12,  # Ticks
+                "ytick.labelsize": 12,  # Ticks
+                "legend.fontsize": 12,  # Legend
+                "figure.titlesize": 16,  # Main title
+                "figure.titleweight": "bold",
                 "axes.grid": True,
-                "grid.alpha": 0.5,
+                "grid.alpha": 0.4,
+                "grid.linestyle": ":",
+                "xtick.direction": "in",
+                "ytick.direction": "in",
             }
         )
 
     def _get_unit_id(self, metadata: Dict) -> str:
-        """Extracts unit ID from metadata for filenames."""
         if metadata and self.unit_key in metadata:
             val = metadata[self.unit_key]
-            # Handle potential array/tensor wrapping
             if hasattr(val, "item"):
                 return str(val.item())
             return str(val)
@@ -95,30 +75,11 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
     def transform_data(
         self, data: NamedTransformInput, metadata: Dict
     ) -> NamedTransformInput:
-        """
-        Generates comparison plots for the provided data batch.
-
-        This method does NOT modify the data. It saves plots to disk and passes
-        the data through unchanged.
-
-        Args:
-            data: Dictionary containing input arrays.
-            metadata: Metadata dictionary.
-
-        Returns:
-            NamedTransformInput: The input data, unmodified.
-        """
-        # Validate keys exist
-        if self.imputed_key not in data:
-            logger.warning(f"Key '{self.imputed_key}' not found. Skipping plot.")
+        if self.imputed_key not in data or self.corrupted_key not in data:
+            logger.warning("Required keys for plotting not found.")
             return data
 
-        if self.corrupted_key not in data:
-            logger.warning(f"Key '{self.corrupted_key}' not found. Skipping plot.")
-            return data
-
-        # Convert to numpy and ensure (Batch, Time, Channels) format
-        # If input is (Time, Channels), add Batch dim -> (1, T, C)
+        # Data retrieval
         imputed = convert_to_numpy(data[self.imputed_key], ensure_2d=False)
         corrupted = convert_to_numpy(data[self.corrupted_key], ensure_2d=False)
 
@@ -126,25 +87,21 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
         if self.original_key and self.original_key in data:
             original = convert_to_numpy(data[self.original_key], ensure_2d=False)
 
-        # Standardization helper
         def standardize_shape(arr):
             if arr.ndim == 2:
                 return arr[np.newaxis, :, :]
             elif arr.ndim == 3:
                 return arr
-            else:
-                raise ValueError(f"Data must be 2D or 3D, got {arr.ndim}D")
+            raise ValueError(f"Invalid shape {arr.shape}")
 
         imputed = standardize_shape(imputed)
         corrupted = standardize_shape(corrupted)
         if original is not None:
             original = standardize_shape(original)
 
-        # Plotting Loop (per batch)
+        # Plot loop
         B, T, C = imputed.shape
         unit_id_base = self._get_unit_id(metadata)
-
-        # Limit number of batches to plot to avoid IO bottlenecks (e.g. max 5)
         batches_to_plot = min(B, 5)
 
         for b in range(batches_to_plot):
@@ -165,92 +122,159 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
         original: Optional[np.ndarray],
         unit_id: str,
     ):
-        """
-        Creates and saves a plot for a single sample (Time, Channels).
-        Handles filename collisions by appending an incrementing ID.
-        """
         T, C = imputed.shape
         channels_to_plot = min(C, self.n_channels_to_plot)
 
+        # Create figure
         fig, axes = plt.subplots(
             nrows=channels_to_plot,
             ncols=1,
-            figsize=(10, 3 * channels_to_plot),
+            figsize=(10, 2.2 * channels_to_plot),
             sharex=True,
-            squeeze=False,
+            gridspec_kw={"hspace": 0.15},
         )
-        axes = axes.flatten()
+
+        if channels_to_plot == 1:
+            axes = [axes]
+        else:
+            axes = axes.flatten()
+
         time_steps = np.arange(T)
 
         for c in range(channels_to_plot):
             ax = axes[c]
 
-            # 1. Plot Original (if available) - Gray dashed line
+            # --- Determine Global Min/Max for Tight Y-Axis ---
+            valid_data = [imputed[:, c]]
+            if original is not None:
+                valid_data.append(original[:, c])
+
+            all_vals = np.concatenate(valid_data)
+            y_min, y_max = np.nanmin(all_vals), np.nanmax(all_vals)
+
+            # Add a tiny 2% padding Y-axis
+            y_range = y_max - y_min if y_max != y_min else 1.0
+            margin_y = y_range * 0.02
+            ax.set_ylim(y_min - margin_y, y_max + margin_y)
+
+            # --- 1. Plot Ground Truth (Gray Background) ---
             if original is not None:
                 ax.plot(
                     time_steps,
                     original[:, c],
                     color="gray",
                     linestyle="--",
-                    linewidth=1.5,
+                    linewidth=1.2,
                     alpha=0.6,
-                    label="Original (Ground Truth)",
+                    zorder=1,
                 )
 
-            # 2. Plot Imputed Signal - Blue line
+            # --- 2. Plot "Reconstructed" Gap (Red Middle Layer) ---
             ax.plot(
                 time_steps,
                 imputed[:, c],
-                color="#1f77b4",
-                linewidth=1.0,
-                alpha=0.8,
-                label="Imputed Signal",
+                color="#d62728",  # Red
+                linestyle="-",
+                linewidth=1.5,
+                zorder=2,
             )
 
-            # 3. Highlight Observed Points - Green Dots
-            mask_observed = ~np.isnan(corrupted[:, c])
-            if np.any(mask_observed):
-                ax.scatter(
-                    time_steps[mask_observed],
-                    imputed[mask_observed, c],
-                    color="#2ca02c",
-                    s=10,
-                    label="Observed Data",
-                    zorder=3,
+            # --- 3. Plot "Observed" Data (Green Top Layer) ---
+            ax.plot(
+                time_steps,
+                corrupted[:, c],
+                color="#2ca02c",  # Green
+                linestyle="-",
+                linewidth=1.5,
+                zorder=3,
+            )
+
+            # --- 4. Styling & Alignment ---
+            ax.set_ylabel(f"Sensor {c+1}", fontweight="bold", fontsize=14)
+            ax.tick_params(axis="y", labelsize=12)
+            ax.grid(True, which="both", alpha=0.5)
+
+            # --- X-AXIS PADDING (Tight) ---
+            x_range = time_steps[-1] - time_steps[0]
+            x_margin = x_range * 0.01
+            ax.set_xlim(time_steps[0] - x_margin, time_steps[-1] + x_margin)
+
+            # Force x-ticks visible
+            ax.tick_params(axis="x", which="both", bottom=True, labelbottom=False)
+
+            # --- LEGEND: Configurable Channel ---
+            if c == self.legend_channel:
+                legend_elements = [
+                    Line2D(
+                        [0],
+                        [0],
+                        color="gray",
+                        lw=1.5,
+                        linestyle="--",
+                        alpha=0.6,
+                        label="Ground Truth",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        color="#2ca02c",
+                        lw=2.0,
+                        linestyle="-",
+                        label="Observed Data",
+                    ),
+                    Line2D(
+                        [0],
+                        [0],
+                        color="#d62728",
+                        lw=2.0,
+                        linestyle="-",
+                        label="Imputed Gap",
+                    ),
+                ]
+
+                ax.legend(
+                    handles=legend_elements,
+                    loc="best",
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12,
+                    edgecolor="gray",
                 )
 
-            # 4. Highlight Missing/Imputed Regions - Red 'x'
-            mask_missing = np.isnan(corrupted[:, c])
-            if np.any(mask_missing):
-                ax.scatter(
-                    time_steps[mask_missing],
-                    imputed[mask_missing, c],
-                    color="#d62728",
-                    marker="x",
-                    s=20,
-                    label="Imputed Points",
-                    zorder=4,
-                )
+        # Fix bottom axis
+        axes[-1].tick_params(
+            axis="x", which="both", bottom=True, labelbottom=True, labelsize=12
+        )
+        axes[-1].set_xlabel("Time (samples)", fontweight="bold", fontsize=14)
 
-            ax.set_title(f"Channel {c}")
-            ax.set_ylabel("Value")
-            if c == 0:
-                ax.legend(loc="upper right", framealpha=0.9)
+        # --- Alignment Logic ---
+        fig.align_ylabels(axes)
 
-        axes[-1].set_xlabel("Time Step")
-        fig.suptitle(f"Imputation Analysis: {unit_id}", y=1.02, fontsize=12)
+        # --- TITLE LOGIC (ATTACHED TO SUBPLOT) ---
+        if "UnknownUnit" in unit_id:
+            title_text = self.dataset_name
+        else:
+            title_text = f"{self.dataset_name}: Unit {unit_id}"
+
+        # CRITICAL FIX: Attach title to axes[0] instead of figure
+        # pad=15 puts it exactly 15 points above the top spine
+        axes[0].set_title(title_text, fontsize=16, fontweight="bold", pad=15)
+
+        # --- Layout & Save ---
+        # No more 'rect' adjustments needed because tight_layout handles axis titles automatically
         plt.tight_layout()
 
-        # Save Logic with Collision Handling
-        save_dir = os.path.join(self.saving_path, "imputation_plots")
+        save_dir = os.path.join(self.saving_path, "paper_plots")
         os.makedirs(save_dir, exist_ok=True)
 
-        base_name = unit_id
+        safe_unit_id = unit_id.replace(" ", "_").replace(":", "").replace("/", "_")
+        safe_dataset = self.dataset_name.replace(" ", "_")
+        base_name = f"{safe_dataset}_{safe_unit_id}"
         extension = ".png"
+
         filename = f"{base_name}{extension}"
         filepath = os.path.join(save_dir, filename)
 
-        # Check if file exists and append incremental ID if it does
         counter = 1
         while os.path.exists(filepath):
             filename = f"{base_name}_{counter}{extension}"
@@ -258,9 +282,9 @@ class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
             counter += 1
 
         try:
-            fig.savefig(filepath, dpi=150, bbox_inches="tight")
-            logger.debug(f"Saved imputation plot to {filepath}")
+            fig.savefig(filepath, dpi=300, bbox_inches="tight")
+            logger.info(f"Saved plot to {filepath}")
         except Exception as e:
-            logger.error(f"Failed to save plot {filename}: {e}")
+            logger.error(f"Failed to save plot: {e}")
         finally:
             plt.close(fig)
