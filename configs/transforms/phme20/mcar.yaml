@@ -24,7 +24,7 @@ missing_values_analytics:
 imputation:
   transform:
     _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
-    strategy: "locf"
+    strategy: ["locf", "locf", "spectral", "locf", "locf"]
   metadata:
     #apply_to: features
     fit_on: train
