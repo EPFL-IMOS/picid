@@ -18,7 +18,8 @@ from lmetk.data.data_objects.utils import (
 )
 
 # Basic logger configuration
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+# logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=(np.ndarray | ak.Array))
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
@@ -170,7 +171,7 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
                 for split, data_for_split in splits_dict.items():
                     # If the data for a split is not a list, wrap it in one
                     if not isinstance(data_for_split, list):
-                        logging.info(
+                        logger.info(
                             f"Found single item for '{data_key}/{split}'. "
                             "Wrapping it in a list for consistency."
                         )
@@ -194,7 +195,7 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
             ValueError: If any validation check fails.
         """
         if not self:
-            logging.info("MultiDatasetChunk is empty. Nothing to validate.")
+            logger.info("MultiDatasetChunk is empty. Nothing to validate.")
             return
 
     def copy(
@@ -260,7 +261,7 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
                         f"Found: {unit_key_sets}"
                     )
 
-        logging.info(
+        logger.info(
             "MultiDatasetChunk validation successful. All splits and units are consistent."
         )
 
