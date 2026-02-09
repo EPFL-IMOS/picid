@@ -1,6 +1,7 @@
 import logging
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,101 @@ from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
 
 logger = logging.getLogger(__name__)
+
+
+class SpectralExtrapolationImputation:
+    """
+    Helper class for Causal Spectral Extrapolation.
+    Models the signal as a sum of sinusoids derived from the immediate past.
+    """
+
+    def __init__(self, window_len: int = 64, top_k: int = 3):
+        self.window_len = window_len
+        self.top_k = top_k
+
+    def impute(self, X: np.ndarray) -> np.ndarray:
+        """
+        Performs spectral imputation on a 3D array (Batch, Time, Channels).
+        Returns a copy of the array with gaps filled.
+        """
+        X_imp = X.copy()
+        B, T, C = X_imp.shape
+
+        for b in range(B):
+            for c in range(C):
+                signal = X_imp[b, :, c]
+
+                # Identify NaN regions
+                nan_mask = np.isnan(signal)
+                if not np.any(nan_mask):
+                    continue
+
+                # Find starts and ends of gaps
+                # Concatenate with False to detect edges at 0 and T
+                bounded_mask = np.concatenate(([False], nan_mask, [False]))
+                diffs = np.diff(bounded_mask.astype(int))
+                starts = np.where(diffs == 1)[0]
+                ends = np.where(diffs == -1)[0]
+
+                for start, end in zip(starts, ends):
+                    gap_len = end - start
+
+                    # --- DYNAMIC WINDOW LOGIC ---
+                    # Use whatever history is available, up to the max window_len
+                    curr_window_len = min(start, self.window_len)
+
+                    # Safety check: If history is extremely short (e.g. < 4 points),
+                    # FFT results will be meaningless/unstable. Fallback to 0.0.
+                    if curr_window_len < 4:
+                        signal[start:end] = 0.0
+                        continue
+
+                    hist_start = start - curr_window_len
+                    history = signal[hist_start:start]
+
+                    # Handle NaNs in history (e.g. from previous nearby gaps)
+                    if np.isnan(history).any():
+                        history = np.nan_to_num(history, nan=np.nanmean(history))
+
+                    # 1. Compute FFT (Real input -> Complex output)
+                    fft_vals = np.fft.rfft(history)
+                    freqs = np.fft.rfftfreq(len(history))
+
+                    # 2. Peak Picking
+                    magnitudes = np.abs(fft_vals)
+                    magnitudes[0] = 0  # Remove DC offset
+
+                    # Select top K frequencies
+                    if len(magnitudes) <= self.top_k:
+                        peak_indices = np.arange(len(magnitudes))
+                    else:
+                        peak_indices = np.argsort(magnitudes)[-self.top_k :]
+
+                    # 3. Synthesize the gap
+                    # t_gap is time relative to the start of the window
+                    # IMPORTANT: Use curr_window_len for the offset
+                    t_gap = np.arange(curr_window_len, curr_window_len + gap_len)
+                    filled_gap = np.zeros(gap_len)
+
+                    for idx in peak_indices:
+                        # Normalize amplitude based on CURRENT window length
+                        amp = magnitudes[idx] / curr_window_len
+                        if idx > 0 and idx < len(magnitudes) - 1:
+                            amp *= 2
+
+                        phase = np.angle(fft_vals[idx])
+                        freq_cycles = freqs[idx]
+
+                        # Generate cosine wave
+                        wave = amp * np.cos(2 * np.pi * freq_cycles * t_gap + phase)
+                        filled_gap += wave
+
+                    # 4. Fill
+                    signal[start:end] = filled_gap
+
+                X_imp[b, :, c] = signal
+
+        return X_imp
 
 
 class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
@@ -25,81 +121,97 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
     of shape ``(Time, Channels)``. Imputation is applied independently per channel and,
     for time-series methods, independently per batch to prevent data leakage.
 
-    Attributes:
-        strategy (str): The imputation strategy to use. Must be one of:
-            - ``"mean"``: Replaces NaNs with the global mean of the channel, computed
-              during the ``fit`` phase. If a channel is all-NaN during fit, it falls back to 0.0.
-            - ``"locf"``: Last Observation Carried Forward. Propagates the last valid observation
-              forward to next missing values. Leading NaNs are filled via backfill (NOCB).
-            - ``"linear"``: Applies linear interpolation between valid points. Edges (start/end)
-              that cannot be interpolated are filled using forward/backward fill, defaulting to 0.0.
-            - ``"zero"``: Replaces all NaNs with 0.0.
-        apply_to (Optional[List[str]]): A list of keys in the input dictionary
-            (e.g., ``["features"]``) to which the imputation should be applied.
-            If ``None``, the transform is applied to all keys in the input data.
-        fitted_means (Dict[str, np.ndarray]): Stores the computed means for each key
-            when ``strategy="mean"``. Populated during ``fit_data``.
+    **Strategy Usage Guide:**
 
-    Examples:
-        >>> import numpy as np
-        >>> # Setup: Data with missing values
-        >>> data = {"features": np.array([[1.0, np.nan], [2.0, 3.0]])}
-        >>>
-        >>> # Strategy 1: Zero Imputation
-        >>> imputer = ImputationTransform(strategy="zero", apply_to=["features"])
-        >>> out_zero = imputer.transform_data(data, metadata={})
-        >>> print(out_zero["features"])
-        [[1. 0.]
-         [2. 3.]]
-        >>>
-        >>> # Strategy 2: Mean Imputation (requires fit)
-        >>> imputer_mean = ImputationTransform(strategy="mean")
-        >>> imputer_mean.fit_data(data, metadata={})  # Fits mean: Ch0=1.5, Ch1=3.0
-        >>> out_mean = imputer_mean.transform_data(data, metadata={})
-        >>> print(out_mean["features"])
-        [[1. 3.]
-         [2. 3.]]
+    The choice of strategy depends heavily on the nature of the signal (stationary vs. trending,
+    smooth vs. oscillating) and whether the application allows "peeking" into the future (causality).
+
+    | Strategy | Causality | Best Use Case | Pros/Cons |
+    | :--- | :--- | :--- | :--- |
+    | ``"zero"`` | N/A | Sparse signals or when 0 represents "off/missing". | **+** Simple.<br>**-** Biases statistics if 0 is not natural. |
+    | ``"mean"`` | Global* | Stationary noise with no trend. | **+** Preserves global mean.<br>**-** Reduces variance; creates unnatural flat lines. |
+    | ``"locf"`` | **Causal** | Step functions, digital states, or slow-moving trends. | **+** Causal; stable.<br>**-** "Freezes" the signal; bad for noise/jitter. |
+    | ``"linear"``| **Non-Causal** | Smooth, continuous signals (e.g., temperature). | **+** Smooth transitions.<br>**-** Peeks at future (end of gap); smooths out high-freq variance. |
+    | ``"stochastic"`` | **Causal** | **Oscillating/Jittery signals** (e.g., noisy sensors). | **+** Preserves signal texture/variance; strictly causal.<br>**-** Non-deterministic output. |
+    | ``"spectral"`` | **Causal** | **Periodic/Rhythmic signals** (e.g., vibration). | **+** Restores underlying waveform.<br>**-** Computationally heavier; assumes periodicity. |
+
+    *\* Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
+
+    Attributes:
+        strategy (Union[str, List[str]]): The imputation strategy to use.
+            Can be a single string (applied to all channels) or a list of strings
+            (one per channel). Must be one of:
+            - ``"mean"``: Replaces NaNs with the global mean.
+            - ``"locf"``: Last Observation Carried Forward.
+            - ``"linear"``: Linear interpolation.
+            - ``"zero"``: Replaces NaNs with 0.0.
+            - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by the channel's std dev.
+            - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of sinusoids based on history.
+        apply_to (Optional[List[str]]): A list of keys in the input dictionary to transform.
+        spectral_window_len (int): Window size (history) used for spectral analysis (default: 64).
+        spectral_top_k (int): Number of dominant frequencies to use for extrapolation (default: 3).
+        fitted_means (Dict[str, np.ndarray]): Stores computed means (for ``"mean"``).
+        fitted_stds (Dict[str, np.ndarray]): Stores computed std devs (for ``"stochastic"``).
     """
 
-    VALID_STRATEGIES = {"mean", "locf", "linear", "zero"}
+    VALID_STRATEGIES = {"mean", "locf", "linear", "zero", "stochastic", "spectral"}
 
     def __init__(
         self,
-        strategy: str = "linear",
+        strategy: Union[str, List[str]] = "linear",
         apply_to: Optional[List[str]] = None,
+        spectral_window_len: int = 64,
+        spectral_top_k: int = 3,
         **kwargs,
     ):
         """
         Initializes the ImputationTransform with a specific strategy.
 
         Args:
-            strategy: The name of the imputation strategy. Defaults to ``"linear"``.
+            strategy: The name of the imputation strategy or a list of strategies per channel.
+                Defaults to ``"linear"``.
             apply_to: List of dictionary keys to transform. If ``None``, all keys
                 are transformed. Defaults to ``None``.
+            spectral_window_len: Number of past time steps to analyze for "spectral" imputation.
+            spectral_top_k: Number of frequency components to synthesize for "spectral" imputation.
             **kwargs: Additional keyword arguments passed to the parent class.
 
         Raises:
             ValueError: If ``strategy`` is not one of the valid options.
         """
         super().__init__(**kwargs)
-        if strategy not in self.VALID_STRATEGIES:
-            raise ValueError(
-                f"Invalid strategy '{strategy}'. Valid: {self.VALID_STRATEGIES}"
-            )
+
+        # Fix for Hydra/OmegaConf: Convert ListConfig (or tuple) to standard list
+        if not isinstance(strategy, str) and hasattr(strategy, "__iter__"):
+            strategy = list(strategy)
+
+        # Validate strategies
+        strategies_check = [strategy] if isinstance(strategy, str) else strategy
+        for s in strategies_check:
+            if s not in self.VALID_STRATEGIES:
+                raise ValueError(
+                    f"Invalid strategy '{s}'. Valid: {self.VALID_STRATEGIES}"
+                )
 
         self.strategy = strategy
         self.apply_to = apply_to
 
-        # Store learned parameters for the 'mean' strategy.
-        # Structure: {key_name: np.ndarray(shape=(n_channels,))}
+        # Spectral parameters
+        self.spectral_window_len = spectral_window_len
+        self.spectral_top_k = spectral_top_k
+        self._spectral_imputer = None  # Lazy instantiation
+
+        # Store learned parameters
         self.fitted_means: Dict[str, np.ndarray] = {}
+        self.fitted_stds: Dict[str, np.ndarray] = {}
 
     def fit_data(self, data: NamedTransformInput, metadata: Dict):
         """
         Fits the transform to the data.
 
-        For ``strategy="mean"``, this calculates the global mean for each channel across
-        all batches and time steps, ignoring NaNs. For other strategies, this is a no-op.
+        Calculates necessary statistics based on the selected strategies:
+        - ``"mean"``: Computes global mean per channel.
+        - ``"stochastic"``: Computes global standard deviation per channel.
 
         Args:
             data: A dictionary containing input arrays.
@@ -107,14 +219,19 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
 
         Returns:
             self: Returns the instance itself.
-
-        Raises:
-            ValueError: If input data has unsupported dimensions (not 2D or 3D).
         """
-        if self.strategy != "mean":
-            return self
-
         keys_to_process = self.apply_to if self.apply_to is not None else data.keys()
+
+        # Determine which stats we need to compute
+        if isinstance(self.strategy, list):
+            uses_mean = "mean" in self.strategy
+            uses_std = "stochastic" in self.strategy
+        else:
+            uses_mean = self.strategy == "mean"
+            uses_std = self.strategy == "stochastic"
+
+        if not (uses_mean or uses_std):
+            return self
 
         for key, value in data.items():
             if key not in keys_to_process:
@@ -123,44 +240,53 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
             # Ensure 3D arrays are preserved (Batch, Time, Channel)
             np_val = convert_to_numpy(value, ensure_2d=False)
 
-            # Compute channel-wise means, collapsing Batch and Time dimensions.
-            # We use warnings context manager to suppress RuntimeWarnings when a channel is all-NaN.
+            # Validate dimensions and strategy length
+            n_channels = np_val.shape[-1]
+            if isinstance(self.strategy, list) and len(self.strategy) != n_channels:
+                raise ValueError(
+                    f"Strategy list length ({len(self.strategy)}) does not match "
+                    f"number of channels ({n_channels}) for key '{key}'."
+                )
+
+            # Determine axes for aggregation (collapse Batch and Time)
             if np_val.ndim == 2:
-                # Shape (Time, Channels) -> Mean along Time (axis 0)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=RuntimeWarning)
-                    means = np.nanmean(np_val, axis=0)
+                axes = 0  # (Time, Channels) -> Mean over Time
             elif np_val.ndim == 3:
-                # Shape (Batch, Time, Channels) -> Mean along Batch & Time (axes 0, 1)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=RuntimeWarning)
-                    means = np.nanmean(np_val, axis=(0, 1))
+                axes = (0, 1)  # (Batch, Time, Channels) -> Mean over Batch & Time
             else:
                 raise ValueError(
                     f"Data for key '{key}' has invalid dimensions: {np_val.ndim}"
                 )
 
-            # Replace NaNs in the computed means (resulting from all-NaN columns) with 0.0
-            means = np.nan_to_num(means, nan=0.0)
-            self.fitted_means[key] = means
+            # --- Compute Statistics ---
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                if uses_mean:
+                    means = np.nanmean(np_val, axis=axes)
+                    self.fitted_means[key] = np.nan_to_num(means, nan=0.0)
+
+                if uses_std:
+                    stds = np.nanstd(np_val, axis=axes)
+                    # If std is 0 or NaN (e.g., constant signal), default to 0.0 variance
+                    self.fitted_stds[key] = np.nan_to_num(stds, nan=0.0)
 
         return self
+
+    def _get_spectral_imputer(self) -> SpectralExtrapolationImputation:
+        """Lazy loader for the spectral helper class."""
+        if self._spectral_imputer is None:
+            self._spectral_imputer = SpectralExtrapolationImputation(
+                window_len=self.spectral_window_len, top_k=self.spectral_top_k
+            )
+        return self._spectral_imputer
 
     def _impute_array(self, X: np.ndarray, key: str) -> np.ndarray:
         """
         Applies the configured imputation strategy to a single NumPy array.
 
-        This method standardizes input to 3D, applies the strategy, and restores original shape.
-
-        Args:
-            X: Input array with missing values.
-            key: The key name of the data (used to retrieve fitted means).
-
-        Returns:
-            np.ndarray: Imputed array with the same shape as input.
-
-        Raises:
-            ValueError: If input dimensions are not 2D or 3D.
+        This method standardizes input to 3D, applies the strategy per channel,
+        and restores original shape.
         """
         # Standardize input to (Batch, Time, Channels)
         original_shape = X.shape
@@ -176,49 +302,113 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
         X_imp = X_working.copy()
         B, T, C = X_imp.shape
 
-        if self.strategy == "zero":
-            # Replace all NaNs with 0.0
-            X_imp = np.nan_to_num(X_imp, nan=0.0)
+        # Normalize strategies to a list for uniform processing
+        if isinstance(self.strategy, list):
+            if len(self.strategy) != C:
+                raise ValueError(
+                    f"Strategy list length ({len(self.strategy)}) does not match "
+                    f"number of channels ({C})."
+                )
+            strategies = self.strategy
+        else:
+            strategies = [self.strategy] * C
 
-        elif self.strategy == "mean":
-            # Retrieve fitted means or fallback to 0.0
+        # Group channels by strategy for organized processing
+        strat_map = defaultdict(list)
+        for idx, s in enumerate(strategies):
+            strat_map[s].append(idx)
+
+        # --- Apply Strategies ---
+
+        # 1. Zero Imputation
+        if "zero" in strat_map:
+            cols = strat_map["zero"]
+            sub_arr = X_imp[:, :, cols]
+            X_imp[:, :, cols] = np.nan_to_num(sub_arr, nan=0.0)
+
+        # 2. Mean Imputation
+        if "mean" in strat_map:
+            cols = strat_map["mean"]
+            fitted_means = self.fitted_means.get(key, np.zeros(C))
+
             if key not in self.fitted_means:
                 logger.warning(
-                    f"Key '{key}' was not seen during fit(). Using 0.0 fallback."
+                    f"Key '{key}' was not seen during fit(). Using 0.0 fallback for mean."
                 )
-                means = np.zeros(C)
-            else:
-                means = self.fitted_means[key]
 
-            # Apply channel-specific means
-            for c in range(C):
-                mask = np.isnan(X_imp[:, :, c])
-                X_imp[:, :, c][mask] = means[c]
+            for c_idx in cols:
+                mask = np.isnan(X_imp[:, :, c_idx])
+                X_imp[:, :, c_idx][mask] = fitted_means[c_idx]
 
-        elif self.strategy == "locf":
-            # Last Observation Carried Forward
-            # Applied independently per batch using Pandas for efficiency
+        # 3. LOCF (Standard)
+        if "locf" in strat_map:
+            cols = strat_map["locf"]
             for b in range(B):
-                df_batch = pd.DataFrame(X_imp[b, :, :])
-                # ffill propagates valid values forward.
-                # bfill handles leading NaNs (Next Observation Carried Backward).
-                df_filled = df_batch.ffill().bfill()
-                X_imp[b, :, :] = df_filled.values
+                for c in cols:
+                    series = pd.Series(X_imp[b, :, c])
+                    filled = series.ffill().bfill()
+                    X_imp[b, :, c] = filled.values
 
-        elif self.strategy == "linear":
-            # Linear Interpolation
-            for b in range(B):
-                df_batch = pd.DataFrame(X_imp[b, :, :])
-                # 'both' limit direction ensures interpolation attempts to fill edges if possible.
-                df_filled = df_batch.interpolate(
-                    method="linear", limit_direction="both"
+        # 4. Stochastic LOCF
+        if "stochastic" in strat_map:
+            cols = strat_map["stochastic"]
+            fitted_stds = self.fitted_stds.get(key, np.zeros(C))
+
+            if key not in self.fitted_stds:
+                logger.warning(
+                    f"Key '{key}' not seen in fit(). Using 0.0 noise for stochastic."
                 )
-                # Fallback: Edges or full-NaN columns might remain NaN.
-                # Use ffill/bfill and finally fillna(0.0) as a safe fallback.
-                df_filled = df_filled.ffill().bfill().fillna(0.0)
-                X_imp[b, :, :] = df_filled.values
 
-        # Restore original dimensionality (squeeze batch dim if input was 2D)
+            for b in range(B):
+                for c in cols:
+                    # Identify where the NaNs are *before* filling
+                    nan_mask = np.isnan(X_imp[b, :, c])
+
+                    if not np.any(nan_mask):
+                        continue
+
+                    # Step A: Perform LOCF to get the baseline level
+                    series = pd.Series(X_imp[b, :, c])
+                    filled = series.ffill().bfill().values
+
+                    # Step B: Generate noise ~ N(0, sigma_channel)
+                    sigma = fitted_stds[c]
+                    if sigma > 0:
+                        noise = np.random.normal(
+                            loc=0.0, scale=sigma, size=np.sum(nan_mask)
+                        )
+                        # Step C: Add noise ONLY to the missing regions
+                        filled[nan_mask] += noise
+
+                    X_imp[b, :, c] = filled
+
+        # 5. Linear Interpolation
+        if "linear" in strat_map:
+            cols = strat_map["linear"]
+            for b in range(B):
+                for c in cols:
+                    series = pd.Series(X_imp[b, :, c])
+                    filled = series.interpolate(method="linear", limit_direction="both")
+                    # Fallback for edges or all-NaN series
+                    filled = filled.ffill().bfill().fillna(0.0)
+                    X_imp[b, :, c] = filled.values
+
+        # 6. Spectral Extrapolation
+        if "spectral" in strat_map:
+            cols = strat_map["spectral"]
+            imputer = self._get_spectral_imputer()
+
+            # Extract only the spectral columns to avoid processing others
+            # We copy because slicing with a list forces a copy in NumPy anyway
+            spectral_subset = X_imp[:, :, cols].copy()
+
+            # Delegate to helper
+            imputed_subset = imputer.impute(spectral_subset)
+
+            # Assign results back
+            X_imp[:, :, cols] = imputed_subset
+
+        # Restore original dimensionality
         if len(original_shape) == 2:
             return X_imp[0]
         return X_imp
@@ -241,7 +431,7 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
 
         for key, value in data.items():
             if key in keys_to_process:
-                # Ensure 3D structure is preserved
+                # Ensure 3D structure is preserved for processing
                 np_val = convert_to_numpy(value, ensure_2d=False)
                 output_data[key] = self._impute_array(np_val, key)
             else:
