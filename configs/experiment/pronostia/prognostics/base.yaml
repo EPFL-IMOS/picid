@@ -8,15 +8,15 @@ defaults:
 evaluator:
   train:
     inverse_transform_name: scaler_target
-    metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
+    metric_names: ["phm_score", "mae", "mse", "rmse"]
     apply_inverse_scaling: True
   val:
     inverse_transform_name: scaler_target
-    metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
+    metric_names: ["phm_score", "mae", "mse", "rmse"]
     apply_inverse_scaling: True
   test:
     inverse_transform_name: scaler_target
-    metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
+    metric_names: ["phm_score", "mae", "mse", "rmse"]
     apply_inverse_scaling: True
 
 dataset:
