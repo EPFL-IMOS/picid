@@ -71,6 +71,42 @@ def get_search_grid_df(search_space: dict) -> pd.DataFrame:
     return pd.DataFrame(grid, columns=keys)
 
 
+def _count_grid_configs_with_all_seeds(
+    subset: pd.DataFrame,
+    grid_df: pd.DataFrame,
+    join_keys: List[str],
+    model_seed_col: str,
+    required_model_seeds: Set[int],
+) -> int:
+    """
+    Count how many grid configs (rows in grid_df) have all required_model_seeds present in subset.
+
+    Used for schema-first stats: y = count before metric filter, z = count after metric filter.
+    """
+    if subset.empty or grid_df.empty or not required_model_seeds or model_seed_col not in subset.columns:
+        return 0
+    join_keys = [k for k in join_keys if k in subset.columns and k in grid_df.columns]
+    if not join_keys:
+        return 0
+    try:
+        sub = subset.copy()
+        gr = grid_df.copy()
+        for k in join_keys:
+            sub[k] = sub[k].astype(str)
+            gr[k] = gr[k].astype(str)
+        grouped = sub.groupby(join_keys)[model_seed_col].apply(
+            lambda s: {int(float(x)) for x in s.dropna().unique()}
+        )
+        count = 0
+        for _, row in gr.iterrows():
+            key = tuple(row[k] for k in join_keys)
+            if key in grouped.index and required_model_seeds.issubset(grouped[key]):
+                count += 1
+        return count
+    except Exception:
+        return 0
+
+
 def _trace_nans(df: pd.DataFrame, stage: str, prev_count: int) -> int:
     """Debug helper to track the introduction or removal of NaNs."""
     current_count = int(df.isna().sum().sum())
@@ -544,10 +580,93 @@ def analyze_results(
             subset = validators.validate_seeds(
                 subset, aggregation_cols, data_seed_col, required_data_seeds, False
             )
+
+            # --- Resolve grid early (schema-first) for stats: x = expected configs, y = with all seeds before metric filter, z = after ---
+            model_grid = None
+            grid_df = None
+            join_keys = None
+            x_expected = None
+            try:
+                from lmetk_report.configs.search_space import get_search_space
+                model_grid = get_search_space(dataset, model)
+            except ImportError:
+                pass
+            if model_grid is None:
+                model_grid = get_model_grid_from_search_space(dataset, model, _search_space)
+            if model_grid:
+                grid_df = get_search_grid_df(model_grid)
+                grid_df = grid_df.copy()
+                grid_df["Model"] = model
+                join_keys = ["Model"] + list(model_grid.keys())
+                x_expected = len(grid_df)
+                logger.debug("(%s | %s) schema-first: x_expected=%s", dataset, model, x_expected)
+
+            # --- Metric-validity filter: drop rows where sort metric is missing or not a valid float ---
+            seed_context = f"dataset={dataset}, model={model}"
+            configs_failed_missing_invalid_metric = 0
+            y_grid_full_seed_before_metric = None  # only set when schema-first and seeds required
+            if x_expected is not None and required_model_seeds and model_seed_col in subset.columns:
+                y_grid_full_seed_before_metric = _count_grid_configs_with_all_seeds(
+                    subset, grid_df, join_keys, model_seed_col, required_model_seeds
+                )
+                logger.info(
+                    "  [Schema-first stats] %s | x=%s, y (grid configs with all seeds before metric filter)=%s",
+                    seed_context, x_expected, y_grid_full_seed_before_metric,
+                )
+            if cur_optimization_col not in subset.columns and not subset.empty:
+                logger.warning(
+                    "[Metric filter] %s | sort metric column %r not in subset; skipping (configs_failed_missing_invalid_metric=0).",
+                    seed_context, cur_optimization_col,
+                )
+            else:
+                def _count_configs_with_all_seeds(subs):
+                    if subs.empty or not required_model_seeds or model_seed_col not in subs.columns:
+                        return 0
+                    try:
+                        temp = subs.copy()
+                        for c in aggregation_cols:
+                            if c in temp.columns:
+                                temp[c] = temp[c].astype(str)
+                        def has_all(g):
+                            try:
+                                current = set(g[model_seed_col].dropna().unique())
+                                current_int = {int(float(x)) for x in current}
+                                return required_model_seeds.issubset(current_int)
+                            except Exception:
+                                return False
+                        return temp.groupby(aggregation_cols).filter(has_all).groupby(aggregation_cols).ngroups
+                    except Exception:
+                        return 0
+
+                subset = validators.filter_rows_with_valid_sort_metric(
+                    subset, cur_optimization_col, context=seed_context,
+                )
+                # Configs Failed (missing/invalid metric): schema-first x-z, else data-driven
+                if x_expected is not None and required_model_seeds and model_seed_col in subset.columns:
+                    z_grid_full_seed_after_metric = _count_grid_configs_with_all_seeds(
+                        subset, grid_df, join_keys, model_seed_col, required_model_seeds
+                    )
+                    configs_failed_missing_invalid_metric = x_expected - z_grid_full_seed_after_metric
+                    logger.info(
+                        "  [Metric filter] %s | sort_metric_col=%s, z (grid configs with all seeds after filter)=%s, configs_failed_missing_invalid_metric=x-z=%s",
+                        seed_context, cur_optimization_col, z_grid_full_seed_after_metric, configs_failed_missing_invalid_metric,
+                    )
+                elif required_model_seeds and model_seed_col in subset.columns:
+                    n_distinct_configs_before_metric_filter = (
+                        subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
+                    )
+                    n_configs_full_seed_after_metric_filter = _count_configs_with_all_seeds(subset)
+                    configs_failed_missing_invalid_metric = (
+                        n_distinct_configs_before_metric_filter - n_configs_full_seed_after_metric_filter
+                    )
+                    logger.info(
+                        "  [Metric filter] %s | (data-first) configs with all seeds after filter=%s, configs_failed_missing_invalid_metric=%s",
+                        seed_context, n_configs_full_seed_after_metric_filter, configs_failed_missing_invalid_metric,
+                    )
+
             n_configs_before_model_seed = (
                 subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
             )
-            seed_context = f"dataset={dataset}, model={model}"
             subset = validators.validate_seeds(
                 subset, aggregation_cols, model_seed_col, required_model_seeds, True,
                 context=seed_context,
@@ -555,9 +674,17 @@ def analyze_results(
             n_configs_after_model_seed = (
                 subset.groupby(aggregation_cols).ngroups if not subset.empty else 0
             )
-            configs_failed_not_full_seed_set = (
-                n_configs_before_model_seed - n_configs_after_model_seed
-            )
+            # Schema-first: x - y (y = grid configs with all seeds before metric filter). Data-first: data-driven.
+            if y_grid_full_seed_before_metric is not None and x_expected is not None:
+                configs_failed_not_full_seed_set = x_expected - y_grid_full_seed_before_metric
+                logger.info(
+                    "  [Schema-first stats] %s | configs_failed_not_full_seed_set=x-y=%s",
+                    seed_context, configs_failed_not_full_seed_set,
+                )
+            else:
+                configs_failed_not_full_seed_set = (
+                    n_configs_before_model_seed - n_configs_after_model_seed
+                )
             total_runs = len(subset)
 
             if subset.empty:
@@ -582,18 +709,22 @@ def analyze_results(
                 cur_optimization_mode,
             )
 
-            # --- PER-MODEL GRID: config lookup or auto-discovery ---
-            # Prefer dataset-specific grid from configs.search_space when present (e.g. UNIBO21)
-            model_grid = None
+            # --- PER-MODEL GRID: reuse if already resolved early (schema-first stats), else lookup ---
             grid_from_configs = False
-            try:
-                from lmetk_report.configs.search_space import get_search_space
-                model_grid = get_search_space(dataset, model)
-                grid_from_configs = model_grid is not None
-            except ImportError:
-                pass
             if model_grid is None:
-                model_grid = get_model_grid_from_search_space(dataset, model, _search_space)
+                try:
+                    from lmetk_report.configs.search_space import get_search_space
+                    model_grid = get_search_space(dataset, model)
+                    grid_from_configs = model_grid is not None
+                except ImportError:
+                    pass
+                if model_grid is None:
+                    model_grid = get_model_grid_from_search_space(dataset, model, _search_space)
+                if model_grid:
+                    grid_df = get_search_grid_df(model_grid)
+                    grid_df = grid_df.copy()
+                    grid_df["Model"] = model
+                    join_keys = ["Model"] + list(model_grid.keys())
             grid_source = "configs" if grid_from_configs else ("legacy" if model_grid else "auto")
             logger.debug("(%s | %s) model_grid source=%s, keys=%s", dataset, model, grid_source, list(model_grid.keys()) if model_grid else None)
 
@@ -698,6 +829,7 @@ def analyze_results(
             res_entry["non_aggregated_df"] = subset.copy()
             res_entry["total_runs"] = total_runs
             res_entry["configs_failed_not_full_seed_set"] = configs_failed_not_full_seed_set
+            res_entry["configs_failed_missing_invalid_metric"] = configs_failed_missing_invalid_metric
 
             # --- 8. RESOLVE SORT METRIC (if resolver provided) ---
             # Use resolver from pipeline_config if available, otherwise use parameter
@@ -736,10 +868,10 @@ def analyze_results(
                 res_entry["sort_metric_used"] = None
 
             logger.info(
-                "  %s | %s: opt=%s mode=%s grid=%s sort=%s runs=%d configs_failed_seed=%s",
+                "  %s | %s: opt=%s mode=%s grid=%s sort=%s runs=%d configs_failed_seed=%s configs_failed_invalid_metric=%s",
                 dataset, model, cur_optimization_col, cur_optimization_mode, grid_source,
                 res_entry.get("sort_metric_used") or cur_optimization_col,
-                total_runs, configs_failed_not_full_seed_set,
+                total_runs, configs_failed_not_full_seed_set, configs_failed_missing_invalid_metric,
             )
 
             # Fix: Use native Python ints to avoid np.int64 wrappers in seed display

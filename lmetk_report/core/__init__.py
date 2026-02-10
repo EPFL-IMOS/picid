@@ -9,6 +9,7 @@ from lmetk_report.core.preprocess import clean_and_rename_models
 from lmetk_report.core.validators import (
     validate_schema,
     validate_seeds,
+    filter_rows_with_valid_sort_metric,
     log_modification,
     check_hidden_variations,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "clean_and_rename_models",
     "validate_schema",
     "validate_seeds",
+    "filter_rows_with_valid_sort_metric",
     "log_modification",
     "check_hidden_variations",
     "analyze_results",
