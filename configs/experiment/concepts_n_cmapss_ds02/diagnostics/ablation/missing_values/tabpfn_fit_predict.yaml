@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds02/diagnostics/base
+  - /model_configs/diagnostics/tabpfn_fit_predict
+  - override /transforms: concepts_n_cmapss_ds02/ablation_missing_values_depater2023_fit_predict_history

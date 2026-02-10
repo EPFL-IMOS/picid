@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - concepts_n_cmapss_ds02/diagnostics/base
+  - /model_configs/diagnostics/linear_regression
+  - override /transforms: concepts_n_cmapss_ds02/ablation_missing_values_depater2023_default
