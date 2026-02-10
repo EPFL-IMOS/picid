@@ -18,11 +18,15 @@ class SpectralExtrapolationImputation:
     """
     Helper class for Causal Spectral Extrapolation.
     Models the signal as a sum of sinusoids derived from the immediate past.
+    Optionally matches the noise texture (variance) of the history.
     """
 
-    def __init__(self, window_len: int = 64, top_k: int = 3):
+    def __init__(
+        self, window_len: int = 64, top_k: int = 3, match_variance: bool = False
+    ):
         self.window_len = window_len
         self.top_k = top_k
+        self.match_variance = match_variance  # <--- NEW FLAG
 
     def impute(self, X: np.ndarray) -> np.ndarray:
         """
@@ -42,7 +46,6 @@ class SpectralExtrapolationImputation:
                     continue
 
                 # Find starts and ends of gaps
-                # Concatenate with False to detect edges at 0 and T
                 bounded_mask = np.concatenate(([False], nan_mask, [False]))
                 diffs = np.diff(bounded_mask.astype(int))
                 starts = np.where(diffs == 1)[0]
@@ -52,11 +55,8 @@ class SpectralExtrapolationImputation:
                     gap_len = end - start
 
                     # --- DYNAMIC WINDOW LOGIC ---
-                    # Use whatever history is available, up to the max window_len
                     curr_window_len = min(start, self.window_len)
 
-                    # Safety check: If history is extremely short (e.g. < 4 points),
-                    # FFT results will be meaningless/unstable. Fallback to 0.0.
                     if curr_window_len < 4:
                         signal[start:end] = 0.0
                         continue
@@ -64,32 +64,36 @@ class SpectralExtrapolationImputation:
                     hist_start = start - curr_window_len
                     history = signal[hist_start:start]
 
-                    # Handle NaNs in history (e.g. from previous nearby gaps)
                     if np.isnan(history).any():
                         history = np.nan_to_num(history, nan=np.nanmean(history))
 
-                    # 1. Compute FFT (Real input -> Complex output)
-                    fft_vals = np.fft.rfft(history)
+                    # --- 1. Prepare for Variance Matching (Optional) ---
+                    hist_noise_std = 0.0
+                    if self.match_variance:
+                        # Use robust diff-based std to ignore steps/trends
+                        if len(history) > 1:
+                            hist_noise_std = np.std(np.diff(history))
+
+                    # --- 2. Calculate and remove DC bias ---
+                    dc_bias = np.mean(history)
+                    history_centered = history - dc_bias
+
+                    # --- 3. Compute FFT ---
+                    fft_vals = np.fft.rfft(history_centered)
                     freqs = np.fft.rfftfreq(len(history))
-
-                    # 2. Peak Picking
                     magnitudes = np.abs(fft_vals)
-                    magnitudes[0] = 0  # Remove DC offset
+                    magnitudes[0] = 0
 
-                    # Select top K frequencies
                     if len(magnitudes) <= self.top_k:
                         peak_indices = np.arange(len(magnitudes))
                     else:
                         peak_indices = np.argsort(magnitudes)[-self.top_k :]
 
-                    # 3. Synthesize the gap
-                    # t_gap is time relative to the start of the window
-                    # IMPORTANT: Use curr_window_len for the offset
+                    # --- 4. Synthesize the gap ---
                     t_gap = np.arange(curr_window_len, curr_window_len + gap_len)
                     filled_gap = np.zeros(gap_len)
 
                     for idx in peak_indices:
-                        # Normalize amplitude based on CURRENT window length
                         amp = magnitudes[idx] / curr_window_len
                         if idx > 0 and idx < len(magnitudes) - 1:
                             amp *= 2
@@ -97,15 +101,162 @@ class SpectralExtrapolationImputation:
                         phase = np.angle(fft_vals[idx])
                         freq_cycles = freqs[idx]
 
-                        # Generate cosine wave
                         wave = amp * np.cos(2 * np.pi * freq_cycles * t_gap + phase)
                         filled_gap += wave
 
-                    # 4. Fill
+                    # --- 5. Apply Variance Matching (Optional) ---
+                    if self.match_variance:
+                        if len(filled_gap) > 1:
+                            gap_noise_std = np.std(np.diff(filled_gap))
+
+                            # Only scale if we have valid noise stats
+                            if gap_noise_std > 1e-9 and hist_noise_std > 1e-9:
+                                scale_factor = hist_noise_std / gap_noise_std
+                                # Clamp to prevent explosion (e.g. max 10x boost)
+                                scale_factor = min(scale_factor, 10.0)
+                                filled_gap *= scale_factor
+
+                    # --- 6. Restore DC bias ---
+                    filled_gap += dc_bias
+
+                    # --- 7. Fill ---
                     signal[start:end] = filled_gap
 
                 X_imp[b, :, c] = signal
 
+        return X_imp
+
+
+class BlockwisePastCopyImputation:
+    """
+    Robust Blockwise Past Copy Imputation.
+    Hierarchical strategy:
+    1. Causal Pattern Match (for small/medium gaps)
+    2. Periodic Mirroring (for large gaps/exhausted history)
+    3. Stochastic Drift Fallback (for start-of-signal gaps)
+    """
+
+    def __init__(self):
+        pass
+
+    def impute(self, X: np.ndarray) -> np.ndarray:
+        X_imp = X.copy()
+        B, T, C = X_imp.shape
+
+        for b in range(B):
+            for c in range(C):
+                signal = X_imp[b, :, c]
+                nan_mask = np.isnan(signal)
+                if not np.any(nan_mask):
+                    continue
+
+                bounded = np.concatenate(([False], nan_mask, [False]))
+                starts = np.where(np.diff(bounded.astype(int)) == 1)[0]
+                ends = np.where(np.diff(bounded.astype(int)) == -1)[0]
+
+                for start, end in zip(starts, ends):
+                    # --- 1. CAUSAL CONTEXT GATHERING ---
+                    history_so_far = signal[:start]
+                    valid_hist = history_so_far[~np.isnan(history_so_far)]
+
+                    if len(valid_hist) > 5:
+                        causal_mean = np.mean(valid_hist)
+                        causal_std = np.std(valid_hist) if len(valid_hist) > 1 else 0.05
+                        h_range = np.ptp(valid_hist) if len(valid_hist) > 1 else 1.0
+                        clamp_min, clamp_max = (
+                            np.min(valid_hist) - 0.2 * h_range,
+                            np.max(valid_hist) + 0.2 * h_range,
+                        )
+
+                        # Calculate local trend slope (reactive window)
+                        trend_win = min(len(valid_hist), 32)
+                        slope, _ = np.polyfit(
+                            np.arange(trend_win), valid_hist[-trend_win:], 1
+                        )
+                    else:
+                        # Fallback for gaps at the very beginning of a file
+                        causal_mean = (
+                            np.nanmean(signal) if not np.all(np.isnan(signal)) else 0.0
+                        )
+                        causal_std = 0.1
+                        clamp_min, clamp_max = -np.inf, np.inf
+                        slope = 0.0
+
+                    current_fill_idx = start
+                    while current_fill_idx < end:
+                        gap_rem = end - current_fill_idx
+                        found_match = False
+
+                        # --- 2. HIERARCHICAL STRATEGY ---
+
+                        # OPTION A: Pattern Match (Search for historical twins)
+                        for q_size in [24, 12, 6]:
+                            query_len = min(q_size, current_fill_idx)
+                            if query_len < 6:
+                                continue
+
+                            query = signal[
+                                current_fill_idx - query_len : current_fill_idx
+                            ]
+                            search_buf = signal[: current_fill_idx - query_len]
+
+                            if len(search_buf) > query_len:
+                                search_view = np.lib.stride_tricks.sliding_window_view(
+                                    search_buf, query_len
+                                )
+                                dists = np.mean((search_view - query) ** 2, axis=-1)
+                                best_idx = np.argmin(dists)
+
+                                s_start = best_idx + query_len
+                                p_src = signal[s_start : current_fill_idx - query_len]
+                                nans = np.where(np.isnan(p_src))[0]
+                                actual_max_copy = (
+                                    nans[0] if len(nans) > 0 else len(p_src)
+                                )
+
+                                if actual_max_copy > 5:
+                                    c_len = min(gap_rem, actual_max_copy)
+                                    fill_src = signal[s_start : s_start + c_len].copy()
+                                    found_match = True
+                                    break
+
+                        # OPTION B: Mirror Fallback (The 'Oscillation' Safeguard)
+                        if not found_match:
+                            # Use a generous window to capture a full engine cycle
+                            mirror_win = min(current_fill_idx, 128)
+                            if mirror_win > 4:
+                                # Mirroring preserves the 'join' phase perfectly
+                                fill_src = signal[
+                                    current_fill_idx - mirror_win : current_fill_idx
+                                ][::-1].copy()
+                                c_len = min(gap_rem, len(fill_src))
+                                fill_src = fill_src[:c_len]
+                            else:
+                                # Absolute fallback for start-of-stream
+                                c_len = gap_rem
+                                fill_src = np.full(
+                                    c_len, causal_mean
+                                ) + np.random.normal(0, causal_std * 0.1, c_len)
+
+                        # --- 3. CLEANING & STITCHING ---
+                        fill_src = np.nan_to_num(fill_src, nan=causal_mean)
+                        s_idx = np.arange(len(fill_src))
+
+                        # Detrend source -> Align DC to junction -> Re-apply trend slope
+                        fill_src = fill_src - (slope * s_idx)  # Flatten
+                        offset = signal[current_fill_idx - 1] - fill_src[0]
+                        new_seg = (fill_src + offset) + (
+                            slope * s_idx
+                        )  # Tilt into future
+
+                        # --- 4. CLAMP & PASTE ---
+                        # Clamping prevents 'exploding' signals in recursive large gaps
+                        signal[current_fill_idx : current_fill_idx + len(new_seg)] = (
+                            np.clip(new_seg, clamp_min, clamp_max)
+                        )
+                        current_fill_idx += len(new_seg)
+
+                X_imp[b, :, c] = signal
         return X_imp
 
 
@@ -134,6 +285,7 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
     | ``"linear"``| **Non-Causal** | Smooth, continuous signals (e.g., temperature). | **+** Smooth transitions.<br>**-** Peeks at future (end of gap); smooths out high-freq variance. |
     | ``"stochastic"`` | **Causal** | **Oscillating/Jittery signals** (e.g., noisy sensors). | **+** Preserves signal texture/variance; strictly causal.<br>**-** Non-deterministic output. |
     | ``"spectral"`` | **Causal** | **Periodic/Rhythmic signals** (e.g., vibration). | **+** Restores underlying waveform.<br>**-** Computationally heavier; assumes periodicity. |
+    | ``"copy_past"``| **Causal** | **Repetitive/Cyclic signals** (e.g. engine cycles). | **+** Iteratively copies immediate history.<br>**-** Requires history; safe with clamping. |
 
     *\* Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
 
@@ -147,14 +299,24 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
             - ``"zero"``: Replaces NaNs with 0.0.
             - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by the channel's std dev.
             - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of sinusoids based on history.
+            - ``"copy_past"``: Blockwise Past Copy. Iteratively copies the immediately preceding history segment into the gap.
         apply_to (Optional[List[str]]): A list of keys in the input dictionary to transform.
         spectral_window_len (int): Window size (history) used for spectral analysis (default: 64).
         spectral_top_k (int): Number of dominant frequencies to use for extrapolation (default: 3).
+        spectral_match_variance (bool): If True, the spectral imputation will attempt to match the noise variance of the historical signal. Defaults to False.
         fitted_means (Dict[str, np.ndarray]): Stores computed means (for ``"mean"``).
         fitted_stds (Dict[str, np.ndarray]): Stores computed std devs (for ``"stochastic"``).
     """
 
-    VALID_STRATEGIES = {"mean", "locf", "linear", "zero", "stochastic", "spectral"}
+    VALID_STRATEGIES = {
+        "mean",
+        "locf",
+        "linear",
+        "zero",
+        "stochastic",
+        "spectral",
+        "copy_past",
+    }
 
     def __init__(
         self,
@@ -162,6 +324,7 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
         apply_to: Optional[List[str]] = None,
         spectral_window_len: int = 64,
         spectral_top_k: int = 3,
+        spectral_match_variance: bool = False,
         **kwargs,
     ):
         """
@@ -199,7 +362,11 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
         # Spectral parameters
         self.spectral_window_len = spectral_window_len
         self.spectral_top_k = spectral_top_k
+        self.spectral_match_variance = spectral_match_variance
         self._spectral_imputer = None  # Lazy instantiation
+
+        # Pattern Match parameters
+        self._pattern_imputer = None  # Lazy instantiation
 
         # Store learned parameters
         self.fitted_means: Dict[str, np.ndarray] = {}
@@ -263,13 +430,14 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
                 warnings.simplefilter("ignore", category=RuntimeWarning)
 
                 if uses_mean:
-                    means = np.nanmean(np_val, axis=axes)
-                    self.fitted_means[key] = np.nan_to_num(means, nan=0.0)
+                    self.fitted_means[key] = np.nan_to_num(
+                        np.nanmean(np_val, axis=axes), nan=0.0
+                    )
 
                 if uses_std:
-                    stds = np.nanstd(np_val, axis=axes)
-                    # If std is 0 or NaN (e.g., constant signal), default to 0.0 variance
-                    self.fitted_stds[key] = np.nan_to_num(stds, nan=0.0)
+                    self.fitted_stds[key] = np.nan_to_num(
+                        np.nanstd(np_val, axis=axes), nan=0.0
+                    )
 
         return self
 
@@ -277,9 +445,17 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
         """Lazy loader for the spectral helper class."""
         if self._spectral_imputer is None:
             self._spectral_imputer = SpectralExtrapolationImputation(
-                window_len=self.spectral_window_len, top_k=self.spectral_top_k
+                window_len=self.spectral_window_len,
+                top_k=self.spectral_top_k,
+                match_variance=self.spectral_match_variance,
             )
         return self._spectral_imputer
+
+    def _get_pattern_imputer(self) -> BlockwisePastCopyImputation:
+        """Lazy loader for the pattern matching helper class."""
+        if self._pattern_imputer is None:
+            self._pattern_imputer = BlockwisePastCopyImputation()
+        return self._pattern_imputer
 
     def _impute_array(self, X: np.ndarray, key: str) -> np.ndarray:
         """
@@ -404,6 +580,20 @@ class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMix
 
             # Delegate to helper
             imputed_subset = imputer.impute(spectral_subset)
+
+            # Assign results back
+            X_imp[:, :, cols] = imputed_subset
+
+        # 7. Pattern Matching
+        if "copy_past" in strat_map:
+            cols = strat_map["copy_past"]
+            imputer = self._get_pattern_imputer()
+
+            # Extract and copy subset
+            pattern_subset = X_imp[:, :, cols].copy()
+
+            # Delegate to helper
+            imputed_subset = imputer.impute(pattern_subset)
 
             # Assign results back
             X_imp[:, :, cols] = imputed_subset
