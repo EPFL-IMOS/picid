@@ -20,6 +20,7 @@ def _make_all_results(
     optimized_on=None,
     total_runs=None,
     configs_failed_not_full_seed_set=None,
+    configs_failed_missing_invalid_metric=None,
 ):
     """Build minimal all_results structure for reporting tests."""
     if metrics_data is None:
@@ -45,6 +46,10 @@ def _make_all_results(
     if configs_failed_not_full_seed_set is not None:
         all_results["DS1"]["ModelA"]["configs_failed_not_full_seed_set"] = (
             configs_failed_not_full_seed_set
+        )
+    if configs_failed_missing_invalid_metric is not None:
+        all_results["DS1"]["ModelA"]["configs_failed_missing_invalid_metric"] = (
+            configs_failed_missing_invalid_metric
         )
     return all_results
 
@@ -190,12 +195,14 @@ class TestGetExperimentStatsDf:
         df = reporting.get_experiment_stats_df(all_results)
         assert "Runs" in df.columns
         assert "Configs Failed (not full seed set)" in df.columns
+        assert "Configs Failed (missing/invalid metric)" in df.columns
         assert df.columns.tolist() == [
             "Dataset",
             "Model",
             "Configs Completed",
             "Runs",
             "Configs Failed (not full seed set)",
+            "Configs Failed (missing/invalid metric)",
             "Seeds Found",
         ]
 
@@ -225,6 +232,7 @@ class TestGetExperimentStatsDf:
         row = df.iloc[0]
         assert row["Runs"] == ""
         assert row["Configs Failed (not full seed set)"] == 0
+        assert row["Configs Failed (missing/invalid metric)"] == 0
 
 
 # --- display_experiment_stats (reporting.display_experiment_stats) ---

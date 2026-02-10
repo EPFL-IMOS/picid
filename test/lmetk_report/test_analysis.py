@@ -950,6 +950,81 @@ class TestTotalRunsAndConfigsFailed:
         assert len(res["sorted_aggregated_results"]) == 2
 
 
+# --- configs_failed_missing_invalid_metric (analyze_results) ---
+
+
+class TestConfigsFailedMissingInvalidMetric:
+    """
+    Validates that analyze_results stores configs_failed_missing_invalid_metric
+    when some runs have missing/invalid sort metric (dropped by metric filter).
+    """
+
+    def test_configs_failed_invalid_metric_when_one_config_has_nan_metric(
+        self, mock_df_partial_valid_metric, default_analysis_kwargs
+    ):
+        """
+        One config has all seeds but one run has NaN for sort metric; after metric filter
+        that config has only 2 runs -> dropped. configs_failed_missing_invalid_metric=1.
+        """
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                mock_df_partial_valid_metric,
+                **{
+                    **default_analysis_kwargs,
+                    "required_model_seeds": {72, 88, 101},
+                },
+            )
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res["configs_failed_missing_invalid_metric"] == 1
+        assert len(res["sorted_aggregated_results"]) == 1  # only seq_len=10 kept
+
+    def test_configs_failed_invalid_metric_zero_when_all_valid(
+        self, mock_df_multi_seed_runs, default_analysis_kwargs
+    ):
+        """All rows have valid sort metric -> configs_failed_missing_invalid_metric=0."""
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                mock_df_multi_seed_runs,
+                **default_analysis_kwargs,
+            )
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res["configs_failed_missing_invalid_metric"] == 0
+
+
+# --- Schema-first configs failed stats (x-y, x-z) ---
+
+
+class TestSchemaFirstConfigsFailedStats:
+    """
+    Validates schema-first stats: Configs Failed (not full seed set) = x - y,
+    Configs Failed (missing/invalid metric) = x - z, where x = grid size.
+    """
+
+    def test_schema_first_x_minus_y_and_x_minus_z(
+        self, mock_df_partial_valid_metric, default_analysis_kwargs
+    ):
+        """
+        Grid has 3 points (seq_len 10, 20, 30); data has only 10 and 20 with all seeds before
+        metric filter (y=2). After metric filter only config 10 has all seeds (z=1).
+        Expected: configs_failed_not_full_seed_set = x - y = 1, configs_failed_missing_invalid_metric = x - z = 2.
+        """
+        # Grid of 3 (single varying key so merge keys match aggregated results)
+        grid_3 = {"task_definition.seq_len": [10, 20, 30]}
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+            "baselines.lstm_model.LSTM_Forecaster": grid_3,
+        }):
+            results = analysis.analyze_results(
+                mock_df_partial_valid_metric,
+                **{
+                    **default_analysis_kwargs,
+                    "required_model_seeds": {72, 88, 101},
+                },
+            )
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res["configs_failed_not_full_seed_set"] == 1  # x - y = 3 - 2
+        assert res["configs_failed_missing_invalid_metric"] == 2  # x - z = 3 - 1
+
+
 # --- Backward Compatibility: Legacy Model-Only Structure ---
 
 

@@ -93,6 +93,37 @@ class TestValidateSeeds:
         assert sorted(out["g"].unique()) == [2]
 
 
+class TestFilterRowsWithValidSortMetric:
+    """Validates filter_rows_with_valid_sort_metric: drop rows where sort metric is missing or not a valid float."""
+
+    def test_no_column_returns_unchanged(self):
+        """Branch: sort_metric_col not in df -> warning, return df unchanged."""
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+        out = validators.filter_rows_with_valid_sort_metric(df, "missing_col")
+        assert len(out) == 2
+        assert out.equals(df)
+
+    def test_none_column_returns_unchanged(self):
+        """Branch: sort_metric_col is None -> warning, return df unchanged."""
+        df = pd.DataFrame({"a": [1, 2]})
+        out = validators.filter_rows_with_valid_sort_metric(df, None)
+        assert len(out) == 2
+
+    def test_nan_rows_dropped(self):
+        """Branch: Rows with NaN in sort metric column are dropped."""
+        df = pd.DataFrame({"g": [1, 2, 3], "metric": [1.0, float("nan"), 3.0]})
+        out = validators.filter_rows_with_valid_sort_metric(df, "metric")
+        assert len(out) == 2
+        assert out["g"].tolist() == [1, 3]
+
+    def test_numeric_string_coerced(self):
+        """Branch: String values coerced to numeric; invalid -> NaN -> row dropped."""
+        df = pd.DataFrame({"x": [1, 2], "m": ["1.0", "not_a_number"]})
+        out = validators.filter_rows_with_valid_sort_metric(df, "m")
+        assert len(out) == 1
+        assert out["x"].iloc[0] == 1
+
+
 class TestLogModification:
     """Validates log_modification: only logs when shape changes; context printed."""
 
