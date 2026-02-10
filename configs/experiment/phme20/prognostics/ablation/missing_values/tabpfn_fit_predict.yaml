@@ -1,0 +1,14 @@
+#@package _global_
+
+defaults:
+  - phme20/prognostics/base
+  - /model_configs/prognostics/tabpfn_fit_predict
+  - override /transforms: phme20/ablation_missing_values_fit_predict
+
+task_definition:
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul
+        - unit_id

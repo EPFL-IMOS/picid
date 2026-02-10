@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - phme20/prognostics/base
+  - /model_configs/prognostics/tide
+  - override /transforms: phme20/ablation_missing_values
