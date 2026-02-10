@@ -1,0 +1,7 @@
+#@package _global_
+
+defaults:
+  - unibo/prognostics/base
+  - /model_configs/prognostics/timeseries_transformer
+
+  - override /transforms: battery/unibo/ablation_missing_values_combined

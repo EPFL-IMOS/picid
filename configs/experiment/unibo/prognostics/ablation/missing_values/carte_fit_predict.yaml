@@ -1,0 +1,14 @@
+#@package _global_
+
+defaults:
+  - unibo/prognostics/base
+  - /model_configs/prognostics/carte_fit_predict
+  - override /transforms: battery/unibo/ablation_missing_values_combined_fit_predict
+
+task_definition:
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul
+        - unit_id
