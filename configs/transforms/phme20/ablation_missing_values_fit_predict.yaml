@@ -1,0 +1,119 @@
+defaults:
+  - phme20/ablation_missing_values@_here_
+
+populate_unit_information:
+  transform:
+    _target_: lmetk.transforms.base_transforms.shape_manipulations.ExpandScalarToReferenceFeatureSize
+    scalar_key: unit_id
+
+  metadata:
+    apply_to: ["unit_id", "features"]
+    assign_to: ["unit_id"]
+
+# tabularize.yaml
+
+# --- Base blocks --------------------------------------------------------
+
+__tabularize_unit_id_transform: &__tabularize_unit_id_transform
+  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: 0
+  pred_len: 1
+  timestep_dimension: 1
+  select_features:
+    - unit_id: present
+
+__tabularize_x_transform: &__tabularize_x_transform
+  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: 0
+  pred_len: 1
+  timestep_dimension: 1
+  select_features:
+    - features: history
+
+__tabularize_y_transform: &__tabularize_y_transform
+  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: 0
+  pred_len: 1
+  timestep_dimension: 1
+  select_features:
+    - rul: present
+
+__tabularize_x_metadata: &__tabularize_x_metadata
+  apply_to: ["features"]
+  assign_to: features
+
+__tabularize_y_metadata: &__tabularize_y_metadata
+  apply_to: ["rul"]
+  assign_to: rul
+
+__tabularize_unit_id_metadata: &__tabularize_unit_id_metadata
+  apply_to: ["unit_id"]
+  assign_to: unit_id
+
+# --- Derived transforms -------------------------------------------------
+
+tabularize_unit_id_train:
+  transform:
+    <<: *__tabularize_unit_id_transform
+    stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+  metadata:
+    <<: *__tabularize_unit_id_metadata
+    transform_on_keys: ["train"]
+
+tabularize_x_train:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+  metadata:
+    <<: *__tabularize_x_metadata
+    transform_on_keys: ["train"]
+
+tabularize_y_train:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride_train}
+    subset_ratio: ${oc.select:task_definition.subset_ratio,null}
+    subset_seed: ${oc.select:task_definition.subset_seed,null}
+  metadata:
+    <<: *__tabularize_y_metadata
+    transform_on_keys: ["train"]
+
+tabularize_unit_id_test:
+  transform:
+    <<: *__tabularize_unit_id_transform
+    stride: ${task_definition.stride}
+  metadata:
+    <<: *__tabularize_unit_id_metadata
+    transform_on_keys: ["val", "test"]
+
+tabularize_x_val_test:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride}
+  metadata:
+    <<: *__tabularize_x_metadata
+    transform_on_keys: ["val", "test"]
+
+tabularize_y_val_test:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride}
+  metadata:
+    <<: *__tabularize_y_metadata
+    transform_on_keys: ["val", "test"]
+
+concatenate_units_and_ragged2numpy:
+  transform:
+    _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    axis: 1
+
+  metadata:
+    apply_to: ["features", "rul", "unit_id"]
+    assign_to: ["features", "rul", "unit_id"]

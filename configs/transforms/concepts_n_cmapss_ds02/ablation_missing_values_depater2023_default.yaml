@@ -1,4 +1,4 @@
-mcar_corruption:
+mcar_corruption_train_val:
   transform:
     _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
     ratios: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
@@ -8,9 +8,23 @@ mcar_corruption:
       max_size: 0.2
 
   metadata:
+    transform_on_keys: ["train", "val"]
     apply_to: features
-    assign_to: 
-      features: features_corrupted
+
+
+mcar_corruption_test:
+  transform:
+    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    ratios: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    mode: "block"
+    block_params:
+      min_size: 0.01
+      max_size: 0.2
+
+  metadata:
+    transform_on_keys: ["test"]
+    apply_to: features
+
 
 missing_values_analytics:
   transform:
@@ -18,7 +32,7 @@ missing_values_analytics:
     saving_path: ${paths.log_dir}/missing_values_stats
 
   metadata:
-    apply_to: features_corrupted
+    apply_to: features
 
 imputation:
   transform:
@@ -26,25 +40,23 @@ imputation:
     strategy: "copy_past"
     
   metadata:
-    #apply_to: features
     fit_on: train
-    apply_to: features_corrupted
-    assign_to:
-      features_corrupted: features_imputed
+    apply_to: features
 
-plotter:
-  transform:
-    _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
-    saving_path: ${paths.log_dir}/images_imputed
-    unit_key: unit_id
-    imputed_key: features_imputed
-    corrupted_key: features_corrupted
-    original_key: features
-    dataset_name: Concepts N-CMAPSS (DS02)
-    n_channels_to_plot: 14
+# To apply the plotter transform it is required to have ["features_imputed", "features_corrupted", "features"
+# plotter:
+#   transform:
+#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+#     saving_path: ${paths.log_dir}/images_imputed
+#     unit_key: unit_id
+#     imputed_key: features_imputed
+#     corrupted_key: features_corrupted
+#     original_key: features
+#     dataset_name: Concepts N-CMAPSS (DS02)
+#     n_channels_to_plot: 14
   
-  metadata:
-    apply_to: ["features_imputed", "features_corrupted", "features"]
+#   metadata:
+#     apply_to: ["features_imputed", "features_corrupted", "features"]
 
 
 # These scalers are pre-computed and do not need to be fitted on the data.

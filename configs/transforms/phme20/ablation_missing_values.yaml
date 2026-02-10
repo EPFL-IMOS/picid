@@ -1,0 +1,75 @@
+
+mcar_corruption_train_val:
+  transform:
+    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    ratios: [0.5, 0.5, 0.5, 0.5, 0.5]
+    mode: "block"
+    block_params:
+      min_size: 0.01
+      max_size: 0.2
+
+  metadata:
+    apply_to: features
+    transform_on_keys: ["train", "val"]
+
+mcar_corruption_test:
+  transform:
+    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    ratios: [0.5, 0.5, 0.5, 0.5, 0.5]
+    mode: "block"
+    block_params:
+      min_size: 0.01
+      max_size: 0.2
+
+  metadata:
+    apply_to: features
+    transform_on_keys: ["test"]
+
+missing_values_analytics:
+  transform:
+    _target_: lmetk.transforms.analytics.missing_values.MissingValuesStatsLogger
+    saving_path: ${paths.log_dir}/missing_values_stats
+
+  metadata:
+    apply_to: features
+
+imputation:
+  transform:
+    _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
+    strategy: ["locf", "locf", "spectral", "locf", "locf"]
+  metadata:
+    fit_on: train
+    apply_to: features
+
+# # To apply the plotter transform it is required to have ["features_imputed", "features_corrupted", "features"
+# plotter:
+#   transform:
+#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+#     saving_path: ${paths.log_dir}/images_imputed
+#     unit_key: unit_id
+#     dataset_name: "PHME20"
+#     imputed_key: features_imputed
+#     corrupted_key: features_corrupted
+#     original_key: features
+#     n_channels_to_plot: 5
+  
+#   metadata:
+#     apply_to: ["features_imputed", "features_corrupted", "features"]
+
+
+
+scaler_features:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: rul
+    fit_on: train

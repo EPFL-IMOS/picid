@@ -1,4 +1,4 @@
-mcar_corruption:
+mcar_corruption_train_val:
   transform:
     _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
     ratios: [0.5, 0.5, 0.5]
@@ -9,8 +9,21 @@ mcar_corruption:
 
   metadata:
     apply_to: features
-    assign_to: 
-      features: features_corrupted
+    transform_on_keys: ["train", "val"]
+
+
+mcar_corruption_test:
+  transform:
+    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    ratios: [0.5, 0.5, 0.5]
+    mode: "block"
+    block_params:
+      min_size: 0.01
+      max_size: 0.2
+
+  metadata:
+    apply_to: features
+    transform_on_keys: ["test"]
 
 missing_values_analytics:
   transform:
@@ -18,32 +31,31 @@ missing_values_analytics:
     saving_path: ${paths.log_dir}/missing_values_stats
 
   metadata:
-    apply_to: features_corrupted
+    apply_to: features
 
 imputation:
   transform:
     _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "locf"
-  metadata:
-    #apply_to: features
-    fit_on: train
-    apply_to: features_corrupted
-    assign_to:
-      features_corrupted: features_imputed
-
-plotter:
-  transform:
-    _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
-    saving_path: ${paths.log_dir}/images_imputed
-    unit_key: unit_id
-    imputed_key: features_imputed
-    corrupted_key: features_corrupted
-    original_key: features
-    dataset_name: UNIBO21
-    n_channels_to_plot: 3
   
   metadata:
-    apply_to: ["features_imputed", "features_corrupted", "features"]
+    apply_to: features
+    fit_on: train
+    
+# # To apply the plotter transform it is required to have ["features_imputed", "features_corrupted", "features"
+# plotter:
+#   transform:
+#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+#     saving_path: ${paths.log_dir}/images_imputed
+#     unit_key: unit_id
+#     imputed_key: features_imputed
+#     corrupted_key: features_corrupted
+#     original_key: features
+#     dataset_name: UNIBO21
+#     n_channels_to_plot: 3
+  
+#   metadata:
+#     apply_to: ["features_imputed", "features_corrupted", "features"]
 
 
 
