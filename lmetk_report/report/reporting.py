@@ -247,6 +247,7 @@ def get_experiment_stats_df(all_results: defaultdict) -> pd.DataFrame:
 
             total_runs = res.get("total_runs", None)
             configs_failed = res.get("configs_failed_not_full_seed_set", 0)
+            configs_failed_invalid_metric = res.get("configs_failed_missing_invalid_metric", 0)
 
             seeds_info = res.get("seeds_info", {})
             d_seeds = seeds_info.get("data", "N/A")
@@ -270,6 +271,7 @@ def get_experiment_stats_df(all_results: defaultdict) -> pd.DataFrame:
                 "Configs Completed": count,
                 "Runs": total_runs if total_runs is not None else "",
                 "Configs Failed (not full seed set)": configs_failed,
+                "Configs Failed (missing/invalid metric)": configs_failed_invalid_metric,
                 "Seeds Found": seed_display,
             }
             data.append(row)

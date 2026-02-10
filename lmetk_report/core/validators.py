@@ -4,6 +4,7 @@ Validation helpers for experiment consistency and scientific rigor.
 
 - validate_schema: ensures required columns exist; raises ValueError if not.
 - validate_seeds: filters to groups that contain all required data/model seeds; logs drops.
+- filter_rows_with_valid_sort_metric: drops rows where the sort/optimization metric is missing or not a valid float.
 - log_modification: logs DataFrame shape changes (e.g. after seed filter).
 - check_hidden_variations: warns when a non-HP column varies within a (dataset, model) group.
 """
@@ -158,6 +159,63 @@ def validate_seeds(
         input_shape=start_shape,
         output_shape=filtered_df.shape,
     )
+
+    return filtered_df
+
+
+def filter_rows_with_valid_sort_metric(
+    df: pd.DataFrame,
+    sort_metric_col: Optional[str] = None,
+    context: Optional[str] = None,
+) -> pd.DataFrame:
+    """
+    Drop rows where the sort/optimization metric column is missing or not a valid float.
+
+    Used before model-seed validation so that only runs with a valid metric value
+    count toward "all required seeds present". Rows with NaN, non-numeric, or
+    missing values in sort_metric_col are removed.
+
+    Args:
+        df: DataFrame with at least sort_metric_col (if present).
+        sort_metric_col: Column name for the metric used for ranking/selection (e.g. "val_best_rerun/loss").
+            If None or not in df.columns, no filter is applied and df is returned unchanged.
+        context: Optional string (e.g. "dataset=X, model=Y") for log messages.
+
+    Returns:
+        Filtered DataFrame (or df unchanged if sort_metric_col is None or missing).
+    """
+    if sort_metric_col is None:
+        logger.warning(
+            "[Validator] Sort metric column not set; skipping metric-validity filter.%s",
+            f" ({context})" if context else "",
+        )
+        return df
+
+    if sort_metric_col not in df.columns:
+        logger.warning(
+            "[Validator] Sort metric column %r not found in DataFrame; skipping metric-validity filter.%s",
+            sort_metric_col,
+            f" ({context})" if context else "",
+        )
+        return df
+
+    start_rows = len(df)
+    # Coerce to numeric; invalid/NaN become NaN
+    series = pd.to_numeric(df[sort_metric_col], errors="coerce")
+    valid_mask = series.notna()
+    filtered_df = df.loc[valid_mask].copy()
+    dropped = start_rows - len(filtered_df)
+
+    if dropped > 0:
+        ctx_msg = f" ({context})" if context else ""
+        logger.info(
+            "[Validator] Metric-validity filter: column=%s, rows before=%s, after=%s, dropped=%s%s",
+            sort_metric_col,
+            start_rows,
+            len(filtered_df),
+            dropped,
+            ctx_msg,
+        )
 
     return filtered_df
 
