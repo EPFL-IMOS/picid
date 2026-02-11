@@ -478,6 +478,8 @@ def iter_hp_impact_tables(all_results: defaultdict, precision: int = 4, sort_met
             result = _build_hp_impact_df(res, precision, sort_metric=combo_sort_metric)
             if result is not None:
                 df, metric_used = result
+                if res.get("sort_metric_is_fallback") and res.get("original_sort_metric"):
+                    metric_used = f"{metric_used} (fallback; original metric {res['original_sort_metric']} not found)"
                 if not df.empty:
                     yield dataset, model, df, metric_used
 

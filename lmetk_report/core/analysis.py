@@ -137,6 +137,37 @@ def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
     return list(unique_items)
 
 
+def _pick_fallback_sort_metric(subset: pd.DataFrame, metric_prefixes: List[str]) -> Optional[str]:
+    """
+    Find a metric column that has at least one valid numeric value. Prefer val* then test*.
+    Returns column name or None.
+    """
+    candidates = []
+    for col in subset.columns:
+        if not isinstance(col, str):
+            continue
+        for p in metric_prefixes:
+            if col.startswith(p):
+                try:
+                    s = pd.to_numeric(subset[col], errors="coerce")
+                    if s.notna().any():
+                        candidates.append(col)
+                except Exception:
+                    pass
+                break
+    if not candidates:
+        return None
+    # Prefer val* then test*, then by name
+    def key(c):
+        if c.startswith("val"):
+            return (0, c)
+        if c.startswith("test"):
+            return (1, c)
+        return (2, c)
+    candidates.sort(key=key)
+    return candidates[0]
+
+
 def get_dynamic_metrics(
     df_subset: pd.DataFrame,
     column_config: Optional[Dict[str, str]] = None,
@@ -465,6 +496,8 @@ def analyze_results(
 
     for dataset in unique_datasets:
         for model in unique_models:
+            _used_fallback_sort_metric = False
+            _original_sort_metric = None
 
             # --- SUBSETTING ---
             subset_start_shape = df.shape
@@ -613,6 +646,29 @@ def analyze_results(
                     "  [Schema-first stats] %s | x=%s, y (grid configs with all seeds before metric filter)=%s",
                     seed_context, x_expected, y_grid_full_seed_before_metric,
                 )
+            # If original sort metric would drop all rows, try fallback (prefer val*, then test*)
+            would_drop_all = (
+                cur_optimization_col not in subset.columns
+                or not pd.to_numeric(subset[cur_optimization_col], errors="coerce").notna().any()
+            )
+            if would_drop_all and not subset.empty:
+                logger.info(
+                    "[Sort metric] %s | Original metric %r not found or all invalid (would drop all rows). Searching for fallback.",
+                    seed_context, cur_optimization_col,
+                )
+                fallback = _pick_fallback_sort_metric(subset, metric_prefixes)
+                if fallback:
+                    _original_sort_metric = cur_optimization_col
+                    cur_optimization_col = fallback
+                    _used_fallback_sort_metric = True
+                    if cur_optimization_col not in all_performance_cols:
+                        all_performance_cols.append(cur_optimization_col)
+                    logger.info("[Sort metric] %s | Using fallback metric: %r", seed_context, cur_optimization_col)
+                else:
+                    logger.warning(
+                        "[Sort metric] %s | No fallback metric found; model will be skipped.",
+                        seed_context,
+                    )
             if cur_optimization_col not in subset.columns and not subset.empty:
                 logger.warning(
                     "[Metric filter] %s | sort metric column %r not in subset; skipping (configs_failed_missing_invalid_metric=0).",
@@ -866,6 +922,11 @@ def analyze_results(
                     res_entry["sort_metric_used"] = None
             else:
                 res_entry["sort_metric_used"] = None
+
+            if _used_fallback_sort_metric:
+                res_entry["sort_metric_used"] = cur_optimization_col
+                res_entry["sort_metric_is_fallback"] = True
+                res_entry["original_sort_metric"] = _original_sort_metric
 
             logger.info(
                 "  %s | %s: opt=%s mode=%s grid=%s sort=%s runs=%d configs_failed_seed=%s configs_failed_invalid_metric=%s",
