@@ -21,6 +21,9 @@ def _make_all_results(
     total_runs=None,
     configs_failed_not_full_seed_set=None,
     configs_failed_missing_invalid_metric=None,
+    sort_metric_used=None,
+    sort_metric_is_fallback=None,
+    original_sort_metric=None,
 ):
     """Build minimal all_results structure for reporting tests."""
     if metrics_data is None:
@@ -51,6 +54,12 @@ def _make_all_results(
         all_results["DS1"]["ModelA"]["configs_failed_missing_invalid_metric"] = (
             configs_failed_missing_invalid_metric
         )
+    if sort_metric_used is not None:
+        all_results["DS1"]["ModelA"]["sort_metric_used"] = sort_metric_used
+    if sort_metric_is_fallback is not None:
+        all_results["DS1"]["ModelA"]["sort_metric_is_fallback"] = sort_metric_is_fallback
+    if original_sort_metric is not None:
+        all_results["DS1"]["ModelA"]["original_sort_metric"] = original_sort_metric
     return all_results
 
 
@@ -504,6 +513,33 @@ class TestIterHpImpactTablesWithSortMetric:
         assert len(entries) == 1
         dataset, model, df, metric_used = entries[0]
         assert metric_used == "test/accuracy"
+
+    def test_iter_hp_impact_tables_metric_used_includes_fallback_suffix(self):
+        """
+        Branch: res has sort_metric_is_fallback and original_sort_metric.
+        Methodology: Build all_results with sort_metric_used=val/mse, sort_metric_is_fallback=True,
+        original_sort_metric=val/loss. Call iter_hp_impact_tables.
+        Expected: metric_used contains "fallback" and "val/loss" (original not found).
+        """
+        df_sorted = pd.DataFrame({
+            "Model": ["M"],
+            "task_definition.seq_len": [10],
+            "val/mse_mean": [0.52],
+            "val/mse_std": [0.08],
+            "val/mse_count": [3],
+        })
+        all_results = _make_all_results(
+            sorted_aggregated=df_sorted,
+            sort_metric_used="val/mse",
+            sort_metric_is_fallback=True,
+            original_sort_metric="val/loss",
+        )
+        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric="val/mse"))
+        assert len(entries) == 1
+        _dataset, _model, _df, metric_used = entries[0]
+        assert "fallback" in metric_used.lower()
+        assert "val/loss" in metric_used
+        assert "original metric" in metric_used.lower() or "not found" in metric_used.lower()
 
 
 # --- display_hp_impact (reporting.display_hp_impact) ---

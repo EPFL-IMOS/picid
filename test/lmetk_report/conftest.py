@@ -389,6 +389,42 @@ def mock_df_partial_valid_metric(base_config_columns):
 
 
 @pytest.fixture
+def mock_df_original_metric_missing_has_fallback(base_config_columns):
+    """
+    One model with val/mse and test/mse (valid) but no val/loss column.
+    Used to test sort-metric fallback: when optimization_col=val/loss would drop all rows,
+    pipeline should use fallback (val/mse preferred over test/mse) and keep the model.
+    """
+    data = [
+        {
+            MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+            DATASET_COL: "DS1",
+            MODEL_SEED_COL: 72,
+            "run_name": "run_10_72",
+            OPT_METRIC_COL: "test/mse",
+            OPT_MODE_COL: "min",
+            "task_definition.seq_len": 10,
+            "optimization.lr": 0.001,
+            "val/mse": 0.42,
+            "test/mse": 0.40,
+        },
+        {
+            MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+            DATASET_COL: "DS1",
+            MODEL_SEED_COL: 88,
+            "run_name": "run_10_88",
+            OPT_METRIC_COL: "test/mse",
+            OPT_MODE_COL: "min",
+            "task_definition.seq_len": 10,
+            "optimization.lr": 0.001,
+            "val/mse": 0.43,
+            "test/mse": 0.41,
+        },
+    ]
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
 def default_analysis_kwargs():
     """Default kwargs for analyze_results matching typical pipeline usage."""
     return {
