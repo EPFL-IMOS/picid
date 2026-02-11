@@ -1025,6 +1025,73 @@ class TestSchemaFirstConfigsFailedStats:
         assert res["configs_failed_missing_invalid_metric"] == 2  # x - z = 3 - 1
 
 
+# --- Sort-metric fallback when original would drop all rows ---
+
+
+class TestSortMetricFallback:
+    """
+    When the chosen sort metric would drop all rows (missing or all invalid),
+    pipeline should find a fallback (val* then test*) and use it; model is not skipped.
+    """
+
+    def test_fallback_used_when_original_metric_missing(
+        self, mock_df_original_metric_missing_has_fallback, default_analysis_kwargs
+    ):
+        """
+        Original metric val/loss is not in subset; val/mse and test/mse exist with valid values.
+        Expected: Fallback to val/mse (prefer val over test), model not skipped,
+        res has sort_metric_used=val/mse, sort_metric_is_fallback=True, original_sort_metric=val/loss.
+        """
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                mock_df_original_metric_missing_has_fallback,
+                **{
+                    **default_analysis_kwargs,
+                    "optimization_col": "val/loss",
+                },
+            )
+        assert "DS1" in results
+        assert "baselines.lstm_model.LSTM_Forecaster" in results["DS1"]
+        res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
+        assert res.get("sort_metric_is_fallback") is True
+        assert res.get("original_sort_metric") == "val/loss"
+        assert res.get("sort_metric_used") == "val/mse"
+        assert "sorted_aggregated_results" in res and not res["sorted_aggregated_results"].empty
+
+    def test_no_fallback_when_no_val_or_test_metric(self, base_config_columns):
+        """
+        Original metric val/loss missing and no val/ or test/ column with valid data.
+        Expected: Fallback returns None; we do not set sort_metric_is_fallback.
+        Pipeline completes without crash.
+        """
+        df = pd.DataFrame([
+            {
+                config.COLUMN_CONFIG["model_target"]: "SomeModel",
+                config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                config.DEFAULT_MODEL_SEED_COL: 1,
+                "run_name": "r1",
+                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                config.COLUMN_CONFIG["optimization_mode"]: "min",
+                "task_definition.seq_len": 10,
+                "optimization.lr": 0.001,
+                "custom/only": 1.0,
+            }
+        ])
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                df,
+                config_columns=base_config_columns + ["custom/only"],
+                dropped_columns=[],
+                optimization_col="val/loss",
+                reporting_metrics=["mse", "loss"],
+                metric_prefixes=["val/", "test/"],
+            )
+        assert isinstance(results, dict)
+        if "DS1" in results and "SomeModel" in results["DS1"]:
+            res = results["DS1"]["SomeModel"]
+            assert res.get("sort_metric_is_fallback") is not True
+
+
 # --- Backward Compatibility: Legacy Model-Only Structure ---
 
 
