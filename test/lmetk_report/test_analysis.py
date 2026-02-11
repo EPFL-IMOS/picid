@@ -1091,6 +1091,51 @@ class TestSortMetricFallback:
             res = results["DS1"]["SomeModel"]
             assert res.get("sort_metric_is_fallback") is not True
 
+    def test_fallback_prefers_varying_metric_over_constant(self, base_config_columns):
+        """
+        When fallback is needed, prefer a metric that varies across rows over one that is constant
+        (e.g. test/mae_normalized over test/loss when test/loss is 1.0 for all rows).
+        """
+        df = pd.DataFrame([
+            {
+                config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
+                config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                config.DEFAULT_MODEL_SEED_COL: 1,
+                "run_name": "r1",
+                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                config.COLUMN_CONFIG["optimization_mode"]: "min",
+                "task_definition.seq_len": 10,
+                "test/loss": 1.0,
+                "test/mae_normalized": 0.25,
+            },
+            {
+                config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
+                config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                config.DEFAULT_MODEL_SEED_COL: 2,
+                "run_name": "r2",
+                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                config.COLUMN_CONFIG["optimization_mode"]: "min",
+                "task_definition.seq_len": 10,
+                "test/loss": 1.0,
+                "test/mae_normalized": 0.31,
+            },
+        ])
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(
+                df,
+                config_columns=base_config_columns,
+                dropped_columns=[],
+                optimization_col="val/loss",
+                reporting_metrics=["mse", "loss"],
+                metric_prefixes=["val/", "test/"],
+            )
+        assert "DS1" in results and "FitPredictWrapper" in results["DS1"]
+        res = results["DS1"]["FitPredictWrapper"]
+        assert res.get("sort_metric_is_fallback") is True
+        assert res.get("original_sort_metric") == "val/loss"
+        # Should use varying test/mae_normalized, not constant test/loss
+        assert res.get("sort_metric_used") == "test/mae_normalized"
+
 
 # --- Backward Compatibility: Legacy Model-Only Structure ---
 
