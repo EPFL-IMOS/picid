@@ -137,10 +137,20 @@ def get_unique_values(df: pd.DataFrame, column: str) -> List[Any]:
     return list(unique_items)
 
 
+def _metric_varies(subset: pd.DataFrame, col: str) -> bool:
+    """True if the column has at least two distinct numeric values (so ranking by it is meaningful)."""
+    try:
+        s = pd.to_numeric(subset[col], errors="coerce").dropna()
+        return s.nunique() >= 2
+    except Exception:
+        return False
+
+
 def _pick_fallback_sort_metric(subset: pd.DataFrame, metric_prefixes: List[str]) -> Optional[str]:
     """
     Find a metric column that has at least one valid numeric value. Prefer val* then test*.
-    Returns column name or None.
+    Among those, prefer columns that vary (nunique >= 2) so HP ranking is meaningful.
+    Returns column name or None. Logs a warning if the chosen fallback does not vary.
     """
     candidates = []
     for col in subset.columns:
@@ -164,8 +174,18 @@ def _pick_fallback_sort_metric(subset: pd.DataFrame, metric_prefixes: List[str])
         if c.startswith("test"):
             return (1, c)
         return (2, c)
-    candidates.sort(key=key)
-    return candidates[0]
+    varying = [c for c in candidates if _metric_varies(subset, c)]
+    non_varying = [c for c in candidates if c not in varying]
+    varying.sort(key=key)
+    non_varying.sort(key=key)
+    ordered = varying + non_varying
+    chosen = ordered[0]
+    if chosen in non_varying:
+        logger.warning(
+            "[Sort metric] Fallback metric %r does not vary across rows; HP ranking may be arbitrary.",
+            chosen,
+        )
+    return chosen
 
 
 def get_dynamic_metrics(
