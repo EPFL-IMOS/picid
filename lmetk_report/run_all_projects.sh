@@ -22,6 +22,7 @@ while IFS= read -r proj || [[ -n "$proj" ]]; do
   proj="${proj#"${proj%%[![:space:]]*}"}"
   proj="${proj%"${proj##*[![:space:]]}"}"
   [[ -z "$proj" ]] && continue
+  [[ "$proj" =~ ^# ]] && continue
   echo "=============================================="
   echo "Project: $proj"
   echo "=============================================="
