@@ -24,22 +24,26 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=200
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="29_01_2026"
+wandb_log_folder="16_02_2026_scaling_blockwise"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
 
 datasets=(
 #   "nb14|raw|prognostics"
-  "nb14|combined|prognostics"
-  "unibo|combined|prognostics"
+#   "nb14|combined|prognostics"
+#   "unibo|combined|prognostics"
   "phme20|raw|prognostics"
-  "concepts_n_cmapss||prognostics"
-  "concepts_n_cmapss_ds02||prognostics"
-#   "pronostia|raw|prognostics"
-  "pronostia|combined|prognostics"
-  "xjtu_sy|combined|prognostics"
+#   "concepts_n_cmapss||prognostics"
+#   "concepts_n_cmapss_ds02||prognostics"
+# #   "pronostia|raw|prognostics"
+#   "pronostia|combined|prognostics"
+#   "xjtu_sy|combined|prognostics"
 )
+
+subset_ratios=(0.001 0.005 0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+SEEDS=(72 88 101 666 226688)
+subset_blocks=3
 
 model_names=(
     lstm
@@ -54,10 +58,10 @@ model_names=(
     patchtst
 )
 
-BATCH_SIZES=(512)
+batch_size=512
+max_learning_rate=0.001
+context_length=20
 SEEDS=(72 88 101 666 226688)
-SEQ_LEN=(1 10 50 100)
-MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -66,10 +70,20 @@ MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
 # --- 2. Initialize counters for tracking runs and managing parallel jobs ---
 run_counter=1
 job_counter=0
-MAX_PARALLEL=3 # Set the max number of jobs to run at once
+MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
-SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"
+SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"# Function to run and log commands
 
+# run_and_log() {
+#     local command_to_run="$1"
+#     local run_name="$2"
+
+#     # For debugging, just print the command and run name
+#     echo "DEBUG: Run Name: $run_name"
+#     echo "DEBUG: Command: $command_to_run"
+#     # Run the command and log its output
+#     eval "sleep 5"
+# }
 
 build_exp_name() {
   local dataset_key="$1"
@@ -88,12 +102,10 @@ pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
 
 
-for dataset in "${datasets[@]}"; do
-    for model_name in "${model_names[@]}"; do
-        for batch_size in "${BATCH_SIZES[@]}"; do
-            for seq_len in "${SEQ_LEN[@]}"; do
-                for max_learning_rate in "${MAX_LEARNING_RATE[@]}"; do
-                    for seed in "${SEEDS[@]}"; do
+for seed in "${SEEDS[@]}"; do
+    for dataset in "${datasets[@]}"; do
+        for model_name in "${model_names[@]}"; do
+            for ratio in "${subset_ratios[@]}"; do
                         # --- 3. Create a unique and descriptive name for this specific run ---
                         # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
 
@@ -120,7 +132,6 @@ for dataset in "${datasets[@]}"; do
                             datamodule.train_batch_size=${batch_size} \
                             datamodule.val_batch_size=1024 \
                             datamodule.test_batch_size=1024 \
-                            task_definition.seq_len=${seq_len} \
                             optimization.lr=${max_learning_rate} \
                             trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
                             trainer.max_epochs=${max_epochs} \
@@ -131,6 +142,10 @@ for dataset in "${datasets[@]}"; do
                             cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
                             cache.preprocessing_file_lock_path=/tmp/lmetk_preprocess.lock \
                             enable_progress_bar=False \
+                            task_definition.subset_ratio=${ratio} \
+                            +task_definition.subset_blocks=${subset_blocks} \
+                            task_definition.seq_len=${context_length} \
+                            experiment_group=${ratio} \
                             seed=${seed}
                         )
 
@@ -175,8 +190,6 @@ for dataset in "${datasets[@]}"; do
                             # Decrement the counter because a slot just opened up.
                             ((job_counter--))
                         fi
-                    done
-                done
             done
         done
     done

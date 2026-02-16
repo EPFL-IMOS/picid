@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="29_01_2026"
+wandb_log_folder="16_02_2026_scaling_blockwise"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -31,10 +31,10 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 datasets=(
 #   "nb14|raw|prognostics"
 #   "nb14|combined|prognostics"
-  "unibo|combined|prognostics"
+#   "unibo|combined|prognostics" # TODO
   "phme20|raw|prognostics"
 #   "concepts_n_cmapss||prognostics"
-  "concepts_n_cmapss_ds02||prognostics"
+#   "concepts_n_cmapss_ds02||prognostics"  # TODO
 #   "pronostia|raw|prognostics"
 #   "pronostia|combined|prognostics"
 #   "xjtu_sy|combined|prognostics"
@@ -42,12 +42,23 @@ datasets=(
 
 subset_ratios=(0.001 0.005 0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
 SEEDS=(72 88 101 666 226688)
-context_lengths=(20)
+subset_blocks=3
 
 model_names=(
     # xgboost_fit_predict
     tabdpt_fit_predict
     tabpfn_fit_predict
+)
+
+# Careful here because of oom issues with long context lengths / short strides
+# Pairs: "seq_len:stride_train"
+context_stride_pairs=(
+#   "1:1"
+#   "5:1"
+#   "10:5"
+  "20:5"
+#   "50:50"
+#   "100:100"
 )
 
 # ========================================================================
@@ -60,6 +71,18 @@ job_counter=0
 MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
 SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"
+
+# Function to run and log commands
+# run_and_log() {
+#     local command_to_run="$1"
+#     local run_name="$2"
+
+#     # For debugging, just print the command and run name
+#     echo "DEBUG: Run Name: $run_name"
+#     echo "DEBUG: Command: $command_to_run"
+#     # Run the command and log its output
+#     eval "sleep 5"
+# }
 
 
 build_exp_name() {
@@ -79,11 +102,11 @@ pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
 
 
-for dataset in "${datasets[@]}"; do
-    for model_name in "${model_names[@]}"; do
-        for ratio in "${subset_ratios[@]}"; do
-            for context_length in "${context_lengths[@]}"; do
-                for seed in "${SEEDS[@]}"; do
+for seed in "${SEEDS[@]}"; do
+    for dataset in "${datasets[@]}"; do
+        for model_name in "${model_names[@]}"; do
+            for ratio in "${subset_ratios[@]}"; do
+                for cs_pair in "${context_stride_pairs[@]}"; do
                     # --- 3. Create a unique and descriptive name for this specific run ---
                     # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
                     IFS=':' read -r context_length train_set_stride <<< "$cs_pair"
@@ -100,11 +123,11 @@ for dataset in "${datasets[@]}"; do
                         paths=runai \
                         experiment=${exp_name} \
                         logger.wandb.project=${final_log_folder} \
-                        task_definition.seq_len=${context_length} \
-                        task_definition.stride_train=${train_set_stride} \
+                        # task_definition.stride_train=${train_set_stride} \
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
                         task_definition.subset_ratio=${ratio} \
+                        +task_definition.subset_blocks=${subset_blocks} \
                         task_definition.seq_len=${context_length} \
                         experiment_group=${ratio} \
                         seed=${seed}
