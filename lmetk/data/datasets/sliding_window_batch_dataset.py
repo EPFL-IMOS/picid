@@ -75,18 +75,19 @@ class SlidingWindowBatchDataset(BaseDataset):
                 and 0 < subset_ratio < 1
                 and self._seq_idx is None
             ):
-                if self.subset_blocks is not None:
+                len_ds = len(driver)
+                if self.subset_blocks is not None and (
+                    int(len_ds * subset_ratio) > self.subset_blocks
+                ):
                     res = make_subset_blocks_indices(
-                        len_ds=len(driver),
+                        len_ds=len_ds,
                         subset_ratio=subset_ratio,
                         subset_seed=self.subset_seed,
                         subset_blocks=self.subset_blocks,
                     )
                     self._seq_idx = res["seq_idx"]
                 else:
-                    self._seq_idx = self._create_sequence_subset(
-                        len(driver), subset_ratio
-                    )
+                    self._seq_idx = self._create_sequence_subset(len_ds, subset_ratio)
 
                 logger.info(
                     f"Subsetting sequences: using {len(self._seq_idx)} out of {len(driver)} sequences."

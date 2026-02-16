@@ -190,10 +190,12 @@ class TimeseriesTabularizer(
 
                 subset_ratio = self.subset_ratio
                 if subset_ratio is not None and 0 < subset_ratio < 1:
-
-                    if self.subset_blocks is not None:
+                    len_ds = len(seq)
+                    if self.subset_blocks is not None and (
+                        int(len_ds * subset_ratio) > self.subset_blocks
+                    ):
                         res = make_subset_blocks_indices(
-                            len_ds=len(seq),
+                            len_ds=len_ds,
                             subset_ratio=subset_ratio,
                             subset_seed=self.subset_seed,
                             subset_blocks=self.subset_blocks,
@@ -201,7 +203,7 @@ class TimeseriesTabularizer(
                         seq_idx = res["seq_idx"]
                     else:
                         seq_idx = self._create_sequence_subset(
-                            len(seq), self.subset_ratio
+                            len_ds, self.subset_ratio
                         )
 
                     logger.info(

@@ -105,6 +105,64 @@ def test_subset_blocks_raises_when_more_blocks_than_points():
         pass
 
 
+def test_subset_blocks_raises_when_len_ds_smaller_than_blocks():
+    len_ds = 5
+    subset_ratio = 0.8  # n_subset == 4
+    subset_blocks = 7  # blocks > len_ds and > n_subset
+    seed = 1
+
+    with pytest.raises(ValueError):
+        make_subset_blocks_indices(
+            len_ds=len_ds,
+            subset_ratio=subset_ratio,
+            subset_seed=seed,
+            subset_blocks=subset_blocks,
+        )
+
+
+def test_subset_blocks_exactly_one_block_per_point():
+    len_ds = 6
+    subset_ratio = 0.99  # n_subset == 5 with current rounding
+    subset_blocks = len_ds - 1  # 5
+    seed = 99
+
+    res = make_subset_blocks_indices(
+        len_ds=len_ds,
+        subset_ratio=subset_ratio,
+        subset_seed=seed,
+        subset_blocks=subset_blocks,
+    )
+
+    idx = res["seq_idx"]
+    intervals = res["intervals"]
+    gaps = res["gaps"]
+    block_lengths = res["block_lengths"]
+
+    # sizes and counts
+    assert res["n_subset"] == len_ds - 1  # 5 points chosen
+    assert len(block_lengths) == subset_blocks
+    assert sum(block_lengths) == res["n_subset"]
+    assert idx.size == res["n_subset"]
+
+    # structure checks (allow contiguous blocks to merge when gaps are zero)
+    recovered = _intervals_from_indices(idx)
+    assert 1 <= len(recovered) <= subset_blocks
+    assert np.unique(idx).size == idx.size
+    assert idx.min() >= 0 and idx.max() < len_ds
+    for lo, hi in recovered:
+        assert hi >= lo
+    assert sum(hi - lo + 1 for lo, hi in recovered) == res["n_subset"]
+
+    # exactly one position of the dataset should be excluded
+    missing = set(range(len_ds)) - set(idx.tolist())
+    assert len(missing) == 1
+
+    # gaps bookkeeping
+    assert len(gaps) == subset_blocks + 1
+    assert sum(gaps) == len_ds - res["n_subset"]  # 1 missing point
+    assert all(g >= 0 for g in gaps)
+
+
 def test_dirichlet_block_lengths_reproducible_and_valid():
     n_subset = 50
     k = 6
