@@ -11,8 +11,11 @@ Two modes:
   Classification: only CSVs with classification metrics (e.g. accuracy, f1); rank by
   test_best_rerun/accuracy or test/accuracy (fallback for fit_predict). Regression:
   only CSVs with regression metrics (loss, mse, mae, etc.); rank by test_best_rerun/*
-  or test/*, preferring normalized over denormalized. Outputs: average_rank_classification.png
-  and average_rank_regression.png (and optional CSVs).
+  or test/*, preferring normalized over denormalized.
+  Outputs: average_rank_classification.png, average_rank_regression.png (rank bar plots);
+  average_accuracy_classification.png, average_score_regression.png (actual score bar plots,
+  mean ± std across datasets); and under plots/classification/ and plots/regression/,
+  per-dataset rank plots (*.png) and per-dataset score plots (*_scores.png).
 - Single-metric mode: Pass --rank-metric <name> to use one metric for all files; one plot.
 
 Usage:
@@ -22,6 +25,7 @@ Usage:
 """
 
 import argparse
+import csv
 import re
 import sys
 from collections import Counter
@@ -73,17 +77,30 @@ REGRESSION_METRIC_HINTS = ("loss", "mse", "mae", "rmse", "nasa_score", "phm_scor
 
 def _parse_value_cell(s: str):
     """Extract numeric mean from a summary table cell like '0.0657 ± 0.0000 (n=1)' or '-'."""
+    out = _parse_value_cell_with_std(s)
+    return out[0] if out else None
+
+
+def _parse_value_cell_with_std(s: str):
+    """Extract (mean, std, n) from a summary table cell like '0.0657 ± 0.0000 (n=1)' or '0.5'.
+    Return (float, float|None, int|None); std and n are None if not present."""
     if not s or not isinstance(s, str):
         return None
     s = s.strip()
     if s == "-" or s.lower() == "nan":
         return None
-    # Match "number ± ..." or just "number"
-    m = re.match(r"^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*(?:±|$)", s)
+    # Match "mean ± std (n=N)" or "mean ± std" or "mean"
+    m = re.match(
+        r"^([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*(?:±\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?))?\s*(?:\(n=(\d+)\))?\s*$",
+        s,
+    )
     if m:
         try:
-            return float(m.group(1))
-        except ValueError:
+            mean = float(m.group(1))
+            std = float(m.group(2)) if m.group(2) is not None else None
+            n = int(m.group(3)) if m.group(3) is not None else None
+            return (mean, std, n)
+        except (ValueError, TypeError):
             return None
     return None
 
@@ -105,11 +122,12 @@ def _shorten_model_name(full_name: str) -> str:
 
 
 def _load_summary_csv(path: Path):
-    """Load summary CSV; return (row0, row1, data_rows). data_rows are list of list (model in [0], then cells)."""
-    with open(path, encoding="utf-8") as f:
-        lines = [line.strip().split(",") for line in f]
+    """Load summary CSV with csv.reader (handles quoted fields); return (row0, row1, data_rows). data_rows: list of rows, row[0]=model, row[1:]=values."""
+    with open(path, encoding="utf-8", newline="") as f:
+        lines = list(csv.reader(f))
     if len(lines) < 4:
         return None, None, []
+    # Row 0 = Dataset names, row 1 = Metric names, row 2 = "Model" header, row 3+ = data
     return lines[0], lines[1], lines[3:]
 
 
@@ -213,15 +231,17 @@ def pick_metric_and_collect_records_with_fallback(
             if not model:
                 continue
             for dataset, col_idxs in by_dataset.items():
-                val = None
+                val, std = None, None
+                n_runs = None
                 for col_idx in col_idxs:
                     if col_idx < len(row):
-                        val = _parse_value_cell(row[col_idx])
-                        if val is not None:
+                        parsed = _parse_value_cell_with_std(row[col_idx])
+                        if parsed is not None:
+                            val, std = parsed[0], parsed[1]
+                            n_runs = parsed[2] if len(parsed) >= 3 else None
                             break
                 if val is not None:
-                    # Per-file dataset key so same dataset name from different runs ranks separately (max rank = num models)
-                    out.append((_dataset_key(path, dataset), model, val))
+                    out.append((_dataset_key(path, dataset), model, val, std, n_runs))
         if out:
             return logical_name, out
     return None, []
@@ -376,6 +396,26 @@ def compute_rank_one_dataset(records: list, rank_mode: str = "min"):
     return df[["model_full", "model_short", "average_rank", "n_datasets"]]
 
 
+def compute_mean_scores(records: list) -> pd.DataFrame:
+    """
+    Aggregate (dataset, model, value) to mean ± std per model.
+    Returns DataFrame with columns: model_full, model_short, mean_value, std_value, n_datasets.
+    """
+    if not records:
+        return pd.DataFrame()
+    df = pd.DataFrame(records, columns=["dataset", "model", "value"])
+    agg = (
+        df.groupby("model")["value"]
+        .agg(["mean", "std", "count"])
+        .reset_index()
+        .rename(columns={"mean": "mean_value", "std": "std_value", "count": "n_datasets"})
+    )
+    agg["std_value"] = agg["std_value"].fillna(0)
+    agg = agg.rename(columns={"model": "model_full"})
+    agg["model_short"] = agg["model_full"].map(_shorten_model_name)
+    return agg
+
+
 def plot_average_rank(
     df: pd.DataFrame,
     save_path: Path = None,
@@ -383,7 +423,7 @@ def plot_average_rank(
     figsize: tuple = None,
     ylabel: str = "Average rank",
 ):
-    """Bar plot: x = model_short, y = average_rank. Lower rank = better."""
+    """Bar plot: x = model_short, y = average_rank. Lower rank = better. Light grid and n= above bars."""
     try:
         import matplotlib.pyplot as plt
     except ImportError as e:
@@ -395,10 +435,18 @@ def plot_average_rank(
         figsize = (max(6, n * 0.45), 6)
     fig, ax = plt.subplots(figsize=figsize)
     x = range(len(df))
-    ax.bar(x, df["average_rank"], tick_label=df["model_short"])
+    heights = df["average_rank"].values
+    ax.bar(x, heights, tick_label=df["model_short"])
     ax.set_ylabel(ylabel)
     ax.set_xlabel("Model")
     ax.set_title(title)
+    ax.set_axisbelow(True)
+    ax.yaxis.grid(True, linestyle="--", alpha=0.5, color="gray")
+    if "n_datasets" in df.columns:
+        y_max = heights.max() if len(heights) else 0
+        for i, (h, n) in enumerate(zip(heights, df["n_datasets"])):
+            ax.text(i, h + (y_max * 0.02 if y_max else 0.1), f"n={int(n)}", ha="center", va="bottom", fontsize=8, color="gray")
+        ax.margins(y=0.06)
     plt.xticks(rotation=45, ha="right")
     fig.tight_layout()
     if save_path:
@@ -409,18 +457,152 @@ def plot_average_rank(
     return fig
 
 
+def _scale_to_percent_if_needed(y, yerr, metric_label: str) -> tuple:
+    """
+    For classification percentage metrics (accuracy, f1, precision, recall), convert
+    values in 0–1 to 0–100 so the plot matches report tables. Values > 1.5 are left as-is
+    (already in percent). Returns (y_scaled, yerr_scaled).
+    """
+    import numpy as np
+    metric = (metric_label or "").strip().lower()
+    if not any(m in metric for m in ("accuracy", "f1", "precision", "recall")):
+        return y, yerr
+    y = np.asarray(y, dtype=float)
+    scale = np.where(y <= 1.5, 100.0, 1.0)
+    y_scaled = y * scale
+    if yerr is not None:
+        yerr = np.nan_to_num(np.asarray(yerr, dtype=float), nan=0.0)
+        yerr_scaled = yerr * scale
+        return y_scaled, yerr_scaled
+    return y_scaled, None
+
+
+def plot_metric_scores(
+    df: pd.DataFrame,
+    save_path: Path = None,
+    title: str = "Mean score across datasets",
+    figsize: tuple = None,
+    ylabel: str = "Score",
+    higher_better: bool = True,
+    show_error_bars: bool = True,
+):
+    """
+    Bar plot: x = model_short, y = mean_value. Optional error bars from std_value.
+    Light grid and n= above bars (n = runs or datasets used for the statistic).
+    For accuracy/f1/precision/recall, values in 0–1 are scaled to 0–100 for display.
+    """
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except ImportError as e:
+        raise ImportError("Plotting requires matplotlib. pip install matplotlib") from e
+    if df.empty or "mean_value" not in df.columns:
+        return None
+    if figsize is None:
+        n = len(df)
+        figsize = (max(6, n * 0.45), 6)
+    fig, ax = plt.subplots(figsize=figsize)
+    x = range(len(df))
+    y = df["mean_value"].values
+    if show_error_bars and "std_value" in df.columns:
+        yerr = np.nan_to_num(df["std_value"].values, nan=0.0)
+    else:
+        yerr = None
+    y, yerr = _scale_to_percent_if_needed(y, yerr, ylabel)
+    ax.bar(x, y, tick_label=df["model_short"], yerr=yerr, capsize=4)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Model")
+    ax.set_title(title)
+    ax.set_axisbelow(True)
+    ax.yaxis.grid(True, linestyle="--", alpha=0.5, color="gray")
+    if "n_datasets" in df.columns:
+        import numpy as np
+        yerr_safe = np.nan_to_num(yerr, nan=0.0) if yerr is not None else None
+        top = y + (yerr_safe if yerr_safe is not None else 0)
+        y_plot_max = float(np.nanmax(top)) if len(top) else 0.0
+        for i, (yi, ni) in enumerate(zip(y, df["n_datasets"])):
+            err_i = (yerr_safe[i] if yerr_safe is not None and i < len(yerr_safe) else 0.0)
+            label_y = yi + err_i + (y_plot_max * 0.02 if y_plot_max else 0.01)
+            ax.text(i, label_y, f"n={int(ni)}", ha="center", va="bottom", fontsize=8, color="gray")
+        ax.margins(y=0.06)
+    plt.xticks(rotation=45, ha="right")
+    fig.tight_layout()
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, bbox_inches="tight")
+        plt.close(fig)
+    return fig
+
+
+def _score_df_one_dataset(records: list) -> pd.DataFrame:
+    """Build a DataFrame for score plot. records: list of (model, value), (model, value, std), or (model, value, std, n_runs)."""
+    if not records:
+        return pd.DataFrame()
+    r0 = records[0]
+    if len(r0) >= 4:
+        df = pd.DataFrame(records, columns=["model", "value", "std_value", "n_runs"])
+    elif len(r0) >= 3:
+        df = pd.DataFrame(records, columns=["model", "value", "std_value"])
+        df["n_runs"] = None
+    else:
+        df = pd.DataFrame(records, columns=["model", "value"])
+        df["std_value"] = 0.0
+        df["n_runs"] = None
+    df = df.rename(columns={"model": "model_full"})
+    df["model_short"] = df["model_full"].map(_shorten_model_name)
+    df["mean_value"] = df["value"]
+    df["n_datasets"] = df["n_runs"].fillna(1).astype(int)  # for display: n runs per bar
+    return df[["model_full", "model_short", "mean_value", "std_value", "n_datasets"]]
+
+
+def _save_per_dataset_score_plots(
+    records_with_metric: list,
+    task_dir: Path,
+    task_label: str,
+    higher_better: bool,
+) -> None:
+    """Save one bar plot per dataset: actual scores (value) per model with std. records_with_metric: (dataset_key, model, value, std, n_runs, metric)."""
+    if not records_with_metric:
+        return
+    by_dataset = {}
+    for dataset_key, model, value, std, n_runs, metric in records_with_metric:
+        key = (dataset_key, metric)
+        if key not in by_dataset:
+            by_dataset[key] = []
+        by_dataset[key].append((model, value, std if std is not None else 0.0, n_runs))
+    for (dataset_key, metric), recs in by_dataset.items():
+        df = _score_df_one_dataset(recs)
+        if df.empty:
+            continue
+        # Order bars by score: best first (higher_better => descending, else ascending)
+        df = df.sort_values("mean_value", ascending=not higher_better).reset_index(drop=True)
+        safe_name = _safe_filename(f"{dataset_key}_{metric}")
+        out_path = task_dir / f"{safe_name}_scores.png"
+        display_name = dataset_key.split("::")[-1] if "::" in dataset_key else dataset_key
+        title = f"{metric} — {display_name} ({task_label})"
+        plot_metric_scores(
+            df,
+            save_path=out_path,
+            title=title,
+            ylabel=metric,
+            show_error_bars=True,
+        )
+        print(f"Saved plot to {out_path}")
+
+
 def _save_per_dataset_rank_plots(
     records_with_metric: list,
     task_dir: Path,
     rank_mode: str,
     task_label: str,
 ) -> None:
-    """Save one bar plot per dataset: rank by metric. records_with_metric: (dataset_key, model, value, metric)."""
+    """Save one bar plot per dataset: rank by metric. records_with_metric: (dataset_key, model, value, std, n_runs, metric)."""
     if not records_with_metric:
         return
     # Group by (dataset_key, metric) - each key has one metric
     by_dataset = {}
-    for dataset_key, model, value, metric in records_with_metric:
+    for dataset_key, model, value, _std, _n_runs, metric in records_with_metric:
         key = (dataset_key, metric)
         if key not in by_dataset:
             by_dataset[key] = []
@@ -560,9 +742,9 @@ def main():
             )
             if chosen:
                 metrics_used.append(chosen)
-            for dk, model, val in recs:
+            for dk, model, val, std, n_runs in recs:
                 all_records.append((dk, model, val))
-                records_with_metric.append((dk, model, val, chosen or "accuracy"))
+                records_with_metric.append((dk, model, val, std, n_runs, chosen or "accuracy"))
         if all_records:
             df = compute_average_ranks(all_records, rank_mode="max")
             if not df.empty:
@@ -585,6 +767,23 @@ def main():
                 _save_per_dataset_rank_plots(
                     records_with_metric, task_dir, rank_mode="max", task_label="classification"
                 )
+                # Aggregate score plot (mean accuracy/f1 across datasets) and per-dataset score plots
+                df_scores = compute_mean_scores(all_records)
+                if not df_scores.empty:
+                    df_scores = df_scores.sort_values("mean_value", ascending=False).reset_index(drop=True)
+                    score_png = plots_dir / "average_accuracy_classification.png"
+                    plot_metric_scores(
+                        df_scores,
+                        save_path=score_png,
+                        title=f"Mean score across datasets (classification, {metric_label})",
+                        ylabel=metric_label,
+                        higher_better=True,
+                        show_error_bars=True,
+                    )
+                    print(f"Saved plot to {score_png}")
+                    _save_per_dataset_score_plots(
+                        records_with_metric, task_dir, task_label="classification", higher_better=True
+                    )
 
     if args.task_type in ("both", "regression") and regression_paths:
         all_records = []
@@ -596,9 +795,9 @@ def main():
             )
             if chosen:
                 metrics_used.append(chosen)
-            for dk, model, val in recs:
+            for dk, model, val, std, n_runs in recs:
                 all_records.append((dk, model, val))
-                records_with_metric.append((dk, model, val, chosen or "loss"))
+                records_with_metric.append((dk, model, val, std, n_runs, chosen or "loss"))
         if all_records:
             df = compute_average_ranks(all_records, rank_mode="min")
             if not df.empty:
@@ -621,6 +820,23 @@ def main():
                 _save_per_dataset_rank_plots(
                     records_with_metric, task_dir, rank_mode="min", task_label="regression"
                 )
+                # Aggregate score plot (mean MAE/loss across datasets) and per-dataset score plots
+                df_scores = compute_mean_scores(all_records)
+                if not df_scores.empty:
+                    df_scores = df_scores.sort_values("mean_value", ascending=True).reset_index(drop=True)
+                    score_png = plots_dir / "average_score_regression.png"
+                    plot_metric_scores(
+                        df_scores,
+                        save_path=score_png,
+                        title=f"Mean score across datasets (regression, {metric_label})",
+                        ylabel=metric_label,
+                        higher_better=False,
+                        show_error_bars=True,
+                    )
+                    print(f"Saved plot to {score_png}")
+                    _save_per_dataset_score_plots(
+                        records_with_metric, task_dir, task_label="regression", higher_better=False
+                    )
 
     if not any_saved:
         print(
