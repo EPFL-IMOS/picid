@@ -1,11 +1,13 @@
 import logging
 from collections import OrderedDict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
 from lmetk.transforms.base.data_transform import DataTransform
+from lmetk.utils.hash_utils import ensure_serializable
+from lmetk.transforms.base.multisource import InverseTransformMixin
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +253,67 @@ class ConfigTransformManager:
             if dt.metadata.get("fit_on") == fit_on
         )
 
+    def _pipeline_order(self) -> List[str]:
+        """Transform names in pipeline order (excludes keys starting with __)."""
+        return [n for n in self.config.keys() if not str(n).startswith("__")]
+
+    def get_cache_point_names(self) -> List[str]:
+        """
+        Return transform names that are cache points (metadata.cache_point is True),
+        in pipeline order. Used for Phase 5.1 boundary caching.
+
+        Returns:
+            List of transform names that are marked as cache_point.
+        """
+        order = self._pipeline_order()
+        cache_points = []
+        for name in order:
+            entry = self.config.get(name)
+            if entry is None:
+                continue
+            meta = entry.get("metadata") or {}
+            if meta.get("cache_point", False):
+                cache_points.append(name)
+        return cache_points
+
+    def get_transform_names_after(self, transform_name: str) -> List[str]:
+        """
+        Return transform names that come after the given name in pipeline order
+        (exclusive). Used to resume from a boundary cache.
+
+        Args:
+            transform_name: Name of the transform we have already applied (boundary).
+
+        Returns:
+            List of transform names to run after this boundary.
+        """
+        order = self._pipeline_order()
+        try:
+            idx = order.index(transform_name)
+            return order[idx + 1 :]
+        except ValueError:
+            return list(order)
+
+    def get_config_up_to_and_including(self, transform_name: str) -> Dict:
+        """
+        Return serializable transforms config containing only entries up to and
+        including the given transform name (pipeline order). Used to compute
+        boundary cache keys.
+
+        Args:
+            transform_name: Last transform name to include.
+
+        Returns:
+            Plain dict suitable for hashing (e.g. compute_cache_key).
+        """
+        order = self._pipeline_order()
+        try:
+            idx = order.index(transform_name)
+        except ValueError:
+            idx = len(order) - 1
+        subset = {k: self.config[k] for k in order[: idx + 1]}
+        return ensure_serializable(subset)
+
     def remove_transform(self, name: str) -> None:
         """
         Remove a transform from configuration.
@@ -306,6 +369,78 @@ class ConfigTransformManager:
     def get_transform(self, name: str) -> DataTransform:
         """Alias for get_data_transform() for backward compatibility."""
         return self.get_data_transform(name)
+
+    def get_inverter_for_key(
+        self, key: str, which: str = "last"
+    ) -> Optional[InverseTransformMixin]:
+        """
+        Return a transform that implements InverseTransformMixin and writes to the given key.
+
+        When several transforms assign to the same key and implement inverse, pipeline
+        order is used: "last" (default) returns the one that last wrote to the key
+        (typical for inverse scaling); "first" returns the first such transform.
+
+        Args:
+            key: Data key the transform assigns to (e.g. "target", "features").
+            which: "last" (default) or "first" — which matching transform in pipeline order.
+
+        Returns:
+            The transform instance implementing InverseTransformMixin, or None if no match.
+        """
+        if which not in ("first", "last"):
+            raise ValueError(
+                f"get_inverter_for_key(which=...) must be 'first' or 'last', got {which!r}"
+            )
+        if not self._is_instantiated:
+            self._instantiate_all()
+        if not self._data_transforms:
+            return None
+        inverter = None
+        for dt in self._data_transforms.values():
+            assign_to = getattr(dt, "assign_to", None)
+            if assign_to is None:
+                continue
+            keys = [assign_to] if isinstance(assign_to, str) else list(assign_to)
+            if key not in keys:
+                continue
+            if isinstance(dt.transform_instance, InverseTransformMixin):
+                inverter = dt.transform_instance
+                if which == "first":
+                    return inverter
+        return inverter
+
+    def get_inverter_for_key_with_name(
+        self, key: str, which: str = "last"
+    ) -> Tuple[Optional[InverseTransformMixin], Optional[str]]:
+        """
+        Like get_inverter_for_key but also returns the transform config name (for logging).
+
+        Returns:
+            (transform_instance, transform_name); (None, None) if no match.
+        """
+        if which not in ("first", "last"):
+            raise ValueError(
+                f"get_inverter_for_key_with_name(which=...) must be 'first' or 'last', got {which!r}"
+            )
+        if not self._is_instantiated:
+            self._instantiate_all()
+        if not self._data_transforms:
+            return None, None
+        inverter = None
+        inverter_name = None
+        for dt in self._data_transforms.values():
+            assign_to = getattr(dt, "assign_to", None)
+            if assign_to is None:
+                continue
+            keys = [assign_to] if isinstance(assign_to, str) else list(assign_to)
+            if key not in keys:
+                continue
+            if isinstance(dt.transform_instance, InverseTransformMixin):
+                inverter = dt.transform_instance
+                inverter_name = dt.transform_name
+                if which == "first":
+                    return inverter, inverter_name
+        return inverter, inverter_name
 
     def __len__(self) -> int:
         """Return total number of transforms."""

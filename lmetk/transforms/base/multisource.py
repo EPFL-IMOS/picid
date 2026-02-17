@@ -17,6 +17,16 @@ from lmetk.transforms.base.base_transform import (
     RaggedTransform,
 )
 from lmetk.transforms.base.strategy import postprocess_transformed_data
+from lmetk.transforms.base.data_kind import (
+    CAPABILITY_BOTH,
+    CAPABILITY_DENSE,
+    CAPABILITY_RAGGED,
+    DATA_KIND_RAGGED,
+    DATA_KIND_RAGGED_REGULAR,
+    get_capability,
+    infer_data_kind,
+)
+from lmetk.transforms.base.handlers import get_handler
 from lmetk.transforms.utils import _convert_to_numpy
 from lmetk.utils.awkward_utils import (
     ak_find_var_dims,
@@ -116,7 +126,7 @@ class MultiSourceTransformInterface(ABC):
         data_segments: list[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def transform_multi_source(
@@ -124,7 +134,7 @@ class MultiSourceTransformInterface(ABC):
         data_segments: list[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> list[ndarray]:
-        pass
+        pass  # pragma: no cover
 
 
 class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
@@ -212,14 +222,8 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         """
 
         apply_to_keys = metadata["apply_to_keys"]
-        # Check whenever keys list, if not make a list
         if not isinstance(apply_to_keys, list):
             apply_to_keys = [apply_to_keys]
-
-        # Check if the incomming transform supports ragged arrays or numpy arrays
-        cls = self.__class__
-        transform_supports_ragged = issubclass(cls, RaggedTransform)
-        transform_supports_dense = issubclass(cls, DenseTransform)
 
         data_types = {
             v for chunk in data_segments for k, v in chunk.get_instance_cls().items()
@@ -229,86 +233,16 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 f"All data segments must have the same data type. Found: {data_types}"
             )
 
-        # Currently we assume that all the element under every key in the data chunk have the same data type. Note that is a strict rule.
-        data_is_ragged = data_types.pop() is ak.Array
-
-        if data_is_ragged:
-            # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
-            # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
-            ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
-            # The data is regular if the only "ragged dimension" found is None.
-            data_is_ragged_but_regular = ragged_dims == {None}
-            if data_is_ragged_but_regular:
-                data_is_ragged = False
-
-        # Handle different cases based on data type and transform capabilities
-        # --------------------------------------------------------------------
-
-        if (not data_is_ragged) and transform_supports_dense:
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-            for key in apply_to_keys:
-                train[key] = np.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=0
-                )
-
-            fit_func(train, metadata=metadata)
-
-        elif data_is_ragged and (not transform_supports_ragged):
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-
-            # Extract variable dimention
-            var_dim = set(
-                [
-                    find_singular_ragged_dim(data_segment)
-                    for data_segment in data_segments
-                ]
-            )
-            assert (
-                len(var_dim) == 1
-            ), f"Expected exactly one variable-length dimension, found {var_dim}"
-            var_dim = var_dim.pop()
-
-            for key in apply_to_keys:
-                train[key] = ak.concatenate(
-                    [
-                        ak.concatenate(chunk[key], axis=var_dim - 1)
-                        for chunk in data_segments
-                    ],
-                    axis=0,
-                )
-
-            train = {k: v.to_numpy() for k, v in train.items()}
-            fit_func(train, metadata=metadata)
-
-        elif data_is_ragged and transform_supports_ragged:
-            # Go over all data segments dict keys and concatenate the data from all sources
-            train = {}
-
-            # Extract variable dimention
-            var_dim = set(
-                [
-                    find_singular_ragged_dim(data_segment)
-                    for data_segment in data_segments
-                ]
-            )
-            assert (
-                len(var_dim) == 1
-            ), f"Expected exactly one variable-length dimension, found {var_dim}"
-            var_dim = var_dim.pop()
-
-            for key in apply_to_keys:
-                train[key] = ak.concatenate(
-                    [chunk[key] for chunk in data_segments], axis=var_dim - 1
-                )
-
-            fit_func(train, metadata=metadata)
-
-        else:
+        # Phase 2: registry-based dispatch
+        data_kind = infer_data_kind(data_segments, apply_to_keys, find_singular_ragged_dim)
+        capability = get_capability(self)
+        try:
+            handler = get_handler(data_kind, capability)
+        except KeyError:
             raise ValueError(
                 f"Transform {self.__class__.__name__} does not support the data type {data_types}"
             )
+        handler.fit_prepare(data_segments, apply_to_keys, metadata, fit_func)
 
     def transform_function_to_data_segments(
         self,
@@ -346,193 +280,34 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
         """
         transform_log = {}
         apply_to_keys = metadata["apply_to_keys"]
-        # Check whenever keys list, if not make a list
         if not isinstance(apply_to_keys, list):
             apply_to_keys = [apply_to_keys]
-
-        cls = self.__class__
-        transform_supports_ragged = issubclass(cls, RaggedTransform) or issubclass(
-            cls, RaggedOrDenseTransform
-        )
-        transform_supports_dense = issubclass(cls, DenseTransform) or issubclass(
-            cls, RaggedOrDenseTransform
-        )
 
         data_types = set(
             [v for chunk in data_segments for v in chunk.get_instance_cls().values()]
         )
-        # TODO: here we have an issue that if we apply transform to ['features','target']
-        # these variable have two distinct types like pd.DataFrame and pd.Series then the code crash.
         if len(data_types) != 1:
             raise ValueError(
                 f"All data segments must have the same data type. Found: {data_types}"
             )
-        data_is_ragged = data_types.pop() is ak.Array
 
-        # Determine if the data is ragged but structurally regular (i.e., all dimensions are fixed).
-        # This occurs if `find_singular_ragged_dim` returns `None` for all segments.
-        if data_is_ragged:
-            ragged_dims = {find_singular_ragged_dim(ds) for ds in data_segments}
-            # The data is regular if the only "ragged dimension" found is None.
-            data_is_ragged_but_regular = ragged_dims == {None}
-            data_is_ragged = not data_is_ragged_but_regular
-        else:
-            data_is_ragged_but_regular = False
+        # Phase 2: registry-based dispatch (for exception logging we keep these)
+        data_kind = infer_data_kind(data_segments, apply_to_keys, find_singular_ragged_dim)
+        capability = get_capability(self)
+        data_is_ragged = data_kind == DATA_KIND_RAGGED
+        data_is_ragged_but_regular = data_kind == DATA_KIND_RAGGED_REGULAR
+        transform_supports_ragged = capability in (CAPABILITY_RAGGED, CAPABILITY_BOTH)
+        transform_supports_dense = capability in (CAPABILITY_DENSE, CAPABILITY_BOTH)
 
-        # Handle different cases based on data type and transform capabilities
-        # --------------------------------------------------------------------
-        # Construct current data segment from each source
         try:
-            index_depth = (
-                None  # Initialize index_depth for logging in exception handling
+            handler = get_handler(data_kind, capability)
+            out, transform_log = handler.transform_apply(
+                data_segments, transform_func, metadata, self.__class__.__name__
             )
-            if (not data_is_ragged) and transform_supports_dense:
-                transform_log["mode"] = "dense"
-                out = []
-                for data_segment in data_segments:
-                    # Handle the case when the data is ragged but structurally regular
-                    if data_is_ragged_but_regular:
-                        for key, val in data_segment.items():
-                            data_segment[key] = val.to_numpy()
-
-                    out_segment = transform_func(data_segment, metadata=metadata)
-
-                    if data_is_ragged_but_regular:
-                        if isinstance(out_segment, BaseDataObjectWithMetadata):
-                            for key, val in out_segment.items():
-                                out_segment[key] = ak.Array(val)
-                        else:
-                            out_segment = ak.Array(out_segment)
-
-                    out.append(out_segment)
-
-            elif data_is_ragged and (not transform_supports_ragged):
-                transform_log["mode"] = "ragged_to_dense"
-                # The logic is that we find the rugged dimension, ensure that there is only one,
-                # flatten along that dimension, convert to numpy, apply the transform function,
-                # and then reassemble the original structure.
-                # Many loops, therefore I assume quite slow.
-                logger.warning(
-                    f"Transform {self.__class__.__name__} does not support ragged arrays natively. "
-                    "This might be slow for large datasets."
-                )
-                out = []
-
-                for data_segment in data_segments:
-                    # TODO the logic here still do not support the case when one feature is ragged and another one is array
-                    # in the apply to keys ['features','target'] and 'target' is an array then there is not check or logic that takes it into consideration for now.
-
-                    # Ensure that all the keys have same dim 0
-                    assert len(set([len(val) for val in data_segment.values()])) == 1, (
-                        f"All keys in data_segment must have the same length at the first dimension. "
-                        f"Transform {self.__class__.__name__} expects all keys in the data segment to have the same length at the first dimension when handling ragged data without native support."
-                        f"Keys: {list(data_segment.keys())}, Lengths: {[len(val) for val in data_segment.values()]}"
-                    )
-
-                    var_dim = find_singular_ragged_dim(data_segment)
-                    multi_index = ragged_index_tuples(
-                        next(iter(data_segment.values())), var_dim
-                    )
-
-                    index_depth = len(multi_index[0])
-
-                    # Merge metadata from the segment with the overall metadata
-                    data_segment_metadata = copy.deepcopy(metadata)
-                    data_segment_metadata.update(data_segment.metadata or {})
-
-                    out_segment = SortedDict()
-                    use_tqdm = len(multi_index) > 100
-                    iterator = multi_index
-                    if use_tqdm:
-                        iterator = tqdm(
-                            multi_index,
-                            desc=f"{self.__class__.__name__}: transforming ragged segments",
-                        )
-                    for coord in iterator:
-                        subsegment = {}
-                        for k in data_segment.keys():
-                            np_data = data_segment[k][coord].to_numpy()
-                            subsegment[k] = np_data
-                        out_subsegment = [transform_func(subsegment, metadata=metadata)]
-
-                        out_subsegment = postprocess_transformed_data(
-                            out_subsegment, metadata
-                        )
-                        assert (
-                            len(out_subsegment) == 1
-                        ), "Expected single output from transform."
-
-                        # Assemble all the output in a 2 level dictionary
-                        # first level is the array key,
-                        # second level is the coord in the ragged dim
-
-                        for k, block in out_subsegment[0].items():
-                            d: dict = out_segment.setdefault(k, SortedDict())
-                            for i in coord[:-1]:
-                                d: dict = d.setdefault(i, SortedDict())
-                            d[coord[-1]] = block  # keep as np.ndarray
-
-                    for k, v in out_segment.items():
-                        # Example <Array [[[0.458, -1.28], ..., [...]], ...] type='870 * var * var * float64'>
-                        try:
-                            if index_depth == 1:
-                                # v maps integer indices to NumPy arrays (ragged)
-                                # convert directly using offsets and concatenation
-                                subarrays = [np.asarray(arr) for arr in v.values()]
-                                lengths = np.fromiter(
-                                    (len(a) for a in subarrays), dtype=np.int64
-                                )
-                                offsets = np.concatenate([[0], np.cumsum(lengths)])
-                                if len(subarrays) == 0:
-                                    aka = ak.Array([])
-                                else:
-                                    content = ak.from_numpy(np.concatenate(subarrays))
-                                    layout = ak.contents.ListOffsetArray(
-                                        ak.index.Index64(offsets), content.layout
-                                    )
-                                    aka = ak.Array(layout)
-                            else:
-                                aka = ak.Array(tolist(v))
-                        except:
-                            logging.error(
-                                f"{self.__class__.__name__} Fast reconstruction of ragged array from dense transform output failed."
-                            )
-                            aka = ak.Array(tolist(v))
-
-                        regularized = ak_regularize_regular_axes(aka)
-
-                        # There are two cases here:
-                        # 1. the reconstructed data is not ragged anymore.
-                        # in this case we need to restore the ragged axis explicitly
-                        # 2. the reconstructed data is still ragged, in this case we can keep
-                        # the array as is.
-                        # find singular ragged dim crashes if there are more than one ragged dim
-                        var_dims = ak_find_var_dims(regularized)
-                        if len(var_dims) == 0:
-                            # FIX: if the output is 1D we need to add an irregular axis
-                            # explicitly, otherwise the array is considered regular
-                            # and in subsequent transforms it is fed into the "regular" branch.
-                            out_segment[k] = ak.from_regular(regularized, axis=var_dim)
-                        elif len(var_dims) > 1:
-                            # Currently we do not support more than one ragged dim after reconstruction
-                            raise ValueError(
-                                f"Expected at most one variable-length dimension after reconstruction, found {len(var_dims)}: {var_dims}"
-                            )
-                        elif len(var_dims) == 1:
-                            out_segment[k] = regularized
-
-                    out.append(out_segment)
-
-            elif data_is_ragged and transform_supports_ragged:
-                transform_log["mode"] = "ragged"
-                out = []
-                for data_segment in data_segments:
-                    out.append(transform_func(data_segment, metadata=metadata))
-
-            else:
-                raise ValueError(
-                    f"Transform {self.__class__.__name__} does not support the data type {data_types}"
-                )
+        except KeyError:
+            raise ValueError(
+                f"Transform {self.__class__.__name__} does not support the data type {data_types}"
+            )
 
         except Exception:
             t_name = self.__class__.__name__
@@ -552,13 +327,15 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
             logger.error("-" * 160)
             logger.error(f"Metadata: {metadata}")
-            logger.error(f"Data segment: {data_segment}")
-            logger.error(f"Data segment keys: {list(data_segment.keys())}")
-            logger.error("Data segment contents:")
-            for k, v in data_segment.items():
-                logger.error(
-                    f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
-                )
+            _seg = data_segments[0] if data_segments else None
+            logger.error(f"Data segment: {_seg}")
+            if _seg is not None:
+                logger.error(f"Data segment keys: {list(_seg.keys())}")
+                logger.error("Data segment contents:")
+                for k, v in _seg.items():
+                    logger.error(
+                        f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
+                    )
 
             logger.error("-" * 160)
             logger.error("Case analysis:")
@@ -571,20 +348,9 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
                 logger.error(
                     " > the data is processed in regular blocks, converted to numpy, transformed, and reassembled."
                 )
-                if index_depth is not None:
-                    logger.error(f" > index_depth: {index_depth}")
-                    logger.error(
-                        f" > multi_index length: {len(multi_index)} example index : {multi_index[0]}"
-                    )
-                    logger.error(f" > subsegment keys: {list(subsegment.keys())}")
-                    for k, v in subsegment.items():
-                        logger.error(
-                            f" > Key: {k}, Type: {type(v)}, Description: {describe_data_type(v, calculate_stat=True)}"
-                        )
-                else:
-                    logger.error(
-                        " > Error occurred before the transform could be applied. Most likely cause is the data structure."
-                    )
+                logger.error(
+                    " > Error occurred in handler (index_depth/subsegment not available when using registry)."
+                )
             elif data_is_ragged and transform_supports_ragged:
                 logger.error("Case: Ragged Data & Ragged-supporting Transform")
                 logger.error(" > the data is directly passed to the transform.")

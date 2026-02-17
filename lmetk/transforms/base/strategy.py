@@ -1,5 +1,4 @@
 from typing import Any, Dict, List, Optional, Union
-import copy
 
 import numpy as np
 from lmetk.data.data_objects.data import (
@@ -10,10 +9,20 @@ from lmetk.data.data_objects.data import (
     SplitDatasetContainer,
 )
 
-import awkward as ak
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from lmetk.utils.decorators import inject_transform_context_to_strategy_apply
+from lmetk.transforms.base.pipeline import (
+    TransformContext,
+    CopyStep,
+    IntegrityCheckStep,
+    FitStep,
+    TransformStep,
+    PostprocessStep,
+    MergeStep,
+    RecordManifestStep,
+    _emit,
+)
 
 
 def is_sequence(obj):
@@ -76,141 +85,41 @@ class TransformStrategy:
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
         transform_on_keys: Optional[list[str]] = None,
-    ) -> SplitDatasetContainer:
-
+    ):
         if isinstance(apply_to_keys, str):
             apply_to_keys = [apply_to_keys]
-
         if isinstance(assign_to_keys, str):
             assign_to_keys = [assign_to_keys]
-
         if isinstance(assign_to_keys_map, str):
             assign_to_keys_map = [assign_to_keys_map]
 
-        # --- 1. EFFICIENT HYBRID COPY ---
-        transformed_data = data.copy(deep=False)
-        keys_to_modify = apply_to_keys + (assign_to_keys if assign_to_keys else [])
-        for key in keys_to_modify:
-            if key in data:
-
-                if data[key].get_instance_cls() is not ak.Array:
-                    transformed_data[key] = data[key].copy(deep=True)
-                else:
-                    transformed_data[key] = data[key].copy(deep=False)
-
-        is_multi_unit = data.is_multi_unit
-        if not apply_to_keys:
-            raise ValueError(
-                "No 'apply_to_keys' provided. Provide at least one key to apply the transform."
-            )
-
-        apply_key = apply_to_keys[0]
-        if apply_key not in data:
-            available_keys = ", ".join(sorted(map(str, list(data.keys()))))
-            raise KeyError(
-                f"Apply-to key '{apply_key}' not found in data. "
-                f"Check the spelling in the transform or ensure the key is present in the data dictionary. "
-                f"Available keys: [{available_keys}]"
-            )
-
-        if not isinstance(data[apply_key], Mapping):
-            raise TypeError(
-                f"Unexpected structure for data['{apply_key}']; expected a mapping with split keys "
-                f"(e.g. 'train','val','test'). Found type: {type(data[apply_key]).__name__}."
-            )
-
-        available_splits = list(data[apply_key].keys())
-
-        # --- 2. FIT TRANSFORMER (with SINGLE/MULTI LOGIC) ---
-
-        if fit_on_split and fit_on_key:
-            fit_chunks = self._prepare_chunks_for_split(
-                {fit_on_key: data[fit_on_key]}, fit_on_split, is_multi_unit
-            )
-            metadata = {
-                "mode": fit_on_split,
-                "apply_to_keys": fit_on_key,
-                "assign_to_keys": assign_to_keys,
-                "assign_to_map": assign_to_keys_map,
-            }
-
-            if is_multi_unit:
-                transform_instance.fit_multi_source(fit_chunks, metadata=metadata)
-            else:
-                transform_instance.fit_data(fit_chunks[0], metadata=metadata)
-
-        # --- 3. TRANSFORM ALL SPLITS ---
-        target_data_to_transform = {key: data[key] for key in apply_to_keys}
-
-        # This block handles both merging strategies
-        transformed_results_for_new_key = defaultdict(dict)
-
-        if transform_on_keys is not None:
-            # If transform_on_keys is specified, filter available_splits
-            available_splits = list(set(available_splits) & set(transform_on_keys))
-
-        transform_log = {}
-        for split in available_splits:
-            chunks_to_transform = self._prepare_chunks_for_split(
-                target_data_to_transform, split, is_multi_unit
-            )
-
-            metadata = {
-                "mode": split,
-                "apply_to_keys": apply_to_keys,
-                "assign_to_keys": assign_to_keys,
-                "assign_to_map": assign_to_keys_map,
-            }
-            # Call the appropriate transform method
-            if is_multi_unit:
-                transformed_chunks, log = transform_instance.transform_multi_source(
-                    chunks_to_transform, metadata=metadata
-                )
-                transform_log.update({split: log})
-            else:
-                transformed_chunks = [
-                    transform_instance.transform_data(
-                        chunks_to_transform[0], metadata=metadata
-                    )
-                ]
-
-            # At this point we have a list of transformed chunks that are either:
-            # - list of OrderedInput (if the user writes to the input)
-            # - list of np.ndarray
-            # - Directly an output object if the user initializes one.
-            # We need to standardize this into a list of SimpleReturnObject or NamedDictReturnObject
-            transformed_chunks = postprocess_transformed_data(
-                transformed_chunks, metadata
-            )
-
-            # --- 4. MERGE RESULTS (IN-PLACE OR NEW KEY) --- #
-            # Mode 1: Assign results to a key defined by assign_to_keys
-            for assign_to_key, assign_to_map in zip(assign_to_keys, assign_to_keys_map):
-                # Ensure the assign_to_keys_map exist in the transformed chunks
-                for chunk in transformed_chunks:
-                    if assign_to_map not in chunk:
-                        raise KeyError(
-                            f"Transformed chunk does not contain the expected key '{assign_to_map}'. "
-                            f"Available keys: {list(chunk.keys())}"
-                            f"Potential solution: In case the transform returns a dict and the metadata.assign_to is used,"
-                            f"Ensure assign_to is in the form of {{'key': 'value'}}."
-                            f"Example: metadata:"
-                            f"  apply_to: target"
-                            f"  assign_to:"
-                            f"    target: fault_classification"
-                        )
-
-                transformed_results_for_new_key[assign_to_key][split] = [
-                    chunk[assign_to_map] for chunk in transformed_chunks
-                ]
-
-        self._merge_transformed_data(
-            base_data=transformed_data,
-            transformed_results=transformed_results_for_new_key,
-            available_splits=available_splits,
+        context = TransformContext(
+            data=data,
+            transform_instance=transform_instance,
+            apply_to_keys=apply_to_keys,
+            assign_to_keys=assign_to_keys,
+            assign_to_keys_map=assign_to_keys_map,
+            fit_on_split=fit_on_split,
+            fit_on_key=fit_on_key,
+            transform_on_keys=transform_on_keys,
+            strategy=self,
+            postprocess_fn=postprocess_transformed_data,
+            slice_info=getattr(data, "slice_info", None),
         )
-
-        return transformed_data, transform_log
+        _emit("on_pipeline_start", context)
+        try:
+            CopyStep().run(context)
+            IntegrityCheckStep().run(context)
+            FitStep().run(context)
+            TransformStep().run(context)
+            PostprocessStep().run(context)
+            MergeStep().run(context)
+            RecordManifestStep().run(context)
+        except Exception:
+            _emit("on_transform_error", context)
+            raise
+        _emit("on_pipeline_end", context)
+        return context.transformed_data, context.log
 
     def _merge_transformed_data(self, base_data, transformed_results, available_splits):
 
