@@ -25,6 +25,7 @@ This guide dives deep into the inner workings of the transform system, including
 - **How do I configure transforms?** → [User Guide](transforms/guide.md#configuration)
 - **How do transforms work internally?** → [Developer Guide](transforms/developer_guide.md#architecture-overview)
 - **How do I create a custom transform?** → [Developer Guide](transforms/developer_guide.md#creating-custom-transforms)
+- **Architecture audit and refactoring strategy** → [Transform Architecture Audit](transforms/TRANSFORM_ARCHITECTURE_AUDIT.md)
 
 ## Overview
 
