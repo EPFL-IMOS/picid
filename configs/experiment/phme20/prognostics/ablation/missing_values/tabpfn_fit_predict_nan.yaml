@@ -1,0 +1,15 @@
+#@package _global_
+
+defaults:
+  - phme20/prognostics/base
+  - /model_configs/prognostics/tabpfn_fit_predict
+  # We want to see the performance of tabpfn fit-predict with nan values
+  - override /transforms: phme20/ablation_missing_values_fit_predict_nan
+
+task_definition:
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul
+        - unit_id

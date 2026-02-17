@@ -1430,7 +1430,8 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=phme20/prognostics/ablation/lstm",
+                "experiment=phme20/prognostics/ablation/missing_values/tabpfn_fit_predict_nan",
+                "debug=default"
             ],
         },
     ]
