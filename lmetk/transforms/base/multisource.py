@@ -141,6 +141,9 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
     """
     A mixin for transforms that fit on data concatenated from multiple sources.
 
+    Set requires_fit = True so the pipeline will raise a clear error if
+    fit_on_split/fit_on_key are not set in metadata when this transform is used.
+
     This mixin provides a `fit_multi_source` method that standardizes the fitting
     process for transforms that operate on data from multiple units or sources.
     It handles different data formats (dense NumPy arrays and ragged Awkward arrays)
@@ -176,6 +179,8 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
     transform_data : callable
         A method that must be implemented by the consuming class to apply the transform.
     """
+
+    requires_fit = True
 
     def __init__(self):
         """
@@ -436,7 +441,12 @@ class ConcatinatedFitMultiSourceTransformMixin(MultiSourceTransformInterface):
 
 
 class ConcatenateUnitsMixing(MultiSourceTransformInterface):
-    """"""
+    """
+    Multi-source mixin that concatenates units along an axis before transform.
+    Fitting is not supported (fit_multi_source raises NotImplementedError).
+    """
+
+    requires_fit = False
 
     def __init__(self, axis: int = None):
         """
@@ -576,6 +586,8 @@ class NoFitMultiSourceTransformMixin(ConcatinatedFitMultiSourceTransformMixin):
         Use this mixin when implementing transforms that operate on multiple sources
         but do not require a fitting step.
     """
+
+    requires_fit = False
 
     def fit_multi_source(
         self,
