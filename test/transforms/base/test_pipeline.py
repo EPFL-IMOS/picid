@@ -101,6 +101,28 @@ class TestCopyStep:
         with pytest.raises(KeyError, match="not found in data"):
             CopyStep().run(ctx)
 
+    def test_copy_step_transform_on_keys_empty_intersection_raises(self):
+        """When transform_on_keys has no overlap with data splits, CopyStep raises ValueError."""
+        container = create_dummy_single_unit_container()  # has "train", "val"
+        ctx = TransformContext(
+            data=container,
+            transform_instance=DummyStatelessTransform(),
+            apply_to_keys=["features"],
+            assign_to_keys=["features"],
+            assign_to_keys_map=["features"],
+            transform_on_keys=["valid", "test"],  # no overlap with train, val
+        )
+        with pytest.raises(ValueError) as exc_info:
+            CopyStep().run(ctx)
+        msg = str(exc_info.value)
+        # Print full error in debug (run with: pytest -s ...)
+        print("\n--- ValueError (transform_on_keys empty intersection) ---\n" + msg + "\n---")
+        assert "no splits left after applying transform_on_keys" in msg
+        assert "train" in msg and "val" in msg
+        assert "valid" in msg and "test" in msg
+        assert "Fix:" in msg
+        assert "transform_on_keys" in msg
+
 
 class TestHooks:
     """Lifecycle hook registry and emit."""
@@ -195,3 +217,24 @@ class TestStrategyViaPipeline:
         assert result is not None
         assert isinstance(log, dict)
         assert "features" in result
+
+    def test_fittable_transform_without_fit_on_raises(self):
+        """When transform has requires_fit=True but fit_on_split/fit_on_key are not set, pipeline raises."""
+        from lmetk.transforms.base.strategy import TransformStrategy
+
+        strategy = TransformStrategy()
+        transform = DummyFittableTransform()  # has ConcatinatedFitMultiSourceTransformMixin -> requires_fit=True
+        container = create_dummy_single_unit_container()
+        with pytest.raises(ValueError) as exc_info:
+            strategy.apply(
+                transform_instance=transform,
+                data=container,
+                apply_to_keys="features",
+                assign_to_keys="features",
+                assign_to_keys_map=["features"],
+                fit_on_split=None,
+                fit_on_key=None,
+            )
+        msg = str(exc_info.value)
+        assert "requires fitting" in msg
+        assert "fit_on" in msg
