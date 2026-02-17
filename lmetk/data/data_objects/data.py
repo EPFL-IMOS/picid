@@ -12,6 +12,8 @@ import pandas as pd
 from torch import Type
 
 from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
+from lmetk.data.data_objects.manifest import MetadataManifest
+from lmetk.data.data_objects.slice_info import SliceInfo
 from lmetk.data.data_objects.utils import (
     check_for_nans,
     check_length_consistency,
@@ -162,9 +164,15 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
+        Optional: pass manifest= to attach a MetadataManifest (Phase 4.1);
+        slice_info= for slice-awareness (Phase 4.2).
         """
         # Assume multi-unit by default. If we find any single item, we flip the flag.
         self.is_multi_unit: bool = is_multi_unit
+        manifest = kwargs.pop("manifest", None)
+        self.manifest: Optional[MetadataManifest] = manifest
+        slice_info = kwargs.pop("slice_info", None)
+        self.slice_info: Optional[SliceInfo] = slice_info
 
         # check if every element in args is in fact also a. DatasetContainer
         # merge them into one
@@ -212,6 +220,12 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         new.is_multi_unit = (
             copy.deepcopy(self.is_multi_unit) if deep else self.is_multi_unit
         )
+        manifest_src = getattr(self, "manifest", None)
+        if manifest_src is not None:
+            object.__setattr__(new, "manifest", manifest_src.copy(deep=deep))
+        slice_src = getattr(self, "slice_info", None)
+        if slice_src is not None:
+            object.__setattr__(new, "slice_info", slice_src.copy(deep=deep))
         return new
 
 
