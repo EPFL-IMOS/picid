@@ -54,12 +54,12 @@ class TestMultisourceUtils:
     
     def test_find_singular_ragged_dim_multiple_error(self):
         """Test find_singular_ragged_dim with multiple ragged dims raises error."""
-        # Create data with multiple ragged dimensions
-        ragged1 = ak.Array([[[1.0]], [[2.0], [3.0]]])
-        ragged2 = ak.Array([[[1.0, 2.0]], [[3.0]]])
-        data = NamedTransformInput(features=ragged1, target=ragged2)
-        # This might raise error if dimensions don't match
-        # The exact behavior depends on implementation
+        # Single array with two variable dimensions (2 * var * var * float64 -> var_dims [1, 2])
+        # so unique_var_dims has size 2 and find_singular_ragged_dim raises ValueError
+        arr_two_var_dims = ak.Array([[[1.0], [2.0, 3.0]], [[4.0]]])
+        data = NamedTransformInput(features=arr_two_var_dims)
+        with pytest.raises(ValueError, match="Expected at most one variable-length dimension"):
+            find_singular_ragged_dim(data)
     
     def test_tolist_dict(self):
         """Test tolist with dictionary."""
