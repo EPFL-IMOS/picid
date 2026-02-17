@@ -1,10 +1,16 @@
 """
 Phase 3: Composable pipeline steps and lifecycle hooks.
 
-- TransformContext: holds data, transform_instance, metadata, log; passed through the pipeline.
+The pipeline runs in a fixed order (see TransformStrategy.apply): CopyStep → IntegrityCheckStep
+→ FitStep → TransformStep → PostprocessStep → MergeStep → RecordManifestStep. Each step reads
+and/or mutates TransformContext; later steps depend on fields set by earlier steps.
+
+- TransformContext: holds input data, transform_instance, metadata (apply_to_keys, fit_on_split, etc.),
+  and mutable state that steps fill (transformed_data, available_splits, _raw_transformed_by_split, etc.).
 - PipelineStep: protocol run(context) -> context.
-- Concrete steps: CopyStep, FitStep, TransformStep, PostprocessStep, MergeStep.
-- Hook registry and events: on_pipeline_start, before_transform, after_transform, on_transform_error, on_pipeline_end.
+- Hook registry and events: on_pipeline_start, before_transform, after_transform, on_transform_error,
+  on_pipeline_end. When on_transform_error is emitted, context.error is set to the exception.
+  Default hook implementations live in lmetk.transforms.base.hooks. See docs/transforms/HOOKS_EXAMPLES.md.
 """
 from __future__ import annotations
 
@@ -25,7 +31,17 @@ from lmetk.transforms.base.integrity import run_checks
 @dataclass
 class TransformContext:
     """
-    Context passed through the transform pipeline. Steps read and update this object.
+    Shared context passed through the transform pipeline. Steps read and update this object in order.
+
+    Inputs (set when the context is built, e.g. by TransformStrategy.apply):
+    - data, transform_instance, apply_to_keys, assign_to_keys, assign_to_keys_map, fit_on_split,
+      fit_on_key, transform_on_keys, strategy, postprocess_fn, slice_info, integrity_checks.
+
+    Mutable state (set by steps; later steps depend on these):
+    - transformed_data, available_splits, transformed_results_for_new_key: set by CopyStep; later
+      steps read or extend them.
+    - _raw_transformed_by_split: set by TransformStep; read by PostprocessStep.
+    - log: updated by TransformStep (per-split logs from transform_multi_source).
 
     Attributes
     ----------
@@ -47,13 +63,12 @@ class TransformContext:
         If set, only these splits are transformed.
     log : Dict[str, Any]
         Transform log (e.g. per-split logs from transform_multi_source).
-    # Mutable state updated by steps
     transformed_data : Optional[SplitDatasetContainer]
-        Set by CopyStep; holds the copy that will receive merged results.
+        Set by CopyStep; holds the copy that will receive merged results. Read by MergeStep, RecordManifestStep.
     available_splits : Optional[List[str]]
-        Set by CopyStep; list of split names to transform.
+        Set by CopyStep; list of split names to transform. Read by TransformStep, MergeStep.
     transformed_results_for_new_key : Optional[Dict]
-        Set by TransformStep; assign_to_key -> split -> list of arrays.
+        Structure set by CopyStep (defaultdict(dict)); filled by PostprocessStep; read by MergeStep.
     """
 
     data: SplitDatasetContainer
@@ -77,14 +92,19 @@ class TransformContext:
     step_id: Optional[str] = None
     cache_status: Optional[str] = None
 
-    # Set by strategy when building context so steps can call _prepare_chunks_for_split, _merge_transformed_data
+    # Set by TransformStrategy.apply() when building context (strategy=self). Steps use it to call
+    # _prepare_chunks_for_split and _merge_transformed_data. In production it is always an instance
+    # of TransformStrategy; it is None only when context is built by hand (e.g. in tests).
     strategy: Optional[Any] = None
-    # Postprocess function (strategy.postprocess_transformed_data) set by strategy
+    # Set by TransformStrategy.apply() when building context (postprocess_fn=postprocess_transformed_data).
+    # Used by PostprocessStep to normalize raw transform output into list of SimpleReturnObject. None if context built by hand.
     postprocess_fn: Optional[Callable[..., Any]] = None
     # Slice-awareness (Phase 4.2): copied from data.slice_info when building context; read-only for transforms
     slice_info: Optional[SliceInfo] = None
     # Integrity (Phase 4.3): optional list of (name, check_fn, policy); IntegrityCheckStep runs them
     integrity_checks: Optional[List[Tuple[str, Callable[[], None], str]]] = None
+    # Set by strategy when emitting on_transform_error; hooks can read for debugging
+    error: Optional[BaseException] = None
 
 
 # -----------------------------------------------------------------------------
@@ -93,7 +113,11 @@ class TransformContext:
 
 
 class PipelineStep(Protocol):
-    """Protocol for a pipeline step: run(context) -> context."""
+    """
+    Protocol for a pipeline step. Each step receives the same TransformContext and returns it
+    (possibly mutated). Steps are invoked in sequence by TransformStrategy.apply; order matters
+    because later steps depend on fields set by earlier steps.
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         """Execute the step; may mutate context. Returns context for chaining."""
@@ -139,6 +163,15 @@ def _emit(event: str, context: TransformContext) -> None:
             pass  # Hooks must not break the pipeline
 
 
+# Default hooks (implementations in hooks.py) are registered when the pipeline is used
+def _register_default_hooks() -> None:
+    from lmetk.transforms.base import hooks
+    hooks.register_defaults()
+
+
+_register_default_hooks()
+
+
 # -----------------------------------------------------------------------------
 # Concrete pipeline steps (Phase 3.2)
 # -----------------------------------------------------------------------------
@@ -149,7 +182,21 @@ import awkward as ak
 
 
 class CopyStep:
-    """Step 1: Hybrid copy and validation. Sets transformed_data, available_splits."""
+    """
+    Step 1: Copy container and establish split list. No prior step; required for all later steps.
+
+    What it does:
+    - Shallow-copies context.data into a new container (deep copy for non-awkward keys to modify).
+    - Validates apply_to_keys (non-empty, apply key exists in data, structure is split-keyed).
+    - Applies transform_on_keys filter: available_splits = data splits ∩ transform_on_keys (raises if empty).
+    - Sets context.transformed_data, context.available_splits, context.transformed_results_for_new_key
+      (defaultdict(dict)), and clears context._raw_transformed_by_split.
+
+    Depends on: context.data, context.apply_to_keys, context.transform_on_keys (optional).
+    Affects: FitStep (uses strategy + data; fit does not need transformed_data), TransformStep
+    (needs transformed_data, available_splits), PostprocessStep (needs transformed_results_for_new_key
+    container), MergeStep (needs all three), RecordManifestStep (needs transformed_data).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         data = context.data
@@ -183,6 +230,18 @@ class CopyStep:
         available_splits = list(data[apply_key].keys())
         if context.transform_on_keys is not None:
             available_splits = list(set(available_splits) & set(context.transform_on_keys))
+            if not available_splits:
+                data_splits = sorted(data[apply_key].keys())
+                requested = sorted(context.transform_on_keys)
+                transform_name = getattr(
+                    context.transform_instance, "__name__", type(context.transform_instance).__name__
+                )
+                raise ValueError(
+                    f"Transform {transform_name!r}: no splits left after applying transform_on_keys. "
+                    f"Data has splits: {data_splits}. Requested transform_on_keys: {requested}. "
+                    "Fix: set metadata.transform_on_keys to include at least one split present in the data "
+                    f"(e.g. one of {data_splits}), or set transform_on_keys to None to run on all splits."
+                )
 
         context.transformed_data = transformed_data
         context.available_splits = available_splits
@@ -192,7 +251,16 @@ class CopyStep:
 
 
 class IntegrityCheckStep:
-    """Step 1.5 (Phase 4.3): Run optional integrity checks (policy: fail / warn / allow). No-op if context.integrity_checks is None."""
+    """
+    Step 1.5 (Phase 4.3): Run optional integrity checks. No-op if context.integrity_checks is None.
+
+    What it does:
+    - Runs each (name, check_fn, policy) in context.integrity_checks via run_checks (fail / warn / allow).
+    - Does not read or set pipeline state; used to validate context or data after CopyStep.
+
+    Depends on: context.integrity_checks (set when context is built). No dependency on other steps.
+    Affects: None (checks must not mutate context for later steps).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         if not context.integrity_checks:
@@ -202,12 +270,33 @@ class IntegrityCheckStep:
 
 
 class FitStep:
-    """Step 2: Fit transform if fit_on_split and fit_on_key are set."""
+    """
+    Step 2: Fit the transform on the specified split when fit_on_split and fit_on_key are set.
+
+    What it does:
+    - If transform has requires_fit=True and fit_on_split or fit_on_key is missing, raises ValueError.
+    - If either is missing and transform does not require fit, returns without fitting.
+    - Otherwise uses context.strategy._prepare_chunks_for_split to get chunks for the fit split,
+      then calls transform_instance.fit_multi_source or fit_data. Does not write to transformed_data.
+
+    Depends on: context.strategy (from TransformStrategy.apply), context.data, context.fit_on_split,
+    context.fit_on_key, context.transform_instance. Does not require CopyStep outputs (only strategy).
+    Affects: TransformStep (transform_instance is fitted and used in transform_data / transform_multi_source).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
+        requires_fit = getattr(context.transform_instance, "requires_fit", False)
         if not context.fit_on_split or not context.fit_on_key:
+            if requires_fit:
+                transform_name = getattr(
+                    context.transform_instance, "__name__", type(context.transform_instance).__name__
+                )
+                raise ValueError(
+                    f"Transform {transform_name!r} requires fitting but fit_on_split and/or fit_on_key are not set. "
+                    "Set metadata 'fit_on' (e.g. 'train') and optionally 'fit_on_key' (defaults to apply_to)."
+                )
             return context
-        strategy = context.strategy
+        strategy = context.strategy  # TransformStrategy from strategy.apply(); None if context built by hand
         if strategy is None:
             return context
         data = context.data
@@ -231,11 +320,32 @@ class FitStep:
 
 
 class TransformStep:
-    """Step 3: Transform each split; store raw results in _raw_transformed_by_split."""
+    """
+    Step 3: Run the transform on each split and store raw output per split.
+
+    What it does:
+    - For each split in context.available_splits, prepares chunks via strategy._prepare_chunks_for_split,
+      calls transform_instance.transform_multi_source (multi-unit) or transform_data (single-unit),
+      and stores (transformed_chunks, metadata) in context._raw_transformed_by_split[split].
+    - Updates context.log[split] when transform_multi_source returns a log. Does not merge into
+      transformed_data; that is done by MergeStep after PostprocessStep.
+
+    Depends on: CopyStep (context.transformed_data, context.available_splits), FitStep (transform
+    must be fitted if it requires fitting), context.strategy, context.data, context.apply_to_keys.
+    Affects: PostprocessStep (reads _raw_transformed_by_split), MergeStep indirectly (via PostprocessStep
+    filling transformed_results_for_new_key).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         strategy = context.strategy
-        if strategy is None or context.transformed_data is None or context.available_splits is None:
+        # Skip when prerequisites are missing:
+        # - strategy is None: context was built by hand (e.g. tests) and we cannot call _prepare_chunks_for_split.
+        # - transformed_data or available_splits is None: only CopyStep sets these (context defaults are None).
+        #   So they are None only if CopyStep was never run (e.g. TransformStep run in isolation in tests, or
+        #   steps invoked out of order). In the full pipeline, CopyStep always runs first, so both are set.
+        if strategy is None:
+            return context
+        if context.transformed_data is None or context.available_splits is None:
             return context
         target_data = {key: context.data[key] for key in context.apply_to_keys}
         is_multi_unit = context.data.is_multi_unit
@@ -265,9 +375,26 @@ class TransformStep:
 
 
 class PostprocessStep:
-    """Step 4: Postprocess raw transform output per split and fill transformed_results_for_new_key."""
+    """
+    Step 4: Normalize raw transform output and fill transformed_results_for_new_key per split.
+
+    What it does:
+    - For each split, reads (transformed_chunks, metadata) from context._raw_transformed_by_split,
+      calls context.postprocess_fn(transformed_chunks, metadata) to get a list of objects with
+      assign_to_map keys, then writes context.transformed_results_for_new_key[assign_to_key][split]
+      from each chunk's assign_to_map value. Fails if a chunk is missing the expected key.
+
+    Depends on: CopyStep (transformed_results_for_new_key structure), TransformStep
+    (_raw_transformed_by_split), context.postprocess_fn (set when context is built).
+    Affects: MergeStep (reads transformed_results_for_new_key to merge into transformed_data).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
+        # Skip when prerequisites are missing:
+        # - postprocess_fn: set only in TransformStrategy.apply() when building the context
+        #   (postprocess_fn=postprocess_transformed_data). None only if context was built by hand (e.g. tests).
+        # - transformed_results_for_new_key: set by CopyStep (defaultdict(dict)). None only if CopyStep was
+        #   never run (e.g. step run in isolation). In the full pipeline both are set.
         if context.postprocess_fn is None or context.transformed_results_for_new_key is None:
             return context
         for split, (transformed_chunks, metadata) in context._raw_transformed_by_split.items():
@@ -288,7 +415,20 @@ class PostprocessStep:
 
 
 class MergeStep:
-    """Step 5: Merge transformed results into transformed_data."""
+    """
+    Step 5: Merge per-split transformed results into context.transformed_data.
+
+    What it does:
+    - Calls context.strategy._merge_transformed_data(context.transformed_data,
+      context.transformed_results_for_new_key, context.available_splits). The strategy writes
+      each assign_to_key's split results into transformed_data[key][split], in place. After this,
+      transformed_data holds the final transformed container returned to the caller.
+
+    Depends on: CopyStep (transformed_data, available_splits, transformed_results_for_new_key
+    structure), PostprocessStep (transformed_results_for_new_key filled), context.strategy.
+    Affects: RecordManifestStep (reads transformed_data to append manifest entry); caller receives
+    transformed_data as the pipeline result.
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         strategy = context.strategy
@@ -317,11 +457,25 @@ def _get_producer_version() -> str:
 
 
 class RecordManifestStep:
-    """Step 6 (Phase 4.1): If container has a manifest, append a transform metadata entry."""
+    """
+    Step 6 (Phase 4.1): Append a transform metadata entry to the container's manifest, if present.
+
+    What it does:
+    - If context.transformed_data has a manifest attribute and it is a MetadataManifest, appends
+      a ManifestEntry with category "transform" and payload (apply_to_keys, assign_to_keys,
+      fit_on_split, fit_on_key, log_splits, optional slice_info). Does not change transformed_data
+      contents; only the manifest. If there is no manifest, returns without change.
+
+    Depends on: CopyStep (transformed_data exists and may carry a manifest from context.data copy).
+    Affects: None for pipeline logic; enriches manifest for downstream consumers (traceability, debugging).
+    """
 
     def run(self, context: TransformContext) -> TransformContext:
         if context.transformed_data is None:
             return context
+        # manifest: optional MetadataManifest on the container (Phase 4.1). Set when the container is
+        # created (e.g. datasource passes manifest=) or carried over by CopyStep from context.data.
+        # If present, we append a transform entry (apply_to_keys, fit_on_split, etc.) for traceability.
         manifest = getattr(context.transformed_data, "manifest", None)
         if manifest is None or not isinstance(manifest, MetadataManifest):
             return context
