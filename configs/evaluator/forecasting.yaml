@@ -3,7 +3,10 @@ _evaluator_defaults: &evaluator_defaults
   metric_names: ["mae", "mse"]
 
   apply_inverse_scaling: True
-  inverse_transform_name: scaler_target
+  # Option A (by name): explicit transform, e.g. scaler_target
+  # inverse_transform_name: scaler_target
+  # Option B (by key): use data key (assign_to); e.g. rul when target scaler has assign_to: rul
+  # inverse_transform_key: rul  # then inverse_transform_name not needed
   save_predictions: True
 
   model_seq_len: ${task_definition.seq_len}
