@@ -107,6 +107,17 @@ class TestFileSystemCachePaths:
         
         with pytest.raises(ValueError, match="cache_key"):
             cache._paths(cache_dir, stage="preprocessed", cache_key=None)
+
+    def test_paths_boundary_stage_requires_cache_key(self, tmp_path):
+        """Boundary stage (Phase 5.1) requires cache_key and nests under it."""
+        cache = FileSystemCache()
+        cache_dir = str(tmp_path)
+        with pytest.raises(ValueError, match="cache_key"):
+            cache._paths(cache_dir, stage="boundary", cache_key=None)
+        key = "boundary_hash_abc"
+        data_path, _, _, _ = cache._paths(cache_dir, stage="boundary", cache_key=key)
+        assert key in str(data_path)
+        assert "boundary" in str(data_path)
     
     def test_paths_creates_directories(self, tmp_path):
         """Test that _paths creates directory structure.
@@ -290,6 +301,38 @@ class TestFileSystemCacheData:
         assert (stage_dir / "meta.json").exists()
         assert (stage_dir / "hash.txt").exists()
     
+    def test_save_and_load_boundary_stage(self, tmp_path):
+        """Save and load with stage='boundary' and cache_key (Phase 5.1)."""
+        import joblib
+        cache = FileSystemCache()
+        cache_dir = str(tmp_path)
+        cache_key = "boundary_xyz"
+        test_data = {"container_key": np.array([1.0, 2.0, 3.0])}
+        test_metadata = {"transforms": "mock", "meta_data": {}}
+        test_config = {"datasource": {}, "transforms": {"t1": {}}}
+        cache.save(
+            cache_dir=cache_dir,
+            stage="boundary",
+            data=test_data,
+            metadata=test_metadata,
+            config=test_config,
+            cache_key=cache_key,
+        )
+        boundary_dir = tmp_path / "boundary" / cache_key
+        assert (boundary_dir / "data.pkl").exists()
+        assert (boundary_dir / "metadata.pkl").exists()
+        meta = cache.load_metadata(cache_dir, stage="boundary", cache_key=cache_key)
+        assert meta is not None
+        loaded_config, stored_hash = meta
+        assert stored_hash == cache_key
+        loaded_data, loaded_meta = cache.load_data(
+            cache_dir, stage="boundary", cache_key=cache_key
+        )
+        np.testing.assert_array_equal(
+            loaded_data["container_key"], test_data["container_key"]
+        )
+        assert loaded_meta == test_metadata
+
     def test_save_with_library_dir_computes_cache_key(self, tmp_path):
         """Test save with library_dir computes cache key.
         

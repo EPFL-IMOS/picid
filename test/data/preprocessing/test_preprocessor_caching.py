@@ -1,0 +1,442 @@
+"""
+Comprehensive tests for the preprocessing caching mechanism (Stage 1, boundary, preprocessed).
+
+Tests write cache to disk, load it back, and assert data and behaviour are correct.
+Target: close to 100% coverage of cache-related paths in PreProcessor.pipeline() and FileSystemCache.
+"""
+from __future__ import annotations
+
+import numpy as np
+import pytest
+from pathlib import Path
+
+from lmetk.data.data_objects.data import SplitDatasetContainer
+from lmetk.data.preprocessing.preprocessor import PreProcessor
+from lmetk.data.cache.offline import FileSystemCache
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
+
+
+# -----------------------------------------------------------------------------
+# Picklable datasource for pipeline tests (Stage 1 cache stores datasource + meta)
+# -----------------------------------------------------------------------------
+
+
+class _PicklableDatasource:
+    """Minimal datasource that returns a SplitDatasetContainer and is picklable."""
+
+    def __init__(self, seed: int = 0, n_units: int = 2, n_samples: int = 20, n_features: int = 3):
+        self._seed = seed
+        self._n_units = n_units
+        self._n_samples = n_samples
+        self._n_features = n_features
+        self._container: SplitDatasetContainer | None = None
+        # For cache key stability; must be serializable
+        self._init_kwargs = {
+            "seed": seed,
+            "n_units": n_units,
+            "n_samples": n_samples,
+            "n_features": n_features,
+        }
+
+    def load_data(self) -> None:
+        pass
+
+    def split_data(self) -> None:
+        pass
+
+    def get_meta_data(self) -> dict:
+        return {"seed": self._seed, "n_units": self._n_units}
+
+    def get_data(self) -> SplitDatasetContainer:
+        if self._container is None:
+            rng = np.random.default_rng(self._seed)
+            self._container = SplitDatasetContainer(
+                features={
+                    "train": [rng.standard_normal((self._n_samples, self._n_features)) for _ in range(self._n_units)],
+                    "val": [rng.standard_normal((self._n_samples // 2, self._n_features)) for _ in range(self._n_units)],
+                    "test": [rng.standard_normal((self._n_samples // 2, self._n_features)) for _ in range(self._n_units)],
+                },
+                target={
+                    "train": [rng.standard_normal((self._n_samples, 1)) for _ in range(self._n_units)],
+                    "val": [rng.standard_normal((self._n_samples // 2, 1)) for _ in range(self._n_units)],
+                    "test": [rng.standard_normal((self._n_samples // 2, 1)) for _ in range(self._n_units)],
+                },
+            )
+        return self._container
+
+
+# -----------------------------------------------------------------------------
+# Transform configs (DummyStatelessTransform from base conftest)
+# -----------------------------------------------------------------------------
+
+_TRANSFORM_CONFIG_NO_CACHE_POINT = {
+    "t1": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+    "t2": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+}
+
+_TRANSFORM_CONFIG_WITH_CACHE_POINT = {
+    "t1": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+    "heavy": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features", "cache_point": True},
+    },
+    "light": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+}
+
+# Same as above but with a different light transform metadata (to simulate "changed light config")
+_TRANSFORM_CONFIG_LIGHT_CHANGED = {
+    "t1": _TRANSFORM_CONFIG_WITH_CACHE_POINT["t1"],
+    "heavy": _TRANSFORM_CONFIG_WITH_CACHE_POINT["heavy"],
+    "light": {
+        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "metadata": {"apply_to": "features", "assign_to": "features", "extra_param": "changed"},
+    },
+}
+
+
+# -----------------------------------------------------------------------------
+# Fixtures
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def cache_dir(tmp_path):
+    return str(tmp_path / "cache")
+
+
+@pytest.fixture
+def library_dir(tmp_path):
+    """A stable directory with a dummy file for compute_cache_key (extensions=[".py"])."""
+    d = tmp_path / "library"
+    d.mkdir()
+    (d / "dummy.py").write_text("# cache key seed")
+    return str(d)
+
+
+@pytest.fixture
+def datasource():
+    return _PicklableDatasource(seed=42, n_units=2, n_samples=20, n_features=3)
+
+
+@pytest.fixture
+def manager_no_cache_point():
+    return ConfigTransformManager(transforms_config=_TRANSFORM_CONFIG_NO_CACHE_POINT)
+
+
+@pytest.fixture
+def manager_with_cache_point():
+    return ConfigTransformManager(transforms_config=_TRANSFORM_CONFIG_WITH_CACHE_POINT)
+
+
+@pytest.fixture
+def manager_light_changed():
+    return ConfigTransformManager(transforms_config=_TRANSFORM_CONFIG_LIGHT_CHANGED)
+
+
+def _assert_containers_equal(c1: SplitDatasetContainer, c2: SplitDatasetContainer) -> None:
+    """Assert two SplitDatasetContainers have the same keys and array values."""
+    assert set(c1.keys()) == set(c2.keys())
+    for key in c1.keys():
+        for split in c1[key].keys():
+            a1 = c1[key][split]
+            a2 = c2[key][split]
+            assert len(a1) == len(a2)
+            for u1, u2 in zip(a1, a2):
+                np.testing.assert_array_almost_equal(np.asarray(u1), np.asarray(u2))
+
+
+# -----------------------------------------------------------------------------
+# Pipeline caching: full preprocessed hit
+# -----------------------------------------------------------------------------
+
+
+class TestPipelinePreprocessedCache:
+    """Full pipeline with cache: first run writes, second run hits preprocessed."""
+
+    def test_first_run_writes_preprocessed_to_disk(
+        self, cache_dir, library_dir, datasource, manager_no_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        # Stage 1 and Stage 2 should have written
+        cache = FileSystemCache()
+        datasource_config = ensure_serializable(datasource._init_kwargs)
+        transforms_config = ensure_serializable(manager_no_cache_point.config)
+        preprocessed_config = {"datasource": datasource_config, "transforms": transforms_config}
+        expected_hash = compute_cache_key(
+            config=preprocessed_config,
+            library_dir=[library_dir, library_dir],
+            extensions=[".py"],
+        )
+        meta = cache.load_metadata(cache_dir, stage="preprocessed", cache_key=expected_hash)
+        assert meta is not None
+        stored_config, stored_hash = meta
+        assert stored_hash == expected_hash
+        data, saved_objects = cache.load_data(
+            cache_dir, stage="preprocessed", cache_key=expected_hash
+        )
+        assert data is not None
+        assert "transforms" in saved_objects
+        assert "meta_data" in saved_objects
+        assert hasattr(data, "features") and hasattr(data, "target")
+
+    def test_second_run_same_config_hits_preprocessed_returns_same_data(
+        self, cache_dir, library_dir, datasource, manager_no_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+        result1 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        result2 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        _assert_containers_equal(result1, result2)
+
+    def test_cache_disabled_no_preprocessed_write(self, tmp_path, datasource, manager_no_cache_point):
+        """With cache paths None and cache_preprocessed False, pipeline runs but does not use cache."""
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+        result = preprocessor.pipeline(
+            data_cache_path=None,
+            data_library_part_path=None,
+            transform_library_part_path=None,
+            cache_preprocessed=False,
+        )
+        assert result is not None
+        # No cache dir was passed, so nothing under tmp_path
+        assert not (tmp_path / "preprocessed").exists()
+
+
+# -----------------------------------------------------------------------------
+# Pipeline caching: Stage 1 (loaded_and_splitted_data)
+# -----------------------------------------------------------------------------
+
+
+class TestPipelineStage1Cache:
+    """Stage 1 cache: load/split once, reuse on second run."""
+
+    def test_stage1_written_when_cache_enabled(
+        self, cache_dir, library_dir, datasource, manager_no_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        stage1_dir = Path(cache_dir) / "loaded_and_splitted_data"
+        assert stage1_dir.exists()
+        assert (stage1_dir / "data.pkl").exists()
+        assert (stage1_dir / "metadata.pkl").exists()
+        assert (stage1_dir / "hash.txt").exists()
+
+    def test_no_cache_point_does_not_create_boundary_dir(
+        self, cache_dir, library_dir, datasource, manager_no_cache_point
+    ):
+        """When no transform has cache_point, pipeline never touches boundary stage."""
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        boundary_dir = Path(cache_dir) / "boundary"
+        assert not boundary_dir.exists()
+
+
+# -----------------------------------------------------------------------------
+# Pipeline caching: boundary save and restore
+# -----------------------------------------------------------------------------
+
+
+class TestPipelineBoundaryCache:
+    """Boundary cache: save after heavy transform, restore and run only light transforms."""
+
+    def test_first_run_with_cache_point_writes_boundary_and_preprocessed(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_with_cache_point,
+        )
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+        # Boundary cache exists (after "heavy")
+        boundary_names = manager_with_cache_point.get_cache_point_names()
+        assert "heavy" in boundary_names
+        boundary_config = {
+            "datasource": ensure_serializable(datasource._init_kwargs),
+            "transforms": manager_with_cache_point.get_config_up_to_and_including("heavy"),
+        }
+        boundary_key = compute_cache_key(
+            config=boundary_config,
+            library_dir=[library_dir, library_dir],
+            extensions=[".py"],
+        )
+        cache = FileSystemCache()
+        meta = cache.load_metadata(cache_dir, stage="boundary", cache_key=boundary_key)
+        assert meta is not None
+        boundary_data, saved_objects = cache.load_data(
+            cache_dir, stage="boundary", cache_key=boundary_key
+        )
+        assert boundary_data is not None
+        assert "transforms" in saved_objects
+
+    def test_second_run_unchanged_config_hits_preprocessed(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_with_cache_point,
+        )
+        r1 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+        r2 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        _assert_containers_equal(r1, r2)
+
+    def test_light_config_changed_restores_from_boundary_runs_only_light(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point, manager_light_changed
+    ):
+        # Run 1: full pipeline with cache_point → boundary + preprocessed written
+        preprocessor1 = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_with_cache_point,
+        )
+        result_full = preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+        # Run 2: "light" config changed → full preprocessed miss, boundary hit, run only light
+        preprocessor2 = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_light_changed,
+        )
+        result_restored = preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+        # Result should still be a valid container with same structure (features/target, splits)
+        assert set(result_restored.keys()) == set(result_full.keys())
+        for key in result_restored.keys():
+            assert set(result_restored[key].keys()) == set(result_full[key].keys())
+        # Data may differ slightly because light transform metadata changed (extra_param),
+        # but shapes must match
+        for key in result_restored.keys():
+            for split in result_restored[key].keys():
+                assert len(result_restored[key][split]) == len(result_full[key][split])
+
+    def test_save_boundary_caches_false_does_not_write_boundaries(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point
+    ):
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=manager_with_cache_point,
+        )
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=False,
+        )
+        boundary_dir = Path(cache_dir) / "boundary"
+        # Pipeline may create boundary subdirs when probing load_metadata; we must not have written data.pkl
+        for subdir in boundary_dir.iterdir() if boundary_dir.exists() else []:
+            assert not (subdir / "data.pkl").exists(), (
+                "save_boundary_caches=False should not write boundary data"
+            )
+
+
+# -----------------------------------------------------------------------------
+# FileSystemCache: preprocessed and boundary load when missing
+# -----------------------------------------------------------------------------
+
+
+class TestCacheLoadWhenMissing:
+    """load_metadata / load_data when cache is missing."""
+
+    def test_load_metadata_preprocessed_missing_returns_none(self, tmp_path):
+        cache = FileSystemCache()
+        meta = cache.load_metadata(
+            str(tmp_path), stage="preprocessed", cache_key="nonexistent_key"
+        )
+        assert meta is None
+
+    def test_load_data_preprocessed_missing_returns_none(self, tmp_path):
+        cache = FileSystemCache()
+        # load_data returns (data, metadata) from joblib; when files missing it returns None
+        result = cache.load_data(
+            str(tmp_path), stage="preprocessed", cache_key="nonexistent_key"
+        )
+        assert result is None

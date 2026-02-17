@@ -11,6 +11,7 @@ from lmetk.transforms.base.transform_manager import ConfigTransformManager
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (
     DummyStatelessTransform,
+    DummyInverseTransform,
 )
 
 
@@ -242,3 +243,183 @@ class TestConfigTransformManager:
             assert "public" in transform_names
         except (RuntimeError, ImportError, AttributeError):
             pytest.skip("Transform instantiation not available in test context")
+
+
+class TestGetInverterForKey:
+    """Tests for get_inverter_for_key (Phase 5.3 inverse transform routing)."""
+
+    def test_get_inverter_for_key_empty_manager_returns_none(self):
+        """Empty manager returns None for any key."""
+        manager = ConfigTransformManager(transforms_config={})
+        assert manager.get_inverter_for_key("target") is None
+        assert manager.get_inverter_for_key("features") is None
+
+    def test_get_inverter_for_key_no_inverse_transform_returns_none(self):
+        """Manager with only non-inverse transforms returns None."""
+        config = {
+            "scale_features": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        assert manager.get_inverter_for_key("features") is None
+
+    def test_get_inverter_for_key_returns_inverter_when_assign_to_matches(self):
+        """When a transform implements InverseTransformMixin and assign_to matches key, return it."""
+        config = {
+            "scale_target": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            }
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        inverter = manager.get_inverter_for_key("target")
+        assert inverter is not None
+        assert isinstance(inverter, DummyInverseTransform)
+
+    def test_get_inverter_for_key_returns_none_for_other_key(self):
+        """get_inverter_for_key returns None for key that no inverse transform assigns to."""
+        config = {
+            "scale_target": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            }
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        assert manager.get_inverter_for_key("target") is not None
+        assert manager.get_inverter_for_key("features") is None
+
+    def test_get_inverter_for_key_multiple_inverters_returns_last_by_default(self):
+        """When several transforms assign to the same key and implement inverse, default is last in pipeline order."""
+        config = {
+            "scale_target_1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            },
+            "scale_target_2": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            },
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        last_ = manager.get_inverter_for_key("target")
+        first_ = manager.get_inverter_for_key("target", which="first")
+        assert last_ is not first_
+        # Last in pipeline order is the second transform
+        dt_list = list(manager.get_data_transforms().values())
+        assert last_ is dt_list[1].transform_instance
+        assert first_ is dt_list[0].transform_instance
+
+    def test_get_inverter_for_key_which_first_returns_first_match(self):
+        """which='first' returns the first transform (in pipeline order) that assigns to key and implements inverse."""
+        config = {
+            "scale_target": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            }
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        inv = manager.get_inverter_for_key("target", which="first")
+        assert inv is not None
+        assert inv is manager.get_inverter_for_key("target", which="last")
+
+    def test_get_inverter_for_key_which_invalid_raises(self):
+        """which must be 'first' or 'last'."""
+        manager = ConfigTransformManager(transforms_config={})
+        with pytest.raises(ValueError, match="must be 'first' or 'last'"):
+            manager.get_inverter_for_key("target", which="middle")
+
+    def test_get_inverter_for_key_with_name_returns_instance_and_name(self):
+        """get_inverter_for_key_with_name returns (instance, transform_name) for logging."""
+        config = {
+            "scale_target": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyInverseTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            }
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        inv, name = manager.get_inverter_for_key_with_name("target")
+        assert inv is not None
+        assert name == "scale_target"
+        inv_none, name_none = manager.get_inverter_for_key_with_name("other")
+        assert inv_none is None
+        assert name_none is None
+
+
+class TestCachePointBoundaries:
+    """Tests for Phase 5.1 cache boundaries (get_cache_point_names, get_transform_names_after, get_config_up_to_and_including)."""
+
+    def test_get_cache_point_names_empty_when_no_cache_point(self):
+        """When no transform has cache_point in metadata, get_cache_point_names returns []."""
+        config = {
+            "t1": {
+                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        assert manager.get_cache_point_names() == []
+
+    def test_get_cache_point_names_returns_marked_transforms_in_order(self):
+        """Transforms with metadata.cache_point true are returned in pipeline order."""
+        config = {
+            "t1": {
+                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+            "t2": {
+                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "metadata": {"apply_to": "features", "assign_to": "features", "cache_point": True},
+            },
+            "t3": {
+                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+            "t4": {
+                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "metadata": {"apply_to": "features", "assign_to": "features", "cache_point": True},
+            },
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        assert manager.get_cache_point_names() == ["t2", "t4"]
+
+    def test_get_transform_names_after_returns_tail(self):
+        """get_transform_names_after returns transform names after the given name (exclusive)."""
+        config = {
+            "a": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "x", "assign_to": "x"}},
+            "b": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "x", "assign_to": "x"}},
+            "c": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "x", "assign_to": "x"}},
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        assert manager.get_transform_names_after("a") == ["b", "c"]
+        assert manager.get_transform_names_after("b") == ["c"]
+        assert manager.get_transform_names_after("c") == []
+        assert manager.get_transform_names_after("nonexistent") == ["a", "b", "c"]
+
+    def test_get_config_up_to_and_including_returns_slice(self):
+        """get_config_up_to_and_including returns serializable config slice up to and including the name."""
+        config = {
+            "first": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "f", "assign_to": "f"}},
+            "second": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "f", "assign_to": "f"}},
+        }
+        manager = ConfigTransformManager(transforms_config=config)
+        slice_one = manager.get_config_up_to_and_including("first")
+        assert isinstance(slice_one, dict)
+        assert list(slice_one.keys()) == ["first"]
+        slice_two = manager.get_config_up_to_and_including("second")
+        assert list(slice_two.keys()) == ["first", "second"]

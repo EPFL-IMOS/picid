@@ -19,6 +19,7 @@ from lmetk.transforms.base.multisource import (
     ConcatinatedFitMultiSourceTransformMixin,
     NoFitMultiSourceTransformMixin,
     ConcatenateUnitsMixing,
+    InverseTransformMixin,
 )
 from lmetk.data.data_objects.data import (
     NamedTransformInput,
@@ -90,6 +91,25 @@ class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitMultiSourceTransf
         if isinstance(data[key], ak.Array):
             return ak.Array(result) if not isinstance(result, ak.Array) else result
         return result
+
+
+class DummyInverseTransform(DenseTransform, NoFitMultiSourceTransformMixin, InverseTransformMixin):
+    """Minimal transform implementing InverseTransformMixin for get_inverter_for_key tests."""
+
+    def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
+        key = list(data.keys())[0]
+        return data[key] * 2
+
+    def inverse_transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any] = None
+    ) -> np.ndarray:
+        key = list(data.keys())[0]
+        return data[key] / 2
+
+    def inverse_transform(
+        self, data: NamedTransformInput, metadata: dict = None
+    ) -> np.ndarray:
+        return self.inverse_transform_data(data, metadata)
 
 
 class DummyTransformWithMetadata(DenseTransform, NoFitMultiSourceTransformMixin):
