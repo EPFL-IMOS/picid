@@ -39,9 +39,9 @@ class FileSystemCache:
         """
         base_dir = Path(cache_dir).expanduser()
 
-        if stage == "preprocessed":
+        if stage in ("preprocessed", "boundary"):
             if cache_key is None:
-                raise ValueError("cache_key required for 'preprocessed' stage")
+                raise ValueError(f"cache_key required for stage {stage!r}")
             stage_dir = base_dir / stage / cache_key
         else:
             stage_dir = base_dir / stage
