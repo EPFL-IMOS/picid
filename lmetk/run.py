@@ -734,33 +734,49 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         inverse_transform_required = cfg.evaluator[s].get(
             "apply_inverse_scaling", False
         )
+        inverse_transform_key = cfg.evaluator[s].get(
+            "inverse_transform_key", None
+        )
+        inverse_transform_which = cfg.evaluator[s].get(
+            "inverse_transform_which", "last"
+        )
+        inverse_transform_name = cfg.evaluator[s].get(
+            "inverse_transform_name", None
+        )
+
+        inverse_transform = None
         if inverse_transform_required:
-            inverse_transform_name = cfg.evaluator[s].get(
-                "inverse_transform_name", None
-            )
-
-            assert inverse_transform_name is not None, (
-                f"Evaluator for {s} requires inverse scaling but no "
-                "inverse_transform_name is provided. Consider setting the inverse_transform_name in evaluator config group."
-            )
-        else:
-            inverse_transform_name = None
-
-        if inverse_transform_required and inverse_transform_name is None:
-            raise ValueError(
-                f"Evaluator for {s} requires inverse scaling but no "
-                "inverse_transform_name is provided."
-            )
-        if inverse_transform_name is not None:
-            inverse_transform = transforms_manager.get_transform(inverse_transform_name)
-            inverse_transform = inverse_transform.transform_instance
-
-            assert isinstance(inverse_transform, InverseTransformMixin), (
-                f"The transform {inverse_transform_name} does not implement "
-                "InverseTransformMixin but is selected for inverse_transform in evaluator."
-            )
-        else:
-            inverse_transform = None
+            # Prefer key-based lookup (Phase 5.3): discover inverter from registry
+            if inverse_transform_key is not None:
+                inverse_transform, chosen_name = transforms_manager.get_inverter_for_key_with_name(
+                    inverse_transform_key, which=inverse_transform_which
+                )
+                if inverse_transform is None:
+                    raise ValueError(
+                        f"Evaluator for {s} requires inverse scaling and inverse_transform_key={inverse_transform_key!r} "
+                        "was set, but no transform that assigns to that key implements InverseTransformMixin."
+                    )
+                if chosen_name:
+                    log.info(
+                        "Inverse transform for %s: using transform %r for key %r (which=%s).",
+                        s,
+                        chosen_name,
+                        inverse_transform_key,
+                        inverse_transform_which,
+                    )
+            elif inverse_transform_name is not None:
+                inverse_transform = transforms_manager.get_transform(
+                    inverse_transform_name
+                ).transform_instance
+                assert isinstance(inverse_transform, InverseTransformMixin), (
+                    f"The transform {inverse_transform_name} does not implement "
+                    "InverseTransformMixin but is selected for inverse_transform in evaluator."
+                )
+            else:
+                raise ValueError(
+                    f"Evaluator for {s} requires inverse scaling but neither "
+                    "inverse_transform_key (e.g. 'rul') nor inverse_transform_name is provided."
+                )
 
         remote_logger = None
         for lgr in logger:
