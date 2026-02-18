@@ -5,6 +5,12 @@ from numpy import ndarray
 from lmetk.data.preprocessing.base import PreProcessorInterface
 from lmetk.transforms.base.data_transform import DataTransform
 from lmetk.data.data_objects.data import DatasetContainer
+from lmetk.data.data_objects.manifest import (
+    MANIFEST_SCHEMA_VERSION,
+    ManifestEntry,
+    MetadataManifest,
+)
+from lmetk.transforms.base.pipeline import _get_producer_version
 
 from rich import print as rprint
 import logging
@@ -123,6 +129,45 @@ class PreProcessor(PreProcessorInterface):
         )
 
         self.data: DatasetContainer = data
+        self._add_datasource_manifest_entry()
+
+    def _add_datasource_manifest_entry(self) -> None:
+        """Append a datasource manifest entry to self.data.manifest if present."""
+        if self.data is None:
+            return
+        manifest = getattr(self.data, "manifest", None)
+        if manifest is None or not isinstance(manifest, MetadataManifest):
+            return
+        ds = self.datasource
+        payload: dict[str, Any] = {
+            "datasource_type": type(ds).__name__,
+        }
+        # data_name: only a string identifier (e.g. "phme20", "NB14"), not the full metadata dict
+        if hasattr(ds, "data_name"):
+            val = getattr(ds, "data_name", None)
+            if isinstance(val, str):
+                payload["data_name"] = val
+        if hasattr(ds, "task_mode"):
+            payload["task_mode"] = getattr(ds, "task_mode", None)
+        if "data_name" not in payload and hasattr(ds, "get_data_name") and callable(getattr(ds, "get_data_name")):
+            try:
+                name_val = ds.get_data_name()
+                if isinstance(name_val, str):
+                    payload["data_name"] = name_val
+                elif isinstance(name_val, (list, tuple)) and all(isinstance(x, str) for x in name_val):
+                    payload["data_name"] = name_val
+            except Exception:
+                pass
+        entry = ManifestEntry(
+            schema_version=MANIFEST_SCHEMA_VERSION,
+            producer_version=_get_producer_version(),
+            category="datasource",
+            payload=payload,
+            step_id=type(ds).__name__,
+            key=None,
+            split=None,
+        )
+        manifest.add(entry)
 
     def apply_transforms(
         self,
