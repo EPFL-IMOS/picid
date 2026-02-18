@@ -310,6 +310,7 @@ def _build_registry() -> Dict[Tuple[str, str], TransformHandler]:
         (DATA_KIND_DENSE, CAPABILITY_BOTH): dense_dense,
         (DATA_KIND_RAGGED_REGULAR, CAPABILITY_DENSE): dense_dense,
         (DATA_KIND_RAGGED_REGULAR, CAPABILITY_BOTH): dense_dense,
+        (DATA_KIND_RAGGED_REGULAR, CAPABILITY_RAGGED): ragged_ragged,
         (DATA_KIND_RAGGED, CAPABILITY_DENSE): ragged_dense,
         (DATA_KIND_RAGGED, CAPABILITY_RAGGED): ragged_ragged,
         (DATA_KIND_RAGGED, CAPABILITY_BOTH): ragged_ragged,

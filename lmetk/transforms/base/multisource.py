@@ -31,7 +31,8 @@ handler still runs to enforce type-compatibility:
     Data kind               Handler                 transform_data calls
     ─────────────────────── ─────────────────────── ────────────────────
     Dense / np.ndarray      DenseDenseHandler        1  (direct)
-    Ragged-regular ak.Array DenseDenseHandler        1  (numpy roundtrip*)
+    Ragged-regular + dense  DenseDenseHandler        1  (numpy roundtrip*)
+    Ragged-regular + ragged RaggedRaggedHandler      1  (direct ak.Array)
     Ragged + ragged-capable RaggedRaggedHandler       1  (direct)
     Ragged + dense-only     RaggedDenseHandler        N  (one per block) ← bug-fix vs old
 
