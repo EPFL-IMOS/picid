@@ -71,7 +71,7 @@ run_counter=1
 job_counter=0
 MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
-SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"# Function to run and log commands
+SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log" # Function to run and log commands
 
 # run_and_log() {
 #     local command_to_run="$1"
