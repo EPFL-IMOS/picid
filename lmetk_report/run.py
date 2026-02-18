@@ -78,6 +78,7 @@ def run_pipeline(
     sort_metric: Optional[str] = None,
     report_filename: Optional[str] = None,
     quiet: bool = False,
+    use_legacy_search_space_fallback: bool = True,
 ) -> Tuple[pd.DataFrame, defaultdict, pd.DataFrame]:
     """
     Run the full pipeline: load → optional preprocess → validate → analyze → report.
@@ -123,6 +124,10 @@ def run_pipeline(
         Metric to use for sorting/ranking/selecting best results in tables (e.g. "test/accuracy").
         If None, uses optimization metric for each model/dataset.
         Can also be a dict mapping (dataset, model) -> metric for per-combination control.
+    use_legacy_search_space_fallback : bool, default True
+        If True, when get_search_space(dataset, model) returns None (e.g. search_space.py has no
+        entry), the pipeline falls back to config.EXPECTED_SEARCH_SPACE (legacy model-only grid).
+        Set to False (e.g. --data-first) to use data-first mode in that case.
 
     Returns
     -------
@@ -210,6 +215,7 @@ def run_pipeline(
         additional_ignored_cols=additional_ignored_cols,
         pipeline_config=pipeline_config,
         sort_metric_resolver=sort_metric_resolver,
+        use_legacy_search_space_fallback=use_legacy_search_space_fallback,
     )
     n_entries = sum(len(m) for m in all_results.values()) if all_results else 0
     logger.info("[Stage 4/6] Analyze: %d dataset(s) -> %d (dataset, model) result entries", len(all_results), n_entries)
@@ -299,6 +305,19 @@ def _save_outputs(
 
     # Experiment stats
     export_experiment_stats(all_results, os.path.join(tables_dir, "experiment_stats.csv"))
+
+    # Diagnostics log: per (dataset, model) explanation of counts and failures for debugging
+    log_path = os.path.join(output_dir, "log.txt")
+    with open(log_path, "w") as f:
+        f.write("Report pipeline diagnostics — per dataset/model: optimization metric, seeds, and failure counts.\n")
+        f.write("Use this to understand why 'Configs Failed (not full seed set)' or 'Configs Failed (missing/invalid metric)' appear.\n")
+        for dataset, models in sorted(all_results.items()):
+            for model, res in sorted(models.items()):
+                lines = res.get("diagnostics_log", [])
+                if lines:
+                    f.write("\n".join(lines))
+                    f.write("\n")
+    logger.info("Diagnostics log written to %s", log_path)
 
     # Single LaTeX file with all tables for pasting into paper
     write_tables_tex(
@@ -399,6 +418,7 @@ def main() -> None:
     parser.add_argument("--no-plots", action="store_true", help="Skip building plots")
     parser.add_argument("--performance-tables", action="store_true", help="Show per-metric performance tables")
     parser.add_argument("--quiet", "-q", action="store_true", help="Do not print tables to terminal; only write report and files")
+    parser.add_argument("--data-first", action="store_true", help="Do not fall back to config.EXPECTED_SEARCH_SPACE when search_space.py has no entry; use data-first mode")
     args = parser.parse_args()
 
     configure_logging(debug=args.debug)
@@ -413,6 +433,7 @@ def main() -> None:
         export_laTeX=args.export_latex,
         report_filename=args.report_name,
         quiet=args.quiet,
+        use_legacy_search_space_fallback=not args.data_first,
     )
 
 

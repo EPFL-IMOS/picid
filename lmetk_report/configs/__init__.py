@@ -9,6 +9,7 @@ Config package: dataset/model-level configuration.
 """
 
 from lmetk_report.configs.search_space import (
+    DEFAULT_SEARCH_SPACE,
     EXPECTED_SEARCH_SPACE,
     get_search_space,
     get_model_grid_from_search_space,
@@ -24,6 +25,7 @@ from lmetk_report.configs.sort_metrics import (
 )
 
 __all__ = [
+    "DEFAULT_SEARCH_SPACE",
     "EXPECTED_SEARCH_SPACE",
     "get_search_space",
     "get_model_grid_from_search_space",

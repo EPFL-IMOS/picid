@@ -90,6 +90,9 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "trainer.default_root_dir",
     "_wandb.runtime",
     "cache.use_preprocessing_file_lock",
+    # Small data experiment
+    "dataset._overrides.train.dataset_cfg.subset_seed",
+    "dataset._overrides.train.dataset_cfg.subset_ratio",
 ]
 
 ADDITIONAL_COLUMNS_TO_SHOW = [
@@ -125,70 +128,70 @@ REQUIRED_COLUMNS = [
 ]
 
 
-#  Global Expected Search Space (legacy) ---
-# Shape: {model: {hp_name: [values]}}. If None, only completed experiments are shown.
-# If provided, analysis uses get_model_grid_from_search_space(..., this_dict), which
-# accepts this legacy shape; missing (dataset, model) -> auto-discovery from data.
+#  Global Expected Search Space (legacy / default for all datasets) ---
+# Shape: {model: {hp_name: [values]}}. Used as the "default for all datasets" when
+# lmetk_report.configs.search_space.DEFAULT_SEARCH_SPACE is None (see search_space.py).
 #
-# DEPRECATED: Prefer the dataset/model structure in
-# lmetk_report.configs.search_space.EXPECTED_SEARCH_SPACE ({dataset: {model: {hp: [values]}}}).
-# This module-level dict is kept for backward compatibility and may be removed in a future version.
-EXPECTED_SEARCH_SPACE = {
-    "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "baselines.patchtst_model.PatchTST_Forecaster": {
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-        "task_definition.seq_len": [1, 10, 50, 100],
-    },
-    "baselines.lstm_model.LSTM_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "model.wrappers.mlp_wrapper.MLPWrapper": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "baselines.tide_model.TiDE_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "baselines.crossformer_model.Crossformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
-        "task_definition.seq_len": [1, 10, 50, 100],
-        "optimization.lr": [0.001, 0.0005, 0.0001],
-    },
-    # "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": {
-    #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
-    #     "task_definition.stride_train": [1, 5, 50, 100],
-    # },
-    # "model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": {
-    #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
-    #     "task_definition.stride_train": [1, 5, 50, 100],
-    # },
+# Prefer defining search space in one place: lmetk_report.configs.search_space
+#   - EXPECTED_SEARCH_SPACE[dataset][model] = per-dataset grid
+#   - DEFAULT_SEARCH_SPACE = {model: {hp: [values]}} for all datasets, or {} for data-first
+# This dict is still read by search_space.get_search_space() when DEFAULT_SEARCH_SPACE is None.
+# EXPECTED_SEARCH_SPACE = {
+#     "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "baselines.patchtst_model.PatchTST_Forecaster": {
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#     },
+#     "baselines.lstm_model.LSTM_Forecaster": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "model.wrappers.mlp_wrapper.MLPWrapper": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "baselines.tide_model.TiDE_Forecaster": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "baselines.crossformer_model.Crossformer_Forecaster": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
+#         "task_definition.seq_len": [1, 10, 50, 100],
+#         "optimization.lr": [0.001, 0.0005, 0.0001],
+#     },
+#     # "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": {
+#     #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
+#     #     "task_definition.stride_train": [1, 5, 50, 100],
+#     # },
+#     # "model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": {
+#     #     "task_definition.seq_len": [1, 5, 10, 20, 50, 100],
+#     #     "task_definition.stride_train": [1, 5, 50, 100],
+#     # },
 
-    # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
-    #     "task_definition.seq_len": [1, 10, 50, 100, 150],
-    #     'optimization.lr': [0.001, 0.0005, 0.0001],,
-    # },
-    # FitPredictTabPFNWrapper is omitted, so it will use automatic discovery
-}
+#     # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
+#     #     "task_definition.seq_len": [1, 10, 50, 100, 150],
+#     #     'optimization.lr': [0.001, 0.0005, 0.0001],,
+#     # },
+#     # FitPredictTabPFNWrapper is omitted, so it will use automatic discovery
+# }
 
 # Import new config functions (backward compatible)
 try:
