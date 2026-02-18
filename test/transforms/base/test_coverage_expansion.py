@@ -466,7 +466,7 @@ class TestMultisourceCoverage:
 
         t = RaggedOnlyTransform()
         segments = [NamedTransformInput(features=np.array([[1.0]]))]
-        with pytest.raises(ValueError, match="does not support the data type"):
+        with pytest.raises(ValueError, match=r"does not support .*data_kind|capability"):
             t.fit_multi_source(segments, metadata={"apply_to_keys": ["features"]})
 
     @pytest.mark.skip(
@@ -495,7 +495,7 @@ class TestMultisourceCoverage:
         """Line 695: ConcatenateUnitsMixing.fit_multi_source raises NotImplementedError."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
-        with pytest.raises(NotImplementedError, match="fit_multi_source"):
+        with pytest.raises(NotImplementedError, match="does not support fitting|fit_multi_source"):
             t.fit_multi_source([NamedTransformInput(features=np.array([[1.0]]))], metadata={"apply_to_keys": ["features"]})
 
     def test_concatenate_units_transform_with_ak_array(self):
@@ -506,7 +506,7 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=ak.Array([[1.0], [2.0]])),
             NamedTransformInput(features=ak.Array([[3.0], [4.0]])),
         ]
-        metadata = {"apply_to_keys": ["features"]}
+        metadata = {"apply_to_keys": ["features"], "assign_to_map": ["features"]}
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
         arr = out[0] if not hasattr(out[0], "keys") else out[0]["features"]
@@ -527,15 +527,13 @@ class TestMultisourceCoverage:
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
 
-    def test_inverse_transform_mixin_init_requires_inverse_transform_data(self):
-        """Lines 830-832: InverseTransformMixin without inverse_transform_data raises."""
-        # Put InverseTransformMixin first so its __init__ runs and checks hasattr(inverse_transform_data)
-        class BadInverse(InverseTransformMixin, DenseTransform):
+    def test_inverse_transform_mixin_init_requires_inverse_transform_or_data(self):
+        """InverseTransformMixin requires inverse_transform or inverse_transform_data."""
+        # Class with neither inverse method should raise at init
+        class NoInverse(InverseTransformMixin, DenseTransform):
             def transform_data(self, data, metadata): return data
-            def inverse_transform(self, data, metadata=None): return data
-            # no inverse_transform_data
-        with pytest.raises(TypeError, match="inverse_transform_data"):
-            BadInverse()
+        with pytest.raises(TypeError, match="inverse_transform"):
+            NoInverse()
 
     def test_transform_multi_source_ragged_to_dense_exception_logging(self):
         """Lines 533-598: exception in transform_function_to_data_segments is logged and re-raised."""
@@ -594,7 +592,7 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=np.array([[2.0]]), target=np.array([[0.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(ValueError, match="lengths of the data segments"):
+        with pytest.raises(ValueError, match="different numbers of keys|lengths of the data segments"):
             transform.transform_multi_source(segments, metadata=metadata)
 
     def test_concatenate_units_key_not_in_segment_raises(self):
@@ -606,33 +604,34 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=np.array([[2.0]])),  # missing "target" -> different key count
         ]
         metadata = {"apply_to_keys": ["features", "target"]}
-        with pytest.raises(ValueError, match="lengths of the data segments"):
+        with pytest.raises(ValueError, match="different numbers of keys|lengths of the data segments"):
             t.transform_multi_source(segs, metadata=metadata)
 
-    def test_concatenate_units_ak_assert_isinstance(self):
-        """Line 747: ConcatenateUnitsMixing asserts data_segment[key] is ak.Array when data_types says ak."""
+    def test_concatenate_units_ak_two_segments_success(self):
+        """StatelessConcatenateMixin: two ak.Array segments concatenate successfully."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         seg1 = NamedTransformInput(features=ak.Array([[1.0], [2.0]]))
         seg2 = NamedTransformInput(features=ak.Array([[3.0], [4.0]]))
-        seg2._data["features"] = np.array([[3.0], [4.0]])  # replace with np so isinstance fails
         segs = [seg1, seg2]
-        metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(AssertionError, match="not an awkward array"):
-            t.transform_multi_source(segs, metadata=metadata)
+        metadata = {"apply_to_keys": ["features"], "assign_to_map": ["features"]}
+        out, _ = t.transform_multi_source(segs, metadata=metadata)
+        assert len(out) == 1
+        assert out[0]["features"] is not None
 
     def test_concatenate_units_multi_key_ak_and_numpy_length_checks(self):
-        """Lines 775, 781: multi-key with both ak.Array and np.ndarray hits get_ak_shape and .shape."""
+        """Multi-key concatenate: both keys same type to satisfy uniform data type; length checks."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         class MultiKeyConcat(ConcatenateUnitsTransform):
             def transform_data(self, data, metadata):
                 return {"features": data["features"] * 2, "target": data["target"] * 2}
         t = MultiKeyConcat(axis=0)
+        # Use same type for all keys (np) so _assert_uniform_data_types passes
         segs = [
-            NamedTransformInput(features=ak.Array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])),
-            NamedTransformInput(features=ak.Array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])),
+            NamedTransformInput(features=np.array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])),
+            NamedTransformInput(features=np.array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])),
         ]
-        metadata = {"apply_to_keys": ["features", "target"]}
+        metadata = {"apply_to_keys": ["features", "target"], "assign_to_map": ["features", "target"]}
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
 
@@ -648,7 +647,7 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=np.array([[2.0]]), target=np.array([[3.0], [4.0]])),
         ]
         metadata = {"apply_to_keys": ["features", "target"]}
-        with pytest.raises(ValueError, match="lengths of the concatenated"):
+        with pytest.raises(ValueError, match="After concatenation|lengths of the concatenated"):
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_ragged_to_dense_exception_after_index_depth_set(self):
@@ -692,7 +691,7 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=ak.Array([[3.0], [4.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(ValueError, match="not the same across all data segments"):
+        with pytest.raises(ValueError, match="data type mismatch|not the same across all data segments"):
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_concatenate_units_unsupported_type_raises(self):
@@ -711,5 +710,5 @@ class TestMultisourceCoverage:
                 raise KeyError(k)
         segs = [ListTypeSegment(), ListTypeSegment()]
         metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(ValueError, match="is not supported"):
+        with pytest.raises(ValueError, match="unsupported data type|is not supported"):
             t.transform_multi_source(segs, metadata=metadata)

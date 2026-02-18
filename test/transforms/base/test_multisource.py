@@ -12,7 +12,10 @@ from sortedcontainers import SortedDict
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
     ConcatinatedFitMultiSourceTransformMixin,
+    ConcatenatedMultiSourceTransformMixin,
+    FitMultiSourceTransformMixin,
     NoFitMultiSourceTransformMixin,
+    StandardFitTransformMixin,
     ConcatenateUnitsMixing,
     find_singular_ragged_dim,
     tolist,
@@ -79,6 +82,48 @@ class TestMultisourceUtils:
         arr = np.array([1, 2, 3])
         result = tolist(arr)
         assert result is arr
+
+
+class TestConcatenatedAndFitMultiSourceMixinsComposition:
+    """Tests for the new split: ConcatenatedMultiSourceTransformMixin + FitMultiSourceTransformMixin."""
+
+    def test_new_composition_fit_and_transform_multi_source(self):
+        """Confirm a class using StandardFitTransformMixin (new design) behaves like the old ConcatinatedFit mixin."""
+
+        class FittableWithNewMixins(
+            DenseTransform,
+            StandardFitTransformMixin,
+        ):
+            def __init__(self):
+                super().__init__()
+                self.fitted = False
+                self.factor = 1.0
+
+            def fit_data(self, data: NamedTransformInput, metadata: Dict) -> None:
+                key = list(data.keys())[0]
+                self.factor = float(np.mean(data[key]))
+                self.fitted = True
+
+            def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
+                key = list(data.keys())[0]
+                return data[key] * self.factor
+
+        transform = FittableWithNewMixins()
+        assert getattr(transform, "requires_fit", None) is True
+
+        data_segments = [
+            NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0]])),
+            NamedTransformInput(features=np.array([[5.0, 6.0], [7.0, 8.0]])),
+        ]
+        metadata = {"apply_to_keys": ["features"]}
+
+        transform.fit_multi_source(data_segments, metadata=metadata)
+        assert transform.fitted
+        assert transform.factor > 0
+
+        result, log = transform.transform_multi_source(data_segments, metadata=metadata)
+        assert len(result) == 2
+        assert "mode" in log or "flags" in log
 
 
 class TestConcatinatedFitMultiSourceTransformMixin:
