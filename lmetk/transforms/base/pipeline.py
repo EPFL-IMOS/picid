@@ -14,6 +14,7 @@ and/or mutates TransformContext; later steps depend on fields set by earlier ste
 """
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
@@ -91,6 +92,9 @@ class TransformContext:
     # Optional: for hooks and observability
     step_id: Optional[str] = None
     cache_status: Optional[str] = None
+    # Timing: set by TransformStrategy.apply() for manifest (started_at/finished_at as epoch seconds)
+    started_at: Optional[float] = None
+    finished_at: Optional[float] = None
 
     # Set by TransformStrategy.apply() when building context (strategy=self). Steps use it to call
     # _prepare_chunks_for_split and _merge_transformed_data. In production it is always an instance
@@ -479,24 +483,51 @@ class RecordManifestStep:
         manifest = getattr(context.transformed_data, "manifest", None)
         if manifest is None or not isinstance(manifest, MetadataManifest):
             return context
-        step_id = getattr(
-            context.transform_instance,
-            "transform_name",
-            context.transform_instance.__class__.__name__ if context.transform_instance else None,
+        step_id = (
+            context.step_id
+            or getattr(
+                context.transform_instance,
+                "transform_name",
+                context.transform_instance.__class__.__name__ if context.transform_instance else None,
+            )
         )
         payload = {
+            "transform_name": step_id,
+            "transform_class": (
+                context.transform_instance.__class__.__name__
+                if context.transform_instance else None
+            ),
             "apply_to_keys": context.apply_to_keys,
             "assign_to_keys": context.assign_to_keys,
             "fit_on_split": context.fit_on_split,
             "fit_on_key": context.fit_on_key,
             "log_splits": list(context.log.keys()) if context.log else [],
         }
+        if context.started_at is not None:
+            payload["started_at"] = context.started_at
+            payload["started_at_iso"] = datetime.datetime.fromtimestamp(
+                context.started_at, tz=datetime.timezone.utc
+            ).isoformat()
+        if context.finished_at is not None:
+            payload["finished_at"] = context.finished_at
+            payload["finished_at_iso"] = datetime.datetime.fromtimestamp(
+                context.finished_at, tz=datetime.timezone.utc
+            ).isoformat()
+        if context.started_at is not None and context.finished_at is not None:
+            payload["duration_seconds"] = round(context.finished_at - context.started_at, 6)
         if context.slice_info is not None:
             payload["slice_info"] = {
                 "split": context.slice_info.split,
                 "n_units": len(context.slice_info.unit_ids) if context.slice_info.unit_ids else None,
                 "n_cycles": len(context.slice_info.cycle_ids) if context.slice_info.cycle_ids else None,
             }
+        # entry.split: comma-joined list of splits this transform ran over. available_splits is set
+        # in CopyStep from the data container (data[apply_to_keys[0]].keys()), i.e. the split names
+        # (e.g. "train", "val", "test") come from whoever built the container (usually the datasource).
+        split_str = (
+            ",".join(context.available_splits)
+            if getattr(context, "available_splits", None) else None
+        )
         entry = ManifestEntry(
             schema_version=MANIFEST_SCHEMA_VERSION,
             producer_version=_get_producer_version(),
@@ -504,6 +535,7 @@ class RecordManifestStep:
             payload=payload,
             step_id=step_id,
             key=context.apply_to_keys[0] if context.apply_to_keys else None,
+            split=split_str,
         )
         manifest.add(entry)
         return context

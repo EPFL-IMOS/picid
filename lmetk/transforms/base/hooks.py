@@ -7,14 +7,27 @@ steps, and emission logic. Register defaults via register_defaults().
 from __future__ import annotations
 
 import logging
+import time
 
 from lmetk.transforms.base.pipeline import TransformContext, register_hook
+
+
+def set_transform_started_at(event: str, context: TransformContext) -> None:
+    """Record pipeline start time for manifest timing (before_transform)."""
+    context.started_at = time.time()
+
+
+def set_transform_finished_at(event: str, context: TransformContext) -> None:
+    """Record pipeline end time for manifest timing (after_transform)."""
+    context.finished_at = time.time()
 
 
 def on_transform_error_enrich_log(event: str, context: TransformContext) -> None:
     """Log pipeline failures with rich context for debugging and error tracking."""
     if context.error is None:
         return
+    if context.finished_at is None:
+        context.finished_at = time.time()
     extra = {
         "transform": getattr(
             context.transform_instance,
@@ -35,5 +48,7 @@ def on_transform_error_enrich_log(event: str, context: TransformContext) -> None
 
 
 def register_defaults() -> None:
-    """Register default pipeline hooks (e.g. enrich-and-re-log on transform error)."""
+    """Register default pipeline hooks (timing for manifest, enrich-and-re-log on error)."""
+    register_hook("before_transform", set_transform_started_at)
+    register_hook("after_transform", set_transform_finished_at)
     register_hook("on_transform_error", on_transform_error_enrich_log)

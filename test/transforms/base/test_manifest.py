@@ -143,6 +143,7 @@ class TestContainerManifest:
 
     def test_container_copy_without_manifest(self):
         container = create_dummy_single_unit_container()
+        container.manifest = None  # explicit no-manifest
         assert getattr(container, "manifest", None) is None
         copied = container.copy(deep=True)
         assert getattr(copied, "manifest", None) is None
@@ -151,6 +152,7 @@ class TestContainerManifest:
 class TestRecordManifestStep:
     def test_no_manifest_no_op(self):
         container = create_dummy_single_unit_container()
+        container.manifest = None  # explicit no-manifest: RecordManifestStep should no-op
         assert getattr(container, "manifest", None) is None
         ctx = TransformContext(
             data=container,
