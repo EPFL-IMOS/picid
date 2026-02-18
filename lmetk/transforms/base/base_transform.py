@@ -14,6 +14,14 @@ class BaseTransform(ABC):
     def __init__(self, exclude_keys: list[str] = None, **kwargs):
         self.exclude_keys = exclude_keys if exclude_keys is not None else []
         self._init_kwargs = kwargs
+        # Set requires_fit from fit-policy mixin (avoids pipeline needing to know mixin types)
+        from lmetk.transforms.base.multisource import FitByConcatenationMixin, NoFitMixin
+        if issubclass(type(self), FitByConcatenationMixin):
+            self.requires_fit = True
+        elif issubclass(type(self), NoFitMixin):
+            self.requires_fit = False
+        else:
+            self.requires_fit = getattr(self, "requires_fit", False)
 
     @check_transform_output_consistency
     @abstractmethod

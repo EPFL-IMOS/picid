@@ -403,9 +403,7 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
 # ---------------------------------------------------------------------------
 
 class FitByConcatenationMixin(_BaseDispatcher):
-    """Fit on all segments concatenated into one. requires_fit = True."""
-
-    requires_fit: bool = True
+    """Fit on all segments concatenated into one. requires_fit set in BaseTransform.__init__."""
 
     def fit_multi_source(
         self,
@@ -418,9 +416,7 @@ class FitByConcatenationMixin(_BaseDispatcher):
 
 
 class NoFitMixin(_BaseDispatcher):
-    """No fitting step. requires_fit = False."""
-
-    requires_fit: bool = False
+    """No fitting step. requires_fit set in BaseTransform.__init__."""
 
     def fit_multi_source(
         self,
