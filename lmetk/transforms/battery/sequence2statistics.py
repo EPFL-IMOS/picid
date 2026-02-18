@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class Sequence2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
+class Sequence2Statistics(DenseTransform, StatelessPerSegmentMixin):
     """
     Transforms sequence data by computing the mean and standard deviation
     for each cycle, ignoring a specified padding value and np.nan.

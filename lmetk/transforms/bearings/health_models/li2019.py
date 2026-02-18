@@ -7,7 +7,7 @@ from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 # Changed to NoFit, as this transform doesn't learn parameters
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ TEST_RULS = {
 }
 
 
-class Li2019FPTCutTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class Li2019FPTCutTransform(DenseTransform, StatelessPerSegmentMixin):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "2*sigma interval of kurtosis" method from Li et al. 2019.

@@ -278,16 +278,15 @@ class TestConcatenateTransform:
             transform.transform_data(data, metadata)
     
     def test_fit_multi_source(self):
-        """Test fit_multi_source."""
+        """ConcatenateTransform is stateless; fit_multi_source raises NotImplementedError."""
         transform = ConcatenateTransform(dim=1)
         data_segments = [
             NamedTransformInput(feat1=np.array([[1.0]]), feat2=np.array([[2.0]])),
             NamedTransformInput(feat1=np.array([[3.0]]), feat2=np.array([[4.0]])),
         ]
         metadata = {"apply_to_keys": ["feat1", "feat2"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless|does not support fitting"):
+            transform.fit_multi_source(data_segments, metadata)
     
     def test_call_method(self):
         """Test __call__ method."""
@@ -350,7 +349,7 @@ class TestRuggedToDenseTransform:
             transform.transform_data(data, metadata)
     
     def test_fit_multi_source(self):
-        """Test fit_multi_source."""
+        """RuggedToDenseTransform is stateless; fit_multi_source raises NotImplementedError."""
         transform = RuggedToDenseTransform()
         ragged = ak.Array([
             [1.0, 2.0],
@@ -361,9 +360,8 @@ class TestRuggedToDenseTransform:
             NamedTransformInput(features=ragged),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless|does not support fitting"):
+            transform.fit_multi_source(data_segments, metadata)
 
 
 class TestMultiDatasetRuggedToDenseTransform:

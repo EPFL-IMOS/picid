@@ -6,14 +6,14 @@ from sklearn.linear_model import LinearRegression
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    NoFitMultiSourceTransformMixin,
+    StatelessPerSegmentMixin,
 )
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class Ahmad2019FPTCutTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class Ahmad2019FPTCutTransform(DenseTransform, StatelessPerSegmentMixin):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "Alarm bound technique" from Ahmad et al. 2019.

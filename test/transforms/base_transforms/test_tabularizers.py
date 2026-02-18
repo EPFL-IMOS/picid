@@ -306,19 +306,7 @@ class TestTimeseriesTabularizer:
         transform.fit_data(data, metadata)
     
     def test_fit_multi_source(self):
-        """Test fit_multi_source.
-        
-        **Assumption**: TimeseriesTabularizer should support multi-source fitting (fitting
-        on multiple data segments from different sources/units). Since it doesn't need to
-        learn parameters, this should also be a no-op.
-        
-        **Action**: Create a TimeseriesTabularizer and call fit_multi_source with multiple
-        data segments.
-        
-        **Expected Result**: The method should complete without raising any errors. This
-        validates that the multi-source fit interface works correctly, which is essential
-        for transforms that need to work with data from multiple units or sources.
-        """
+        """TimeseriesTabularizer is stateless; fit_multi_source raises NotImplementedError."""
         select_features = OmegaConf.create([{"features": "t"}])
         transform = TimeseriesTabularizer(
             select_features=select_features,
@@ -333,9 +321,8 @@ class TestTimeseriesTabularizer:
             NamedTransformInput(features=np.random.randn(5, 20, 3)),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless|does not support fitting"):
+            transform.fit_multi_source(data_segments, metadata)
     
     # ========================================================================
     # TRANSFORM DATA TESTS - SELECTION TYPES

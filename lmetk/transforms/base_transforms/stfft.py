@@ -5,13 +5,13 @@ from scipy.signal.windows import get_window
 from scipy.signal import ShortTimeFFT
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class STFTTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class STFTTransform(DenseTransform, StatelessPerSegmentMixin):
     def __init__(
         self,
         win_len: int = 256,

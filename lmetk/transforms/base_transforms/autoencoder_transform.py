@@ -8,7 +8,7 @@ import omegaconf
 import torch
 
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 from lmetk.utils.omegaconf_utils import find_config_file
 from lmetk.utils.torch_utils import correct_state_dict_keys
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class BaseAutoencoderTransform(
     RaggedOrDenseTransform,
-    NoFitMultiSourceTransformMixin,
+    StatelessPerSegmentMixin,
 ):
     """
     Compresses battery  data into a mean/std representation using a pre-trained Autoencoder.

@@ -4,13 +4,13 @@ import pandas as pd
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
-    NoFitMultiSourceTransformMixin,
+    StandardFitTransformMixin,
+    StatelessPerSegmentMixin,
 )
 from lmetk.transforms.battery.utils import get_mode_change_right_indices
 
 
-class FilterDataFrameColumns(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class FilterDataFrameColumns(DenseTransform, StandardFitTransformMixin):
     """
     Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
     """
@@ -33,7 +33,7 @@ class FilterDataFrameColumns(DenseTransform, ConcatinatedFitMultiSourceTransform
         return data_segment
 
 
-class UpdateTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class UpdateTarget(DenseTransform, StandardFitTransformMixin):
     """
     Update the target column to be the one specified in the config.
     This update takes a column from the "features" and returns it
@@ -61,7 +61,7 @@ class UpdateTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
         return out
 
 
-class AssignNaiveTimefeatures(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class AssignNaiveTimefeatures(DenseTransform, StatelessPerSegmentMixin):
     """
     Replace the time features with a range from 0 to len(feature)
     """
@@ -78,7 +78,7 @@ class AssignNaiveTimefeatures(DenseTransform, ConcatinatedFitMultiSourceTransfor
         return data_segment
 
 
-class Cycles2Statistics(DenseTransform, NoFitMultiSourceTransformMixin):
+class Cycles2Statistics(DenseTransform, StatelessPerSegmentMixin):
     """
     Compress cycles to the mean/std representations of the cycles for NB1 dataset
     """

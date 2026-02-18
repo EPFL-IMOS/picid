@@ -5,14 +5,14 @@ import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 # Assuming this import path is correct for your project
 
 logger = logging.getLogger(__name__)
 
 
-class FillTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class FillTransform(DenseTransform, StatelessPerSegmentMixin):
 
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs

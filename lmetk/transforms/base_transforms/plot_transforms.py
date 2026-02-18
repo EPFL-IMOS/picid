@@ -8,10 +8,10 @@ import matplotlib.pyplot as _plt
 
 _plt.switch_backend("Agg")
 
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StandardFitTransformMixin
 
 
-class PlotFeatures(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class PlotFeatures(DenseTransform, StandardFitTransformMixin):
     """
     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.
     Handles various input data types by converting them to numpy.ndarray internally

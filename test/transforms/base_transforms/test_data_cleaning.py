@@ -78,16 +78,15 @@ class TestFillTransform:
         assert "features" in result
     
     def test_fit_multi_source(self):
-        """Test fit_multi_source."""
+        """FillTransform is stateless; fit_multi_source raises NotImplementedError."""
         transform = FillTransform()
         data_segments = [
             NamedTransformInput(features=pd.DataFrame({"a": [1.0, 2.0]})),
             NamedTransformInput(features=pd.DataFrame({"a": [3.0, 4.0]})),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless|does not support fitting"):
+            transform.fit_multi_source(data_segments, metadata)
     
     def test_call_method(self):
         """Test __call__ method."""

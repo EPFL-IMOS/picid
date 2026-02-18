@@ -6,7 +6,7 @@ import scipy
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def hankel_svdvals(data, hankel_window_size, slice_window_size):
     return np.array(hankel_svd).mean(axis=0)
 
 
-class TimeStatsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class TimeStatsTransform(DenseTransform, StatelessPerSegmentMixin):
     """
     Computes global statistical features directly from time-domain signals.
 

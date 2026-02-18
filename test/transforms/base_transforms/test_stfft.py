@@ -137,27 +137,15 @@ class TestSTFTTransform:
         transform.fit_data(data, metadata)
     
     def test_fit_multi_source(self):
-        """Test fit_multi_source.
-        
-        **Assumption**: STFTTransform should support multi-source fitting (fitting on
-        multiple data segments from different sources/units). Since it doesn't need to
-        learn parameters, this should also be a no-op.
-        
-        **Action**: Create an STFTTransform and call fit_multi_source with multiple
-        data segments.
-        
-        **Expected Result**: The method should complete without raising any errors. This
-        validates that the multi-source fit interface works correctly.
-        """
+        """STFTTransform is stateless; fit_multi_source raises NotImplementedError."""
         transform = STFTTransform(win_len=32, hop=8)
         data_segments = [
             NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0]])),
             NamedTransformInput(features=np.array([[5.0, 6.0], [7.0, 8.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless|does not support fitting"):
+            transform.fit_multi_source(data_segments, metadata)
     
     # ========================================================================
     # INPUT VALIDATION TESTS

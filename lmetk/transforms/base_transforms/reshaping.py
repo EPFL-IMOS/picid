@@ -5,12 +5,12 @@ from einops import parse_shape, rearrange
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ReshapeTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class ReshapeTransform(DenseTransform, StatelessPerSegmentMixin):
     def __init__(self, pattern: str, **kwargs):
         """
         Initialize the transform.

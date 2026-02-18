@@ -8,7 +8,7 @@ import awkward as ak
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
+    StandardFitTransformMixin,
     InverseTransformMixin,
 )
 from lmetk.transforms.utils import _convert_to_numpy
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class MinMaxScalerMZVAV(
-    DenseTransform, ConcatinatedFitMultiSourceTransformMixin, InverseTransformMixin
+    DenseTransform, StandardFitTransformMixin, InverseTransformMixin
 ):
     """
     An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.

@@ -4,12 +4,12 @@ import pandas as pd
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class StatisticsBearingsTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class StatisticsBearingsTransform(DenseTransform, StatelessPerSegmentMixin):
     """
     A pass-through transform that prints statistics about the data.
 

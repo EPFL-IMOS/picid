@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 
 # Import your awkward utils
@@ -24,7 +24,7 @@ plt.switch_backend("Agg")
 logger = logging.getLogger(__name__)
 
 
-class FeatureTargetPlotter(RaggedOrDenseTransform, NoFitMultiSourceTransformMixin):
+class FeatureTargetPlotter(RaggedOrDenseTransform, StatelessPerSegmentMixin):
     """
     A pass-through transform that plots features and/or targets
     from `awkward` arrays.

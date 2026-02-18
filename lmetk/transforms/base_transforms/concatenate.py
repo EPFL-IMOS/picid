@@ -7,16 +7,15 @@ import awkward as ak
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
-    ConcatenateUnitsMixing,
-    NoFitMultiSourceTransformMixin,
+    StatelessPerSegmentMixin,
+    StatelessConcatenateMixin,
 )
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
 
 
-class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class ConcatenateTransform(DenseTransform, StatelessPerSegmentMixin):
     def __init__(self, dim: int = 1, **kwargs):
         """
         Initialize the transform.
@@ -157,7 +156,7 @@ class ConcatenateTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMi
         return self.transform_data(data, metadata)
 
 
-class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransformMixin):
+class RuggedToDenseTransform(RaggedTransform, StatelessPerSegmentMixin):
     def __init__(self, **kwargs):
         """
         Initialize the transform.
@@ -185,7 +184,7 @@ class RuggedToDenseTransform(RaggedTransform, ConcatinatedFitMultiSourceTransfor
         return data
 
 
-class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing):
+class MultiDatasetRuggedToDenseTransform(RaggedTransform, StatelessConcatenateMixin):
     def __init__(self, axis: int, **kwargs):
         """
         Initialize the transform.
@@ -194,9 +193,8 @@ class MultiDatasetRuggedToDenseTransform(RaggedTransform, ConcatenateUnitsMixing
             axis: The axis along which to concatenate ragged arrays
             **kwargs: Additional keyword arguments
         """
-        self.axis = axis
         RaggedTransform.__init__(self)
-        ConcatenateUnitsMixing.__init__(self, axis=axis)
+        StatelessConcatenateMixin.__init__(self, axis=axis, **kwargs)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """

@@ -9,7 +9,7 @@ from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StandardFitTransformMixin
 from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
@@ -18,7 +18,7 @@ def ak_bc(arr):
 
 
 class N_CMAPSSDescriptorsScaler(
-    RaggedOrDenseTransform, ConcatinatedFitMultiSourceTransformMixin
+    RaggedOrDenseTransform, StandardFitTransformMixin
 ):
     def __init__(self, scaling="standard"):
 
@@ -73,7 +73,7 @@ class N_CMAPSSDescriptorsScaler(
 
 
 class N_CMAPSSFeaturesScaler(
-    RaggedOrDenseTransform, ConcatinatedFitMultiSourceTransformMixin
+    RaggedOrDenseTransform, StandardFitTransformMixin
 ):
     def __init__(self, scaling="standard"):
         self.scaling = scaling

@@ -5,12 +5,12 @@ import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class FilterTarget(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class FilterTarget(DenseTransform, StatelessPerSegmentMixin):
     def __init__(self, win_len: int, hop: int, **kwargs):
         """
         Initialize the transform.
