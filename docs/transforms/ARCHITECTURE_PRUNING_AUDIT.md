@@ -2,7 +2,10 @@
 
 **Role:** Pragmatic Systems Architect / Code Minimalist  
 **Focus:** Complexity debt and "gold-plating" in the refactored `lmetk/transforms/base`.  
-**Constraint:** Do not revert to monolithic if/else; aim for a decoupled but boring, predictable middle path.
+**Constraint:** Do not revert to monolithic if/else; aim for a decoupled but boring, predictable middle path.  
+**PHM context:** This framework is for Prognostics Health Management; when something goes wrong in a transform, execution should **stop and raise** for debugging rather than silently proceed.
+
+*Audit updated after refactor (context.error, strategy re-raise, FitStep requires_fit, CopyStep transform_on_keys, default hooks in hooks.py).*
 
 ---
 
@@ -16,6 +19,7 @@
 | **`context.integrity_checks`** | **Unused on default path** | `TransformContext` is built only in `TransformStrategy.apply()` and never sets `integrity_checks` (defaults to `None`). So `IntegrityCheckStep` is always a no-op unless some external code builds a context with checks. No caller in the codebase does this. |
 | **`context.step_id` / `context.cache_status`** | **Optional / future** | Set nowhere in the current flow; reserved for observability. Low cost but add cognitive load when reading the context. |
 | **Handler registry** | **Used** | Only used in **multi-source** path: `ConcatinatedFitMultiSourceTransformMixin.fit_function_to_data_segments` and `transform_function_to_data_segments` call `get_handler(data_kind, capability)`. Single-unit path never touches the registry. |
+| **Default hooks** | **Used** | `hooks.py` registers `on_transform_error` → `on_transform_error_enrich_log` via `_register_default_hooks()` at pipeline import. Doc references `HOOKS_EXAMPLES.md`. |
 
 ### 1.2 Is Registry-Based Dispatching Too "Magical"?
 
@@ -87,7 +91,43 @@ No significant latency or memory pressure was identified from the new observabil
 
 ---
 
-## 5. Simplicity Score Card
+## 5. PHM: Fail-Fast and No Silent Proceed
+
+For Prognostics Health Management, the expectation is: **if something goes wrong in a transform, stop execution and raise for debug**—do not silently continue. The following assesses the current code against that.
+
+### 5.1 What Already Stops and Raises (good for PHM)
+
+| Location | Behavior |
+|----------|----------|
+| **TransformStrategy.apply()** | On any exception in the step pipeline: sets `context.error = e`, emits `on_transform_error`, then **re-raises** (`raise`). Pipeline does not swallow step failures. |
+| **CopyStep** | Raises `ValueError` if `apply_to_keys` is empty; `KeyError` if apply key missing; `TypeError` if structure wrong; **ValueError** if `transform_on_keys` yields no splits (with clear message). No silent proceed. |
+| **FitStep** | If transform has `requires_fit=True` and `fit_on_split` or `fit_on_key` is missing: **raises ValueError** (fail-fast on misconfiguration). |
+| **PostprocessStep** | **Raises KeyError** if a transformed chunk is missing the expected assign_to_map key. |
+| **Handler lookup** | `get_handler(data_kind, capability)` raises **KeyError** if no handler; mixin converts to **ValueError** with a clear message. |
+| **Integrity run_check** | When policy is `"fail"`, re-raises; when `"warn"` or `"allow"`, continues (see below). |
+
+So: **core pipeline and steps are fail-fast**. Any step or transform exception propagates; the strategy does not catch and continue.
+
+### 5.2 Remaining "Warn or Continue" Surfaces (review for PHM)
+
+| Location | Current behavior | PHM recommendation |
+|----------|------------------|---------------------|
+| **Integrity policies `"warn"` and `"allow"`** | `integrity.py`: `warn` issues `warnings.warn` and continues; `allow` suppresses. Only `fail` re-raises. | For PHM, treat **only `"fail"` as acceptable** when registering checks. Document that `warn`/`allow` are for non-PHM or dev-only use; default or recommended policy for PHM is `"fail"`. No code change required if callers only register checks with policy `"fail"`. |
+| **Pipeline hook callbacks (_emit)** | `pipeline._emit`: `try: cb(event, context) except Exception: pass` — **hook callback exceptions are swallowed**. | For PHM, a failing hook (e.g. logging or validation) should not hide the fact that something went wrong. Options: (1) **Re-raise** after first hook that raises (pipeline fails if any hook fails); (2) **Log and re-raise** so the original step error is still the one that surfaces but hook failures are visible. Recommendation: **re-raise in _emit** so hook errors do not silently proceed; if observability hooks must never break the pipeline, keep pass but at least **log** the exception. |
+| **DataTransform.forward() post-validation** | After strategy returns: if split type or source count changes, only **logger.warning** is used; execution continues and returns data. | For PHM, **raise** on contract violation (e.g. `TypeError` if type changed, `ValueError` if source count changed) so bad transforms are caught immediately instead of producing questionable outputs. |
+| **RaggedDenseHandler reconstruction fallback** | On fast reconstruction failure, handler **logs** and falls back to `ak.Array(tolist_fn(v))`; does not re-raise. | For PHM, consider **re-raising** in that except block (or adding a strict mode) so ragged→dense→reassemble failures are not masked by a slower fallback. |
+
+### 5.3 Summary (PHM)
+
+- **Pipeline and steps:** Already stop and re-raise on any exception; `context.error` is set for debugging before re-raise. Aligned with PHM.
+- **Integrity:** Use only policy `"fail"` for PHM; document that.
+- **Hooks:** Prefer re-raising (or log+re-raise) in `_emit` so hook failures are not silent.
+- **DataTransform post-validation:** Prefer raising instead of warning on type/source-count violations.
+- **RaggedDenseHandler:** Optional: re-raise on reconstruction failure for strict PHM behavior.
+
+---
+
+## 6. Simplicity Score Card
 
 **Scale: 1 = Lean, 5 = Overengineered**
 
@@ -95,7 +135,7 @@ No significant latency or memory pressure was identified from the new observabil
 |------------------|--------|-----------|
 | **Registry + data_kind** | **2** | Single lookup (data_kind × capability) → handler. Used only on multi-source path. Clear constants and one place to extend. |
 | **Handlers** | **2** | Three concrete handlers; protocol is small (fit_prepare, transform_apply). Logic is where it belongs (dense vs ragged). |
-| **Lifecycle hooks** | **4** | Five events, three emitted. Two slots are dead. No in-repo consumers of hooks. Overbuilt for current use. |
+| **Lifecycle hooks** | **4** | Five events, three emitted. Two slots (before_transform, after_transform) still never emitted. Default hook (on_transform_error) in hooks.py adds value. Overbuilt for unused events. |
 | **Pipeline steps** | **3** | Six steps in a fixed order; each step has a clear job. TransformContext is large; IntegrityCheckStep is no-op by default. |
 | **TransformContext** | **4** | Many optional fields (step_id, cache_status, integrity_checks, slice_info, strategy, postprocess_fn). “Kitchen sink” for future features. |
 | **Integrity (run_check / IntegrityCheckStep)** | **3** | run_check/run_checks are simple. IntegrityCheckStep is never fed checks on the default path, so it’s dead surface area. |
@@ -106,7 +146,7 @@ No significant latency or memory pressure was identified from the new observabil
 
 ---
 
-## 6. Keep, Collapse, or Cut
+## 7. Keep, Collapse, or Cut
 
 ### Keep (essential or clearly on the roadmap)
 
@@ -130,34 +170,32 @@ No significant latency or memory pressure was identified from the new observabil
 
 ---
 
-## 7. One-Page Developer Path: How Data Flows
+## 8. One-Page Developer Path: How Data Flows
 
-### 7.1 Single-Page Picture
+### 8.1 Single-Page Picture
 
 ```
 DataTransform.forward(data)
   → TransformStrategy.apply(transform_instance, data, apply_to_keys, assign_to_keys, ...)
-       → Build TransformContext(data, transform_instance, apply_to_keys, ...)
+       → Build TransformContext(..., strategy=self, postprocess_fn=postprocess_transformed_data, slice_info=...)
        → _emit("on_pipeline_start", context)
-       → CopyStep.run(context)           → copy container; set transformed_data, available_splits
-       → IntegrityCheckStep.run(context) → if context.integrity_checks: run_checks(...); else no-op
-       → FitStep.run(context)            → if fit_on_split/fit_on_key: prepare chunks
-                                          → single: transform_instance.fit_data(chunk, metadata)
-                                          → multi:  transform_instance.fit_multi_source(chunks, metadata)
-                                               → mixin: infer_data_kind, get_capability, get_handler
-                                               → handler.fit_prepare(segments, ..., fit_func)
-       → TransformStep.run(context)      → for each split: prepare chunks
-                                          → single: transform_instance.transform_data(chunk, metadata)
-                                          → multi:  transform_instance.transform_multi_source(chunks, metadata)
-                                               → mixin: get_handler → handler.transform_apply(...)
-       → PostprocessStep.run(context)    → postprocess_fn(raw results) → transformed_results_for_new_key
-       → MergeStep.run(context)          → strategy._merge_transformed_data(...)
-       → RecordManifestStep.run(context) → if container.manifest: manifest.add(entry)
+       → try:
+            CopyStep.run(context)           → copy; set transformed_data, available_splits (raises if key missing / transform_on_keys empty)
+            IntegrityCheckStep.run(context) → if context.integrity_checks: run_checks(...); else no-op
+            FitStep.run(context)            → if requires_fit and no fit_on: raise; else fit_data / fit_multi_source (mixin → get_handler → handler.fit_prepare)
+            TransformStep.run(context)      → per split: transform_data / transform_multi_source (mixin → handler.transform_apply)
+            PostprocessStep.run(context)    → postprocess_fn → transformed_results_for_new_key (raises KeyError if chunk missing key)
+            MergeStep.run(context)          → strategy._merge_transformed_data(...)
+            RecordManifestStep.run(context) → if container.manifest: manifest.add(entry)
+       → except Exception e:
+            context.error = e
+            _emit("on_transform_error", context)   ← default hook logs with rich context
+            raise
        → _emit("on_pipeline_end", context)
   ← return context.transformed_data, context.log
 ```
 
-### 7.2 Where the Registry Lives
+### 8.2 Where the Registry Lives
 
 The **handler registry is not used by the pipeline**. It is used **inside the transform instance** when it’s a multi-source transform (mixin):
 
@@ -166,22 +204,23 @@ The **handler registry is not used by the pipeline**. It is used **inside the tr
 
 So: **Pipeline → Transform (mixin) → (data_kind, capability) → registry → handler.**
 
-### 7.3 Can This Be Explained Simply?
+### 8.3 Can This Be Explained Simply?
 
 Yes: one page (above) is enough for “how data flows” and “where dispatch happens.” The only non-obvious part is that **dispatch is inside the transform’s multi_source methods**, not in the strategy or steps. A short note in the module docstring or a dedicated “Transform pipeline” section in the docs would make this the single source of truth.
 
-### 7.4 Optional Refactor for Even Simpler Explanation
+### 8.4 Optional Refactor for Even Simpler Explanation
 
 If the goal is “a developer sees the pipeline and immediately sees dispatch,” one could **move handler lookup into the strategy** (or a small helper used by FitStep/TransformStep): e.g. strategy or step computes data_kind and capability and calls a “run_fit” / “run_transform” helper that uses the registry. Then the mixin would only “prepare segments” and call that helper. That would make the pipeline the single place that “knows” about data_kind and handlers, at the cost of one more coupling (strategy or steps to data_kind + registry). Current design keeps the pipeline data-agnostic and puts type-aware dispatch inside the transform; both are defensible. Recommendation: **keep current design** and document the flow (e.g. this one-pager) rather than refactor for this alone.
 
 ---
 
-## 8. Summary
+## 9. Summary
 
-- **YAGNI:** Two lifecycle events and the default integrity-check path are unused; registry and pipeline steps are used and justified.
+- **YAGNI:** Two lifecycle events (before_transform, after_transform) and the default integrity-check path are unused; registry and pipeline steps are used and justified. Default hook (on_transform_error) in hooks.py is used.
 - **Traceability:** Acceptable; multi-source path is 4–5 hops with dispatch inside the mixin. Document that in one place.
 - **Indirection-to-value:** Good for “add a transform”; poor for “add integrity checks” and “use before/after_transform” until wired or pruned.
 - **Abstraction:** Orchestration still knows about `ak.Array` and `get_instance_cls()` in CopyStep, data_kind, and handlers; no regression, but no full decoupling.
 - **Performance:** No concerning overhead from context, steps, manifest, or hooks.
 - **Simplicity:** Registry and handlers are lean; hooks and unused context/IntegrityCheck surface are the main complexity debt.
-- **Actions:** Keep registry, handlers, steps, manifest, dry run. Collapse or wire IntegrityCheckStep and before/after_transform (emit or remove). Cut unused hook names from the public surface if not planning to use them soon. Add the one-page developer path to the repo (e.g. this section or a link from `lmetk/transforms/base`).
+- **PHM (fail-fast):** Pipeline and steps already stop and re-raise; context.error is set before re-raise. Remaining soft spots: integrity policy warn/allow, _emit swallowing hook exceptions, DataTransform warning instead of raising on post-validation, RaggedDenseHandler fallback without re-raise. See §5 for recommendations.
+- **Actions:** Keep registry, handlers, steps, manifest, dry run. Collapse or wire IntegrityCheckStep and before/after_transform (emit or remove). Cut unused hook names from the public surface if not planning to use them soon. For PHM: consider re-raise in _emit, raise in DataTransform post-validation on contract violation, document integrity policy "fail" for PHM, optional re-raise in RaggedDenseHandler. Add the one-page developer path to the repo (e.g. this section or a link from `lmetk/transforms/base`).
