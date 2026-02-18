@@ -291,6 +291,7 @@ class DataTransform:
             fit_on_split=self.fit_on_split,
             fit_on_key=self.fit_on_key,
             transform_on_keys=self.transform_on_keys,
+            step_id=self.transform_name,
         )
 
         # --- Post-transformation Validation ---

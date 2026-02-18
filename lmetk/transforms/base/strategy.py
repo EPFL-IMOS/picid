@@ -129,6 +129,7 @@ class TransformStrategy:
         fit_on_split: Optional[str] = None,
         fit_on_key: Optional[str] = None,
         transform_on_keys: Optional[list[str]] = None,
+        step_id: Optional[str] = None,
     ):
         # Normalize single string to list so context and steps always see lists
         if isinstance(apply_to_keys, str):
@@ -152,15 +153,18 @@ class TransformStrategy:
             strategy=self,
             postprocess_fn=postprocess_transformed_data,
             slice_info=getattr(data, "slice_info", None),
+            step_id=step_id,
         )
         _emit("on_pipeline_start", context)
         try:
+            _emit("before_transform", context)
             CopyStep().run(context)
             IntegrityCheckStep().run(context)
             FitStep().run(context)
             TransformStep().run(context)
             PostprocessStep().run(context)
             MergeStep().run(context)
+            _emit("after_transform", context)
             RecordManifestStep().run(context)
         except Exception as e:
             context.error = e
