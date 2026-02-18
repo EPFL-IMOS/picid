@@ -27,35 +27,6 @@ T = TypeVar("T", bound=(np.ndarray | ak.Array))
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
 
 
-# class ImplicitTypeDataObject(BaseDataObjectWithMetadata):
-
-#     def __init__(self, **kwargs):
-
-#         # assume instance_cls from set of kwargs values
-#         if not kwargs:
-#             raise ValueError(
-#                 "TransformInput requires at least one value. "
-#                 "At least one keyword argument is required to infer type."
-#             )
-
-#         # Exclude "metadata" key to allow for passing metadata into transform explicitly
-#         if "metadata" in kwargs:
-#             # If metadata is present, it's not part of the data values for type inference
-#             temp_kwargs = {k: v for k, v in kwargs.items() if k != "metadata"}
-#             instance_types = {type(v) for v in temp_kwargs.values()}
-#         else:
-#             instance_types = {type(v) for v in kwargs.values()}
-
-#         if len(instance_types) != 1:
-#             raise ValueError(
-#                 f"All values must be of the same type to infer instance_cls, got: {instance_types}"
-#             )
-#         else:
-#             instance_cls = instance_types.pop()
-
-#         super().__init__(instance_cls, **kwargs)
-
-
 class NamedTransformInput(BaseDataObjectWithMetadata):
     """
     A data object that holds inputs for a transformation and can sanitize them.
@@ -164,12 +135,12 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
-        Optional: pass manifest= to attach a MetadataManifest (Phase 4.1);
-        slice_info= for slice-awareness (Phase 4.2).
+        By default a new MetadataManifest is attached (Phase 4.1); pass manifest=
+        to override. Optional slice_info= for slice-awareness (Phase 4.2).
         """
         # Assume multi-unit by default. If we find any single item, we flip the flag.
         self.is_multi_unit: bool = is_multi_unit
-        manifest = kwargs.pop("manifest", None)
+        manifest = kwargs.pop("manifest", MetadataManifest())
         self.manifest: Optional[MetadataManifest] = manifest
         slice_info = kwargs.pop("slice_info", None)
         self.slice_info: Optional[SliceInfo] = slice_info
@@ -223,6 +194,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         manifest_src = getattr(self, "manifest", None)
         if manifest_src is not None:
             object.__setattr__(new, "manifest", manifest_src.copy(deep=deep))
+        else:
+            object.__setattr__(new, "manifest", None)
         slice_src = getattr(self, "slice_info", None)
         if slice_src is not None:
             object.__setattr__(new, "slice_info", slice_src.copy(deep=deep))
