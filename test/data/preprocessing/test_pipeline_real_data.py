@@ -1,0 +1,161 @@
+"""
+Phase 0: Real-data pipeline comparison tests.
+
+Compare current pipeline output to saved slices (loaded and transformed);
+assert preprocessing time within bounds. Skip when snapshots are missing (@pytest.mark.requires_snapshots).
+"""
+from __future__ import annotations
+
+import os
+import time
+from pathlib import Path
+
+import pytest
+
+from lmetk.data.preprocessing.preprocessor import PreProcessor
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
+
+# Snapshot fixtures root: test/data/fixtures/pipeline_snapshots
+SNAPSHOTS_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "pipeline_snapshots"
+
+
+def _snapshot_dir(name: str, stage: str) -> Path:
+    return SNAPSHOTS_ROOT / name / stage
+
+
+def _manifest_path(name: str, stage: str) -> Path:
+    return _snapshot_dir(name, stage) / "slices_manifest.json"
+
+
+def _has_snapshots(name: str) -> bool:
+    loaded = _manifest_path(name, "loaded").exists()
+    transformed = _manifest_path(name, "transformed").exists()
+    return loaded and transformed
+
+
+@pytest.mark.requires_snapshots
+@pytest.mark.parametrize("config_name", ["phme20", "unibo21_bosello"])
+def test_loaded_slices_match_saved(config_name: str):
+    """After load only, slice manifest and numeric slices match saved (skip if snapshots missing)."""
+    if not _has_snapshots(config_name):
+        pytest.skip(
+            f"Snapshots missing for {config_name}. "
+            "Run: uv run python scripts/generate_pipeline_snapshots.py"
+        )
+    # Import here so slice_utils is only needed when snapshots exist
+    from omegaconf import OmegaConf
+    from hydra.utils import instantiate
+
+    from test.data.fixtures.pipeline_snapshots.slice_utils import (
+        container_to_slice_manifest,
+        load_manifest,
+        compare_to_saved_slices,
+    )
+
+    CONFIGS = {
+        "phme20": (
+            "configs/datasource/phme20.yaml",
+            "configs/transforms/phme20/normalize_feature_target.yaml",
+        ),
+        "unibo21_bosello": (
+            "configs/datasource/unibo21_bosello.yaml",
+            "configs/transforms/battery/unibo/combined.yaml",
+        ),
+    }
+    project_root = Path(__file__).resolve().parents[3]
+    ds_path, _ = CONFIGS[config_name]
+    ds_cfg = OmegaConf.load(project_root / ds_path)
+    datasource = instantiate(ds_cfg)
+    datasource.load_data()
+    datasource.split_data()
+    container = datasource.get_data()
+
+    loaded_dir = _snapshot_dir(config_name, "loaded")
+    saved_path = _manifest_path(config_name, "loaded")
+    # Build current manifest and slices into a temp dir so we don't overwrite saved snapshots
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        current_manifest = container_to_slice_manifest(
+            container,
+            keys=["features", "target"],
+            out_dir=tmp_path,
+            max_rows_per_unit=100,
+        )
+        compare_to_saved_slices(
+            current_manifest,
+            saved_path,
+            loaded_dir,
+            current_split_dict=container.to_split_dict() if hasattr(container, "to_split_dict") else None,
+            current_slices_dir=tmp_path,
+        )
+
+
+@pytest.mark.requires_snapshots
+@pytest.mark.parametrize("config_name", ["phme20", "unibo21_bosello"])
+def test_transformed_slices_match_saved(config_name: str):
+    """Full pipeline output matches saved transformed slices; timing within bounds (skip if snapshots missing)."""
+    if not _has_snapshots(config_name):
+        pytest.skip(
+            f"Snapshots missing for {config_name}. "
+            "Run: uv run python scripts/generate_pipeline_snapshots.py"
+        )
+    from omegaconf import OmegaConf
+    from hydra.utils import instantiate
+
+    from test.data.fixtures.pipeline_snapshots.slice_utils import (
+        container_to_slice_manifest,
+        compare_to_saved_slices,
+        assert_preprocessing_time_within_bounds,
+        load_manifest,
+    )
+
+    CONFIGS = {
+        "phme20": (
+            "configs/datasource/phme20.yaml",
+            "configs/transforms/phme20/normalize_feature_target.yaml",
+        ),
+        "unibo21_bosello": (
+            "configs/datasource/unibo21_bosello.yaml",
+            "configs/transforms/battery/unibo/combined.yaml",
+        ),
+    }
+    project_root = Path(__file__).resolve().parents[3]
+    ds_path, tf_path = CONFIGS[config_name]
+    ds_cfg = OmegaConf.load(project_root / ds_path)
+    tf_cfg = OmegaConf.load(project_root / tf_path)
+    datasource = instantiate(ds_cfg)
+    transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
+    preprocessor = PreProcessor(
+        mode="per_unit",
+        datasource=datasource,
+        transforms=transforms_manager,
+    )
+    t0 = time.perf_counter()
+    preprocessor.pipeline()
+    current_time = time.perf_counter() - t0
+
+    transformed_dir = _snapshot_dir(config_name, "transformed")
+    saved_path = _manifest_path(config_name, "transformed")
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        current_manifest = container_to_slice_manifest(
+            preprocessor.data,
+            keys=["features", "target"],
+            out_dir=tmp_path,
+            max_rows_per_unit=100,
+        )
+        compare_to_saved_slices(
+            current_manifest,
+            saved_path,
+            transformed_dir,
+            current_split_dict=preprocessor.data.to_split_dict() if hasattr(preprocessor.data, "to_split_dict") else None,
+            current_slices_dir=tmp_path,
+        )
+    max_ratio = float(os.environ.get("PIPELINE_SNAPSHOT_MAX_TIME_RATIO", "2.0"))
+    assert_preprocessing_time_within_bounds(
+        current_time,
+        saved_path,
+        max_time_ratio=max_ratio,
+    )
