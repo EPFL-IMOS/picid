@@ -1,8 +1,8 @@
 """
 Characterization tests for lmetk.data.data_objects.utils only.
 
-This module imports ONLY from lmetk.data.data_objects.utils (no data.py/base.py),
-so it can be run in isolation without pulling in awkward/pyarrow via data layer.
+This module imports from lmetk.data.data_objects.utils; tests use real arrays
+(numpy, pandas, awkward) and assert concrete expected outcomes.
 Run: pytest test/data/data_objects/test_utils_characterization.py -v
 """
 from __future__ import annotations
@@ -11,13 +11,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# Intentionally only utils – no data.py/base.py
 from lmetk.data.data_objects.utils import (
     get_length,
     check_length_consistency,
     check_for_nans,
     convert_to_numpy,
 )
+
+try:
+    import awkward as ak
+    HAS_AWKWARD = True
+except ImportError:
+    HAS_AWKWARD = False
 
 
 # ----- get_length -----
@@ -68,61 +73,157 @@ def test_check_length_consistency_warn_only():
 
 
 def test_check_for_nans_ndarray_raises():
-    with pytest.raises(ValueError, match="NaN"):
-        check_for_nans([np.array([1.0, np.nan, 2.0])], ["x"])
+    """Numeric ndarray with NaN raises ValueError with key in message."""
+    arr = np.array([1.0, np.nan, 2.0])
+    with pytest.raises(ValueError) as exc_info:
+        check_for_nans([arr], ["x"])
+    assert "NaN" in exc_info.value.args[0]
+    assert "x" in exc_info.value.args[0]
 
 
 def test_check_for_nans_ndarray_ok():
-    check_for_nans([np.array([1.0, 2.0])], ["x"])
+    """Numeric ndarray without NaN returns without error."""
+    result = check_for_nans([np.array([1.0, 2.0])], ["x"])
+    assert result is None
 
 
 def test_check_for_nans_ndarray_non_numeric_no_raise():
-    check_for_nans([np.array(["a", "b"])], ["x"])
+    """Non-numeric ndarray is not checked for NaN; no error."""
+    result = check_for_nans([np.array(["a", "b"])], ["x"])
+    assert result is None
 
 
 def test_check_for_nans_ndarray_warn_only():
-    with pytest.warns(UserWarning, match="NaN"):
-        check_for_nans(
+    """With raise_on_error=False, NaN triggers warning only."""
+    with pytest.warns(UserWarning) as warn_info:
+        result = check_for_nans(
             [np.array([1.0, np.nan])],
             ["x"],
             raise_on_error=False,
         )
+    assert result is None
+    assert len(warn_info) == 1
+    assert "NaN" in str(warn_info[0].message)
+    assert "x" in str(warn_info[0].message)
 
 
 # ----- check_for_nans: DataFrame -----
 
 
 def test_check_for_nans_dataframe_with_nan_raises():
+    """DataFrame with NaN in numeric column raises; message includes key."""
     df = pd.DataFrame({"a": [1.0, np.nan], "b": [3.0, 4.0]})
-    with pytest.raises(ValueError, match="NaN"):
+    with pytest.raises(ValueError) as exc_info:
         check_for_nans([df], ["feat"])
+    assert "NaN" in exc_info.value.args[0]
+    assert "feat" in exc_info.value.args[0]
 
 
 def test_check_for_nans_dataframe_no_nan_ok():
+    """DataFrame with no NaN in numeric columns returns None."""
     df = pd.DataFrame({"a": [1.0, 2.0], "b": [3.0, 4.0]})
-    check_for_nans([df], ["feat"])
+    result = check_for_nans([df], ["feat"])
+    assert result is None
 
 
 def test_check_for_nans_dataframe_empty_numeric_ok():
+    """Empty numeric DataFrame does not raise."""
     df = pd.DataFrame({"a": [], "b": []})
-    check_for_nans([df], ["feat"])
+    result = check_for_nans([df], ["feat"])
+    assert result is None
 
 
 # ----- check_for_nans: Series -----
 
 
 def test_check_for_nans_series_numeric_with_nan_raises():
+    """Numeric Series with NaN raises; message includes key."""
     s = pd.Series([1.0, np.nan, 2.0])
-    with pytest.raises(ValueError, match="NaN"):
+    with pytest.raises(ValueError) as exc_info:
         check_for_nans([s], ["x"])
+    assert "NaN" in exc_info.value.args[0]
+    assert "x" in exc_info.value.args[0]
 
 
 def test_check_for_nans_series_numeric_ok():
-    check_for_nans([pd.Series([1.0, 2.0])], ["x"])
+    """Numeric Series without NaN returns None."""
+    result = check_for_nans([pd.Series([1.0, 2.0])], ["x"])
+    assert result is None
 
 
 def test_check_for_nans_series_non_numeric_skipped():
-    check_for_nans([pd.Series(["a", "b"])], ["x"])
+    """Non-numeric Series is not checked; no error."""
+    result = check_for_nans([pd.Series(["a", "b"])], ["x"])
+    assert result is None
+
+
+# ----- check_for_nans: awkward.Array -----
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_numeric_with_nan_raises():
+    """Numeric awkward array with NaN raises ValueError; message includes key."""
+    arr = ak.Array([1.0, np.nan, 2.0])
+    with pytest.raises(ValueError) as exc_info:
+        check_for_nans([arr], ["ak_feat"])
+    assert "NaN" in exc_info.value.args[0]
+    assert "ak_feat" in exc_info.value.args[0]
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_numeric_no_nan_ok():
+    """Numeric awkward array without NaN returns None."""
+    arr = ak.Array([1.0, 2.0, 3.0])
+    result = check_for_nans([arr], ["ak_feat"])
+    assert result is None
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_nested_numeric_with_nan_raises():
+    """Nested numeric awkward array with NaN raises; flatten is applied."""
+    arr = ak.Array([[1.0, 2.0], [np.nan, 4.0]])
+    with pytest.raises(ValueError) as exc_info:
+        check_for_nans([arr], ["nested"])
+    assert "NaN" in exc_info.value.args[0]
+    assert "nested" in exc_info.value.args[0]
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_nested_numeric_no_nan_ok():
+    """Nested numeric awkward array without NaN returns None."""
+    arr = ak.Array([[1.0, 2.0], [3.0, 4.0]])
+    result = check_for_nans([arr], ["nested"])
+    assert result is None
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_non_numeric_skipped():
+    """Non-numeric awkward array (e.g. strings) is not checked; no error."""
+    arr = ak.Array(["a", "b", "c"])
+    result = check_for_nans([arr], ["labels"])
+    assert result is None
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_awkward_warn_only():
+    """awkward array with NaN and raise_on_error=False issues warning only."""
+    arr = ak.Array([1.0, np.nan])
+    with pytest.warns(UserWarning) as warn_info:
+        result = check_for_nans([arr], ["ak_x"], raise_on_error=False)
+    assert result is None
+    assert len(warn_info) == 1
+    assert "NaN" in str(warn_info[0].message)
+    assert "ak_x" in str(warn_info[0].message)
+
+
+@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
+def test_check_for_nans_mixed_list_awkward_nan_raises():
+    """Multiple values: one awkward with NaN raises for that key."""
+    ok_arr = np.array([1.0, 2.0])
+    bad_ak = ak.Array([1.0, np.nan])
+    with pytest.raises(ValueError) as exc_info:
+        check_for_nans([ok_arr, bad_ak], ["ok", "bad"])
+    assert "bad" in exc_info.value.args[0]
 
 
 # ----- convert_to_numpy -----

@@ -40,6 +40,18 @@ def jagged_data():
 # =========================================================================
 
 
+def test_padding_left_flag_invalid_raises(dense_data):
+    """padding_left_flag not in [0, 1] raises ValueError (coverage)."""
+    with pytest.raises(ValueError, match="padding_left_flag must be boolean or int"):
+        AkwardJaggedAutoregressiveSequencer(
+            features=dense_data,
+            seq_len=2,
+            pred_len=1,
+            label_len=0,
+            padding_left_flag=2,
+        )
+
+
 def test_padding_activates_for_short_sequences(dense_data):
     """
     Scenario: Data length (5) is shorter than required (Seq 6 + Pred 1 = 7).

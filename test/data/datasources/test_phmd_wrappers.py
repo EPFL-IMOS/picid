@@ -1,0 +1,94 @@
+"""
+Tests for phmd_* loader wrappers (CBMv3, HSF15, Battery, Pronostia, etc.).
+Uses conftest phmd mock; exercises init and, where possible, load_data with mocked _load_data.
+"""
+from __future__ import annotations
+
+import numpy as np
+import pytest
+from unittest.mock import patch
+
+# phmd is mocked in conftest; import loaders that depend on it
+from lmetk.data.datasources.phmd_battery import PHMDBatteryLoader
+from lmetk.data.datasources.phmd_cbmv3 import CBMv3Loader
+from lmetk.data.datasources.phmd_hsf15 import HSF15Loader
+from lmetk.data.datasources.phmd_pronostia import PronostiaLoader, UNIT_NAMES_TO_ID, TEST_RULS
+from lmetk.data.datasources.phmd_n_cmapss import PHMDNCMAPSSLoader
+from lmetk.data.datasources.phmd_phme20 import PHME20Loader
+from lmetk.data.datasources.phmd_pubd16 import Pubd16Loader
+from lmetk.data.datasources.phmd_xjtu_sy import XJTU_SYLoader
+
+
+def _minimal_phmd_kwargs(cache_dir="/tmp/phmd_cache"):
+    return {
+        "fold": 0,
+        "data_name": "NB14",
+        "task_mode": "rul",
+        "cache_dir": cache_dir,
+    }
+
+
+def test_phmd_battery_loader_init():
+    """PHMDBatteryLoader initializes with minimal kwargs."""
+    loader = PHMDBatteryLoader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+    assert loader.task_mode == "rul"
+
+
+def test_phmd_cbmv3_loader_init():
+    """CBMv3Loader initializes."""
+    loader = CBMv3Loader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_phmd_hsf15_loader_init():
+    """HSF15Loader initializes."""
+    loader = HSF15Loader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_pronostia_loader_init():
+    """PronostiaLoader initializes; constants are defined."""
+    loader = PronostiaLoader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+    assert "1_3" in UNIT_NAMES_TO_ID
+    assert "1_3" in TEST_RULS
+
+
+def test_phmd_n_cmapss_loader_init():
+    """PHMDNCMAPSSLoader initializes."""
+    loader = PHMDNCMAPSSLoader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_phmd_phme20_loader_init():
+    """PHME20Loader initializes."""
+    loader = PHME20Loader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_phmd_pubd16_loader_init():
+    """Pubd16Loader initializes."""
+    loader = Pubd16Loader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_phmd_xjtu_sy_loader_init():
+    """XJTU_SYLoader initializes."""
+    loader = XJTU_SYLoader(**_minimal_phmd_kwargs())
+    assert loader.data_name == "NB14"
+
+
+def test_phmd_battery_load_data_mocked():
+    """PHMDBatteryLoader.load_data with mocked _load_data; get_data_name returns data_dict['metadata']."""
+    loader = PHMDBatteryLoader(**_minimal_phmd_kwargs())
+    # PHMD get_data_name() returns self.data_dict["metadata"]
+    fake_data = {
+        "features": {"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))], "test": [np.zeros((5, 2))]},
+        "target": {"train": [np.zeros((10, 1))], "val": [np.zeros((5, 1))], "test": [np.zeros((5, 1))]},
+        "metadata": ["NB14"],
+    }
+    with patch.object(loader, "_load_data", return_value=fake_data):
+        loader.load_data()
+    assert loader._is_loaded
+    assert loader.get_data_name() == ["NB14"]

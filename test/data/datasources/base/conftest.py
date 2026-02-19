@@ -143,3 +143,21 @@ def _two_sources_with_by_source_splitter_config():
 @pytest.fixture
 def two_sources_config_with_by_source_splitter():
     return _two_sources_with_by_source_splitter_config()
+
+
+class FailingSingleSourceLoader(SingleSourceLoader):
+    """Loader that does not set _is_loaded in load_data (for coverage: MultiSourceLoader warning)."""
+
+    def __init__(self, data_name="failing", **kwargs):
+        if "data_name" not in kwargs:
+            kwargs["data_name"] = data_name
+        if "task_mode" not in kwargs:
+            kwargs["task_mode"] = "regression"
+        super().__init__(**kwargs)
+
+    def load_data(self):
+        """Override: do not set _is_loaded so MultiSourceLoader hits the warning branch."""
+        pass
+
+    def _load_data(self):
+        return {}

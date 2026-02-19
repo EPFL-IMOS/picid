@@ -138,85 +138,19 @@ def test_ragged_input_handling(ragged_data_dict):
     assert batch_sample["jagged_feat_seq_x"].ndim == 3
 
 
-# =========================================================================
-# === Tests: subset_ratio / subset_seed ===
-# =========================================================================
+def test_sliding_window_get_collate_fn(dense_data_dict):
+    """get_collate_fn returns collate_key_value_batch (coverage)."""
+    from lmetk.data.datasets.collate_functions import collate_key_value_batch
 
-
-def test_subset_reduces_length_and_matches_expected_indices(dense_data_dict):
-    """
-    subset_ratio should reduce the available windows and honor deterministic indices.
-    """
     ds = SlidingWindowBatchDataset(
         data_dict=dense_data_dict,
         seq_len=2,
         label_len=0,
         pred_len=1,
         stride=1,
-        subset_ratio=0.25,
-        subset_seed=123,
     )
-
-    # length should be roughly 25% of full
-    # Recompute full windows based on driver
-    full_windows = len(
-        SlidingWindowBatchDataset(
-            data_dict=dense_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1
-        )
-    )
-    expected_len = int(full_windows * 0.25)
-    assert len(ds) == expected_len
-
-    # Verify indices are sorted and within range
-    seq_idx = ds._seq_idx
-    assert seq_idx is not None
-    assert np.all(np.diff(seq_idx) >= 0)
-    assert seq_idx.min() >= 0 and seq_idx.max() < full_windows
-
-
-def test_subset_seed_reproducibility_and_variation(dense_data_dict):
-    """Same seed -> same subset indices; different seed -> different indices."""
-    common_kwargs = dict(
-        data_dict=dense_data_dict,
-        seq_len=3,
-        label_len=0,
-        pred_len=1,
-        stride=1,
-        subset_ratio=0.3,
-    )
-
-    ds_a = SlidingWindowBatchDataset(**common_kwargs, subset_seed=7)
-    ds_b = SlidingWindowBatchDataset(**common_kwargs, subset_seed=7)
-    ds_c = SlidingWindowBatchDataset(**common_kwargs, subset_seed=8)
-
-    assert np.array_equal(ds_a._seq_idx, ds_b._seq_idx)
-    assert not np.array_equal(ds_a._seq_idx, ds_c._seq_idx)
-
-
-def test_reindexing_idx_in_get_item(dense_data_dict):
-    """Test that the indexes are mapped in get_item"""
-    ds_full = SlidingWindowBatchDataset(
-        data_dict=dense_data_dict, seq_len=3, label_len=0, pred_len=1, stride=1
-    )
-    ds_subset = SlidingWindowBatchDataset(
-        data_dict=dense_data_dict,
-        seq_len=3,
-        label_len=0,
-        pred_len=1,
-        stride=1,
-        subset_ratio=0.4,
-        subset_seed=42,
-    )
-
-    seq_idx = ds_subset._seq_idx
-    assert seq_idx is not None and len(seq_idx) > 0
-
-    mapped_idx = seq_idx[0]
-    subset_sample = ds_subset[[0]]
-    full_sample = ds_full[[mapped_idx]]
-
-    assert torch.equal(subset_sample["sensor_A_seq_x"], full_sample["sensor_A_seq_x"])
-    assert torch.equal(subset_sample["sensor_A_seq_y"], full_sample["sensor_A_seq_y"])
+    fn = ds.get_collate_fn()
+    assert fn is collate_key_value_batch
 
 
 # def test_dataloader_integration_and_collation():

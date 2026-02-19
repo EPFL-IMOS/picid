@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import pandas as pd
 import torch
 import awkward as ak
 
@@ -108,6 +109,18 @@ def test_dense_sequencer_invalid_input():
         )
 
 
+def test_dense_sequencer_dataframe_init():
+    """DenseArraySequencer accepts pd.DataFrame (coverage: DataFrame branch)."""
+    df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+    seq = DenseArraySequencer(
+        array=df, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+    # 3 rows, req 2+1=3 -> 1 valid window
+    assert len(seq) == 1
+    x, y = seq.sequences_batch([0])
+    assert x.shape == (1, 2, 2)
+
+
 def test_dense_sequencer_delegation(numpy_dense_data):
     """
     Verifies that __len__, get_index_array, and sequences_batch
@@ -148,6 +161,16 @@ def test_ragged_sequencer_standard_jagged(jagged_ak_data):
     assert seq.driver is not None
     # Verify jagged mode is active in driver (implicit check via len calculation)
     assert seq.driver.is_ragged is True
+
+
+def test_ragged_sequencer_get_index_array(jagged_ak_data):
+    """RaggedArraySequencer.get_index_array delegates to driver (coverage)."""
+    seq = RaggedArraySequencer(
+        array=jagged_ak_data, seq_len=2, label_len=0, pred_len=1, stride=1
+    )
+    indices = seq.get_index_array()
+    assert indices is not None
+    np.testing.assert_array_equal(indices, seq.driver.get_index_array())
 
 
 # def test_ragged_sequencer_fallback_regular(regular_ak_data):

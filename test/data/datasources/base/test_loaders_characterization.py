@@ -205,6 +205,59 @@ def test_multi_source_loader_get_multisource_data_splitter(
     assert isinstance(loader_yes.get_multisource_data_splitter(), BySourceSplitter)
 
 
+def test_multi_source_loader_split_data_warns_when_already_splitted(
+    two_sources_config_no_multisource_splitter,
+):
+    """split_data when loader._is_splitted already True logs warning and returns (coverage)."""
+    loader = MultiSourceLoader(**two_sources_config_no_multisource_splitter)
+    loader.load_data()
+    loader.split_data()
+    loader._is_splitted = True
+    loader.split_data()  # early return with warning
+
+
+def test_multi_source_loader_split_data_raises_when_source_not_loaded(
+    two_sources_config_no_multisource_splitter,
+):
+    """split_data raises when a source has not been loaded (coverage)."""
+    loader = MultiSourceLoader(**two_sources_config_no_multisource_splitter)
+    loader.load_data()
+    loader._is_loaded = True
+    loader.data_source_dict["unit_b"]._is_loaded = False
+    with pytest.raises(RuntimeError, match="has not been loaded"):
+        loader.split_data()
+
+
+def test_multi_source_loader_warns_when_source_fails_to_load():
+    """load_data logs warning when a source does not set _is_loaded (coverage)."""
+    from test.data.datasources.base.conftest import FailingSingleSourceLoader
+    from omegaconf import OmegaConf
+
+    ok_source = {
+        "_target_": "test.data.datasources.base.conftest.InMemorySingleSourceLoader",
+        "n_samples": 50,
+        "n_features": 2,
+        "data_name": "ok",
+        "task_mode": "regression",
+    }
+    fail_source = {
+        "_target_": "test.data.datasources.base.conftest.FailingSingleSourceLoader",
+        "data_name": "failing",
+    }
+    config = {
+        "data_name": "mixed",
+        "task_mode": "regression",
+        "source_list": {"ok": ok_source, "failing": fail_source},
+        "multisource_data_splitter": None,
+        "ok": OmegaConf.create(ok_source),
+        "failing": OmegaConf.create(fail_source),
+    }
+    loader = MultiSourceLoader(**config)
+    loader.load_data()
+    assert loader.data_source_dict["ok"]._is_loaded
+    assert not getattr(loader.data_source_dict["failing"], "_is_loaded", True)
+
+
 def test_multi_source_loader_repr(
     two_sources_config_no_multisource_splitter,
 ):
