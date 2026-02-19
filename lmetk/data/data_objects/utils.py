@@ -3,6 +3,8 @@ import warnings
 from typing import Any, List, Optional, Union
 import numpy as np
 import pandas as pd
+import awkward as ak
+
 
 
 def get_length(value: Any) -> Optional[int]:
@@ -31,28 +33,51 @@ def check_length_consistency(
 def check_for_nans(
     values: List[Any], keys: List[str], raise_on_error: bool = True
 ) -> None:
-    """Checks for NaN values in various raw data types."""
+    """
+    Checks for NaN values in various raw data types (DataFrame, Series, ndarray, ak.Array).
+    
+    Args:
+        values: A list of data objects to check.
+        keys: A list of names corresponding to the data objects (for error messages).
+        raise_on_error: If True, raises ValueError when NaNs are found. 
+                        If False, issues a warning instead.
+    
+    Raises:
+        ValueError: If NaNs are found and raise_on_error is True.
+    """
     for value, key in zip(values, keys):
         has_nan = False
 
-        # Handle pandas DataFrames
+        # 1. Handle pandas DataFrames
         if isinstance(value, pd.DataFrame):
             # Check only numeric columns for NaNs
             numeric_data = value.select_dtypes(include=np.number)
             if not numeric_data.empty:
                 has_nan = numeric_data.isnull().values.any()
 
-        # Handle pandas Series separately
+        # 2. Handle pandas Series
         elif isinstance(value, pd.Series):
             # Check Series only if it's a numeric type
             if pd.api.types.is_numeric_dtype(value.dtype):
                 has_nan = value.isnull().any()
 
-        # Handle numpy arrays
+        # 3. Handle numpy arrays
         elif isinstance(value, np.ndarray):
             if np.issubdtype(value.dtype, np.number):
                 has_nan = np.isnan(value).any()
 
+        # 4. Handle awkward arrays (numeric only; non-numeric e.g. string raises in np.isnan)
+        elif isinstance(value, ak.Array):
+            try:
+                # Optimized check: ak.any(np.isnan()) is significantly faster 
+                # than converting to numpy or flattening for standard ragged arrays.
+                # It operates directly on the structure.
+                has_nan = bool(ak.any(np.isnan(value)))
+            except TypeError:
+                # Non-numeric content (e.g. string type): skip NaN check
+                pass
+
+        # Reporting
         if has_nan:
             message = f"NaN values found in object '{key}'."
             if raise_on_error:
@@ -61,37 +86,6 @@ def check_for_nans(
                 warnings.warn(message)
 
 
-# Here is another implementation that was found in data.data_objects.udata.py
-# If the implementation is preferred, please replace the above with this one.
-# Keeping it for debugging purposes.
-
-
-# def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
-#     """
-#     Converts the data for a given key to a NumPy array on demand.
-#     """
-#     if key not in self:
-#         raise KeyError(f"Key '{key}' not found in DataChunk.")
-#     value = self[key]
-
-#     if isinstance(value, np.ndarray):
-#         array = value
-#     elif isinstance(value, (pd.DataFrame, pd.Series)):
-#         dtypes = getattr(value, "dtypes", [getattr(value, "dtype", None)])
-#         if any(dt.kind not in "biufc" for dt in dtypes):
-#             array = value.values
-#         else:
-#             array = value.values.astype(np.float32)
-#     else:
-#         array = np.array(value)
-#     if ensure_2d:
-#         if array.ndim == 1:
-#             return array.reshape(-1, 1)
-#         if array.ndim != 2:
-#             raise ValueError(
-#                 f"Key '{key}' has unsupported dimensions: {array.ndim}."
-#             )
-#     return array
 
 
 def convert_to_numpy(
