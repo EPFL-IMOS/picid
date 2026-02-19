@@ -27,27 +27,36 @@ plugins:
 nav:
   - Home: index.md
   - Getting started:
-    - Setup: setup.md
-  - Data:
-    - Data objects & containers: dataobject.md
-    - Datasets (task-centric): datasets.md
-    - Datasets inner workings: datasets_inner_workings.md
-    - Datasources: datasources.md
-  - Transforms:
-    - Overview: transforms.md
+    - Overview: getting-started/index.md
+    - Setup: getting-started/setup.md
+    - Dataset viewer: getting-started/viewer.md
+  - Concepts:
+    - Overview: concepts/index.md
+    - From data to prediction: concepts/from_data_to_prediction.md
+  - Guides:
+    - Overview: guides/index.md
+    - Config and overrides: guides/configs_and_overrides.md
+    - OmegaConf resolvers: guides/omegaconf_resolvers.md
+    - Adding a new model: guides/how_to_add_a_new_model.md
+    - RunAI (cluster): guides/runai.md
+  - Examples:
+    - Overview: examples/index.md
+    - Unibo battery RUL: examples/unibo_rul.md
+  - Reference:
+    - Overview: reference/index.md
+    - Datasources: reference/datasources.md
+    - Data objects & containers: reference/dataobject.md
+    - Datasets: reference/datasets.md
+    - Datasets inner workings: reference/datasets_inner_workings.md
+    - Transforms: reference/transforms.md
+    - Evaluators: reference/evaluators.md
+    - Model types: reference/model_types.md
+    - API: reference/api.md
+  - Transforms (deep dives):
     - Quick start: transforms/quick_start.md
     - User guide: transforms/guide.md
     - Developer guide: transforms/developer_guide.md
-  - Evaluators:
-    - Evaluator subsystem: evaluators/index.md
-  - Models & configuration:
-    - Model types: model_types.md
-    - Adding a new model: how_to_add_a_new_model.md
-    - OmegaConf resolvers: how_to_use_configs.md
-  - Running:
-    - RunAI (cluster): runai.md
-    - Dataset viewer: viewer.md
-  - API Reference: api.md
+    - Hooks examples: transforms/HOOKS_EXAMPLES.md
   - Archive:
     - Legacy setup (RunAI/Guild): old_setup.md
-    - Documentation update plan: DOCUMENTATION_UPDATE_PLAN.md
+    - Documentation update plan: plans/2025-02-19-docs-webpage-refactor.md

@@ -5,4 +5,4 @@
 
 ## Getting started
 
-Please read trough the [instructions](docs/setup.md).
+Please read the [documentation](docs/index.md) and [setup instructions](docs/getting-started/setup.md).
