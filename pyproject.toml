@@ -47,6 +47,7 @@ dependencies = [
     "numba>=0.62.1",
     "cloudpickle>=3.1.1",
     "fvcore>=0.1.5.post20221221",
+    "tables>=3.10.2",
 ]
 
 [project.optional-dependencies]

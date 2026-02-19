@@ -8,6 +8,7 @@ CLASSIFICATION_TASKS = [
     "health_states",
     "concepts",
     "fault_classification",
+    "anomaly_detection",
 ]  # binary/multi-class classification x_t -> y_t
 FORECASTING_TASKS = ["forecasting"]  # contextual forecasting x_c, y_c, x_t -> y_t
 STATE_FORECASTING_TASKS = ["state_forecasting"]  # non-contextual forecasting y_c -> y_t

@@ -124,12 +124,12 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
             if len(value) > 0:
                 type_set = {type(v) for v in value}
                 if len(type_set) != 1:
-                    logger.warning(
+                    logger.debug(
                         f"All items in the list must have the same type, got {type_set}"
                     )
                 elem_type = next(iter(type_set))
                 if not issubclass(elem_type, allowed_single_types):
-                    logger.warning(
+                    logger.debug(
                         f"List items must be pandas (DataFrame/Series), "
                         f"numpy (ndarray), or awkward (Array), got {elem_type.__name__}"
                     )
@@ -138,20 +138,20 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
                     self._instance_cls[key] = elem_type
                 else:
                     if self._instance_cls[key] != elem_type:
-                        logger.warning(
+                        logger.debug(
                             f"Expected list items of type {self._instance_cls[key].__name__}, "
                             f"got {elem_type.__name__}"
                         )
                 self._data[key] = value
             else:
-                logger.warning("Received an empty list; type cannot be validated.")
+                logger.debug("Received an empty list; type cannot be validated.")
 
         elif isinstance(value, allowed_single_types):
             if not key in self._instance_cls:
                 self._instance_cls[key] = type(value)
             else:
                 if self._instance_cls[key] != type(value):
-                    logger.warning(
+                    logger.debug(
                         f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}. Changing stored type."
                     )
                     self._instance_cls[key] = type(value)

@@ -1,0 +1,7 @@
+
+_target_: lmetk.model.wrappers.fit_predict_isolation_forest_wrapper.FitPredictIsolationForestWrapper
+task_type: ${task_definition.task_type}
+
+n_estimators: 100
+contamination: 0.1 
+random_state: 42 

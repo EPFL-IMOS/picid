@@ -23,6 +23,10 @@ from lmetk.utils.rich_output import (
     to_descriptive_dict,
 )
 
+from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
+from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
+from lmetk.transforms.base.transform_manager import ConfigTransformManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +66,18 @@ class PreProcessor(PreProcessorInterface):
             transforms, and returns the processed data.
     """
 
-    def __init__(self, mode, datasource, transforms, **kwargs):
+    def __init__(
+        self,
+        mode,
+        datasource: Union[SingleSourceLoader, MultiSourceLoader],
+        transforms: Optional[ConfigTransformManager] = None,
+        **kwargs,
+    ):
+
+        if transforms is None:
+            transforms = ConfigTransformManager(transforms_config=None)
+            logger.info("No transforms provided; using empty ConfigTransformManager.")
+
         super().__init__(datasource=datasource, transforms=transforms)
 
         assert mode in [

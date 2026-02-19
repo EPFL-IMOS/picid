@@ -1,0 +1,11 @@
+_target_: lmetk.data.datasets.hydra_concat_dataset.HydraConcatDataset
+_recursive_: False
+
+dataset_cfg:
+  _target_: lmetk.data.datasets.fault_classification_dataset.FaultClassificationBatchDataset
+  seq_len: ${task_definition.seq_len}
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
+  stride: ${task_definition.stride}
+  task_type: ${task_definition.task_type}
+  
