@@ -1,6 +1,6 @@
 cut_to_first_zero_target:
   transform:
-    _target_: lmetk.transforms.bearings.cut_till_first_zero.RULTaskUpToFirstZero
+    _target_: lmetk.transforms.bearings.old.cut_till_first_zero.RULTaskUpToFirstZero
 
   metadata:
     apply_to: ["target", "features"]

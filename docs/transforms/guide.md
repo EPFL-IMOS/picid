@@ -181,9 +181,24 @@ metadata:
 | `fit_on_key` | No** | When `apply_to` is a list and `fit_on` is set, which key to use for fitting. |
 | `transform_on_keys` | No | Restrict which splits are transformed; default is all splits. |
 | `multi_source_fit` | No | If `true`, fit across all units in the fit split (concatenate then fit). Default `false`. |
+| `validate_output` | No | If `false`, skip built-in structural validation after the transform. Default `true`. |
+| `integrity_checks` | No | Optional list of `(name, check_fn, policy)` for pipeline IntegrityCheckStep; set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
 
 \* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.  
 \** Required when `apply_to` is a list and `fit_on` is set.
+
+### Turning off post-transform validation
+
+To disable the built-in structural validation (e.g. for debugging or trusted pipelines), set `validate_output: false` in metadata:
+
+```yaml
+my_transform:
+  transform:
+    _target_: lmetk.transforms.path.ToSomeTransform
+  metadata:
+    apply_to: features
+    validate_output: false
+```
 
 ## Transform Manager
 

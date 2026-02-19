@@ -15,8 +15,9 @@ This guide provides a deep dive into the transforms system architecture, impleme
 7. [Data Type Handling](#data-type-handling)
 8. [Creating Custom Transforms](#creating-custom-transforms)
 9. [Pipeline steps and hooks](#pipeline-steps-and-hooks)
-10. [Advanced Topics](#advanced-topics)
-11. [Debugging](#debugging)
+10. [Validation and integrity](#validation-and-integrity)
+11. [Advanced Topics](#advanced-topics)
+12. [Debugging](#debugging)
 
 ## Architecture Overview
 
@@ -595,6 +596,16 @@ class CustomScaler(
 ### Pipeline steps and hooks
 
 The pipeline runs in order: **CopyStep** → **IntegrityCheckStep** → **FitStep** → **TransformStep** → **PostprocessStep** → **MergeStep** → **RecordManifestStep**. Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `lmetk.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
+
+### Validation and integrity
+
+Transform metadata supports two validation-related options:
+
+1. **Built-in post-transform validation**  
+   After each transform, `DataTransform.forward()` runs structural checks (return type, keys present, splits preserved). You can turn this off per transform with **`validate_output: false`** in metadata (e.g. for debugging or trusted pipelines). Default is `true`.
+
+2. **Optional pipeline integrity checks**  
+   The pipeline runs an **IntegrityCheckStep** after CopyStep. It executes a list of `(name, check_fn, policy)` where `policy` is `"fail"`, `"warn"`, or `"allow"`. You can pass **`integrity_checks`** in metadata: a list of `(name, check_fn, policy)` tuples. Each `check_fn` must be a no-arg callable that may raise; it is run during the step. Because callables cannot be expressed in YAML, **`integrity_checks`** is set **programmatically** when building the transform config (e.g. when constructing the metadata dict before passing it to `DataTransform` or `ConfigTransformManager`). Helpers: `lmetk.transforms.base.integrity.run_check`, `run_checks`. Integrity checks run **before** FitStep and TransformStep.
 
 ## Advanced Topics
 

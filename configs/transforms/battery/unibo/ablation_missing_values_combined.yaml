@@ -10,6 +10,8 @@ mcar_corruption_train_val:
   metadata:
     apply_to: features
     transform_on_keys: ["train", "val"]
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 
 mcar_corruption_test:
@@ -24,6 +26,8 @@ mcar_corruption_test:
   metadata:
     apply_to: features
     transform_on_keys: ["test"]
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 missing_values_analytics:
   transform:
