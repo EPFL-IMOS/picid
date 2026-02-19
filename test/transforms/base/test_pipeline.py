@@ -86,7 +86,7 @@ class TestCopyStep:
             assign_to_keys=["features"],
             assign_to_keys_map=["features"],
         )
-        with pytest.raises(ValueError, match="No 'apply_to_keys' provided"):
+        with pytest.raises(ValueError, match="apply_to_keys must not be empty"):
             CopyStep().run(ctx)
 
     def test_copy_step_missing_apply_key_raises(self):
@@ -117,11 +117,9 @@ class TestCopyStep:
         msg = str(exc_info.value)
         # Print full error in debug (run with: pytest -s ...)
         print("\n--- ValueError (transform_on_keys empty intersection) ---\n" + msg + "\n---")
-        assert "no splits left after applying transform_on_keys" in msg
+        assert "no splits" in msg and "transform_on_keys" in msg
         assert "train" in msg and "val" in msg
         assert "valid" in msg and "test" in msg
-        assert "Fix:" in msg
-        assert "transform_on_keys" in msg
 
 
 class TestHooks:

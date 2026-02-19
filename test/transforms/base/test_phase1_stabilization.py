@@ -69,7 +69,7 @@ class TestPostprocessCharacterization:
         # Mixed: one Mapping, one non-Mapping -> not "all Mapping", not "all non-Mapping" -> ValueError
         data = [{"features": np.array([1.0])}, 42]
         metadata = {"assign_to_map": ["features"]}
-        with pytest.raises(ValueError, match="not recognized or not handled"):
+        with pytest.raises(ValueError, match="not recognised|not recognized|not handled"):
             postprocess_transformed_data(data, metadata)
 
     def test_postprocess_single_array_shape_and_dtype_preserved(self):

@@ -95,14 +95,14 @@ class TestDataTransformCoverage:
         transform = DummyFittableTransform()
         with caplog.at_level("INFO", logger="lmetk.transforms.base.data_transform"):
             DataTransform("t", transform, metadata)
-        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")) for r in caplog.records)
+        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
 
     def test_process_assign_to_implicit_sequence_triggers_logger(self, caplog):
         """Line 52: _process_assign_to(None, sequence) triggers logger.info."""
         dt = DataTransform("t", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
         with caplog.at_level("INFO", logger="lmetk.transforms.base.data_transform"):
             dt._process_assign_to(assign_to=None, apply_to=["features", "target"])
-        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")) for r in caplog.records)
+        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
 
     def test_assign_to_required_when_apply_to_is_mapping(self):
         """Line 92: apply_to as Mapping without assign_to raises ValueError.
@@ -195,7 +195,7 @@ class TestStrategyCoverage:
             is_multi_unit=False,
         )
         container._data["features"] = NotMapping()
-        with pytest.raises(TypeError, match="expected a mapping|Unexpected structure"):
+        with pytest.raises(TypeError, match="expected a mapping|Unexpected structure|split-keyed mapping"):
             strategy.apply(
                 transform_instance=transform,
                 data=container,

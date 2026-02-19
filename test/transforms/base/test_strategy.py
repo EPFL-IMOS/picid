@@ -102,7 +102,7 @@ class TestTransformStrategy:
         transform = DummyStatelessTransform()
         container = create_dummy_single_unit_container()
         
-        with pytest.raises(ValueError, match="No 'apply_to_keys'"):
+        with pytest.raises(ValueError, match="apply_to_keys"):
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -364,7 +364,7 @@ class TestTransformStrategyAdvanced:
         container = create_dummy_split_container()
         
         # This should fail when trying to access assign_to_map in transformed chunk
-        with pytest.raises(KeyError, match="does not contain the expected key"):
+        with pytest.raises(KeyError, match="missing expected key|expected key"):
             strategy.apply(
                 transform_instance=transform,
                 data=container,

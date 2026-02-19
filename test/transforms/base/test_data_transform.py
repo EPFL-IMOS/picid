@@ -135,7 +135,7 @@ class TestDataTransform:
         
         not_transform = NotATransform()
         metadata = {"apply_to": "features"}
-        with pytest.raises(AssertionError, match="must implement BaseTransform"):
+        with pytest.raises(TypeError, match="BaseTransform"):
             DataTransform("test", not_transform, metadata)
     
     def test_data_transform_forward_basic(self):
@@ -247,7 +247,7 @@ class TestDataTransform:
         """Test _process_assign_to with unsupported type."""
         transform = DummyStatelessTransform()
         metadata = {"apply_to": "features", "assign_to": 123}  # Invalid type
-        with pytest.raises(ValueError, match="Unsupported type"):
+        with pytest.raises(ValueError, match="unsupported assign_to type"):
             DataTransform("test", transform, metadata)
     
     def test_data_transform_signature_validation(self):
@@ -290,7 +290,7 @@ class TestDataTransformAdvanced:
             "val": [np.array([[0.3]]) for _ in range(2)]
         }
         
-        with pytest.raises(NotImplementedError, match="apply_to as mapping"):
+        with pytest.raises(NotImplementedError, match="apply_to as a mapping"):
             dt.forward(container)
     
     def test_named_parameter_transform_signature_validation(self):
@@ -340,7 +340,7 @@ class TestDataTransformAdvanced:
         transform = WrongCountTransform()
         metadata = {"apply_to": {"features": "features"}}
         
-        with pytest.raises(AssertionError, match="exactly"):
+        with pytest.raises(AssertionError, match="transform_data must have .* data parameter"):
             DataTransform("test", transform, metadata)
     
     def test_named_parameter_missing_key_error(self):
@@ -352,7 +352,7 @@ class TestDataTransformAdvanced:
         transform = MissingKeyTransform()
         metadata = {"apply_to": {"features": "features"}}
         
-        with pytest.raises(AssertionError, match="must include parameters"):
+        with pytest.raises(AssertionError, match="must include"):
             DataTransform("test", transform, metadata)
     
     def test_forward_missing_assign_to_key_error(self, mocker):
@@ -371,17 +371,20 @@ class TestDataTransformAdvanced:
         container = create_dummy_split_container()
         
         # INTENTIONAL: Direct strategy replacement to test error handling
-        # for corrupted strategy output that cannot occur through normal flow
+        # for corrupted strategy output that cannot occur through normal flow.
+        # In the new design, validation runs in the pipeline (IntegrityCheckAfterStep);
+        # when strategy is mocked we bypass the pipeline, so forward() no longer raises.
         class MockStrategy:
             def apply(self, **kwargs):
                 # Return container without the assign_to key
                 result = container.copy(deep=False)
                 return result, {}
-        
+
         dt.strategy = MockStrategy()
-        
-        with pytest.raises(KeyError, match="does not contain"):
-            dt.forward(container)
+
+        # Validation now in pipeline; with mock strategy we get no validation.
+        result, _ = dt.forward(container)
+        assert "nonexistent_key" not in result
     
     def test_forward_wrong_assign_to_type_error(self):
         """Test forward with wrong assign_to type raises error (line 326).
@@ -396,18 +399,17 @@ class TestDataTransformAdvanced:
         
         container = create_dummy_split_container()
         
-        # INTENTIONAL: Direct strategy replacement to test type validation
+        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
+        # with mock strategy we bypass pipeline so forward() returns without raising.
         class MockStrategy:
             def apply(self, **kwargs):
                 result = container.copy(deep=False)
-                # Replace features with a plain dict (not SplitDatasetContainer)
-                result._data["features"] = {"train": [np.array([[1.0]])]}  # Plain dict
+                result._data["features"] = {"train": [np.array([[1.0]])]}
                 return result, {}
-        
+
         dt.strategy = MockStrategy()
-        
-        with pytest.raises(TypeError, match="expected dict of splits"):
-            dt.forward(container)
+        result, _ = dt.forward(container)
+        assert "features" in result
     
     def test_forward_split_mismatch_error(self):
         """Test forward with split mismatch raises error (line 337).
@@ -422,23 +424,21 @@ class TestDataTransformAdvanced:
         
         container = create_dummy_split_container()
         
-        # INTENTIONAL: Direct strategy replacement to test split mismatch validation
+        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
+        # with mock strategy we bypass pipeline so forward() returns without raising.
         class MockStrategy:
             def apply(self, **kwargs):
                 result = container.copy(deep=False)
-                # Create new SplitDatasetContainer with missing split
                 new_features = SplitDatasetContainer(
                     train=result.features.train,
-                    test=result.features.test
-                    # Missing "val"
+                    test=result.features.test,
                 )
                 result._data["features"] = new_features
                 return result, {}
-        
+
         dt.strategy = MockStrategy()
-        
-        with pytest.raises(KeyError, match="Split key mismatch"):
-            dt.forward(container)
+        result, _ = dt.forward(container)
+        assert "val" not in result.features
     
     def test_forward_type_change_warning(self):
         """Test forward with type change logs warning (line 348).
@@ -653,15 +653,15 @@ class TestDataTransformCoverage:
         
         container = create_dummy_split_container()
         
-        # INTENTIONAL: Direct strategy replacement to test type validation
+        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
+        # with mock strategy we bypass pipeline so forward() returns without raising.
         class MockStrategy:
             def apply(self, **kwargs):
-                return {"not_a_container": True}, {}  # Not SplitDatasetContainer
-        
+                return {"not_a_container": True}, {}
+
         dt.strategy = MockStrategy()
-        
-        with pytest.raises(TypeError, match="expected dict for single source"):
-            dt.forward(container)
+        result, _ = dt.forward(container)
+        assert result == {"not_a_container": True}
     
     def test_forward_validation_checks(self):
         """Test forward validation checks (lines 318, 326, 337, 348, 360)."""
