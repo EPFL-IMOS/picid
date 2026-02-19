@@ -1,0 +1,226 @@
+"""
+Utilities for multi-source (multi-unit) transforms.
+
+Used by the multisource mixins (mixins.py) and the handler layer (handlers/):
+- find_singular_ragged_dim: infer which axis is variable-length for data_kind.
+- _concatenate_segments: merge segments along an axis (e.g. for ConcatenateBeforeTransformMixin).
+- _assert_uniform_*: validate that segments share types/key count.
+- _build_flags / _log_transform_error: diagnostics when transform_multi_source fails.
+
+Data kind (ragged vs dense) and capability (transform supports ragged/dense/both)
+drive handler selection in get_handler(); see data_kind and handlers packages.
+"""
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List, Optional
+
+import awkward as ak
+import numpy as np
+
+from lmetk.data.data_objects.data import NamedTransformInput
+from lmetk.transforms.base.data_kind import (
+    CAPABILITY_BOTH,
+    CAPABILITY_DENSE,
+    CAPABILITY_RAGGED,
+    DATA_KIND_RAGGED,
+    DATA_KIND_RAGGED_REGULAR,
+)
+from lmetk.utils.awkward_utils import ak_find_var_dims, get_ak_shape
+from lmetk.utils.rich_output import describe_data_type
+from sortedcontainers import SortedDict
+
+logger = logging.getLogger(__name__)
+
+
+def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
+    """
+    Find the single variable-length (ragged) dimension in a NamedTransformInput.
+
+    Used by infer_data_kind (data_kind) to classify data as dense vs ragged.
+    Returns None if all arrays are regular; raises ValueError if more than one
+    variable-length dimension is found.
+    """
+    var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
+    if any([len(dim) == 0 for dim in var_dims]):
+        idx = [len(dim) == 0 for dim in var_dims].index(True)
+        pass  # optional warning
+    unique_var_dims = set([x for row in var_dims for x in row])
+
+    if len(unique_var_dims) == 0:
+        return None
+    elif len(unique_var_dims) == 1:
+        return unique_var_dims.pop()
+    else:
+        raise ValueError(
+            f"Expected at most one variable-length dimension, found {len(unique_var_dims)}: {unique_var_dims}"
+        )
+
+
+def tolist(d):
+    """Recursively convert a nested dict (including SortedDict) to nested lists with sorted keys."""
+    if isinstance(d, SortedDict):
+        return [tolist(v) for v in d.values()]
+    if isinstance(d, dict):
+        return [tolist(d[i]) for i in sorted(d)]
+    return d
+
+
+def _normalize_keys(apply_to_keys) -> List[str]:
+    """Ensure apply_to_keys is a list (single key becomes [key])."""
+    if isinstance(apply_to_keys, list):
+        return apply_to_keys
+    return [apply_to_keys]
+
+
+def _assert_uniform_data_types(data_segments: List[NamedTransformInput]) -> None:
+    """Require all segments to have the same get_instance_cls() (e.g. all ak.Array or all np.ndarray)."""
+    data_types = {
+        v
+        for chunk in data_segments
+        for v in chunk.get_instance_cls().values()
+    }
+    if len(data_types) != 1:
+        raise ValueError(
+            f"All data segments must have the same data type. Found: {data_types}"
+        )
+
+
+def _assert_uniform_key_count(data_segments: List[NamedTransformInput]) -> None:
+    """Require all segments to have the same number of keys."""
+    lengths = [len(chunk.keys()) for chunk in data_segments]
+    if len(set(lengths)) != 1:
+        raise ValueError(
+            f"Data segments have different numbers of keys. Lengths: {lengths}"
+        )
+
+
+def _build_flags(data_kind: str, capability: str) -> Dict[str, bool]:
+    """Build a small dict of data_kind/capability flags for logging and manifest."""
+    return {
+        "data_is_ragged": data_kind == DATA_KIND_RAGGED,
+        "data_is_ragged_but_regular": data_kind == DATA_KIND_RAGGED_REGULAR,
+        "transform_supports_ragged": capability in (CAPABILITY_RAGGED, CAPABILITY_BOTH),
+        "transform_supports_dense": capability in (CAPABILITY_DENSE, CAPABILITY_BOTH),
+    }
+
+
+def _log_transform_error(
+    transform_instance: Any,
+    data_segments: List[NamedTransformInput],
+    metadata: Dict[str, Any],
+    data_kind: str,
+    capability: str,
+) -> None:
+    """Log detailed diagnostics when transform_multi_source raises (data kind, flags, first segment)."""
+    t_name = transform_instance.__class__.__name__
+    flags = _build_flags(data_kind, capability)
+    sep = "-" * 120
+
+    logger.error(sep)
+    logger.error("Transform Error Details  (%s.transform_multi_source())", t_name)
+    logger.error(sep)
+    logger.error("Data type flags : %s", flags)
+    logger.error("Metadata        : %s", metadata)
+    logger.error(sep)
+
+    _seg = data_segments[0] if data_segments else None
+    if _seg is not None:
+        logger.error("First segment keys: %s", list(_seg.keys()))
+        logger.error("First segment contents:")
+        for k, v in _seg.items():
+            logger.error(
+                "  key=%-20s  type=%-20s  %s",
+                k,
+                type(v).__name__,
+                describe_data_type(v, calculate_stat=True),
+            )
+    logger.error(sep)
+
+    data_is_ragged = flags["data_is_ragged"]
+    supports_ragged = flags["transform_supports_ragged"]
+    supports_dense = flags["transform_supports_dense"]
+
+    logger.error("Case analysis:")
+    if not data_is_ragged and supports_dense:
+        logger.error("  Dense data + dense-capable transform → data passed directly.")
+    elif data_is_ragged and not supports_ragged:
+        logger.error(
+            "  Ragged data + dense-only transform → "
+            "processed block-by-block, converted to numpy, reassembled."
+        )
+    elif data_is_ragged and supports_ragged:
+        logger.error("  Ragged data + ragged-capable transform → data passed directly.")
+    else:
+        logger.error("  Unknown combination; check the handler registry.")
+
+    logger.error(sep)
+    logger.error("Exception traceback:", exc_info=True)
+    logger.error(sep)
+
+
+def _concatenate_segments(
+    data_segments: List[NamedTransformInput],
+    apply_to_keys: List[str],
+    axis: int,
+) -> NamedTransformInput:
+    """
+    Concatenate multiple data segments into a single NamedTransformInput along axis.
+
+    Used by ConcatenateBeforeTransformMixin: merge units along axis, then run
+    transform_data once. Keys in apply_to_keys must have consistent dtypes
+    across segments (ak.Array or np.ndarray); other keys are taken from the
+    first segment. Validates that concatenated lengths on axis agree across keys.
+    """
+    if not data_segments:
+        raise ValueError("_concatenate_segments requires at least one segment.")
+
+    keys = _normalize_keys(apply_to_keys)
+    first = data_segments[0]
+    cls_map = first.get_instance_cls()
+    merged: Dict[str, Any] = {}
+
+    for key in keys:
+        dtype = cls_map.get(key)
+
+        for idx, seg in enumerate(data_segments[1:], start=1):
+            other_dtype = seg.get_instance_cls().get(key)
+            if other_dtype != dtype:
+                raise ValueError(
+                    f"Key '{key}': data type mismatch between segment 0 "
+                    f"({dtype}) and segment {idx} ({other_dtype})."
+                )
+
+        arrays = [seg[key] for seg in data_segments]
+
+        if dtype is ak.Array:
+            merged[key] = ak.concatenate(arrays, axis=axis)
+        elif dtype is np.ndarray:
+            merged[key] = np.concatenate(arrays, axis=axis)
+        else:
+            raise ValueError(
+                f"Key '{key}': unsupported data type {dtype}. "
+                "Only np.ndarray and ak.Array are supported."
+            )
+
+    for key in first.keys():
+        if key not in merged:
+            merged[key] = first[key]
+
+    lengths = []
+    for key in keys:
+        val = merged[key]
+        if isinstance(val, ak.Array):
+            shape = get_ak_shape(val)
+            lengths.append(shape[axis] if axis < len(shape) else None)
+        elif isinstance(val, np.ndarray):
+            lengths.append(val.shape[axis] if axis < val.ndim else None)
+
+    non_none = [l for l in lengths if l is not None]
+    if non_none and len(set(non_none)) != 1:
+        raise ValueError(
+            f"After concatenation, arrays disagree on axis={axis}. "
+            f"Per-key lengths: {dict(zip(keys, lengths))}"
+        )
+
+    return NamedTransformInput(**merged)
