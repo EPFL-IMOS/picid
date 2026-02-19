@@ -159,3 +159,124 @@ def test_phmd_loader_repr_loaded(mock_phmd_loader):
     mock_phmd_loader.load_data()
     r = repr(mock_phmd_loader)
     assert "MultiSource" in r or "units" in r
+
+
+def test_phmd_loader_init_rejects_multisource_splitter(tmp_path):
+    """PHMDMultiSourceLoader.__init__ asserts multisource_data_splitter is None."""
+    with pytest.raises(AssertionError, match="multisource_data_splitter"):
+        MockPHMDLoader(
+            data_name="X",
+            task_mode="rul",
+            fold=0,
+            cache_dir=str(tmp_path),
+            multisource_data_splitter={"_target_": "some.Splitter"},
+        )
+
+
+def test_phmd_loader_get_cache_file_name(mock_phmd_loader):
+    """_get_cache_file_name returns expected pattern with task_mode, fold, dataset, type."""
+    name = mock_phmd_loader._get_cache_file_name("train")
+    assert "rul" in name
+    assert "fold_0" in name
+    assert "MockPHMD" in name
+    assert "train" in name
+    assert name.endswith(".pkl")
+
+
+def test_phmd_loader_get_cache_file_name_with_auxiliary(mock_phmd_loader):
+    """_get_cache_file_name with auxiliary_tasks includes them."""
+    mock_phmd_loader.auxiliary_tasks = ["aux1", "aux2"]
+    name = mock_phmd_loader._get_cache_file_name("val")
+    assert "aux1_aux2" in name or "aux_" in name
+
+
+def test_phmd_loader_retrieve_cached_task_data_missing_raises(mock_phmd_loader, tmp_path):
+    """_retrieve_cached_task_data raises FileNotFoundError when path does not exist."""
+    missing = tmp_path / "missing.pkl"
+    with pytest.raises(FileNotFoundError, match="Cache file not found"):
+        mock_phmd_loader._retrieve_cached_task_data(missing)
+
+
+def test_phmd_loader_retrieve_cached_task_data_exists(mock_phmd_loader, tmp_path):
+    """_retrieve_cached_task_data returns unpickled data when file exists."""
+    import pickle
+    cache_file = tmp_path / "cached.pkl"
+    data = {"x": [1, 2, 3]}
+    with open(cache_file, "wb") as f:
+        pickle.dump(data, f)
+    out = mock_phmd_loader._retrieve_cached_task_data(cache_file)
+    assert out == data
+
+
+def test_phmd_loader_init_creates_cache_dir(tmp_path):
+    """When cache_dir path does not exist, __init__ creates it."""
+    cache_dir = tmp_path / "new_cache_subdir"
+    assert not cache_dir.exists()
+    MockPHMDLoader(
+        data_name="X",
+        task_mode="rul",
+        fold=0,
+        cache_dir=str(cache_dir),
+    )
+    assert cache_dir.exists()
+    assert cache_dir.is_dir()
+
+
+class LoaderWithMockedInit(PHMDMultiSourceLoader):
+    """Runs real _load_data loop by mocking _init_phmd_dataset; no phmd I/O."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_source_dict = {}
+
+    def _init_phmd_dataset(self, task_names):
+        """Return minimal main_fold so the for-split/unit loop runs."""
+        import pandas as pd
+        self.meta_data = {}
+        unit_col = "unit_id"
+        train_df = pd.DataFrame({
+            unit_col: [1],
+            "feat0": [1.0],
+            "feat1": [2.0],
+            "rul": [10.0],
+        })
+        val_df = train_df.copy()
+        test_df = train_df.copy()
+        main_fold = {"train": train_df, "val": val_df, "test": test_df}
+        return {self.task_mode: main_fold}
+
+    def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
+        return main_fold
+
+    def _get_features_columns(self):
+        return ["feat0", "feat1"]
+
+    def _get_target_column(self):
+        return "rul"
+
+    def _get_unit_column(self):
+        return "unit_id"
+
+    def _process_unit(self, df_unit, unit_name, features_col, target_col):
+        return {
+            "features": df_unit[features_col].values,
+            "target": df_unit[[target_col]].values,
+            "metadata": {"unit_name": f"unit_{unit_name}", "unit_id": unit_name},
+        }
+
+
+def test_phmd_loader_load_data_full_path_mocked_init(tmp_path):
+    """Full _load_data path with _init_phmd_dataset mocked (no real phmd)."""
+    loader = LoaderWithMockedInit(
+        data_name="TestDS",
+        task_mode="rul",
+        fold=0,
+        cache_dir=str(tmp_path),
+    )
+    loader.load_data()
+    data = loader.get_data()
+    assert "features" in data
+    assert "train" in data["features"]
+    assert len(data["features"]["train"]) == 1
+    assert loader.get_meta_data() is not None
+    assert "unit_names" in loader.meta_data or "unit_ids" in loader.meta_data
