@@ -79,6 +79,7 @@ packages = ["lmetk"]
 addopts = "--basetemp=test/.pytest_tmp"
 markers = [
     "requires_snapshots: skip when pipeline snapshot fixtures are missing (run scripts/generate_pipeline_snapshots.py)",
+    "slow: slow benchmarks (e.g. __getitem__ timing); skip with -m 'not slow'",
 ]
 
 [tool.pylint."messages control"]
@@ -90,6 +91,9 @@ source = ["lmetk"]
 omit = [
     "local_packages/*",
     "*/local_packages/*",
+    # Large datasource modules with no tests (external deps / integration-only)
+    "lmetk/data/datasources/picasso/time_series_datamodule.py",
+    "lmetk/data/datasources/unibo/loader.py",
 ]
 
 [tool.coverage.report]
@@ -97,6 +101,8 @@ omit = [
 omit = [
     "local_packages/*",
     "*/local_packages/*",
+    "lmetk/data/datasources/picasso/time_series_datamodule.py",
+    "lmetk/data/datasources/unibo/loader.py",
 ]
 exclude_lines = [
     "pragma: no cover",
