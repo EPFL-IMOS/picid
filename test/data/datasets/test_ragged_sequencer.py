@@ -255,7 +255,7 @@ def test_edge_case_single_step_multi_feature():
         label_len=0,
         pred_len=1,
         stride=1,
-        padding_left_flag=False,  # <--- : Enforce Strict Mode
+        padding_left_flag=True,  # <--- : Enforce Strict Mode
     )
 
     # Unit 0 is valid. Start 0.
@@ -466,6 +466,7 @@ def test_strict_mode_warmup_steps_jagged(jagged_features_ak):
         label_len=0,
         padding_left_flag=False,
         warmup_steps=1,
+        padding_left_flag=False,
     )
 
     indices = seq.get_index_array()

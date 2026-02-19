@@ -24,8 +24,62 @@ logger = logging.getLogger(__name__)
 
 class SlidingWindowBatchDataset(BaseDataset):
     """
-    Create a separate sequencer for every key in `data_dict`.
-    Time features are NOT required.
+    Sliding-window dataset that builds one sequencer per key in ``data_dict``.
+    Time features are not required. Supports dense and ragged (variable-length)
+    arrays; length formulas below apply to a single dense time series.
+
+    Parameters
+    ----------
+    data_dict : dict[str, ArrayLike]
+        Map of array names to arrays. Each value is numpy array, torch tensor,
+        or awkward array (dense or ragged). A separate sequencer is created per
+        key; all sequencers share the same number of windows (length).
+    seq_len : int
+        Context window length (number of time steps per input window).
+    label_len : int
+        Length of the label/decoder context (used by some models).
+    pred_len : int
+        Prediction horizon (number of time steps to predict).
+    stride : int
+        Step between consecutive window start indices.
+    pred_offset : int, optional
+        Offset between context end and prediction start (default 0).
+    suffixes : list of str, optional
+        Suffixes for context and target keys in the batch (default
+        ``["_seq_x", "_seq_y"]``).
+    padding_left_flag : bool or int, optional
+        If True (default), allow windows to start before index 0 by left-padding
+        (min_start = -(seq_len - 1)). If False, only non-padded windows
+        (min_start = 0). Affects dataset length (see below).
+    warmup_steps : int, optional
+        Number of warmup steps for left-padding (overrides default when set).
+    subset_ratio : float, optional
+        If in (0, 1), use a random subset of window indices for this dataset
+        (e.g. for faster training). ``subset_seed`` and ``subset_blocks``
+        control sampling.
+    subset_seed : int, optional
+        Random seed for subset sampling (default 42).
+    subset_blocks : int, optional
+        When subsetting, cap the number of blocks used (see subset_sampling).
+    **kwargs
+        Passed through to the base class.
+
+    Dataset length (dense single time series of length T)
+    -----------------------------------------------------
+    Let required_len = seq_len + pred_len + pred_offset. Valid window start
+    indices form range(min_start, max_start, stride) with
+    max_start = T - required_len + 1 (exclusive end). Then
+    len(ds) = max(0, (max_start - min_start + stride - 1) // stride).
+
+    - padding_left_flag=False (strict): min_start = 0.
+      len(ds) = (T - required_len + stride) // stride.
+      Example: T=20, seq_len=2, pred_len=5, stride=1 → required_len=7,
+      max_start=14 → len(ds) = 14.
+
+    - padding_left_flag=True (default): min_start = -(seq_len - 1).
+      len(ds) = (T - required_len + seq_len + stride - 1) // stride.
+      Example: T=20, seq_len=2, pred_len=5, stride=1 → required_len=7,
+      range(-1, 14, 1) → len(ds) = 15.
     """
 
     def __init__(

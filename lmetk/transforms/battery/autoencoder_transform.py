@@ -41,13 +41,18 @@ class AutoencoderTransform(BaseAutoencoderTransform):
 
     def _create_sequencer(self, array: Any, cfg: Any) -> RaggedArraySequencer:
         """Creates a RaggedArraySequencer with standardized config."""
-        return RaggedArraySequencer(
+        kwargs = dict(
             array=array,
             seq_len=cfg.seq_len,
             label_len=cfg.label_len,
             pred_len=cfg.pred_len,
             stride=cfg.stride,
         )
+        if hasattr(cfg, "pred_offset"):
+            kwargs["pred_offset"] = cfg.pred_offset
+        if hasattr(cfg, "padding_left_flag"):
+            kwargs["padding_left_flag"] = cfg.padding_left_flag
+        return RaggedArraySequencer(**kwargs)
 
     def _process_target_batch(self, y_batch: np.ndarray) -> np.ndarray:
         """

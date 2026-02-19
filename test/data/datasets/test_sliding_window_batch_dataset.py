@@ -51,12 +51,19 @@ def test_init_success_dense(dense_data_dict):
     """Test initialization with standard dense arrays."""
     ds = SlidingWindowBatchDataset(
         data_dict=dense_data_dict,
-        seq_len=5,
+        seq_len=2,
         label_len=0,
         pred_len=5,
         stride=1,
+        padding_left_flag=False
     )
-    assert len(ds) == 11
+    # len(ds) for dense data with padding_left_flag=False:
+    #   required_len = seq_len + pred_len + pred_offset = 2 + 5 + 0 = 7
+    #   min_start = 0, max_start = T - required_len + 1 (exclusive end of range)
+    #   n_windows = number of steps in range(min_start, max_start, stride)
+    #            = (max_start - min_start + stride - 1) // stride
+    #   With T=20: max_start = 20 - 7 + 1 = 14, so len(ds) = (14 - 0) // 1 = 14
+    assert len(ds) == 14
     assert "sensor_A" in ds.sequencers
 
 
@@ -100,6 +107,7 @@ def test_getitem_structure_and_values(dense_data_dict):
         pred_len=1,
         stride=1,
         suffixes=["_X", "_Y"],
+        padding_left_flag=False
     )
 
     # Fetch index 0 (Scalar).
@@ -127,7 +135,7 @@ def test_ragged_input_handling(ragged_data_dict):
     """
     print(ragged_data_dict)
     ds = SlidingWindowBatchDataset(
-        data_dict=ragged_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1
+        data_dict=ragged_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1, padding_left_flag=False
     )
 
     assert len(ds) == 21

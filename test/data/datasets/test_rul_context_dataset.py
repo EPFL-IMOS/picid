@@ -89,6 +89,7 @@ def test_rul_context_rul_last_value_matches(rul_dense_data):
         pred_len=1,
         stride=1,
         meta_data_dict={},
+        padding_left_flag=False,
     )
     batch = ds[[0]]
     expected_rul = rul_dense_data["rul"][4, 0]

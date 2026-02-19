@@ -37,7 +37,9 @@ def transform_fixture():
         transform.device = "cpu"
 
         # 4. Create a mock config (OmegaConf)
-        # These values are crucial for the RaggedArraySequencer
+        # These values are crucial for the RaggedArraySequencer.
+        # padding_left_flag=False gives strict windowing: only full in-bounds
+        # windows, so we get 1+2+3=6 sequences for units of length 5,6,7.
         mock_cfg_dict = {
             "dataset": {
                 "dataset_cfg": {
@@ -45,6 +47,7 @@ def transform_fixture():
                     "label_len": 1,
                     "pred_len": 1,
                     "stride": 1,
+                    "padding_left_flag": False,
                 }
             },
             "model": {},  # Mock model config

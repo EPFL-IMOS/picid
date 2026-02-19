@@ -248,6 +248,7 @@ def test_drop_last_when_remainder_one():
         label_len=0,
         pred_len=2,
         stride=2,
+        padding_left_flag=False
     )
     n = len(ds)
     batch_size = 4
