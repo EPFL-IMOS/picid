@@ -6,3 +6,5 @@ uv run python pseudo_run.py experiment=phme20/prognostics/raw/linear_regression 
 
 # UNIBO with battery/unibo transforms
 uv run python pseudo_run.py experiment=unibo/prognostics/base transforms=battery/unibo/combined_fit_predict cache.use_cache_after_transfroms=false
+
+uv run python pseudo_run.py experiment=unibo/prognostics/base transforms=battery/unibo/ablation_missing_values_combined cache.use_cache_after_transfroms=false
