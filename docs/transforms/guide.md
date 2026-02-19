@@ -171,6 +171,20 @@ metadata:
   multi_source_fit: true  # Fit across all units in training split
 ```
 
+### Metadata reference (summary)
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `apply_to` | Yes | Data key(s) to read from: string, list, or mapping. |
+| `assign_to` | No | Where to write results; defaults to `apply_to`. String, list, or mapping. |
+| `fit_on` | No* | Split to fit on: `train`, `val`, or `test`. Required if the transform has `requires_fit=True`. |
+| `fit_on_key` | No** | When `apply_to` is a list and `fit_on` is set, which key to use for fitting. |
+| `transform_on_keys` | No | Restrict which splits are transformed; default is all splits. |
+| `multi_source_fit` | No | If `true`, fit across all units in the fit split (concatenate then fit). Default `false`. |
+
+\* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.  
+\** Required when `apply_to` is a list and `fit_on` is set.
+
 ## Transform Manager
 
 The `ConfigTransformManager` is the main interface for working with transforms.
@@ -514,6 +528,7 @@ tabularize_val_test:
 - **Want to understand the implementation?** → [Developer Guide](developer_guide.md)
 - **Need to create custom transforms?** → [Developer Guide: Creating Custom Transforms](developer_guide.md#creating-custom-transforms)
 - **Want to see more examples?** → Check `configs/transforms/` directory
+- **Pipeline hooks (debugging, error handling)?** → [Hooks examples](HOOKS_EXAMPLES.md)
 
 ---
 

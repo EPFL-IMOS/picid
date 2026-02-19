@@ -91,8 +91,10 @@ for transform in transforms.values():
 ## Next Steps
 
 - **Want to understand configuration better?** → [User Guide: Configuration](guide.md#configuration)
+- **Full list of metadata options?** → [User Guide: Metadata reference](guide.md#metadata-reference-summary)
 - **Need to create custom transforms?** → [Developer Guide: Creating Custom Transforms](developer_guide.md#creating-custom-transforms)
 - **Want to see more examples?** → [User Guide: Examples](guide.md#examples)
+- **Pipeline hooks for debugging?** → [Hooks examples](HOOKS_EXAMPLES.md)
 
 ## Common Questions
 

@@ -14,8 +14,9 @@ This guide provides a deep dive into the transforms system architecture, impleme
 6. [Multi-Source Transforms](#multi-source-transforms)
 7. [Data Type Handling](#data-type-handling)
 8. [Creating Custom Transforms](#creating-custom-transforms)
-9. [Advanced Topics](#advanced-topics)
-10. [Debugging](#debugging)
+9. [Pipeline steps and hooks](#pipeline-steps-and-hooks)
+10. [Advanced Topics](#advanced-topics)
+11. [Debugging](#debugging)
 
 ## Architecture Overview
 
@@ -308,19 +309,32 @@ else:
 
 ### Dense vs Ragged Data
 
-The `MultiSourceTransformInterface` mixins handle data type routing:
-
-- `ConcatinatedFitMultiSourceTransformMixin`: Handles fitting on concatenated multi-source data
-- `NoFitMultiSourceTransformMixin`: For stateless multi-source transforms
-- `ConcatenateUnitsMixing`: Concatenates units before transformation
+The multi-source mixins (in `lmetk/transforms/base/multisource.py`) handle data type routing and fit/transform policy. Use **exactly one** fit-policy mixin and **one** transform-policy mixin, or use a ready-made composition.
 
 ## Multi-Source Transforms
 
-### ConcatinatedFitMultiSourceTransformMixin
-
 **Location**: `lmetk/transforms/base/multisource.py`
 
-This mixin provides multi-source fitting and transformation capabilities.
+### Ready-made mixins (recommended)
+
+| Mixin | Use case |
+|-------|----------|
+| `StandardFitTransformMixin` | Fit on concatenated segments; transform per segment (e.g. scalers). Sets `requires_fit=True`. |
+| `StatelessPerSegmentMixin` | No fit; transform applied per segment (e.g. reshape, concatenate inputs). |
+| `StatelessConcatenateMixin` | No fit; concatenate all segments along an axis, then one `transform_data` call. Requires `axis` in `__init__`. |
+
+Backward-compatibility aliases: `ConcatinatedFitMultiSourceTransformMixin`, `NoFitMultiSourceTransformMixin`, and `ConcatenateUnitsMixing` still work.
+
+### Composable mixins (advanced)
+
+Combine one fit-policy and one transform-policy mixin:
+
+- **Fit:** `FitByConcatenationMixin` (fit on concatenated data), `NoFitMixin` (no fitting).
+- **Transform:** `PerSegmentTransformMixin` (transform each segment), `ConcatenateBeforeTransformMixin` (concatenate then transform once; requires `axis`).
+
+Example: `StandardFitTransformMixin` = `FitByConcatenationMixin` + `PerSegmentTransformMixin`.
+
+### Fit and transform behavior (StandardFitTransformMixin / FitByConcatenationMixin)
 
 **Fitting Logic**:
 
@@ -490,11 +504,11 @@ def fit_data(self, data: NamedTransformInput, metadata: dict) -> None:
 ### Step 4: Add Multi-Source Support (if needed)
 
 ```python
-from lmetk.transforms.base.multisource import ConcatinatedFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import StandardFitTransformMixin
 
 class MyTransform(
     DenseTransform,
-    ConcatinatedFitMultiSourceTransformMixin
+    StandardFitTransformMixin
 ):
     """Transform with multi-source fitting support."""
     
@@ -528,14 +542,14 @@ def transform_data(self, data: NamedTransformInput, metadata: dict) -> dict:
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
+    StandardFitTransformMixin,
     InverseTransformMixin
 )
 from lmetk.data.data_objects.data import NamedTransformInput
 
 class CustomScaler(
     DenseTransform,
-    ConcatinatedFitMultiSourceTransformMixin,
+    StandardFitTransformMixin,
     InverseTransformMixin
 ):
     """Custom scaler that scales to [-1, 1] range."""
@@ -564,10 +578,10 @@ class CustomScaler(
         scaled = 2 * (values - self.min_) / (self.max_ - self.min_) - 1
         return scaled
     
-    def inverse_transform_data(
+    def inverse_transform(
         self, data: NamedTransformInput, metadata: dict
     ) -> np.ndarray:
-        """Inverse transform."""
+        """Inverse transform (required by InverseTransformMixin)."""
         key = list(data.keys())[0]
         values = data[key]
         
@@ -575,6 +589,12 @@ class CustomScaler(
         original = (values + 1) / 2 * (self.max_ - self.min_) + self.min_
         return original
 ```
+
+`InverseTransformMixin` provides `inverse_transform_data` and `inverse_transform_multi_source`; you implement the abstract `inverse_transform`.
+
+### Pipeline steps and hooks
+
+The pipeline runs in order: **CopyStep** → **IntegrityCheckStep** → **FitStep** → **TransformStep** → **PostprocessStep** → **MergeStep** → **RecordManifestStep**. Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `lmetk.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
 
 ## Advanced Topics
 

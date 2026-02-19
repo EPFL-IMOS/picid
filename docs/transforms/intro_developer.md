@@ -76,23 +76,21 @@ unless you are extending core logic.
 
 ## Multi-Source Mixins (Internal Behavior)
 
-All multi-unit behavior lives in `lmetk/transforms/base/multisource.py`:
+All multi-unit behavior lives in `lmetk/transforms/base/multisource.py`. Prefer the current names:
 
-- **`ConcatinatedFitMultiSourceTransformMixin`**
+- **`StandardFitTransformMixin`** (alias: `ConcatinatedFitMultiSourceTransformMixin`)
   - Fit: concatenate all sources, then fit once
-  - Transform: apply per source
-  - Ragged handling:
-    - dense-only: flatten ragged -> NumPy -> reassemble
-    - ragged-native: pass Awkward arrays directly
+  - Transform: apply per segment
+  - Ragged handling: dense-only (flatten → NumPy → reassemble) or ragged-native (Awkward directly)
 
-- **`NoFitMultiSourceTransformMixin`**
-  - Same as above but raises if `fit_multi_source` is called
+- **`StatelessPerSegmentMixin`** (alias: `NoFitMultiSourceTransformMixin`)
+  - No fit; transform applied per segment. Raises if `fit_multi_source` is called.
 
-- **`ConcatenateUnitsMixing`**
-  - Concatenates all sources along a required `axis` and passes a single unit
+- **`StatelessConcatenateMixin`** (alias: `ConcatenateUnitsMixing`)
+  - No fit; concatenates all sources along a required `axis`, then one `transform_data` call.
 
 - **`InverseTransformMixin`**
-  - Adds `inverse_transform_data(...)` and `inverse_transform_multi_source(...)`
+  - Implement abstract `inverse_transform`; mixin provides `inverse_transform_data` and `inverse_transform_multi_source`.
 
 ---
 
@@ -145,7 +143,7 @@ These are useful for understanding why a transform took a slow path.
 
 ## Common Extension Patterns
 
-- **Pure stateless transform:** `BaseTransform` + `NoFitMultiSourceTransformMixin`
-- **Global-fit scalers:** `BaseTransform` + `ConcatinatedFitMultiSourceTransformMixin`
-- **Unit-merge transforms:** `BaseTransform` + `ConcatenateUnitsMixing` (must set `axis`)
-- **Inverse projections:** `InverseTransformMixin` + `inverse_transform_data`
+- **Pure stateless transform:** `BaseTransform` + `StatelessPerSegmentMixin`
+- **Global-fit scalers:** `BaseTransform` + `StandardFitTransformMixin`
+- **Unit-merge transforms:** `BaseTransform` + `StatelessConcatenateMixin` (must set `axis` in `__init__`)
+- **Inverse projections:** `InverseTransformMixin` + implement `inverse_transform`
