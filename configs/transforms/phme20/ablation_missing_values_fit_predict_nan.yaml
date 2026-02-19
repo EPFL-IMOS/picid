@@ -9,6 +9,8 @@ populate_unit_information:
   metadata:
     apply_to: ["unit_id", "features"]
     assign_to: ["unit_id"]
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 # tabularize.yaml
 

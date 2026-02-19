@@ -10,6 +10,8 @@ mcar_corruption_train_val:
   metadata:
     apply_to: features
     transform_on_keys: ["train", "val"]
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 mcar_corruption_test:
   transform:
@@ -23,6 +25,8 @@ mcar_corruption_test:
   metadata:
     apply_to: features
     transform_on_keys: ["test"]
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 missing_values_analytics:
   transform:
@@ -31,6 +35,8 @@ missing_values_analytics:
 
   metadata:
     apply_to: features
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 # imputation:
 #   transform:
@@ -62,6 +68,8 @@ scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 scaler_target:
   transform:
@@ -70,3 +78,5 @@ scaler_target:
   metadata:
     apply_to: rul
     fit_on: train
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
