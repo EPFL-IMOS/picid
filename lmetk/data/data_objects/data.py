@@ -69,13 +69,7 @@ class NamedTransformInput(BaseDataObjectWithMetadata):
         keys = list(target_obj.keys())
 
         if check_nans:
-            logger.debug(
-                f"Checking for NaNs in data values for keys: {keys} is deactivated, "
-                "it is required to first implement the possibility to disable check_for_nans "
-                "for some transforms (Missing data transforms) additionally"
-                "check_for_nans function do not work properly for ragged data currently"
-            )
-            # check_for_nans(values, keys, raise_on_error=(not warn_only))
+            check_for_nans(values, keys, raise_on_error=(not warn_only))
 
         if check_lengths:
             total_size = sum(v.size for v in values if hasattr(v, "size"))
