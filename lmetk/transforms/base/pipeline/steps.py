@@ -180,9 +180,16 @@ class IntegrityCheckBeforeStep:
             return context
 
         ran: List[str] = []
+        step_id = context.step_id or type(context.transform_instance).__name__
         for split in context.available_splits:
             split_chunks = {split: build(split)}
-            ran_for_split = _run_scoped_checks(checks, split_chunks)
+            ran_for_split = _run_scoped_checks(
+                checks,
+                split_chunks,
+                step_id=step_id,
+                split=split,
+                stage="before-transform",
+            )
             for name in ran_for_split:
                 if name not in ran:
                     ran.append(name)
@@ -423,7 +430,10 @@ class IntegrityCheckAfterStep:
             if key in context.transformed_data
         }
 
-        ran = _run_scoped_checks(checks, assign_to_slice)
+        step_id = context.step_id or type(context.transform_instance).__name__
+        ran = _run_scoped_checks(
+            checks, assign_to_slice, step_id=step_id, stage="after-transform"
+        )
         context.integrity_after_check_names = ran
         context.integrity_after_ran = True
         return context

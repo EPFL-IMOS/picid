@@ -27,16 +27,21 @@ logger = logging.getLogger(__name__)
 def _run_scoped_checks(
     checks: List[Tuple[str, Callable, str]],
     data_slice: Any,
+    *,
+    step_id: str | None = None,
+    split: str | None = None,
+    stage: str | None = None,
 ) -> List[str]:
     """
     Run (name, fn, policy) checks, passing data_slice as the sole argument.
 
-    - policy "fail": on exception, raise RuntimeError.
+    - policy "fail": on exception, raise RuntimeError (message includes step_id/split/stage if given).
     - policy "warn": on exception, log and continue; name still appended to ran.
     - policy "allow": exceptions are not specially handled (same as warn for now).
 
-    Supports legacy no-arg functions via introspection; emits DeprecationWarning.
-    Returns the list of check names that completed (including those that warned).
+    step_id, split, and stage are optional; when provided they are included in the
+    RuntimeError message so pipeline failures can be traced to a specific
+    transform, split, and pipeline stage (e.g. "before-transform", "after-transform").
     """
     ran: List[str] = []
     for name, fn, policy in checks:
@@ -56,9 +61,20 @@ def _run_scoped_checks(
             ran.append(name)
         except Exception as exc:
             if policy == "fail":
-                raise RuntimeError(
-                    f"Integrity check '{name}' failed: {exc}"
-                ) from exc
+                prefix_parts = []
+                if stage is not None:
+                    prefix_parts.append(f"[{stage}]")
+                if step_id is not None:
+                    prefix_parts.append(f"transform {step_id!r}")
+                if split is not None:
+                    prefix_parts.append(f"split {split!r}")
+                prefix = " ".join(prefix_parts)
+                msg = (
+                    f"{prefix}: integrity check {name!r} failed: {exc}"
+                    if prefix
+                    else f"Integrity check '{name}' failed: {exc}"
+                )
+                raise RuntimeError(msg) from exc
             elif policy == "warn":
                 logger.warning(
                     "Integrity check '%s' failed (warn only): %s", name, exc
