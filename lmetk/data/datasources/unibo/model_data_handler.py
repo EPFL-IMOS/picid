@@ -240,8 +240,11 @@ class ModelDataHandler:
             required_step_count = max(max_cycle_step_count, min_cycle_length)
 
         # Pad both sets using the same global max length
-        train_padded = self.__pad_cycle_list(train, required_step_count)
-        test_padded = self.__pad_cycle_list(test, required_step_count)
+        # Ensure list type so __pad_cycle_list empty check is well-defined (no array truth value)
+        train_list = list(train) if isinstance(train, np.ndarray) else train
+        test_list = list(test) if isinstance(test, np.ndarray) else test
+        train_padded = self.__pad_cycle_list(train_list, required_step_count)
+        test_padded = self.__pad_cycle_list(test_list, required_step_count)
 
         return (train_padded, test_padded)
 
