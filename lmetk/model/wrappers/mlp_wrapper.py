@@ -1,7 +1,9 @@
-from einops import rearrange
-import torch
 import logging
-from typing import Dict, Any
+import warnings
+
+import torch
+from einops import rearrange
+from typing import Any, Dict, Optional
 
 from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
@@ -15,16 +17,29 @@ class MLPWrapper(AbstractFeedForwardTrainingWrapper):
     Wrapper specifically for the MLP Baseline model.
     """
 
-    def __init__(self, task_type: str, seq_len: int, **kwargs):
+    def __init__(
+        self,
+        task_type: str,
+        seq_len: int,
+        *,
+        input_channels: int,
+        num_targets: Optional[int] = None,
+        num_classes: Optional[int] = None,
+        output_dim: Optional[int] = None,
+        hidden_dim: int = 64,
+        num_layers: int = 2,
+        **kwargs: Any,
+    ):
         """
         Args:
-            task_type (str): Task name.
-            seq_len (int): Input sequence length.
-            **kwargs:
-                - 'input_channels' (required)
-                - 'num_targets' (required)
-                - 'hidden_dim' (optional, default 64)
-                - 'num_layers' (optional, default 2)
+            task_type: Task name.
+            seq_len: Input sequence length.
+            input_channels: Number of input channels (required).
+            num_targets: Output dimension for regression (optional, default 1).
+            num_classes: Number of classes for classification (required for classification).
+            output_dim: Deprecated. Use num_targets for regression.
+            hidden_dim: Hidden layer size (default 64).
+            num_layers: Number of layers (default 2).
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -36,35 +51,37 @@ class MLPWrapper(AbstractFeedForwardTrainingWrapper):
         self.task_type = task_type
 
         # --- 1. Determine Dimensions ---
-        target_dim = 1
+        target_dim: int = 1
         model_task_type = ""
 
         if task_type in self.regression_tasks:
             model_task_type = "regression"
-            if "num_targets" in kwargs:
-                target_dim = kwargs.pop("num_targets")
-            elif "output_dim" in kwargs:
-                target_dim = kwargs.pop("output_dim")
+            if num_targets is not None:
+                target_dim = num_targets
+            elif output_dim is not None:
+                warnings.warn(
+                    "'output_dim' is deprecated; use 'num_targets' for regression.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                target_dim = output_dim
             else:
                 target_dim = 1
 
         elif task_type in self.classification_tasks:
             model_task_type = "classification"
-            if "num_classes" not in kwargs:
+            if num_classes is None:
                 raise KeyError(
                     "Configuration Error: 'num_classes' must be provided for classification."
                 )
-            target_dim = kwargs.pop("num_classes")
+            target_dim = num_classes
 
-        # --- 2. Extract Config ---
-        if "input_channels" not in kwargs:
-            raise KeyError("Configuration Error: 'input_channels' is required.")
-
+        # --- 2. Build Config ---
         config = {
-            "input_channels": kwargs.pop("input_channels"),
+            "input_channels": input_channels,
             "seq_len": seq_len,
-            "hidden_dim": kwargs.pop("hidden_dim", 64),
-            "num_layers": kwargs.pop("num_layers", 2),  # <--- Extract num_layers
+            "hidden_dim": hidden_dim,
+            "num_layers": num_layers,
         }
 
         # --- 3. Instantiate MLP Backbone ---

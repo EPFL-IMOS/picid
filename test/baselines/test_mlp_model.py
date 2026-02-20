@@ -140,11 +140,11 @@ def test_wrapper_init_classification_missing_args():
 
 def test_wrapper_init_missing_channels():
     """
-    [Coverage: Wrapper Lines 59-60]
-    Verifies `if "input_channels" not in kwargs` raises KeyError.
+    Verifies that omitting required input_channels raises (TypeError for missing
+    keyword-only argument, or KeyError for legacy kwargs-based API).
     """
     task = "rul"
-    with pytest.raises(KeyError, match="'input_channels' is required"):
+    with pytest.raises((TypeError, KeyError), match="input_channels"):
         MLPWrapper(
             task_type=task,
             seq_len=10,
