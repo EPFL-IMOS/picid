@@ -2,7 +2,7 @@ import copy
 import logging
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, override
+from typing import Any, Dict, Optional, override
 
 import awkward as ak
 import numpy as np
@@ -148,7 +148,13 @@ test_names = [
 
 
 class UNIBO21Loader(AbstractDataSourceLoader):
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        *,
+        rul_anomaly_threshold: Optional[float] = None,
+        rul_anomaly_fraction: Optional[float] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.data_path = kwargs["data_dir"]
 
@@ -156,6 +162,18 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         self._is_loaded = False
         self.data_dict = None
         self.meta_data = {}
+
+        self.rul_anomaly_threshold = kwargs.get("rul_anomaly_threshold", rul_anomaly_threshold)
+        self.rul_anomaly_fraction = kwargs.get("rul_anomaly_fraction", rul_anomaly_fraction)
+
+        if self.task_mode == "anomaly_detection":
+            if self.rul_anomaly_threshold is not None and self.rul_anomaly_fraction is not None:
+                raise ValueError(
+                    "For task_mode='anomaly_detection', set exactly one of "
+                    "rul_anomaly_threshold (absolute) or rul_anomaly_fraction (relative)."
+                )
+            if self.rul_anomaly_threshold is None and self.rul_anomaly_fraction is None:
+                self.rul_anomaly_fraction = 0.3  # default: last 30% of life
 
         # Instantiate multisource_data_splitter if is not none
         assert (
@@ -384,7 +402,15 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         for idx, (right_idx, unit_name) in enumerate(zip(battery_range, names)):
             curr_x = x[left_idx:right_idx]
-            curr_y = y[left_idx:right_idx]
+            curr_y = y[left_idx:right_idx].copy()
+
+            if self.task_mode == "anomaly_detection":
+                if self.rul_anomaly_fraction is not None:
+                    max_rul = float(np.max(curr_y))
+                    threshold = self.rul_anomaly_fraction * max_rul
+                    curr_y = (curr_y <= threshold).astype(np.float32)
+                else:
+                    curr_y = (curr_y <= self.rul_anomaly_threshold).astype(np.float32)
 
             if flatten:
                 # Use valid_lengths to unpad and flatten
