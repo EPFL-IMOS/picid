@@ -5,7 +5,7 @@ from numpy import ndarray
 
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_pipeline import TransformSequenceProtocol
 
 
 class PreProcessorInterface(ABC):
@@ -14,7 +14,7 @@ class PreProcessorInterface(ABC):
     def __init__(
         self,
         datasource: Union[SingleSourceLoader, MultiSourceLoader],
-        transforms: ConfigTransformManager,
+        transforms: TransformSequenceProtocol,
         **kwargs,
     ):
         self.datasource = datasource
@@ -23,6 +23,7 @@ class PreProcessorInterface(ABC):
     @abstractmethod
     def get_processed_data_dict(
         self,
+        return_splits_on_first_level: bool = False,
     ) -> dict[str, dict[str, ndarray | list[ndarray]]]:
         """
         Returns the final processed data

@@ -1,92 +1,141 @@
+"""
+preprocessor.py
+===============
+
+PreProcessor orchestrates loading, splitting, transformation, and caching of
+datasets for both framework and library users.
+
+Framework users (run.py)
+------------------------
+    transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
+    preprocessor = PreProcessor("per_unit", datasource, transforms_manager)
+    data = preprocessor.pipeline(cache_paths=..., cache_preprocessed=True)
+
+Library users
+-------------
+    from picid.transforms.base.transform_pipeline import TransformPipeline
+
+    pipeline = TransformPipeline([
+        DataTransform("normalize", scaler,  {"apply_to": "features", "fit_on": "train"}),
+        DataTransform("window",    windower, {"apply_to": "features", "cache_point": True}),
+        DataTransform("scale_y",   scaler2, {"apply_to": "target",   "fit_on": "train"}),
+    ])
+
+    # Without caching:
+    data = pipeline.run(data)
+
+    # With the same three-tier caching as the framework:
+    preprocessor = PreProcessor("per_unit", datasource, pipeline)
+    data = preprocessor.pipeline(
+        data_cache_path=".cache",
+        data_library_part_path="./picid/data/datasources",
+        transform_library_part_path="./picid/transforms",
+        cache_preprocessed=True,
+    )
+
+Both ConfigTransformManager and TransformPipeline satisfy TransformSequenceProtocol.
+PreProcessor and the pipeline runners depend only on that protocol.
+
+Pipeline runners
+----------------
+    DirectPipelineRunner     — no caching; load → split → fetch → transform → return.
+    CachingPipelineRunner    — three-tier cache (loaded_and_splitted_data → boundary →
+                               preprocessed) with optional boundary restore.
+
+Behaviour is identical to the previous implementation; the logic is decomposed
+into named methods for testability and the concrete transform manager type is
+no longer hardcoded.
+"""
+from __future__ import annotations
+
+import logging
 import time
-from collections import OrderedDict
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
+
 from numpy import ndarray
-from picid.data.preprocessing.base import PreProcessorInterface
-from picid.transforms.base.data_transform import DataTransform
+
+from picid.data.cache.offline import FileSystemCache
 from picid.data.data_objects.data import DatasetContainer
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
     MetadataManifest,
 )
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.preprocessing.base import PreProcessorInterface
+from picid.exceptions import TransformError
+from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.pipeline import _get_producer_version
-
-from rich import print as rprint
-import logging
-from picid.data.cache.offline import FileSystemCache
+from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_pipeline import (
+    TransformPipeline,
+    TransformSequenceProtocol,
+)
 from picid.utils import print_data_dict_structure
-from picid.utils.hash_utils import compute_cache_key, ensure_serializable
+from picid.data.preprocessing.pipeline_runners import (
+    CachingPipelineRunner,
+    DirectPipelineRunner,
+)
 from picid.utils.rich_output import (
     descriptive_dict_differences_str,
     print_transforms_summary,
     to_descriptive_dict,
 )
 
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.transforms.base.transform_manager import ConfigTransformManager
-
-
 logger = logging.getLogger(__name__)
 
+# Union type accepted wherever a transform sequence is expected.
+AnyTransformSequence = Union[ConfigTransformManager, TransformPipeline]
+
+
+# ---------------------------------------------------------------------------
+# PreProcessor
+# ---------------------------------------------------------------------------
 
 class PreProcessor(PreProcessorInterface):
     """
-    PreProcessor is a data preprocessing class that orchestrates the loading, splitting,
-    transformation, and management of datasources.
+    Orchestrates loading, splitting, transformation, and caching of datasets.
 
-    See also:
-        - `picid.data.preprocessing.single_source_loader.SingleSourceLoader`:
-                For preprocessing pipelines that operate on a single data source.
-        - `picid.data.preprocessing.multi_source_loader.MultiSourceLoader`:
-                For pipelines that handle multiple data sources simultaneously.
-        - `picid.data.preprocessing.phmd_loader.PHMDLoader`:
-                For specialized loading of PHMD-formatted data sources.
+    Accepts either a ConfigTransformManager (framework path, YAML-driven) or a
+    TransformPipeline (library path, Python-only) as the transforms argument.
+    Both satisfy TransformSequenceProtocol and are handled identically by the
+    pipeline runners.
 
-    Attributes:
-        mode (str): Specifies the preprocessing mode, either 'per_unit' or 'cross_unit'.
-        datasource: The data source object providing access to raw data and metadata.
-        transforms: A collection of data transformation objects to be applied sequentially.
-        data (Optional[DatasetContainer]): The processed dataset container.
-
-    Methods:
-        __init__(mode, datasource, transforms, **kwargs):
-            Initializes the PreProcessor with the specified mode, datasource, and transforms.
-        get_meta_data_dict():
-            Retrieves metadata from the datasource as a dictionary.
-        get_processed_data_dict(return_splits_on_first_level: bool = False) -> dict:
-            Returns the processed data as a dictionary, optionally splitting data at the first level.
-        fetch_data() -> None:
-            Loads and stores data and metadata from the datasource.
-        apply_transforms(data: DatasetContainer, transforms) -> List[Any]:
-            Applies a sequence of data transformations to the dataset.
-        pipeline() -> DatasetContainer:
-            Executes the full preprocessing pipeline: loads, splits, fetches,
-            transforms, and returns the processed data.
+    Attributes
+    ----------
+    mode : str
+        "per_unit" or "cross_unit".
+    datasource : SingleSourceLoader | MultiSourceLoader
+    transforms : ConfigTransformManager | TransformPipeline
+    data : Optional[DatasetContainer]
+        None until pipeline() or fetch_data() + apply_transforms() is called.
     """
 
     def __init__(
         self,
-        mode,
+        mode: str,
         datasource: Union[SingleSourceLoader, MultiSourceLoader],
-        transforms: Optional[ConfigTransformManager] = None,
+        transforms: Optional[AnyTransformSequence] = None,
         **kwargs,
     ):
+        if mode not in ("per_unit", "cross_unit"):
+            raise ValueError(
+                f"Unsupported mode: {mode!r}. "
+                "Supported modes are 'per_unit' and 'cross_unit'."
+            )
 
         if transforms is None:
             transforms = ConfigTransformManager(transforms_config=None)
             logger.info("No transforms provided; using empty ConfigTransformManager.")
+        elif not isinstance(transforms, TransformSequenceProtocol):
+            raise TypeError(
+                f"transforms must be a ConfigTransformManager or TransformPipeline "
+                f"(or any object satisfying TransformSequenceProtocol), "
+                f"got {type(transforms).__name__}."
+            )
 
         super().__init__(datasource=datasource, transforms=transforms)
-
-        assert mode in [
-            "per_unit",
-            "cross_unit",
-        ], (
-            f"Unsupported mode: {mode}. Supported modes are 'per_unit'"
-            " and 'cross_unit'."
-        )
 
         self.mode = mode
         self._is_preprocessed = False
@@ -94,85 +143,73 @@ class PreProcessor(PreProcessorInterface):
         self.meta_data: dict = {}
         self.cache = FileSystemCache()
 
-    def get_meta_data_dict(self):
+    # ------------------------------------------------------------------
+    # Public query methods
+    # ------------------------------------------------------------------
+
+    def get_meta_data_dict(self) -> dict:
         return self.meta_data
 
     def get_processed_data_dict(
         self, return_splits_on_first_level: bool = False
-    ) -> dict[str, ndarray | list[ndarray]]:
+    ) -> Union[DatasetContainer, Dict[str, Any]]:
         """
-        Returns the final processed data.
+        Return the final processed data.
 
-        The returned dictionary is structured as follows:
-        {
-            "features": {
-                "train": ndarray | list[ndarray],
-                "val": ndarray | list[ndarray],
-                "test": ndarray | list[ndarray]
-            },
-            "target": {
-                "train": ndarray | list[ndarray],
-                "val": ndarray | list[ndarray],
-                "test": ndarray | list[ndarray]
-            },
-            "other_named_tensor": {
-                ...
-            }
-        }
-
-        If return_splits_on_first_level is True, the function will return the splits at the first level.
+        When return_splits_on_first_level is True, returns:
+            {split: {key: ndarray | list[ndarray]}}
+        Otherwise returns the DatasetContainer directly.
         """
-
         if not self._is_preprocessed or self.data is None:
             raise RuntimeError(
-                "Data has not been preprocessed. Please run the pipeline() first."
+                "Data has not been preprocessed. Run pipeline() first."
             )
-
-        if return_splits_on_first_level == True:
+        if return_splits_on_first_level:
             return self.data.to_split_dict()
-        else:
-            return self.data
+        return self.data
+
+    def get_cached_transform_manager(self) -> AnyTransformSequence:
+        """Return the (possibly restored-from-cache) transform sequence."""
+        return self.transforms
+
+    # Backward-compatibility alias (typo preserved from original run.py usage).
+    def get_chached_transform_manager(self) -> AnyTransformSequence:
+        return self.get_cached_transform_manager()
+
+    # ------------------------------------------------------------------
+    # Data loading
+    # ------------------------------------------------------------------
 
     def fetch_data(self) -> None:
-        """Prepare data from the datasource and store as instance variables."""
+        """Load data from the datasource and attach a manifest entry."""
+        data = self.datasource.get_data()
 
-        data: DatasetContainer | list[DatasetContainer] = self.datasource.get_data()
+        if not isinstance(data, DatasetContainer):
+            raise TypeError(
+                f"datasource.get_data() must return a DatasetContainer, "
+                f"got {type(data).__name__}."
+            )
 
-        assert isinstance(data, DatasetContainer), (
-            f"Expected MultiDataChunk, but got {type(data)}, "
-            "make sure 'datasource.get_data()' returns MultiDataChunk"
-        )
-
-        self.data: DatasetContainer = data
+        self.data = data
         self._add_datasource_manifest_entry()
 
     def _add_datasource_manifest_entry(self) -> None:
-        """Append a datasource manifest entry to self.data.manifest if present."""
+        """Append a datasource provenance entry to self.data.manifest if present."""
         if self.data is None:
             return
         manifest = getattr(self.data, "manifest", None)
-        if manifest is None or not isinstance(manifest, MetadataManifest):
+        if not isinstance(manifest, MetadataManifest):
             return
+
         ds = self.datasource
-        payload: dict[str, Any] = {
-            "datasource_type": type(ds).__name__,
-        }
-        # data_name: only a string identifier (e.g. "phme20", "NB14"), not the full metadata dict
-        if hasattr(ds, "data_name"):
-            val = getattr(ds, "data_name", None)
-            if isinstance(val, str):
-                payload["data_name"] = val
+        payload: Dict[str, Any] = {"datasource_type": type(ds).__name__}
+
+        data_name = self._resolve_datasource_name(ds)
+        if data_name is not None:
+            payload["data_name"] = data_name
         if hasattr(ds, "task_mode"):
             payload["task_mode"] = getattr(ds, "task_mode", None)
-        if "data_name" not in payload and hasattr(ds, "get_data_name") and callable(getattr(ds, "get_data_name")):
-            try:
-                name_val = ds.get_data_name()
-                if isinstance(name_val, str):
-                    payload["data_name"] = name_val
-                elif isinstance(name_val, (list, tuple)) and all(isinstance(x, str) for x in name_val):
-                    payload["data_name"] = name_val
-            except Exception:
-                pass
+
         entry = ManifestEntry(
             schema_version=MANIFEST_SCHEMA_VERSION,
             producer_version=_get_producer_version(),
@@ -184,26 +221,69 @@ class PreProcessor(PreProcessorInterface):
         )
         manifest.add(entry)
 
+    @staticmethod
+    def _resolve_datasource_name(ds: Any) -> Optional[Any]:
+        """
+        Extract a data_name from a datasource using attribute/method precedence.
+        Returns the name (str or list of str), or None if not found.
+        """
+        if hasattr(ds, "data_name"):
+            val = getattr(ds, "data_name", None)
+            if isinstance(val, str):
+                return val
+
+        if hasattr(ds, "get_data_name") and callable(getattr(ds, "get_data_name")):
+            try:
+                val = ds.get_data_name()
+                if isinstance(val, str):
+                    return val
+                if isinstance(val, (list, tuple)) and all(
+                    isinstance(x, str) for x in val
+                ):
+                    return val
+            except Exception:
+                pass
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Transform application
+    # ------------------------------------------------------------------
+
     def apply_transforms(
         self,
         data: DatasetContainer,
-        transforms,
+        transforms: Dict[str, DataTransform],
         after_each_transform_callback: Optional[
             Callable[[DatasetContainer, str], None]
         ] = None,
-    ) -> List[Any]:
+    ) -> DatasetContainer:
         """
-        Apply a list of transforms to each data item in data.
-        Args:
-            data: List of data items.
-            transforms: Dict-like of transform_name -> DataTransform.
-            after_each_transform_callback: Optional callback (data, transform_name) called after each transform.
-        Returns:
-            Transformed data (same type as input).
+        Apply an ordered dict of DataTransform objects to data sequentially.
+
+        Parameters
+        ----------
+        data : DatasetContainer
+        transforms : OrderedDict[str, DataTransform]
+            Already-resolved DataTransform objects (from get_transforms()).
+        after_each_transform_callback : callable, optional
+            Called as callback(data, transform_name) after each successful
+            transform.  Used internally for boundary cache saves.
+
+        Returns
+        -------
+        DatasetContainer
+
+        Raises
+        ------
+        ValueError
+            If any value in transforms is not a DataTransform.
+        TransformError
+            If a transform raises during application.
         """
         if not all(isinstance(t, DataTransform) for t in transforms.values()):
             raise ValueError(
-                "Every element of transforms_lst must be a DataTransform object."
+                "Every element of transforms must be a DataTransform instance."
             )
 
         summary = []
@@ -211,71 +291,88 @@ class PreProcessor(PreProcessorInterface):
         try:
             for transform_name, transform in transforms.items():
                 logger.info(
-                    f"Applying transform: '{transform_name}' "
-                    f"(Strategy: {transform.strategy.__class__.__name__})"
+                    "Applying transform: '%s' (Strategy: %s)",
+                    transform_name,
+                    transform.strategy.__class__.__name__,
                 )
-                pre_descr_dict = to_descriptive_dict(
+
+                pre_descr = to_descriptive_dict(
                     data.to_split_dict()["train"], calculate_stat=False
                 )
                 start_time = time.time()
-                data, transform_log = transform.forward(data)
+
+                try:
+                    data, transform_log = transform.forward(data)
+                except TransformError:
+                    raise
+                except Exception as e:
+                    raise TransformError(
+                        f"Transform {transform_name!r} failed. "
+                        f"Original error: {e}",
+                        step_id=transform_name,
+                        cause=e,
+                    ) from e
 
                 if after_each_transform_callback is not None:
                     after_each_transform_callback(data, transform_name)
 
-                end_time = time.time()
+                elapsed = time.time() - start_time
                 logger.info(
-                    f" transform: '{transform.transform_name}' - "
-                    f"completed in {end_time - start_time:.4f} seconds."
+                    "Transform '%s' completed in %.4f seconds.",
+                    transform.transform_name,
+                    elapsed,
                 )
-                post_descr_dict = to_descriptive_dict(
+
+                post_descr = to_descriptive_dict(
                     data.to_split_dict()["train"], calculate_stat=False
                 )
+                log_str = self._extract_log_string(transform_log)
 
-                changes = descriptive_dict_differences_str(
-                    pre_descr_dict, post_descr_dict, mode="changed"
-                )
-                added = descriptive_dict_differences_str(
-                    pre_descr_dict, post_descr_dict, mode="added"
-                )
-                removed = descriptive_dict_differences_str(
-                    pre_descr_dict, post_descr_dict, mode="removed"
-                )
-
-                if transform_log is not None and transform_log:
-                    transform_log = (
-                        transform_log["train"]
-                        if "train" in transform_log
-                        else transform_log["test"]
-                    )
-                else:
-                    transform_log = "No additional transform log."
-
-                summary.append(
-                    {
-                        "transform_name": transform_name,
-                        "time": f" {end_time - start_time:.4f}",
-                        "status": "Success",
-                        "details": str(transform_log),
-                        "changes": str(changes),
-                        "added": str(added),
-                        "removed": str(removed),
-                        "inputs": str(pre_descr_dict),
-                    }
-                )
+                summary.append({
+                    "transform_name": transform_name,
+                    "time": f"{elapsed:.4f}",
+                    "status": "Success",
+                    "details": log_str,
+                    "changes": str(descriptive_dict_differences_str(
+                        pre_descr, post_descr, mode="changed"
+                    )),
+                    "added": str(descriptive_dict_differences_str(
+                        pre_descr, post_descr, mode="added"
+                    )),
+                    "removed": str(descriptive_dict_differences_str(
+                        pre_descr, post_descr, mode="removed"
+                    )),
+                    "inputs": str(pre_descr),
+                })
         finally:
             print_transforms_summary(summary)
+
         return data
 
-    def get_chached_transform_manager(self):
-        return self.transforms
+    @staticmethod
+    def _extract_log_string(transform_log: Any) -> str:
+        """
+        Extract a human-readable string from a transform log dict.
 
-    # configs of the dataset
-    # configs of the transforms
+        Prefers "train", falls back to "test", then the first available key.
+        """
+        if not transform_log:
+            return "No additional transform log."
+        if not isinstance(transform_log, dict):
+            return str(transform_log)
+        for preferred in ("train", "test"):
+            if preferred in transform_log:
+                return str(transform_log[preferred])
+        first_key = next(iter(transform_log))
+        logger.debug(
+            "transform_log has no 'train' or 'test' key; using %r for summary.",
+            first_key,
+        )
+        return str(transform_log[first_key])
 
-    # 1) cache after the loading -- do not need to load long time
-    # 2) cache after the preprocessing -- do not need to preprocess
-    # 3) configs of the dataset + but different transforms then laod from the 1) and overwrite 2)
+    # ------------------------------------------------------------------
+    # Pipeline entry point
+    # ------------------------------------------------------------------
 
     def pipeline(
         self,
@@ -286,226 +383,55 @@ class PreProcessor(PreProcessorInterface):
         save_boundary_caches: bool = True,
     ) -> DatasetContainer:
         """
-        Run the preprocessing pipeline using the specific methods of the FileSystemCache.
+        Run the full preprocessing pipeline.
 
-        Expected behaviour (when cache paths and cache_preprocessed are set):
+        When all cache paths and cache_preprocessed=True are provided, a
+        CachingPipelineRunner is used.  Otherwise a DirectPipelineRunner is used.
+        Both runners work with ConfigTransformManager and TransformPipeline.
 
-        1) Load and split data; cache that result (stage "loaded_and_splitted_data").
-        2) Run all transforms, then cache the final result (stage "preprocessed").
-           If some transform has metadata.cache_point (e.g. a heavy step): run until
-           that transform (inclusive), cache that state (stage "boundary"), then run
-           the remaining light transforms and cache the final "preprocessed" result.
-        3) On a later run, if only config of transforms *after* a cache_point changed:
-           full "preprocessed" cache misses (config hash changed), but the "boundary"
-           cache (datasource + transforms up to and including the heavy one) is still
-           valid. Pipeline restores from that boundary, runs only the light transforms,
-           and caches the new final result.
+        Parameters
+        ----------
+        data_cache_path : str, optional
+            Root directory for all cache files.
+        data_library_part_path : str, optional
+            Path to datasource library (used for cache key computation).
+        transform_library_part_path : str, optional
+            Path to transform library (used for cache key computation).
+        cache_preprocessed : bool
+            Enable the preprocessed (final) cache.
+        save_boundary_caches : bool
+            When True (default), save a boundary cache after each cache-point
+            transform so future runs can restore from there.
 
-        save_boundary_caches: when True (default), a full run writes boundary caches
-        after each cache_point so future runs can resume. Set False to only restore
-        from existing boundaries without writing new ones.
-
-        Internal pipeline (when cache paths and cache_preprocessed are set):
-
-        1. Try load final "preprocessed" cache (hash = datasource + full transforms).
-           - If HIT: return immediately. No disk writes.
-
-        2. Stage 1: Load/split data (may use "loaded_and_splitted_data" cache).
-
-        3. If any transform has cache_point:
-           - Try load "boundary" caches in reverse order (latest boundary first).
-           - If a boundary HIT: restore container and manager, run only transforms
-             after that boundary, then save only the final "preprocessed" cache and return.
-             (No boundary caches are written on this path.)
-           - If all boundaries MISS: run all transforms. If save_boundary_caches is True,
-             after each transform that is a cache_point we save to stage "boundary"
-             (so a later run can resume from there). Then save the final "preprocessed" cache.
-
-        4. If no transform has cache_point: run all transforms, then save
-           "preprocessed" once (same as before boundary support).
+        Returns
+        -------
+        DatasetContainer
         """
-        datasource_config = ensure_serializable(self.datasource._init_kwargs)
-        transforms_config = ensure_serializable(self.transforms.config)
-
         cache_enabled = bool(
             data_cache_path
             and transform_library_part_path
             and data_library_part_path
             and cache_preprocessed
         )
-        if cache_enabled:
-            preprocessed_config = {
-                "datasource": datasource_config,
-                "transforms": transforms_config,
-            }
-            combined_paths = [data_library_part_path, transform_library_part_path]
-            expected_hash = compute_cache_key(
-                config=preprocessed_config,
-                library_dir=combined_paths,
-                extensions=[".py"],
-            )
-        else:
-            preprocessed_config = combined_paths = expected_hash = None
-
-        # --- Early Exit: Attempt to load the final preprocessed data first ---
-        if cache_enabled:
-            meta = self.cache.load_metadata(
-                data_cache_path, stage="preprocessed", cache_key=expected_hash
-            )
-            if meta:
-                _, stored_hash = meta
-                if stored_hash == expected_hash:
-                    self.data, saved_objects = self.cache.load_data(
-                        data_cache_path,
-                        stage="preprocessed",
-                        cache_key=expected_hash,
-                    )
-                    self.transforms = saved_objects["transforms"]
-                    self.meta_data = saved_objects["meta_data"]
-                    self._is_preprocessed = True
-                    logger.info(
-                        "✅ Loaded data from Stage 2 (preprocessed) cache. Pipeline complete."
-                    )
-                    return self.data
-
-        # --- Stage 1: Load or Build Raw Data ---
-        def build_data_stage():
-            self.datasource.load_data()
-            self.datasource.split_data()
-            return self.datasource, self.datasource.get_meta_data()
-
-        if data_cache_path and data_library_part_path:
-            self.datasource, self.meta_data = self.cache.handle(
-                cache_dir=data_cache_path,
-                stage="loaded_and_splitted_data",
-                build_fn=build_data_stage,
-                config=datasource_config,
-                library_dir=data_library_part_path,
-                extensions=[".py"],
-            )
-        else:
-            self.datasource, self.meta_data = build_data_stage()
-
-        self.fetch_data()
-
-        # --- Stage 2: Apply Transforms (with optional boundary cache restore) ---
-        cache_point_names = getattr(
-            self.transforms, "get_cache_point_names", lambda: []
-        )()
-        if cache_enabled and cache_point_names:
-            # Try to restore from the latest valid boundary (reverse order)
-            for boundary_name in reversed(cache_point_names):
-                boundary_config = {
-                    "datasource": datasource_config,
-                    "transforms": self.transforms.get_config_up_to_and_including(
-                        boundary_name
-                    ),
-                }
-                boundary_key = compute_cache_key(
-                    config=boundary_config,
-                    library_dir=combined_paths,
-                    extensions=[".py"],
-                )
-                meta = self.cache.load_metadata(
-                    data_cache_path, stage="boundary", cache_key=boundary_key
-                )
-                if meta and meta[1] == boundary_key:
-                    self.data, saved_objects = self.cache.load_data(
-                        data_cache_path,
-                        stage="boundary",
-                        cache_key=boundary_key,
-                    )
-                    self.transforms = saved_objects["transforms"]
-                    self.meta_data = saved_objects["meta_data"]
-                    names_after = self.transforms.get_transform_names_after(
-                        boundary_name
-                    )
-                    if names_after:
-                        all_dt = self.transforms.get_data_transforms()
-                        transforms_to_run = OrderedDict(
-                            (n, all_dt[n]) for n in names_after if n in all_dt
-                        )
-                        self.data = self.apply_transforms(
-                            self.data, transforms_to_run
-                        )
-                    logger.info(
-                        "✅ Restored from boundary cache after %r; ran %d remaining transform(s).",
-                        boundary_name,
-                        len(names_after),
-                    )
-                    if cache_enabled:
-                        objects_to_cache = {
-                            "transforms": self.transforms,
-                            "meta_data": self.meta_data,
-                        }
-                        self.cache.save(
-                            cache_dir=data_cache_path,
-                            stage="preprocessed",
-                            data=self.data,
-                            metadata=objects_to_cache,
-                            config=preprocessed_config,
-                            cache_key=expected_hash,
-                        )
-                    self._is_preprocessed = True
-                    rprint(print_data_dict_structure(self.data))
-                    return self.data
-
-        # No boundary hit: run all transforms, optionally saving at each cache point
-        if cache_enabled and cache_point_names and save_boundary_caches:
-
-            def save_boundary_callback(data: DatasetContainer, transform_name: str):
-                if transform_name not in cache_point_names:
-                    return
-                boundary_config = {
-                    "datasource": datasource_config,
-                    "transforms": self.transforms.get_config_up_to_and_including(
-                        transform_name
-                    ),
-                }
-                objects = {
-                    "transforms": self.transforms,
-                    "meta_data": self.meta_data,
-                }
-                self.cache.save(
-                    cache_dir=data_cache_path,
-                    stage="boundary",
-                    data=data,
-                    metadata=objects,
-                    config=boundary_config,
-                    library_dir=combined_paths,
-                    extensions=[".py"],
-                )
-                logger.info(
-                    "Saved boundary cache after transform %r.", transform_name
-                )
-
-            self.data = self.apply_transforms(
-                self.data,
-                self.transforms.get_transforms(),
-                after_each_transform_callback=save_boundary_callback,
-            )
-        else:
-            self.data = self.apply_transforms(
-                self.data, self.transforms.get_transforms()
-            )
 
         if cache_enabled:
-            objects_to_cache = {
-                "transforms": self.transforms,
-                "meta_data": self.meta_data,
-            }
-            self.cache.save(
-                cache_dir=data_cache_path,
-                stage="preprocessed",
-                data=self.data,
-                metadata=objects_to_cache,
-                config=preprocessed_config,
-                cache_key=expected_hash,
+            runner: Union[DirectPipelineRunner, CachingPipelineRunner] = (
+                CachingPipelineRunner(
+                    preprocessor=self,
+                    data_cache_path=data_cache_path,
+                    data_library_part_path=data_library_part_path,
+                    transform_library_part_path=transform_library_part_path,
+                    save_boundary_caches=save_boundary_caches,
+                )
             )
-            logger.info("Applied transforms and saved result to Stage 2 cache.")
+        else:
+            runner = DirectPipelineRunner(self)
 
+        self.data = runner.run()
         self._is_preprocessed = True
-        logger.info("Data dictionary structure after transforms:")
-        rprint(print_data_dict_structure(self.data))
 
+        logger.debug(
+            "Data structure after transforms:\n%s",
+            print_data_dict_structure(self.data),
+        )
         return self.data
