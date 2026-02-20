@@ -466,7 +466,6 @@ def test_strict_mode_warmup_steps_jagged(jagged_features_ak):
         label_len=0,
         padding_left_flag=False,
         warmup_steps=1,
-        padding_left_flag=False,
     )
 
     indices = seq.get_index_array()
