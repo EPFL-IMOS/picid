@@ -172,10 +172,6 @@ class PreProcessor(PreProcessorInterface):
         """Return the (possibly restored-from-cache) transform sequence."""
         return self.transforms
 
-    # Backward-compatibility alias (typo preserved from original run.py usage).
-    def get_chached_transform_manager(self) -> AnyTransformSequence:
-        return self.get_cached_transform_manager()
-
     # ------------------------------------------------------------------
     # Data loading
     # ------------------------------------------------------------------

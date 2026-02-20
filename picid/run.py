@@ -638,7 +638,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         )
         meta_data_dict = preprocessor.get_meta_data_dict()
         if cache_preprocessed_flag:
-            transforms_manager = preprocessor.get_chached_transform_manager()
+            transforms_manager = preprocessor.get_cached_transform_manager()
     finally:
         if use_file_lock:
             file_lock.release()

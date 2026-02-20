@@ -102,7 +102,7 @@ class Loader:
                 cache_preprocessed=cache_preprocessed_flag,
             )
             if cache_preprocessed_flag:
-                transform_manager = preprocessor.get_chached_transform_manager()
+                transform_manager = preprocessor.get_cached_transform_manager()
                 self.transforms.manager = transform_manager
         finally:
             if file_lock:

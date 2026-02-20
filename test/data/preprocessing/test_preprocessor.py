@@ -278,17 +278,17 @@ class TestPreProcessorApplyTransforms:
 
 
 class TestPreProcessorGetCachedTransformManager:
-    """Tests for get_chached_transform_manager method."""
-    
+    """Tests for get_cached_transform_manager method."""
+
     def test_returns_transform_manager(self, mock_single_source_loader, mock_transform_manager):
         """Test that method returns stored transform manager.
-        
+
         **PHM Logic**: Cached transforms can be retrieved for inspection.
-        
-        **Methodology**: Call get_chached_transform_manager.
-        
+
+        **Methodology**: Call get_cached_transform_manager.
+
         **Expected**: Same transform manager returned.
-        
+
         Validates: Requirement PP-6.1 - Transform manager retrieval
         """
         preprocessor = PreProcessor(
@@ -296,8 +296,8 @@ class TestPreProcessorGetCachedTransformManager:
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
-        
-        result = preprocessor.get_chached_transform_manager()
+
+        result = preprocessor.get_cached_transform_manager()
         
         assert result is mock_transform_manager
 
