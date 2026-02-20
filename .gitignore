@@ -50,3 +50,4 @@ local_packages/
 
 # Lock file (optional: remove this line if you want to commit uv.lock for reproducible installs)
 uv.lock
+~/
