@@ -320,11 +320,11 @@ The multi-source mixins (in `lmetk/transforms/base/multisource.py`) handle data 
 
 | Mixin | Use case |
 |-------|----------|
-| `StandardFitTransformMixin` | Fit on concatenated segments; transform per segment (e.g. scalers). Sets `requires_fit=True`. |
-| `StatelessPerSegmentMixin` | No fit; transform applied per segment (e.g. reshape, concatenate inputs). |
-| `StatelessConcatenateMixin` | No fit; concatenate all segments along an axis, then one `transform_data` call. Requires `axis` in `__init__`. |
+| `ConcatFitAndPerSegmentTransformMixin` | Fit on concatenated segments; transform per segment (e.g. scalers). Sets `requires_fit=True`. |
+| `NoFitPerSegmentMixin` | No fit; transform applied per segment (e.g. reshape, concatenate inputs). |
+| `NoFitConcatAlongAxisMixin` | No fit; concatenate all segments along an axis, then one `transform_data` call. Requires `axis` in `__init__`. |
 
-Backward-compatibility aliases: `ConcatinatedFitMultiSourceTransformMixin`, `NoFitMultiSourceTransformMixin`, and `ConcatenateUnitsMixing` still work.
+Backward-compatibility aliases: `ConcatFitAndPerSegmentTransformMixin`, `StatelessPerSegmentMixin`, `StatelessConcatenateMixin`, and legacy names `ConcatinatedFitMultiSourceTransformMixin`, `NoFitMultiSourceTransformMixin`, `ConcatenateUnitsMixing` still work.
 
 ### Composable mixins (advanced)
 
@@ -333,9 +333,9 @@ Combine one fit-policy and one transform-policy mixin:
 - **Fit:** `FitByConcatenationMixin` (fit on concatenated data), `NoFitMixin` (no fitting).
 - **Transform:** `PerSegmentTransformMixin` (transform each segment), `ConcatenateBeforeTransformMixin` (concatenate then transform once; requires `axis`).
 
-Example: `StandardFitTransformMixin` = `FitByConcatenationMixin` + `PerSegmentTransformMixin`.
+Example: `ConcatFitAndPerSegmentTransformMixin` = `FitByConcatenationMixin` + `PerSegmentTransformMixin`.
 
-### Fit and transform behavior (StandardFitTransformMixin / FitByConcatenationMixin)
+### Fit and transform behavior (ConcatFitAndPerSegmentTransformMixin / FitByConcatenationMixin)
 
 **Fitting Logic**:
 
@@ -505,11 +505,11 @@ def fit_data(self, data: NamedTransformInput, metadata: dict) -> None:
 ### Step 4: Add Multi-Source Support (if needed)
 
 ```python
-from lmetk.transforms.base.multisource import StandardFitTransformMixin
+from lmetk.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
 
 class MyTransform(
     DenseTransform,
-    StandardFitTransformMixin
+    ConcatFitAndPerSegmentTransformMixin
 ):
     """Transform with multi-source fitting support."""
     
@@ -543,14 +543,14 @@ def transform_data(self, data: NamedTransformInput, metadata: dict) -> dict:
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    StandardFitTransformMixin,
+    ConcatFitAndPerSegmentTransformMixin,
     InverseTransformMixin
 )
 from lmetk.data.data_objects.data import NamedTransformInput
 
 class CustomScaler(
     DenseTransform,
-    StandardFitTransformMixin,
+    ConcatFitAndPerSegmentTransformMixin,
     InverseTransformMixin
 ):
     """Custom scaler that scales to [-1, 1] range."""

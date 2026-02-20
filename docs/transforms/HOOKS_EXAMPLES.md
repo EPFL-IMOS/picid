@@ -4,6 +4,8 @@ The pipeline emits lifecycle events that you can subscribe to via `register_hook
 
 Events: `on_pipeline_start`, `before_transform`, `after_transform`, **`on_transform_error`**, `on_pipeline_end`.
 
+On transform or pipeline errors, the default hooks print Rich tables and panels to stderr for diagnostics; the same events are also logged with traceback for log files.
+
 Below are draft examples for **`on_transform_error`** to facilitate debugging (e.g. for the `transform_on_keys` empty-intersection case and other failures).
 
 ---

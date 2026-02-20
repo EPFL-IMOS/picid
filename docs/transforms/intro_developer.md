@@ -78,15 +78,15 @@ unless you are extending core logic.
 
 All multi-unit behavior lives in `lmetk/transforms/base/multisource.py`. Prefer the current names:
 
-- **`StandardFitTransformMixin`** (alias: `ConcatinatedFitMultiSourceTransformMixin`)
+- **`ConcatFitAndPerSegmentTransformMixin`** (formerly `StandardFitTransformMixin`; alias: `ConcatinatedFitMultiSourceTransformMixin`)
   - Fit: concatenate all sources, then fit once
   - Transform: apply per segment
   - Ragged handling: dense-only (flatten → NumPy → reassemble) or ragged-native (Awkward directly)
 
-- **`StatelessPerSegmentMixin`** (alias: `NoFitMultiSourceTransformMixin`)
+- **`NoFitPerSegmentMixin`** (formerly `StatelessPerSegmentMixin`; alias: `NoFitMultiSourceTransformMixin`)
   - No fit; transform applied per segment. Raises if `fit_multi_source` is called.
 
-- **`StatelessConcatenateMixin`** (alias: `ConcatenateUnitsMixing`)
+- **`NoFitConcatAlongAxisMixin`** (formerly `StatelessConcatenateMixin`; alias: `ConcatenateUnitsMixing`)
   - No fit; concatenates all sources along a required `axis`, then one `transform_data` call.
 
 - **`InverseTransformMixin`**
@@ -143,7 +143,7 @@ These are useful for understanding why a transform took a slow path.
 
 ## Common Extension Patterns
 
-- **Pure stateless transform:** `BaseTransform` + `StatelessPerSegmentMixin`
-- **Global-fit scalers:** `BaseTransform` + `StandardFitTransformMixin`
-- **Unit-merge transforms:** `BaseTransform` + `StatelessConcatenateMixin` (must set `axis` in `__init__`)
+- **Pure stateless transform:** `BaseTransform` + `NoFitPerSegmentMixin`
+- **Global-fit scalers:** `BaseTransform` + `ConcatFitAndPerSegmentTransformMixin`
+- **Unit-merge transforms:** `BaseTransform` + `NoFitConcatAlongAxisMixin` (must set `axis` in `__init__`)
 - **Inverse projections:** `InverseTransformMixin` + implement `inverse_transform`

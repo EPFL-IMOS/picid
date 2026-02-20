@@ -252,8 +252,8 @@ These classes determine how the transform "sees" the data: does it learn from al
 
 Below is a guide to the mixins available in `lmetk.transforms.base.base_transform`. Your custom transform should inherit from `BaseTransform` **and** one of these mixins depending on the desired behavior.
 
-#### A. `ConcatinatedFitMultiSourceTransformMixin`
-**"Fit Global, Transform Local"**
+#### A. `ConcatFitAndPerSegmentTransformMixin`
+**"Fit Global, Transform Local"** (legacy alias: `ConcatinatedFitMultiSourceTransformMixin`)
 
 * **Behavior:**
     * **Fitting:** Concatenates data from *all* sources (units) into one large dataset to learn global parameters (e.g., a global min/max for scaling).
@@ -261,16 +261,16 @@ Below is a guide to the mixins available in `lmetk.transforms.base.base_transfor
     * **Ragged Support:** Contains smart logic. If your transform only supports Dense (Numpy) data but is fed Ragged (Awkward) data, this mixin automatically flattens the ragged dimension, applies the transform, and reconstructs the ragged structure.
 * **Use Case:** Scalers (`MinMaxScaler`, `StandardScaler`), PCA, Autoencoders, or any model that needs to learn the statistical properties of the *entire* dataset but preserve the original split structure.
 
-#### B. `NoFitMultiSourceTransformMixin`
-**"Stateless Multi-Source"**
+#### B. `NoFitPerSegmentMixin`
+**"Stateless Multi-Source"** (legacy alias: `NoFitMultiSourceTransformMixin`)
 
 * **Behavior:**
-    * Inherits from the class above but explicitly disables fitting.
+    * No fitting; transform applied per segment.
     * Iterates over all sources and applies the transform logic.
 * **Use Case:** Stateless operations that don't need to "learn" anything but still need to handle list-of-dicts input. Examples: Casting data types, log-transforms, simple mathematical operations.
 
-#### C. `ConcatenateUnitsMixing`
-**"Many-to-One Aggregator"**
+#### C. `NoFitConcatAlongAxisMixin`
+**"Many-to-One Aggregator"** (legacy alias: `ConcatenateUnitsMixing`)
 
 * **Behavior:**
     * Takes a list of data segments (N sources).
@@ -289,14 +289,14 @@ Below is a guide to the mixins available in `lmetk.transforms.base.base_transfor
 While the Python implementation changes based on the parent class, the YAML configuration changes slightly to accommodate specific requirements (like `axis` for concatenation).
 
 #### Scenario 1: Global Learning (Scaler)
-**Inherits:** `ConcatinatedFitMultiSourceTransformMixin` + `BaseTransform`
+**Inherits:** `ConcatFitAndPerSegmentTransformMixin` + `BaseTransform`
 
 This transform learns from all units (Train set) but keeps them separate.
 
 ```yaml
 scaler_global:
   transform:
-    # Python class inherits ConcatinatedFitMultiSourceTransformMixin
+    # Python class inherits ConcatFitAndPerSegmentTransformMixin
     _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
     
   metadata:
@@ -307,14 +307,14 @@ scaler_global:
 ```
 
 #### Scenario 2: Aggregation (Merging Units)
-**Inherits:** `ConcatenateUnitsMixing` + `BaseTransform`
+**Inherits:** `NoFitConcatAlongAxisMixin` + `BaseTransform`
 
 This transform merges all units into one. It **requires** an `axis` parameter.
 
 ```yaml
 merge_units:
   transform:
-    # Python class inherits ConcatenateUnitsMixing
+    # Python class inherits NoFitConcatAlongAxisMixin
     _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
     axis: 0  # <--- REQUIRED: How to stitch them together?
     
@@ -326,12 +326,12 @@ merge_units:
 ```
 
 #### Scenario 3: Stateless Operation
-**Inherits:** `NoFitMultiSourceTransformMixin` + `BaseTransform`
+**Inherits:** `NoFitPerSegmentMixin` + `BaseTransform`
 
 ```yaml
 log_transform:
   transform:
-    # Python class inherits NoFitMultiSourceTransformMixin
+    # Python class inherits NoFitPerSegmentMixin
     _target_: lmetk.transforms.math.LogTransform
     
   metadata:
@@ -378,7 +378,7 @@ class MyCustomScaler(BaseTransform):
 
 ### Step 4: Developer Notes: Handling Ragged Data
 
-The `ConcatinatedFitMultiSourceTransformMixin` contains sophisticated logic for handling Ragged (Variable-length) data. If you are writing a transform:
+The `ConcatFitAndPerSegmentTransformMixin` contains sophisticated logic for handling Ragged (Variable-length) data. If you are writing a transform:
 
 1.  **If your math works on Ragged Arrays (Awkward Array):**
     Inherit from `RaggedTransform`. The mixin will pass the raw Awkward Array to you. This is the fastest method.
