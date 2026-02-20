@@ -47,6 +47,7 @@ from picid.data.data_objects.data import (
     SimpleReturnObject,
     SplitDatasetContainer,
 )
+from picid.exceptions import TransformError, build_transform_error
 from picid.transforms.base.pipeline import (
     TransformContext,
     CopyStep,
@@ -209,7 +210,9 @@ class TransformStrategy:
         except Exception as e:
             context.error = e
             _emit("on_transform_error", context)
-            raise
+            if isinstance(context.error, TransformError):
+                raise context.error from context.error.cause
+            self._raise_transform_error(context, e)
 
         _emit("on_pipeline_end", context)
         return context.transformed_data, context.log
@@ -217,6 +220,11 @@ class TransformStrategy:
     # ------------------------------------------------------------------
     # Helpers used by pipeline steps
     # ------------------------------------------------------------------
+
+    def _raise_transform_error(self, context: TransformContext, e: Exception) -> None:
+        """Build and raise TransformError from pipeline context and caught exception."""
+        err = build_transform_error(context, e)
+        raise err from e
 
     def _prepare_chunks_for_split(
         self,
