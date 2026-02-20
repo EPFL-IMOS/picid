@@ -113,6 +113,18 @@ def test_base_data_object_copy_shallow():
 # ---------------------------------------------------------------------------
 
 
+def test_base_with_metadata_explicit_metadata_param():
+    """BaseDataObjectWithMetadata(metadata=...) sets _metadata; column_map updated for DataFrames."""
+    c = BaseDataObjectWithMetadata(
+        metadata={"custom": "value"},
+        values=np.array([[1, 2], [3, 4]]),
+    )
+    assert c._metadata is not None
+    assert c._metadata.get("custom") == "value"
+    assert "column_map" in c._metadata
+    assert list(c.keys()) == ["values"]
+
+
 def test_base_with_metadata_setitem_removes_stale_column_map():
     """Replacing a DataFrame key with non-DataFrame removes its column_map entry."""
     c = BaseDataObjectWithMetadata()
