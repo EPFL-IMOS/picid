@@ -1,14 +1,12 @@
-from einops import rearrange
+import logging
+from typing import Any, List, Optional
+
 import torch
-import numpy as np
-from typing import List
+from einops import rearrange
 
 from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-
-# Import your new model class
 from lmetk.model.methods.cnn_1d import EncoderModel
 from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +32,22 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
     Wrapper for the EncoderModel, handling both regression and classification tasks.
     """
 
-    def __init__(self, task_type: str, seq_len: int, **kwargs):
-
-        # Define supported tasks based on your new categories
+    def __init__(
+        self,
+        task_type: str,
+        seq_len: int,
+        *,
+        input_channels: int,
+        latent_dim: int,
+        dropout_prob: float,
+        output_channels: int,
+        kernels: List[int],
+        strides: List[int],
+        dilations: List[int],
+        num_classes: Optional[int] = None,
+        cls_head: Optional[Any] = None,
+        **kwargs: Any,
+    ):
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
         self.supported_types = self.regression_tasks + self.classification_tasks
@@ -47,44 +58,34 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
         self.task_type = task_type
         self.seq_len = seq_len
 
-        # --- Model Configuration ---
-
-        # 1. Determine the model's task_type and num_classes
+        # --- 1. Determine task_type and num_classes ---
         if task_type in self.regression_tasks:
             model_task_type = "regression"
-            # num_classes is 1 for regression; pop it if user provided it
-            num_classes = 1
-            kwargs.pop("num_classes", None)
-        elif (
-            self.task_type in self.classification_tasks
-        ):  # task_type in self.classification_tasks
+            num_classes_val = 1
+        elif task_type in self.classification_tasks:
             model_task_type = "classification"
-            # For classification, we *require* num_classes from kwargs
-            if "num_classes" not in kwargs:
+            if num_classes is None:
                 raise KeyError(
-                    "Missing 'num_classes' in kwargs for classification task."
+                    "Missing 'num_classes' for classification task. "
+                    "Pass num_classes=<int>."
                 )
-            num_classes = kwargs.pop("num_classes")
+            num_classes_val = num_classes
+        else:
+            raise ValueError(f"Task {task_type} not supported for CNN1D_Wrapper.")
 
-        # 2. Extract config keys from kwargs
-        config_keys = [
-            "input_channels",
-            "latent_dim",
-            "dropout_prob",
-            "output_channels",
-            "kernels",
-            "strides",
-            "dilations",
-        ]
-        config = {}
-        for key in config_keys:
-            if key not in kwargs:
-                raise KeyError(f"Missing required model config key: '{key}' in kwargs.")
-            config[key] = kwargs.pop(key)
+        # --- 2. Build config from explicit args ---
+        config = {
+            "input_channels": input_channels,
+            "latent_dim": latent_dim,
+            "dropout_prob": dropout_prob,
+            "output_channels": output_channels,
+            "kernels": kernels,
+            "strides": strides,
+            "dilations": dilations,
+            "input_seq_len": seq_len,
+        }
 
-        config["input_seq_len"] = seq_len
-
-        # 3. Check Receptive Field (unchanged)
+        # --- 3. Check receptive field ---
         receptive_field = _calculate_receptive_field(
             config["kernels"], config["strides"], config["dilations"]
         )
@@ -93,21 +94,17 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
                 f"Configuration Error: Input 'seq_len' ({seq_len}) is larger than "
                 f"the model's receptive field ({receptive_field})."
             )
-        else:
-            logger.info(
-                f"Model receptive field ({receptive_field}) is sufficient for "
-                f"input seq_len ({seq_len})."
-            )
+        logger.info(
+            f"Model receptive field ({receptive_field}) is sufficient for "
+            f"input seq_len ({seq_len})."
+        )
 
-        # 4. Instantiate the new backbone
+        # --- 4. Instantiate backbone (cls_head ignored for backward compat) ---
         backbone = EncoderModel(
             config=config,
             task_type=model_task_type,
-            num_classes=num_classes,
+            num_classes=num_classes_val,
         )
-
-        # 5. Clean up old kwargs and pass the rest to super()
-        kwargs.pop("cls_head", None)  # No longer used
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
