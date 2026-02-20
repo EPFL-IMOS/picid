@@ -1,0 +1,9 @@
+# UNIBO21 for anomaly_detection: target = binary anomaly from RUL.
+# Default: rul_anomaly_fraction = 0.3 (anomaly = last 30% of each unit's life).
+# Alternative: set rul_anomaly_threshold (absolute) and leave rul_anomaly_fraction unset.
+_target_: picid.data.datasources.unibo.loader.UNIBO21Loader
+data_name: UNIBO21
+task_mode: anomaly_detection
+data_dir: ${paths.data_dir}
+rul_anomaly_fraction: 0.3
+# rul_anomaly_threshold: 50  # optional: absolute RUL <= 50 -> anomaly
