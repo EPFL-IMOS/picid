@@ -60,10 +60,14 @@ class FitPredictTaskDataset(BaseDataset):
         subset_range: Optional[
             Tuple[int, int, int]
         ] = None,  # Used for debugging purposes
+        dataset_cfg: Optional[dict] = None,
         **kwargs,
     ):
         # Additional default values
         self.get_unit_id = False
+
+        if dataset_cfg is not None and dataset_cfg.get("get_unit_id", None):
+            self.get_unit_id = True
 
         # Make sure that the data_dict contains the required keys
         if task_type in REGRESSION_TASKS:
@@ -83,12 +87,6 @@ class FitPredictTaskDataset(BaseDataset):
 
         else:
             raise ValueError(f"Unknown task_type: {task_type}")
-
-        if kwargs.get("dataset_cfg", None) is not None:
-            dataset_cfg = kwargs.pop("dataset_cfg")
-
-            if dataset_cfg.get("get_unit_id", None):
-                self.get_unit_id = True
 
         for key in required_keys:
             if key not in data_dict:
