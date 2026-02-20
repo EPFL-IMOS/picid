@@ -229,19 +229,12 @@ class BaseDataObjectWithMetadata(
     original format.
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, metadata: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
         """
         Initializes the chunk, handling metadata and column extraction robustly.
         """
-        # --- FIX ---
-        # Pop metadata to handle it separately after other items are initialized.
-        # This avoids order-of-operation bugs.
-
-        # We keep Metadata as a private attribute to
-        # keep the data homogeneous
+        # We keep Metadata as a private attribute to keep the data homogeneous
         self._metadata: Optional[Dict[str, Any]] = None
-
-        metadata = kwargs.pop("metadata", None)
 
         # Initialize all other data first
         super().__init__(**kwargs)
