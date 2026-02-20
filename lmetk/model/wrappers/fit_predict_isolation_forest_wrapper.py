@@ -6,13 +6,9 @@ import numpy as np
 
 from sklearn.ensemble import IsolationForest
 
-# Assuming "detection" is the task type you are using,
-# you might import DETECTION_TASKS or just define it here as a supported type.
+# Canonical task type for this wrapper is anomaly_detection (in CLASSIFICATION_TASKS).
 from lmetk.baselines.definitions import CLASSIFICATION_TASKS
 from lmetk.model.wrappers.base import AbstractFitPredictWrapper
-
-# If DETECTION_TASKS is not in your definitions file, we define it locally for the check
-DETECTION_TASKS = ["detection", "anomaly_detection"]
 
 
 class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
@@ -29,7 +25,7 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     ):
 
         # --- Task Validation ---
-        self.supported_tasks = DETECTION_TASKS + CLASSIFICATION_TASKS
+        self.supported_tasks = CLASSIFICATION_TASKS
         self.task_type = task_type
 
         if task_type not in self.supported_tasks:

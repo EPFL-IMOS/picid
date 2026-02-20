@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - airbus_helicopter/base
+  - /model_configs/anomaly_detection/isolation_forest
+  - override /transforms: airbus_helicopter/statistics_fit_predict

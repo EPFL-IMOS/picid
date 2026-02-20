@@ -2,7 +2,7 @@
 
 defaults:
   - override /evaluator: classification
-  - override /task_definition: detection/airbus_helicopter
+  - override /task_definition: anomaly_detection/airbus_helicopter
   - override /datasource: airbus_helicopter
 
 evaluator:

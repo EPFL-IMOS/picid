@@ -55,7 +55,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         Args:
             data_dir (str): Path to the directory where data will be stored/loaded.
             data_name (str): Name of the dataset.
-            task_mode (str): Task type (e.g. 'detection').
+            task_mode (str): Task type (e.g. 'anomaly_detection').
             download (bool): If True, downloads files if missing. Default True.
         """
         super().__init__(

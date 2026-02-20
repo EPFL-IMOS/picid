@@ -57,7 +57,7 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
         self,
         data_dir: str,
         data_name: str = "toy_ragged_dataset",
-        task_mode: str = "detection",
+        task_mode: str = "anomaly_detection",
         multisource_data_splitter: Any = None,
         **kwargs,
     ):
@@ -65,7 +65,7 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
         Args:
             data_dir: Where data is stored (not used in this toy example as we generate data).
             data_name: Unique identifier for the dataset.
-            task_mode: 'detection', 'diagnosis', or 'rul'.
+            task_mode: 'anomaly_detection', 'diagnosis', or 'rul'.
         """
         super().__init__(
             data_name=data_name,
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     # 1. Instantiate
     # In Hydra, this would be: dataset_source = hydra.utils.instantiate(cfg.datasource)
     loader = ToyRaggedLoader(
-        data_dir="./dummy_path", task_mode="detection"  # Ignored by this toy class
+        data_dir="./dummy_path", task_mode="anomaly_detection"  # Ignored by this toy class
     )
 
     # 2. Load

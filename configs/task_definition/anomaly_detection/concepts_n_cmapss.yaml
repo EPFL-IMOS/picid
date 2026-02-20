@@ -1,0 +1,22 @@
+# https://www.sciencedirect.com/science/article/pii/S0952197622005723
+
+seq_len: 50 # window size
+label_len: 0 # overlap size
+pred_len: 1 # prediction size
+task_type: anomaly_detection
+padding_left_flag: True # Ensure sequences are left-padded to have enough history and consistent lengths of train/val/test regardless of seq_len
+stride: 1
+stride_train: 5
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - rul
+      - timestamps
+      - health_states
+      - unit
+      - concepts
+
+target_metric: val/loss
+target_metric_mode: min
