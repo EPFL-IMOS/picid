@@ -126,17 +126,23 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     # --- Dunder Methods ---
 
-    def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args,
+        is_multi_unit: bool = True,
+        manifest: Optional[MetadataManifest] = None,
+        slice_info: Optional[SliceInfo] = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
         By default a new MetadataManifest is attached (Phase 4.1); pass manifest=
         to override. Optional slice_info= for slice-awareness (Phase 4.2).
         """
-        # Assume multi-unit by default. If we find any single item, we flip the flag.
         self.is_multi_unit: bool = is_multi_unit
-        manifest = kwargs.pop("manifest", MetadataManifest())
-        self.manifest: Optional[MetadataManifest] = manifest
-        slice_info = kwargs.pop("slice_info", None)
+        self.manifest: Optional[MetadataManifest] = (
+            manifest if manifest is not None else MetadataManifest()
+        )
         self.slice_info: Optional[SliceInfo] = slice_info
 
         # check if every element in args is in fact also a. DatasetContainer
