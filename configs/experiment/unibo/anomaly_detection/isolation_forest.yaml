@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - unibo/anomaly_detection/base
+  - /model_configs/anomaly_detection/isolation_forest
+  - override /transforms: battery/unibo/anomaly_detection_fit_predict

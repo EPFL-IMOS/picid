@@ -1,0 +1,16 @@
+#@package _global_
+
+defaults:
+  - override /evaluator: classification
+  - override /task_definition: anomaly_detection/unibo
+  - override /datasource: unibo21_bosello_anomaly
+
+evaluator:
+  train:
+    apply_inverse_scaling: false
+  val:
+    apply_inverse_scaling: false
+    save_predictions: true
+  test:
+    apply_inverse_scaling: false
+    save_predictions: true

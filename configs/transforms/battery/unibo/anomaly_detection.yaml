@@ -1,0 +1,91 @@
+# UNIBO anomaly_detection: target (binary from loader) -> anomaly_detection, no RUL.
+# Self-contained; do not default to combined (which assigns target->rul).
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+ragged_regular_ragged_target:
+  transform:
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+  metadata:
+    apply_to: target
+    assign_to: anomaly_detection
+
+reshape_target:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a 1 1 -> a 1"
+  metadata:
+    apply_to: anomaly_detection
+
+time_domain_features:
+  transform:
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
+    hankel_window_size: 10
+    stats_to_compute: [
+        "mean",
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "abs_avg",
+        "peak_to_peak_value",
+        "standard_deviation",
+        "variance",
+        "peak_factor",
+        "change_coefficient",
+        "clearance_factor",
+        "abs_energy",
+      ]
+  metadata:
+    apply_to: "features"
+    assign_to: "time_domain_features"
+
+ragged2regular_time_domain_features:
+  transform:
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+  metadata:
+    apply_to: "time_domain_features"
+
+spectral_domain_features:
+  transform:
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
+    stats_to_compute: [
+        "mean",
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "peak_to_peak_value",
+        "variance",
+        "abs_energy",
+        "peak_factor",
+        "change_coefficient",
+        "clearance_factor",
+        "spectral_entropy",
+        "shannon_entropy",
+      ]
+  metadata:
+    apply_to: "features"
+    assign_to: "spectral_features"
+
+ragged2regular_spectral_features:
+  transform:
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+  metadata:
+    apply_to: "spectral_features"
+
+concatenate_features:
+  transform:
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
+  metadata:
+    apply_to: ["spectral_features", "time_domain_features"]
+    assign_to: features
+
+final_scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
