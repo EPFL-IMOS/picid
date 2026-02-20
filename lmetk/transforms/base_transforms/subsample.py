@@ -6,14 +6,14 @@ import numpy as np
 # Assuming this import path is correct for your project
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.utils.decorators import check_transform_output_consistency
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class SubsampleTransform(DenseTransform, StatelessPerSegmentMixin):
+class SubsampleTransform(DenseTransform, NoFitPerSegmentMixin):
 
     def __init__(
         self,
@@ -49,7 +49,7 @@ class SubsampleTransform(DenseTransform, StatelessPerSegmentMixin):
         return self.transform_data(data, None)
 
 
-class WindowedAggregationTransform(DenseTransform, StatelessPerSegmentMixin):
+class WindowedAggregationTransform(DenseTransform, NoFitPerSegmentMixin):
     """
     Applies a non-overlapping window aggregation to the input data.
     """

@@ -3,7 +3,7 @@ Base transform interface and data-type markers.
 
 BaseTransform is the abstract base for all transforms: it defines
 transform_data (and optional fit_data). Subclasses combine with multisource
-mixins (e.g. StandardFitTransformMixin) and optionally with RaggedTransform /
+mixins (e.g. ConcatFitAndPerSegmentTransformMixin) and optionally with RaggedTransform /
 DenseTransform / RaggedOrDenseTransform to declare capability for handler dispatch.
 """
 from abc import ABC, abstractmethod

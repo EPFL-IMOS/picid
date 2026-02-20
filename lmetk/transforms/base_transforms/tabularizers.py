@@ -26,13 +26,13 @@ from omegaconf import OmegaConf
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.data.optimization.sequencer import DenseArraySequencer
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(DenseTransform, StatelessPerSegmentMixin):
+class TimeseriesTabularizer(DenseTransform, NoFitPerSegmentMixin):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

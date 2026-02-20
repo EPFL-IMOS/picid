@@ -7,15 +7,15 @@ import awkward as ak
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform, RaggedTransform
 from lmetk.transforms.base.multisource import (
-    StatelessPerSegmentMixin,
-    StatelessConcatenateMixin,
+    NoFitPerSegmentMixin,
+    NoFitConcatAlongAxisMixin,
 )
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
 
 
-class ConcatenateTransform(DenseTransform, StatelessPerSegmentMixin):
+class ConcatenateTransform(DenseTransform, NoFitPerSegmentMixin):
     def __init__(self, dim: int = 1, **kwargs):
         """
         Initialize the transform.
@@ -156,7 +156,7 @@ class ConcatenateTransform(DenseTransform, StatelessPerSegmentMixin):
         return self.transform_data(data, metadata)
 
 
-class RuggedToDenseTransform(RaggedTransform, StatelessPerSegmentMixin):
+class RuggedToDenseTransform(RaggedTransform, NoFitPerSegmentMixin):
     def __init__(self, **kwargs):
         """
         Initialize the transform.
@@ -184,7 +184,7 @@ class RuggedToDenseTransform(RaggedTransform, StatelessPerSegmentMixin):
         return data
 
 
-class MultiDatasetRuggedToDenseTransform(RaggedTransform, StatelessConcatenateMixin):
+class MultiDatasetRuggedToDenseTransform(RaggedTransform, NoFitConcatAlongAxisMixin):
     def __init__(self, axis: int, **kwargs):
         """
         Initialize the transform.
@@ -194,7 +194,7 @@ class MultiDatasetRuggedToDenseTransform(RaggedTransform, StatelessConcatenateMi
             **kwargs: Additional keyword arguments
         """
         RaggedTransform.__init__(self)
-        StatelessConcatenateMixin.__init__(self, axis=axis, **kwargs)
+        NoFitConcatAlongAxisMixin.__init__(self, axis=axis, **kwargs)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """

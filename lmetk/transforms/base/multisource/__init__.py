@@ -7,6 +7,7 @@ when data is multi-unit. See mixins.py module docstring for composition guide.
 """
 from lmetk.transforms.base.multisource.mixins import (
     ConcatenateBeforeTransformMixin,
+    ConcatFitAndPerSegmentTransformMixin,
     ConcatenateUnitsMixing,
     ConcatenatedMultiSourceTransformMixin,
     ConcatinatedFitMultiSourceTransformMixin,
@@ -14,8 +15,10 @@ from lmetk.transforms.base.multisource.mixins import (
     FitMultiSourceTransformMixin,
     InverseTransformMixin,
     MultiSourceTransformInterface,
+    NoFitConcatAlongAxisMixin,
     NoFitMixin,
     NoFitMultiSourceTransformMixin,
+    NoFitPerSegmentMixin,
     PerSegmentTransformMixin,
     StandardFitTransformMixin,
     StatelessConcatenateMixin,
@@ -28,6 +31,7 @@ from lmetk.transforms.base.multisource.utils import (
 
 __all__ = [
     "ConcatenateBeforeTransformMixin",
+    "ConcatFitAndPerSegmentTransformMixin",
     "ConcatenateUnitsMixing",
     "ConcatenatedMultiSourceTransformMixin",
     "ConcatinatedFitMultiSourceTransformMixin",
@@ -35,8 +39,10 @@ __all__ = [
     "FitMultiSourceTransformMixin",
     "InverseTransformMixin",
     "MultiSourceTransformInterface",
+    "NoFitConcatAlongAxisMixin",
     "NoFitMixin",
     "NoFitMultiSourceTransformMixin",
+    "NoFitPerSegmentMixin",
     "PerSegmentTransformMixin",
     "StandardFitTransformMixin",
     "StatelessConcatenateMixin",

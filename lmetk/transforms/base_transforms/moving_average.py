@@ -4,7 +4,7 @@ import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 # Import the sequencer
@@ -13,7 +13,7 @@ from lmetk.data.optimization.sequencer import DenseArraySequencer
 logger = logging.getLogger(__name__)
 
 
-class MovingAverageTransform(DenseTransform, StatelessPerSegmentMixin):
+class MovingAverageTransform(DenseTransform, NoFitPerSegmentMixin):
     """
     Applies a moving average filter to smooth time-domain signals.
 

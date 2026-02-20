@@ -7,7 +7,7 @@ from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 from lmetk.transforms.base.multisource import (
-    StatelessPerSegmentMixin,
+    NoFitPerSegmentMixin,
     InverseTransformMixin,
 )
 
@@ -82,7 +82,7 @@ def diff_at_step_n(vector, n):
 
 
 class HealthIndexTransform(
-    DenseTransform, StatelessPerSegmentMixin, InverseTransformMixin
+    DenseTransform, NoFitPerSegmentMixin, InverseTransformMixin
 ):
     """
     Calculates a Health Index (HI) based on a runtime channel and a

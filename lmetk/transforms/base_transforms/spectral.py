@@ -7,13 +7,13 @@ from scipy.stats import entropy
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class SpectralStatsTransform(DenseTransform, StatelessPerSegmentMixin):
+class SpectralStatsTransform(DenseTransform, NoFitPerSegmentMixin):
     """
     Computes global statistical features from the frequency spectrum of signals.
 

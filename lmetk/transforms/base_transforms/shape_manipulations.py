@@ -10,13 +10,13 @@ from lmetk.transforms.base.base_transform import (
     RaggedTransform,
     RaggedOrDenseTransform,
 )
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
 
 
-class RegularizeRaggedDataTransform(RaggedTransform, StatelessPerSegmentMixin):
+class RegularizeRaggedDataTransform(RaggedTransform, NoFitPerSegmentMixin):
     def __init__(self, **kwargs):
         """
         This transform regularizes ragged arrays to have uniform length.
@@ -40,7 +40,7 @@ class RegularizeRaggedDataTransform(RaggedTransform, StatelessPerSegmentMixin):
 
 
 class ExpandScalarToReferenceFeatureSize(
-    DenseTransform, StatelessPerSegmentMixin
+    DenseTransform, NoFitPerSegmentMixin
 ):
     def __init__(self, scalar_key: str, **kwargs):
         """
@@ -111,7 +111,7 @@ class ExpandScalarToReferenceFeatureSize(
         return output_array
 
 
-class RaggedToDenseTransform(RaggedTransform, StatelessPerSegmentMixin):
+class RaggedToDenseTransform(RaggedTransform, NoFitPerSegmentMixin):
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Concatenate ragged arrays along a single ragged dimension

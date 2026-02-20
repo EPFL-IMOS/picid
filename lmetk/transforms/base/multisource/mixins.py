@@ -14,9 +14,9 @@ Compositions:
 - NoFitMixin: no fitting; raises if fit is requested.
 - PerSegmentTransformMixin: transform each segment independently.
 - ConcatenateBeforeTransformMixin: concatenate along self.axis, then transform once.
-- StandardFitTransformMixin = FitByConcatenation + PerSegment.
-- StatelessPerSegmentMixin = NoFit + PerSegment.
-- StatelessConcatenateMixin = NoFit + Concatenate (requires axis in __init__).
+- ConcatFitAndPerSegmentTransformMixin = FitByConcatenation + PerSegment.
+- NoFitPerSegmentMixin = NoFit + PerSegment.
+- NoFitConcatAlongAxisMixin = NoFit + Concatenate (requires axis in __init__).
 
 InverseTransformMixin is optional and provides inverse_transform_data / inverse_transform_multi_source.
 """
@@ -196,15 +196,15 @@ class ConcatenateBeforeTransformMixin(_BaseDispatcher):
         )
 
 
-class StandardFitTransformMixin(FitByConcatenationMixin, PerSegmentTransformMixin):
+class ConcatFitAndPerSegmentTransformMixin(FitByConcatenationMixin, PerSegmentTransformMixin):
     """Fit on concatenated segments; transform per segment. Common for fittable per-unit transforms."""
 
 
-class StatelessPerSegmentMixin(NoFitMixin, PerSegmentTransformMixin):
+class NoFitPerSegmentMixin(NoFitMixin, PerSegmentTransformMixin):
     """No fit; transform each segment independently. Use for stateless transforms."""
 
 
-class StatelessConcatenateMixin(NoFitMixin, ConcatenateBeforeTransformMixin):
+class NoFitConcatAlongAxisMixin(NoFitMixin, ConcatenateBeforeTransformMixin):
     """No fit; concatenate along axis then transform once. Subclass must set self.axis."""
 
     def __init__(self, axis: int, **kwargs):
@@ -257,8 +257,11 @@ class InverseTransformMixin(ABC):
 # ---------------------------------------------------------------------------
 # Backward compatibility aliases (old names still used in configs or downstream)
 # ---------------------------------------------------------------------------
-ConcatinatedFitMultiSourceTransformMixin = StandardFitTransformMixin
-NoFitMultiSourceTransformMixin = StatelessPerSegmentMixin
-ConcatenateUnitsMixing = StatelessConcatenateMixin
-ConcatenatedMultiSourceTransformMixin = StandardFitTransformMixin
-FitMultiSourceTransformMixin = StandardFitTransformMixin
+StatelessPerSegmentMixin = NoFitPerSegmentMixin
+StandardFitTransformMixin = ConcatFitAndPerSegmentTransformMixin
+StatelessConcatenateMixin = NoFitConcatAlongAxisMixin
+ConcatinatedFitMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
+NoFitMultiSourceTransformMixin = NoFitPerSegmentMixin
+ConcatenateUnitsMixing = NoFitConcatAlongAxisMixin
+ConcatenatedMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
+FitMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin

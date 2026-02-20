@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class PadToLength(DenseTransform, StatelessPerSegmentMixin):
+class PadToLength(DenseTransform, NoFitPerSegmentMixin):
     """
     Pads a numpy array along a chosen axis to reach at least `target_length`.
     Useful when sequences are shorter than a required sliding-window size.
