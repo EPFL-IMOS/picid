@@ -14,7 +14,11 @@ from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.cache.offline import FileSystemCache
 from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_pipeline import TransformPipeline
+from picid.transforms.base.data_transform import DataTransform
 from picid.utils.hash_utils import compute_cache_key, ensure_serializable
+
+from test.transforms.base.conftest import DummyStatelessTransform
 
 
 # -----------------------------------------------------------------------------
@@ -416,6 +420,81 @@ class TestPipelineBoundaryCache:
             assert not (subdir / "data.pkl").exists(), (
                 "save_boundary_caches=False should not write boundary data"
             )
+
+
+# -----------------------------------------------------------------------------
+# PreProcessor with TransformPipeline (library path)
+# -----------------------------------------------------------------------------
+
+
+class TestPreProcessorWithTransformPipelineNoCache:
+    """PreProcessor accepts TransformPipeline and runs pipeline without cache."""
+
+    def test_pipeline_with_transform_pipeline_returns_container(
+        self, datasource
+    ):
+        pipeline = TransformPipeline([
+            DataTransform(
+                "t1",
+                DummyStatelessTransform(),
+                {"apply_to": "features", "assign_to": "features"},
+            ),
+        ])
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=pipeline,
+        )
+        result = preprocessor.pipeline()
+        assert result is not None
+        assert hasattr(result, "features") and hasattr(result, "target")
+        assert "train" in result.features and "val" in result.features and "test" in result.features
+
+
+class TestPreProcessorWithTransformPipelineWithCache:
+    """PreProcessor with TransformPipeline uses same three-tier cache as ConfigTransformManager."""
+
+    def test_two_runs_with_cache_preprocessed_second_hits_cache(
+        self, cache_dir, library_dir, datasource
+    ):
+        pipeline = TransformPipeline([
+            DataTransform(
+                "t1",
+                DummyStatelessTransform(),
+                {"apply_to": "features", "assign_to": "features"},
+            ),
+        ])
+        preprocessor = PreProcessor(
+            mode="per_unit",
+            datasource=datasource,
+            transforms=pipeline,
+        )
+        result1 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        result2 = preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+        )
+        _assert_containers_equal(result1, result2)
+        # Preprocessed cache should exist
+        cache = FileSystemCache()
+        config = {
+            "datasource": ensure_serializable(datasource._init_kwargs),
+            "transforms": ensure_serializable(pipeline.config),
+        }
+        key = compute_cache_key(
+            config=config,
+            library_dir=[library_dir, library_dir],
+            extensions=[".py"],
+        )
+        meta = cache.load_metadata(cache_dir, stage="preprocessed", cache_key=key)
+        assert meta is not None
 
 
 # -----------------------------------------------------------------------------

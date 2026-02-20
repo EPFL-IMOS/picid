@@ -195,14 +195,18 @@ class TestDataTransform:
             np.testing.assert_array_equal(transformed, original * 2)
     
     def test_data_transform_forward_missing_key_error(self):
-        """Test that missing apply_to key raises error."""
+        """Test that missing apply_to key raises error (wrapped in TransformError)."""
+        from picid.exceptions import TransformError
+
         transform = DummyStatelessTransform()
         metadata = {"apply_to": "nonexistent", "assign_to": "nonexistent"}
         dt = DataTransform("test", transform, metadata)
-        
+
         container = create_dummy_single_unit_container()
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(TransformError) as exc_info:
             dt.forward(container)
+        assert isinstance(exc_info.value.cause, KeyError)
+        assert "not found" in str(exc_info.value.cause)
     
     def test_data_transform_forward_transform_on_keys(self):
         """Test forward pass with transform_on_keys filter."""

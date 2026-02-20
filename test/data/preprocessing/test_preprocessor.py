@@ -77,11 +77,11 @@ class TestPreProcessorInitialization:
         
         **Methodology**: Pass invalid mode string.
         
-        **Expected**: AssertionError raised.
+        **Expected**: ValueError raised.
         
         Validates: Requirement PP-1.3 - Mode validation
         """
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             PreProcessor(
                 mode="invalid_mode",
                 datasource=mock_single_source_loader,

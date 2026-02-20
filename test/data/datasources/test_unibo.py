@@ -418,3 +418,76 @@ def test_model_handler_get_discharge_whole_cycle_future(mocker):
     assert np.all(train_range == np.array([1, 2]))
     assert np.all(val_range == np.array([1]))
     assert np.all(test_range == np.array([1]))
+
+
+# =========================================================================
+# === Part 4: UNIBO21Loader anomaly_detection task_mode ===
+# =========================================================================
+
+
+def test_unibo_loader_anomaly_detection_process_split_returns_binary_target():
+    """
+    When task_mode is anomaly_detection and rul_anomaly_fraction is set,
+    _process_split converts RUL to binary (0=normal, 1=anomaly) per unit.
+    """
+    from picid.data.datasources.unibo.loader import UNIBO21Loader
+
+    loader = UNIBO21Loader(
+        data_dir="/tmp",
+        data_name="UNIBO21",
+        task_mode="anomaly_detection",
+        rul_anomaly_fraction=0.3,
+    )
+    # RUL: 10, 8, 6, 4, 2, 0 -> max=10, threshold=0.3*10=3 -> anomaly where RUL<=3
+    # So binary target should be [0,0,0,1,1,1]
+    x = np.zeros((6, 2, 3), dtype=np.float32)  # 6 cycles, len 2, 3 features
+    y = np.array([10.0, 8.0, 6.0, 4.0, 2.0, 0.0])
+    battery_range = [6]
+    names = ["000-DM-3.0-4019-S"]  # must be in UNIT_NAMES_TO_ID
+    # Flat list of per-cycle lengths (one int per cycle)
+    valid_lengths = [2, 2, 2, 2, 2, 2]
+
+    result = loader._process_split(
+        x=x,
+        y=y,
+        battery_range=battery_range,
+        names=names,
+        valid_lengths=valid_lengths,
+        flatten=True,
+    )
+    assert len(result) == 1
+    target = result[0]["target"]
+    # Awkward array: flatten to numpy for assertion
+    if hasattr(target, "to_numpy"):
+        arr = np.asarray(target.to_numpy()).ravel()
+    else:
+        arr = np.asarray(ak.ravel(target)).ravel()
+    assert np.isin(arr, [0.0, 1.0]).all(), f"Expected only 0 and 1, got {np.unique(arr)}"
+    assert 0.0 in arr and 1.0 in arr, "Expected both labels present"
+
+
+def test_unibo_loader_anomaly_detection_absolute_threshold():
+    """Absolute threshold: anomaly when RUL <= rul_anomaly_threshold."""
+    from picid.data.datasources.unibo.loader import UNIBO21Loader
+
+    loader = UNIBO21Loader(
+        data_dir="/tmp",
+        data_name="UNIBO21",
+        task_mode="anomaly_detection",
+        rul_anomaly_threshold=5.0,
+    )
+    y = np.array([10.0, 8.0, 6.0, 4.0, 2.0, 0.0])  # RUL <= 5 -> last three are anomaly
+    x = np.zeros((6, 2, 3), dtype=np.float32)
+    result = loader._process_split(
+        x=x,
+        y=y,
+        battery_range=[6],
+        names=["000-DM-3.0-4019-S"],
+        valid_lengths=[2, 2, 2, 2, 2, 2],
+        flatten=True,
+    )
+    target = result[0]["target"]
+    arr = np.asarray(ak.ravel(target)).ravel()
+    assert np.isin(arr, [0.0, 1.0]).all()
+    # 10,8,6 > 5 -> 0; 4,2,0 <= 5 -> 1
+    assert arr[0] == 0.0 and arr[-1] == 1.0

@@ -218,12 +218,13 @@ class TestStrategyViaPipeline:
 
     def test_fittable_transform_without_fit_on_raises(self):
         """When transform has requires_fit=True but fit_on_split/fit_on_key are not set, pipeline raises."""
+        from picid.exceptions import TransformError
         from picid.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
         transform = DummyFittableTransform()  # has ConcatFitAndPerSegmentTransformMixin -> requires_fit=True
         container = create_dummy_single_unit_container()
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -233,6 +234,7 @@ class TestStrategyViaPipeline:
                 fit_on_split=None,
                 fit_on_key=None,
             )
+        assert isinstance(exc_info.value.cause, ValueError)
         msg = str(exc_info.value)
         assert "requires fitting" in msg
         assert "fit_on" in msg

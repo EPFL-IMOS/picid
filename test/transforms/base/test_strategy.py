@@ -8,6 +8,7 @@ import pytest
 import awkward as ak
 from typing import Any, Dict, List
 
+from picid.exceptions import TransformError
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.strategy import TransformStrategy, postprocess_transformed_data
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
@@ -82,12 +83,12 @@ class TestTransformStrategy:
         assert transform.fitted
     
     def test_strategy_apply_missing_apply_to_key_error(self):
-        """Test that missing apply_to key raises error."""
+        """Test that missing apply_to key raises error (wrapped in TransformError)."""
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
         container = create_dummy_single_unit_container()
         
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -95,14 +96,16 @@ class TestTransformStrategy:
                 assign_to_keys="nonexistent",
                 assign_to_keys_map=["nonexistent"]
             )
+        assert isinstance(exc_info.value.cause, KeyError)
+        assert "not found" in str(exc_info.value.cause)
     
     def test_strategy_apply_no_apply_to_keys_error(self):
-        """Test that empty apply_to_keys raises error."""
+        """Test that empty apply_to_keys raises error (wrapped in TransformError)."""
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
         container = create_dummy_single_unit_container()
         
-        with pytest.raises(ValueError, match="apply_to_keys"):
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -110,15 +113,17 @@ class TestTransformStrategy:
                 assign_to_keys="features",
                 assign_to_keys_map=["features"]
             )
+        assert isinstance(exc_info.value.cause, ValueError)
+        assert "apply_to_keys" in str(exc_info.value.cause)
     
     def test_strategy_apply_invalid_structure_error(self):
-        """Test that invalid data structure raises error."""
+        """Test that invalid data structure raises error (wrapped in TransformError)."""
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
         # Create container with missing features key
         container = SplitDatasetContainer(target={"train": [np.array([[1.0]])]})
         
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -126,6 +131,8 @@ class TestTransformStrategy:
                 assign_to_keys="features",
                 assign_to_keys_map=["features"]
             )
+        assert isinstance(exc_info.value.cause, KeyError)
+        assert "not found" in str(exc_info.value.cause)
     
     def test_strategy_prepare_chunks_single_unit(self):
         """Test _prepare_chunks_for_split with single unit."""
@@ -322,7 +329,7 @@ class TestTransformStrategyAdvanced:
         )
         # features key is missing
         
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -330,6 +337,8 @@ class TestTransformStrategyAdvanced:
                 assign_to_keys="features",
                 assign_to_keys_map=["features"]
             )
+        assert isinstance(exc_info.value.cause, KeyError)
+        assert "not found" in str(exc_info.value.cause)
     
     def test_strategy_fit_on_split_with_fit_on_key(self):
         """Test strategy fit_on_split with fit_on_key (line 138)."""
@@ -364,7 +373,7 @@ class TestTransformStrategyAdvanced:
         container = create_dummy_split_container()
         
         # This should fail when trying to access assign_to_map in transformed chunk
-        with pytest.raises(KeyError, match="missing expected key|expected key"):
+        with pytest.raises(TransformError) as exc_info:
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -372,6 +381,8 @@ class TestTransformStrategyAdvanced:
                 assign_to_keys="scaled_features",
                 assign_to_keys_map=["scaled_features"]  # Transform returns "wrong_key" instead
             )
+        assert isinstance(exc_info.value.cause, KeyError)
+        assert "missing expected key" in str(exc_info.value.cause) or "expected key" in str(exc_info.value.cause)
 
 
 class TestStrategyCoverage:

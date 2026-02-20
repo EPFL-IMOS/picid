@@ -120,6 +120,31 @@ def mock_multi_source_loader(multi_unit_dataset_container):
 # MOCK TRANSFORMS
 # =============================================================================
 
+class _StubTransformSequence:
+    """Minimal stub satisfying TransformSequenceProtocol for PreProcessor tests."""
+
+    def __init__(self):
+        self.transforms = {}
+        self._config = {}
+
+    @property
+    def config(self):
+        return self._config
+
+    def get_transforms(self):
+        from collections import OrderedDict
+        return OrderedDict(self.transforms)
+
+    def get_cache_point_names(self):
+        return []
+
+    def get_transform_names_after(self, transform_name: str):
+        return []
+
+    def get_config_up_to_and_including(self, transform_name: str):
+        return {}
+
+
 class MockTransform:
     """Mock transform that multiplies by a factor."""
     
@@ -149,11 +174,8 @@ class MockDataTransform:
 
 @pytest.fixture
 def mock_transform_manager():
-    """Create a mock ConfigTransformManager."""
-    manager = MagicMock()
-    manager.transforms = {}
-    manager.get_transforms.return_value = {}
-    return manager
+    """Create a stub satisfying TransformSequenceProtocol for PreProcessor tests."""
+    return _StubTransformSequence()
 
 
 @pytest.fixture
