@@ -134,9 +134,9 @@ def test_init_missing_num_classes():
 
 
 def test_init_missing_input_channels():
-    """Target: raise KeyError if input_channels missing."""
+    """Target: raise when input_channels is missing (TypeError or KeyError)."""
     task = "rul"
-    with pytest.raises(KeyError, match="'input_channels' is required"):
+    with pytest.raises((TypeError, KeyError), match="input_channels"):
         StatisticalBaselineWrapper(
             task_type=task,
             seq_len=10,

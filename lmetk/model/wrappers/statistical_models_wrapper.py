@@ -1,7 +1,9 @@
-from einops import rearrange
-import torch
 import logging
-from typing import Dict, Any, List, Optional
+import warnings
+
+import torch
+from einops import rearrange
+from typing import Any, Dict, List, Optional
 
 from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
@@ -26,18 +28,30 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
     """
 
     def __init__(
-        self, task_type: str, seq_len: int, model_type: str = "linear", **kwargs
+        self,
+        task_type: str,
+        seq_len: int,
+        model_type: str = "linear",
+        *,
+        input_channels: int,
+        num_targets: Optional[int] = None,
+        num_classes: Optional[int] = None,
+        output_dim: Optional[int] = None,
+        poly_degree: int = 2,
+        **kwargs: Any,
     ):
         """
         Initializes the wrapper and the underlying statistical backbone.
 
         Args:
-            task_type (str): The specific task name (e.g., 'rul_regression', 'fault_classification').
-            seq_len (int): The length of the input time series.
-            model_type (str, optional): The type of baseline to use ('linear', 'polynomial', 'exponential').
-            **kwargs: Additional configuration (must include 'input_channels').
-                - For Classification: Must include 'num_classes'.
-                - For Regression: May include 'num_targets' (default=1).
+            task_type: The specific task name (e.g., 'rul_regression', 'fault_classification').
+            seq_len: The length of the input time series.
+            model_type: The type of baseline to use ('linear', 'polynomial', 'exponential').
+            input_channels: Number of input channels (required).
+            num_targets: Output dimension for regression (optional, default 1).
+            num_classes: Number of classes for classification (required for classification).
+            output_dim: Deprecated. Use num_targets for regression.
+            poly_degree: Polynomial degree for polynomial model (default 2).
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -53,37 +67,36 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         self.model_type = model_type.lower()
 
         # --- 1. Determine Output Dimensions ---
-        # We explicitly separate 'num_targets' (regression) from 'num_classes' (classification)
         model_task_type = ""
-        target_dim = 1
+        target_dim: int = 1
 
         if task_type in self.regression_tasks:
             model_task_type = "regression"
-
-            # Priority: 'num_targets' -> 'output_dim' -> Default (1)
-            if "num_targets" in kwargs:
-                target_dim = kwargs.pop("num_targets")
-            elif "output_dim" in kwargs:
-                target_dim = kwargs.pop("output_dim")
+            if num_targets is not None:
+                target_dim = num_targets
+            elif output_dim is not None:
+                warnings.warn(
+                    "'output_dim' is deprecated; use 'num_targets' for regression.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                target_dim = output_dim
             else:
                 target_dim = 1
 
         elif task_type in self.classification_tasks:
             model_task_type = "classification"
-            if "num_classes" not in kwargs:
+            if num_classes is None:
                 raise KeyError(
                     "Configuration Error: 'num_classes' must be provided for classification tasks."
                 )
-            target_dim = kwargs.pop("num_classes")
+            target_dim = num_classes
 
-        # --- 2. Extract Configuration ---
-        if "input_channels" not in kwargs:
-            raise KeyError("Configuration Error: 'input_channels' is required.")
-
+        # --- 2. Build Configuration ---
         config = {
-            "input_channels": kwargs.pop("input_channels"),
+            "input_channels": input_channels,
             "seq_len": seq_len,
-            "poly_degree": kwargs.pop("poly_degree", 2),
+            "poly_degree": poly_degree,
         }
 
         # --- 3. Instantiate Backbone ---
