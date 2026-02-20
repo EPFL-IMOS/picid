@@ -10,14 +10,19 @@ from lmetk.data.preprocessing.splits import TimeSplitter
 class InMemorySingleSourceLoader(SingleSourceLoader):
     """Concrete SingleSourceLoader that returns fixed in-memory arrays (for tests only)."""
 
-    def __init__(self, n_samples=200, n_features=5, data_name="in_memory", **kwargs):
+    def __init__(
+        self,
+        n_samples=200,
+        n_features=5,
+        data_name="in_memory",
+        data_splitter=None,
+        **kwargs,
+    ):
         if "data_name" not in kwargs:
             kwargs["data_name"] = data_name
         if "task_mode" not in kwargs:
             kwargs["task_mode"] = "regression"
-        data_splitter = kwargs.pop("data_splitter", None)
         if data_splitter is None:
-            # Use ratio-based splits with test=None so TimeSplitter uses n - train_len - val_len for test
             data_splitter = TimeSplitter(
                 train=0.5,
                 val=0.25,
