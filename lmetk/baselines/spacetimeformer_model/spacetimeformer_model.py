@@ -1,6 +1,5 @@
 from typing import Callable, Optional, Tuple
 
-import pkg_resources
 import torch
 import torch.nn.functional as F
 import torchmetrics
@@ -134,9 +133,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         if decoder_only:
             start_token_len = 0
 
-        self.torchmetrics_version = pkg_resources.get_distribution(
-            "torchmetrics"
-        ).version
+        self.torchmetrics_version = torchmetrics.__version__
+            
 
         if start_token_len < 0:
             timetable_emb_enc_type = timetable_emb_type

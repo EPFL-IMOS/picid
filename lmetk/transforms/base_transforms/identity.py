@@ -1,10 +1,10 @@
 from typing import Any
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StandardFitTransformMixin
+from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
 
 
-class IdentityPassThrough(DenseTransform, StandardFitTransformMixin):
+class IdentityPassThrough(DenseTransform, StatelessPerSegmentMixin):
     """
     An identity transform that passes the input data straight through
     without modification in both the fit and transform stages.
