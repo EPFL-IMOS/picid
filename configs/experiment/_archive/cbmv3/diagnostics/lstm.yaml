@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - cbmv3/diagnostics/base
-  - /model_configs/diagnostics/lstm
-  - override /transforms: cbmv3/normalize_feature_target
