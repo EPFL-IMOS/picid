@@ -221,7 +221,7 @@ class TestStrategyViaPipeline:
         from lmetk.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
-        transform = DummyFittableTransform()  # has ConcatinatedFitMultiSourceTransformMixin -> requires_fit=True
+        transform = DummyFittableTransform()  # has ConcatFitAndPerSegmentTransformMixin -> requires_fit=True
         container = create_dummy_single_unit_container()
         with pytest.raises(ValueError) as exc_info:
             strategy.apply(

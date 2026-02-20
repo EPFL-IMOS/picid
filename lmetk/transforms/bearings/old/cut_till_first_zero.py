@@ -5,14 +5,14 @@ import numpy as np
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
 from lmetk.transforms.base.multisource import (
-    StatelessPerSegmentMixin,
+    NoFitPerSegmentMixin,
 )
 from lmetk.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 
 
-class RULTaskUpToFirstZero(RaggedOrDenseTransform, StatelessPerSegmentMixin):
+class RULTaskUpToFirstZero(RaggedOrDenseTransform, NoFitPerSegmentMixin):
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """

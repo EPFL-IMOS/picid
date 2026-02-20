@@ -4,12 +4,12 @@ from typing import Any, Dict, List
 import numpy as np
 
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class First(DenseTransform, StatelessPerSegmentMixin):
+class First(DenseTransform, NoFitPerSegmentMixin):
     def __init__(self, **kwargs):
         """
         Initialize the transform.

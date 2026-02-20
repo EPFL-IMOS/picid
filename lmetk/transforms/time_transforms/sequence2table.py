@@ -1,13 +1,13 @@
 from typing import Any, Dict
 import numpy as np
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class ExtractSequenceStartTime(DenseTransform, StatelessPerSegmentMixin):
+class ExtractSequenceStartTime(DenseTransform, NoFitPerSegmentMixin):
     """
     Extracts the first time step from a time-feature sequence to represent
     the starting time of the event.

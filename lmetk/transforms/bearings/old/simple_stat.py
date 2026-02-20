@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from lmetk.data.optimization.sequencer import RaggedArraySequencer
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.data.datasets.rul_context_dataset import RULContextBatchDataset
 from lmetk.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
 
@@ -16,7 +16,7 @@ from lmetk.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragg
 logger = logging.getLogger(__name__)
 
 
-class BearingStat(RaggedOrDenseTransform, StatelessPerSegmentMixin):
+class BearingStat(RaggedOrDenseTransform, NoFitPerSegmentMixin):
     """
     Compresses bearing data into representation using a pre-trained Autoencoder.
     """

@@ -16,9 +16,9 @@ from lmetk.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
-    NoFitMultiSourceTransformMixin,
-    ConcatenateUnitsMixing,
+    ConcatFitAndPerSegmentTransformMixin,
+    NoFitConcatAlongAxisMixin,
+    NoFitPerSegmentMixin,
     InverseTransformMixin,
 )
 from lmetk.data.data_objects.data import (
@@ -33,7 +33,7 @@ from lmetk.data.data_objects.data import (
 # DUMMY TRANSFORMS FOR TESTING
 # ============================================================================
 
-class DummyStatelessTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class DummyStatelessTransform(DenseTransform, NoFitPerSegmentMixin):
     """A stateless transform that multiplies by 2."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
@@ -41,7 +41,7 @@ class DummyStatelessTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         return data[key] * 2
 
 
-class DummyFittableTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class DummyFittableTransform(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
     """A fittable transform that learns a scaling factor."""
     
     def __init__(self, initial_factor=1.0):
@@ -62,7 +62,7 @@ class DummyFittableTransform(DenseTransform, ConcatinatedFitMultiSourceTransform
         return data[key] * self.factor
 
 
-class DummyMultiKeyTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class DummyMultiKeyTransform(DenseTransform, NoFitPerSegmentMixin):
     """A transform that takes multiple keys and returns a dict."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -72,7 +72,7 @@ class DummyMultiKeyTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         return result
 
 
-class DummyRaggedTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
+class DummyRaggedTransform(RaggedTransform, NoFitPerSegmentMixin):
     """A transform that works with ragged arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> ak.Array:
@@ -81,7 +81,7 @@ class DummyRaggedTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
         return data[key] * 2
 
 
-class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitMultiSourceTransformMixin):
+class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitPerSegmentMixin):
     """A transform that works with both ragged and dense arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
@@ -93,7 +93,7 @@ class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitMultiSourceTransf
         return result
 
 
-class DummyInverseTransform(DenseTransform, NoFitMultiSourceTransformMixin, InverseTransformMixin):
+class DummyInverseTransform(DenseTransform, NoFitPerSegmentMixin, InverseTransformMixin):
     """Minimal transform implementing InverseTransformMixin for get_inverter_for_key tests."""
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
@@ -112,7 +112,7 @@ class DummyInverseTransform(DenseTransform, NoFitMultiSourceTransformMixin, Inve
         return self.inverse_transform_data(data, metadata)
 
 
-class DummyTransformWithMetadata(DenseTransform, NoFitMultiSourceTransformMixin):
+class DummyTransformWithMetadata(DenseTransform, NoFitPerSegmentMixin):
     """A transform that uses metadata."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
@@ -122,7 +122,7 @@ class DummyTransformWithMetadata(DenseTransform, NoFitMultiSourceTransformMixin)
         return data[key] * multiplier
 
 
-class NamedParameterTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class NamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
     """Transform that uses named parameters matching apply_to keys."""
     
     def transform_data(self, features: np.ndarray, metadata: Dict[str, Any]) -> np.ndarray:
@@ -130,7 +130,7 @@ class NamedParameterTransform(DenseTransform, NoFitMultiSourceTransformMixin):
         return features * 2
 
 
-class MultiNamedParameterTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class MultiNamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
     """Transform with multiple named parameters."""
     
     def transform_data(self, features: np.ndarray, target: np.ndarray, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -148,7 +148,7 @@ class BadSignatureTransform(BaseTransform):
         return data
 
 
-class TransformReturningDict(DenseTransform, NoFitMultiSourceTransformMixin):
+class TransformReturningDict(DenseTransform, NoFitPerSegmentMixin):
     """Transform that returns a dictionary."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -158,14 +158,14 @@ class TransformReturningDict(DenseTransform, NoFitMultiSourceTransformMixin):
         return result
 
 
-class TransformReturningList(DenseTransform, NoFitMultiSourceTransformMixin):
+class TransformReturningList(DenseTransform, NoFitPerSegmentMixin):
     """Transform that returns a list of arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> List[np.ndarray]:
         return [value * 2 for value in data.values()]
 
 
-class RaggedSupportingTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
+class RaggedSupportingTransform(RaggedTransform, NoFitPerSegmentMixin):
     """Transform that supports ragged arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> ak.Array:
@@ -173,12 +173,12 @@ class RaggedSupportingTransform(RaggedTransform, NoFitMultiSourceTransformMixin)
         return data[key] * 2
 
 
-class ConcatenateUnitsTransform(DenseTransform, ConcatenateUnitsMixing):
+class ConcatenateUnitsTransform(DenseTransform, NoFitConcatAlongAxisMixin):
     """Transform that concatenates units."""
     
     def __init__(self, axis: int = 0):
         DenseTransform.__init__(self)
-        ConcatenateUnitsMixing.__init__(self, axis=axis)
+        NoFitConcatAlongAxisMixin.__init__(self, axis=axis)
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
         key = list(data.keys())[0]

@@ -28,9 +28,9 @@ from lmetk.transforms.base.transform_manager import (
 from lmetk.transforms.base.multisource import (
     tolist,
     find_singular_ragged_dim,
-    ConcatinatedFitMultiSourceTransformMixin,
-    NoFitMultiSourceTransformMixin,
-    ConcatenateUnitsMixing,
+    ConcatFitAndPerSegmentTransformMixin,
+    NoFitPerSegmentMixin,
+    NoFitConcatAlongAxisMixin,
     InverseTransformMixin,
 )
 
@@ -460,7 +460,7 @@ class TestMultisourceCoverage:
 
     def test_fit_unsupported_data_type_raises(self):
         """Line 309: fit when transform does not support data type."""
-        class RaggedOnlyTransform(RaggedTransform, ConcatinatedFitMultiSourceTransformMixin):
+        class RaggedOnlyTransform(RaggedTransform, ConcatFitAndPerSegmentTransformMixin):
             def fit_data(self, data, metadata): ...
             def transform_data(self, data, metadata): return data[list(data.keys())[0]]
 
@@ -474,7 +474,7 @@ class TestMultisourceCoverage:
     )
     def test_transform_unsupported_data_type_raises(self):
         """Line 533: transform_multi_source when data type not supported hits else and raises ValueError."""
-        class RaggedOnlyTransform(RaggedTransform, NoFitMultiSourceTransformMixin):
+        class RaggedOnlyTransform(RaggedTransform, NoFitPerSegmentMixin):
             def transform_data(self, data, metadata): return data[list(data.keys())[0]]
 
         t = RaggedOnlyTransform()
@@ -492,14 +492,14 @@ class TestMultisourceCoverage:
         assert len(out) == 1
 
     def test_concatenate_units_fit_multi_source_raises(self):
-        """Line 695: ConcatenateUnitsMixing.fit_multi_source raises NotImplementedError."""
+        """Line 695: NoFitConcatAlongAxisMixin.fit_multi_source raises NotImplementedError."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         with pytest.raises(NotImplementedError, match="does not support fitting|fit_multi_source"):
             t.fit_multi_source([NamedTransformInput(features=np.array([[1.0]]))], metadata={"apply_to_keys": ["features"]})
 
     def test_concatenate_units_transform_with_ak_array(self):
-        """Lines 742-753: ConcatenateUnitsMixing with ak.Array."""
+        """Lines 742-753: NoFitConcatAlongAxisMixin with ak.Array."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         segs = [
@@ -537,7 +537,7 @@ class TestMultisourceCoverage:
 
     def test_transform_multi_source_ragged_to_dense_exception_logging(self):
         """Lines 533-598: exception in transform_function_to_data_segments is logged and re-raised."""
-        class RaisingTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+        class RaisingTransform(DenseTransform, NoFitPerSegmentMixin):
             def transform_data(self, data, metadata):
                 raise RuntimeError("test error in transform")
 
@@ -572,7 +572,7 @@ class TestMultisourceCoverage:
         from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
         regular_ak = ak.from_numpy(np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]))
 
-        class ReturnNamedInput(DenseTransform, NoFitMultiSourceTransformMixin):
+        class ReturnNamedInput(DenseTransform, NoFitPerSegmentMixin):
             def transform_data(self, data, metadata):
                 out = data[list(data.keys())[0]] * 2
                 return NamedTransformInput(features=out)
@@ -608,7 +608,7 @@ class TestMultisourceCoverage:
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_concatenate_units_ak_two_segments_success(self):
-        """StatelessConcatenateMixin: two ak.Array segments concatenate successfully."""
+        """NoFitConcatAlongAxisMixin: two ak.Array segments concatenate successfully."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         seg1 = NamedTransformInput(features=ak.Array([[1.0], [2.0]]))
@@ -652,7 +652,7 @@ class TestMultisourceCoverage:
 
     def test_ragged_to_dense_exception_after_index_depth_set(self):
         """Lines 567-568, 575-584: exception in ragged-to-dense loop triggers case analysis with index_depth."""
-        class RaiseOnSecondCoord(DenseTransform, NoFitMultiSourceTransformMixin):
+        class RaiseOnSecondCoord(DenseTransform, NoFitPerSegmentMixin):
             def __init__(self):
                 self._count = 0
             def transform_data(self, data, metadata):
@@ -670,7 +670,7 @@ class TestMultisourceCoverage:
 
     def test_ragged_to_dense_reassembly_regular_output_hits_from_regular(self):
         """Line 515: reassembly with len(var_dims)==0 after regularize uses ak.from_regular."""
-        class SameShapeTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+        class SameShapeTransform(DenseTransform, NoFitPerSegmentMixin):
             def transform_data(self, data, metadata):
                 return np.array([[1.0, 2.0]])  # same shape (1,2) per segment -> regular output
 
@@ -683,7 +683,7 @@ class TestMultisourceCoverage:
         assert len(result) == 1
 
     def test_concatenate_units_different_data_types_raises(self):
-        """Line 727: ConcatenateUnitsMixing when data types differ across segments."""
+        """Line 727: NoFitConcatAlongAxisMixin when data types differ across segments."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         segs = [
@@ -695,7 +695,7 @@ class TestMultisourceCoverage:
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_concatenate_units_unsupported_type_raises(self):
-        """Line 781: ConcatenateUnitsMixing when key type is not ak.Array or np.ndarray."""
+        """Line 781: NoFitConcatAlongAxisMixin when key type is not ak.Array or np.ndarray."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
         t = ConcatenateUnitsTransform(axis=0)
         # Segment that reports type as list so we hit the else branch

@@ -146,19 +146,15 @@ class TestIdentityPassThrough:
     def test_fit_multi_source(self):
         """Test fit_multi_source method.
         
-        **Assumption**: IdentityPassThrough should support multi-source fitting (fitting on
-        multiple data segments from different sources/units) as a no-op, since it doesn't
-        need to learn any parameters. This is important for compatibility with the framework's
-        multi-source transform interface.
+        **Assumption**: IdentityPassThrough uses NoFitPerSegmentMixin (stateless); it does
+        not support fitting. fit_multi_source must raise NotImplementedError so the pipeline
+        does not attempt to fit this transform.
         
         **Action**: Create an IdentityPassThrough transform and call fit_multi_source with
-        a list of two data segments (each with different feature values) and metadata
-        specifying which keys to apply to.
+        a list of two data segments and metadata. Expect NotImplementedError.
         
-        **Expected Result**: The method should complete without raising any exceptions and
-        should not modify the transform's state. This validates that the identity transform
-        correctly implements the multi-source fit interface, which is essential for transforms
-        that need to work with data from multiple units or sources in the framework.
+        **Expected Result**: fit_multi_source raises NotImplementedError with a message
+        indicating the transform is stateless and does not support fitting.
         """
         transform = IdentityPassThrough()
         data_segments = [
@@ -166,9 +162,8 @@ class TestIdentityPassThrough:
             NamedTransformInput(features=np.array([[3.0, 4.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        
-        # Should not raise
-        transform.fit_multi_source(data_segments, metadata)
+        with pytest.raises(NotImplementedError, match="stateless transform and does not"):
+            transform.fit_multi_source(data_segments, metadata)
     
     def test_transform_multi_source(self):
         """Test transform_multi_source method.

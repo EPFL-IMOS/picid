@@ -4,10 +4,10 @@ import awkward as ak
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 
 
-class CumSumTransform(RaggedTransform, StatelessPerSegmentMixin):
+class CumSumTransform(RaggedTransform, NoFitPerSegmentMixin):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

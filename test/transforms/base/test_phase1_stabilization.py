@@ -34,9 +34,9 @@ from lmetk.transforms.base.strategy import (
 )
 from lmetk.transforms.base.multisource import (
     find_singular_ragged_dim,
-    ConcatinatedFitMultiSourceTransformMixin,
-    NoFitMultiSourceTransformMixin,
-    ConcatenateUnitsMixing,
+    ConcatFitAndPerSegmentTransformMixin,
+    NoFitPerSegmentMixin,
+    NoFitConcatAlongAxisMixin,
     InverseTransformMixin,
 )
 from lmetk.transforms.base.base_transform import (
@@ -171,7 +171,7 @@ class TestMultisourceFitCharacterization:
 
     def test_fit_multi_source_ragged_ragged_supporting_concatenates_ak(self):
         """Ragged data + ragged-supporting transform: fit receives single ak array."""
-        class FitCaptureRagged(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+        class FitCaptureRagged(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
             def __init__(self):
                 super().__init__()
                 self.fitted = False
@@ -291,7 +291,7 @@ class TestMetadataPropagation:
         """Strategy passes mode and apply_to_keys in metadata to transform_data."""
         captured = {}
 
-        class CaptureMetaTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+        class CaptureMetaTransform(DenseTransform, NoFitPerSegmentMixin):
             def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
                 captured["metadata"] = copy.deepcopy(metadata)
                 return data[list(data.keys())[0]] * 2
@@ -315,7 +315,7 @@ class TestMetadataPropagation:
         """Fit phase receives mode=fit_on_split and apply_to_keys."""
         captured = {}
 
-        class CaptureFitMeta(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+        class CaptureFitMeta(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
             def __init__(self):
                 super().__init__()
                 self.fitted = False
@@ -378,15 +378,15 @@ class TestTransformOnKeysCharacterization:
 
 
 # -----------------------------------------------------------------------------
-# 6. ConcatenateUnitsMixing
+# 6. NoFitConcatAlongAxisMixin
 # -----------------------------------------------------------------------------
 
 
-class TestConcatenateUnitsMixingCharacterization:
-    """Lock ConcatenateUnitsMixing: list of n segments -> concat -> transform -> list of 1."""
+class TestNoFitConcatAlongAxisMixinCharacterization:
+    """Lock NoFitConcatAlongAxisMixin: list of n segments -> concat -> transform -> list of 1."""
 
     def test_concatenate_units_transform_multi_source_n_to_one(self):
-        """ConcatenateUnitsMixing: multiple segments become one after concat then transform."""
+        """NoFitConcatAlongAxisMixin: multiple segments become one after concat then transform."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
 
         transform = ConcatenateUnitsTransform(axis=0)
@@ -410,7 +410,7 @@ class TestConcatenateUnitsMixingCharacterization:
 # -----------------------------------------------------------------------------
 
 
-class DummyInverseTransform(DenseTransform, NoFitMultiSourceTransformMixin, InverseTransformMixin):
+class DummyInverseTransform(DenseTransform, NoFitPerSegmentMixin, InverseTransformMixin):
     """Dummy transform with inverse for Phase 1 characterization."""
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:

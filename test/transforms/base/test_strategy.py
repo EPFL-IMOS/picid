@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.strategy import TransformStrategy, postprocess_transformed_data
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 from lmetk.data.data_objects.data import (
     NamedTransformInput,
     SplitDatasetContainer,
@@ -355,7 +355,7 @@ class TestTransformStrategyAdvanced:
         strategy = TransformStrategy()
         
         # Transform that returns dict but with wrong key name
-        class BadReturnTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+        class BadReturnTransform(DenseTransform, NoFitPerSegmentMixin):
             def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Dict:
                 # Returns dict but with wrong key
                 return {"wrong_key": list(data.values())[0] * 2}

@@ -11,12 +11,9 @@ from sortedcontainers import SortedDict
 
 from lmetk.transforms.base.base_transform import DenseTransform
 from lmetk.transforms.base.multisource import (
-    ConcatinatedFitMultiSourceTransformMixin,
-    ConcatenatedMultiSourceTransformMixin,
-    FitMultiSourceTransformMixin,
-    NoFitMultiSourceTransformMixin,
-    StandardFitTransformMixin,
-    ConcatenateUnitsMixing,
+    ConcatFitAndPerSegmentTransformMixin,
+    NoFitConcatAlongAxisMixin,
+    NoFitPerSegmentMixin,
     find_singular_ragged_dim,
     tolist,
 )
@@ -85,14 +82,14 @@ class TestMultisourceUtils:
 
 
 class TestConcatenatedAndFitMultiSourceMixinsComposition:
-    """Tests for the new split: ConcatenatedMultiSourceTransformMixin + FitMultiSourceTransformMixin."""
+    """Tests for ConcatFitAndPerSegmentTransformMixin (fit on concat, transform per segment)."""
 
     def test_new_composition_fit_and_transform_multi_source(self):
-        """Confirm a class using StandardFitTransformMixin (new design) behaves like the old ConcatinatedFit mixin."""
+        """Confirm a class using ConcatFitAndPerSegmentTransformMixin (new design) behaves like the old ConcatinatedFit mixin."""
 
         class FittableWithNewMixins(
             DenseTransform,
-            StandardFitTransformMixin,
+            ConcatFitAndPerSegmentTransformMixin,
         ):
             def __init__(self):
                 super().__init__()
@@ -126,8 +123,8 @@ class TestConcatenatedAndFitMultiSourceMixinsComposition:
         assert "mode" in log or "flags" in log
 
 
-class TestConcatinatedFitMultiSourceTransformMixin:
-    """Tests for ConcatinatedFitMultiSourceTransformMixin."""
+class TestConcatFitAndPerSegmentTransformMixin:
+    """Tests for ConcatFitAndPerSegmentTransformMixin."""
     
     def test_mixin_initialization_check(self):
         """Test that mixin checks for required methods."""
@@ -138,7 +135,7 @@ class TestConcatinatedFitMultiSourceTransformMixin:
         # The mixin checks in __init__, but BadTransform also needs fit_data
         # Let's test with a transform that's missing fit_data
         try:
-            mixin = ConcatinatedFitMultiSourceTransformMixin()
+            mixin = ConcatFitAndPerSegmentTransformMixin()
             mixin.__init__(BadTransform())
             # If no error, the check might happen later
         except (TypeError, AttributeError):
@@ -235,8 +232,8 @@ class TestConcatinatedFitMultiSourceTransformMixin:
         assert len(result) == 2
 
 
-class TestNoFitMultiSourceTransformMixin:
-    """Tests for NoFitMultiSourceTransformMixin."""
+class TestNoFitPerSegmentMixin:
+    """Tests for NoFitPerSegmentMixin."""
     
     def test_no_fit_multi_source_raises_error(self):
         """Test that fit_multi_source raises NotImplementedError."""

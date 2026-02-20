@@ -5,12 +5,12 @@ import numpy as np
 
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import StatelessPerSegmentMixin
+from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class FilterTarget(DenseTransform, StatelessPerSegmentMixin):
+class FilterTarget(DenseTransform, NoFitPerSegmentMixin):
     def __init__(self, win_len: int, hop: int, **kwargs):
         """
         Initialize the transform.

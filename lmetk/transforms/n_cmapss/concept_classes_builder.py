@@ -7,7 +7,7 @@ import numpy as np
 from lmetk.data.data_objects.data import NamedTransformInput
 from lmetk.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
 from lmetk.transforms.base.multisource import (
-    StandardFitTransformMixin,
+    ConcatFitAndPerSegmentTransformMixin,
 )
 from lmetk.utils.decorators import check_transform_output_consistency
 
@@ -32,7 +32,7 @@ class ClassLabelLookup:
         return self.table[key]
 
 
-class ConceptClassesBuilder(DenseTransform, StandardFitTransformMixin):
+class ConceptClassesBuilder(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
     def __init__(
         self,
         **kwargs,
