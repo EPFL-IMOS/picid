@@ -9,6 +9,9 @@ from __future__ import annotations
 import logging
 import time
 
+from rich.console import Console
+from rich.table import Table
+
 from lmetk.transforms.base.pipeline import TransformContext, register_hook
 
 
@@ -39,10 +42,16 @@ def on_transform_error_enrich_log(event: str, context: TransformContext) -> None
         "available_splits": getattr(context, "available_splits", None),
         "fit_on_split": context.fit_on_split,
     }
+    table = Table(title="Pipeline error context")
+    table.add_column("Key", style="cyan")
+    table.add_column("Value", style="yellow", overflow="fold")
+    for k, v in extra.items():
+        table.add_row(k, str(v))
+    Console(stderr=True).print(table)
     logging.getLogger("lmetk.transforms").error(
         "Pipeline failed: %s",
         context.error,
-        exc_info=context.error,
+        exc_info=True,
         extra=extra,
     )
 

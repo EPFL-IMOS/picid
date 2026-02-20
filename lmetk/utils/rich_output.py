@@ -8,6 +8,8 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
 from rich.console import Console
+from rich.panel import Panel
+from rich.rule import Rule
 from rich.table import Table
 from rich.tree import Tree
 
@@ -283,3 +285,41 @@ def print_transforms_summary(summary: dict[str, str]):
         )
 
     Console(width=180).print(table)
+
+
+def build_transform_error_renderables(
+    transform_name: str,
+    flags: dict,
+    metadata: dict,
+    first_segment_keys: list | None,
+    first_segment_rows: list[tuple[str, str, str]],  # (key, type_name, describe_data_type)
+    case_analysis_line: str,
+) -> list:
+    """Build list of Rich renderables for transform_multi_source error diagnostics."""
+    out = []
+    out.append(
+        Rule(
+            title=f"Transform Error — {transform_name}.transform_multi_source()",
+            style="red",
+        )
+    )
+    flags_table = Table(title="Data type flags")
+    flags_table.add_column("Flag", style="cyan")
+    flags_table.add_column("Value", style="yellow")
+    for k, v in flags.items():
+        flags_table.add_row(k, str(v))
+    out.append(flags_table)
+    out.append(Panel(str(metadata), title="Metadata", border_style="dim"))
+    if first_segment_keys is not None and first_segment_rows:
+        seg_table = Table(title="First segment contents")
+        seg_table.add_column("key", style="cyan", no_wrap=True)
+        seg_table.add_column("type", style="magenta")
+        seg_table.add_column("description", style="green", overflow="fold")
+        for row in first_segment_rows:
+            seg_table.add_row(*row)
+        out.append(seg_table)
+    out.append(
+        Panel(case_analysis_line, title="Case analysis", border_style="blue")
+    )
+    out.append(Rule(style="red"))
+    return out

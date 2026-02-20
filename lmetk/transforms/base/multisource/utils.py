@@ -27,7 +27,8 @@ from lmetk.transforms.base.data_kind import (
     DATA_KIND_RAGGED_REGULAR,
 )
 from lmetk.utils.awkward_utils import ak_find_var_dims, get_ak_shape
-from lmetk.utils.rich_output import describe_data_type
+from lmetk.utils.rich_output import build_transform_error_renderables, describe_data_type
+from rich.console import Console
 from sortedcontainers import SortedDict
 
 logger = logging.getLogger(__name__)
@@ -115,48 +116,53 @@ def _log_transform_error(
     """Log detailed diagnostics when transform_multi_source raises (data kind, flags, first segment)."""
     t_name = transform_instance.__class__.__name__
     flags = _build_flags(data_kind, capability)
-    sep = "-" * 120
-
-    logger.error(sep)
-    logger.error("Transform Error Details  (%s.transform_multi_source())", t_name)
-    logger.error(sep)
-    logger.error("Data type flags : %s", flags)
-    logger.error("Metadata        : %s", metadata)
-    logger.error(sep)
-
     _seg = data_segments[0] if data_segments else None
+
+    first_segment_rows: List[tuple[str, str, str]] = []
     if _seg is not None:
-        logger.error("First segment keys: %s", list(_seg.keys()))
-        logger.error("First segment contents:")
         for k, v in _seg.items():
-            logger.error(
-                "  key=%-20s  type=%-20s  %s",
-                k,
-                type(v).__name__,
-                describe_data_type(v, calculate_stat=True),
+            first_segment_rows.append(
+                (
+                    k,
+                    type(v).__name__,
+                    describe_data_type(v, calculate_stat=True),
+                )
             )
-    logger.error(sep)
 
     data_is_ragged = flags["data_is_ragged"]
     supports_ragged = flags["transform_supports_ragged"]
     supports_dense = flags["transform_supports_dense"]
-
-    logger.error("Case analysis:")
     if not data_is_ragged and supports_dense:
-        logger.error("  Dense data + dense-capable transform → data passed directly.")
+        case_analysis_line = "Dense data + dense-capable transform → data passed directly."
     elif data_is_ragged and not supports_ragged:
-        logger.error(
-            "  Ragged data + dense-only transform → "
+        case_analysis_line = (
+            "Ragged data + dense-only transform → "
             "processed block-by-block, converted to numpy, reassembled."
         )
     elif data_is_ragged and supports_ragged:
-        logger.error("  Ragged data + ragged-capable transform → data passed directly.")
+        case_analysis_line = "Ragged data + ragged-capable transform → data passed directly."
     else:
-        logger.error("  Unknown combination; check the handler registry.")
+        case_analysis_line = "Unknown combination; check the handler registry."
 
-    logger.error(sep)
-    logger.error("Exception traceback:", exc_info=True)
-    logger.error(sep)
+    renderables = build_transform_error_renderables(
+        t_name,
+        flags,
+        metadata,
+        list(_seg.keys()) if _seg else None,
+        first_segment_rows,
+        case_analysis_line,
+    )
+    console = Console(stderr=True)
+    for r in renderables:
+        console.print(r)
+
+    logger.error(
+        "Transform error in %s (data_kind=%s, capability=%s); see stderr for Rich diagnostics.",
+        t_name,
+        data_kind,
+        capability,
+        exc_info=True,
+    )
 
 
 def _concatenate_segments(
