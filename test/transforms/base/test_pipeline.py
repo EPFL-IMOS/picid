@@ -1,7 +1,7 @@
 """Tests for Phase 3: pipeline steps and lifecycle hooks."""
 import pytest
 
-from lmetk.transforms.base.pipeline import (
+from picid.transforms.base.pipeline import (
     TransformContext,
     CopyStep,
     FitStep,
@@ -12,7 +12,7 @@ from lmetk.transforms.base.pipeline import (
     clear_hooks,
     _emit,
 )
-from lmetk.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects.data import SplitDatasetContainer
 
 from test.transforms.base.conftest import (
     create_dummy_single_unit_container,
@@ -200,7 +200,7 @@ class TestStrategyViaPipeline:
     """Strategy.apply uses pipeline; behaviour unchanged (smoke)."""
 
     def test_strategy_apply_returns_tuple_via_pipeline(self):
-        from lmetk.transforms.base.strategy import TransformStrategy
+        from picid.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
@@ -218,7 +218,7 @@ class TestStrategyViaPipeline:
 
     def test_fittable_transform_without_fit_on_raises(self):
         """When transform has requires_fit=True but fit_on_split/fit_on_key are not set, pipeline raises."""
-        from lmetk.transforms.base.strategy import TransformStrategy
+        from picid.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
         transform = DummyFittableTransform()  # has ConcatFitAndPerSegmentTransformMixin -> requires_fit=True

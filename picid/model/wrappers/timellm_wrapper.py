@@ -1,6 +1,6 @@
-from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
-from lmetk.model.methods.cnn1d import CNN
-from lmetk.model.wrappers.base import (
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
+from picid.model.methods.cnn1d import CNN
+from picid.model.wrappers.base import (
     AbstractFeedForwardTrainingWrapper,
     AbstractFeedForwardWrapper,
 )

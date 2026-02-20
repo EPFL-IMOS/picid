@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 # Adjust imports to match your project structure
-from lmetk.model.methods.statistical_models import (
+from picid.model.methods.statistical_models import (
     LinearBaseline,
     PolynomialBaseline,
     ExponentialBaseline,

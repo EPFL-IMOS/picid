@@ -1,5 +1,5 @@
 """
-Shared fixtures for lmetk/data test suite.
+Shared fixtures for picid/data test suite.
 
 Provides synthetic but representative data (numpy, torch, small arrays) for
 high-fidelity pipeline testing without mocks. Use these fixtures for
@@ -14,7 +14,7 @@ import torch
 # Optional: for ragged/sliding-window tests
 try:
     import awkward as ak
-    from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+    from picid.utils.awkward_utils import ak_regularize_regular_axes
     HAS_AWKWARD = True
 except ImportError:
     HAS_AWKWARD = False

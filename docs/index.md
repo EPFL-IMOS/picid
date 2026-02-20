@@ -44,7 +44,7 @@
 3. **Run** — From the project root:
    ```bash
    source .venv/bin/activate
-   python lmetk/run.py paths=<your_paths> experiment=<experiment_key>
+   python picid/run.py paths=<your_paths> experiment=<experiment_key>
    ```
    Example: `experiment=unibo/prognostics/raw/cnn_1d`. Use `debug=default` for faster runs during development.
 

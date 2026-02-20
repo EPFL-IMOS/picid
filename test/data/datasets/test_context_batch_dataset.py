@@ -6,8 +6,8 @@ from lightning_fabric.utilities.data import AttributeDict
 from torch.utils.data import DataLoader
 
 # Adjust imports based on your actual structure
-from lmetk.data.datasets.context_dataset import ContextBatchDataset
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.data.datasets.context_dataset import ContextBatchDataset
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 # =========================================================================
 # === Fixtures ===

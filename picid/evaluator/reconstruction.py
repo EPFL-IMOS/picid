@@ -1,5 +1,5 @@
 from typing import Any, List
-from lmetk.evaluator.default import DefaultEvaluator
+from picid.evaluator.default import DefaultEvaluator
 
 
 class ReconstructionEvaluator(DefaultEvaluator):

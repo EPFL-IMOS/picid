@@ -1,7 +1,7 @@
 # Setup taken over from https://github.com/EPFL-IMOS/concept-prognostics/tree/main
 # TODO: make
 
-_target_: lmetk.data.datasources.base.multi_source_loader.MultiSourceLoader
+_target_: picid.data.datasources.base.multi_source_loader.MultiSourceLoader
 _recursive_: False
 
 # Must have keys for the pipeline
@@ -41,7 +41,7 @@ source_list:
   test4: ${..test4}
 
 multisource_data_splitter:
-  _target_: lmetk.data.preprocessing.BySourceSplitter
+  _target_: picid.data.preprocessing.BySourceSplitter
   sources_train: [train1, train2, train3, train4]
   sources_test: [test1, test2, test3, test4]
 

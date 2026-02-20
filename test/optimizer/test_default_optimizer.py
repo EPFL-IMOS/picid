@@ -1,5 +1,5 @@
 """
-Tests for lmetk.optimizer.default (DefaultOptimizer).
+Tests for picid.optimizer.default (DefaultOptimizer).
 
 DefaultOptimizer is deprecated; tests validate deprecation behavior and
 (when init is bypassed) that configure_optimizer and __repr__ behave
@@ -11,8 +11,8 @@ import functools
 import pytest
 import torch
 
-from lmetk.optimizer.base import AbstractOptimizer
-from lmetk.optimizer import default as default_module
+from picid.optimizer.base import AbstractOptimizer
+from picid.optimizer import default as default_module
 
 # Use the module-level dicts so we can test configure_optimizer logic
 TORCH_OPTIMIZERS = torch.optim.__dict__

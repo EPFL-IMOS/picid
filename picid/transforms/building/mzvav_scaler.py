@@ -5,13 +5,13 @@ from sklearn.preprocessing import MinMaxScaler
 
 import awkward as ak
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
     InverseTransformMixin,
 )
-from lmetk.transforms.utils import _convert_to_numpy
+from picid.transforms.utils import _convert_to_numpy
 
 logger = logging.getLogger(__name__)
 

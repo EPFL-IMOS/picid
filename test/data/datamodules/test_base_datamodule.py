@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 from torch.utils.data import DataLoader
 
-from lmetk.data.datamodules.base import BaseDataModule
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datamodules.base import BaseDataModule
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
 
 @pytest.fixture

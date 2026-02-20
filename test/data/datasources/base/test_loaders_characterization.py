@@ -7,10 +7,10 @@ multi without multisource splitter, multi with BySourceSplitter, and edge cases
 """
 import pytest
 
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 
 from test.data.datasources.base.conftest import (
     InMemorySingleSourceLoader,
@@ -201,7 +201,7 @@ def test_multi_source_loader_get_multisource_data_splitter(
     assert loader_no.get_multisource_data_splitter() is None
 
     loader_yes = MultiSourceLoader(**two_sources_config_with_by_source_splitter)
-    from lmetk.data.preprocessing.splits import BySourceSplitter
+    from picid.data.preprocessing.splits import BySourceSplitter
     assert isinstance(loader_yes.get_multisource_data_splitter(), BySourceSplitter)
 
 

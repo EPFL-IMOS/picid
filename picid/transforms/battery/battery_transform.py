@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 
 # Assuming this import path is correct for your project
 

@@ -2,7 +2,7 @@
 import pytest
 import torch
 
-from lmetk.model.wrappers.cnn1d_wrapper import CNN1D_Wrapper
+from picid.model.wrappers.cnn1d_wrapper import CNN1D_Wrapper
 
 
 def _default_cnn_config(seq_len=7):

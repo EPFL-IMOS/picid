@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 from datetime import datetime
 
-from lmetk.data.preprocessing.splits.database_splitter import TimeStampSplitter
+from picid.data.preprocessing.splits.database_splitter import TimeStampSplitter
 
 
 class TestTimeStampSplitterInitialization:

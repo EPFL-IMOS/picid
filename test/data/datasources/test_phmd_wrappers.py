@@ -9,14 +9,14 @@ import pytest
 from unittest.mock import patch
 
 # phmd is mocked in conftest; import loaders that depend on it
-from lmetk.data.datasources.phmd_battery import PHMDBatteryLoader
-from lmetk.data.datasources.phmd_cbmv3 import CBMv3Loader
-from lmetk.data.datasources.phmd_hsf15 import HSF15Loader
-from lmetk.data.datasources.phmd_pronostia import PronostiaLoader, UNIT_NAMES_TO_ID, TEST_RULS
-from lmetk.data.datasources.phmd_n_cmapss import PHMDNCMAPSSLoader
-from lmetk.data.datasources.phmd_phme20 import PHME20Loader
-from lmetk.data.datasources.phmd_pubd16 import Pubd16Loader
-from lmetk.data.datasources.phmd_xjtu_sy import XJTU_SYLoader
+from picid.data.datasources.phmd_battery import PHMDBatteryLoader
+from picid.data.datasources.phmd_cbmv3 import CBMv3Loader
+from picid.data.datasources.phmd_hsf15 import HSF15Loader
+from picid.data.datasources.phmd_pronostia import PronostiaLoader, UNIT_NAMES_TO_ID, TEST_RULS
+from picid.data.datasources.phmd_n_cmapss import PHMDNCMAPSSLoader
+from picid.data.datasources.phmd_phme20 import PHME20Loader
+from picid.data.datasources.phmd_pubd16 import Pubd16Loader
+from picid.data.datasources.phmd_xjtu_sy import XJTU_SYLoader
 
 
 def _minimal_phmd_kwargs(cache_dir="/tmp/phmd_cache"):

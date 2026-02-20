@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from lmetk.data.datasources.concepts_n_cmapss import (
+from picid.data.datasources.concepts_n_cmapss import (
     subsampling,
     binarize_concept,
     scale_concept,

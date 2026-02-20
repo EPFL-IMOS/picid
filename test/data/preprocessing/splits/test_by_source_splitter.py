@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock
 
-from lmetk.data.preprocessing.splits.by_source_splitter import (
+from picid.data.preprocessing.splits.by_source_splitter import (
     BySourceSplitter,
     convert_outer_list_to_inner,
 )

@@ -2,7 +2,7 @@ import numpy as np
 from numpy import ndarray
 
 import torch
-from lmetk.data.datasets.base import BaseDataset
+from picid.data.datasets.base import BaseDataset
 from lightning_fabric.utilities.data import AttributeDict
 
 import logging

@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper
+_target_: picid.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper
 ignore_pretraining_limits: True
 device: ${trainer.accelerator}
 task_type: ${task_definition.task_type}

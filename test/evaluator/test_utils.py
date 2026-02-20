@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.utils module.
+Tests for picid.evaluator.utils module.
 
 This module contains tests for utility metric functions used in PHM evaluators:
 - RSE (Relative Squared Error)
@@ -22,7 +22,7 @@ import torch
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from lmetk.evaluator.utils import (
+from picid.evaluator.utils import (
     RSE,
     CORR,
     MAE,

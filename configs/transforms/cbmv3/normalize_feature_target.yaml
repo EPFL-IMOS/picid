@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -8,7 +8,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: rul
@@ -18,7 +18,7 @@ scaler_target:
 plot_features:
   transform:
     unit_key: unit_id
-    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+    _target_: picid.transforms.visualization.features_target_plotter.FeatureTargetPlotter
     saving_path: ${paths.log_dir}/images
     features_key: features
     target_key: rul

@@ -13,7 +13,7 @@ from typing import Any, Callable, List, Optional, Union
 
 import awkward as ak
 
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 # -----------------------------------------------------------------------------
 # Data kind: classification of data for dispatch
@@ -41,7 +41,7 @@ def get_capability(transform_instance: Any) -> TransformCapability:
     Uses DenseTransform, RaggedTransform, RaggedOrDenseTransform (from base_transform).
     """
     cls = transform_instance.__class__
-    from lmetk.transforms.base.base_transform import (
+    from picid.transforms.base.base_transform import (
         DenseTransform,
         RaggedOrDenseTransform,
         RaggedTransform,

@@ -1,11 +1,11 @@
-"""Tests for FaultClassificationBatchDataset (lmetk.data.datasets.fault_classification_dataset)."""
+"""Tests for FaultClassificationBatchDataset (picid.data.datasets.fault_classification_dataset)."""
 from __future__ import annotations
 
 import numpy as np
 import pytest
 import torch
 
-from lmetk.data.datasets.fault_classification_dataset import FaultClassificationBatchDataset
+from picid.data.datasets.fault_classification_dataset import FaultClassificationBatchDataset
 
 
 @pytest.fixture

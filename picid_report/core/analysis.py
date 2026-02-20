@@ -1,4 +1,4 @@
-# lmetk_report/core/analysis.py
+# picid_report/core/analysis.py
 """
 Core analysis module for processing experiment results.
 
@@ -25,14 +25,14 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 import pandas as pd
 
-from lmetk_report import config
-from lmetk_report.config import PipelineConfig
-from lmetk_report.core import validators
-from lmetk_report.utils import flatten_aggregated_columns
+from picid_report import config
+from picid_report.config import PipelineConfig
+from picid_report.core import validators
+from picid_report.utils import flatten_aggregated_columns
 
 # Import search space helper: one function handles both legacy and new structure
 try:
-    from lmetk_report.configs.search_space import get_model_grid_from_search_space
+    from picid_report.configs.search_space import get_model_grid_from_search_space
 except ImportError:
     def get_model_grid_from_search_space(_dataset: str, _model: str, search_space):
         if not search_space or not isinstance(search_space, dict):
@@ -647,7 +647,7 @@ def analyze_results(
             # --- 2. OPTIMIZATION METRIC ---
             if optimization_col is None:
                 try:
-                    from lmetk_report.core.analysis import get_optimized_metric
+                    from picid_report.core.analysis import get_optimized_metric
 
                     cur_optimization_col = get_optimized_metric(
                         subset, model, dataset, _col_cfg
@@ -745,7 +745,7 @@ def analyze_results(
             join_keys = None
             x_expected = None
             try:
-                from lmetk_report.configs.search_space import get_search_space
+                from picid_report.configs.search_space import get_search_space
                 model_grid = get_search_space(dataset, model, use_default=use_legacy_search_space_fallback)
             except ImportError:
                 pass
@@ -975,7 +975,7 @@ def analyze_results(
             grid_from_configs = False
             if model_grid is None:
                 try:
-                    from lmetk_report.configs.search_space import get_search_space
+                    from picid_report.configs.search_space import get_search_space
                     model_grid = get_search_space(dataset, model, use_default=use_legacy_search_space_fallback)
                     grid_from_configs = model_grid is not None
                 except ImportError:

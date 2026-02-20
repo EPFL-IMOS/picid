@@ -72,7 +72,7 @@ for model_name in "${model_names[@]}"; do
                     fi
 
                     command_to_run=(
-                        python lmetk/run.py \
+                        python picid/run.py \
                         paths=runai \
                         experiment=${dataset}/${transform}/prognostics/${model_name} \
                         datamodule.train_batch_size=${batch_size} \
@@ -85,7 +85,7 @@ for model_name in "${model_names[@]}"; do
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
                          cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
-                        cache.preprocessing_file_lock_path=/tmp/lmetk_preprocess.lock \
+                        cache.preprocessing_file_lock_path=/tmp/picid_preprocess.lock \
                         enable_progress_bar=False \
                         experiment_group=${transform} \
                         seed=${seed}
@@ -102,7 +102,7 @@ for model_name in "${model_names[@]}"; do
                     if (( run_counter > 1 )); then
                     (
                         flock 200
-                    ) 200>/tmp/lmetk_preprocess.lock
+                    ) 200>/tmp/picid_preprocess.lock
                     echo "Python lock released, continuing..."
                     fi
 

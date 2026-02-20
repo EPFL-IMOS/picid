@@ -5,8 +5,8 @@ import torch
 import awkward as ak
 
 # Adjust imports to match your project structure
-from lmetk.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 # =========================================================================
 # === Fixtures ===

@@ -2,11 +2,11 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, override, Union
 import numpy as np
 
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.data.data_objects.utils import convert_to_numpy
+from picid.transforms.base.base_transform import DenseTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.utils import convert_to_numpy
 
-from lmetk.transforms.base.multisource import (
+from picid.transforms.base.multisource import (
     NoFitPerSegmentMixin,
     InverseTransformMixin,
 )

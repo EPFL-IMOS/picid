@@ -14,12 +14,12 @@ from torch.utils.data import (
     Subset,
 )
 
-from lmetk.data.datasets.base import (
+from picid.data.datasets.base import (
     BaseConcatDataset,
     BaseDataset,
     BaseVectorizedConcatDataset,
 )
-from lmetk.data.datasets.hydra_concat_dataset import NonVectorizedHydraConcatDataset
+from picid.data.datasets.hydra_concat_dataset import NonVectorizedHydraConcatDataset
 
 logger = logging.getLogger(__name__)
 

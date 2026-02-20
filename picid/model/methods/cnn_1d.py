@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from lmetk.model.autoencoder.residual_1d import ResidualBlock
+from picid.model.autoencoder.residual_1d import ResidualBlock
 
 
 class EncoderModel(nn.Module):

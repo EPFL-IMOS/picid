@@ -10,9 +10,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 # Reuse picklable datasource and transform config from caching tests

@@ -1,6 +1,6 @@
 # Datasources
 
-This repository provides unified access to a wide collection of **datasources** for prognostics, health management (PHM), forecasting, and anomaly detection. Each datasource is implemented as a dedicated loader (under `lmetk.data.datasources`) that standardizes raw data into the framework’s container format, enabling reproducible experiments across domains.
+This repository provides unified access to a wide collection of **datasources** for prognostics, health management (PHM), forecasting, and anomaly detection. Each datasource is implemented as a dedicated loader (under `picid.data.datasources`) that standardizes raw data into the framework’s container format, enabling reproducible experiments across domains.
 
 In this framework, a **datasource** is *data-centric* (raw files, I/O, split layout). The data it produces is held in [data objects](dataobject.md) (e.g. `SplitDatasetContainer`). Task-centric access—e.g. sliding windows or fit-predict tables—is provided by [datasets](datasets.md), which consume that container output.
 

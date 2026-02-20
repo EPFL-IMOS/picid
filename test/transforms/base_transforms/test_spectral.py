@@ -1,13 +1,13 @@
 """Comprehensive tests for spectral.py transform.
 
 This file consolidates all tests for SpectralStatsTransform from multiple test files
-to ensure complete coverage of lmetk.transforms.base_transforms.spectral.
+to ensure complete coverage of picid.transforms.base_transforms.spectral.
 """
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.spectral import SpectralStatsTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.spectral import SpectralStatsTransform
 
 
 class TestSpectralStatsTransform:

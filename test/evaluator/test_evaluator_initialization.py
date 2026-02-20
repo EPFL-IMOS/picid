@@ -15,16 +15,16 @@ import numpy as np
 from unittest.mock import MagicMock
 from pathlib import Path
 
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.evaluator.classification import ClassificationEvaluator
-from lmetk.evaluator.forecasting import ForecastingEvaluator
-from lmetk.evaluator.multiunit import MultiUnitEvaluator
-from lmetk.evaluator.reconstruction import ReconstructionEvaluator
-from lmetk.metrics.metric_factory import MetricFactory
-from lmetk.transforms.base.multisource import InverseTransformMixin
+from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.classification import ClassificationEvaluator
+from picid.evaluator.forecasting import ForecastingEvaluator
+from picid.evaluator.multiunit import MultiUnitEvaluator
+from picid.evaluator.reconstruction import ReconstructionEvaluator
+from picid.metrics.metric_factory import MetricFactory
+from picid.transforms.base.multisource import InverseTransformMixin
 
-from lmetk.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
-from lmetk.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
+from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
+from picid.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
 
 # =============================================================================
 # === DEFAULT EVALUATOR INITIALIZATION TESTS ===

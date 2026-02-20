@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 import awkward as ak
 
-from lmetk.data.optimization.ak_jagged_sequencer import (
+from picid.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 # =========================================================================
 # === Fixtures ===

@@ -114,7 +114,7 @@
 
 1. **Create `docs/examples/unibo_rul.md`:**  
    - **Title:** e.g. “Unibo battery RUL: from data to prediction.”  
-   - **What you’ll run:** `python lmetk/run.py paths=<paths> experiment=unibo/prognostics/raw/cnn_1d` (and optionally `debug=default`).  
+   - **What you’ll run:** `python picid/run.py paths=<paths> experiment=unibo/prognostics/raw/cnn_1d` (and optionally `debug=default`).  
    - **Config layout:**  
      - `configs/experiment/unibo/base.yaml` (datasource, evaluator, task_definition).  
      - `configs/experiment/unibo/prognostics/base.yaml` (per_unit evaluator, prognostics/rul, dataset with `get_unit_id`).  

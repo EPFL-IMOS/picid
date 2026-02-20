@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.report.plots`
+**Module:** `picid_report.report.plots`
 
 This document describes the **plotting** helpers that read from **all_results** (output of **analyze_results**): **plot_best_metric_bars** and **plot_hp_impact**. Both require **matplotlib**; if it is not installed, they raise a clear ImportError.
 
@@ -39,7 +39,7 @@ def plot_best_metric_bars(
 ### Example 1: Default metric, display only
 
 ```python
-from lmetk_report.plots import plot_best_metric_bars
+from picid_report.plots import plot_best_metric_bars
 
 fig = plot_best_metric_bars(all_results)
 if fig is not None:
@@ -119,7 +119,7 @@ def plot_hp_impact(
 ### Example 1: One model/dataset, display only
 
 ```python
-from lmetk_report.plots import plot_hp_impact
+from picid_report.plots import plot_hp_impact
 
 fig = plot_hp_impact(all_results, model="LSTM", dataset="UNIBO21", metric="test/mse")
 if fig is not None:
@@ -151,8 +151,8 @@ if fig is not None:
 ### Example 3: Iterate over all dataset/model (as in run.py)
 
 ```python
-from lmetk_report.reporting import iter_hp_impact_tables
-from lmetk_report.plots import plot_hp_impact
+from picid_report.reporting import iter_hp_impact_tables
+from picid_report.plots import plot_hp_impact
 
 for dataset, model, hp_df, metric_used in iter_hp_impact_tables(all_results, precision=4):
     path = f"plots/hp_impact_{dataset}_{model}.png".replace(" ", "_")

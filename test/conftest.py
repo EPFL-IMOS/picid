@@ -1,5 +1,5 @@
-# Important to set the environment variable PROJECT_ROOT to the root of the project, hence always import lmetk first!
-import lmetk  # noqa: F401
+# Important to set the environment variable PROJECT_ROOT to the root of the project, hence always import picid first!
+import picid  # noqa: F401
 import sys
 import os
 from test.utils import ProjectSearchPathPlugin

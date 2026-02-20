@@ -8,11 +8,11 @@ from numpy.testing import assert_array_equal
 
 # --- Import the class to be tested
 # (Adjust this import path to match your project structure)
-from lmetk.transforms.battery.autoencoder_transform import AutoencoderTransform
-from lmetk.transforms.base_transforms.autoencoder_transform import (
+from picid.transforms.battery.autoencoder_transform import AutoencoderTransform
+from picid.transforms.base_transforms.autoencoder_transform import (
     BaseAutoencoderTransform,
 )
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 
 @pytest.fixture

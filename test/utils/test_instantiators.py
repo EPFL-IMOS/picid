@@ -19,7 +19,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from omegaconf import DictConfig, OmegaConf
 
-from lmetk.utils.instantiators import (
+from picid.utils.instantiators import (
     instantiate_callbacks,
     instantiate_loggers,
 )
@@ -61,7 +61,7 @@ class TestInstantiateCallbacks:
         with pytest.raises(TypeError):
             instantiate_callbacks(cfg)
     
-    @patch('lmetk.utils.instantiators.hydra.utils.instantiate')
+    @patch('picid.utils.instantiators.hydra.utils.instantiate')
     def test_valid_callback_instantiated(self, mock_instantiate):
         """Test that valid callback config is instantiated.
         
@@ -150,7 +150,7 @@ class TestInstantiateLoggers:
         with pytest.raises(TypeError):
             instantiate_loggers(cfg)
     
-    @patch('lmetk.utils.instantiators.hydra.utils.instantiate')
+    @patch('picid.utils.instantiators.hydra.utils.instantiate')
     def test_valid_logger_instantiated(self, mock_instantiate):
         """Test that valid logger config is instantiated.
         
@@ -233,7 +233,7 @@ class TestInstantiatorsEdgeCases:
         assert isinstance(result_callbacks, list)
         assert isinstance(result_loggers, list)
     
-    @patch('lmetk.utils.instantiators.hydra.utils.instantiate')
+    @patch('picid.utils.instantiators.hydra.utils.instantiate')
     def test_multiple_callbacks(self, mock_instantiate):
         """Test instantiation of multiple callbacks.
         

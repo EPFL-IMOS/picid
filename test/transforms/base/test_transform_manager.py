@@ -1,4 +1,4 @@
-"""Tests for lmetk.transforms.base.transform_manager module.
+"""Tests for picid.transforms.base.transform_manager module.
 
 This file consolidates all tests for ConfigTransformManager from multiple test files.
 All dummy transforms and fixtures are imported from conftest.
@@ -6,7 +6,7 @@ All dummy transforms and fixtures are imported from conftest.
 import numpy as np
 import pytest
 
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (
@@ -20,14 +20,14 @@ class TestConfigTransformManager:
     
     def test_manager_initialization_empty(self):
         """Test manager initialization with empty config."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager()
         assert len(manager) == 0
         assert not manager.is_instantiated
     
     def test_manager_initialization_with_config(self):
         """Test manager initialization with config."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {
             "scale": {
                 "transform": {
@@ -41,7 +41,7 @@ class TestConfigTransformManager:
     
     def test_manager_lazy_instantiation(self):
         """Test lazy instantiation mode."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager(lazy_instantiation=True)
         assert not manager.is_instantiated
         # Should instantiate on first access
@@ -50,7 +50,7 @@ class TestConfigTransformManager:
     
     def test_manager_has_transform(self):
         """Test has_transform method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         assert manager.has_transform("transform1")
@@ -58,7 +58,7 @@ class TestConfigTransformManager:
     
     def test_manager_get_transform_names(self):
         """Test get_transform_names method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {
             "transform1": {"transform": {}, "metadata": {}},
             "transform2": {"transform": {}, "metadata": {}}
@@ -70,7 +70,7 @@ class TestConfigTransformManager:
     
     def test_manager_get_transform_config(self):
         """Test get_transform_config method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {"apply_to": "features"}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         transform_config = manager.get_transform_config("transform1")
@@ -78,14 +78,14 @@ class TestConfigTransformManager:
     
     def test_manager_get_transform_config_missing_error(self):
         """Test get_transform_config with missing transform."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager(lazy_instantiation=True)
         with pytest.raises(KeyError):
             manager.get_transform_config("nonexistent")
     
     def test_manager_add_transforms_config(self):
         """Test add_transforms_config method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager(lazy_instantiation=True)
         new_config = {"transform1": {"transform": {}, "metadata": {}}}
         manager.add_transforms_config(new_config)
@@ -93,7 +93,7 @@ class TestConfigTransformManager:
     
     def test_manager_add_transforms_config_conflict_error(self):
         """Test add_transforms_config with conflicting names."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         new_config = {"transform1": {"transform": {}, "metadata": {}}}
@@ -102,7 +102,7 @@ class TestConfigTransformManager:
     
     def test_manager_add_transforms_after_instantiation_error(self):
         """Test that adding transforms after instantiation raises error."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager()
         # Force instantiation
         _ = manager.get_data_transforms()
@@ -112,7 +112,7 @@ class TestConfigTransformManager:
     
     def test_manager_update_transforms_config(self):
         """Test update_transforms_config method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         new_config = {"transform2": {"transform": {}, "metadata": {}}}
@@ -122,7 +122,7 @@ class TestConfigTransformManager:
     
     def test_manager_remove_transform(self):
         """Test remove_transform method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {
             "transform1": {"transform": {}, "metadata": {}},
             "transform2": {"transform": {}, "metadata": {}}
@@ -134,14 +134,14 @@ class TestConfigTransformManager:
     
     def test_manager_remove_transform_missing_error(self):
         """Test remove_transform with missing transform."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager(lazy_instantiation=True)
         with pytest.raises(KeyError):
             manager.remove_transform("nonexistent")
     
     def test_manager_remove_transform_after_instantiation_error(self):
         """Test that removing transforms after instantiation raises error."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         # ConfigTransformManager expects DictConfig with _target_ for instantiation
         # For testing, we'll use a simpler approach - test the error path directly
         # by creating a manager and forcing instantiation, then trying to remove
@@ -163,7 +163,7 @@ class TestConfigTransformManager:
     
     def test_manager_clear_cache(self):
         """Test clear_cache method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         manager = ConfigTransformManager()
         _ = manager.get_data_transforms()
         assert manager.is_instantiated
@@ -172,7 +172,7 @@ class TestConfigTransformManager:
     
     def test_manager_force_reinstantiate(self):
         """Test force_reinstantiate method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         # ConfigTransformManager expects DictConfig with _target_ for instantiation
         config = {
             "transform1": {
@@ -192,7 +192,7 @@ class TestConfigTransformManager:
     
     def test_manager_len(self):
         """Test __len__ method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {
             "transform1": {"transform": {}, "metadata": {}},
             "transform2": {"transform": {}, "metadata": {}}
@@ -202,7 +202,7 @@ class TestConfigTransformManager:
     
     def test_manager_contains(self):
         """Test __contains__ method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         assert "transform1" in manager
@@ -210,7 +210,7 @@ class TestConfigTransformManager:
     
     def test_manager_repr(self):
         """Test __repr__ method."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {"transform1": {"transform": {}, "metadata": {}}}
         manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
         repr_str = repr(manager)
@@ -219,7 +219,7 @@ class TestConfigTransformManager:
     
     def test_manager_skip_private_keys(self):
         """Test that keys starting with __ are skipped."""
-        from lmetk.transforms.base.transform_manager import ConfigTransformManager
+        from picid.transforms.base.transform_manager import ConfigTransformManager
         # ConfigTransformManager expects DictConfig with _target_ for instantiation
         config = {
             "__private": {

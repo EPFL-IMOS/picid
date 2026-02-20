@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 import numpy as np
 import awkward as ak
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
 

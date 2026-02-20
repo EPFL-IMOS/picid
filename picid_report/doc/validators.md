@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.core.validators`
+**Module:** `picid_report.core.validators`
 
 This document describes every **validation** function: schema check, seed filtering, modification logging, and hidden-variation checks. Each function is documented with **examples**.
 
@@ -14,8 +14,8 @@ Checks that all **required_cols** are present in the DataFrame. If any are missi
 
 **Example:**
 ```python
-from lmetk_report import config
-from lmetk_report.validators import validate_schema
+from picid_report import config
+from picid_report.validators import validate_schema
 
 validate_schema(df, config.REQUIRED_COLUMNS)
 # Passes silently if all required columns exist
@@ -47,7 +47,7 @@ Logs a DataFrame shape change (e.g. after subsetting or seed filter). Only logs 
 **Example:**
 ```python
 import logging
-from lmetk_report.validators import log_modification
+from picid_report.validators import log_modification
 
 log_modification(
     action="Strict Seed Filter applied on 'seed'",
@@ -92,7 +92,7 @@ Filters the DataFrame to **groups** (defined by **group_cols**) that contain **a
 
 **Example — filter to groups with all model seeds:**
 ```python
-from lmetk_report.validators import validate_seeds
+from picid_report.validators import validate_seeds
 
 subset = validate_seeds(
     subset,
@@ -125,8 +125,8 @@ Warns when a **non-HP** column varies within a group (e.g. same dataset/model/HP
 
 **Example:**
 ```python
-from lmetk_report import config
-from lmetk_report.validators import check_hidden_variations
+from picid_report import config
+from picid_report.validators import check_hidden_variations
 
 check_hidden_variations(
     subset,

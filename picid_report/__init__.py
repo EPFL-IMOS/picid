@@ -3,15 +3,15 @@
 import logging
 import sys
 
-from lmetk_report import config
-from lmetk_report.config import PipelineConfig
-from lmetk_report.core import (
+from picid_report import config
+from picid_report.config import PipelineConfig
+from picid_report.core import (
     load_runs_df,
     clean_and_rename_models,
     validate_schema,
     analyze_results,
 )
-from lmetk_report.report import (
+from picid_report.report import (
     create_summary_table,
     display_experiment_stats,
     display_hp_impact,
@@ -27,7 +27,7 @@ from lmetk_report.report import (
     plot_hp_impact,
 )
 
-_logger = logging.getLogger("lmetk_report")
+_logger = logging.getLogger("picid_report")
 if not _logger.handlers:
     _handler = logging.StreamHandler(sys.stdout)
     _handler.setFormatter(logging.Formatter("%(message)s"))

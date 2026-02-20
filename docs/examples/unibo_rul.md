@@ -9,13 +9,13 @@ This example walks through running a **Remaining Useful Life (RUL)** experiment 
 From the project root (with environment activated and paths configured):
 
 ```bash
-python lmetk/run.py paths=<your_paths> experiment=unibo/prognostics/raw/cnn_1d
+python picid/run.py paths=<your_paths> experiment=unibo/prognostics/raw/cnn_1d
 ```
 
 For faster runs during development, use the debug config:
 
 ```bash
-python lmetk/run.py paths=<your_paths> debug=default experiment=unibo/prognostics/raw/cnn_1d
+python picid/run.py paths=<your_paths> debug=default experiment=unibo/prognostics/raw/cnn_1d
 ```
 
 ---
@@ -70,13 +70,13 @@ You can keep the same model and only change the **transform** override:
 Example — run with combined transforms:
 
 ```bash
-python lmetk/run.py paths=<your_paths> experiment=unibo/prognostics/combined/cnn_1d
+python picid/run.py paths=<your_paths> experiment=unibo/prognostics/combined/cnn_1d
 ```
 
 Example — run ablation (missing values):
 
 ```bash
-python lmetk/run.py paths=<your_paths> experiment=unibo/prognostics/ablation/missing_values/cnn_1d
+python picid/run.py paths=<your_paths> experiment=unibo/prognostics/ablation/missing_values/cnn_1d
 ```
 
 What changes is only the `override /transforms: ...` in the experiment YAML; the rest (datasource, task, model, evaluator) stays the same.

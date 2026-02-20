@@ -2,7 +2,7 @@
 # This file reads from datasource to find the task_mode i.e., rul or ahRul (${datasource.task_mode})
 get_simple_feature_statistics:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
+    _target_:  picid.transforms.battery.nb1_transforms.Cycles2Statistics  # Your wrapper class
     target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
     cycles_identifier: rul
     battery_mode_state: mode
@@ -14,7 +14,7 @@ get_simple_feature_statistics:
 # Transfrom which takes a column from the features and assigns it to target
 assign_updated_taget_from_features:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
+    _target_:  picid.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
     target_name: ${datasource.task_mode}
     apply_to_key: features
     
@@ -25,7 +25,7 @@ assign_updated_taget_from_features:
     
 filter_features:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+    _target_:  picid.transforms.battery.nb1_transforms.FilterDataFrameColumns  
     columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
     apply_to_key: features
 
@@ -35,7 +35,7 @@ filter_features:
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     
   metadata:
     apply_to: features
@@ -44,7 +44,7 @@ scaler_features:
 
 AssignNaiveTimefeatures:
   transform:
-    _target_:  lmetk.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
+    _target_:  picid.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
     
   metadata:
     apply_to: features
@@ -52,7 +52,7 @@ AssignNaiveTimefeatures:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   
   metadata:
     apply_to: target

@@ -28,8 +28,8 @@ import numpy as np
 import pytest
 from scipy import stats as scipy_stats
 
-from lmetk.transforms.base_transforms.time_statistics import TimeStatsTransform
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.time_statistics import TimeStatsTransform
+from picid.data.data_objects.data import NamedTransformInput
 
 
 class TestTimeStatsTransformInitialization:

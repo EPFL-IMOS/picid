@@ -34,17 +34,17 @@ MODELS=("lstm" "stf" "patchtst")  #"crossformer" "tide" "timeseries_transformer"
 # This prevents ${model} from being expanded immediately.
 commands=(
 
-    'python lmetk/run.py experiment=pronostia/prognostics/raw/${model}.yaml task_definition.seq_len=2560 trainer.max_epochs=1000  datamodule.val_batch_size=1024 datamodule.train_batch_size=512 optimization.lr=0.001 optimization.optimizer.weight_decay=1e-5 evaluator.val.log_image=False' # model.n_layers=2 model.hidden_dim=128'
-    # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
-    # 'python lmetk/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+    'python picid/run.py experiment=pronostia/prognostics/raw/${model}.yaml task_definition.seq_len=2560 trainer.max_epochs=1000  datamodule.val_batch_size=1024 datamodule.train_batch_size=512 optimization.lr=0.001 optimization.optimizer.weight_decay=1e-5 evaluator.val.log_image=False' # model.n_layers=2 model.hidden_dim=128'
+    # 'python picid/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
+    # 'python picid/run.py experiment=pronostia/prognostics/spectral/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16' # model.n_layers=2 model.hidden_dim=128 debug=pronostia
 
-    #'python lmetk/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1'
-    #'python lmetk/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
-    #'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16'
-    #'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16'
-    # 'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01'
-    # 'python lmetk/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01 optimizer.parameters.weight_decay=0.0001'
-    #'python lmetk/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=25 debug=pronostia'
+    #'python picid/run.py experiment=unibo/prognostics/bosello23_base_statistics/${model}.yaml trainer.max_epochs=1'
+    #'python picid/run.py experiment=nb14/prognostics/statistics/${model}.yaml trainer.max_epochs=1'
+    #'python picid/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.01 task_definition.seq_len=16'
+    #'python picid/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=100 trainer.min_epochs=50 optimizer.parameters.lr=0.001 task_definition.seq_len=16'
+    # 'python picid/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01'
+    # 'python picid/run.py experiment=pronostia/prognostics/statistics/${model}.yaml trainer.max_epochs=250 optimizer.parameters.lr=0.01 optimizer.parameters.weight_decay=0.0001'
+    #'python picid/run.py experiment=xjtu_sy/prognostics/statistics/${model}.yaml trainer.max_epochs=25 debug=pronostia'
 )
 
 # 2. Keep the loop order the same (commands outer, models inner).

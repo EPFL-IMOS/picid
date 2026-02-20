@@ -1,7 +1,7 @@
 # These transforms adapted from the TimePFN paper
 scaler:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
   
   metadata:
     apply_to: features
@@ -9,7 +9,7 @@ scaler:
 
 time_features_transform:
   transform:
-      _target_: lmetk.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
+      _target_: picid.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
       freq: h 
 
   metadata:

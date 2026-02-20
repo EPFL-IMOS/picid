@@ -12,7 +12,7 @@ Formats aggregate stats as "mean ± std (n=count)". NaN std is shown as 0. count
 
 **Example:**
 ```python
-from lmetk_report.utils import format_mean_std_count
+from picid_report.utils import format_mean_std_count
 
 format_mean_std_count(1.2345, 0.0012, 3, precision=4)
 # "1.2345 ± 0.0012 (n=3)"
@@ -30,7 +30,7 @@ Converts MultiIndex columns like (metric, "mean"), (metric, "std"), (metric, "co
 
 **Example:**
 ```python
-from lmetk_report.utils import flatten_aggregated_columns
+from picid_report.utils import flatten_aggregated_columns
 
 # After groupby.agg you get tuple columns; flatten for sorting/display
 flat = flatten_aggregated_columns(aggregated_df)

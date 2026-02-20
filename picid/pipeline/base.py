@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from lightning import LightningModule
 
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.model.wrappers.base import AbstractFitPredictWrapper
+from picid.evaluator.base import AbstractEvaluator
+from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 import logging
 import itertools

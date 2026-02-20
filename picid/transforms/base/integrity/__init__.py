@@ -1,5 +1,5 @@
 """Integrity guards — policy-driven invariants and validators."""
-from lmetk.transforms.base.integrity.integrity import (
+from picid.transforms.base.integrity.integrity import (
     CHECK_FN,
     IntegrityPolicy,
     run_check,

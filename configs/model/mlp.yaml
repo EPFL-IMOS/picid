@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.mlp_wrapper.MLPWrapper
+_target_: picid.model.wrappers.mlp_wrapper.MLPWrapper
 task_type: ${task_definition.task_type}
 
 # There values will be read from the model parameters similarly to how we deal with data_path.

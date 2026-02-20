@@ -2,7 +2,7 @@ import random
 import numpy as np
 import pytest
 
-from lmetk.data.datasets.subset_sampling import (
+from picid.data.datasets.subset_sampling import (
     _intervals_from_indices,
     dirichlet_block_lengths,
     geometric_block_lengths,

@@ -1,6 +1,6 @@
 from typing import Any
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
 
 import numpy as _np
 import math as _math
@@ -8,7 +8,7 @@ import matplotlib.pyplot as _plt
 
 _plt.switch_backend("Agg")
 
-from lmetk.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
+from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
 
 
 class PlotFeatures(DenseTransform, ConcatFitAndPerSegmentTransformMixin):

@@ -1,5 +1,5 @@
 # This was a prototype! Needs work.
-_target_: lmetk.data.datasources.AGTF30KLoader
+_target_: picid.data.datasources.AGTF30KLoader
 
 data_name: AGTF30_rawdata_1_Hz #first
 data_folder: AGTF30K
@@ -18,7 +18,7 @@ stride: 1
 scaling: "legacy"
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.TimeSplitter
+  _target_: picid.data.preprocessing.TimeSplitter
   train: 9040 # int or float. In case of float it is a percentage of the dataset
   val: 578 # int or float. In case of float it is a percentage of the dataset
   test: 1784 # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)

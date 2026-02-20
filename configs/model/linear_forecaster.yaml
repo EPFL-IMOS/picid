@@ -1,4 +1,4 @@
-_target_: lmetk.baselines.linear_model.linear_model.Linear_Forecaster
+_target_: picid.baselines.linear_model.linear_model.Linear_Forecaster
 task_type: ${task_definition.task_type}
 
 metadata:

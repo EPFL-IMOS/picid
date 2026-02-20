@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.forecasting.ForecastingEvaluator
+  _target_: picid.evaluator.forecasting.ForecastingEvaluator
   metric_names: ["mae", "mse"]
 
   apply_inverse_scaling: True
@@ -20,7 +20,7 @@ _evaluator_defaults: &evaluator_defaults
   effective_pred_len: null #24
   paths: ${paths}
   hooks:
-    - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
       dims: ["sample", "time", "feature"]
 
 train: *evaluator_defaults

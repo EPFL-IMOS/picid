@@ -6,7 +6,7 @@ from hydra.utils import instantiate
 from numpy import ndarray
 from torch.utils.data._utils.collate import default_collate
 
-from lmetk.data.datasets.base import BaseVectorizedConcatDataset
+from picid.data.datasets.base import BaseVectorizedConcatDataset
 from torch.utils.data import ConcatDataset
 import logging
 

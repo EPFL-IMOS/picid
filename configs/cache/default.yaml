@@ -8,4 +8,4 @@ use_cache_after_transfroms: True #True
 # on servers with many cpus.
 # Use flock in your shell script to prevent this from happening.
 use_preprocessing_file_lock: False
-preprocessing_file_lock_path: /tmp/lmetk_preprocess.lock
+preprocessing_file_lock_path: /tmp/picid_preprocess.lock

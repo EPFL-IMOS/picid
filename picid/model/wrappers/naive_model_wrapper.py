@@ -1,7 +1,7 @@
 """Wrapper for the NaiveModel model."""
 
 from .base import AbstractFeedForwardWrapper
-from lmetk.model.methods.naive_model import NaiveModelBaseline
+from picid.model.methods.naive_model import NaiveModelBaseline
 from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 

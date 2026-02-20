@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.hooks.unit_trend_plot.UnitTrendPlotHook.
+Tests for picid.evaluator.hooks.unit_trend_plot.UnitTrendPlotHook.
 
 Ref: docs/evaluators/index.md - MultiUnitEvaluator, pred-vs-target per unit.
 Validates: Guard conditions, mode/epoch filtering, subsampling, 1D/2D unit IDs.
@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from lmetk.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
+from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
 
 
 # =============================================================================
@@ -35,7 +35,7 @@ def test_unit_trend_plot_hook_returns_early_when_no_remote_logger():
         "unit_ids": np.array([1, 1, 2, 2, 2]),
     }
 
-    with patch("lmetk.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_plt.subplots.assert_not_called()
 
@@ -59,7 +59,7 @@ def test_unit_trend_plot_hook_returns_early_when_mode_train():
         "unit_ids": np.array([1, 1, 2, 2, 2]),
     }
 
-    with patch("lmetk.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, mode="train", epoch=0, step=0)
         mock_plt.subplots.assert_not_called()
 
@@ -82,7 +82,7 @@ def test_unit_trend_plot_hook_returns_early_when_val_epoch_not_divisible():
         "unit_ids": np.array([1, 1, 2, 2, 2]),
     }
 
-    with patch("lmetk.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, mode="val", epoch=1, step=0)
         mock_plt.subplots.assert_not_called()
 
@@ -104,7 +104,7 @@ def test_unit_trend_plot_hook_returns_early_when_no_unit_ids():
         "targets": np.ones((5, 1, 1)),
     }
 
-    with patch("lmetk.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.unit_trend_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, mode="val", epoch=0, step=0)
         mock_plt.subplots.assert_not_called()
 
@@ -114,7 +114,7 @@ def test_unit_trend_plot_hook_returns_early_when_no_unit_ids():
 # =============================================================================
 
 
-@patch("lmetk.evaluator.hooks.unit_trend_plot.plt")
+@patch("picid.evaluator.hooks.unit_trend_plot.plt")
 def test_unit_trend_plot_hook_plots_per_unit_1d_ids(mock_plt, phm_multiunit_buffer_data):
     """
     Validates main flow: one plot per unique unit with 1D unit_ids.
@@ -143,7 +143,7 @@ def test_unit_trend_plot_hook_plots_per_unit_1d_ids(mock_plt, phm_multiunit_buff
     assert evaluator.log_plot.call_count == 3
 
 
-@patch("lmetk.evaluator.hooks.unit_trend_plot.plt")
+@patch("picid.evaluator.hooks.unit_trend_plot.plt")
 def test_unit_trend_plot_hook_plots_per_unit_2d_ids(mock_plt):
     """
     Validates 2D unit_ids: np.unique(axis=0) and mask with .all(axis=1).
@@ -184,7 +184,7 @@ def test_unit_trend_plot_hook_plots_per_unit_2d_ids(mock_plt):
     )
 
 
-@patch("lmetk.evaluator.hooks.unit_trend_plot.plt")
+@patch("picid.evaluator.hooks.unit_trend_plot.plt")
 def test_unit_trend_plot_hook_subsamples_when_above_threshold(mock_plt):
     """
     Validates subsampling: when p.size > subsample_threshold, use step.

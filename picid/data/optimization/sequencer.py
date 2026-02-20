@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 import torch
 
-from lmetk.data.optimization.ak_jagged_sequencer import (
+from picid.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
-from lmetk.transforms.base.multisource import find_singular_ragged_dim
+from picid.transforms.base.multisource import find_singular_ragged_dim
 import logging
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]

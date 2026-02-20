@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.core.preprocess`
+**Module:** `picid_report.core.preprocess`
 
 This document describes the **preprocessing** step used by the pipeline: **`clean_and_rename_models()`**. It normalizes model names for display and grouping.
 
@@ -22,7 +22,7 @@ def clean_and_rename_models(
 
 **Behavior:**
 
-1. **Strip common prefix** — Finds the common prefix of all model identifiers (e.g. `lmetk.baselines.`) and removes it so names are shorter (e.g. `patchtst_model.PatchTST_Forecaster`).
+1. **Strip common prefix** — Finds the common prefix of all model identifiers (e.g. `picid.baselines.`) and removes it so names are shorter (e.g. `patchtst_model.PatchTST_Forecaster`).
 2. **Append (linear) / (exponential)** — If a model type column exists (e.g. `model.model_type` with values `"linear"` or `"exponential"`), appends ` (linear)` or ` (exponential)` to the model name. Used to distinguish StatisticalBaselineWrapper variants.
 
 **Parameters:**
@@ -38,11 +38,11 @@ def clean_and_rename_models(
 ### Example 1: Default columns (use config)
 
 ```python
-from lmetk_report.preprocess import clean_and_rename_models
+from picid_report.preprocess import clean_and_rename_models
 
 df = clean_and_rename_models(df)
 # Uses config.COLUMN_CONFIG["model_target"] and "model.model_type"
-# e.g. "lmetk.baselines.patchtst_model.PatchTST_Forecaster" becomes "baselines.patchtst_model.PatchTST_Forecaster"
+# e.g. "picid.baselines.patchtst_model.PatchTST_Forecaster" becomes "baselines.patchtst_model.PatchTST_Forecaster"
 # If model.model_type is "linear" then "... (linear)" is appended
 ```
 
@@ -78,7 +78,7 @@ df = clean_and_rename_models(df)
 To keep raw model names (no cleaning), pass a no-op preprocess when calling run_pipeline:
 
 ```python
-from lmetk_report.run import run_pipeline
+from picid_report.run import run_pipeline
 
 df, all_results, summary_df = run_pipeline(
     project_name="my_project",

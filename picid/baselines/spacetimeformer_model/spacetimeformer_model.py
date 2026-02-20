@@ -4,12 +4,12 @@ import torch
 import torch.nn.functional as F
 import torchmetrics
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     STATE_FORECASTING_TASKS,
 )
-from lmetk.baselines.forecaster import TransformerForecaster
+from picid.baselines.forecaster import TransformerForecaster
 
 from .nn import Spacetimeformer
 

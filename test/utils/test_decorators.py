@@ -20,7 +20,7 @@ import numpy as np
 from unittest.mock import MagicMock, Mock
 from dataclasses import dataclass
 
-from lmetk.utils.decorators import (
+from picid.utils.decorators import (
     inject_transform_context_to_strategy_apply,
     check_transform_output_consistency,
 )

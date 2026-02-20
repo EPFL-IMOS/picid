@@ -19,7 +19,7 @@ import pytest
 import numpy as np
 from omegaconf import ListConfig
 
-from lmetk.utils.assertions import assert_list_of_ndarray_or_nd_array_for_dims
+from picid.utils.assertions import assert_list_of_ndarray_or_nd_array_for_dims
 
 
 class TestAssertListOfNdarray:

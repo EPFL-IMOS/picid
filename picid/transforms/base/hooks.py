@@ -12,7 +12,7 @@ import time
 from rich.console import Console
 from rich.table import Table
 
-from lmetk.transforms.base.pipeline import TransformContext, register_hook
+from picid.transforms.base.pipeline import TransformContext, register_hook
 
 
 def set_transform_started_at(event: str, context: TransformContext) -> None:
@@ -48,7 +48,7 @@ def on_transform_error_enrich_log(event: str, context: TransformContext) -> None
     for k, v in extra.items():
         table.add_row(k, str(v))
     Console(stderr=True).print(table)
-    logging.getLogger("lmetk.transforms").error(
+    logging.getLogger("picid.transforms").error(
         "Pipeline failed: %s",
         context.error,
         exc_info=True,

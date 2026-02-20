@@ -1,14 +1,14 @@
 """Comprehensive tests for timefeatures.py transform.
 
 This file consolidates all tests for timefeatures from multiple test files
-to ensure complete coverage of lmetk.transforms.base_transforms.timefeatures.
+to ensure complete coverage of picid.transforms.base_transforms.timefeatures.
 """
 import numpy as np
 import pytest
 import pandas as pd
 from unittest.mock import patch, MagicMock
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.timefeatures import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.timefeatures import (
     TimePFNTimeFeaturesTransform,
     TimeFeature,
     SecondOfMinute,

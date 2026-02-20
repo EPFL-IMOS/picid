@@ -5,9 +5,9 @@ import torch
 from einops import rearrange
 from typing import Any, Dict, Optional
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
-from lmetk.model.methods.mlp import MLP
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
+from picid.model.methods.mlp import MLP
 
 logger = logging.getLogger(__name__)
 

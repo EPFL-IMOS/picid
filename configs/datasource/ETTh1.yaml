@@ -1,5 +1,5 @@
 # Dataset loader config
-_target_: lmetk.data.datasources.ETThLoader
+_target_: picid.data.datasources.ETThLoader
 
 data_name: ETTh1
 data_folder: ETT-small
@@ -12,7 +12,7 @@ target_dim_position: 0
 timestamp_name: date
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.TimeSplitter
+  _target_: picid.data.preprocessing.TimeSplitter
   splitter_type: TimeSplitter
   train: 8640 # int or float. In case of float it is a percentage of the dataset
   val: 2880 # int or float. In case of float it is a percentage of the dataset

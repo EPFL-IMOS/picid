@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 import torch
 
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
-from lmetk.data.datasets.context_dataset import ContextBatchDataset
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datasets.context_dataset import ContextBatchDataset
 
 
 @pytest.fixture

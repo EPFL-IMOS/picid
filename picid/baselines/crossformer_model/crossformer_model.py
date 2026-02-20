@@ -4,8 +4,8 @@ from typing import Tuple
 from typing import Callable
 import torch
 
-from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
-from lmetk.baselines.forecaster import TransformerForecaster
+from picid.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
+from picid.baselines.forecaster import TransformerForecaster
 
 from .cross_former import Crossformer
 

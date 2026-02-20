@@ -1,10 +1,10 @@
 """Tests for Phase 4.2: slice-awareness (SliceInfo, container, context)."""
 import pytest
 
-from lmetk.data.data_objects.slice_info import SliceInfo
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.data_objects.manifest import MetadataManifest
-from lmetk.transforms.base.pipeline import TransformContext, RecordManifestStep
+from picid.data.data_objects.slice_info import SliceInfo
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects.manifest import MetadataManifest
+from picid.transforms.base.pipeline import TransformContext, RecordManifestStep
 
 from test.transforms.base.conftest import (
     create_dummy_single_unit_container,
@@ -64,7 +64,7 @@ class TestContextSliceInfo:
     def test_context_slice_info_from_data(self):
         container = create_dummy_single_unit_container()
         container.slice_info = SliceInfo(split="train", unit_ids=[0, 1])
-        from lmetk.transforms.base.strategy import TransformStrategy
+        from picid.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
         # Build context via apply; we only need to check that with manifest we get slice_info in payload

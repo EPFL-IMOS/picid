@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.core.analysis`
+**Module:** `picid_report.core.analysis`
 
 This document describes the **analysis** stage: turning a flat DataFrame of runs into a nested structure **all_results[dataset][model]** with best run, aggregated stats, and optional sort metric. It covers **every important function** with examples.
 
@@ -64,8 +64,8 @@ Config can come from **pipeline_config** (overrides) or from module-level config
 ### Example 1: After load and preprocess (typical use from run_pipeline)
 
 ```python
-from lmetk_report import load_runs_df, analyze_results, config
-from lmetk_report.preprocess import clean_and_rename_models
+from picid_report import load_runs_df, analyze_results, config
+from picid_report.preprocess import clean_and_rename_models
 
 df, config_columns, dropped_columns = load_runs_df(
     project_name="my_project", user="my_team", csv_cache_dir="csv_files"
@@ -89,7 +89,7 @@ all_results = analyze_results(
 When `run_pipeline` is used, it builds a resolver from `get_sort_metric` and passes it (or uses the one in `PipelineConfig`). You can pass one explicitly:
 
 ```python
-from lmetk_report.configs import get_sort_metric, infer_task_type_from_dataset, infer_dataset_category_from_name
+from picid_report.configs import get_sort_metric, infer_task_type_from_dataset, infer_dataset_category_from_name
 
 def my_resolver(dataset, model, task_type=None, dataset_category=None):
     if task_type is None:
@@ -129,7 +129,7 @@ Builds a DataFrame whose rows are the Cartesian product of HP values.
 **Example:**
 
 ```python
-from lmetk_report.analysis import get_search_grid_df
+from picid_report.analysis import get_search_grid_df
 
 grid = get_search_grid_df({
     "task_definition.seq_len": [1, 10, 50],
@@ -147,7 +147,7 @@ Returns sorted unique values from a column; list cells are expanded so each elem
 **Example:**
 
 ```python
-from lmetk_report.analysis import get_unique_values
+from picid_report.analysis import get_unique_values
 
 vals = get_unique_values(df, "model._target_")
 # e.g. ["LSTM", "Transformer"]
@@ -163,7 +163,7 @@ Extracts metric names from the evaluator config column (e.g. `evaluator.train.me
 **Example:**
 
 ```python
-from lmetk_report.analysis import get_dynamic_metrics
+from picid_report.analysis import get_dynamic_metrics
 
 metrics = get_dynamic_metrics(subset_df)
 # e.g. ["loss", "mse", "mae"]
@@ -178,7 +178,7 @@ Resolves the metric used for optimization (best-run selection). Priority: (1) ta
 **Example:**
 
 ```python
-from lmetk_report.analysis import get_optimized_metric
+from picid_report.analysis import get_optimized_metric
 
 opt_col = get_optimized_metric(subset, "LSTM", "UNIBO21")
 # e.g. "val_best_rerun/loss" or "test/mse"
@@ -194,7 +194,7 @@ Identifies config columns that have more than one unique value. Used for data-fi
 **Example:**
 
 ```python
-from lmetk_report.analysis import get_varying_hyperparameters
+from picid_report.analysis import get_varying_hyperparameters
 
 varying = get_varying_hyperparameters(
     subset,
@@ -213,7 +213,7 @@ Aggregates runs by HP config (mean/std/count per metric) and returns the aggrega
 **Example:**
 
 ```python
-from lmetk_report.analysis import aggregate_and_find_best
+from picid_report.analysis import aggregate_and_find_best
 
 sorted_agg, best_row = aggregate_and_find_best(
     subset,

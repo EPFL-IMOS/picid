@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasources.railway.RailwayLoader
+_target_: picid.data.datasources.railway.RailwayLoader
 
 data_name: railway
 data_folder: railway
@@ -17,7 +17,7 @@ task_mode: univariate
 mode_mode: context
 
 data_splitter:
-  _target_: lmetk.data.preprocessing.TimeStampSplitter
+  _target_: picid.data.preprocessing.TimeStampSplitter
   splitter_type: TimeStampSplitter
   test_start: "2023-01-24 00:00:00"
   train_ratio: 0.9

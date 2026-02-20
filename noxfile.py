@@ -150,7 +150,7 @@ def run_experiment(session, exp_name: str, metadata: dict, max_err_len: int = 30
 
         session.run(
             str(VENV_PYTHON),
-            "lmetk/run.py",
+            "picid/run.py",
             "paths=rt_local",
             f"experiment={exp_name}",
             *additional_args,

@@ -8,7 +8,7 @@ This guide is for contributors implementing new transforms or modifying core beh
 
 ### `BaseTransform`
 
-Located in `lmetk/transforms/base/base_transform.py`.
+Located in `picid/transforms/base/base_transform.py`.
 
 ```python
 class BaseTransform(ABC):
@@ -76,7 +76,7 @@ unless you are extending core logic.
 
 ## Multi-Source Mixins (Internal Behavior)
 
-All multi-unit behavior lives in `lmetk/transforms/base/multisource.py`. Prefer the current names:
+All multi-unit behavior lives in `picid/transforms/base/multisource.py`. Prefer the current names:
 
 - **`ConcatFitAndPerSegmentTransformMixin`** (formerly `StandardFitTransformMixin`; alias: `ConcatinatedFitMultiSourceTransformMixin`)
   - Fit: concatenate all sources, then fit once

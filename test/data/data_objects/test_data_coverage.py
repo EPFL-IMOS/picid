@@ -1,12 +1,12 @@
 """
-Coverage-focused tests for lmetk.data.data_objects.data (DatasetContainer, get_sanitized_data, etc.).
+Coverage-focused tests for picid.data.data_objects.data (DatasetContainer, get_sanitized_data, etc.).
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from lmetk.data.data_objects.data import (
+from picid.data.data_objects.data import (
     DatasetContainer,
     NamedTransformInput,
     SplitDatasetContainer,

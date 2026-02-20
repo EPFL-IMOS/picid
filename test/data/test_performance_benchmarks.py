@@ -10,7 +10,7 @@ import time
 import numpy as np
 import pytest
 
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
 
 @pytest.fixture

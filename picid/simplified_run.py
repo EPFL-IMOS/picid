@@ -1,8 +1,8 @@
 """Minimal GraphBench-like entry point that hides Hydra details."""
 
-from lmetk.run import *
+from picid.run import *
 
-from lmetk.simplified_run_objects import (
+from picid.simplified_run_objects import (
     Experiment,
     Loader,
     Transforms,

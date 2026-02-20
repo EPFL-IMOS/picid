@@ -21,7 +21,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, MagicMock
 
-from lmetk.data.cache.online import StreamCache
+from picid.data.cache.online import StreamCache
 
 
 class TestStreamCacheInitialization:

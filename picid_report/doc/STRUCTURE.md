@@ -1,15 +1,15 @@
-# lmetk_report — Folder structure
+# picid_report — Folder structure
 
-The package uses a **function-based layout**: **core/** (pipeline engine), **report/** (output), **configs/** (dataset/model overrides), and root for entry point and shared modules. The public API is unchanged (`from lmetk_report import ...`).
+The package uses a **function-based layout**: **core/** (pipeline engine), **report/** (output), **configs/** (dataset/model overrides), and root for entry point and shared modules. The public API is unchanged (`from picid_report import ...`).
 
 ---
 
 ## Current layout (implemented)
 
 ```
-lmetk_report/
+picid_report/
   __init__.py              # re-exports from subpackages → same public API
-  run.py                   # entry point (python -m lmetk_report.run)
+  run.py                   # entry point (python -m picid_report.run)
   run.sh, run_all_projects.sh, projects.sh
   config.py                # column/schema defaults, PipelineConfig
   configs/                 # dataset/model overrides (unchanged)
@@ -40,7 +40,7 @@ lmetk_report/
 
 | Folder / file | Role |
 |---------------|------|
-| **run.py** (root) | Single entry for CLI and `run_pipeline()`; stays at root so `python -m lmetk_report.run` is unchanged. |
+| **run.py** (root) | Single entry for CLI and `run_pipeline()`; stays at root so `python -m picid_report.run` is unchanged. |
 | **config.py** + **configs/** | Configuration; no change. |
 | **core/** | “Engine”: load W&B data, preprocess, validate, analyze. One place for the data → `all_results` flow. |
 | **report/** | Everything that turns `all_results` into output: summary/stats/HP tables, HTML report, plots. |
@@ -53,7 +53,7 @@ lmetk_report/
 `__init__.py` will import from the new locations and re-export. Callers keep using:
 
 ```python
-from lmetk_report import (
+from picid_report import (
     config,
     PipelineConfig,
     load_runs_df,
@@ -70,7 +70,7 @@ from lmetk_report import (
 )
 ```
 
-So: **no breaking changes** for code that uses `lmetk_report` as above.
+So: **no breaking changes** for code that uses `picid_report` as above.
 
 ---
 
@@ -78,15 +78,15 @@ So: **no breaking changes** for code that uses `lmetk_report` as above.
 
 | From | To |
 |------|----|
-| `from lmetk_report.run_processor import load_runs_df` | `from lmetk_report.core.run_processor import load_runs_df` |
-| `from lmetk_report.preprocess import clean_and_rename_models` | `from lmetk_report.core.preprocess import clean_and_rename_models` |
-| `from lmetk_report.validators import validate_schema` | `from lmetk_report.core.validators import validate_schema` |
-| `from lmetk_report.analysis import analyze_results` | `from lmetk_report.core.analysis import analyze_results` |
-| `from lmetk_report.reporting import ...` | `from lmetk_report.report.reporting import ...` |
-| `from lmetk_report.report_html import write_report_html` | `from lmetk_report.report.report_html import write_report_html` |
-| `from lmetk_report.plots import ...` | `from lmetk_report.report.plots import ...` |
+| `from picid_report.run_processor import load_runs_df` | `from picid_report.core.run_processor import load_runs_df` |
+| `from picid_report.preprocess import clean_and_rename_models` | `from picid_report.core.preprocess import clean_and_rename_models` |
+| `from picid_report.validators import validate_schema` | `from picid_report.core.validators import validate_schema` |
+| `from picid_report.analysis import analyze_results` | `from picid_report.core.analysis import analyze_results` |
+| `from picid_report.reporting import ...` | `from picid_report.report.reporting import ...` |
+| `from picid_report.report_html import write_report_html` | `from picid_report.report.report_html import write_report_html` |
+| `from picid_report.plots import ...` | `from picid_report.report.plots import ...` |
 
-Within **core/** and **report/**, modules will use relative or package-qualified imports (e.g. `from lmetk_report.config import ...`, `from lmetk_report.utils import ...`) as they do today; only the path to the moved modules changes.
+Within **core/** and **report/**, modules will use relative or package-qualified imports (e.g. `from picid_report.config import ...`, `from picid_report.utils import ...`) as they do today; only the path to the moved modules changes.
 
 ---
 
@@ -107,4 +107,4 @@ That still groups the “engine” and leaves output modules at root.
 - **Benefit:** Clear split between “pipeline engine” (core) and “output” (report); fewer top-level files.
 - **Cost:** One-time refactor of internal imports and `__init__.py`; doc links to module paths can be updated in passing.
 
-This structure is **implemented**. Internal imports use `lmetk_report.core.*` and `lmetk_report.report.*`; the root `__init__.py` re-exports so `from lmetk_report import load_runs_df`, `analyze_results`, etc. still works.
+This structure is **implemented**. Internal imports use `picid_report.core.*` and `picid_report.report.*`; the root `__init__.py` re-exports so `from picid_report import load_runs_df`, `analyze_results`, etc. still works.

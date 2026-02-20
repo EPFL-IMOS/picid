@@ -1,5 +1,5 @@
 """
-Tests for lmetk.callbacks.model_checkpoint (ModelCheckpointWithConfig).
+Tests for picid.callbacks.model_checkpoint (ModelCheckpointWithConfig).
 
 Validates that the callback saves the model checkpoint and, on the main process,
 writes config to a JSON file once. Aligns with PHM pipeline checkpointing and
@@ -12,7 +12,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
+from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
 
 
 # -----------------------------------------------------------------------------

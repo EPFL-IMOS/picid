@@ -2,13 +2,13 @@ from typing import Callable, Tuple
 
 import torch
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     STATE_FORECASTING_TASKS,
 )
-from lmetk.baselines.forecaster import TransformerForecaster
-from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
+from picid.baselines.forecaster import TransformerForecaster
+from picid.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 
 from .timeseries_transformer import Model as Transformer
 

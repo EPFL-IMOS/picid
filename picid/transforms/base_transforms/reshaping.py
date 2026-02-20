@@ -3,9 +3,9 @@ import logging
 import numpy as np
 from einops import parse_shape, rearrange
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 

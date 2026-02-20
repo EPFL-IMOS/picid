@@ -17,9 +17,9 @@ import logging
 import warnings
 from typing import Any, Callable, Dict, List, Tuple
 
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
-from lmetk.transforms.base.pipeline.context import AfterCheck, BeforeCheck
+from picid.transforms.base.pipeline.context import AfterCheck, BeforeCheck
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def _default_before_check_nans(
     split_chunks: Dict[str, List[NamedTransformInput]],
 ) -> None:
     """Default before-check: no NaN values in any chunk of this split."""
-    from lmetk.data.data_objects.utils import check_for_nans
+    from picid.data.data_objects.utils import check_for_nans
     for split, chunks in split_chunks.items():
         for chunk in chunks:
             check_for_nans(
@@ -99,7 +99,7 @@ def _default_before_check_lengths(
     split_chunks: Dict[str, List[NamedTransformInput]],
 ) -> None:
     """Default before-check: consistent array lengths within each chunk."""
-    from lmetk.data.data_objects.utils import check_length_consistency
+    from picid.data.data_objects.utils import check_length_consistency
     for split, chunks in split_chunks.items():
         for chunk in chunks:
             check_length_consistency(

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from lmetk.data.datasources.battery import BatteryLoader
+from picid.data.datasources.battery import BatteryLoader
 
 
 @pytest.fixture

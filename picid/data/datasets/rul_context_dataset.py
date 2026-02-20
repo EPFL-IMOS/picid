@@ -5,8 +5,8 @@ from typing import Dict, List, Union, Optional, override
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
-from lmetk.data.datasets.collate_functions import collate_key_value_batch
-from lmetk.data.datasets.context_dataset import ContextBatchDataset
+from picid.data.datasets.collate_functions import collate_key_value_batch
+from picid.data.datasets.context_dataset import ContextBatchDataset
 
 
 class RULContextBatchDataset(ContextBatchDataset):

@@ -62,33 +62,33 @@ from omegaconf import DictConfig, OmegaConf
 
 from hydra.core.hydra_config import HydraConfig
 
-from lmetk.data.cache.file_lock import FileLock
-from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.datasources.kubric_movie.loader import MOViLoader
-from lmetk.data.datasources.nb14.loader import NB14Loader
-from lmetk.data.datasources.unibo.loader import UNIBO21Loader
-from lmetk.data.datasources.MZVAV import MZVAVLoader
-from lmetk.data.datasources.airbus_helicopter import AirbusHelicopterLoader
+from picid.data.cache.file_lock import FileLock
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.kubric_movie.loader import MOViLoader
+from picid.data.datasources.nb14.loader import NB14Loader
+from picid.data.datasources.unibo.loader import UNIBO21Loader
+from picid.data.datasources.MZVAV import MZVAVLoader
+from picid.data.datasources.airbus_helicopter import AirbusHelicopterLoader
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.model.wrappers.base import (
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.evaluator.base import AbstractEvaluator
+from picid.model.wrappers.base import (
     AbstractFeedForwardWrapper,
     AbstractFitPredictWrapper,
     AbstractFeedForwardTrainingWrapper,
 )
-from lmetk.pipeline.base import (
+from picid.pipeline.base import (
     ConstantLossLightningModule,
     FitPredictWrapperLightningModule,
     TrainingLightningModule,
 )
-from lmetk.callbacks.model_checkpoint import ModelCheckpointWithConfig
-from lmetk.transforms.base.multisource import InverseTransformMixin
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
+from picid.transforms.base.multisource import InverseTransformMixin
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
-from lmetk.utils import (
+from picid.utils import (
     RankedLogger,
     extras,
     get_metric_value,
@@ -98,10 +98,10 @@ from lmetk.utils import (
     log_hyperparameters,
     display_targets,
 )
-from lmetk.utils.logging_utils import get_hydra_override
-from lmetk.utils.awkward_utils import get_ak_shape
-from lmetk.utils.examine_model import get_model_summary
-from lmetk.model.autoencoder.utils import get_autoencoder_summary_and_tags
+from picid.utils.logging_utils import get_hydra_override
+from picid.utils.awkward_utils import get_ak_shape
+from picid.utils.examine_model import get_model_summary
+from picid.model.autoencoder.utils import get_autoencoder_summary_and_tags
 
 # register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
@@ -547,7 +547,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
     display_targets(cfg)
-    if cfg.model._target_ == "lmetk.model.autoencoder.wrapper.AutoencoderWrapper":
+    if cfg.model._target_ == "picid.model.autoencoder.wrapper.AutoencoderWrapper":
         model_summary_table, model_tags_list = get_autoencoder_summary_and_tags(
             cfg.model
         )
@@ -600,19 +600,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         else None
     )
     data_library_part_path = (
-        Path(cfg.paths.root_dir) / "lmetk/data/datasources"
+        Path(cfg.paths.root_dir) / "picid/data/datasources"
         if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
         else None
     )
     transform_library_part_path = (
-        Path(cfg.paths.root_dir) / "lmetk/transforms"
+        Path(cfg.paths.root_dir) / "picid/transforms"
         if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
         else None
     )
     cache_preprocessed_flag = cfg.cache.use_cache_after_transfroms
     use_file_lock = cfg.cache.get("use_preprocessing_file_lock", False)
     file_lock_path = cfg.cache.get(
-        "preprocessing_file_lock_path", "/tmp/lmetk_preprocess.lock"
+        "preprocessing_file_lock_path", "/tmp/picid_preprocess.lock"
     )
 
     if use_file_lock:

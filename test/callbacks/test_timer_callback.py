@@ -1,5 +1,5 @@
 """
-Tests for lmetk.callbacks.timer_callback (PipelineTimer).
+Tests for picid.callbacks.timer_callback (PipelineTimer).
 
 Validates timing hooks and _log_averages. Aligns with PHM pipeline
 benchmarking (docs: runai.md, pipeline training/validation/test stages).
@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 from unittest.mock import MagicMock
 
-from lmetk.callbacks.timer_callback import PipelineTimer
+from picid.callbacks.timer_callback import PipelineTimer
 
 
 # -----------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 """Tests for Phase 5.2: structural dry run (dry_run_transforms)."""
 import pytest
 
-from lmetk.transforms.base.dry_run import (
+from picid.transforms.base.dry_run import (
     DryRunResult,
     dry_run_transforms,
     _get_first_segment,
 )
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.data.data_objects.data import SplitDatasetContainer
+from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.data_objects.data import SplitDatasetContainer
 
 from test.transforms.base.conftest import (
     create_dummy_single_unit_container,

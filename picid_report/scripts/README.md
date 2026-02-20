@@ -13,16 +13,16 @@ Produces bar plots of **average rank** of each model across datasets (from exist
 
 ```bash
 # Default: task-type mode, writes report_output/plots/average_rank_classification.png and average_rank_regression.png
-python -m lmetk_report.scripts.plot_average_rank --output-dir report_output
+python -m picid_report.scripts.plot_average_rank --output-dir report_output
 
 # With CSV export
-python -m lmetk_report.scripts.plot_average_rank -o report_output --csv report_output/plots
+python -m picid_report.scripts.plot_average_rank -o report_output --csv report_output/plots
 
 # Only regression plot
-python -m lmetk_report.scripts.plot_average_rank -o report_output --task-type regression
+python -m picid_report.scripts.plot_average_rank -o report_output --task-type regression
 
 # Single-metric mode (one plot)
-python -m lmetk_report.scripts.plot_average_rank -o report_output --rank-metric val_best_rerun/loss --out report_output/plots/average_rank.png --csv report_output/plots/average_rank.csv
+python -m picid_report.scripts.plot_average_rank -o report_output --rank-metric val_best_rerun/loss --out report_output/plots/average_rank.png --csv report_output/plots/average_rank.csv
 ```
 
 **Options:** `--output-dir`, `--rank-metric` (optional; if set, single-metric mode), `--task-type` (both | classification | regression), `--rank-mode` (min/max, single-metric only), `--out` (directory in task-type mode, file path in single-metric mode), `--csv`.

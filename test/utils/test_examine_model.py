@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 from unittest.mock import patch, MagicMock
 
-from lmetk.utils.examine_model import (
+from picid.utils.examine_model import (
     get_model_summary,
     print_model_summary,
     _populate_summary,

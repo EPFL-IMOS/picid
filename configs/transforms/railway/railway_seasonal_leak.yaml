@@ -1,7 +1,7 @@
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
 
     
   metadata:
@@ -10,7 +10,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
   
   metadata:
     apply_to: target
@@ -21,7 +21,7 @@ seasonal_leak:
   # Dummy shift supports only 168, otherwise the 
   # shift breaks the week symmetry. 
   transform:
-    _target_: lmetk.transforms.railway.seasonal_dummy_railway.SeasonalDummyTransform 
+    _target_: picid.transforms.railway.seasonal_dummy_railway.SeasonalDummyTransform 
     # we have to ensure that context from target 
     # do not have any future information!
     shift: ${oc.select:task_definition.seq_len} 
@@ -32,7 +32,7 @@ seasonal_leak:
 
 time_features_transform:
   transform:
-    _target_: lmetk.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
+    _target_: picid.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
     use_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: False
   
@@ -42,7 +42,7 @@ time_features_transform:
 
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
   
   metadata:
     apply_to: time_features
@@ -51,7 +51,7 @@ scaler_timefeatures:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
   
   metadata:
     apply_to: ['features', 'time_features']

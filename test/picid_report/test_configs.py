@@ -1,12 +1,12 @@
 """
-Test suite for lmetk_report.configs.
+Test suite for picid_report.configs.
 
 Validates search space and sort metric configuration functions.
 """
 
 import pytest
 
-from lmetk_report.configs import (
+from picid_report.configs import (
     get_search_space,
     get_sort_metric,
     SORT_METRIC_BY_TASK_TYPE,
@@ -14,8 +14,8 @@ from lmetk_report.configs import (
     SORT_METRIC_OVERRIDES,
     EXPECTED_SEARCH_SPACE,
 )
-from lmetk_report.configs.search_space import get_model_grid_from_search_space
-from lmetk_report.configs.sort_metrics import (
+from picid_report.configs.search_space import get_model_grid_from_search_space
+from picid_report.configs.sort_metrics import (
     infer_task_type_from_dataset,
     infer_dataset_category_from_name,
 )

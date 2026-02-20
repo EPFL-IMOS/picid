@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.core.run_processor`
+**Module:** `picid_report.core.run_processor`
 
 This document describes the data-loading step: **`load_runs_df()`**. It is responsible for fetching run data from Weights & Biases (or a local CSV cache) and turning it into a flat, cleaned pandas DataFrame plus metadata for the analysis stage.
 
@@ -54,7 +54,7 @@ def load_runs_df(
 ### Example 1: Load with defaults (module config, cache in `csv_files`)
 
 ```python
-from lmetk_report import load_runs_df
+from picid_report import load_runs_df
 
 df, config_columns, dropped_columns = load_runs_df(
     project_name="29_01_2026_unibo_prognostics_combined",
@@ -74,7 +74,7 @@ print("Dropped count:", len(dropped_columns))
 
 ```python
 import os
-from lmetk_report import load_runs_df
+from picid_report import load_runs_df
 
 cache_path = "csv_files/my_project.csv"
 if os.path.exists(cache_path):
@@ -93,9 +93,9 @@ df, config_columns, dropped_columns = load_runs_df(
 ### Example 3: Use PipelineConfig to override normalize/drop lists
 
 ```python
-from lmetk_report.config import PipelineConfig
-from lmetk_report import config
-from lmetk_report import load_runs_df
+from picid_report.config import PipelineConfig
+from picid_report import config
+from picid_report import load_runs_df
 
 cfg = PipelineConfig.from_default()
 # Drop more columns (e.g. add "logger.")

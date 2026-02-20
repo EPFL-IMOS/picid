@@ -40,14 +40,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from lmetk.data.data_objects.data import (
+from picid.data.data_objects.data import (
     NamedTransformInput,
     NamedDictReturnObject,
     ReturnObject,
     SimpleReturnObject,
     SplitDatasetContainer,
 )
-from lmetk.transforms.base.pipeline import (
+from picid.transforms.base.pipeline import (
     TransformContext,
     CopyStep,
     RegisterChunkBuilderStep,
@@ -62,7 +62,7 @@ from lmetk.transforms.base.pipeline import (
     build_default_after_checks,
     _emit,
 )
-from lmetk.utils.decorators import inject_transform_context_to_strategy_apply
+from picid.utils.decorators import inject_transform_context_to_strategy_apply
 
 
 def is_sequence(obj):

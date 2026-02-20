@@ -2,30 +2,30 @@ import time
 from collections import OrderedDict
 from typing import Any, Callable, List, Optional, Union
 from numpy import ndarray
-from lmetk.data.preprocessing.base import PreProcessorInterface
-from lmetk.transforms.base.data_transform import DataTransform
-from lmetk.data.data_objects.data import DatasetContainer
-from lmetk.data.data_objects.manifest import (
+from picid.data.preprocessing.base import PreProcessorInterface
+from picid.transforms.base.data_transform import DataTransform
+from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
     MetadataManifest,
 )
-from lmetk.transforms.base.pipeline import _get_producer_version
+from picid.transforms.base.pipeline import _get_producer_version
 
 from rich import print as rprint
 import logging
-from lmetk.data.cache.offline import FileSystemCache
-from lmetk.utils import print_data_dict_structure
-from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
-from lmetk.utils.rich_output import (
+from picid.data.cache.offline import FileSystemCache
+from picid.utils import print_data_dict_structure
+from picid.utils.hash_utils import compute_cache_key, ensure_serializable
+from picid.utils.rich_output import (
     descriptive_dict_differences_str,
     print_transforms_summary,
     to_descriptive_dict,
 )
 
-from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 logger = logging.getLogger(__name__)
@@ -37,11 +37,11 @@ class PreProcessor(PreProcessorInterface):
     transformation, and management of datasources.
 
     See also:
-        - `lmetk.data.preprocessing.single_source_loader.SingleSourceLoader`:
+        - `picid.data.preprocessing.single_source_loader.SingleSourceLoader`:
                 For preprocessing pipelines that operate on a single data source.
-        - `lmetk.data.preprocessing.multi_source_loader.MultiSourceLoader`:
+        - `picid.data.preprocessing.multi_source_loader.MultiSourceLoader`:
                 For pipelines that handle multiple data sources simultaneously.
-        - `lmetk.data.preprocessing.phmd_loader.PHMDLoader`:
+        - `picid.data.preprocessing.phmd_loader.PHMDLoader`:
                 For specialized loading of PHMD-formatted data sources.
 
     Attributes:

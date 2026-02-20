@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.plot_transforms import PlotFeatures
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.plot_transforms import PlotFeatures
 
 
 @pytest.fixture

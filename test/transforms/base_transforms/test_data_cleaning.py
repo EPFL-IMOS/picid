@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 import pandas as pd
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.data_cleaning import FillTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.data_cleaning import FillTransform
 
 
 class TestFillTransform:

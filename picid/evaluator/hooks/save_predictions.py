@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import xarray as xr
 
-from lmetk.evaluator.hooks.base import BaseEvalHook
+from picid.evaluator.hooks.base import BaseEvalHook
 
 logger = logging.getLogger(__name__)
 

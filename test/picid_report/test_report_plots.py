@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.report.plots.
+Test suite for picid_report.report.plots.
 
 Validates plot_best_metric_bars and plot_hp_impact: data extraction from all_results,
 metric/prefix handling, empty/missing data, sorted (ranked) HP config order, and save_path.
@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
-from lmetk_report.report import plots
+from picid_report.report import plots
 
 
 def _make_all_results(

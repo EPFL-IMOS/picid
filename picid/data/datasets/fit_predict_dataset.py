@@ -9,13 +9,13 @@ from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 from torch.utils.data._utils.collate import default_collate
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     FORECASTING_TASKS,
 )
-from lmetk.data.datasets.base import BaseDataset
-from lmetk.utils.assertions import assert_list_of_ndarray_or_nd_array_for_dims
+from picid.data.datasets.base import BaseDataset
+from picid.utils.assertions import assert_list_of_ndarray_or_nd_array_for_dims
 
 logger = logging.getLogger(__name__)
 

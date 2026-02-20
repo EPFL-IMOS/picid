@@ -1,9 +1,9 @@
-"""Tests for lmetk.transforms.base.multisource.utils."""
+"""Tests for picid.transforms.base.multisource.utils."""
 import numpy as np
 from unittest.mock import MagicMock
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.multisource.utils import _log_transform_error
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.multisource.utils import _log_transform_error
 
 
 def test_log_transform_error_runs_without_raise():

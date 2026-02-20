@@ -11,11 +11,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 
-from lmetk.transforms.base.data_kind import get_capability, infer_data_kind
-from lmetk.transforms.base.handlers import get_handler
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.data_kind import get_capability, infer_data_kind
+from picid.transforms.base.handlers import get_handler
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 @dataclass
@@ -96,7 +96,7 @@ def dry_run_transforms(
     List[DryRunResult]
         One result per transform (transform_name, success, list of issue messages).
     """
-    from lmetk.transforms.base.multisource import find_singular_ragged_dim
+    from picid.transforms.base.multisource import find_singular_ragged_dim
 
     results = []
     transforms = manager.get_data_transforms()

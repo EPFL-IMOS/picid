@@ -3,7 +3,7 @@
 import torch
 from lightning_fabric.utilities.data import AttributeDict
 
-from lmetk.model.time_pfn.TimePFN import TimePFN
+from picid.model.time_pfn.TimePFN import TimePFN
 
 from .base import AbstractFeedForwardWrapper
 from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS

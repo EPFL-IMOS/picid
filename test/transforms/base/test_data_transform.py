@@ -1,4 +1,4 @@
-"""Tests for lmetk.transforms.base.data_transform module.
+"""Tests for picid.transforms.base.data_transform module.
 
 This file consolidates all tests for DataTransform from multiple test files.
 All dummy transforms and fixtures are imported from conftest.
@@ -10,9 +10,9 @@ from typing import Any, Dict, List
 from omegaconf import DictConfig, OmegaConf
 import inspect
 
-from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.data_transform import DataTransform, _type_matches, _matches
-from lmetk.data.data_objects.data import (
+from picid.transforms.base.base_transform import BaseTransform
+from picid.transforms.base.data_transform import DataTransform, _type_matches, _matches
+from picid.data.data_objects.data import (
     NamedTransformInput,
     SplitDatasetContainer,
     SimpleReturnObject,

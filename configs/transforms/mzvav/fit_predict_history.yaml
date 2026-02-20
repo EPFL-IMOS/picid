@@ -4,7 +4,7 @@ defaults:
 tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -26,7 +26,7 @@ tabularize_x_train:
 tabularize_x_val_test:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -45,7 +45,7 @@ tabularize_x_val_test:
 tabularize_y_train:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -67,7 +67,7 @@ tabularize_y_train:
 tabularize_y_val_test:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -85,7 +85,7 @@ tabularize_y_val_test:
 
 rugged_dimension_swap:
   transform:
-    _target_: lmetk.transforms.building.rugged_dimension_swap.RuggedDimensionSwap
+    _target_: picid.transforms.building.rugged_dimension_swap.RuggedDimensionSwap
     axis_to_regularize: 1
     axis_to_irregularize: 2
 
@@ -94,6 +94,6 @@ rugged_dimension_swap:
 
 concatenate_units:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+    _target_: picid.transforms.base_transforms.concatenate.RuggedToDenseTransform
   metadata:
     apply_to: [features, fault_classification]

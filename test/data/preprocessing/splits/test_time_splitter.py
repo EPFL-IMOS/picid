@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 import warnings
 
-from lmetk.data.preprocessing.splits.time_splitter import TimeSplitter, ValueWarning
+from picid.data.preprocessing.splits.time_splitter import TimeSplitter, ValueWarning
 
 
 class TestTimeSplitterInitialization:

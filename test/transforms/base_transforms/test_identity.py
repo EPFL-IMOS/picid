@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 import awkward as ak
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.transforms.base_transforms.identity import IdentityPassThrough
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.transforms.base_transforms.identity import IdentityPassThrough
 from test.transforms.base.conftest import create_dummy_split_container
 
 

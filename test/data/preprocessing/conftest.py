@@ -3,7 +3,7 @@
 Provides mock data loaders, transform managers, and sample data for testing
 the preprocessing pipeline components.
 
-Imports from lmetk.data.data_objects.data are deferred to inside fixtures
+Imports from picid.data.data_objects.data are deferred to inside fixtures
 so that collection does not pull in awkward/pyarrow before plugins are ready.
 """
 
@@ -60,7 +60,7 @@ def small_time_series_data():
 @pytest.fixture
 def sample_dataset_container():
     """Create a sample SplitDatasetContainer for testing."""
-    from lmetk.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects.data import SplitDatasetContainer
     return SplitDatasetContainer(
         features={
             "train": [np.random.randn(100, 5)],
@@ -78,7 +78,7 @@ def sample_dataset_container():
 @pytest.fixture
 def multi_unit_dataset_container():
     """Create a multi-unit SplitDatasetContainer."""
-    from lmetk.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects.data import SplitDatasetContainer
     n_units = 3
     return SplitDatasetContainer(
         features={
@@ -219,7 +219,7 @@ def hourly_timestamp_data():
 @pytest.fixture
 def multi_source_data():
     """Create multiple source data for BySourceSplitter tests."""
-    from lmetk.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects.data import SplitDatasetContainer
     sources = {
         'source_a': SplitDatasetContainer(
             features={"all": [np.random.randn(100, 5)]},
@@ -240,7 +240,7 @@ def multi_source_data():
 @pytest.fixture
 def source_containers():
     """Create list of DatasetContainers for source splitting."""
-    from lmetk.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects.data import SplitDatasetContainer
     containers = [
         SplitDatasetContainer(
             features={"all": [np.random.randn(100, 5)]},

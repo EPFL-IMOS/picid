@@ -5,12 +5,12 @@ import numpy as np
 from numpy import ndarray
 
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
-from lmetk.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
-from lmetk.transforms.utils import _convert_from_numpy, _convert_to_numpy
+from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
+from picid.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
 def ak_bc(arr):

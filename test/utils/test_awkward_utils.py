@@ -4,7 +4,7 @@ import awkward as ak
 
 # We assume your utility functions are in a file named `awkward_utils.py`
 # in the same directory or on the python path.
-from lmetk.utils.awkward_utils import (
+from picid.utils.awkward_utils import (
     ak_flatten_variable_dims,
     ak_unflatten_discontinous_groups,
     ak_find_var_dims,

@@ -15,7 +15,7 @@ scripts/**/*.log
 #phmd/
 results/
 artifacts/
-lmetk_report_artifacts/
+picid_report_artifacts/
 csv_files/
 MagicMock/
 
@@ -23,6 +23,7 @@ MagicMock/
 .DS_Store
 .venv
 .nox
+.csv
 *.egg-info
 build
 site/
@@ -37,7 +38,7 @@ container/rt_*
 *.jsonl
 trace.json
 scratch.ipynb
-/lmetk_report/csv_files/*
+/picid_report/csv_files/*
 /output
 /plot_dir
 /scripts/to_finish_large/

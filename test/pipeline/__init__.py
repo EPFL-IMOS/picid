@@ -1,1 +1,1 @@
-"""Tests for lmetk.pipeline module."""
+"""Tests for picid.pipeline module."""

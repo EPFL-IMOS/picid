@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import joblib
 
-from lmetk.utils.hash_utils import (
+from picid.utils.hash_utils import (
     hash_config,
     ensure_serializable,
     compute_cache_key,

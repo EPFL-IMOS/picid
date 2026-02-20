@@ -1,13 +1,13 @@
 # subsample_features:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.subsample.SubsampleTransform
+#     _target_: picid.transforms.base_transforms.subsample.SubsampleTransform
 #     step: 100
 #   metadata:
 #     apply_to: features
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: features
@@ -15,7 +15,7 @@ scaler_features:
 
 take_last_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 1 # TO BE CHANGED SOMEHOW
     window_size: full
     aggregation: last
@@ -26,14 +26,14 @@ take_last_target:
 # Reduce target dim
 reshape_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a 1 1 -> a 1"
   metadata:
     apply_to: target
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    _target_: picid.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
     dataset_name: XJTU-SY
@@ -45,7 +45,7 @@ scaler_target:
 ############# CumSum Feature #################
 cumsum_feature:
   transform:
-    _target_: lmetk.transforms.signal_processing.cumsum.CumSumTransform
+    _target_: picid.transforms.signal_processing.cumsum.CumSumTransform
 
   metadata:
     apply_to: "features"
@@ -53,7 +53,7 @@ cumsum_feature:
 
 take_last_cumsum:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 1 # TO BE CHANGED SOMEHOW
     window_size: full
     aggregation: last
@@ -63,7 +63,7 @@ take_last_cumsum:
 
 cumsum_feature_scaler:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: cumsum_feature
@@ -72,14 +72,14 @@ cumsum_feature_scaler:
 # Reduce target dim
 reshape_cumsum:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "1 a -> a"
   metadata:
     apply_to: cumsum_feature
 
 ragged2regular_cumsum_feature:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "cumsum_feature"
@@ -88,7 +88,7 @@ ragged2regular_cumsum_feature:
 
 time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
     hankel_window_size: 200
     stats_to_compute: [
         "mean",
@@ -114,7 +114,7 @@ time_domain_features:
 
 ragged2regular_time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "time_domain_features"
@@ -123,7 +123,7 @@ ragged2regular_time_domain_features:
 
 spectral_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
 
     stats_to_compute: [
         "mean",
@@ -151,7 +151,7 @@ spectral_domain_features:
 
 ragged2regular_spectral_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "spectral_features"
@@ -159,7 +159,7 @@ ragged2regular_spectral_features:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
     apply_to: [
@@ -172,7 +172,7 @@ concatenate_features:
 
 final_scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -180,7 +180,7 @@ final_scaler_features:
 # plot_features_final:
 #   transform:
 #     unit_key: unit_id
-#     _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+#     _target_: picid.transforms.visualization.features_target_plotter.FeatureTargetPlotter
 #     saving_path: ${paths.log_dir}/images_subsampled
 #     features_key: features
 #     target_key: target

@@ -4,8 +4,8 @@ from typing import Optional, Any
 
 import torch
 
-from lmetk.baselines.definitions import CLASSIFICATION_TASKS
-from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
+from picid.baselines.definitions import CLASSIFICATION_TASKS
+from picid.model.wrappers.base import AbstractFeedForwardWrapper
 
 from omegaconf import OmegaConf
 from autogluon.tabular import TabularPredictor
@@ -20,7 +20,7 @@ import pandas as pd
 
 from einops import rearrange
 
-from lmetk.model.autogluon.multi_label_predictor import MultilabelTabularPredictor
+from picid.model.autogluon.multi_label_predictor import MultilabelTabularPredictor
 
 
 class AutoGluonWrapper(AbstractFeedForwardWrapper):

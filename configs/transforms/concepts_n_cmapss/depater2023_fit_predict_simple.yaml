@@ -4,7 +4,7 @@ defaults:
 # Introduce the task dimension to X, y. We
 reshape_X:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: features
@@ -12,13 +12,13 @@ reshape_X:
 
 reshape_y:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: rul
     assign_to: rul
 # concatenate_units:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.concatenate.RuggedToDenseTransform
+#     _target_: picid.transforms.base_transforms.concatenate.RuggedToDenseTransform
 #   metadata:
 #     apply_to: [features, rul, concepts]

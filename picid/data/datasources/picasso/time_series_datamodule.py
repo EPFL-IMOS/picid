@@ -602,7 +602,7 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
     def _add_datetime_features(self):
         """Add datetime features if requested"""
 
-        from lmetk.case_studies.common import time_features
+        from picid.case_studies.common import time_features
 
         dtf = time_features(
             pd.Series(self.data.index), use_features=["month", "day", "weekday", "hour"]

@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import warnings
 import pandas as pd
-from lmetk.transforms.base_transforms.imputation_methods import ImputationTransform
-from lmetk.transforms.base_transforms.mcar_corruption import MCARCorruptorTransform
+from picid.transforms.base_transforms.imputation_methods import ImputationTransform
+from picid.transforms.base_transforms.mcar_corruption import MCARCorruptorTransform
 
 
 # --- Fixtures ---

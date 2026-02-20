@@ -1,4 +1,4 @@
-_target_: lmetk.baselines.patchtst_model.PatchTST_Forecaster
+_target_: picid.baselines.patchtst_model.PatchTST_Forecaster
 
 metadata:
   lightning_model: true

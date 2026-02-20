@@ -2,7 +2,7 @@
 # We define a group named 'block_configs' and explicitly tell Hydra
 # where to find its files using the special '_group_' key.
 
-_target_: lmetk.model.autoencoder.wrapper.AutoencoderWrapper
+_target_: picid.model.autoencoder.wrapper.AutoencoderWrapper
 task_type: ${task_definition.task_type}
 
 input_channels: null # currently defined in the experiment

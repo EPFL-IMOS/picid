@@ -1,7 +1,7 @@
 # Dataset loader config
 # Must have keys: data_name, task_mode
 
-_target_: lmetk.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
+_target_: picid.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
 
 # Must have keys
 data_name: ${.data_folder}_${.n_DS}

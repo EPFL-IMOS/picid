@@ -1,1 +1,1 @@
-"""Tests for lmetk.callbacks module."""
+"""Tests for picid.callbacks module."""

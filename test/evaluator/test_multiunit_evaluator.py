@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 from collections import defaultdict
 from pathlib import Path
 
-from lmetk.evaluator.multiunit import MultiUnitEvaluator
-from lmetk.metrics.base import AbstractMetric
-from lmetk.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
-from lmetk.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
+from picid.evaluator.multiunit import MultiUnitEvaluator
+from picid.metrics.base import AbstractMetric
+from picid.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
+from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
 
 # =========================================================================
 # === 1. MOCKS & FACTORY ===
@@ -42,7 +42,7 @@ def multiunit_evaluator_factory(mocker, mock_path_obj):
         collect_predictions=True,
         use_mock_logger=True,
     ):
-        from lmetk.transforms.base.multisource import InverseTransformMixin
+        from picid.transforms.base.multisource import InverseTransformMixin
 
         class SimpleScaler(InverseTransformMixin):
             def __init__(self, apply_inverse_scaling):
@@ -181,7 +181,7 @@ def test_compute_aggregates_means_and_logs_per_unit(multiunit_evaluator_fixture)
     assert "mse_normalized_mean" in results
 
 
-# @patch("lmetk.evaluator.multiunit.plt")
+# @patch("picid.evaluator.multiunit.plt")
 # def test_plotting_triggers(mock_plt, multiunit_evaluator_with_plotting_fixture):
 #     eval = multiunit_evaluator_with_plotting_fixture
 #     mock_plt.subplots.return_value = (MagicMock(), MagicMock())
@@ -231,7 +231,7 @@ def test_update_splits_data_by_unit_2d(multiunit_evaluator_fixture):
     assert (2, 101) in eval.unit_managers
 
 
-@patch("lmetk.evaluator.hooks.unit_trend_plot.plt")
+@patch("picid.evaluator.hooks.unit_trend_plot.plt")
 def test_plotting_skips_when_no_logger(mock_plt, multiunit_evaluator_factory):
     """
     Tests that plotting is bypassed if no remote logger is provided.
@@ -256,7 +256,7 @@ def test_plotting_skips_when_no_logger(mock_plt, multiunit_evaluator_factory):
     mock_plt.subplots.assert_not_called()
 
 
-@patch("lmetk.evaluator.hooks.unit_trend_plot.plt")
+@patch("picid.evaluator.hooks.unit_trend_plot.plt")
 def test_plotting_handles_empty_predictions(
     mock_plt, multiunit_evaluator_with_plotting_fixture
 ):

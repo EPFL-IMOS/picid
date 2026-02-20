@@ -1,4 +1,4 @@
-# lmetk_report/report/plots.py
+# picid_report/report/plots.py
 """
 Paper-ready plotting helpers. Reads from all_results (output of analyze_results).
 
@@ -10,7 +10,7 @@ from typing import Optional
 
 import pandas as pd
 
-from lmetk_report.utils import flatten_aggregated_columns
+from picid_report.utils import flatten_aggregated_columns
 
 
 def _ensure_matplotlib():

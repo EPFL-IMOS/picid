@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 
 import numpy as np
 
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
 
 
 class SourceSplitter(ABC):

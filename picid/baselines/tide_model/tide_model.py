@@ -3,12 +3,12 @@ from typing import Callable, Tuple
 import torch
 from omegaconf import OmegaConf
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     STATE_FORECASTING_TASKS,
 )
-from lmetk.baselines.forecaster import TransformerForecaster
+from picid.baselines.forecaster import TransformerForecaster
 
 from .tide import Model as TiDE
 

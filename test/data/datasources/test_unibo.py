@@ -6,15 +6,15 @@ from unittest.mock import MagicMock
 
 # --- Import the classes you need to test ---
 # (You will need to adjust these import paths to match your library structure)
-from lmetk.data.datasources.unibo.unibo_powertools_data import (
+from picid.data.datasources.unibo.unibo_powertools_data import (
     UniboPowertoolsData,
     CycleCols,
     CapacityCols,
 )
-from lmetk.data.datasources.unibo.model_data_handler import ModelDataHandler
+from picid.data.datasources.unibo.model_data_handler import ModelDataHandler
 
 # Assuming your RulHandler is here, adjust path if needed
-from lmetk.data.datasources.nb14.prepare_rul_data import RulHandler
+from picid.data.datasources.nb14.prepare_rul_data import RulHandler
 
 
 # =========================================================================
@@ -112,7 +112,7 @@ def mock_unibo_csvs(mocker):
     """
     # 1. Mock the dataset download
     mocker.patch(
-        "lmetk.data.datasources.unibo.unibo_powertools_data.download", return_value=None
+        "picid.data.datasources.unibo.unibo_powertools_data.download", return_value=None
     )
 
     # 2. Create fake "cycle" (features) data

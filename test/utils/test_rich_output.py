@@ -23,7 +23,7 @@ import awkward as ak
 from omegaconf import OmegaConf
 from unittest.mock import patch, MagicMock
 
-from lmetk.utils.rich_output import (
+from picid.utils.rich_output import (
     describe_data_type,
     to_descriptive_dict,
     descriptive_dict_differences_str,

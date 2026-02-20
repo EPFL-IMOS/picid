@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.base module.
+Tests for picid.evaluator.base module.
 
 This module contains tests for AbstractEvaluator, the base class for all
 PHM evaluators. It handles initialization, scaling wrapper setup, and
@@ -18,12 +18,12 @@ import numpy as np
 from unittest.mock import MagicMock, patch
 from abc import ABC
 
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.evaluator.scaling_wrapper import (
+from picid.evaluator.base import AbstractEvaluator
+from picid.evaluator.scaling_wrapper import (
     ScalingWrapper,
     MultivariateTimeseriesScalingWrapper,
 )
-from lmetk.transforms.base.multisource import InverseTransformMixin
+from picid.transforms.base.multisource import InverseTransformMixin
 
 
 # =============================================================================

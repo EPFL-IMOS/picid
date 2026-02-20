@@ -1,4 +1,4 @@
-# lmetk_report/config.py
+# picid_report/config.py
 """
 Central configuration for the experiment analysis pipeline.
 
@@ -130,9 +130,9 @@ REQUIRED_COLUMNS = [
 
 #  Global Expected Search Space (legacy / default for all datasets) ---
 # Shape: {model: {hp_name: [values]}}. Used as the "default for all datasets" when
-# lmetk_report.configs.search_space.DEFAULT_SEARCH_SPACE is None (see search_space.py).
+# picid_report.configs.search_space.DEFAULT_SEARCH_SPACE is None (see search_space.py).
 #
-# Prefer defining search space in one place: lmetk_report.configs.search_space
+# Prefer defining search space in one place: picid_report.configs.search_space
 #   - EXPECTED_SEARCH_SPACE[dataset][model] = per-dataset grid
 #   - DEFAULT_SEARCH_SPACE = {model: {hp: [values]}} for all datasets, or {} for data-first
 # This dict is still read by search_space.get_search_space() when DEFAULT_SEARCH_SPACE is None.
@@ -195,7 +195,7 @@ REQUIRED_COLUMNS = [
 
 # Import new config functions (backward compatible)
 try:
-    from lmetk_report.configs import (
+    from picid_report.configs import (
         get_search_space,
         get_sort_metric,
         SORT_METRIC_BY_TASK_TYPE,
@@ -232,7 +232,7 @@ class PipelineConfig:
         """Build a PipelineConfig from the current module-level config."""
         # Import get_sort_metric from configs if available
         try:
-            from lmetk_report.configs import get_sort_metric
+            from picid_report.configs import get_sort_metric
             resolver = get_sort_metric
         except ImportError:
             resolver = None

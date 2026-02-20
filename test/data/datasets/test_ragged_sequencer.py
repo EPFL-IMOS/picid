@@ -2,10 +2,10 @@ import pytest
 import awkward as ak
 from unittest.mock import patch
 import numpy as np
-from lmetk.data.optimization.ak_jagged_sequencer import (
+from picid.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 # --- Fixtures ---
 
@@ -386,7 +386,7 @@ def test_ragged_dim_zero_coverage(dense_features_ak):
     # We need to mock 'ragged_index_tuples' to return a list containing an empty tuple [()].
     # This simulates the root level iteration.
     with patch(
-        "lmetk.data.optimization.ak_jagged_sequencer.ragged_index_tuples"
+        "picid.data.optimization.ak_jagged_sequencer.ragged_index_tuples"
     ) as mock_tuples:
         mock_tuples.return_value = [()]  # List containing one empty tuple
 

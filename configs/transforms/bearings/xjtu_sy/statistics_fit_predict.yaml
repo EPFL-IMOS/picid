@@ -29,7 +29,7 @@ defaults:
 tabularize_x_train:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -51,7 +51,7 @@ tabularize_x_train:
 tabularize_x_val_test:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -70,7 +70,7 @@ tabularize_x_val_test:
 tabularize_y_train:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: 0
     pred_len: 1
@@ -92,7 +92,7 @@ tabularize_y_train:
 tabularize_y_val_test:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     padding_left_flag: ${task_definition.padding_left_flag}
     label_len: 0
@@ -110,7 +110,7 @@ tabularize_y_val_test:
 
 concatenate_units:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
     axis: 1
 
   metadata:

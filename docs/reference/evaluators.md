@@ -1,6 +1,6 @@
 # Evaluators
 
-This document describes the evaluator subsystem in `lmetk.evaluator`: the abstract base, scaling utilities, buffer, hooks, metric management, and all concrete evaluators. For each component we explain **purpose**, **architecture**, **attributes**, **methods** (signatures, inputs, outputs), and **logic** in explicit form.
+This document describes the evaluator subsystem in `picid.evaluator`: the abstract base, scaling utilities, buffer, hooks, metric management, and all concrete evaluators. For each component we explain **purpose**, **architecture**, **attributes**, **methods** (signatures, inputs, outputs), and **logic** in explicit form.
 
 ---
 
@@ -26,7 +26,7 @@ This document describes the evaluator subsystem in `lmetk.evaluator`: the abstra
 
 ## Overview and architecture
 
-**Location:** `lmetk/evaluator/`
+**Location:** `picid/evaluator/`
 
 **Role:** Evaluators consume model outputs (predictions and targets), optionally apply inverse scaling via the scaling wrapper, update internal metrics via a `MetricManager`, accumulate data in a `PredictionBuffer` for saving and plotting, and invoke pluggable **hooks** for side effects (saving to disk, logging plots). At the end of an evaluation phase, they return a dictionary of metric values.
 
@@ -55,7 +55,7 @@ This document describes the evaluator subsystem in `lmetk.evaluator`: the abstra
 
 ## Task types
 
-Task types are defined in `lmetk.baselines.definitions` and used by evaluators to branch logic (scaling, metric factory):
+Task types are defined in `picid.baselines.definitions` and used by evaluators to branch logic (scaling, metric factory):
 
 | Constant | Values |
 |----------|--------|
@@ -75,7 +75,7 @@ Task types are defined in `lmetk.baselines.definitions` and used by evaluators t
 
 ## AbstractEvaluator (base)
 
-**Module:** `lmetk.evaluator.base`
+**Module:** `picid.evaluator.base`
 
 **Purpose:** Abstract base for all evaluators. It selects the scaling strategy (univariate vs multivariate) and declares the interface: `update`, `compute`, `reset`.
 
@@ -122,7 +122,7 @@ __init__(
 
 ## Scaling wrappers
 
-**Module:** `lmetk.evaluator.scaling_wrapper`
+**Module:** `picid.evaluator.scaling_wrapper`
 
 Two wrappers delegate inverse scaling to an `InverseTransformMixin` instance and handle shape flattening/reshaping so the scaler sees 2D data.
 
@@ -169,7 +169,7 @@ __init__(
 
 ## PredictionBuffer
 
-**Module:** `lmetk.evaluator.buffer`
+**Module:** `picid.evaluator.buffer`
 
 **Purpose:** Handles raw data accumulation for saving and plotting. Stores predictions, targets, optional normalized variants, and unit IDs.
 
@@ -204,7 +204,7 @@ __init__(self) -> None
 
 ## MetricManager
 
-**Module:** `lmetk.metrics.manager`
+**Module:** `picid.metrics.manager`
 
 **Purpose:** Orchestrates multiple metric instances. Handles dual-scaling (normalized/denormalized) and task-specific aggregation. Used by evaluators to avoid direct metric management.
 
@@ -252,13 +252,13 @@ __init__(
 
 ## Evaluation hooks
 
-**Module:** `lmetk.evaluator.hooks`
+**Module:** `picid.evaluator.hooks`
 
 **Purpose:** Pluggable lifecycle hooks for side effects during evaluation (saving, plotting). Hooks are invoked by `DefaultEvaluator` after each batch (`on_update_end`) and after metrics are computed (`on_compute_end`).
 
 ### BaseEvalHook
 
-**Module:** `lmetk.evaluator.hooks.base`
+**Module:** `picid.evaluator.hooks.base`
 
 Abstract base for all evaluator hooks.
 
@@ -272,7 +272,7 @@ Abstract base for all evaluator hooks.
 
 ### SavePredictionsHook
 
-**Module:** `lmetk.evaluator.hooks.save_predictions`
+**Module:** `picid.evaluator.hooks.save_predictions`
 
 **Purpose:** Handles NetCDF saving with standardized dimension naming. Resolves dimension size conflicts (e.g. classification: preds `(N, T, C)` vs targets `(N, T, 1)`).
 
@@ -292,7 +292,7 @@ __init__(self, dims: Optional[List[str]] = None)
 
 ### ReconstructionPlotHook
 
-**Module:** `lmetk.evaluator.hooks.reconstruction_plot`
+**Module:** `picid.evaluator.hooks.reconstruction_plot`
 
 **Purpose:** Generates signal reconstruction comparison plots (e.g. for autoencoders). Plots target vs prediction for up to 10 evenly spaced samples.
 
@@ -300,7 +300,7 @@ __init__(self, dims: Optional[List[str]] = None)
 
 ### UnitTrendPlotHook
 
-**Module:** `lmetk.evaluator.hooks.unit_trend_plot`
+**Module:** `picid.evaluator.hooks.unit_trend_plot`
 
 **Purpose:** Plots degradation trends split by unit ID. Intended for multi-unit RUL evaluation.
 
@@ -331,7 +331,7 @@ __init__(
 
 ## DefaultEvaluator
 
-**Module:** `lmetk.evaluator.default`
+**Module:** `picid.evaluator.default`
 
 **Purpose:** Orchestrates data flow between a `PredictionBuffer`, a `MetricManager`, and pluggable hooks. Supports regression, classification, and forecasting with optional dual reporting (normalized + denormalized) when inverse scaling is enabled.
 
@@ -404,7 +404,7 @@ __init__(
 
 ## ClassificationEvaluator
 
-**Module:** `lmetk.evaluator.classification`
+**Module:** `picid.evaluator.classification`
 
 **Purpose:** Specialized evaluator for classification tasks. Thin wrapper over `DefaultEvaluator` with `task_type="classification"` and required `num_classes`.
 
@@ -424,7 +424,7 @@ __init__(self, num_classes: int, metric_names: List[str], **kwargs: Any)
 
 ## ForecastingEvaluator
 
-**Module:** `lmetk.evaluator.forecasting`
+**Module:** `picid.evaluator.forecasting`
 
 **Purpose:** Forecasting evaluator with horizon slicing. Extends `DefaultEvaluator` by slicing predictions and targets to an optional effective prediction length and, for univariate mode, to an optional target dimension before calling the base `update`.
 
@@ -464,7 +464,7 @@ __init__(
 
 ## MultiUnitEvaluator
 
-**Module:** `lmetk.evaluator.multiunit`
+**Module:** `picid.evaluator.multiunit`
 
 **Purpose:** Evaluator that calculates metrics individually per unit ID. Extends `DefaultEvaluator` with per-unit `MetricManager` instances and optional per-unit metric logging.
 
@@ -515,7 +515,7 @@ Returns `(unique_units, get_indices, get_key)` for 1D or 2D unit identifiers. `g
 
 ## ReconstructionEvaluator
 
-**Module:** `lmetk.evaluator.reconstruction`
+**Module:** `picid.evaluator.reconstruction`
 
 **Purpose:** Specialized evaluator for reconstruction tasks (e.g. autoencoders). Thin wrapper over `DefaultEvaluator` with `task_type="regression"`. Reconstruction plots and prediction saving are handled by hooks (e.g. `ReconstructionPlotHook`, `SavePredictionsHook`).
 
@@ -533,7 +533,7 @@ __init__(self, metric_names: List[str], **kwargs: Any)
 
 ## Utils
 
-**Module:** `lmetk.evaluator.utils`
+**Module:** `picid.evaluator.utils`
 
 **Purpose:** Standalone scalar metric functions for ad-hoc or external use. Not integrated into the evaluator class hierarchy.
 
@@ -550,7 +550,7 @@ __init__(self, metric_names: List[str], **kwargs: Any)
 | `MSPE(pred, true)` | Mean squared percentage error |
 | `metric(pred, true)` | Returns `(mae, mse, rmse, mape, mspe)` |
 
-These operate on raw arrays and do not handle inverse scaling or the 3D `(N, T, C)` contract. The main regression/classification metrics used inside evaluators come from `lmetk.metrics` (MetricFactory, MetricManager).
+These operate on raw arrays and do not handle inverse scaling or the 3D `(N, T, C)` contract. The main regression/classification metrics used inside evaluators come from `picid.metrics` (MetricFactory, MetricManager).
 
 ---
 
@@ -562,7 +562,7 @@ The evaluators are typically instantiated via Hydra/OmegaConf from YAML configs 
 
 ```yaml
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.default.DefaultEvaluator
+  _target_: picid.evaluator.default.DefaultEvaluator
   metric_names: ["mae", "mse", "rmse"]
   apply_inverse_scaling: False
   inverse_transform_name: null
@@ -580,41 +580,41 @@ test:
 ### Classification
 
 ```yaml
-_target_: lmetk.evaluator.classification.ClassificationEvaluator
+_target_: picid.evaluator.classification.ClassificationEvaluator
 metric_names: ["f1", "accuracy", "precision", "recall"]
 num_classes: ${task_definition.num_classes}
 task_mode: ${datasource.task_mode}
 paths: ${paths}
 hooks:
-  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+  - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
     dims: ["sample", "time", "feature"]
 ```
 
 ### Multi-unit with unit trend plots
 
 ```yaml
-_target_: lmetk.evaluator.multiunit.MultiUnitEvaluator
+_target_: picid.evaluator.multiunit.MultiUnitEvaluator
 metric_names: ["mape", "phm_score", "mae", "mse", "rmse"]
 paths: ${paths}
 hooks:
-  - _target_: lmetk.evaluator.hooks.unit_trend_plot.UnitTrendPlotHook
+  - _target_: picid.evaluator.hooks.unit_trend_plot.UnitTrendPlotHook
     enable_subsampling: True
     subsample_threshold: 1000
     subsample_factor: 10
-  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+  - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
     dims: ["sample", "time", "feature"]
 ```
 
 ### Reconstruction with plots
 
 ```yaml
-_target_: lmetk.evaluator.reconstruction.ReconstructionEvaluator
+_target_: picid.evaluator.reconstruction.ReconstructionEvaluator
 metric_names: ["mae", "mse", "rmse"]
 plot_reconstructions: True
 paths: ${paths}
 hooks:
-  - _target_: lmetk.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook
-  - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+  - _target_: picid.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook
+  - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
     dims: ["sample", "time", "feature"]
 ```
 

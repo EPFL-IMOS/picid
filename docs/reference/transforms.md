@@ -59,7 +59,7 @@ Every transformation in the pipeline is defined by two distinct blocks:
 my_transform_name:
   # The Logic Block
   transform:
-    _target_: lmetk.transforms.path.to.YourClass
+    _target_: picid.transforms.path.to.YourClass
     arg1: value
     arg2: value
   
@@ -146,7 +146,7 @@ Sometimes you want to apply a transform *only* to specific splits, or apply the 
 ```yaml
 # 1. Define the Base Logic (Anchor)
 __tabularize_base: &__tabularize_base
-  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: 50
 
 # 2. Define Base Metadata (Anchor)
@@ -185,7 +185,7 @@ tabularize_test:
 ```yaml
 mcar_corruption:
   transform:
-    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    _target_: picid.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
     missing_fraction: 0.1
   metadata:
     apply_to: features
@@ -193,7 +193,7 @@ mcar_corruption:
 
 imputation:
   transform:
-    _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
+    _target_: picid.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "mean"
   metadata:
     apply_to: features_corrupted   # Work on the corrupted branch
@@ -211,7 +211,7 @@ imputation:
 ```yaml
 time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
     stats_to_compute: ["mean", "variance"]
   metadata:
     apply_to: "features"
@@ -219,7 +219,7 @@ time_domain_features:
 
 ragged2regular:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
   metadata:
     apply_to: "time_domain_features" # Converts the ragged stats to dense array
 ```
@@ -232,7 +232,7 @@ ragged2regular:
 ```yaml
 concatenate_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
     axis: 1
   metadata:
     # Concatenates spectral features with time features
@@ -250,7 +250,7 @@ These classes determine how the transform "sees" the data: does it learn from al
 
 ### Class Overview & Selection Guide
 
-Below is a guide to the mixins available in `lmetk.transforms.base.base_transform`. Your custom transform should inherit from `BaseTransform` **and** one of these mixins depending on the desired behavior.
+Below is a guide to the mixins available in `picid.transforms.base.base_transform`. Your custom transform should inherit from `BaseTransform` **and** one of these mixins depending on the desired behavior.
 
 #### A. `ConcatFitAndPerSegmentTransformMixin`
 **"Fit Global, Transform Local"** (legacy alias: `ConcatinatedFitMultiSourceTransformMixin`)
@@ -297,7 +297,7 @@ This transform learns from all units (Train set) but keeps them separate.
 scaler_global:
   transform:
     # Python class inherits ConcatFitAndPerSegmentTransformMixin
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
     
   metadata:
     apply_to: features
@@ -315,7 +315,7 @@ This transform merges all units into one. It **requires** an `axis` parameter.
 merge_units:
   transform:
     # Python class inherits NoFitConcatAlongAxisMixin
-    _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
     axis: 0  # <--- REQUIRED: How to stitch them together?
     
   metadata:
@@ -332,7 +332,7 @@ merge_units:
 log_transform:
   transform:
     # Python class inherits NoFitPerSegmentMixin
-    _target_: lmetk.transforms.math.LogTransform
+    _target_: picid.transforms.math.LogTransform
     
   metadata:
     apply_to: features
@@ -346,7 +346,7 @@ log_transform:
 To add new functionality, create a Python class that adheres to the framework's contract.
 
 ### Step 1: Inherit from BaseTransform
-Your class must inherit from `lmetk.transforms.base.base_transform.BaseTransform`.
+Your class must inherit from `picid.transforms.base.base_transform.BaseTransform`.
 
 ### Step 2: Implement Required Methods
 * `__init__`: Handle configuration arguments.
@@ -365,7 +365,7 @@ The signature of `transform_data` must match your `metadata.apply_to` configurat
 ### Example Class
 
 ```python
-from lmetk.transforms.base.base_transform import BaseTransform
+from picid.transforms.base.base_transform import BaseTransform
 
 class MyCustomScaler(BaseTransform):
     def __init__(self, factor: float = 1.0):

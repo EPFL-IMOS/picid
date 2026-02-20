@@ -5,8 +5,8 @@ import awkward as ak
 import numpy as np
 import torch
 
-from lmetk.transforms.base.multisource import find_singular_ragged_dim
-from lmetk.utils.awkward_utils import get_ak_shape, ragged_index_tuples
+from picid.transforms.base.multisource import find_singular_ragged_dim
+from picid.utils.awkward_utils import get_ak_shape, ragged_index_tuples
 
 logger = logging.getLogger(__name__)
 

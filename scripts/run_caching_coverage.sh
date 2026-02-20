@@ -19,7 +19,7 @@ if [ "$CACHE_ONLY" = true ]; then
     test/data/cache/test_file_system_cache.py \
     test/data/cache/test_stream_cache.py \
     test/data/cache/test_file_lock.py \
-    --cov=lmetk.data.cache \
+    --cov=picid.data.cache \
     --cov-report=term-missing \
     --cov-report=html:htmlcov_caching \
     -q \
@@ -31,8 +31,8 @@ else
     test/data/cache/test_stream_cache.py \
     test/data/cache/test_file_lock.py \
     test/data/preprocessing/test_preprocessor_caching.py \
-    --cov=lmetk.data.cache \
-    --cov=lmetk.data.preprocessing.preprocessor \
+    --cov=picid.data.cache \
+    --cov=picid.data.preprocessing.preprocessor \
     --cov-report=term-missing \
     --cov-report=html:htmlcov_caching \
     --cov-fail-under=0 \

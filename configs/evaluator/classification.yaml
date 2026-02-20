@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.classification.ClassificationEvaluator
+  _target_: picid.evaluator.classification.ClassificationEvaluator
 
   metric_names: ["f1", "accuracy", "precision", "recall", "auroc"] #f1
 
@@ -12,7 +12,7 @@ _evaluator_defaults: &evaluator_defaults
   paths: ${paths}
   num_classes: ${task_definition.num_classes}
   hooks:
-    - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
       dims: ["sample", "time", "feature"]
 
 train: *evaluator_defaults

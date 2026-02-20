@@ -4,13 +4,13 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
-from lmetk.data.data_objects.utils import convert_to_numpy
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.data.data_objects.utils import convert_to_numpy
 
 # Import the sequencer
-from lmetk.data.optimization.sequencer import DenseArraySequencer
+from picid.data.optimization.sequencer import DenseArraySequencer
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lmetk.data.datasources.agtf30k import (
+from picid.data.datasources.agtf30k import (
     subsampling,
     binarize_concept,
     scale_concept,
@@ -89,8 +89,8 @@ def test_agtf30k_load_data_full_path_mocked_io(mocker):
     fake_df = pd.DataFrame(
         {c: np.arange(n, dtype=float) for c in required_cols}
     )
-    mocker.patch("lmetk.data.datasources.agtf30k.os.path.exists", return_value=True)
-    mocker.patch("lmetk.data.datasources.agtf30k.pd.read_csv", return_value=fake_df)
+    mocker.patch("picid.data.datasources.agtf30k.os.path.exists", return_value=True)
+    mocker.patch("picid.data.datasources.agtf30k.pd.read_csv", return_value=fake_df)
     ds = AGTF30KDataSource(
         path="/fake",
         subsampling_rate=1,

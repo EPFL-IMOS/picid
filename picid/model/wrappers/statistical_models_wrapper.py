@@ -5,9 +5,9 @@ import torch
 from einops import rearrange
 from typing import Any, Dict, List, Optional
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
-from lmetk.model.methods.statistical_models import (
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
+from picid.model.methods.statistical_models import (
     LinearBaseline,
     PolynomialBaseline,
     ExponentialBaseline,

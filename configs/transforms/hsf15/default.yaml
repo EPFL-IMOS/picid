@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -9,7 +9,7 @@ scaler_features:
 # # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
 # ragged_regular_ragged_features:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+#     _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
 #   metadata:
 #     apply_to: features
@@ -18,7 +18,7 @@ scaler_features:
 # This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
 take_last_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 1 
     window_size: full
     aggregation: last
@@ -32,7 +32,7 @@ take_last_target:
 # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
 ragged_regular_ragged_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: fault_classification
@@ -41,7 +41,7 @@ ragged_regular_ragged_target:
 # Reduce target dim
 reshape_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a 1 1 -> a 1"
   metadata:
     apply_to: fault_classification
@@ -51,7 +51,7 @@ reshape_target:
 # Create time-domain and spectral-domain features
 time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
     hankel_window_size: 500
     stats_to_compute: [
         "mean",
@@ -77,7 +77,7 @@ time_domain_features:
 
 ragged2regular_time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "time_domain_features"
@@ -85,7 +85,7 @@ ragged2regular_time_domain_features:
 
 spectral_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
 
     stats_to_compute: [
         "mean",
@@ -113,7 +113,7 @@ spectral_domain_features:
 
 ragged2regular_spectral_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "spectral_features"
@@ -121,7 +121,7 @@ ragged2regular_spectral_features:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
     apply_to: ["spectral_features", "time_domain_features"]
@@ -129,7 +129,7 @@ concatenate_features:
 
 final_scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features

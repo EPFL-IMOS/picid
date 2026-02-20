@@ -1,12 +1,12 @@
 # OmegaConf Resolvers
 
-TabPHM uses **Hydra** and **OmegaConf** for configuration. Custom **resolvers** are registered in **`lmetk/run.py`** before `hydra.main` is invoked, so they are available in any YAML config loaded via the main entry point (e.g. `python lmetk/run.py ...`). In configs, use the syntax **`${resolver_name:arg1,arg2,...}`**. Resolvers are evaluated when OmegaConf resolves the config (e.g. when a value is first accessed); the two `infer_*` resolvers are replaced at runtime by the pipeline, so they only return real values after the pipeline has called the corresponding register function.
+TabPHM uses **Hydra** and **OmegaConf** for configuration. Custom **resolvers** are registered in **`picid/run.py`** before `hydra.main` is invoked, so they are available in any YAML config loaded via the main entry point (e.g. `python picid/run.py ...`). In configs, use the syntax **`${resolver_name:arg1,arg2,...}`**. Resolvers are evaluated when OmegaConf resolves the config (e.g. when a value is first accessed); the two `infer_*` resolvers are replaced at runtime by the pipeline, so they only return real values after the pipeline has called the corresponding register function.
 
 ---
 
 ## Built-in resolvers (always available)
 
-These are registered once at startup in `lmetk.run`.
+These are registered once at startup in `picid.run`.
 
 | Resolver | Signature | Description |
 |----------|-----------|-------------|
@@ -27,8 +27,8 @@ These are registered once at startup in `lmetk.run`.
 
 Two resolvers are registered first as placeholders and then **replaced** when the pipeline has the required data:
 
-1. **`infer_data_dim`** — Replaced via **`register_data_dim_resolver(data)`** (in `lmetk.run`). The new implementation takes a `key` (string) and `dim` (int), looks up `data[key]`, and returns the size of that array along dimension `dim`. Supports NumPy arrays, PyTorch tensors, and Awkward arrays (and lists of them, if consistent).
-2. **`infer_dataloader_length`** — Replaced via **`register_infer_dataloader_length_resolver(lengths)`** (in `lmetk.run`). The new implementation takes a `key` and returns `lengths[key]` (the dataloader length for that key).
+1. **`infer_data_dim`** — Replaced via **`register_data_dim_resolver(data)`** (in `picid.run`). The new implementation takes a `key` (string) and `dim` (int), looks up `data[key]`, and returns the size of that array along dimension `dim`. Supports NumPy arrays, PyTorch tensors, and Awkward arrays (and lists of them, if consistent).
+2. **`infer_dataloader_length`** — Replaced via **`register_infer_dataloader_length_resolver(lengths)`** (in `picid.run`). The new implementation takes a `key` and returns `lengths[key]` (the dataloader length for that key).
 
 If a config references these before they are replaced, the resolved value will be the placeholder string. Configs that depend on them should be evaluated after the pipeline has called the register functions.
 
@@ -36,7 +36,7 @@ If a config references these before they are replaced, the resolved value will b
 
 ## Where registration happens
 
-All resolver registration is in **`lmetk/run.py`**:
+All resolver registration is in **`picid/run.py`**:
 
 - **Top-level (before `hydra.main`):** `flat`, `uuid`, `sum`, `mod`, `int_div`, `prod`, `quot`, `diff`, and the initial (placeholder) `infer_data_dim` and `infer_dataloader_length`.
 - **During run setup:** The pipeline (or test harness) calls `register_data_dim_resolver(data)` and `register_infer_dataloader_length_resolver(lengths)` so that configs resolved later see the real dimensions and lengths.

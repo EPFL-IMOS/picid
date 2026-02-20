@@ -1,5 +1,5 @@
 """
-Test suite for lmetk_report.core.analysis.
+Test suite for picid_report.core.analysis.
 
 Validates result aggregation, hyperparameter grid-tracking, string normalization
 for merge, seed formatting, and edge cases (n=1, zero metrics, MultiIndex flattening).
@@ -11,8 +11,8 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from lmetk_report import config
-from lmetk_report.core import analysis
+from picid_report import config
+from picid_report.core import analysis
 
 
 # --- _trace_nans (analysis._trace_nans) ---
@@ -656,7 +656,7 @@ class TestAnalyzeResultsEdgeCases:
         """
         # Add test/mse so there is one matching metric; pipeline does not hit empty agg_dict path.
         # (Zero metrics with no optimization_col in df would yield empty agg_dict and later KeyError
-        # on sort; we cannot change lmetk_report so we test the path where one metric exists.)
+        # on sort; we cannot change picid_report so we test the path where one metric exists.)
         df = mock_df_no_matching_metrics.copy()
         df["test/mse"] = 1.0
         kwargs = {**default_analysis_kwargs, "optimization_col": "test/mse"}
@@ -723,7 +723,7 @@ class TestAnalyzeResultsAdditionalBranches:
             "run_name": ["r1"],
             "test/mse": [0.5],  # have so we can aggregate
         })
-        with patch("lmetk_report.core.analysis.get_optimized_metric", side_effect=ValueError("no metric")):
+        with patch("picid_report.core.analysis.get_optimized_metric", side_effect=ValueError("no metric")):
             with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
                 results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "D" in results and "M" in results["D"]
@@ -1313,7 +1313,7 @@ class TestSortMetricResolution:
         Methodology: Create PipelineConfig with resolver.
         Expected: Resolver from config used.
         """
-        from lmetk_report.config import PipelineConfig
+        from picid_report.config import PipelineConfig
         
         def resolver(dataset, model, task_type=None, dataset_category=None):
             return "test/f1"

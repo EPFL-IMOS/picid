@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock
 
-from lmetk.evaluator.buffer import PredictionBuffer
+from picid.evaluator.buffer import PredictionBuffer
 
 
 # =============================================================================

@@ -1,5 +1,5 @@
 """
-Test suite for ranking functionality in lmetk_report.scripts.plot_average_rank.
+Test suite for ranking functionality in picid_report.scripts.plot_average_rank.
 
 Validates parsing of summary CSVs, task-type inference, metric selection (with fallback),
 rank computation (average rank across datasets and per-dataset), and filename/label helpers.
@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from lmetk_report.scripts import plot_average_rank as pa
+from picid_report.scripts import plot_average_rank as pa
 
 
 # --- _parse_value_cell ---

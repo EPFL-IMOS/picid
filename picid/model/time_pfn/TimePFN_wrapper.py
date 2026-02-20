@@ -2,7 +2,7 @@
 import copy
 import torch.nn as nn
 import torch.nn.functional as F
-from lmetk.model.time_pfn.TimePFN import TimePFN as TimePFN_Model
+from picid.model.time_pfn.TimePFN import TimePFN as TimePFN_Model
 
 class TimePFNWrapper(nn.Module):
 

@@ -1,5 +1,5 @@
 """
-Central logging configuration for the lmetk_report pipeline.
+Central logging configuration for the picid_report pipeline.
 
 Use configure_logging(debug=...) at pipeline entry (e.g. run.main()) to set:
 - INFO: stage boundaries, per-dataset/model decisions, counts (suitable for "stay tuned").
@@ -12,8 +12,8 @@ When debug=True, DEBUG and above are shown with level and module name for tracin
 import logging
 import sys
 
-# Root logger name for the package; all subloggers (lmetk_report.run, etc.) inherit.
-LOGGER_NAME = "lmetk_report"
+# Root logger name for the package; all subloggers (picid_report.run, etc.) inherit.
+LOGGER_NAME = "picid_report"
 
 # Format when debug is off: just the message (current behavior).
 FORMAT_INFO = "%(message)s"
@@ -26,7 +26,7 @@ def configure_logging(
     stream=None,
 ) -> None:
     """
-    Configure the lmetk_report package logger and its children.
+    Configure the picid_report package logger and its children.
 
     Call this at pipeline entry (e.g. in run.main()) so that:
     - debug=False: INFO and above, message-only format (clean for normal runs).

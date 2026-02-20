@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.batchcontext_timepfn_wrapper.BatchContextTimePFNWrapper
+_target_: picid.model.wrappers.batchcontext_timepfn_wrapper.BatchContextTimePFNWrapper
 task_type: ${task_definition.task_type}
 
 seq_len: ${task_definition.seq_len} # window size

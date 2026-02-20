@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasources.MZVAV.MZVAVLoader
+_target_: picid.data.datasources.MZVAV.MZVAVLoader
 
 data_folder: building
 data_path: ${paths.data_dir}/${.data_folder}/${.data_name}.csv

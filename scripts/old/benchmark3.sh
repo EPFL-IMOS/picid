@@ -3,9 +3,9 @@ device=7
 max_epochs=100
 
 seq=1024
-python lmetk/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+python picid/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 # device=4
-# python lmetk/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+# python picid/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 wait
 
 
@@ -15,17 +15,17 @@ wait
 
 
 seq=2048
-python lmetk/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+python picid/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 
 # device=4
-# python lmetk/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+# python picid/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 wait
 
 
 seq=512
-python lmetk/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+python picid/run.py experiment=pronostia/prognostics/autoencoder/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 # device=4
-# python lmetk/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
+# python picid/run.py experiment=pronostia/prognostics/statistics/stf logger.wandb.project=$wandb_log_folder trainer.devices=[$device] trainer.max_epochs=$max_epochs task_definition.seq_len=$seq  task_definition.stride=$seq &
 wait
 
 

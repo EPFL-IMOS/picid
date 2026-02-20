@@ -10,10 +10,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
-from lmetk.data.datasets.context_dataset import ContextBatchDataset
-from lmetk.data.datasets.fit_predict_dataset import FitPredictTaskDataset
-from lmetk.data.datasets.hydra_concat_dataset import initialize_datasets
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datasets.context_dataset import ContextBatchDataset
+from picid.data.datasets.fit_predict_dataset import FitPredictTaskDataset
+from picid.data.datasets.hydra_concat_dataset import initialize_datasets
 from omegaconf import DictConfig
 
 
@@ -78,7 +78,7 @@ def test_fit_predict_missing_key():
 def test_hydra_initialize_empty_list_raises():
     """initialize_datasets with empty list raises ValueError."""
     cfg = DictConfig({
-        "_target_": "lmetk.data.datasets.rul_context_dataset.RULContextBatchDataset",
+        "_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset",
         "task_type": "rul",
         "seq_len": 2,
         "label_len": 0,

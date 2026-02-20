@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from einops import rearrange, repeat
 
-from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
+from picid.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 
 # from layers.Embed_iTransformer import DataEmbedding_inverted
 from .extra_layers import ConvBlock, Flatten

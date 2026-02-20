@@ -3,8 +3,8 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
 
 logger = logging.getLogger(__name__)
 

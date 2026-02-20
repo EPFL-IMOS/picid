@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper
+_target_: picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper
 task_type: ${task_definition.task_type}
 
 input_channels: null

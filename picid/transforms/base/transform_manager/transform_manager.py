@@ -13,9 +13,9 @@ from typing import Dict, List, Optional, Tuple, Union
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 
-from lmetk.transforms.base.data_transform import DataTransform
-from lmetk.utils.hash_utils import ensure_serializable
-from lmetk.transforms.base.multisource import InverseTransformMixin
+from picid.transforms.base.data_transform import DataTransform
+from picid.utils.hash_utils import ensure_serializable
+from picid.transforms.base.multisource import InverseTransformMixin
 
 logger = logging.getLogger(__name__)
 

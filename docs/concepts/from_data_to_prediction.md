@@ -54,7 +54,7 @@ The **model** receives batches from the dataloader (shapes defined by the task a
 
 ## 7. Pipeline ties it together (Hydra, config)
 
-The **pipeline** orchestrates datamodules, models, optimizers, and evaluators. Configuration is Hydra-based: the **experiment** key (e.g. `unibo/prognostics/raw/cnn_1d`) composes datasource, task_definition, dataset, transforms, model, and evaluator via `defaults` and `override` in YAML. Running `python lmetk/run.py paths=<paths> experiment=unibo/prognostics/raw/cnn_1d` runs this full flow.
+The **pipeline** orchestrates datamodules, models, optimizers, and evaluators. Configuration is Hydra-based: the **experiment** key (e.g. `unibo/prognostics/raw/cnn_1d`) composes datasource, task_definition, dataset, transforms, model, and evaluator via `defaults` and `override` in YAML. Running `python picid/run.py paths=<paths> experiment=unibo/prognostics/raw/cnn_1d` runs this full flow.
 
 → See [Guides: Config and overrides](../guides/configs_and_overrides.md) and [Examples: Unibo RUL](../examples/unibo_rul.md).
 

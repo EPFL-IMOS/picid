@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -8,7 +8,7 @@ scaler_features:
 
 ragged_regular_ragged_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.identity.IdentityPassThrough
+    _target_: picid.transforms.base_transforms.identity.IdentityPassThrough
 
   metadata:
     apply_to: target

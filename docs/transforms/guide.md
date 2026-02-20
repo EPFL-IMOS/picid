@@ -36,7 +36,7 @@ Transforms are configured using YAML files. Each transform entry has two main pa
 ```yaml
 transform_name:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
     # Additional parameters for the transform class
   
   metadata:
@@ -60,7 +60,7 @@ defaults:
 
 # Define reusable transform config
 __scaler_config: &scaler_config
-  _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+  _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
 # Use it multiple times
 scale_features:
@@ -194,7 +194,7 @@ To disable the built-in structural validation (e.g. for debugging or trusted pip
 ```yaml
 my_transform:
   transform:
-    _target_: lmetk.transforms.path.ToSomeTransform
+    _target_: picid.transforms.path.ToSomeTransform
   metadata:
     apply_to: features
     validate_output: false
@@ -207,13 +207,13 @@ The `ConfigTransformManager` is the main interface for working with transforms.
 ### Initialization
 
 ```python
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_manager import ConfigTransformManager
 from omegaconf import OmegaConf
 
 # From dictionary
 config = {
     "scale_features": {
-        "transform": {"_target_": "lmetk.transforms.base_transforms.scaler.StandardScalerSklearn"},
+        "transform": {"_target_": "picid.transforms.base_transforms.scaler.StandardScalerSklearn"},
         "metadata": {"apply_to": "features", "fit_on": "train"}
     }
 }
@@ -278,7 +278,7 @@ Fit the transform on training data, then apply to all splits:
 ```yaml
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: features
     fit_on: train  # Fit on train, transform all splits
@@ -291,7 +291,7 @@ Transforms that don't require fitting (e.g., reshaping, identity):
 ```yaml
 reshape_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     new_shape: [100, 10]
   metadata:
     apply_to: features
@@ -305,7 +305,7 @@ Fit across multiple units/sources:
 ```yaml
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: features
     fit_on: train
@@ -363,7 +363,7 @@ Scale features to [0, 1] using training statistics:
 ```yaml
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   metadata:
     apply_to: features
     fit_on: train
@@ -376,13 +376,13 @@ Apply multiple transforms in order:
 ```yaml
 clean_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.data_cleaning.RemoveOutliers
+    _target_: picid.transforms.base_transforms.data_cleaning.RemoveOutliers
   metadata:
     apply_to: features
 
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: features
     fit_on: train
@@ -395,7 +395,7 @@ Transform data and store in a new key:
 ```yaml
 extract_statistics:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatistics
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatistics
   metadata:
     apply_to: features
     assign_to: statistics
@@ -408,7 +408,7 @@ Transform only specific splits:
 ```yaml
 tabularize_train:
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: 100
   metadata:
     apply_to: features
@@ -416,7 +416,7 @@ tabularize_train:
 
 tabularize_val_test:
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: 100
   metadata:
     apply_to: features
@@ -430,7 +430,7 @@ Transform multiple keys simultaneously:
 ```yaml
 scale_features_and_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: [features, target]
     fit_on: train
@@ -445,14 +445,14 @@ scale_features_and_target:
 # transforms.yaml
 normalize_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: features
     fit_on: train
 
 normalize_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   metadata:
     apply_to: target
     fit_on: train
@@ -464,7 +464,7 @@ normalize_target:
 # Extract time statistics
 extract_stats:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatistics
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatistics
   metadata:
     apply_to: features
     assign_to: time_stats
@@ -472,7 +472,7 @@ extract_stats:
 # Extract spectral features
 extract_spectral:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralTransform
   metadata:
     apply_to: features
     assign_to: spectral_features
@@ -480,7 +480,7 @@ extract_spectral:
 # Concatenate all features
 concatenate_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
   metadata:
     apply_to: [features, time_stats, spectral_features]
     assign_to: features
@@ -492,7 +492,7 @@ concatenate_features:
 # Tabularize training data with stride
 tabularize_train:
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: 100
     stride: 10
   metadata:
@@ -502,7 +502,7 @@ tabularize_train:
 # Tabularize validation/test with different stride
 tabularize_val_test:
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: 100
     stride: 100  # No overlap for val/test
   metadata:

@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 import awkward as ak
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.shape_manipulations import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.shape_manipulations import (
     RegularizeRaggedDataTransform,
     ExpandScalarToReferenceFeatureSize,
     RaggedToDenseTransform,

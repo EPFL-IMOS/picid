@@ -5,7 +5,7 @@ Pseudo-run: load data + run transforms only (no training).
 Use this script to see loading and transform pipeline behaviour in action,
 including the MetadataManifest (Phase 4.1) and how new functionality is integrated.
 
-Inspired by lmetk/run.py; runs only:
+Inspired by picid/run.py; runs only:
   - datasource load + split
   - transform manager + preprocessor.pipeline()
 
@@ -39,15 +39,15 @@ if "PROJECT_ROOT" not in os.environ:
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-# Resolvers used by configs (same as lmetk/run.py) so Hydra can resolve e.g. hydra.run.dir
+# Resolvers used by configs (same as picid/run.py) so Hydra can resolve e.g. hydra.run.dir
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
 
-from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.datasources.unibo.loader import UNIBO21Loader
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.unibo.loader import UNIBO21Loader
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 def _print_section(title: str) -> None:
@@ -112,8 +112,8 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
     preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
 
     data_cache_path = cfg.paths.cache_path if (cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms) else None
-    data_library = Path(cfg.paths.root_dir) / "lmetk/data/datasources" if data_cache_path else None
-    transform_library = Path(cfg.paths.root_dir) / "lmetk/transforms" if data_cache_path else None
+    data_library = Path(cfg.paths.root_dir) / "picid/data/datasources" if data_cache_path else None
+    transform_library = Path(cfg.paths.root_dir) / "picid/transforms" if data_cache_path else None
     cache_preprocessed = cfg.cache.use_cache_after_transfroms
 
     print(f"  cache: data_cache_path={data_cache_path!s}, cache_preprocessed={cache_preprocessed}")

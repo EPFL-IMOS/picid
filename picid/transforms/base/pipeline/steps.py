@@ -28,16 +28,16 @@ from typing import Any, Dict, List
 
 import awkward as ak
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.data.data_objects.manifest import (
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
     MetadataManifest,
 )
-from lmetk.transforms.base.integrity import run_checks
+from picid.transforms.base.integrity import run_checks
 
-from lmetk.transforms.base.pipeline.checks import _run_scoped_checks
-from lmetk.transforms.base.pipeline.context import TransformContext
+from picid.transforms.base.pipeline.checks import _run_scoped_checks
+from picid.transforms.base.pipeline.context import TransformContext
 
 logger = logging.getLogger(__name__)
 
@@ -440,10 +440,10 @@ class IntegrityCheckAfterStep:
 
 
 def _get_producer_version() -> str:
-    """Return lmetk package version for manifest entries; fallback '0.0.0' on failure."""
+    """Return picid package version for manifest entries; fallback '0.0.0' on failure."""
     try:
         import importlib.metadata
-        return importlib.metadata.version("lmetk")
+        return importlib.metadata.version("picid")
     except Exception:
         return "0.0.0"
 

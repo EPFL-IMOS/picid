@@ -12,7 +12,7 @@ import pytest
 hypothesis = pytest.importorskip("hypothesis")
 from hypothesis import given, strategies as st
 
-from lmetk.data.data_objects.utils import (
+from picid.data.data_objects.utils import (
     get_length,
     check_length_consistency,
     check_for_nans,

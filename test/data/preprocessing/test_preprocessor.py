@@ -23,8 +23,8 @@ import pytest
 from unittest.mock import MagicMock, Mock, patch
 from dataclasses import dataclass
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.data.preprocessing.base import PreProcessorInterface
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.data.preprocessing.base import PreProcessorInterface
 
 
 class TestPreProcessorInitialization:

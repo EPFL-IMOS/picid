@@ -2,7 +2,7 @@
 
 from .base import AbstractFeedForwardWrapper
 
-from lmetk.model.methods.ses_model import SESModelBaseline
+from picid.model.methods.ses_model import SESModelBaseline
 from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 

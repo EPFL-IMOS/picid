@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
-from lmetk.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.data_objects.data import SplitDatasetContainer
 
 
 class ConcreteLoader(AbstractDataSourceLoader):

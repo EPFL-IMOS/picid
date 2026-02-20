@@ -1,17 +1,17 @@
 """Tests for base transform functionality.
 
-This file tests lmetk.transforms.base.base_transform module.
+This file tests picid.transforms.base.base_transform module.
 All dummy transforms and fixtures are imported from conftest.
 """
 import numpy as np
 import pytest
-from lmetk.transforms.base.base_transform import (
+from picid.transforms.base.base_transform import (
     BaseTransform,
     DenseTransform,
     RaggedTransform,
     RaggedOrDenseTransform,
 )
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (

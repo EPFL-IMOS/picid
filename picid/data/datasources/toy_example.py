@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 # --- LIBRARY IMPORTS ---
 # These are the base classes you must inherit from or use
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
 
 # In your actual code, you import this from utils.py

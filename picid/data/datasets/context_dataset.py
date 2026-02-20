@@ -2,16 +2,16 @@ from typing import List, Dict, Optional, Union
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     REGRESSION_TASKS,
     FORECASTING_TASKS,
     CLASSIFICATION_TASKS,
 )
-from lmetk.data.datasets.base import BaseDataset
-from lmetk.data.datasets.collate_functions import (
+from picid.data.datasets.base import BaseDataset
+from picid.data.datasets.collate_functions import (
     collate_key_value_batch,
 )
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
 import awkward as ak
 

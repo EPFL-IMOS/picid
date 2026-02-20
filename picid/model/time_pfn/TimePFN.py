@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-from lmetk.model.time_pfn.layers.Transformer_EncDec import Encoder, EncoderLayer
-from lmetk.model.time_pfn.layers.SelfAttention_Family import (
+from picid.model.time_pfn.layers.Transformer_EncDec import Encoder, EncoderLayer
+from picid.model.time_pfn.layers.SelfAttention_Family import (
     FullAttention,
     AttentionLayer,
 )
-from lmetk.model.time_pfn.layers.Embed import DataEmbedding_FeaturePatching
+from picid.model.time_pfn.layers.Embed import DataEmbedding_FeaturePatching
 
 
 class TimePFN(nn.Module):

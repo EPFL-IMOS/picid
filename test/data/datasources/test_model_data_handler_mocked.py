@@ -6,8 +6,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lmetk.data.datasources.unibo.model_data_handler import ModelDataHandler
-from lmetk.data.datasources.unibo.unibo_powertools_data import CycleCols, CapacityCols
+from picid.data.datasources.unibo.model_data_handler import ModelDataHandler
+from picid.data.datasources.unibo.unibo_powertools_data import CycleCols, CapacityCols
 
 
 def _make_cap(n_cycles: int, test_name: str, n_cols: int = 20):

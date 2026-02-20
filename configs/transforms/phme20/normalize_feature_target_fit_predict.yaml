@@ -3,7 +3,7 @@ defaults:
 
 populate_unit_information:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.ExpandScalarToReferenceFeatureSize
+    _target_: picid.transforms.base_transforms.shape_manipulations.ExpandScalarToReferenceFeatureSize
     scalar_key: unit_id
 
   metadata:
@@ -15,7 +15,7 @@ populate_unit_information:
 # --- Base blocks --------------------------------------------------------
 
 __tabularize_unit_id_transform: &__tabularize_unit_id_transform
-  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
   label_len: 0
   pred_len: 1
@@ -24,7 +24,7 @@ __tabularize_unit_id_transform: &__tabularize_unit_id_transform
     - unit_id: present
 
 __tabularize_x_transform: &__tabularize_x_transform
-  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
   label_len: 0
   pred_len: 1
@@ -33,7 +33,7 @@ __tabularize_x_transform: &__tabularize_x_transform
     - features: history
 
 __tabularize_y_transform: &__tabularize_y_transform
-  _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
   label_len: 0
   pred_len: 1
@@ -119,7 +119,7 @@ tabularize_y_val_test:
     transform_on_keys: ["val", "test"]
 # concatenate_units_and_ragged2numpy:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+#     _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
 #     axis: 1
 
 #   metadata:

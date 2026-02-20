@@ -10,7 +10,7 @@ from hydra.core.plugins import Plugins
 class ProjectSearchPathPlugin(SearchPathPlugin):
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
         search_path.append(
-            provider="lmetk.defaults", path=f"file://{Path.cwd()}/configs"
+            provider="picid.defaults", path=f"file://{Path.cwd()}/configs"
         )
 
     def register() -> None:

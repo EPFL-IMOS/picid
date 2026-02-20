@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 # --- Import the classes you need to test ---
 # (You will need to adjust these import paths to match your library structure)
-from lmetk.data.datasources.nb14.loader import (
+from picid.data.datasources.nb14.loader import (
     NB14Loader,
     NasaRandomizedData,
     RulHandler,
@@ -30,7 +30,7 @@ def test_rul_handler_prepare_y_future_nb14(mocker):
     rul_handler = RulHandler()
 
     # Patch the *module-level* logger where RulHandler uses it.
-    mocker.patch("lmetk.data.datasources.nb14.prepare_rul_data.logger", MagicMock())
+    mocker.patch("picid.data.datasources.nb14.prepare_rul_data.logger", MagicMock())
 
     # --- Handler Inputs ---
     battery_names = ["batt-A-2.2-X"]  # Name provides nominal capacity
@@ -83,7 +83,7 @@ def mock_nasa_mat_file(mocker):
     """
     # 1. Mock the download
     mocker.patch(
-        "lmetk.data.datasources.nb14.nasa_random_data.download", return_value=None
+        "picid.data.datasources.nb14.nasa_random_data.download", return_value=None
     )
 
     # 2. Create fake raw data that will produce 3 cycles with max_len=2
@@ -186,7 +186,7 @@ def mock_nb14_loader_deps(mocker):
 
     # 1. --- Mock NasaRandomizedData ---
     mock_nasa_class = mocker.patch(
-        "lmetk.data.datasources.nb14.loader.NasaRandomizedData"
+        "picid.data.datasources.nb14.loader.NasaRandomizedData"
     )
 
     # Define the 18-tuple of fake data it will return
@@ -235,7 +235,7 @@ def mock_nb14_loader_deps(mocker):
     )
 
     # 2. --- Mock RulHandler ---
-    mock_rul_class = mocker.patch("lmetk.data.datasources.nb14.loader.RulHandler")
+    mock_rul_class = mocker.patch("picid.data.datasources.nb14.loader.RulHandler")
     mock_rul_class.return_value.prepare_y_future.side_effect = [
         np.array([[0, 20.0], [1, 19.0], [2, 18.0]]),  # train
         np.array([[0, 15.0]]),  # val
@@ -265,16 +265,16 @@ def mock_nb14_loader_deps(mocker):
     }
 
     mocker.patch.dict(
-        "lmetk.data.datasources.nb14.loader.UNIT_NAMES_TO_ID", mock_unit_ids
+        "picid.data.datasources.nb14.loader.UNIT_NAMES_TO_ID", mock_unit_ids
     )
     mocker.patch(
-        "lmetk.data.datasources.nb14.loader.train_names", mock_names["train_names"]
+        "picid.data.datasources.nb14.loader.train_names", mock_names["train_names"]
     )
     mocker.patch(
-        "lmetk.data.datasources.nb14.loader.val_names", mock_names["val_names"]
+        "picid.data.datasources.nb14.loader.val_names", mock_names["val_names"]
     )
     mocker.patch(
-        "lmetk.data.datasources.nb14.loader.test_names", mock_names["test_names"]
+        "picid.data.datasources.nb14.loader.test_names", mock_names["test_names"]
     )
 
     return mock_nasa_class, mock_rul_class, mock_names
@@ -385,7 +385,7 @@ def test_nasa_randomized_data_get_discharge_branches(
 
     # We also need to mock the `download` in the __init__
     mocker.patch(
-        "lmetk.data.datasources.nb14.nasa_random_data.download", return_value=None
+        "picid.data.datasources.nb14.nasa_random_data.download", return_value=None
     )
 
     # Instantiate the class

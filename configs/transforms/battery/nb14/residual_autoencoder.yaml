@@ -3,7 +3,7 @@ defaults:
 
 autoencoder:
   transform:
-    _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+    _target_:  picid.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
     folder_name: null #${paths.root_dir}//home/levtel/projects/TabPHM/artifacts/debug/runs/debug+nb14+reconstruction+residual_autoencoder/2025-11-10_01-36-21 # TODO, define the path where the autoencoder artifacts are stored
 
   metadata:
@@ -14,7 +14,7 @@ autoencoder:
   
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   
   metadata:
     apply_to: target
@@ -23,7 +23,7 @@ scaler_target:
 
 # sequence2combined:
 #   transform:
-#     _target_: lmetk.transforms.battery.sequence2combined.Sequence2combined
+#     _target_: picid.transforms.battery.sequence2combined.Sequence2combined
 #     padding_value: null
 
 #   metadata:
@@ -31,7 +31,7 @@ scaler_target:
   
 # ragged2regularragged:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+#     _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
 #   metadata:
 #     apply_to: 'features'

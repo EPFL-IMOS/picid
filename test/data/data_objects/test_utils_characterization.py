@@ -1,7 +1,7 @@
 """
-Characterization tests for lmetk.data.data_objects.utils only.
+Characterization tests for picid.data.data_objects.utils only.
 
-This module imports from lmetk.data.data_objects.utils; tests use real arrays
+This module imports from picid.data.data_objects.utils; tests use real arrays
 (numpy, pandas, awkward) and assert concrete expected outcomes.
 Run: pytest test/data/data_objects/test_utils_characterization.py -v
 """
@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lmetk.data.data_objects.utils import (
+from picid.data.data_objects.utils import (
     get_length,
     check_length_consistency,
     check_for_nans,

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from math import sqrt
-from lmetk.model.utils.masking import TriangularCausalMask, ProbMask
+from picid.model.utils.masking import TriangularCausalMask, ProbMask
 from einops import rearrange
 
 #code implementation from iTransformer

@@ -9,7 +9,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-from lmetk.data.datasources.MZVAV import MZVAVLoader
+from picid.data.datasources.MZVAV import MZVAVLoader
 
 
 @pytest.fixture

@@ -3,11 +3,11 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 
-from lmetk.baselines.definitions import ALL_TASKS, CLASSIFICATION_TASKS
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.evaluator.buffer import PredictionBuffer
-from lmetk.evaluator.hooks.base import BaseEvalHook
-from lmetk.metrics.manager import MetricManager
+from picid.baselines.definitions import ALL_TASKS, CLASSIFICATION_TASKS
+from picid.evaluator.base import AbstractEvaluator
+from picid.evaluator.buffer import PredictionBuffer
+from picid.evaluator.hooks.base import BaseEvalHook
+from picid.metrics.manager import MetricManager
 
 logger = logging.getLogger(__name__)
 

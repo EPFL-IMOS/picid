@@ -8,7 +8,7 @@ defaults:
 transforms:
   autoencoder:
     transform:
-      _target_:  lmetk.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+      _target_:  picid.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
       folder_name: ${paths.root_dir}/artifacts/debug/runs/debug+nb14+reconstruction+residual_autoencoder/2025-11-10_01-36-21 # TODO, define the path where the autoencoder artifacts are stored
 
     metadata:

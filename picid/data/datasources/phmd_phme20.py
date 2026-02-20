@@ -3,7 +3,7 @@ from typing import Dict
 
 import numpy as np
 
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,9 @@
-# lmetk_report/core/preprocess.py
+# picid_report/core/preprocess.py
 """
 Preprocessing helpers for the analysis pipeline.
 
 clean_and_rename_models: normalizes model names for display and grouping:
-- Strips a common package prefix (e.g. lmetk.baselines. -> baselines.) so names are short.
+- Strips a common package prefix (e.g. picid.baselines. -> baselines.) so names are short.
 - Appends (linear) or (exponential) from model.model_type when present (e.g. StatisticalBaselineWrapper).
 Defaults use config.COLUMN_CONFIG for column names; override via optional arguments.
 """
@@ -14,7 +14,7 @@ from typing import Optional
 
 import pandas as pd
 
-from lmetk_report import config
+from picid_report import config
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ def clean_and_rename_models(
     as "(linear)" vs "(exponential)" using model.model_type.
 
     Matches the logic in table.ipynb so that:
-    - "lmetk.baselines.patchtst_model.PatchTST_Forecaster" -> "patchtst_model.PatchTST_Forecaster"
-    - "lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper" + type "linear"
+    - "picid.baselines.patchtst_model.PatchTST_Forecaster" -> "patchtst_model.PatchTST_Forecaster"
+    - "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper" + type "linear"
       -> "statistical_models_wrapper.StatisticalBaselineWrapper (linear)"
 
     Parameters

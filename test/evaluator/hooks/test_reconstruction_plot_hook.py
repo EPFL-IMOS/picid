@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook.
+Tests for picid.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook.
 
 Ref: docs/evaluators/index.md - ReconstructionEvaluator, reconstruction plots.
 Validates: Guard conditions, plot creation, data integrity, PHM shape (N, T, C).
@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from lmetk.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
-from lmetk.evaluator.buffer import PredictionBuffer
+from picid.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
+from picid.evaluator.buffer import PredictionBuffer
 
 
 # =============================================================================
@@ -33,7 +33,7 @@ def test_reconstruction_plot_hook_returns_early_when_plot_reconstructions_false(
     evaluator.buffer = PredictionBuffer()
     evaluator.buffer.accumulate({"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))})
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_plt.subplots.assert_not_called()
 
@@ -53,7 +53,7 @@ def test_reconstruction_plot_hook_returns_early_when_no_remote_logger():
     evaluator.buffer = PredictionBuffer()
     evaluator.buffer.accumulate({"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))})
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_plt.subplots.assert_not_called()
 
@@ -72,7 +72,7 @@ def test_reconstruction_plot_hook_returns_early_when_buffer_empty():
     evaluator.remote_logger = MagicMock()
     evaluator.buffer = PredictionBuffer()
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_plt.subplots.assert_not_called()
 
@@ -92,7 +92,7 @@ def test_reconstruction_plot_hook_returns_early_when_preds_none():
     evaluator.buffer = MagicMock()
     evaluator.buffer.get_all.return_value = {"targets": np.ones((2, 10, 1))}
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_plt.subplots.assert_not_called()
 
@@ -102,7 +102,7 @@ def test_reconstruction_plot_hook_returns_early_when_preds_none():
 # =============================================================================
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_reconstruction_plot_hook_creates_figure_with_nominal_data(
     mock_plt, phm_reconstruction_buffer_data
 ):
@@ -139,7 +139,7 @@ def test_reconstruction_plot_hook_creates_figure_with_nominal_data(
     mock_plt.close.assert_called_once_with(mock_fig)
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_reconstruction_plot_hook_selects_up_to_10_indices(mock_plt):
     """
     Validates index selection: np.linspace for up to 10 evenly spaced samples.
@@ -170,7 +170,7 @@ def test_reconstruction_plot_hook_selects_up_to_10_indices(mock_plt):
     mock_axes.flatten.assert_called()
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_reconstruction_plot_hook_plots_first_channel_only(mock_plt):
     """
     Validates that plots use first channel/dim (index 0) for comparison.

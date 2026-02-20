@@ -4,7 +4,7 @@ import logging
 
 from numpy import ndarray
 
-from lmetk.data.data_objects.data import DatasetContainer
+from picid.data.data_objects.data import DatasetContainer
 
 logger = logging.getLogger(__name__)
 

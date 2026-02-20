@@ -3,8 +3,8 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 

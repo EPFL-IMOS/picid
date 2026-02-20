@@ -1,15 +1,15 @@
 """
-Test suite for lmetk_report.core.validators.
+Test suite for picid_report.core.validators.
 
 Validates validate_schema, log_modification, validate_seeds, and check_hidden_variations
-used by the analysis pipeline. Does not modify lmetk_report.
+used by the analysis pipeline. Does not modify picid_report.
 """
 
 from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from lmetk_report.core import validators
+from picid_report.core import validators
 
 
 class TestValidateSchema:
@@ -80,7 +80,7 @@ class TestValidateSeeds:
         df = pd.DataFrame({"g": [1, 1], "seed": [1, 2]})
         mock_gb = MagicMock()
         mock_gb.filter.side_effect = TypeError("mock")
-        with patch("lmetk_report.core.validators.pd.DataFrame.groupby", return_value=mock_gb):
+        with patch("picid_report.core.validators.pd.DataFrame.groupby", return_value=mock_gb):
             out = validators.validate_seeds(df, ["g"], "seed", {1, 2})
         assert len(out) == 2
         assert mock_gb.filter.called

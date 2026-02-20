@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 import numpy as np
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.metrics.manager import MetricManager
+from picid.evaluator.default import DefaultEvaluator
+from picid.metrics.manager import MetricManager
 
 
 class MultiUnitEvaluator(DefaultEvaluator):

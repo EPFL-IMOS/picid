@@ -16,9 +16,9 @@ Log full context and exception so you can inspect state at failure time (e.g. in
 
 ```python
 import logging
-from lmetk.transforms.base.pipeline import register_hook
+from picid.transforms.base.pipeline import register_hook
 
-logger = logging.getLogger("lmetk.transforms")
+logger = logging.getLogger("picid.transforms")
 
 def on_error_log(event: str, context) -> None:
     if context.error is None:
@@ -47,7 +47,7 @@ register_hook("on_transform_error", on_error_log)
 When the failure is the “no splits left after applying transform_on_keys” case (or any `ValueError` in CopyStep), print a short, actionable summary:
 
 ```python
-from lmetk.transforms.base.pipeline import register_hook
+from picid.transforms.base.pipeline import register_hook
 
 def on_error_transform_on_keys_hint(event: str, context) -> None:
     err = context.error
@@ -76,7 +76,7 @@ You can attach context to your logging or error-tracking system without re-raisi
 
 ```python
 import logging
-from lmetk.transforms.base.pipeline import register_hook
+from picid.transforms.base.pipeline import register_hook
 
 def on_error_rich_context(event: str, context) -> None:
     if context.error is None:
@@ -88,7 +88,7 @@ def on_error_rich_context(event: str, context) -> None:
         "available_splits": getattr(context, "available_splits", None),
         "fit_on_split": context.fit_on_split,
     }
-    logging.getLogger("lmetk.transforms").error(
+    logging.getLogger("picid.transforms").error(
         "Pipeline failed: %s",
         context.error,
         exc_info=context.error,
@@ -108,7 +108,7 @@ register_hook("on_transform_error", on_error_rich_context)
 Run different logic for different errors (e.g. KeyError vs ValueError):
 
 ```python
-from lmetk.transforms.base.pipeline import register_hook
+from picid.transforms.base.pipeline import register_hook
 
 def on_error_by_type(event: str, context) -> None:
     err = context.error

@@ -4,10 +4,10 @@ from typing import Tuple, Optional
 from typing import Callable
 import torch
 from torch import nn
-from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
-from lmetk.baselines.forecaster import Forecaster
+from picid.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
+from picid.baselines.forecaster import Forecaster
 
-from lmetk.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
+from picid.baselines.spacetimeformer_model.nn.time2vec import Time2Vec
 
 
 class LSTM_Encoder(nn.Module):

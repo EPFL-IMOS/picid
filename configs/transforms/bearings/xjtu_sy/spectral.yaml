@@ -1,6 +1,6 @@
 scaler_target:
   transform:
-    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    _target_: picid.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
     dataset_name: XJTU-SY
@@ -11,7 +11,7 @@ scaler_target:
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+    _target_:  picid.transforms.base_transforms.scaler.StandardScalerSklearn  
     
   metadata:
     apply_to: features
@@ -20,7 +20,7 @@ scaler_features:
 
 spectral:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
     stats_to_compute: ["mean", 
         "maximum",
         "minimum",
@@ -47,7 +47,7 @@ spectral:
     
 sequence2statistics:
   transform:
-    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    _target_: picid.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
 
   metadata:
@@ -55,7 +55,7 @@ sequence2statistics:
 
 ragged2regularragged:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: 'features'

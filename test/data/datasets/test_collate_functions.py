@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from lmetk.data.datasets.collate_functions import (
+from picid.data.datasets.collate_functions import (
     collate_key_value_batch,
     collate_identity,
 )

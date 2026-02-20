@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-from lmetk.data.datasets.rul_context_dataset import RULContextBatchDataset
+from picid.data.datasets.rul_context_dataset import RULContextBatchDataset
 
 
 @pytest.fixture
@@ -146,7 +146,7 @@ def test_rul_context_get_collate_fn(rul_dense_data):
         meta_data_dict={},
     )
     fn = ds.get_collate_fn()
-    from lmetk.data.datasets.collate_functions import collate_key_value_batch
+    from picid.data.datasets.collate_functions import collate_key_value_batch
     assert fn is collate_key_value_batch
 
 

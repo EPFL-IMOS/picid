@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 # Assuming this import path is correct for your project
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.data.data_objects.data import NamedTransformInput
 
 
 class TimePFNTimeFeaturesTransform(DenseTransform):

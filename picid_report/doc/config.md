@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Modules:** `lmetk_report.config`, `lmetk_report.configs.search_space`, `lmetk_report.configs.sort_metrics`
+**Modules:** `picid_report.config`, `picid_report.configs.search_space`, `picid_report.configs.sort_metrics`
 
 This document explains the **logic** behind `config.py` and the `configs/` package (search space and sort metrics), and gives **examples** for every constant and function.
 
@@ -37,7 +37,7 @@ Maps **logical names** to the **actual column names** in your WandB logs (after 
 
 **Example — reading columns in code:**
 ```python
-from lmetk_report import config
+from picid_report import config
 
 model_col = config.COLUMN_CONFIG["model_target"]   # e.g. "model._target_"
 dataset_col = config.COLUMN_CONFIG["dataset_name"]  # e.g. "datasource.data_name"
@@ -46,7 +46,7 @@ dataset_col = config.COLUMN_CONFIG["dataset_name"]  # e.g. "datasource.data_name
 
 **Example — overriding for a different project:**
 ```python
-from lmetk_report.config import PipelineConfig
+from picid_report.config import PipelineConfig
 
 custom = PipelineConfig.from_default()
 custom.column_config["model_target"] = "model.name"  # if your logs use model.name
@@ -107,8 +107,8 @@ Columns that **must** exist after load; otherwise `validate_schema()` raises. De
 
 **Example:**
 ```python
-from lmetk_report import config
-from lmetk_report.validators import validate_schema
+from picid_report import config
+from picid_report.validators import validate_schema
 
 validate_schema(df, config.REQUIRED_COLUMNS)  # Raises ValueError if any missing
 ```
@@ -143,7 +143,7 @@ Dataclass that **bundles** all overridable config so you can pass one object ins
 
 **Example — build from current module config:**
 ```python
-from lmetk_report.config import PipelineConfig
+from picid_report.config import PipelineConfig
 
 cfg = PipelineConfig.from_default()
 # cfg.column_config is a copy of config.COLUMN_CONFIG
@@ -153,8 +153,8 @@ cfg = PipelineConfig.from_default()
 
 **Example — custom PipelineConfig for a different benchmark:**
 ```python
-from lmetk_report import config
-from lmetk_report.config import PipelineConfig
+from picid_report import config
+from picid_report.config import PipelineConfig
 
 cfg = PipelineConfig(
     column_config=dict(config.COLUMN_CONFIG),
@@ -192,7 +192,7 @@ Looks up **(dataset, model)** in the **module-level** `EXPECTED_SEARCH_SPACE` (n
 
 **Example:**
 ```python
-from lmetk_report.configs.search_space import get_search_space, EXPECTED_SEARCH_SPACE
+from picid_report.configs.search_space import get_search_space, EXPECTED_SEARCH_SPACE
 
 # If EXPECTED_SEARCH_SPACE has "UNIBO21" and "baselines.lstm_model.LSTM_Forecaster":
 grid = get_search_space("UNIBO21", "baselines.lstm_model.LSTM_Forecaster")
@@ -208,7 +208,7 @@ Returns the HP grid for (dataset, model) from **any** dict you pass: **new** or 
 
 **Example — new shape:**
 ```python
-from lmetk_report.configs.search_space import get_model_grid_from_search_space
+from picid_report.configs.search_space import get_model_grid_from_search_space
 
 space_new = {
     "UNIBO21": {
@@ -275,7 +275,7 @@ Returns the metric name to use for sorting/ranking. See resolution order above. 
 
 **Example:**
 ```python
-from lmetk_report.configs.sort_metrics import get_sort_metric, DEFAULT_SORT_METRIC
+from picid_report.configs.sort_metrics import get_sort_metric, DEFAULT_SORT_METRIC
 
 get_sort_metric("UNIBO21", "LSTM", task_type="regression", dataset_category="prognostics")
 # Typically "val_best_rerun/loss" (from task type or category or default)
@@ -289,7 +289,7 @@ Heuristic: infers "classification" or "regression" from dataset name (e.g. mzvav
 
 **Example:**
 ```python
-from lmetk_report.configs.sort_metrics import infer_task_type_from_dataset
+from picid_report.configs.sort_metrics import infer_task_type_from_dataset
 
 infer_task_type_from_dataset("mzvav")   # "classification"
 infer_task_type_from_dataset("UNIBO21") # "regression"
@@ -302,7 +302,7 @@ Heuristic: infers "diagnostics" or "prognostics" from dataset name. Returns `Non
 
 **Example:**
 ```python
-from lmetk_report.configs.sort_metrics import infer_dataset_category_from_name
+from picid_report.configs.sort_metrics import infer_dataset_category_from_name
 
 infer_dataset_category_from_name("mzvav")   # "diagnostics"
 infer_dataset_category_from_name("UNIBO21") # "prognostics"

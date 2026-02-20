@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import pytest
 import logging
-from lmetk.model.methods.mlp import MLP
-from lmetk.model.wrappers.mlp_wrapper import MLPWrapper
+from picid.model.methods.mlp import MLP
+from picid.model.wrappers.mlp_wrapper import MLPWrapper
 
 # =========================================================================
 # 1. MLP Model Logic Coverage (Targeting image_10ea2a.png)

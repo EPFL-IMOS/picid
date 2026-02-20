@@ -1,4 +1,4 @@
-# lmetk_report/report/report_html.py
+# picid_report/report/report_html.py
 """
 Generate a single HTML report for experiment results.
 

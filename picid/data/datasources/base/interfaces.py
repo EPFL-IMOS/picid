@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 
 
 

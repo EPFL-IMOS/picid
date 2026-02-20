@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 from omegaconf import OmegaConf
 
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.preprocessing.splits import TimeSplitter
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.preprocessing.splits import TimeSplitter
 
 
 class InMemorySingleSourceLoader(SingleSourceLoader):
@@ -78,7 +78,7 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_a",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "lmetk.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
     }
     source_b = {
         "_target_": "test.data.datasources.base.conftest.InMemorySingleSourceLoader",
@@ -86,7 +86,7 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_b",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "lmetk.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
     }
     return {
         "data_name": "multi_test",
@@ -134,7 +134,7 @@ def _two_sources_with_by_source_splitter_config():
         "task_mode": "regression",
         "source_list": {"unit_a": source_a, "unit_b": source_b, "unit_c": source_c},
         "multisource_data_splitter": {
-            "_target_": "lmetk.data.preprocessing.splits.BySourceSplitter",
+            "_target_": "picid.data.preprocessing.splits.BySourceSplitter",
             "sources_train": ["unit_a"],
             "sources_val": ["unit_b"],
             "sources_test": ["unit_c"],

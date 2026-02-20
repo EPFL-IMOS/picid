@@ -1,5 +1,5 @@
 """
-Tests for lmetk.pipeline.base.
+Tests for picid.pipeline.base.
 
 Validates PHM pipeline modules: CustomEvaluatorLightningModule,
 BackboneWrapperLightningModule, FitPredictWrapperLightningModule,
@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from unittest.mock import MagicMock, patch
 
-from lmetk.pipeline.base import (
+from picid.pipeline.base import (
     CustomEvaluatorInterface,
     CustomEvaluatorLightningModule,
     BackboneWrapperLightningModule,
@@ -21,7 +21,7 @@ from lmetk.pipeline.base import (
     ConstantLossLightningModule,
     TrainingLightningModule,
 )
-from lmetk.evaluator.base import AbstractEvaluator
+from picid.evaluator.base import AbstractEvaluator
 
 
 # -----------------------------------------------------------------------------
@@ -302,7 +302,7 @@ class TestFitPredictWrapperLightningModule:
 
     def test_init_debug_logs_warning(self, mock_evaluators, mock_fit_predict_backbone, caplog):
         """Doc: pipeline/base.py - when debug=True, logger.warning is called."""
-        with patch("lmetk.pipeline.base.logger") as mock_logger:
+        with patch("picid.pipeline.base.logger") as mock_logger:
             FitPredictWrapperLightningModule(
                 backbone=mock_fit_predict_backbone,
                 evaluators=mock_evaluators,

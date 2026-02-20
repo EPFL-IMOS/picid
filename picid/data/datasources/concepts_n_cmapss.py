@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import awkward as ak
 
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.utils.awkward_utils import ak_unflatten_discontinous_groups
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.utils.awkward_utils import ak_unflatten_discontinous_groups
 
 logger = logging.getLogger(__name__)
 

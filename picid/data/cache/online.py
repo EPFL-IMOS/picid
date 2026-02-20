@@ -3,7 +3,7 @@
 import joblib
 
 from pathlib import Path
-from lmetk.data.cache.base import BaseCache
+from picid.data.cache.base import BaseCache
 import logging
 logger = logging.getLogger(__name__)
 

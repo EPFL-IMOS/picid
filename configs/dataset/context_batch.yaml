@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasets.context_dataset.ContextBatchDataset
+_target_: picid.data.datasets.context_dataset.ContextBatchDataset
 
 seq_len: ${task_definition.seq_len}
 label_len: ${task_definition.label_len}

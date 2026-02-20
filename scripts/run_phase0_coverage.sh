@@ -13,11 +13,11 @@ set -e
 cd "$(dirname "$0")/.."
 
 COV_ARGS=(
-  --cov=lmetk.data.datasources.base
-  --cov=lmetk.data.data_objects
-  --cov=lmetk.data.cache.offline
-  --cov=lmetk.data.preprocessing.preprocessor
-  --cov=lmetk.data.preprocessing.base
+  --cov=picid.data.datasources.base
+  --cov=picid.data.data_objects
+  --cov=picid.data.cache.offline
+  --cov=picid.data.preprocessing.preprocessor
+  --cov=picid.data.preprocessing.base
   --cov-report=term-missing
   --cov-fail-under=0
 )
@@ -43,7 +43,7 @@ if [[ " ${*} " =~ " --no-cov " ]]; then
   uv run pytest "${UTILS_ONLY[@]}" "${PHASE0_FILES[@]}" -q "${@}"
 else
   echo "=== Step 1: utils in isolation ==="
-  uv run pytest "${UTILS_ONLY[@]}" --cov=lmetk.data.data_objects.utils --cov-report=term-missing -q
+  uv run pytest "${UTILS_ONLY[@]}" --cov=picid.data.data_objects.utils --cov-report=term-missing -q
   echo "=== Step 2: rest of Phase 0 with coverage ==="
   uv run pytest "${PHASE0_FILES[@]}" "${COV_ARGS[@]}" -q "$@"
 fi

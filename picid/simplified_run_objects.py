@@ -1,4 +1,4 @@
-"""Detailed building blocks for a GraphBench-style facade over lmetk.run."""
+"""Detailed building blocks for a GraphBench-style facade over picid.run."""
 
 from __future__ import annotations
 
@@ -15,17 +15,17 @@ from hydra import (
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
-from lmetk.run import create_lightning_module, rerun_best_model_checkpoint
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from lmetk.data.datasources.kubric_movie.loader import MOViLoader
-from lmetk.data.datasources.nb14.loader import NB14Loader
-from lmetk.data.datasources.unibo.loader import UNIBO21Loader
-from lmetk.data.datasources.MZVAV import MZVAVLoader
-from lmetk.utils import instantiate_callbacks, instantiate_loggers
-from lmetk.data.cache.file_lock import FileLock
+from picid.run import create_lightning_module, rerun_best_model_checkpoint
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.data.datasources.kubric_movie.loader import MOViLoader
+from picid.data.datasources.nb14.loader import NB14Loader
+from picid.data.datasources.unibo.loader import UNIBO21Loader
+from picid.data.datasources.MZVAV import MZVAVLoader
+from picid.utils import instantiate_callbacks, instantiate_loggers
+from picid.data.cache.file_lock import FileLock
 
 # Classes considered single-source to decide preprocessing mode.
 SINGLE_SOURCE_TYPES: tuple[type, ...] = (
@@ -77,17 +77,17 @@ class Loader:
         )
         data_cache_path = self.cfg.paths.cache_path if use_cache else None
         data_library_part_path = (
-            Path(self.cfg.paths.root_dir) / "lmetk/data/datasources"
+            Path(self.cfg.paths.root_dir) / "picid/data/datasources"
             if use_cache
             else None
         )
         transform_library_part_path = (
-            Path(self.cfg.paths.root_dir) / "lmetk/transforms" if use_cache else None
+            Path(self.cfg.paths.root_dir) / "picid/transforms" if use_cache else None
         )
         cache_preprocessed_flag = self.cfg.cache.use_cache_after_transfroms
         use_file_lock = self.cfg.cache.get("use_preprocessing_file_lock", False)
         file_lock_path = self.cfg.cache.get(
-            "preprocessing_file_lock_path", "/tmp/lmetk_preprocess.lock"
+            "preprocessing_file_lock_path", "/tmp/picid_preprocess.lock"
         )
 
         file_lock = FileLock(path=file_lock_path) if use_file_lock else None

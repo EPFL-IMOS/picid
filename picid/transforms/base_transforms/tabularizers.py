@@ -1,7 +1,7 @@
 # tabularize:
 #   # Concatenate time-features to the feature set
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+#     _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
 #     select_features:
 #       - time_features: t
 #       - features: t
@@ -23,10 +23,10 @@ from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.data.optimization.sequencer import DenseArraySequencer
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.data.data_objects.data import NamedTransformInput
+from picid.data.optimization.sequencer import DenseArraySequencer
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

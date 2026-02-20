@@ -5,7 +5,7 @@ defaults:
 concatenate_X:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
   metadata:
     apply_to: ['features', 'time_features']
     assign_to: X
@@ -13,7 +13,7 @@ concatenate_X:
 concatenate_y:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
   metadata:
     apply_to: ['target']
     assign_to: y
@@ -21,7 +21,7 @@ concatenate_y:
 # Introduce the task dimension to X, y. We
 reshape_X: 
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: ['X']
@@ -29,7 +29,7 @@ reshape_X:
 
 reshape_y: 
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: ['y'] 

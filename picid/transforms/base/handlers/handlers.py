@@ -14,10 +14,10 @@ import numpy as np
 import awkward as ak
 from sortedcontainers import SortedDict
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
+from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.base import BaseDataObjectWithMetadata
 
-from lmetk.transforms.base.data_kind import (
+from picid.transforms.base.data_kind import (
     CAPABILITY_BOTH,
     CAPABILITY_DENSE,
     CAPABILITY_RAGGED,
@@ -54,27 +54,27 @@ class TransformHandler(Protocol):
 
 
 def _postprocess():
-    from lmetk.transforms.base.strategy import postprocess_transformed_data
+    from picid.transforms.base.strategy import postprocess_transformed_data
     return postprocess_transformed_data
 
 
 def _find_singular_ragged_dim():
-    from lmetk.transforms.base.multisource import find_singular_ragged_dim
+    from picid.transforms.base.multisource import find_singular_ragged_dim
     return find_singular_ragged_dim
 
 
 def _tolist():
-    from lmetk.transforms.base.multisource import tolist
+    from picid.transforms.base.multisource import tolist
     return tolist
 
 
 def _ragged_index_tuples():
-    from lmetk.utils.awkward_utils import ragged_index_tuples
+    from picid.utils.awkward_utils import ragged_index_tuples
     return ragged_index_tuples
 
 
 def _ak_utils():
-    from lmetk.utils.awkward_utils import (
+    from picid.utils.awkward_utils import (
         ak_find_var_dims,
         ak_regularize_regular_axes,
         get_ak_shape,

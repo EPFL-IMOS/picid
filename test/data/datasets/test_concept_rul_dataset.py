@@ -9,7 +9,7 @@ import pytest
 import torch
 from box import Box
 
-from lmetk.data.datasets.concept_rul_dataset import ConceptRULDataset
+from picid.data.datasets.concept_rul_dataset import ConceptRULDataset
 
 
 def _make_concept_rul_data_dict(T: int, F: int, window_size: int, n_concepts: int = 2):

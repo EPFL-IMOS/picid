@@ -1,12 +1,12 @@
 """Comprehensive tests for stfft.py transform.
 
 This file consolidates all tests for STFTTransform from multiple test files
-to ensure complete coverage of lmetk.transforms.base_transforms.stfft.
+to ensure complete coverage of picid.transforms.base_transforms.stfft.
 """
 import numpy as np
 import pytest
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.stfft import STFTTransform
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.stfft import STFTTransform
 
 
 class TestSTFTTransform:

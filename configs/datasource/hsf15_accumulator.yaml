@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasources.phmd_hsf15.HSF15Loader
+_target_: picid.data.datasources.phmd_hsf15.HSF15Loader
 fold: 0
 data_name: HSF15
 

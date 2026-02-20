@@ -17,8 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.data.data_objects.slice_info import SliceInfo
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.slice_info import SliceInfo
 
 # ---------------------------------------------------------------------------
 # Integrity check type aliases

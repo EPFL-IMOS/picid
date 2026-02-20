@@ -1,4 +1,4 @@
-_target_: lmetk.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster
+_target_: picid.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster
 
 metadata:
   lightning_model: true

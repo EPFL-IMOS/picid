@@ -36,8 +36,8 @@ import torch
 import numpy as np
 from torch.utils.data import IterableDataset
 
-from lmetk.synthetic_data.tabicl_style.dataset import PriorDataset
-from lmetk.synthetic_data.tabicl_style.prior_config import DEFAULT_FIXED_HP, DEFAULT_SAMPLED_HP
+from picid.synthetic_data.tabicl_style.dataset import PriorDataset
+from picid.synthetic_data.tabicl_style.prior_config import DEFAULT_FIXED_HP, DEFAULT_SAMPLED_HP
 
 warnings.filterwarnings(
     "ignore", message=".*The PyTorch API of nested tensors is in prototype stage.*", category=UserWarning

@@ -34,8 +34,8 @@ source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
 uv pip install -e ".[dev]"
 # uv pip install --upgrade netCDF4 h5py xarray nvitop
-python lmetk/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
-python lmetk/run.py paths=runai experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict
+python picid/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
+python picid/run.py paths=runai experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict
 
 ```
 

@@ -1,4 +1,4 @@
-# lmetk_report/core/run_processor.py
+# picid_report/core/run_processor.py
 """
 Handles fetching, caching, and preprocessing of wandb experiment run data.
 
@@ -15,8 +15,8 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 import wandb
-from lmetk_report import config
-from lmetk_report.config import PipelineConfig
+from picid_report import config
+from picid_report.config import PipelineConfig
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)

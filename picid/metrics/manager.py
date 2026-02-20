@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-from lmetk.metrics.metric_factory import MetricFactory
+from picid.metrics.metric_factory import MetricFactory
 
 logger = logging.getLogger(__name__)
 

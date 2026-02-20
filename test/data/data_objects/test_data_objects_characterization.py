@@ -7,8 +7,8 @@ validate(), to_split_dict(), group_by_split(), get_instance_cls().
 import numpy as np
 import pytest
 
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
-from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
+from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects.base import BaseDataObjectWithMetadata
 
 
 # ----- Fixtures -----
@@ -180,8 +180,8 @@ def test_split_container_get_instance_cls(single_unit_split_container):
 
 def test_dataset_container_optional_manifest_slice_info():
     """DatasetContainer accepts optional manifest= and slice_info= (no error)."""
-    from lmetk.data.data_objects.manifest import MetadataManifest
-    from lmetk.data.data_objects.slice_info import SliceInfo
+    from picid.data.data_objects.manifest import MetadataManifest
+    from picid.data.data_objects.slice_info import SliceInfo
 
     manifest = MetadataManifest()
     slice_info = SliceInfo(split="train", unit_ids=[0])
@@ -197,8 +197,8 @@ def test_dataset_container_optional_manifest_slice_info():
 
 def test_split_container_copy_preserves_manifest_slice_info(single_unit_split_container):
     """copy(deep=True) preserves manifest and slice_info."""
-    from lmetk.data.data_objects.manifest import MetadataManifest
-    from lmetk.data.data_objects.slice_info import SliceInfo
+    from picid.data.data_objects.manifest import MetadataManifest
+    from picid.data.data_objects.slice_info import SliceInfo
 
     single_unit_split_container.manifest = MetadataManifest()
     single_unit_split_container.slice_info = SliceInfo(split="train", unit_ids=[0])
@@ -213,7 +213,7 @@ def test_split_container_copy_preserves_manifest_slice_info(single_unit_split_co
 
 def test_utils_get_length():
     """get_length returns shape[0] for arrays and len() for list/tuple."""
-    from lmetk.data.data_objects.utils import get_length
+    from picid.data.data_objects.utils import get_length
 
     assert get_length(np.zeros((10, 2))) == 10
     assert get_length([1, 2, 3]) == 3
@@ -223,7 +223,7 @@ def test_utils_get_length():
 
 def test_utils_check_length_consistency_ok():
     """check_length_consistency does not raise when lengths match."""
-    from lmetk.data.data_objects.utils import check_length_consistency
+    from picid.data.data_objects.utils import check_length_consistency
 
     check_length_consistency(
         [np.zeros((5, 2)), np.zeros(5)],
@@ -233,7 +233,7 @@ def test_utils_check_length_consistency_ok():
 
 def test_utils_check_length_consistency_raises():
     """check_length_consistency raises when lengths differ."""
-    from lmetk.data.data_objects.utils import check_length_consistency
+    from picid.data.data_objects.utils import check_length_consistency
 
     with pytest.raises(ValueError, match="Length mismatch"):
         check_length_consistency(
@@ -244,7 +244,7 @@ def test_utils_check_length_consistency_raises():
 
 def test_utils_check_for_nans_raises():
     """check_for_nans raises when NaN present in numeric array."""
-    from lmetk.data.data_objects.utils import check_for_nans
+    from picid.data.data_objects.utils import check_for_nans
 
     arr = np.array([1.0, np.nan, 2.0])
     with pytest.raises(ValueError, match="NaN"):
@@ -253,7 +253,7 @@ def test_utils_check_for_nans_raises():
 
 def test_utils_check_for_nans_ok():
     """check_for_nans does not raise when no NaN."""
-    from lmetk.data.data_objects.utils import check_for_nans
+    from picid.data.data_objects.utils import check_for_nans
 
     check_for_nans([np.array([1.0, 2.0])], ["x"])
 
@@ -263,7 +263,7 @@ def test_utils_check_for_nans_ok():
 
 def test_manifest_add_and_query():
     """MetadataManifest add and query by step_id/key/split/category."""
-    from lmetk.data.data_objects.manifest import MetadataManifest, ManifestEntry
+    from picid.data.data_objects.manifest import MetadataManifest, ManifestEntry
 
     m = MetadataManifest()
     m.add(
@@ -299,7 +299,7 @@ def test_manifest_add_and_query():
 
 def test_manifest_copy():
     """MetadataManifest copy(deep=True) returns independent copy."""
-    from lmetk.data.data_objects.manifest import MetadataManifest, ManifestEntry
+    from picid.data.data_objects.manifest import MetadataManifest, ManifestEntry
 
     m = MetadataManifest()
     m.add(

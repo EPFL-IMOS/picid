@@ -18,11 +18,11 @@ from omegaconf import OmegaConf
 from rich.console import Console
 import torch
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.utils.omegaconf_utils import find_config_file
-from lmetk.utils.rich_output import print_data_dict_structure
-from lmetk.utils.torch_utils import correct_state_dict_keys
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.utils.omegaconf_utils import find_config_file
+from picid.utils.rich_output import print_data_dict_structure
+from picid.utils.torch_utils import correct_state_dict_keys
 
 FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 
@@ -60,12 +60,12 @@ def load_dataset_from_cfg(cfg: OmegaConf) -> dict:
         else None
     )
     data_library_part_path = (
-        Path(cfg.paths.root_dir) / "lmetk/data/datasources"
+        Path(cfg.paths.root_dir) / "picid/data/datasources"
         if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
         else None
     )
     transform_library_part_path = (
-        Path(cfg.paths.root_dir) / "lmetk/transforms"
+        Path(cfg.paths.root_dir) / "picid/transforms"
         if cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms
         else None
     )

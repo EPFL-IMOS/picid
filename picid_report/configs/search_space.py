@@ -194,7 +194,7 @@ DEFAULT_SEARCH_SPACE: Optional[Dict[str, Dict[str, List[Any]]]] = None
 def _legacy_default_search_space() -> Optional[Dict[str, Dict[str, List[Any]]]]:
     """Backward compat: config.EXPECTED_SEARCH_SPACE when DEFAULT_SEARCH_SPACE is not set."""
     try:
-        from lmetk_report import config
+        from picid_report import config
         return config.EXPECTED_SEARCH_SPACE if getattr(config, "EXPECTED_SEARCH_SPACE", None) else None
     except Exception:
         return None

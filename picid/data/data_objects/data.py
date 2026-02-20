@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 from torch import Type
 
-from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
-from lmetk.data.data_objects.manifest import MetadataManifest
-from lmetk.data.data_objects.slice_info import SliceInfo
-from lmetk.data.data_objects.utils import (
+from picid.data.data_objects.base import BaseDataObjectWithMetadata
+from picid.data.data_objects.manifest import MetadataManifest
+from picid.data.data_objects.slice_info import SliceInfo
+from picid.data.data_objects.utils import (
     check_for_nans,
     check_length_consistency,
 )

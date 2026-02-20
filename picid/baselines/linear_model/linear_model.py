@@ -1,7 +1,7 @@
 from typing import Callable
 
 import torch
-from lmetk.baselines.forecaster import Forecaster
+from picid.baselines.forecaster import Forecaster
 
 from .linear_ar import LinearModel
 

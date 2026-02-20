@@ -1,1 +1,1 @@
-_target_: lmetk.loss.default.MSELoss
+_target_: picid.loss.default.MSELoss

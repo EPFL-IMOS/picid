@@ -2,13 +2,13 @@
 import numpy as np
 import pytest
 import awkward as ak
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.concatenate import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.concatenate import (
     ConcatenateTransform,
     RuggedToDenseTransform,
     MultiDatasetRuggedToDenseTransform,
 )
-from lmetk.utils.awkward_utils import ak_find_var_dims
+from picid.utils.awkward_utils import ak_find_var_dims
 
 
 class TestConcatenateTransform:

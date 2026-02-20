@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.hooks.save_predictions.SavePredictionsHook.
+Tests for picid.evaluator.hooks.save_predictions.SavePredictionsHook.
 
 Ref: docs/evaluators/index.md - DefaultEvaluator, NetCDF saving, dimension naming.
 Validates: Guard conditions, _format_xarray branches, dimension conflict resolution.
@@ -10,8 +10,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from lmetk.evaluator.hooks.save_predictions import SavePredictionsHook
-from lmetk.evaluator.buffer import PredictionBuffer
+from picid.evaluator.hooks.save_predictions import SavePredictionsHook
+from picid.evaluator.buffer import PredictionBuffer
 
 
 # =============================================================================
@@ -52,7 +52,7 @@ def test_save_predictions_hook_returns_early_when_buffer_empty():
     evaluator.buffer.get_all.return_value = {}
 
     with patch(
-        "lmetk.evaluator.hooks.save_predictions.xr.Dataset"
+        "picid.evaluator.hooks.save_predictions.xr.Dataset"
     ) as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
@@ -73,7 +73,7 @@ def test_save_predictions_hook_returns_early_when_preds_none():
     evaluator.buffer.get_all.return_value = {"targets": np.ones((2, 1, 1))}
 
     with patch(
-        "lmetk.evaluator.hooks.save_predictions.xr.Dataset"
+        "picid.evaluator.hooks.save_predictions.xr.Dataset"
     ) as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
@@ -121,7 +121,7 @@ def test_save_predictions_hook_returns_early_when_eval_details_missing():
     }
 
     with patch(
-        "lmetk.evaluator.hooks.save_predictions.xr.Dataset"
+        "picid.evaluator.hooks.save_predictions.xr.Dataset"
     ) as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
@@ -300,8 +300,8 @@ def test_format_xarray_non_3d_uses_fallback_dims():
 # =============================================================================
 
 
-@patch("lmetk.evaluator.hooks.save_predictions.xr.Dataset")
-@patch("lmetk.evaluator.hooks.save_predictions.Path")
+@patch("picid.evaluator.hooks.save_predictions.xr.Dataset")
+@patch("picid.evaluator.hooks.save_predictions.Path")
 def test_save_predictions_hook_writes_netcdf(mock_path_cls, mock_xr_dataset):
     """
     Validates full flow: on_compute_end formats data and writes NetCDF.

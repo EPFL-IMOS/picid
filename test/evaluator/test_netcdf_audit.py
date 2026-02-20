@@ -2,11 +2,11 @@ import pytest
 import xarray as xr
 import numpy as np
 from types import SimpleNamespace
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.evaluator.classification import ClassificationEvaluator
-from lmetk.evaluator.forecasting import ForecastingEvaluator
-from lmetk.evaluator.reconstruction import ReconstructionEvaluator
-from lmetk.evaluator.hooks.save_predictions import SavePredictionsHook
+from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.classification import ClassificationEvaluator
+from picid.evaluator.forecasting import ForecastingEvaluator
+from picid.evaluator.reconstruction import ReconstructionEvaluator
+from picid.evaluator.hooks.save_predictions import SavePredictionsHook
 
 
 @pytest.fixture

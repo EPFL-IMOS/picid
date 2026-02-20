@@ -27,7 +27,7 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from lmetk.data.cache.offline import FileSystemCache
+from picid.data.cache.offline import FileSystemCache
 
 
 class TestFileSystemCachePaths:

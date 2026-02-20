@@ -3,9 +3,9 @@ import numpy as np
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-from lmetk.evaluator.reconstruction import ReconstructionEvaluator
-from lmetk.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
-from lmetk.metrics.metric_factory import MetricFactory
+from picid.evaluator.reconstruction import ReconstructionEvaluator
+from picid.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook
+from picid.metrics.metric_factory import MetricFactory
 
 # =========================================================================
 # === 1. Fixtures ===
@@ -66,7 +66,7 @@ def test_init_smart_activation(mocker):
     assert eval_manual.collect_predictions is False
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_validation_enforces_phm_shape(mock_plt, reconstruction_evaluator_fixture):
     """Verifies that 2D inputs FAIL validation due to the (N, T, 1) constraint."""
     evaluator = reconstruction_evaluator_fixture
@@ -78,7 +78,7 @@ def test_validation_enforces_phm_shape(mock_plt, reconstruction_evaluator_fixtur
         evaluator.update(bad_data)
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_plot_reconstructions_flow(mock_plt, reconstruction_evaluator_fixture):
     """Verifies orchestration from update through plotting."""
     # FIX: Provide return values for unpacking (fig, axes)
@@ -97,7 +97,7 @@ def test_plot_reconstructions_flow(mock_plt, reconstruction_evaluator_fixture):
     mock_plt.close.assert_called()
 
 
-@patch("lmetk.evaluator.hooks.reconstruction_plot.plt")
+@patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_dual_scaling_logic(mock_plt, reconstruction_evaluator_fixture):
     """Verifies that scaling is applied during the update process."""
     mock_plt.subplots.return_value = (
@@ -127,7 +127,7 @@ def test_compute_handles_empty_buffer(reconstruction_evaluator_fixture):
     evaluator = reconstruction_evaluator_fixture
     evaluator.reset()
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt.subplots") as mock_sub:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt.subplots") as mock_sub:
         evaluator.compute(mode="val", epoch=1, step=0)
         mock_sub.assert_not_called()
 
@@ -142,7 +142,7 @@ def test_plot_reconstructions_returns_early_without_logger(
     data = np.zeros((2, 5, 1))
     evaluator.update({"predictions": data, "targets": data})
 
-    with patch("lmetk.evaluator.hooks.reconstruction_plot.plt.subplots") as mock_plt:
+    with patch("picid.evaluator.hooks.reconstruction_plot.plt.subplots") as mock_plt:
         evaluator.compute(mode="val", epoch=1, step=0)
         # It should return early before calling subplots
         mock_plt.assert_not_called()

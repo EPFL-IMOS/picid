@@ -1,7 +1,7 @@
 import pytest
 import torch
-from lmetk.loss.default import MSELoss
-from lmetk.loss.cross_entropy import (
+from picid.loss.default import MSELoss
+from picid.loss.cross_entropy import (
     CrossEntropyLoss,
 )
 

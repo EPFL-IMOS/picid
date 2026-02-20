@@ -2,7 +2,7 @@
 
 from .base import AbstractFeedForwardWrapper
 
-from lmetk.model.methods.drift_model import DriftModelBaseline
+from picid.model.methods.drift_model import DriftModelBaseline
 from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
 
 

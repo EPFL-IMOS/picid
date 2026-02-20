@@ -1,6 +1,6 @@
 # Data Objects & Dataset Containers
 
-The `lmetk.data.data_objects` module provides the fundamental data structures used to transport data throughout the PHM pipeline. Unlike standard Python dictionaries, these objects enforce **type safety**, provide **recursive dot-notation access**, and handle **metadata synchronization** automatically.
+The `picid.data.data_objects` module provides the fundamental data structures used to transport data throughout the PHM pipeline. Unlike standard Python dictionaries, these objects enforce **type safety**, provide **recursive dot-notation access**, and handle **metadata synchronization** automatically.
 
 ## 1. The Core Philosophy
 
@@ -129,7 +129,7 @@ Raw Files (HDF5/CSV, etc.)
 
 ## 5. Module location and API
 
-All types above live in the package **`lmetk.data.data_objects`**:
+All types above live in the package **`picid.data.data_objects`**:
 
 - **`base.py`** — `BaseDataObject`, `BaseDataObjectWithMetadata`, `ToNumpyMixin`, `ToDataFrameMixin`
 - **`data.py`** — `NamedTransformInput`, `DatasetContainer`, `SplitDatasetContainer`, and the generic return types (`ReturnObject`, `SimpleReturnObject`, etc.)

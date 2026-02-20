@@ -1,5 +1,5 @@
 """
-Tests for lmetk.callbacks.resource_tracker (ResourceTracker).
+Tests for picid.callbacks.resource_tracker (ResourceTracker).
 
 Validates FLOPs/throughput/GPU/timing hooks and helpers. Aligns with PHM
 pipeline efficiency logging (docs: runai.md, pipeline training).
@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from unittest.mock import MagicMock, patch
 
-from lmetk.callbacks.resource_tracker import ResourceTracker
+from picid.callbacks.resource_tracker import ResourceTracker
 
 
 # -----------------------------------------------------------------------------

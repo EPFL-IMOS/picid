@@ -6,11 +6,11 @@ import numpy as np
 import awkward as ak
 from tqdm import tqdm
 
-from lmetk.data.optimization.sequencer import RaggedArraySequencer
-from lmetk.transforms.base_transforms.autoencoder_transform import (
+from picid.data.optimization.sequencer import RaggedArraySequencer
+from picid.transforms.base_transforms.autoencoder_transform import (
     BaseAutoencoderTransform,
 )
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
+from picid.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
 
 # Set up a logger for better feedback
 logger = logging.getLogger(__name__)

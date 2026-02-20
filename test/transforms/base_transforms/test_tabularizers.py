@@ -1,14 +1,14 @@
 """Comprehensive tests for tabularizers.py transform.
 
 This file consolidates all tests for TimeseriesTabularizer from multiple test files
-to ensure complete coverage of lmetk.transforms.base_transforms.tabularizers.
+to ensure complete coverage of picid.transforms.base_transforms.tabularizers.
 """
 import numpy as np
 import pytest
 import torch
 from omegaconf import OmegaConf
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.tabularizers import TimeseriesTabularizer
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.tabularizers import TimeseriesTabularizer
 
 
 class TestTimeseriesTabularizer:

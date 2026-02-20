@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasources.phmd_battery.PHMDBatteryLoader
+_target_: picid.data.datasources.phmd_battery.PHMDBatteryLoader
 
 fold: 0
 data_name: NB1

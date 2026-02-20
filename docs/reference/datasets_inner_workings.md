@@ -4,8 +4,8 @@ In this project we adopt the **PyTorch** notion of a *Dataset*: an abstract clas
 
 **Module locations:**
 
-- **Datasets:** `lmetk.data.datasets` — `HydraConcatDataset`, `ContextBatchDataset`, `RULContextBatchDataset`, `SlidingWindowBatchDataset`, etc. For the **batch structure** (keys like `features_seq_x`, `rul_seq_x`, or the flattened `rul`/`features` in RUL), see [Datasets](datasets.md).
-- **Sequencers and engine:** `lmetk.data.optimization` — `DenseArraySequencer`, `RaggedArraySequencer`, and the core indexing engine **`AkwardJaggedAutoregressiveSequencer`** (the class name uses the spelling *Akward* for historical reasons; it operates on Awkward arrays).
+- **Datasets:** `picid.data.datasets` — `HydraConcatDataset`, `ContextBatchDataset`, `RULContextBatchDataset`, `SlidingWindowBatchDataset`, etc. For the **batch structure** (keys like `features_seq_x`, `rul_seq_x`, or the flattened `rul`/`features` in RUL), see [Datasets](datasets.md).
+- **Sequencers and engine:** `picid.data.optimization` — `DenseArraySequencer`, `RaggedArraySequencer`, and the core indexing engine **`AkwardJaggedAutoregressiveSequencer`** (the class name uses the spelling *Akward* for historical reasons; it operates on Awkward arrays).
 
 ---
 
@@ -556,4 +556,4 @@ This architecture allows the system to scale seamlessly from simple single-varia
 
 - [Datasets](datasets.md) — Task-centric dataset types and their batch structures (`ContextBatchDataset`, `RULContextBatchDataset`, `FitPredictDataset`, etc.).
 - [Data objects & containers](dataobject.md) — How datasource output is encapsulated and validated before being consumed by this pipeline.
-- [API Reference](api.md) — Data objects and utilities under `lmetk.data.data_objects`.
+- [API Reference](api.md) — Data objects and utilities under `picid.data.data_objects`.

@@ -4,9 +4,9 @@ from typing import Any, List, Optional
 import torch
 from einops import rearrange
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from lmetk.model.methods.cnn_1d import EncoderModel
-from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.methods.cnn_1d import EncoderModel
+from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
 
 logger = logging.getLogger(__name__)
 

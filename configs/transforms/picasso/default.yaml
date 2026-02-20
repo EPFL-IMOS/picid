@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -8,14 +8,14 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: target
     fit_on: train
 # time_features_transform:
 #   transform:
-#     _target_: lmetk.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
+#     _target_: picid.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
 #     use_features: ["year", "month", "day", "weekday", "hour"]
 #     normalize_time_features: False
 
@@ -25,7 +25,7 @@ scaler_target:
 
 # scaler_timefeatures:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+#     _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
 #   metadata:
 #     apply_to: time_features
@@ -33,7 +33,7 @@ scaler_target:
 
 # concatenate_features:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+#     _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
 
 #   metadata:
 #     apply_to: ['features','time_features']

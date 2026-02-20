@@ -2,7 +2,7 @@
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.building.mzvav_scaler.MinMaxScalerMZVAV
+    _target_: picid.transforms.building.mzvav_scaler.MinMaxScalerMZVAV
 
   metadata:
     apply_to: features
@@ -10,7 +10,7 @@ scaler_features:
 
 rename_target_to_fault_classification:
   transform:
-    _target_: lmetk.transforms.base_transforms.identity.IdentityPassThrough
+    _target_: picid.transforms.base_transforms.identity.IdentityPassThrough
 
   metadata:
     apply_to: target

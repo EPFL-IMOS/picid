@@ -23,7 +23,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-from lmetk_report import (
+from picid_report import (
     PipelineConfig,
     config,
     analyze_results,
@@ -44,7 +44,7 @@ from lmetk_report import (
     validate_schema,
     clean_and_rename_models,
 )
-from lmetk_report.logging_config import configure_logging
+from picid_report.logging_config import configure_logging
 
 
 # --- Default configuration (override via run_pipeline() or CLI) ---
@@ -170,7 +170,7 @@ def run_pipeline(
     else:
         # Try to create resolver using get_sort_metric from configs
         try:
-            from lmetk_report.configs import get_sort_metric, infer_task_type_from_dataset, infer_dataset_category_from_name
+            from picid_report.configs import get_sort_metric, infer_task_type_from_dataset, infer_dataset_category_from_name
             
             def resolver(dataset: str, model: str, task_type=None, dataset_category=None):
                 """Resolve sort metric for a dataset/model combination."""
@@ -406,7 +406,7 @@ def main() -> None:
     """Entry point when run as a script. Parses minimal CLI and runs the pipeline."""
     import argparse
     parser = argparse.ArgumentParser(
-        description="Run lmetk_report pipeline. Use --output-dir to save tables, plots, and an HTML report."
+        description="Run picid_report pipeline. Use --output-dir to save tables, plots, and an HTML report."
     )
     parser.add_argument("--debug", "-d", action="store_true", help="Enable DEBUG logging (resolver details, shapes, etc.)")
     parser.add_argument("--project", default=DEFAULT_PROJECT_NAME, help="W&B project name")

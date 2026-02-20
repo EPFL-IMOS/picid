@@ -4,11 +4,11 @@ import torch
 from unittest.mock import MagicMock, patch
 
 # Adjust imports to match your project structure
-from lmetk.evaluator.classification import ClassificationEvaluator
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
-from lmetk.metrics.metric_factory import MetricFactory
-from lmetk.metrics.metrics import (
+from picid.evaluator.classification import ClassificationEvaluator
+from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
+from picid.metrics.metric_factory import MetricFactory
+from picid.metrics.metrics import (
     MulticlassAccuracyMetric,
     MulticlassPrecisionMetric,
     MulticlassRecallMetric,
@@ -338,7 +338,7 @@ def test_compute_metrics_integration_f1(real_metric_evaluator):
 def test_compute_metrics_integration_auroc(real_metric_evaluator):
     """
     Verifies AUROC integration with manual calculation check.
-    Prerequisite: lmetk/metrics/metrics.py must perform permute/squeeze.
+    Prerequisite: picid/metrics/metrics.py must perform permute/squeeze.
     """
     evaluator = real_metric_evaluator(metric_names=["auroc"])
     data = create_dummy_data()

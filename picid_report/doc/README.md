@@ -1,6 +1,6 @@
-# lmetk_report — Documentation Index
+# picid_report — Documentation Index
 
-This folder documents the **lmetk_report** package: pipeline for loading W&B experiment runs, validating and analyzing them by dataset/model, and producing tables, plots, and a single HTML report. Each document focuses on one area and includes **concrete examples** for every function.
+This folder documents the **picid_report** package: pipeline for loading W&B experiment runs, validating and analyzing them by dataset/model, and producing tables, plots, and a single HTML report. Each document focuses on one area and includes **concrete examples** for every function.
 
 **Navigation:** Each document in the table below links to its page; every other doc has a **← Documentation index** link at the top (and often at the bottom) to return here.
 
@@ -22,7 +22,7 @@ This folder documents the **lmetk_report** package: pipeline for loading W&B exp
 **Configuration** drives behavior at every stage: column names and required columns (`config.py`), which columns to normalize/drop/ignore for HP search (`config.py`), expected HP grid per dataset/model (`configs/search_space.py`), and which metric to use for sorting/ranking (`configs/sort_metrics.py`). See [Configuration (config and configs)](config.md) for in-depth logic.
 
 **Entry points:**
-- **Script:** `python -m lmetk_report.run` (or `run.sh`) runs the full pipeline; use `-o <dir>` to save outputs, `-q` to avoid printing tables to the terminal.
+- **Script:** `python -m picid_report.run` (or `run.sh`) runs the full pipeline; use `-o <dir>` to save outputs, `-q` to avoid printing tables to the terminal.
 - **Programmatic:** `run_pipeline(...)` returns `(df, all_results, summary_df)`; you can also call `load_runs_df`, `analyze_results`, and reporting functions step by step.
 
 ---
@@ -48,7 +48,7 @@ This folder documents the **lmetk_report** package: pipeline for loading W&B exp
 ## 3. Quick example (end-to-end)
 
 ```python
-from lmetk_report.run import run_pipeline
+from picid_report.run import run_pipeline
 
 # Run full pipeline and save report to report_output/
 df, all_results, summary_df = run_pipeline(

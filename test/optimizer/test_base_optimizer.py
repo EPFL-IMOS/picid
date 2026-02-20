@@ -1,5 +1,5 @@
 """
-Tests for lmetk.optimizer.base (AbstractOptimizer).
+Tests for picid.optimizer.base (AbstractOptimizer).
 
 Validates the abstract optimizer interface required by the PHM pipeline
 (docs/datasets.md, docs/how_to_use_configs.md). All concrete optimizers
@@ -10,7 +10,7 @@ with optimizer and optional LR scheduler.
 import pytest
 import torch
 
-from lmetk.optimizer.base import AbstractOptimizer
+from picid.optimizer.base import AbstractOptimizer
 
 
 # -----------------------------------------------------------------------------

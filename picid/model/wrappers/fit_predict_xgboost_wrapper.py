@@ -6,8 +6,8 @@ import torch
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from lmetk.model.wrappers.base import AbstractFitPredictWrapper
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 
 class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):

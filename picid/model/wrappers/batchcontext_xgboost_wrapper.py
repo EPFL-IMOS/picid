@@ -4,8 +4,8 @@ from einops import rearrange
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
-from lmetk.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
-from lmetk.model.wrappers.base import AbstractFeedForwardWrapper
+from picid.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from picid.model.wrappers.base import AbstractFeedForwardWrapper
 
 
 class BatchContextXGBoostWrapper(AbstractFeedForwardWrapper):

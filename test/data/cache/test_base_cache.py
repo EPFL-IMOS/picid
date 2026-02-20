@@ -1,7 +1,7 @@
-"""Tests for lmetk.data.cache.base (BaseCache) via a concrete implementation."""
+"""Tests for picid.data.cache.base (BaseCache) via a concrete implementation."""
 import pytest
 
-from lmetk.data.cache.base import BaseCache
+from picid.data.cache.base import BaseCache
 
 
 class ConcreteCache(BaseCache):

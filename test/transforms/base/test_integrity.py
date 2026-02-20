@@ -1,8 +1,8 @@
 """Tests for Phase 4.3: integrity guards (IntegrityPolicy, run_check, IntegrityCheckStep)."""
 import pytest
 
-from lmetk.transforms.base.integrity import run_check, run_checks
-from lmetk.transforms.base.pipeline import TransformContext, IntegrityCheckStep
+from picid.transforms.base.integrity import run_check, run_checks
+from picid.transforms.base.pipeline import TransformContext, IntegrityCheckStep
 
 from test.transforms.base.conftest import create_dummy_single_unit_container, DummyStatelessTransform
 

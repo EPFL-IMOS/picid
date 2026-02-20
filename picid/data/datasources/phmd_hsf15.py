@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import awkward as ak
 
-from lmetk.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from lmetk.utils.awkward_utils import ak_flatten_variable_dims
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
+from picid.utils.awkward_utils import ak_flatten_variable_dims
 
 logger = logging.getLogger(__name__)
 

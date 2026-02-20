@@ -1,8 +1,8 @@
 """Wrapper for the TimePFN model."""
 
 import torch
-from lmetk.model.wrappers.base import AbstractFeedForwardTrainingWrapper
-from lmetk.model.autoencoder.residual_1d import SymmetricalAutoencoder
+from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
+from picid.model.autoencoder.residual_1d import SymmetricalAutoencoder
 
 
 class AutoencoderWrapper(AbstractFeedForwardTrainingWrapper):

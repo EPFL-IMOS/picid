@@ -7,8 +7,8 @@ from box import Box
 import awkward as ak
 from pandas.core.generic import NDFrame
 
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
 logger = logging.getLogger(__name__)
 

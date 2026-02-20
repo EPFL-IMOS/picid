@@ -9,8 +9,8 @@ DenseTransform / RaggedOrDenseTransform to declare capability for handler dispat
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.utils.decorators import check_transform_output_consistency
+from picid.data.data_objects.data import NamedTransformInput
+from picid.utils.decorators import check_transform_output_consistency
 
 
 class BaseTransform(ABC):
@@ -23,7 +23,7 @@ class BaseTransform(ABC):
         self.exclude_keys = exclude_keys if exclude_keys is not None else []
         self._init_kwargs = kwargs
         # Set requires_fit from fit-policy mixin (avoids pipeline needing to know mixin types)
-        from lmetk.transforms.base.multisource import FitByConcatenationMixin, NoFitMixin
+        from picid.transforms.base.multisource import FitByConcatenationMixin, NoFitMixin
         if issubclass(type(self), FitByConcatenationMixin):
             self.requires_fit = True
         elif issubclass(type(self), NoFitMixin):

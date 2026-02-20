@@ -5,10 +5,10 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from lmetk.data.optimization.sequencer import RaggedArraySequencer
-from lmetk.transforms.base_transforms.autoencoder_transform import AutoencoderTransform
-from lmetk.data.datasets.rul_context_dataset import RULContextBatchDataset
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
+from picid.data.optimization.sequencer import RaggedArraySequencer
+from picid.transforms.base_transforms.autoencoder_transform import AutoencoderTransform
+from picid.data.datasets.rul_context_dataset import RULContextBatchDataset
+from picid.utils.awkward_utils import ak_regularize_regular_axes, blocks_to_ragged_array
 
 
 # Set up a logger for better feedback

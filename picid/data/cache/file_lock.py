@@ -9,7 +9,7 @@ else:
 import logging
 
 logger = logging.getLogger(__name__)
-LOCK_FILE = "/tmp/lmetk_preprocess.lock"
+LOCK_FILE = "/tmp/picid_preprocess.lock"
 
 
 class FileLock:

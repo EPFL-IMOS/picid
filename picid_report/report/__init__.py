@@ -1,8 +1,8 @@
-# lmetk_report/report: tables, HTML report, plots
+# picid_report/report: tables, HTML report, plots
 
-import lmetk_report.report.reporting as reporting
-import lmetk_report.report.report_html as report_html
-from lmetk_report.report.reporting import (
+import picid_report.report.reporting as reporting
+import picid_report.report.report_html as report_html
+from picid_report.report.reporting import (
     create_summary_table,
     display_experiment_stats,
     display_hp_impact,
@@ -14,8 +14,8 @@ from lmetk_report.report.reporting import (
     export_hp_impact_tables,
     write_tables_tex,
 )
-from lmetk_report.report.report_html import write_report_html
-from lmetk_report.report.plots import plot_best_metric_bars, plot_hp_impact
+from picid_report.report.report_html import write_report_html
+from picid_report.report.plots import plot_best_metric_bars, plot_hp_impact
 
 __all__ = [
     "reporting",

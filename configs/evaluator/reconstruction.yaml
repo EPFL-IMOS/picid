@@ -1,5 +1,5 @@
 _evaluator_defaults: &evaluator_defaults
-  _target_: lmetk.evaluator.reconstruction.ReconstructionEvaluator
+  _target_: picid.evaluator.reconstruction.ReconstructionEvaluator
   metric_names: ["mae", "mse", "rmse"] # 'rmse', 'mape', 'mspe' , 'mae_railway', 'mse_railway'
 
   apply_inverse_scaling: False
@@ -11,8 +11,8 @@ _evaluator_defaults: &evaluator_defaults
   task_mode: ${datasource.task_mode} # univariate/multivariate
   paths: ${paths}
   hooks:
-    - _target_: lmetk.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook
-    - _target_: lmetk.evaluator.hooks.save_predictions.SavePredictionsHook
+    - _target_: picid.evaluator.hooks.reconstruction_plot.ReconstructionPlotHook
+    - _target_: picid.evaluator.hooks.save_predictions.SavePredictionsHook
       dims: ["sample", "time", "feature"]
 
 train: *evaluator_defaults

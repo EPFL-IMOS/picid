@@ -16,7 +16,7 @@ class ProjectSearchPathPlugin(SearchPathPlugin):
         # Remember to verify the config is packaged properly (build sdist and look inside,
         # and verify MANIFEST.in is correct).
         search_path.append(
-            provider="lmetk.defaults", path=f"file://{Path.cwd()}/configs"
+            provider="picid.defaults", path=f"file://{Path.cwd()}/configs"
         )
 
     def register() -> None:

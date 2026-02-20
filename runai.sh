@@ -22,7 +22,7 @@ echo -e "\033[1;34m[INFO]\033[0m Running experiment with args: $ARGS"
 echo -e "\033[1;34m[INFO]\033[0m Logs: $LOGFILE"
 
 # Launch experiment
-python -u lmetk/run.py paths=runai $ARGS 2>&1 | tee "$LOGFILE" &
+python -u picid/run.py paths=runai $ARGS 2>&1 | tee "$LOGFILE" &
 PID=$!
 
 # Also kill child process on Ctrl+C

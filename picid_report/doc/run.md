@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.run` (root)
+**Module:** `picid_report.run` (root)
 
 This document describes the main pipeline script: `run_pipeline()`, `main()`, and the CLI. It includes **examples** for every function and common usage patterns.
 
@@ -59,7 +59,7 @@ def run_pipeline(
 ### Example 1: Full pipeline with default project and save to disk
 
 ```python
-from lmetk_report.run import run_pipeline
+from picid_report.run import run_pipeline
 
 df, all_results, summary_df = run_pipeline(
     project_name="29_01_2026_unibo_prognostics_combined",
@@ -121,8 +121,8 @@ df, all_results, summary_df = run_pipeline(
 ### Example 5: Using PipelineConfig (custom column config / search space)
 
 ```python
-from lmetk_report.run import run_pipeline
-from lmetk_report.config import PipelineConfig
+from picid_report.run import run_pipeline
+from picid_report.config import PipelineConfig
 
 cfg = PipelineConfig.from_default()
 cfg.column_config["model_target"] = "model.name"  # if your logs use model.name
@@ -187,7 +187,7 @@ df, all_results, summary_df = run_pipeline(
 **Usage:**
 
 ```bash
-python -m lmetk_report.run [options]
+python -m picid_report.run [options]
 ```
 
 **Arguments:**
@@ -209,16 +209,16 @@ python -m lmetk_report.run [options]
 
 ```bash
 # Default run (no save)
-python -m lmetk_report.run
+python -m picid_report.run
 
 # Save everything to report_output/
-python -m lmetk_report.run -o report_output
+python -m picid_report.run -o report_output
 
 # Save with LaTeX and custom report name, quiet
-python -m lmetk_report.run -o report_output --export-latex --report-name unibo_report.html -q
+python -m picid_report.run -o report_output --export-latex --report-name unibo_report.html -q
 
 # Debug logging
-python -m lmetk_report.run --debug -o report_output
+python -m picid_report.run --debug -o report_output
 ```
 
 ---

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from lmetk.data.preprocessing.base import PreProcessorInterface
+from picid.data.preprocessing.base import PreProcessorInterface
 
 
 class DummyPreprocessor(PreProcessorInterface):

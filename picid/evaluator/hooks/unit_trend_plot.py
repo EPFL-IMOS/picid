@@ -3,7 +3,7 @@ from typing import Any, Dict
 import matplotlib.pyplot as plt
 import numpy as np
 
-from lmetk.evaluator.hooks.base import BaseEvalHook
+from picid.evaluator.hooks.base import BaseEvalHook
 
 
 class UnitTrendPlotHook(BaseEvalHook):

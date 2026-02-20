@@ -11,8 +11,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from lmetk_report.scripts.load_best_config import load_best_configs_from_report
-from lmetk_report.scripts.parse_experiment_script import parse_experiment_script, ParsedScript
+from picid_report.scripts.load_best_config import load_best_configs_from_report
+from picid_report.scripts.parse_experiment_script import parse_experiment_script, ParsedScript
 
 
 # Default seeds for baselines when not parsed from script (paper_prognostics/baselines.sh)

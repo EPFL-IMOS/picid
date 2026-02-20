@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from typing import Dict, Optional, Tuple
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitMultiSourceTransformMixin
-from lmetk.data.data_objects.utils import convert_to_numpy
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from picid.data.data_objects.utils import convert_to_numpy
 
 # Set backend for non-interactive environments
 plt.switch_backend("Agg")

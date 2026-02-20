@@ -1,5 +1,5 @@
 """
-Tests for lmetk_report.core.preprocess.
+Tests for picid_report.core.preprocess.
 
 Covers clean_and_rename_models.
 """
@@ -7,8 +7,8 @@ Covers clean_and_rename_models.
 import pandas as pd
 import pytest
 
-from lmetk_report import config
-from lmetk_report.core import preprocess
+from picid_report import config
+from picid_report.core import preprocess
 
 
 class TestCleanAndRenameModels:
@@ -17,8 +17,8 @@ class TestCleanAndRenameModels:
     def test_strips_common_prefix(self):
         df = pd.DataFrame({
             "model._target_": [
-                "lmetk.baselines.patchtst_model.PatchTST_Forecaster",
-                "lmetk.baselines.lstm_model.LSTM_Forecaster",
+                "picid.baselines.patchtst_model.PatchTST_Forecaster",
+                "picid.baselines.lstm_model.LSTM_Forecaster",
             ],
         })
         out = preprocess.clean_and_rename_models(df, model_target_col="model._target_")
@@ -56,8 +56,8 @@ class TestCleanAndRenameModels:
         """When model_target_col is None, uses config.COLUMN_CONFIG['model_target']."""
         df = pd.DataFrame({
             config.COLUMN_CONFIG["model_target"]: [
-                "lmetk.baselines.patchtst_model.PatchTST_Forecaster",
-                "lmetk.baselines.lstm_model.LSTM_Forecaster",
+                "picid.baselines.patchtst_model.PatchTST_Forecaster",
+                "picid.baselines.lstm_model.LSTM_Forecaster",
             ],
         })
         out = preprocess.clean_and_rename_models(df)

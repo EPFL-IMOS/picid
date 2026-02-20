@@ -60,7 +60,7 @@ The transforms system follows a layered architecture with clear separation of co
 
 ### 1. ConfigTransformManager
 
-**Location**: `lmetk/transforms/base/transform_manager.py`
+**Location**: `picid/transforms/base/transform_manager.py`
 
 The `ConfigTransformManager` is responsible for:
 
@@ -90,7 +90,7 @@ def _instantiate_all(self) -> None:
 
 ### 2. DataTransform
 
-**Location**: `lmetk/transforms/base/data_transform.py`
+**Location**: `picid/transforms/base/data_transform.py`
 
 `DataTransform` acts as a facade that:
 
@@ -144,7 +144,7 @@ def forward(self, data: SplitDatasetContainer) -> SplitDatasetContainer:
 
 ### 3. TransformStrategy
 
-**Location**: `lmetk/transforms/base/strategy.py`
+**Location**: `picid/transforms/base/strategy.py`
 
 `TransformStrategy` orchestrates the transformation process:
 
@@ -249,7 +249,7 @@ The `postprocess_transformed_data` function standardizes outputs:
 
 ### BaseTransform
 
-**Location**: `lmetk/transforms/base/base_transform.py`
+**Location**: `picid/transforms/base/base_transform.py`
 
 The abstract base class all transforms must inherit from:
 
@@ -310,11 +310,11 @@ else:
 
 ### Dense vs Ragged Data
 
-The multi-source mixins (in `lmetk/transforms/base/multisource.py`) handle data type routing and fit/transform policy. Use **exactly one** fit-policy mixin and **one** transform-policy mixin, or use a ready-made composition.
+The multi-source mixins (in `picid/transforms/base/multisource.py`) handle data type routing and fit/transform policy. Use **exactly one** fit-policy mixin and **one** transform-policy mixin, or use a ready-made composition.
 
 ## Multi-Source Transforms
 
-**Location**: `lmetk/transforms/base/multisource.py`
+**Location**: `picid/transforms/base/multisource.py`
 
 ### Ready-made mixins (recommended)
 
@@ -452,7 +452,7 @@ if data_is_ragged_but_regular:
 Select the appropriate marker class:
 
 ```python
-from lmetk.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 
 class MyTransform(DenseTransform):
     """My custom transform that only works with dense arrays."""
@@ -505,7 +505,7 @@ def fit_data(self, data: NamedTransformInput, metadata: dict) -> None:
 ### Step 4: Add Multi-Source Support (if needed)
 
 ```python
-from lmetk.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
+from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
 
 class MyTransform(
     DenseTransform,
@@ -541,12 +541,12 @@ def transform_data(self, data: NamedTransformInput, metadata: dict) -> dict:
 
 ```python
 import numpy as np
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import (
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
     InverseTransformMixin
 )
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 class CustomScaler(
     DenseTransform,
@@ -595,7 +595,7 @@ class CustomScaler(
 
 ### Pipeline steps and hooks
 
-The pipeline runs in order: **CopyStep** → **IntegrityCheckStep** → **FitStep** → **TransformStep** → **PostprocessStep** → **MergeStep** → **RecordManifestStep**. Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `lmetk.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
+The pipeline runs in order: **CopyStep** → **IntegrityCheckStep** → **FitStep** → **TransformStep** → **PostprocessStep** → **MergeStep** → **RecordManifestStep**. Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `picid.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
 
 ### Validation and integrity
 
@@ -605,7 +605,7 @@ Transform metadata supports two validation-related options:
    After each transform, `DataTransform.forward()` runs structural checks (return type, keys present, splits preserved). You can turn this off per transform with **`validate_output: false`** in metadata (e.g. for debugging or trusted pipelines). Default is `true`.
 
 2. **Optional pipeline integrity checks**  
-   The pipeline runs an **IntegrityCheckStep** after CopyStep. It executes a list of `(name, check_fn, policy)` where `policy` is `"fail"`, `"warn"`, or `"allow"`. You can pass **`integrity_checks`** in metadata: a list of `(name, check_fn, policy)` tuples. Each `check_fn` must be a no-arg callable that may raise; it is run during the step. Because callables cannot be expressed in YAML, **`integrity_checks`** is set **programmatically** when building the transform config (e.g. when constructing the metadata dict before passing it to `DataTransform` or `ConfigTransformManager`). Helpers: `lmetk.transforms.base.integrity.run_check`, `run_checks`. Integrity checks run **before** FitStep and TransformStep.
+   The pipeline runs an **IntegrityCheckStep** after CopyStep. It executes a list of `(name, check_fn, policy)` where `policy` is `"fail"`, `"warn"`, or `"allow"`. You can pass **`integrity_checks`** in metadata: a list of `(name, check_fn, policy)` tuples. Each `check_fn` must be a no-arg callable that may raise; it is run during the step. Because callables cannot be expressed in YAML, **`integrity_checks`** is set **programmatically** when building the transform config (e.g. when constructing the metadata dict before passing it to `DataTransform` or `ConfigTransformManager`). Helpers: `picid.transforms.base.integrity.run_check`, `run_checks`. Integrity checks run **before** FitStep and TransformStep.
 
 ## Advanced Topics
 
@@ -684,7 +684,7 @@ for key in keys_to_modify:
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('lmetk.transforms')
+logger = logging.getLogger('picid.transforms')
 ```
 
 ### Common Issues
@@ -726,7 +726,7 @@ ValueError: Transform MyTransform does not support the data type {ak.Array}
 **Describe Data Type**:
 
 ```python
-from lmetk.utils.rich_output import describe_data_type
+from picid.utils.rich_output import describe_data_type
 
 describe_data_type(data, calculate_stat=True)
 ```

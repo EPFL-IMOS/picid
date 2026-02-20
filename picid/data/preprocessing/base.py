@@ -3,9 +3,9 @@ from typing import Union
 
 from numpy import ndarray
 
-from lmetk.data.datasources.base.multi_source_loader import MultiSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 class PreProcessorInterface(ABC):

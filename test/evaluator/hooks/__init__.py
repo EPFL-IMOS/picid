@@ -1,1 +1,1 @@
-"""Tests for lmetk.evaluator.hooks module."""
+"""Tests for picid.evaluator.hooks module."""

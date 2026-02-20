@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.StandardScalerSklearn  
+    _target_:  picid.transforms.base_transforms.scaler.StandardScalerSklearn  
     
   metadata:
     apply_to: features

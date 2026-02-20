@@ -61,7 +61,7 @@ def _parse_array_lines(content: str, start: int, end: int) -> List[str]:
 
 
 def _parse_command_block(content: str, start: int, end: int) -> List[str]:
-    """Extract the command array lines (each line is one token, e.g. 'python lmetk/run.py \\' or 'experiment=${exp_name} \\')."""
+    """Extract the command array lines (each line is one token, e.g. 'python picid/run.py \\' or 'experiment=${exp_name} \\')."""
     block = content[start:end]
     lines: List[str] = []
     for raw_line in block.splitlines():

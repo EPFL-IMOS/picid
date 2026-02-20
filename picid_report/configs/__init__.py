@@ -8,13 +8,13 @@ Config package: dataset/model-level configuration.
   get_sort_metric(), inference helpers for task type and dataset category.
 """
 
-from lmetk_report.configs.search_space import (
+from picid_report.configs.search_space import (
     DEFAULT_SEARCH_SPACE,
     EXPECTED_SEARCH_SPACE,
     get_search_space,
     get_model_grid_from_search_space,
 )
-from lmetk_report.configs.sort_metrics import (
+from picid_report.configs.sort_metrics import (
     SORT_METRIC_BY_TASK_TYPE,
     SORT_METRIC_BY_DATASET_CATEGORY,
     SORT_METRIC_OVERRIDES,

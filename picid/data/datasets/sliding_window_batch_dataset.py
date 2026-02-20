@@ -7,10 +7,10 @@ import awkward as ak
 import numpy as np
 import torch
 
-from lmetk.data.datasets.base import BaseDataset
-from lmetk.data.datasets.collate_functions import collate_key_value_batch
-from lmetk.data.datasets.subset_sampling import make_subset_blocks_indices
-from lmetk.data.optimization.sequencer import (
+from picid.data.datasets.base import BaseDataset
+from picid.data.datasets.collate_functions import collate_key_value_batch
+from picid.data.datasets.subset_sampling import make_subset_blocks_indices
+from picid.data.optimization.sequencer import (
     BaseSequencer,
     DenseArraySequencer,
     RaggedArraySequencer,

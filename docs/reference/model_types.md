@@ -16,7 +16,7 @@ Models that process the **full dataset per task** in one shot: fit on train, pre
   - Context/input: `(1, N_samples, F)` or equivalent tabular `(N_samples, F)`
   - Target: `(1, N_samples, T)` or `(N_samples, T)`
 - **Pipeline:** Uses `FitPredictDataset` (or task-wise iteration). The wrapper implements `fit(X, y)` and `predict(X)`; the pipeline calls these once per task (e.g. per unit or per horizon).
-- **Examples:** AutoGluon, TabPFN, TabDPT, Carte, XGBoost (fit-predict wrappers in `lmetk.model.wrappers`).
+- **Examples:** AutoGluon, TabPFN, TabDPT, Carte, XGBoost (fit-predict wrappers in `picid.model.wrappers`).
 
 ### 2. Batchwise forward (contextual / windowed)
 
@@ -77,8 +77,8 @@ The pipeline and configs determine which behaviour is used for a given experimen
 
 ## Where implementations live
 
-- **Wrappers (unified interface):** `lmetk.model.wrappers` — all model wrappers (fit-predict and feed-forward) and the abstract bases `AbstractFitPredictWrapper`, `AbstractFeedForwardWrapper`, `AbstractFeedForwardTrainingWrapper`.
-- **Baselines (backbone implementations):** `lmetk.baselines` — e.g. LSTM, PatchTST, Crossformer, TiDE, SpacetimeFormer, timeseries transformer, forecaster orchestration.
-- **Task types:** `lmetk.baselines.definitions` — `REGRESSION_TASKS`, `CLASSIFICATION_TASKS`, `FORECASTING_TASKS`, `ALL_TASKS`; used by wrappers and evaluators.
+- **Wrappers (unified interface):** `picid.model.wrappers` — all model wrappers (fit-predict and feed-forward) and the abstract bases `AbstractFitPredictWrapper`, `AbstractFeedForwardWrapper`, `AbstractFeedForwardTrainingWrapper`.
+- **Baselines (backbone implementations):** `picid.baselines` — e.g. LSTM, PatchTST, Crossformer, TiDE, SpacetimeFormer, timeseries transformer, forecaster orchestration.
+- **Task types:** `picid.baselines.definitions` — `REGRESSION_TASKS`, `CLASSIFICATION_TASKS`, `FORECASTING_TASKS`, `ALL_TASKS`; used by wrappers and evaluators.
 
 To add a new model type or wrapper, see [Adding a new model](how_to_add_a_new_model.md).

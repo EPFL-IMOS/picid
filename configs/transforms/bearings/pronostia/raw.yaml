@@ -1,6 +1,6 @@
 reshape_y:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b c -> (a b) c"
   metadata:
     apply_to: target
@@ -9,14 +9,14 @@ reshape_y:
 # as features have 1st var dim then we first have to regularize then use reshape_x
 ragged2regularragged:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "features"
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    _target_: picid.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
     dataset_name: PRONOSTIA
@@ -27,7 +27,7 @@ scaler_target:
 
 reshape_x:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b c -> (a b) c"
   metadata:
     apply_to: features
@@ -35,7 +35,7 @@ reshape_x:
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: features

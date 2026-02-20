@@ -33,14 +33,14 @@ import torch.nn as nn
 from typing import Dict, Any
 from unittest.mock import Mock, MagicMock, patch
 
-from lmetk.baselines.lstm_model.lstm_model import (
+from picid.baselines.lstm_model.lstm_model import (
     LSTM_Encoder,
     LSTM_Decoder,
     LSTM_Seq2Seq,
     LSTM_Regression,
     LSTM_Forecaster,
 )
-from lmetk.evaluator.base import AbstractEvaluator
+from picid.evaluator.base import AbstractEvaluator
 
 
 # =============================================================================

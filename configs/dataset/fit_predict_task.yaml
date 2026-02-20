@@ -1,2 +1,2 @@
-_target_: lmetk.data.datasets.fit_predict_dataset.FitPredictTaskDataset
+_target_: picid.data.datasets.fit_predict_dataset.FitPredictTaskDataset
 task_type: ${task_definition.task_type}

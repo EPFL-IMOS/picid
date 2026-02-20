@@ -2,7 +2,7 @@
 
 **Navigation:** [← Documentation index](README.md)
 
-**Module:** `lmetk_report.report.report_html`
+**Module:** `picid_report.report.report_html`
 
 This document describes **write_report_html()**, which produces a single HTML file that embeds experiment statistics, the summary table, optional plots, and per (dataset, model) HP impact tables with "Metric used to select best results".
 
@@ -37,9 +37,9 @@ def write_report_html(
 ### Example 1: Minimal (tables only)
 
 ```python
-from lmetk_report.report_html import write_report_html
-from lmetk_report import create_summary_table
-from lmetk_report.reporting import get_experiment_stats_df
+from picid_report.report_html import write_report_html
+from picid_report import create_summary_table
+from picid_report.reporting import get_experiment_stats_df
 
 summary_df = create_summary_table(all_results, precision=4)
 stats_df = get_experiment_stats_df(all_results)

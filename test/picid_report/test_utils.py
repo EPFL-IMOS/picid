@@ -1,5 +1,5 @@
 """
-Tests for lmetk_report.utils.
+Tests for picid_report.utils.
 
 Covers format_mean_std_count and flatten_aggregated_columns.
 """
@@ -7,7 +7,7 @@ Covers format_mean_std_count and flatten_aggregated_columns.
 import pandas as pd
 import pytest
 
-from lmetk_report import utils
+from picid_report import utils
 
 
 class TestFormatMeanStdCount:

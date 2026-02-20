@@ -22,7 +22,7 @@ dataset_run_name="unibo"
 run_name="001_unibo_tabpfn_fit_predict_prognostics_combined_72"
 
 command_to_run=(
-    python lmetk/run.py \
+    python picid/run.py \
     paths=runai \
     experiment=unibo/prognostics/combined/tabpfn_fit_predict \
     logger.wandb.project=reproduce_29_01_2026_unibo_prognostics_combined \

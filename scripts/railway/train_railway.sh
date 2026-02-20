@@ -75,7 +75,7 @@ for model_name in "${model_names[@]}"; do
                 # --- 4. Build the full command as a single string ---
                 # Note the escaped quotes \"...\" for parameters that are lists.
                 command_to_run=(
-                    python lmetk/run.py \
+                    python picid/run.py \
                     paths=runai \
                     experiment=${dataset}/forecasting/${model_name} \
                     datamodule.train_batch_size=${batch_size} \

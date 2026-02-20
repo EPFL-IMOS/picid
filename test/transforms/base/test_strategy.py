@@ -1,4 +1,4 @@
-"""Tests for lmetk.transforms.base.strategy module.
+"""Tests for picid.transforms.base.strategy module.
 
 This file consolidates all tests for TransformStrategy and postprocess_transformed_data
 from multiple test files. All dummy transforms and fixtures are imported from conftest.
@@ -8,10 +8,10 @@ import pytest
 import awkward as ak
 from typing import Any, Dict, List
 
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.strategy import TransformStrategy, postprocess_transformed_data
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
-from lmetk.data.data_objects.data import (
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.strategy import TransformStrategy, postprocess_transformed_data
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.data.data_objects.data import (
     NamedTransformInput,
     SplitDatasetContainer,
     SimpleReturnObject,

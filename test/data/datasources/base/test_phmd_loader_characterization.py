@@ -16,11 +16,11 @@ from unittest.mock import MagicMock
 sys.modules["phmd"] = MagicMock()
 sys.modules["phmd.datasets"] = MagicMock()
 
-from lmetk.data.datasources.base.phmd_loader import (
+from picid.data.datasources.base.phmd_loader import (
     convert_outer_list_to_inner,
     PHMDMultiSourceLoader,
 )
-from lmetk.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects.data import SplitDatasetContainer
 
 
 # ----- convert_outer_list_to_inner -----

@@ -2,10 +2,10 @@
 # Generate HTML reports for every project listed in projects.sh.
 # Each report is written to report_output/<PROJECT_NAME>/<PROJECT_NAME>.html
 # (report filename is exactly the project name with .html).
-# Usage: ./lmetk_report/run_all_projects.sh [output_base_dir] [-- extra_args...]
+# Usage: ./picid_report/run_all_projects.sh [output_base_dir] [-- extra_args...]
 # Default output base: report_output (same as run.sh).
 # Pass --data-first after -- to disable legacy search space fallback (data-first mode when search_space.py has no entry).
-# Example: ./lmetk_report/run_all_projects.sh report_output -- --data-first
+# Example: ./picid_report/run_all_projects.sh report_output -- --data-first
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,7 +40,7 @@ while IFS= read -r proj || [[ -n "$proj" ]]; do
   echo "=============================================="
   echo "Project: $proj"
   echo "=============================================="
-  uv run python -m lmetk_report.run \
+  uv run python -m picid_report.run \
     --project "$proj" \
     -o "$OUTPUT_BASE/$proj" \
     --report-name "${proj}.html" \

@@ -4,13 +4,13 @@ import pytest
 import hydra
 import torch
 
-from lmetk.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
-from lmetk.baselines.tide_model.tide_model import TiDE_Forecaster
+from picid.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
+from picid.baselines.tide_model.tide_model import TiDE_Forecaster
 from test.conftest import BATCH_SIZE
 from test.utils import ProjectSearchPathPlugin
 from collections.abc import Mapping
 from typing import Any
-from lmetk.evaluator.base import AbstractEvaluator
+from picid.evaluator.base import AbstractEvaluator
 from hydra.core.global_hydra import GlobalHydra
 
 

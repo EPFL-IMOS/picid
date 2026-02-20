@@ -3,7 +3,7 @@ from sklearn.linear_model import LogisticRegression
 
 from .base import AbstractFeedForwardWrapper
 
-from lmetk.model.methods.linear_regression_model import LinearRegressionModelBaseline
+from picid.model.methods.linear_regression_model import LinearRegressionModelBaseline
 from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
 
 

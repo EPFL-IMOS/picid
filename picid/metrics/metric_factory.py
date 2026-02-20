@@ -2,7 +2,7 @@
 
 from typing import Dict, Type
 from .base import AbstractMetric
-from lmetk.metrics.metrics import (
+from picid.metrics.metrics import (
     MAEMetric,
     MSEMetric,
     MulticlassAUROCMetric,
@@ -19,7 +19,7 @@ from lmetk.metrics.metrics import (
     NormalizedMSEMetricRailway,
     MulticlassF1Metric,
 )
-from lmetk.metrics.rul_metrics import MeanPercentageErrorMetric, PHMScoreMetric
+from picid.metrics.rul_metrics import MeanPercentageErrorMetric, PHMScoreMetric
 
 
 class MetricFactory:

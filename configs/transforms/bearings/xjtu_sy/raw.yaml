@@ -1,7 +1,7 @@
 # plot_features:
 #   transform:
 #     unit_key: unit_id
-#     _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+#     _target_: picid.transforms.visualization.features_target_plotter.FeatureTargetPlotter
 #     saving_path: ${paths.log_dir}/images
 #     features_key: features
 #     target_key: target
@@ -11,7 +11,7 @@
 
 subsample_features_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 10
     window_size: 1
     aggregation: last
@@ -22,7 +22,7 @@ subsample_features_target:
 plot_features_subsampled:
   transform:
     unit_key: unit_id
-    _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+    _target_: picid.transforms.visualization.features_target_plotter.FeatureTargetPlotter
     saving_path: ${paths.log_dir}/images_subsampled
     features_key: features
     target_key: target
@@ -32,14 +32,14 @@ plot_features_subsampled:
 
 ragged2regularragged:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "features"
 
 reshape_x_for_health_index:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b c -> (a b) c"
   metadata:
     apply_to: features
@@ -47,7 +47,7 @@ reshape_x_for_health_index:
 
 # features2RMS:
 #   transform:
-#     _target_: lmetk.transforms.signal_processing.rms.MovingRMSTransform
+#     _target_: picid.transforms.signal_processing.rms.MovingRMSTransform
 #     window_size: 2560
 #     apply_to_columns: True
 #     save_images: True
@@ -60,14 +60,14 @@ reshape_x_for_health_index:
 
 target_to_regular_ragged:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "target"
 
 reshape_y:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b c -> (a b) c"
   metadata:
     apply_to: target
@@ -75,7 +75,7 @@ reshape_y:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    _target_: picid.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
     dataset_name: XJTU-SY
@@ -86,7 +86,7 @@ scaler_target:
 
 reshape_x:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b c -> (a b) c"
   metadata:
     apply_to: features
@@ -94,7 +94,7 @@ reshape_x:
 
 # plot:
 #   transform:
-#     _target_: lmetk.transforms.base_transforms.plot_transforms.PlotFeatures
+#     _target_: picid.transforms.base_transforms.plot_transforms.PlotFeatures
 #     unit_key: unit_id
 
 #   metadata:
@@ -103,7 +103,7 @@ reshape_x:
 
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: features

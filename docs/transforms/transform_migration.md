@@ -38,8 +38,8 @@ This document (1) evaluates the draft `*_new.py` files (`data_transform_new`, `s
 - **CopyStep and container shape:** New CopyStep uses `_first_leaf(data[key])` to unwrap nested dict/list and reach the first array; if it is `ak.Array` it does shallow copy, otherwise deep copy. This preserves awkward-aware behaviour. Confirm that your container shape (e.g. `data[key]` is split-keyed and values are list-like or mapping) is compatible with that unwrapping so `_first_leaf` reaches a real array and does not raise or return something unexpected.
 - **Two integrity steps and more context fields:** Context and docs must carry `integrity_checks_before` / `integrity_checks_after`, `integrity_before_ran` / `integrity_after_ran`, `integrity_before_check_names` / `integrity_after_check_names`. More surface area to maintain and document.
 - **Check function signature change:** Current integrity uses no-arg callables (they read from context via closure). New pipeline passes a data slice as the first argument. The new code supports no-arg functions via introspection and emits DeprecationWarning; existing tests or configs that pass no-arg checks will need to migrate to the new signature when the deprecation is removed.
-- **Pipeline import surface:** Strategy and other code import from `lmetk.transforms.base.pipeline`. Replacing pipeline.py with pipeline_new adds new exports (RegisterChunkBuilderStep, IntegrityCheckBeforeStep, IntegrityCheckAfterStep, build_default_before_checks, build_default_after_checks, _emit). Existing tests that import IntegrityCheckStep must switch to the new steps or a thin compatibility layer.
-- **Unused import in pipeline_new:** `from lmetk.transforms.base.integrity import run_checks` is present but the new pipeline uses its own `_run_scoped_checks`; the import can be removed as a small cleanup.
+- **Pipeline import surface:** Strategy and other code import from `picid.transforms.base.pipeline`. Replacing pipeline.py with pipeline_new adds new exports (RegisterChunkBuilderStep, IntegrityCheckBeforeStep, IntegrityCheckAfterStep, build_default_before_checks, build_default_after_checks, _emit). Existing tests that import IntegrityCheckStep must switch to the new steps or a thin compatibility layer.
+- **Unused import in pipeline_new:** `from picid.transforms.base.integrity import run_checks` is present but the new pipeline uses its own `_run_scoped_checks`; the import can be removed as a small cleanup.
 
 ---
 
@@ -70,10 +70,10 @@ Integration is done in phases so that each step is testable and reversible. The 
    - Confirm that your container shape is compatible: `data[key]` is split-keyed (e.g. `{split: [unit_arrays]}` or `{split: ...}` with values that unwrap to arrays) so `_first_leaf` reaches a concrete array and does not raise or return an unexpected type.
 
 2. **Clean pipeline_new**
-   - Remove unused `from lmetk.transforms.base.integrity import run_checks` from pipeline_new if still present (new code uses `_run_scoped_checks` only).
+   - Remove unused `from picid.transforms.base.integrity import run_checks` from pipeline_new if still present (new code uses `_run_scoped_checks` only).
 
 3. **Imports in strategy_new**
-   - strategy_new imports from `lmetk.transforms.base.pipeline`. Ensure pipeline_new exports every symbol strategy_new needs: `TransformContext`, `CopyStep`, `RegisterChunkBuilderStep`, `IntegrityCheckBeforeStep`, `IntegrityCheckAfterStep`, `FitStep`, `TransformStep`, `PostprocessStep`, `MergeStep`, `RecordManifestStep`, `build_default_before_checks`, `build_default_after_checks`, `_emit`.
+   - strategy_new imports from `picid.transforms.base.pipeline`. Ensure pipeline_new exports every symbol strategy_new needs: `TransformContext`, `CopyStep`, `RegisterChunkBuilderStep`, `IntegrityCheckBeforeStep`, `IntegrityCheckAfterStep`, `FitStep`, `TransformStep`, `PostprocessStep`, `MergeStep`, `RecordManifestStep`, `build_default_before_checks`, `build_default_after_checks`, `_emit`.
 
 4. **Run existing transform tests against current code**
    - Establish a green baseline: `pytest test/transforms/ -v` (and any integration tests that use DataTransform/strategy/pipeline).
@@ -116,7 +116,7 @@ Integration is done in phases so that each step is testable and reversible. The 
    - Replace `strategy.py` with the contents of `strategy_new.py`.
 
 2. **Import alignment**
-   - New strategy imports from `lmetk.transforms.base.pipeline`. Pipeline was already replaced in Phase 1; ensure it exports RegisterChunkBuilderStep, IntegrityCheckBeforeStep, IntegrityCheckAfterStep, build_default_before_checks, build_default_after_checks. Remove the IntegrityCheckStep shim from pipeline if it was added only for Phase 1.
+   - New strategy imports from `picid.transforms.base.pipeline`. Pipeline was already replaced in Phase 1; ensure it exports RegisterChunkBuilderStep, IntegrityCheckBeforeStep, IntegrityCheckAfterStep, build_default_before_checks, build_default_after_checks. Remove the IntegrityCheckStep shim from pipeline if it was added only for Phase 1.
 
 3. **_prepare_chunks_for_split**
    - New strategy’s `_prepare_chunks_for_split` does not call `get_sanitized_data()`. Confirm no other code path expects sanitization to happen inside this method; integrity-before now covers that.
@@ -177,7 +177,7 @@ Integration is done in phases so that each step is testable and reversible. The 
 
 ### Phase 5 (optional): Integrity module alignment
 
-**Goal:** Reuse or extend `lmetk.transforms.base.integrity` for the new scoped checks so that policy handling (fail/warn/allow) and check running live in one place.
+**Goal:** Reuse or extend `picid.transforms.base.integrity` for the new scoped checks so that policy handling (fail/warn/allow) and check running live in one place.
 
 - Current `integrity.run_checks` takes no-arg callables. New pipeline uses `_run_scoped_checks(slice)` in pipeline.py.
 - Option: Add `run_scoped_checks(checks, data_slice)` in integrity.py (or similar), have pipeline call it, and deprecate no-arg run_checks. Then pipeline only imports and calls integrity; no duplicated policy logic.
@@ -206,9 +206,9 @@ Integration is done in phases so that each step is testable and reversible. The 
 ## 5. References
 
 - **Refactor plan:** `docs/transforms/SANITIZATION_AND_INTEGRITY_REFACTOR_PLAN.md`
-- **Draft files:** `lmetk/transforms/base/data_transform_new.py`, `strategy_new.py`, `pipeline_new.py`
-- **Current pipeline/strategy/data_transform:** `lmetk/transforms/base/pipeline.py`, `strategy.py`, `data_transform.py`
-- **Integrity (current):** `lmetk/transforms/base/integrity.py`
+- **Draft files:** `picid/transforms/base/data_transform_new.py`, `strategy_new.py`, `pipeline_new.py`
+- **Current pipeline/strategy/data_transform:** `picid/transforms/base/pipeline.py`, `strategy.py`, `data_transform.py`
+- **Integrity (current):** `picid/transforms/base/integrity.py`
 
 ---
 

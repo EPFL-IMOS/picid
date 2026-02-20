@@ -5,8 +5,8 @@ import torch
 import numpy as np
 from typing import Optional, Any, Tuple
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.multisource import InverseTransformMixin
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.multisource import InverseTransformMixin
 
 
 class ScalingWrapper:

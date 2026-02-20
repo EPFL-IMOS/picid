@@ -9,7 +9,7 @@ Experiments in TabPHM are composed from **config groups** via Hydra. You choose 
 The run entry point is:
 
 ```bash
-python lmetk/run.py paths=<paths> experiment=<experiment_key>
+python picid/run.py paths=<paths> experiment=<experiment_key>
 ```
 
 The **experiment key** is a path-like name that selects one config under `configs/experiment/`. For example:
@@ -75,7 +75,7 @@ The base (`unibo/prognostics/base`) already sets datasource, evaluator, task_def
 Example:
 
 ```bash
-python lmetk/run.py paths=rt_local debug=default experiment=unibo/prognostics/raw/cnn_1d
+python picid/run.py paths=rt_local debug=default experiment=unibo/prognostics/raw/cnn_1d
 ```
 
 ---

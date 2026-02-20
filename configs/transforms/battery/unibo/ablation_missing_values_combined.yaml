@@ -1,6 +1,6 @@
 mcar_corruption_train_val:
   transform:
-    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    _target_: picid.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
     ratios: [0.5, 0.5, 0.5]
     mode: "block"
     block_params:
@@ -16,7 +16,7 @@ mcar_corruption_train_val:
 
 mcar_corruption_test:
   transform:
-    _target_: lmetk.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
+    _target_: picid.transforms.base_transforms.mcar_corruption.MCARCorruptorTransform
     ratios: [0.5, 0.5, 0.5]
     mode: "block"
     block_params:
@@ -31,7 +31,7 @@ mcar_corruption_test:
 
 missing_values_analytics:
   transform:
-    _target_: lmetk.transforms.analytics.missing_values.MissingValuesStatsLogger
+    _target_: picid.transforms.analytics.missing_values.MissingValuesStatsLogger
     saving_path: ${paths.log_dir}/missing_values_stats
 
   metadata:
@@ -41,7 +41,7 @@ missing_values_analytics:
 
 imputation:
   transform:
-    _target_: lmetk.transforms.base_transforms.imputation_methods.ImputationTransform
+    _target_: picid.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "locf"
   
   metadata:
@@ -53,7 +53,7 @@ imputation:
 # # To apply the plotter transform it is required to have ["features_imputed", "features_corrupted", "features"
 # plotter:
 #   transform:
-#     _target_: lmetk.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
+#     _target_: picid.transforms.visualization.mcar_imputer_plotter.MCARImputationPlotter
 #     saving_path: ${paths.log_dir}/images_imputed
 #     unit_key: unit_id
 #     imputed_key: features_imputed
@@ -69,7 +69,7 @@ imputation:
 
 scaler_features:
   transform:
-    _target_:  lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn  
+    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn  
     
   metadata:
     apply_to: features
@@ -77,7 +77,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   
   metadata:
     apply_to: target
@@ -86,7 +86,7 @@ scaler_target:
 
 time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.time_statistics.TimeStatsTransform
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
     hankel_window_size: 10
     stats_to_compute: [
         "mean",
@@ -113,7 +113,7 @@ time_domain_features:
 
 ragged2regular_time_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "time_domain_features"
@@ -121,7 +121,7 @@ ragged2regular_time_domain_features:
 
 spectral_domain_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
 
     stats_to_compute: [
         "mean",
@@ -146,7 +146,7 @@ spectral_domain_features:
 
 ragged2regular_spectral_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "spectral_features"
@@ -154,7 +154,7 @@ ragged2regular_spectral_features:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
     apply_to: ["spectral_features", "time_domain_features"]
@@ -163,7 +163,7 @@ concatenate_features:
 # This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
 take_last_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 1 
     window_size: full
     aggregation: last
@@ -174,14 +174,14 @@ take_last_target:
 # Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
 ragged_regular_ragged_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: rul
 
 reshape_target_second_time:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a 1 1 -> a 1"
   
   metadata:
@@ -189,7 +189,7 @@ reshape_target_second_time:
 
 final_scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -198,7 +198,7 @@ final_scaler_features:
 # plot_features_final:
 #   transform:
 #     unit_key: unit_id
-#     _target_: lmetk.transforms.visualization.features_target_plotter.FeatureTargetPlotter
+#     _target_: picid.transforms.visualization.features_target_plotter.FeatureTargetPlotter
 #     saving_path: ${paths.log_dir}/images_subsampled
 #     features_key: features
 #     target_key: target

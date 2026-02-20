@@ -1,13 +1,13 @@
 """
-Tests for lmetk_report.config.
+Tests for picid_report.config.
 
 Covers PipelineConfig and from_default().
 """
 
 import pytest
 
-from lmetk_report import config
-from lmetk_report.config import PipelineConfig
+from picid_report import config
+from picid_report.config import PipelineConfig
 
 
 class TestPipelineConfig:

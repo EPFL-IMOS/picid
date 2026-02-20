@@ -1,8 +1,8 @@
 """Comprehensive tests for scaler.py transforms."""
 import numpy as np
 import pytest
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.scaler import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.scaler import (
     ConstantScaler,
     MinMaxScalerSklearn,
     StandardScalerSklearn,

@@ -28,9 +28,9 @@ import omegaconf
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.transforms.base.base_transform import BaseTransform
-from lmetk.transforms.base.strategy import TransformStrategy
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.transforms.base.base_transform import BaseTransform
+from picid.transforms.base.strategy import TransformStrategy
 
 logger = logging.getLogger(__name__)
 

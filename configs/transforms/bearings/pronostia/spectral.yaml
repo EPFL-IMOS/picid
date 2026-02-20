@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: features
@@ -8,7 +8,7 @@ scaler_features:
 
 take_last_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
     window_size: full
     aggregation: last
@@ -19,14 +19,14 @@ take_last_target:
 # Reduce target dim
 reshape_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a 1 1 -> a 1"
   metadata:
     apply_to: target
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.bearings.health_index.HealthIndexTransform
+    _target_: picid.transforms.bearings.health_index.HealthIndexTransform
     runtime_key: target
     unit_key: unit_id
     dataset_name: PRONOSTIA
@@ -37,7 +37,7 @@ scaler_target:
 
 spectral_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.spectral.SpectralStatsTransform
+    _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
     stats_to_compute: [
         "mean",
         "maximum",
@@ -64,7 +64,7 @@ spectral_features:
 
 sequence2statistics:
   transform:
-    _target_: lmetk.transforms.battery.sequence2statistics.Sequence2Statistics
+    _target_: picid.transforms.battery.sequence2statistics.Sequence2Statistics
     padding_value: null
 
   metadata:
@@ -72,7 +72,7 @@ sequence2statistics:
 
 ragged2regularragged:
   transform:
-    _target_: lmetk.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
 
   metadata:
     apply_to: "features"

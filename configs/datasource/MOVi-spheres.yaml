@@ -1,5 +1,5 @@
 # Dataset loader config
-_target_: lmetk.data.datasources.kubric_movie.loader.MOViLoader
+_target_: picid.data.datasources.kubric_movie.loader.MOViLoader
 
 data_name: MOVi-spheres
 data_folder: rigid_body_dynamics
@@ -15,7 +15,7 @@ task_mode: multivariate #multivariate # Here it atually not for the task mode bu
 # timestamp_name: date
 
 # data_splitter:
-#   _target_: lmetk.data.preprocessing.TimeSplitter
+#   _target_: picid.data.preprocessing.TimeSplitter
 #   splitter_type: TimeSplitter
 #   train: 5 # int or float. In case of float it is a percentage of the dataset
 #   val: 3 # int or float. In case of float it is a percentage of the dataset

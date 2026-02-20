@@ -8,9 +8,9 @@ import awkward as ak
 
 from sklearn.model_selection import train_test_split
 
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.utils.awkward_utils import ak_unflatten_discontinous_groups
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.utils.awkward_utils import ak_unflatten_discontinous_groups
 
 
 warnings.filterwarnings("ignore")

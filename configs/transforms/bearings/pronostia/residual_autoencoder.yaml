@@ -1,6 +1,6 @@
 cut_to_first_zero_target:
   transform:
-    _target_: lmetk.transforms.bearings.old.cut_till_first_zero.RULTaskUpToFirstZero
+    _target_: picid.transforms.bearings.old.cut_till_first_zero.RULTaskUpToFirstZero
 
   metadata:
     apply_to: ["target", "features"]
@@ -11,7 +11,7 @@ cut_to_first_zero_target:
 # Autoencoder transform
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: features
@@ -19,7 +19,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: target
@@ -27,7 +27,7 @@ scaler_target:
 
 autoencoder:
   transform:
-    _target_: lmetk.transforms.bearings.autoencoder_transform.BearingAutoencoderTransform # Your wrapper class
+    _target_: picid.transforms.bearings.autoencoder_transform.BearingAutoencoderTransform # Your wrapper class
     folder_name: ${paths.root_dir}/artifacts/debug/runs/pronostia+reconstruction+residual_autoencoder/2025-10-06_15-07-59
     batch_size: 32000
 

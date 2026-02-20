@@ -7,7 +7,7 @@ optimizer:
   weight_decay: 0.0
 
 scheduler:
-  _target_: lmetk.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler.WarmupReduceLROnPlateauScheduler
+  _target_: picid.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler.WarmupReduceLROnPlateauScheduler
   # Warmup params
   init_lr: ${optimization.start_lr}
   peak_lr: ${optimization.lr}

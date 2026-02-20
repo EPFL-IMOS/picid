@@ -76,7 +76,7 @@
             "name": "Railway Traction: Spacetimeformer (STF)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -91,7 +91,7 @@
             "name": "Railway Traction: Linear Model (Linear_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -106,7 +106,7 @@
             "name": "Railway Traction: LSTM Model (LSTM_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -121,7 +121,7 @@
             "name": "Picasso: LSTM Model (LSTM_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -136,7 +136,7 @@
             "name": "Railway Traction: Crossformer Model (Crossformer_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -151,7 +151,7 @@
             "name": "Railway Traction: Tide Model (Tide_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -166,7 +166,7 @@
             "name": "Railway Traction: PatchTST Model (PatchTST_Forecaster)",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -182,7 +182,7 @@
             "name": "Railway Traction: Timeseries Transformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -197,7 +197,7 @@
             "name": "Railway Traction: TabPFN Seasonal Context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -209,7 +209,7 @@
             "name": "Railway Traction: Fit-Predict TabPFN",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -226,7 +226,7 @@
             "name": "Railway Traction: Fit-Predict Carte",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -243,7 +243,7 @@
             "name": "Railway Traction: Fit-Predict TabDPT",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -260,7 +260,7 @@
             "name": "Railway Traction: Fit-Predict Autogluon",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -276,7 +276,7 @@
             "name": "ETTh: TimePFN Batch-Context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -292,7 +292,7 @@
             "name": "ETTh: Naive",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -308,7 +308,7 @@
             "name": "Concepts N-CMAPSS (Diagnostics): lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -324,7 +324,7 @@
             "name": "Concepts N-CMAPSS: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -340,7 +340,7 @@
             "name": "Concepts N-CMAPSS: STF",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -356,7 +356,7 @@
             "name": "Concepts N-CMAPSS: TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -372,7 +372,7 @@
             "name": "Concepts N-CMAPSS Concept Prediction: TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -388,7 +388,7 @@
             "name": "Concepts N-CMAPSS (DS03 DA): LSTM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -405,7 +405,7 @@
             "name": "Concepts N-CMAPSS (DS03 DA): Crossformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -422,7 +422,7 @@
             "name": "Concepts N-CMAPSS (DS02): TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
@@ -440,7 +440,7 @@
             "name": "Concepts N-CMAPSS (DS02): LSTM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -457,7 +457,7 @@
             "name": "Concepts N-CMAPSS (DS02): CNN_1D",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -474,7 +474,7 @@
             "name": "Concepts N-CMAPSS (DS02): RUNAI TabDPT Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "python": "/workspace/setup/.venv/bin/python",
             "justMyCode": false,
@@ -498,7 +498,7 @@
             "name": "Concepts N-CMAPSS (DS02): Carte Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -515,7 +515,7 @@
             "name": "Concepts N-CMAPSS (DS02): TabPFN Batch-Context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -531,7 +531,7 @@
             "name": "Concepts N-CMAPSS (DS02): STF",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -547,7 +547,7 @@
             "name": "Concepts N-CMAPSS (DS02): Crossformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -563,7 +563,7 @@
             "name": "Concepts N-CMAPSS (DS02): Timeseries Transformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -579,7 +579,7 @@
             "name": "Concepts N-CMAPSS (DS02): TiDE",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -595,7 +595,7 @@
             "name": "Concepts N-CMAPSS (DS02): PatchTST",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -611,7 +611,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: stf ",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -627,7 +627,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: patchtst",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -643,7 +643,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: timeseries_transformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -659,7 +659,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: tide",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -675,7 +675,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: LSTM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -691,7 +691,7 @@
             "name": "Concepts N-CMAPSS (DS02) State Forecasting: Crossformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -707,7 +707,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: LSTM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -723,7 +723,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: PatchTST",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -739,7 +739,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: TiDE",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -755,7 +755,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: Crossformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -771,7 +771,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: STF",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -787,7 +787,7 @@
             "name": "Concepts N-CMAPSS (DS02) Diagnostics: Timeseries Transformer",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -803,7 +803,7 @@
             "name": "Concepts N-CMAPSS (DS02): CNN-1D",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -819,7 +819,7 @@
             "name": "Concepts N-CMAPSS (DS02): TimeLLM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -835,7 +835,7 @@
             "name": "Concepts N-CMAPSS (DS02): XGBOOST Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -851,7 +851,7 @@
             "name": "NB1 Battery: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -867,7 +867,7 @@
             "name": "NB1 Battery: TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -883,7 +883,7 @@
             "name": "NB14 Battery: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -899,7 +899,7 @@
             "name": "NB14 Battery: TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -915,7 +915,7 @@
             "name": "XJTU_SY : TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -931,7 +931,7 @@
             "name": "XJTU_SY : LSTM",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -947,7 +947,7 @@
             "name": "XJTU_SY : TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -963,7 +963,7 @@
             "name": "XJTU_SY diagnostics: TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -979,7 +979,7 @@
             "name": "XJTU_SY diagnostics: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -995,7 +995,7 @@
             "name": "PHMD N-CMAPSS diagnostics: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1011,7 +1011,7 @@
             "name": "XJTU SY (Combined): lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1029,7 +1029,7 @@
             "name": "XJTU SY (Combined): cnn_1d",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1047,7 +1047,7 @@
             "name": "Pronostia : TabPFN Batch Context",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1063,7 +1063,7 @@
             "name": "Pronostia (Combined): 1D STF",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1081,7 +1081,7 @@
             "name": "Pronostia (Combined): TabPFN Fit-Predict ",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1099,7 +1099,7 @@
             "name": "Pronostia : TabPFN Fit-Predict",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1115,7 +1115,7 @@
             "name": "PUBD16 : TabPFN",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1131,7 +1131,7 @@
             "name": "MOVi Dataset: STF",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1147,7 +1147,7 @@
             "name": "NB14: lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1163,7 +1163,7 @@
             "name": "NB14: autoencoder",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1179,7 +1179,7 @@
             "name": "UNIBO: lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1195,7 +1195,7 @@
             "name": "UNIBO pretrain",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1211,7 +1211,7 @@
             "name": "UNIBO prognostics",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "args": [
                 "paths=rt_local",
@@ -1231,7 +1231,7 @@
             "args": [
                 "panel",
                 "serve",
-                "lmetk_report/dataset_viewer.py",
+                "picid_report/dataset_viewer.py",
                 "--show",
                 "--autoreload",
                 "--log-level",
@@ -1244,7 +1244,7 @@
             "name": "PHM20: CNN_1D",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1264,7 +1264,7 @@
             "name": "PHM20: XGBoost",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1284,7 +1284,7 @@
             "name": "PHM20: TabPFN",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1303,7 +1303,7 @@
             "name": "NOX debugging",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1323,7 +1323,7 @@
             "name": "CBMv3: lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1340,7 +1340,7 @@
             "name": "MZVAV: lstm",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1357,7 +1357,7 @@
             "name": "MZVAV: tabpfn",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1374,7 +1374,7 @@
             "name": "MZVAV: CNN_1D",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1391,7 +1391,7 @@
             "name": "TESTER",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1408,7 +1408,7 @@
             "name": "simplified run",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/simplified_run.py",
+            "program": "picid/simplified_run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
@@ -1425,13 +1425,24 @@
             "name": "PHM20: Missing data experiment",
             "type": "debugpy",
             "request": "launch",
-            "program": "lmetk/run.py",
+            "program": "picid/run.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/ablation/missing_values/tabpfn_fit_predict_nan",
                 "debug=default"
+            ],
+        },
+        {
+            "name": "mzvav",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "experiment=mzvav/diagnostics/stf",
             ],
         },
     ]

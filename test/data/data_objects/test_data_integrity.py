@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.data.data_objects.utils import check_for_nans, check_length_consistency
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.utils import check_for_nans, check_length_consistency
 
 
 # ---------------------------------------------------------------------------

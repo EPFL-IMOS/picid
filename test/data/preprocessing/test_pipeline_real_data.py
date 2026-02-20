@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 # Snapshot fixtures root: test/data/fixtures/pipeline_snapshots
 SNAPSHOTS_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "pipeline_snapshots"

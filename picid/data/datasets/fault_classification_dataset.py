@@ -3,7 +3,7 @@ import torch
 from typing import Dict, List, override
 
 from lightning_fabric.utilities.data import AttributeDict
-from lmetk.data.datasets.rul_context_dataset import RULContextBatchDataset
+from picid.data.datasets.rul_context_dataset import RULContextBatchDataset
 
 
 class FaultClassificationBatchDataset(RULContextBatchDataset):

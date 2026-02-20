@@ -21,7 +21,7 @@ import pytest
 import awkward as ak
 from typing import Dict, List, Tuple, Any, Optional
 from dataclasses import dataclass
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 
 
 # =============================================================================

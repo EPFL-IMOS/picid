@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.fit_predict_carte_wrapper.FitPredictCarteWrapper
+_target_: picid.model.wrappers.fit_predict_carte_wrapper.FitPredictCarteWrapper
 task_type: ${task_definition.task_type}
 
 yield_strategy: True

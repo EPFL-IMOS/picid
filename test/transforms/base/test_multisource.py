@@ -1,4 +1,4 @@
-"""Tests for lmetk.transforms.base.multisource module.
+"""Tests for picid.transforms.base.multisource module.
 
 This file consolidates all tests for multisource functionality from multiple test files.
 All dummy transforms and fixtures are imported from conftest.
@@ -9,15 +9,15 @@ import awkward as ak
 from typing import Any, Dict, List
 from sortedcontainers import SortedDict
 
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import (
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
     NoFitConcatAlongAxisMixin,
     NoFitPerSegmentMixin,
     find_singular_ragged_dim,
     tolist,
 )
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (

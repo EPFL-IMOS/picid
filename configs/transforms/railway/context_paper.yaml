@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -8,7 +8,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: target
@@ -16,7 +16,7 @@ scaler_target:
 
 time_features_transform:
   transform:
-    _target_: lmetk.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
+    _target_: picid.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
     use_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: False
 
@@ -26,7 +26,7 @@ time_features_transform:
 
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
 
   metadata:
     apply_to: time_features
@@ -35,7 +35,7 @@ scaler_timefeatures:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
 
   metadata:
     apply_to: ["features", "time_features"]
@@ -44,7 +44,7 @@ concatenate_features:
 tabularize_x:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: ${task_definition.label_len}
     pred_len: ${task_definition.pred_len}
@@ -67,7 +67,7 @@ tabularize_x:
 tabularize_y:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+    _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     label_len: ${task_definition.label_len}
     pred_len: ${task_definition.pred_len}

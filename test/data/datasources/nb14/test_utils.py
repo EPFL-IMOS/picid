@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import awkward as ak
 
-from lmetk.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
+from picid.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
 
 
 def test_flatten_cycles_basic():

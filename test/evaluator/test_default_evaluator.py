@@ -7,14 +7,14 @@ from pathlib import Path
 import pytest
 
 # --- Adjust these imports to match your project structure ---
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.evaluator.hooks.save_predictions import (
+from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.hooks.save_predictions import (
     SavePredictionsHook,
 )  # ADDED: For testing decoupled logic
-from lmetk.metrics.base import AbstractMetric
-from lmetk.transforms.base.multisource import InverseTransformMixin
-from lmetk.metrics.metrics import MSEMetric, RMSEMetric
-from lmetk.metrics.metric_factory import MetricFactory
+from picid.metrics.base import AbstractMetric
+from picid.transforms.base.multisource import InverseTransformMixin
+from picid.metrics.metrics import MSEMetric, RMSEMetric
+from picid.metrics.metric_factory import MetricFactory
 
 # =========================================================================
 # === 1. MOCKS and FIXTURES for Dependencies ===
@@ -35,14 +35,14 @@ class MockMinMaxScaler:
 def mock_external_dependencies(mocker):
     """Mocks external library dependencies (Sklearn, internal helpers)."""
     mocker.patch(
-        "lmetk.transforms.base_transforms.scaler.MinMaxScaler", MockMinMaxScaler
+        "picid.transforms.base_transforms.scaler.MinMaxScaler", MockMinMaxScaler
     )
 
     def mock_convert_to_numpy(data):
         return data, None
 
     mocker.patch(
-        "lmetk.transforms.base_transforms.scaler._convert_to_numpy",
+        "picid.transforms.base_transforms.scaler._convert_to_numpy",
         mock_convert_to_numpy,
     )
 
@@ -392,7 +392,7 @@ def test_default_evaluator_compute_no_scaling_correct_naming(
     assert results["mse_normalized"] >= 0.0
 
 
-@patch("lmetk.evaluator.hooks.save_predictions.xr.Dataset")
+@patch("picid.evaluator.hooks.save_predictions.xr.Dataset")
 def test_prepare_predictions_with_scaling(
     mock_xr_dataset, default_evaluator_with_scaling_fixture, regression_data_basic
 ):
@@ -422,7 +422,7 @@ def test_prepare_predictions_with_scaling(
     assert preds_norm_data.shape == regression_data_basic["predictions"].shape
 
 
-@patch("lmetk.evaluator.hooks.save_predictions.xr.Dataset")
+@patch("picid.evaluator.hooks.save_predictions.xr.Dataset")
 def test_save_predictions_to_file_orchestration(
     mock_xr_dataset, default_evaluator_regression_fixture_saving, mock_path_obj
 ):
@@ -435,7 +435,7 @@ def test_save_predictions_to_file_orchestration(
 
     # FIX: Patch Path in the hook's module
     with patch(
-        "lmetk.evaluator.hooks.save_predictions.Path", return_value=mock_path_obj
+        "picid.evaluator.hooks.save_predictions.Path", return_value=mock_path_obj
     ):
 
         evaluator.paths = MagicMock(eval_details="/mock/base")

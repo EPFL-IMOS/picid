@@ -1,17 +1,17 @@
 """
-Integration tests for lmetk_report: full pipeline from analyze_results to reporting.
+Integration tests for picid_report: full pipeline from analyze_results to reporting.
 
 Validates that analysis output structure is compatible with reporting functions
 and that schema-first vs data-first and model wrapper differentiation hold end-to-end.
-Does not modify lmetk_report or touch lmetk_report/not_used.
+Does not modify picid_report or touch picid_report/not_used.
 """
 
 from unittest.mock import patch
 import pytest
 
-from lmetk_report import config
-from lmetk_report.core import analysis
-from lmetk_report.report import reporting
+from picid_report import config
+from picid_report.core import analysis
+from picid_report.report import reporting
 
 
 class TestPipelineIntegration:

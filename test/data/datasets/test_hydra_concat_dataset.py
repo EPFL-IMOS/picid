@@ -10,18 +10,18 @@ import numpy as np
 import pytest
 from omegaconf import DictConfig, ListConfig
 
-from lmetk.data.datasets.hydra_concat_dataset import (
+from picid.data.datasets.hydra_concat_dataset import (
     initialize_datasets,
     HydraConcatDataset,
 )
-from lmetk.data.datasets.rul_context_dataset import RULContextBatchDataset
+from picid.data.datasets.rul_context_dataset import RULContextBatchDataset
 
 
 @pytest.fixture
 def minimal_rul_dataset_cfg():
     """Minimal Hydra-style config for RULContextBatchDataset per unit."""
     return DictConfig({
-        "_target_": "lmetk.data.datasets.rul_context_dataset.RULContextBatchDataset",
+        "_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset",
         "task_type": "rul",
         "seq_len": 5,
         "label_len": 0,
@@ -48,7 +48,7 @@ def test_initialize_datasets_lengths_must_match():
         "rul": [np.zeros((10, 1))],
     }
     meta = {}
-    cfg = DictConfig({"_target_": "lmetk.data.datasets.rul_context_dataset.RULContextBatchDataset", "task_type": "rul", "seq_len": 2, "label_len": 0, "pred_len": 1, "stride": 1})
+    cfg = DictConfig({"_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset", "task_type": "rul", "seq_len": 2, "label_len": 0, "pred_len": 1, "stride": 1})
     with pytest.raises(AssertionError, match="same length"):
         initialize_datasets(cfg, data_dict, meta)
 
@@ -57,7 +57,7 @@ def test_initialize_datasets_empty_list_raises():
     """Empty list in data_dict raises ValueError."""
     data_dict = {"features": [], "rul": []}
     meta = {}
-    cfg = DictConfig({"_target_": "lmetk.data.datasets.rul_context_dataset.RULContextBatchDataset", "task_type": "rul", "seq_len": 2, "label_len": 0, "pred_len": 1, "stride": 1, "meta_data_dict": {}})
+    cfg = DictConfig({"_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset", "task_type": "rul", "seq_len": 2, "label_len": 0, "pred_len": 1, "stride": 1, "meta_data_dict": {}})
     with pytest.raises(ValueError, match="empty"):
         initialize_datasets(cfg, data_dict, meta)
 
@@ -114,7 +114,7 @@ def test_initialize_datasets_returns_same_type(multi_unit_data_list, minimal_rul
 def test_initialize_datasets_non_list_raises():
     """initialize_datasets raises TypeError for non-list value (except metadata DictConfig)."""
     cfg = DictConfig({
-        "_target_": "lmetk.data.datasets.rul_context_dataset.RULContextBatchDataset",
+        "_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset",
         "task_type": "rul",
         "seq_len": 2,
         "label_len": 0,
@@ -128,7 +128,7 @@ def test_initialize_datasets_non_list_raises():
 
 def test_non_vectorized_hydra_concat_deprecation(multi_unit_data_list, minimal_rul_dataset_cfg):
     """NonVectorizedHydraConcatDataset issues DeprecationWarning and get_collate_fn works."""
-    from lmetk.data.datasets.hydra_concat_dataset import NonVectorizedHydraConcatDataset
+    from picid.data.datasets.hydra_concat_dataset import NonVectorizedHydraConcatDataset
     meta = {"unit_ids": {"train": [0, 1, 2]}, "unit_names": {"train": ["u0", "u1", "u2"]}, "current_data_split": "train"}
     with pytest.warns(DeprecationWarning, match="deprecated"):
         concat = NonVectorizedHydraConcatDataset(

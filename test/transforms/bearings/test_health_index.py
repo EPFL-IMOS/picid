@@ -43,12 +43,12 @@ import numpy as np
 import pytest
 from typing import Dict, Tuple
 
-from lmetk.transforms.bearings.health_index import (
+from picid.transforms.bearings.health_index import (
     HealthIndexTransform,
     DEFAULT_TOTAL_LIFE_LOOKUP,
     DECREASE_PERIOD,
 )
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 
 # =============================================================================

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from positional_encodings.torch_encodings import PositionalEncoding2D
-from lmetk.model.utils.magnitude_max_pooling import magnitude_max_pooling_1d
+from picid.model.utils.magnitude_max_pooling import magnitude_max_pooling_1d
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, d_model, max_len=5000):

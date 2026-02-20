@@ -29,7 +29,7 @@ Here's a simple transform configuration that scales features:
 ```yaml
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   
   metadata:
     apply_to: features
@@ -68,7 +68,7 @@ Extract new features from your data:
 ## Simple Usage Pattern
 
 ```python
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 # Load transform configuration
 manager = ConfigTransformManager(transforms_config=your_config)

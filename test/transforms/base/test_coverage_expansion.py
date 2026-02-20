@@ -1,5 +1,5 @@
 """
-Tests added to increase line coverage for lmetk/transforms/base.
+Tests added to increase line coverage for picid/transforms/base.
 
 Targets missing lines reported by coverage in:
 - base_transform.py, data_transform.py, strategy.py
@@ -16,16 +16,16 @@ from collections.abc import Mapping
 from omegaconf import DictConfig, OmegaConf
 from sortedcontainers import SortedDict
 
-from lmetk.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from lmetk.transforms.base.base_transform import BaseTransform, DenseTransform, RaggedTransform
-from lmetk.transforms.base.strategy import TransformStrategy
-from lmetk.transforms.base.data_transform import DataTransform
+from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.transforms.base.base_transform import BaseTransform, DenseTransform, RaggedTransform
+from picid.transforms.base.strategy import TransformStrategy
+from picid.transforms.base.data_transform import DataTransform
 from collections import OrderedDict
-from lmetk.transforms.base.transform_manager import (
+from picid.transforms.base.transform_manager import (
     ConfigTransformManager,
     create_transform_manager_from_config,
 )
-from lmetk.transforms.base.multisource import (
+from picid.transforms.base.multisource import (
     tolist,
     find_singular_ragged_dim,
     ConcatFitAndPerSegmentTransformMixin,
@@ -93,14 +93,14 @@ class TestDataTransformCoverage:
             "fit_on_key": "features",
         }
         transform = DummyFittableTransform()
-        with caplog.at_level("INFO", logger="lmetk.transforms.base.data_transform"):
+        with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
             DataTransform("t", transform, metadata)
         assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
 
     def test_process_assign_to_implicit_sequence_triggers_logger(self, caplog):
         """Line 52: _process_assign_to(None, sequence) triggers logger.info."""
         dt = DataTransform("t", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
-        with caplog.at_level("INFO", logger="lmetk.transforms.base.data_transform"):
+        with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
             dt._process_assign_to(assign_to=None, apply_to=["features", "target"])
         assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
 
@@ -110,7 +110,7 @@ class TestDataTransformCoverage:
         reachable if _process_assign_to is called with apply_to as Mapping from elsewhere.
         We test the branch by calling _process_assign_to directly.
         """
-        from lmetk.transforms.base.data_transform import DataTransform
+        from picid.transforms.base.data_transform import DataTransform
         dt = DataTransform("t", DummyFittableTransform(), {"apply_to": "features", "assign_to": "features"})
         with pytest.raises(ValueError, match="assign_to|ambiguity"):
             dt._process_assign_to(assign_to=None, apply_to={"feat": "features"})
@@ -326,7 +326,7 @@ class TestTransformManagerCoverage:
         config = {
             "bad_entry": {"metadata": {"apply_to": "features"}},  # no "transform" key
         }
-        with caplog.at_level("ERROR", logger="lmetk.transforms.base.transform_manager"):
+        with caplog.at_level("ERROR", logger="picid.transforms.base.transform_manager"):
             try:
                 manager = ConfigTransformManager(transforms_config=config)
                 manager.get_data_transforms()
@@ -569,7 +569,7 @@ class TestMultisourceCoverage:
 
     def test_transform_ragged_but_regular_returns_base_data_object(self):
         """Lines 402-403: ragged_but_regular path when transform returns BaseDataObjectWithMetadata."""
-        from lmetk.data.data_objects.base import BaseDataObjectWithMetadata
+        from picid.data.data_objects.base import BaseDataObjectWithMetadata
         regular_ak = ak.from_numpy(np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]))
 
         class ReturnNamedInput(DenseTransform, NoFitPerSegmentMixin):

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lmetk.data.datasources.phmd_pronostia import (
+from picid.data.datasources.phmd_pronostia import (
     PronostiaLoader,
     UNIT_NAMES_TO_ID,
     SAMPLE_RANGE_SIZE,

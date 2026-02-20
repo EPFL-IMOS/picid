@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import pytest
 
-from lmetk.model.wrappers.fit_predict_xgboost_wrapper import FitPredictXGBoostWrapper
+from picid.model.wrappers.fit_predict_xgboost_wrapper import FitPredictXGBoostWrapper
 
 
 def _build_linear_dataset(num_samples: int, num_features: int, *, seed: int = 0):

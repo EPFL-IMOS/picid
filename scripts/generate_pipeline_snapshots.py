@@ -28,8 +28,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from omegaconf import OmegaConf
 from hydra.utils import instantiate
 
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
 # Config pairs: (datasource config path, transforms config path)

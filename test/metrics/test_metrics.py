@@ -5,9 +5,9 @@ import torch
 from unittest.mock import MagicMock
 
 # --- Import all classes ---
-from lmetk.metrics.base import AbstractMetric
-from lmetk.metrics.metric_factory import MetricFactory
-from lmetk.metrics.metrics import (
+from picid.metrics.base import AbstractMetric
+from picid.metrics.metric_factory import MetricFactory
+from picid.metrics.metrics import (
     MAEMetric,
     MSEMetric,
     RMSEMetric,
@@ -25,7 +25,7 @@ from lmetk.metrics.metrics import (
     MulticlassF1Metric,
     MulticlassAUROCMetric,
 )
-from lmetk.metrics.rul_metrics import MeanPercentageErrorMetric, PHMScoreMetric
+from picid.metrics.rul_metrics import MeanPercentageErrorMetric, PHMScoreMetric
 
 
 # =========================================================================
@@ -37,7 +37,7 @@ def mock_railway_csv(mocker):
     fake_df = pd.DataFrame({"Bahnlast": [10, -20, 30]})
     # Factor logic in metric: factor = mean(abs(values))
     # Factor = (10 + 20 + 30) / 3 = 20.0
-    mocker.patch("lmetk.metrics.metrics.pd.read_csv", return_value=fake_df)
+    mocker.patch("picid.metrics.metrics.pd.read_csv", return_value=fake_df)
 
 
 # =========================================================================

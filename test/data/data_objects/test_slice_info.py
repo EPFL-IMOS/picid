@@ -1,7 +1,7 @@
-"""Tests for lmetk.data.data_objects.slice_info (SliceInfo) to reach full coverage."""
+"""Tests for picid.data.data_objects.slice_info (SliceInfo) to reach full coverage."""
 import pytest
 
-from lmetk.data.data_objects.slice_info import SliceInfo
+from picid.data.data_objects.slice_info import SliceInfo
 
 
 class TestSliceInfoCoverage:

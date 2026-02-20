@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import awkward as ak
 from torch.utils.data import DataLoader
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
-from lmetk.utils.awkward_utils import ak_regularize_regular_axes
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.utils.awkward_utils import ak_regularize_regular_axes
 
 # =========================================================================
 # === Fixtures ===
@@ -148,7 +148,7 @@ def test_ragged_input_handling(ragged_data_dict):
 
 def test_sliding_window_get_collate_fn(dense_data_dict):
     """get_collate_fn returns collate_key_value_batch (coverage)."""
-    from lmetk.data.datasets.collate_functions import collate_key_value_batch
+    from picid.data.datasets.collate_functions import collate_key_value_batch
 
     ds = SlidingWindowBatchDataset(
         data_dict=dense_data_dict,

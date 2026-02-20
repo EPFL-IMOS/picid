@@ -21,7 +21,7 @@ defaults:
   #   normalize_time_features: False
       
   # data_splitter:
-  #   _target_: lmetk.data.preprocessing.SimpleSplitter
+  #   _target_: picid.data.preprocessing.SimpleSplitter
   #   train: 8640 # int or float. In case of float it is a percentage of the dataset
   #   val: 2880 # int or float. In case of float it is a percentage of the dataset
   #   test: null # int or float, or None. In case of float it is a percentage of the dataset. None means len(dataset) - (train + val)

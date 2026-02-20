@@ -10,9 +10,9 @@ import numpy as np
 import pytest
 import torch
 
-from lmetk.data.datasets.base import BaseVectorizedConcatDataset
-from lmetk.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
-from lmetk.data.datasets.collate_functions import collate_key_value_batch
+from picid.data.datasets.base import BaseVectorizedConcatDataset
+from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
+from picid.data.datasets.collate_functions import collate_key_value_batch
 
 
 class _ConcatWithCollate(BaseVectorizedConcatDataset):

@@ -1,1 +1,1 @@
-_target_: lmetk.loss.cross_entropy.CrossEntropyLoss
+_target_: picid.loss.cross_entropy.CrossEntropyLoss

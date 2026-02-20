@@ -11,8 +11,8 @@ import torch
 from typing import Dict, Any
 from unittest.mock import MagicMock
 
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.model.wrappers.base import AbstractFitPredictWrapper
+from picid.evaluator.base import AbstractEvaluator
+from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 
 # -----------------------------------------------------------------------------
@@ -150,7 +150,7 @@ class MockBackbone(torch.nn.Module):
 
 
 class MockLoss(torch.nn.Module):
-    """Loss that returns model_out dict with 'loss' key (same contract as lmetk.loss.default)."""
+    """Loss that returns model_out dict with 'loss' key (same contract as picid.loss.default)."""
 
     def forward(self, model_out=None, batch=None):
         out = dict(model_out) if model_out else {}

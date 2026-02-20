@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
 
 
 warnings.filterwarnings("ignore")

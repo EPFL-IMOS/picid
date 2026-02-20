@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any, Dict
 import logging
 
-from lmetk.evaluator.scaling_wrapper import (
+from picid.evaluator.scaling_wrapper import (
     MultivariateTimeseriesScalingWrapper,
     ScalingWrapper,
 )
-from lmetk.transforms.base.multisource import InverseTransformMixin
+from picid.transforms.base.multisource import InverseTransformMixin
 
 logger = logging.getLogger(__name__)
 

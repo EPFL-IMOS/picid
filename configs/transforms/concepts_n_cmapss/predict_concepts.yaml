@@ -4,7 +4,7 @@ defaults:
 
 scaler_concepts:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: concepts
@@ -12,7 +12,7 @@ scaler_concepts:
 
 subsample:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.WindowedAggregationTransform
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
     step: 60
     window_size: 60
     aggregation: mean
@@ -22,7 +22,7 @@ subsample:
 # Introduce the task dimension to X, y. We
 reshape_X:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: features
@@ -30,7 +30,7 @@ reshape_X:
 
 reshape_y:
   transform:
-    _target_: lmetk.transforms.base_transforms.reshaping.ReshapeTransform
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
     apply_to: concepts

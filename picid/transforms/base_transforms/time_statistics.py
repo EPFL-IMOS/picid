@@ -4,10 +4,10 @@ import numpy as np
 from scipy import stats  # For skewness and kurtosis
 import scipy
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
-from lmetk.data.data_objects.utils import convert_to_numpy
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.data.data_objects.utils import convert_to_numpy
 
 logger = logging.getLogger(__name__)
 

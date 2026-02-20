@@ -1,1 +1,1 @@
-"""Tests for lmetk.optimizer module."""
+"""Tests for picid.optimizer module."""

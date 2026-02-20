@@ -8,7 +8,7 @@ import omegaconf
 import torch
 from torch import nn
 
-from lmetk.utils.omegaconf_utils import find_config_file
+from picid.utils.omegaconf_utils import find_config_file
 
 logger = logging.getLogger(__name__)
 

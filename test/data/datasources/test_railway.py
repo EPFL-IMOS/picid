@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from lmetk.data.datasources.railway import RailwayLoader
+from picid.data.datasources.railway import RailwayLoader
 
 
 @pytest.fixture

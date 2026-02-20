@@ -11,8 +11,8 @@ import requests
 from tqdm import tqdm
 
 # Internal library imports
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from .utils import convert_outer_list_to_inner
 
 warnings.filterwarnings("ignore")

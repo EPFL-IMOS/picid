@@ -3,16 +3,16 @@ from typing import Callable, Tuple
 from einops import rearrange
 import torch
 
-from lmetk.baselines.definitions import (
+from picid.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     FORECASTING_TASKS,
 )
-from lmetk.baselines.linear_model.linear_ar import LinearModel
-from lmetk.evaluator.base import AbstractEvaluator
-from lmetk.model.utils.revin import RevIN, SeriesDecomposition
-from lmetk.pipeline.base import CustomEvaluatorLightningModule
+from picid.baselines.linear_model.linear_ar import LinearModel
+from picid.evaluator.base import AbstractEvaluator
+from picid.model.utils.revin import RevIN, SeriesDecomposition
+from picid.pipeline.base import CustomEvaluatorLightningModule
 
 
 class Forecaster(CustomEvaluatorLightningModule):

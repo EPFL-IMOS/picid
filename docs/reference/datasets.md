@@ -4,7 +4,7 @@ In this project we follow the **PyTorch** notion of a *Dataset*: an abstract cla
 
 > **Terminology:** A **datasource** is *data-centric* (raw files, I/O). A **dataset** is *task-centric* (formatting for model inputs).
 
-All dataset classes below live in **`lmetk.data.datasets`**. The following sections describe the main dataset types and their batch structures.
+All dataset classes below live in **`picid.data.datasets`**. The following sections describe the main dataset types and their batch structures.
 
 ## ContextBatchDataset
 

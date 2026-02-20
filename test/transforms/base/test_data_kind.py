@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import awkward as ak
 
-from lmetk.transforms.base.data_kind import (
+from picid.transforms.base.data_kind import (
     DATA_KIND_DENSE,
     DATA_KIND_RAGGED,
     DATA_KIND_RAGGED_REGULAR,
@@ -13,8 +13,8 @@ from lmetk.transforms.base.data_kind import (
     get_capability,
     infer_data_kind,
 )
-from lmetk.transforms.base.multisource import find_singular_ragged_dim
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.multisource import find_singular_ragged_dim
+from picid.data.data_objects.data import NamedTransformInput
 
 from test.transforms.base.conftest import (
     DummyStatelessTransform,

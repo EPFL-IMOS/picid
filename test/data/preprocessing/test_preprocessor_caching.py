@@ -10,11 +10,11 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from lmetk.data.data_objects.data import SplitDatasetContainer
-from lmetk.data.preprocessing.preprocessor import PreProcessor
-from lmetk.data.cache.offline import FileSystemCache
-from lmetk.transforms.base.transform_manager import ConfigTransformManager
-from lmetk.utils.hash_utils import compute_cache_key, ensure_serializable
+from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.data.cache.offline import FileSystemCache
+from picid.transforms.base.transform_manager import ConfigTransformManager
+from picid.utils.hash_utils import compute_cache_key, ensure_serializable
 
 
 # -----------------------------------------------------------------------------

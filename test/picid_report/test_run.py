@@ -1,5 +1,5 @@
 """
-Tests for lmetk_report.run.
+Tests for picid_report.run.
 
 Covers _safe_basename, _save_outputs (mocked I/O), and main (CLI parsing).
 """
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from lmetk_report import run
+from picid_report import run
 
 
 class TestSafeBasename:

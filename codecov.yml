@@ -4,4 +4,4 @@ coverage:
   round: down
   precision: 2
   paths:
-    - lmetk/data/
+    - picid/data/

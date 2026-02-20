@@ -1,4 +1,4 @@
-# lmetk_report/core/validators.py
+# picid_report/core/validators.py
 """
 Validation helpers for experiment consistency and scientific rigor.
 
@@ -35,7 +35,7 @@ def validate_schema(df: pd.DataFrame, required_cols: List[str]) -> None:
         error_msg = (
             f"\n[SCHEMA ERROR] Missing {len(missing)} required columns!\n"
             f"The following columns were not found: {missing}\n"
-            "Please check your WandB config or update lmetk_report.config."
+            "Please check your WandB config or update picid_report.config."
         )
         logger.error(error_msg)
         raise ValueError(error_msg)

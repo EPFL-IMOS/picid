@@ -9,7 +9,7 @@ import awkward as ak
 
 from pandas.core.generic import NDFrame
 
-from lmetk.data.data_objects.utils import (
+from picid.data.data_objects.utils import (
     check_for_nans,
     check_length_consistency,
     convert_to_numpy,

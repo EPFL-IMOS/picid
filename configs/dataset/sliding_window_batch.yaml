@@ -1,4 +1,4 @@
-_target_: lmetk.data.datasets.sliding_window_batch_dataset.SlidingWindowBatchDataset
+_target_: picid.data.datasets.sliding_window_batch_dataset.SlidingWindowBatchDataset
 
 seq_len: ${task_definition.seq_len} 
 label_len: ${task_definition.label_len} 

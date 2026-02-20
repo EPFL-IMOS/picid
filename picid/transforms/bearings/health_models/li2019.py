@@ -2,12 +2,12 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, override
 import numpy as np
 
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base.base_transform import DenseTransform
-from lmetk.data.data_objects.utils import convert_to_numpy
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base.base_transform import DenseTransform
+from picid.data.data_objects.utils import convert_to_numpy
 
 # Changed to NoFit, as this transform doesn't learn parameters
-from lmetk.transforms.base.multisource import NoFitPerSegmentMixin
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 

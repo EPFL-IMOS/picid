@@ -9,12 +9,12 @@ graceful degradation.
 import pytest
 import numpy as np
 from unittest.mock import MagicMock, patch
-from lmetk.evaluator.classification import ClassificationEvaluator
-from lmetk.evaluator.default import DefaultEvaluator
-from lmetk.evaluator.multiunit import MultiUnitEvaluator
-from lmetk.metrics.metric_factory import MetricFactory
-from lmetk.transforms.base.multisource import InverseTransformMixin
-from lmetk.metrics.metrics import MSEMetric
+from picid.evaluator.classification import ClassificationEvaluator
+from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.multiunit import MultiUnitEvaluator
+from picid.metrics.metric_factory import MetricFactory
+from picid.transforms.base.multisource import InverseTransformMixin
+from picid.metrics.metrics import MSEMetric
 
 # =========================================================================
 # === 1. FIXTURES ===
@@ -196,7 +196,7 @@ class TestExtremeValues:
     def test_extreme_values_with_scaling(self, data_extreme_values):
         """Test extreme values with scaling enabled."""
         # Use ConstantScaler(factor=0.5) so inverse_transform divides by 0.5 (= scale by 2)
-        from lmetk.transforms.base_transforms.scaler import ConstantScaler
+        from picid.transforms.base_transforms.scaler import ConstantScaler
 
         scaler = ConstantScaler(factor=0.5)
 

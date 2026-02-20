@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 
-from lmetk.data.datasets.fit_predict_dataset import FitPredictTaskDataset
+from picid.data.datasets.fit_predict_dataset import FitPredictTaskDataset
 
 
 @pytest.fixture

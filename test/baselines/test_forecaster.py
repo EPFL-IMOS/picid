@@ -29,15 +29,15 @@ import torch.nn as nn
 from typing import Tuple, Dict, Any
 from unittest.mock import Mock, MagicMock, patch
 
-from lmetk.baselines.forecaster import Forecaster, TransformerForecaster
-from lmetk.baselines.definitions import (
+from picid.baselines.forecaster import Forecaster, TransformerForecaster
+from picid.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     FORECASTING_TASKS,
     STATE_FORECASTING_TASKS,
 )
-from lmetk.evaluator.base import AbstractEvaluator
+from picid.evaluator.base import AbstractEvaluator
 
 
 # =============================================================================

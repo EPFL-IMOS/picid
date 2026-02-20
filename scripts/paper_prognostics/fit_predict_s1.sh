@@ -102,7 +102,7 @@ for dataset in "${datasets[@]}"; do
             # --- 4. Build the full command as a single string ---
             # Note the escaped quotes \"...\" for parameters that are lists.
             command_to_run=(
-                python lmetk/run.py \
+                python picid/run.py \
                 paths=runai \
                 experiment=${exp_name} \
                 # trainer.devices=[${device}] \

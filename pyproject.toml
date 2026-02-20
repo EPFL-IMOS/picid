@@ -68,8 +68,8 @@ dev = [
 ]
 
 [tool.setuptools]
-# If your package is at the top-level (./lmetk), this is fine:
-packages = ["lmetk"]
+# If your package is at the top-level (./picid), this is fine:
+packages = ["picid"]
 
 # If your package lives under src/, replace with:
 # [tool.setuptools.packages.find]
@@ -88,13 +88,13 @@ disable = ["logging-fstring-interpolation"]
 
 [tool.coverage.run]
 # Only measure coverage for your own code
-source = ["lmetk"]
+source = ["picid"]
 omit = [
     "local_packages/*",
     "*/local_packages/*",
     # Large datasource modules with no tests (external deps / integration-only)
-    "lmetk/data/datasources/picasso/time_series_datamodule.py",
-    "lmetk/data/datasources/unibo/loader.py",
+    "picid/data/datasources/picasso/time_series_datamodule.py",
+    "picid/data/datasources/unibo/loader.py",
 ]
 
 [tool.coverage.report]
@@ -102,8 +102,8 @@ omit = [
 omit = [
     "local_packages/*",
     "*/local_packages/*",
-    "lmetk/data/datasources/picasso/time_series_datamodule.py",
-    "lmetk/data/datasources/unibo/loader.py",
+    "picid/data/datasources/picasso/time_series_datamodule.py",
+    "picid/data/datasources/unibo/loader.py",
 ]
 exclude_lines = [
     "pragma: no cover",

@@ -1,4 +1,4 @@
-_target_: lmetk.baselines.tide_model.TiDE_Forecaster
+_target_: picid.baselines.tide_model.TiDE_Forecaster
 
 metadata:
   lightning_model: true

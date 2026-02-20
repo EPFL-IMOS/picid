@@ -1,8 +1,8 @@
 """Comprehensive tests for subsample.py transforms."""
 import numpy as np
 import pytest
-from lmetk.data.data_objects.data import NamedTransformInput
-from lmetk.transforms.base_transforms.subsample import (
+from picid.data.data_objects.data import NamedTransformInput
+from picid.transforms.base_transforms.subsample import (
     SubsampleTransform,
     WindowedAggregationTransform,
 )

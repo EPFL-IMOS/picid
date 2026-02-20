@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.hooks.base.BaseEvalHook.
+Tests for picid.evaluator.hooks.base.BaseEvalHook.
 
 Ref: docs/evaluators/index.md - AbstractEvaluator, hook lifecycle.
 Validates: Abstract interface contract, on_update_end no-op, on_compute_end abstract.
@@ -7,7 +7,7 @@ Validates: Abstract interface contract, on_update_end no-op, on_compute_end abst
 
 import pytest
 
-from lmetk.evaluator.hooks.base import BaseEvalHook
+from picid.evaluator.hooks.base import BaseEvalHook
 
 
 # =============================================================================

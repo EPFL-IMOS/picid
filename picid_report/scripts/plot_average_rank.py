@@ -19,9 +19,9 @@ Two modes:
 - Single-metric mode: Pass --rank-metric <name> to use one metric for all files; one plot.
 
 Usage:
-  python -m lmetk_report.scripts.plot_average_rank --output-dir report_output
-  python -m lmetk_report.scripts.plot_average_rank -o report_output --task-type both
-  python -m lmetk_report.scripts.plot_average_rank -o report_output --rank-metric val_best_rerun/loss --out report_output/plots/average_rank.png
+  python -m picid_report.scripts.plot_average_rank --output-dir report_output
+  python -m picid_report.scripts.plot_average_rank -o report_output --task-type both
+  python -m picid_report.scripts.plot_average_rank -o report_output --rank-metric val_best_rerun/loss --out report_output/plots/average_rank.png
 """
 
 import argparse

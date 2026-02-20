@@ -31,9 +31,9 @@ import torch.nn as nn
 from typing import Dict, Any
 from unittest.mock import Mock, MagicMock
 
-from lmetk.baselines.linear_model.linear_ar import LinearModel
-from lmetk.baselines.linear_model.linear_model import Linear_Forecaster
-from lmetk.evaluator.base import AbstractEvaluator
+from picid.baselines.linear_model.linear_ar import LinearModel
+from picid.baselines.linear_model.linear_model import Linear_Forecaster
+from picid.evaluator.base import AbstractEvaluator
 
 
 # =============================================================================

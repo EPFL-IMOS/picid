@@ -44,7 +44,7 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
       # Loop through the architecture names
       for arch_name in "${arch_name_list[@]}"; do
         echo "--- Running $dataset with seq_len=$seq, arch=$arch_name ---"
-        python lmetk/run.py \
+        python picid/run.py \
           experiment=${dataset}/reconstruction/residual_autoencoder \
           trainer.max_epochs=${max_epochs} \
           trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
@@ -134,7 +134,7 @@ done
 
         
 #         echo "--- Running $dataset with seq_len=$seq ---"
-#         python lmetk/run.py \
+#         python picid/run.py \
 #           experiment=${dataset}/reconstruction/residual_autoencoder \
 #           trainer.max_epochs=${max_epochs} \
 #           trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
@@ -158,7 +158,7 @@ done
 #   # Get the full configuration string for the current iteration
 #   arch_config="${ARCHITECTURES[$i]}"
 # # DONT FORGET LATER: paths=rt_local \
-#   python lmetk/run.py \
+#   python picid/run.py \
 #     experiment=${dataset}/reconstruction/residual_autoencoder \
 #     trainer.max_epochs=${max_epochs} \
 #     trainer.check_val_every_n_epoch=${check_val_every_n_epoch} \
@@ -190,7 +190,7 @@ ARCHITECTURES=(
 
 
 
-# python lmetk/run.py paths=rt_local  experiment=nb14/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
-# python lmetk/run.py paths=rt_local  experiment=unibo/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
-# python lmetk/run.py paths=rt_local  experiment=xjtu_sy/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
-# python lmetk/run.py paths=rt_local  experiment=pronostia/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
+# python picid/run.py paths=rt_local  experiment=nb14/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
+# python picid/run.py paths=rt_local  experiment=unibo/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
+# python picid/run.py paths=rt_local  experiment=xjtu_sy/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5
+# python picid/run.py paths=rt_local  experiment=pronostia/reconstruction/residual_autoencoder trainer.max_epochs=500 trainer.check_val_every_n_epoch=5

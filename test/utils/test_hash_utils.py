@@ -25,7 +25,7 @@ import os
 from pathlib import Path
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from lmetk.utils.hash_utils import (
+from picid.utils.hash_utils import (
     ensure_serializable,
     hash_config,
     hash_directory,

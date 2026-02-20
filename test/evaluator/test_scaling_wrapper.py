@@ -1,5 +1,5 @@
 """
-Tests for lmetk.evaluator.scaling_wrapper module.
+Tests for picid.evaluator.scaling_wrapper module.
 
 This module contains tests for ScalingWrapper and MultivariateTimeseriesScalingWrapper,
 which handle inverse scaling operations critical for converting normalized
@@ -19,11 +19,11 @@ import numpy as np
 from unittest.mock import MagicMock, patch
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from lmetk.evaluator.scaling_wrapper import (
+from picid.evaluator.scaling_wrapper import (
     ScalingWrapper,
     MultivariateTimeseriesScalingWrapper,
 )
-from lmetk.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects.data import NamedTransformInput
 
 
 # =============================================================================

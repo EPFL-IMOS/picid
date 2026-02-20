@@ -1,15 +1,15 @@
 import pytest
 import numpy as np
 from unittest.mock import MagicMock, patch
-from lmetk.evaluator.forecasting import ForecastingEvaluator
-from lmetk.metrics.metric_factory import MetricFactory
+from picid.evaluator.forecasting import ForecastingEvaluator
+from picid.metrics.metric_factory import MetricFactory
 
 
 @pytest.fixture
 def forecasting_evaluator_fixture(mocker):
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
     # We mock the super().update to verify what data it receives
-    mocker.patch("lmetk.evaluator.default.DefaultEvaluator.update")
+    mocker.patch("picid.evaluator.default.DefaultEvaluator.update")
 
     return ForecastingEvaluator(
         target_dim_position=None,
@@ -38,7 +38,7 @@ def test_update_slices_effective_pred_len(
     evaluator.update(forecasting_data_multi_step)
 
     # ASSERT
-    from lmetk.evaluator.default import DefaultEvaluator
+    from picid.evaluator.default import DefaultEvaluator
 
     args, _ = DefaultEvaluator.update.call_args
     passed_model_out = args[0]
@@ -73,7 +73,7 @@ def test_update_selects_target_dim(forecasting_evaluator_fixture):
     evaluator.update(model_out)
 
     # ASSERT
-    from lmetk.evaluator.default import DefaultEvaluator
+    from picid.evaluator.default import DefaultEvaluator
 
     args, _ = DefaultEvaluator.update.call_args
     passed_model_out = args[0]
@@ -164,7 +164,7 @@ def test_update_no_dimension_selection_multivariate(
     mocker, forecasting_data_multivariate
 ):
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    mocker.patch("lmetk.evaluator.default.DefaultEvaluator.update")
+    mocker.patch("picid.evaluator.default.DefaultEvaluator.update")
 
     evaluator = ForecastingEvaluator(
         target_dim_position=1,
@@ -182,7 +182,7 @@ def test_update_no_dimension_selection_multivariate(
 
     evaluator.update(forecasting_data_multivariate)
 
-    from lmetk.evaluator.default import DefaultEvaluator
+    from picid.evaluator.default import DefaultEvaluator
 
     args, _ = DefaultEvaluator.update.call_args
     passed = args[0]
@@ -199,7 +199,7 @@ def test_update_no_dimension_selection_multivariate(
 
 def test_update_no_effective_pred_len_slicing(mocker, forecasting_data_multi_step):
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    mocker.patch("lmetk.evaluator.default.DefaultEvaluator.update")
+    mocker.patch("picid.evaluator.default.DefaultEvaluator.update")
 
     horizon = forecasting_data_multi_step["predictions"].shape[1]
 
@@ -218,7 +218,7 @@ def test_update_no_effective_pred_len_slicing(mocker, forecasting_data_multi_ste
 
     evaluator.update(forecasting_data_multi_step)
 
-    from lmetk.evaluator.default import DefaultEvaluator
+    from picid.evaluator.default import DefaultEvaluator
 
     args, _ = DefaultEvaluator.update.call_args
     passed = args[0]
@@ -229,7 +229,7 @@ def test_update_no_effective_pred_len_slicing(mocker, forecasting_data_multi_ste
 
 def test_update_univariate_no_dim_selection_when_none(mocker):
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-    mocker.patch("lmetk.evaluator.default.DefaultEvaluator.update")
+    mocker.patch("picid.evaluator.default.DefaultEvaluator.update")
 
     evaluator = ForecastingEvaluator(
         target_dim_position=None,
@@ -250,7 +250,7 @@ def test_update_univariate_no_dim_selection_when_none(mocker):
 
     evaluator.update({"predictions": preds, "targets": targets})
 
-    from lmetk.evaluator.default import DefaultEvaluator
+    from picid.evaluator.default import DefaultEvaluator
 
     args, _ = DefaultEvaluator.update.call_args
     passed = args[0]

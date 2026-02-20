@@ -28,7 +28,7 @@ You can copy the [default](../../configs/paths/default.yaml).
     "name": "Railway Traction: Fit-Predict Autogluon",
     "type": "debugpy",
     "request": "launch",
-    "program": "lmetk/run.py",
+    "program": "picid/run.py",
     "console": "integratedTerminal",
     "args": [
         "paths=rt_local",
@@ -46,20 +46,20 @@ or by using the terminal
 
 ```bash
 source .venv/bin/activate
-python lmetk/run.py paths=rt_local experiment=railway_traction/autogluon_railway_fit_predict
+python picid/run.py paths=rt_local experiment=railway_traction/autogluon_railway_fit_predict
 ```
 
 If you want to make the run faster, use debug mode to develop:
 ```bash
 source .venv/bin/activate
-python lmetk/run.py paths=rt_local debug=default experiment=railway_traction/autogluon_railway_fit_predict
+python picid/run.py paths=rt_local debug=default experiment=railway_traction/autogluon_railway_fit_predict
 ```
 
 You can also customize your paths locally using a config file in `configs/paths`
 
 ```bash
 source .venv/bin/activate
-python lmetk/run.py paths=rt_local debug=default experiment=railway_traction/autogluon_railway_fit_predict
+python picid/run.py paths=rt_local debug=default experiment=railway_traction/autogluon_railway_fit_predict
 ```
 
 

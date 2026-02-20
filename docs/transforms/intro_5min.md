@@ -16,7 +16,7 @@ Minimal example:
 ```yaml
 scale_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
   metadata:
     apply_to: features
     fit_on: train
@@ -52,7 +52,7 @@ Examples:
 # Branch results into a new key
 normalize_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
   metadata:
     apply_to: features
     assign_to: features_scaled
@@ -61,7 +61,7 @@ normalize_features:
 # Apply only on train (e.g., data augmentation)
 augment_train_only:
   transform:
-    _target_: lmetk.transforms.base_transforms.subsample.RandomSubsampleTransform
+    _target_: picid.transforms.base_transforms.subsample.RandomSubsampleTransform
     fraction: 0.5
   metadata:
     apply_to: features
@@ -80,7 +80,7 @@ If a transform needs multiple inputs, pass a list in `apply_to`:
 ```yaml
 concat_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
     axis: 1
   metadata:
     apply_to: ["spectral_features", "time_domain_features"]
@@ -92,7 +92,7 @@ If the transform returns a dict, you can remap keys with `assign_to`:
 ```yaml
 classify_faults:
   transform:
-    _target_: lmetk.transforms.base_transforms.identity.IdentityTransform
+    _target_: picid.transforms.base_transforms.identity.IdentityTransform
   metadata:
     apply_to: target
     assign_to:

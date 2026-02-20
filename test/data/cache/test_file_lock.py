@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from lmetk.data.cache.file_lock import FileLock, LOCK_FILE
+from picid.data.cache.file_lock import FileLock, LOCK_FILE
 
 
 class TestFileLockInitialization:

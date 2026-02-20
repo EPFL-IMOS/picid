@@ -1,5 +1,5 @@
 """
-Fixtures for lmetk_report tests: mock W&B-style DataFrames.
+Fixtures for picid_report tests: mock W&B-style DataFrames.
 
 Provides synthetic experiment data with:
 - Heterogeneous HP types (int vs float) for string-normalization merge testing
@@ -12,10 +12,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lmetk_report import config
+from picid_report import config
 
 
-# --- Column names from config (do not modify lmetk_report, only read) ---
+# --- Column names from config (do not modify picid_report, only read) ---
 MODEL_COL = config.COLUMN_CONFIG["model_target"]
 DATASET_COL = config.COLUMN_CONFIG["dataset_name"]
 OPT_METRIC_COL = config.COLUMN_CONFIG["optimization_metric"]

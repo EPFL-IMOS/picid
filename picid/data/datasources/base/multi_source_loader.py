@@ -4,10 +4,10 @@ from typing import Any, Dict, Optional, override
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from lmetk.data.data_objects.data import DatasetContainer, SplitDatasetContainer
-from lmetk.data.datasources.base.interfaces import AbstractDataSourceLoader
-from lmetk.data.datasources.base.single_source_loader import SingleSourceLoader
-from lmetk.data.preprocessing.splits import BySourceSplitter
+from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.preprocessing.splits import BySourceSplitter
 
 logger = logging.getLogger(__name__)
 

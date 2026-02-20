@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional
 
-from lmetk.transforms.base.pipeline.context import TransformContext
+from picid.transforms.base.pipeline.context import TransformContext
 
 HookCallback = Callable[[str, TransformContext], None]
 _HOOK_REGISTRY: Dict[str, List[HookCallback]] = {
@@ -45,7 +45,7 @@ def clear_hooks(event: Optional[str] = None) -> None:
 
 def _register_default_hooks() -> None:
     """Import and register default hooks from base/hooks. Called once on first _emit()."""
-    from lmetk.transforms.base import hooks
+    from picid.transforms.base import hooks
     hooks.register_defaults()
 
 

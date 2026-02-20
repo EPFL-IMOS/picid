@@ -1,4 +1,4 @@
-_target_: lmetk.model.wrappers.batchcontext_tabpfn_wrapper.BatchContextTabPFNWrapper
+_target_: picid.model.wrappers.batchcontext_tabpfn_wrapper.BatchContextTabPFNWrapper
 ignore_pretraining_limits: True
 device: ${trainer.accelerator}
 task_type: ${task_definition.task_type}

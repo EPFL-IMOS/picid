@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
 
     
   metadata:
@@ -9,7 +9,7 @@ scaler_features:
 
 scaler_target:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
   
   metadata:
     apply_to: target
@@ -17,7 +17,7 @@ scaler_target:
 
 time_features_transform:
   transform:
-      _target_: lmetk.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
+      _target_: picid.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
       freq: h 
 
   metadata:
@@ -26,7 +26,7 @@ time_features_transform:
   
 scaler_timefeatures:
   transform:
-    _target_: lmetk.transforms.base_transforms.scaler.StandardScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
   
   metadata:
     apply_to: time_features
@@ -35,7 +35,7 @@ scaler_timefeatures:
 concatenate_features:
   # Concatenate time-features to the feature set
   transform:
-    _target_: lmetk.transforms.base_transforms.concatenate.ConcatenateTransform
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
   
   metadata:
     apply_to: ['features', 'target']

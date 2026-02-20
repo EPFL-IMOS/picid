@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lmetk.data.datasources.ETTh import ETThLoader
+from picid.data.datasources.ETTh import ETThLoader
 
 
 @pytest.fixture
