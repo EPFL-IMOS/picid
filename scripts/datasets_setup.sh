@@ -9,7 +9,7 @@
 
 
 # ncmapps_ds02
-# gdown --id 1qcsUl84Vxl5sXBeRoLDGnf9SEl72BFBe -O datasets/ncmapps_ds02.csv
+#gdown --id 1qcsUl84Vxl5sXBeRoLDGnf9SEl72BFBe -O datasets/ncmapps_ds02.csv
 
 # # building
 # gdown --id 1rSyzyJWkjcnBjegac34WVPlFVg6UkqBZ -O datasets/alpha_building_years_02_03_occupancy_levelwise.csv
@@ -23,5 +23,5 @@
 # rm iTransformer_datasets.zip
 
 
-mkdir -p datasets/N-CMAPSS
+# mkdir -p datasets/N-CMAPSS
 gdown --folder https://drive.google.com/drive/folders/1iWx09Pam7aCra5-C4Qba15kgUFqtwBGk -O datasets/N-CMAPSS

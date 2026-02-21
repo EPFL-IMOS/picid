@@ -18,6 +18,8 @@ artifacts/
 picid_report_artifacts/
 csv_files/
 MagicMock/
+picid_latex/
+docs/plans/
 
 *.jsonl
 .DS_Store
