@@ -158,7 +158,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         super().__init__(**kwargs)
         self.data_path = kwargs["data_dir"]
 
-        self._is_isplitted = False
+        self._is_splitted = False
         self._is_loaded = False
         self.data_dict = None
         self.meta_data = {}
@@ -186,7 +186,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         """Load data from the data source."""
         self.data_dict = self._load_data()
         self._is_loaded = True
-        self._is_isplitted = True
+        self._is_splitted = True
 
     @override
     def get_data(self) -> dict | list[dict]:
@@ -197,7 +197,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         """
         assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_isplitted is True, "Data must be splitted before getting data."
+        assert self._is_splitted is True, "Data must be splitted before getting data."
 
         return SplitDatasetContainer(**self.data_dict)
 
