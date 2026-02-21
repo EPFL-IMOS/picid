@@ -139,11 +139,7 @@ class MultiSourceLoader(AbstractDataSourceLoader):
                         f"'{key}' is already split. This configuration is not supported."
                     )
             else:
-                if getattr(datasource, "_is_splitted", True):
-                    raise RuntimeError(
-                        f"Source '{key}' must not be split when part of a multisource config."
-                    )
-                else:
+                if getattr(datasource, "_is_splitted", False):
                     datasource.split_data()
 
             data_lst.append(datasource.get_data())
