@@ -101,6 +101,13 @@ class SingleSourceLoader(AbstractDataSourceLoader):
                     "val": metadata,
                     "test": metadata,
                 }
+            # Ensure all split values are lists (unified multi-unit contract; see docs/reference/datasources.md)
+            for key in self.data_dict:
+                if isinstance(self.data_dict[key], dict):
+                    for split in self.data_dict[key]:
+                        val = self.data_dict[key][split]
+                        if not isinstance(val, list):
+                            self.data_dict[key][split] = [val]
             return SplitDatasetContainer(**self.data_dict)
         else:
             return DatasetContainer(**self.data_dict)
