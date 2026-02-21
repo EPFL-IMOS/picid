@@ -142,7 +142,6 @@ class TestTransformStrategy:
         chunks = strategy._prepare_chunks_for_split(
             data_to_prepare={"features": container.features},
             split="train",
-            is_multi_unit=False
         )
         
         assert len(chunks) == 1
@@ -156,7 +155,6 @@ class TestTransformStrategy:
         chunks = strategy._prepare_chunks_for_split(
             data_to_prepare={"features": container.features},
             split="train",
-            is_multi_unit=True
         )
         
         assert len(chunks) == 3
@@ -364,7 +362,7 @@ class TestTransformStrategyAdvanced:
         strategy = TransformStrategy()
         
         # Transform that returns dict but with wrong key name
-        class BadReturnTransform(DenseTransform, NoFitPerSegmentMixin):
+        class BadReturnTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Dict:
                 # Returns dict but with wrong key
                 return {"wrong_key": list(data.values())[0] * 2}

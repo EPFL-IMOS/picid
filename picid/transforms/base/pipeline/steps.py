@@ -8,8 +8,8 @@ returns it. Data flow in short:
   1. CopyStep: shallow-copy data, set transformed_data and available_splits.
   2. RegisterChunkBuilderStep: set context.build_fit_chunks / build_transform_chunks.
   3. IntegrityCheckBeforeStep: run before-checks on chunks per split.
-  4. FitStep: call transform.fit_data or fit_multi_source on fit chunks.
-  5. TransformStep: call transform.transform_data or transform_multi_source per split.
+  4. FitStep: call transform.fit_multi_source on fit chunks.
+  5. TransformStep: call transform.transform_multi_source per split.
   6. PostprocessStep: run postprocess_fn on raw results, fill transformed_results_for_new_key.
   7. MergeStep: strategy._merge_transformed_data into context.transformed_data.
   8. IntegrityCheckAfterStep: run after-checks on assign_to slice.
@@ -140,22 +140,19 @@ class RegisterChunkBuilderStep:
 
         strategy = context.strategy
         data = context.data
-        is_multi_unit = data.is_multi_unit
         apply_to_keys = context.apply_to_keys
         fit_on_split = context.fit_on_split
         fit_on_key = context.fit_on_key
 
         def build_transform_chunks(split: str) -> List[NamedTransformInput]:
             target_data = {key: data[key] for key in apply_to_keys}
-            return strategy._prepare_chunks_for_split(target_data, split, is_multi_unit)
+            return strategy._prepare_chunks_for_split(target_data, split)
 
         def build_fit_chunks() -> List[NamedTransformInput]:
             if not fit_on_split or not fit_on_key:
                 return []
             fit_data = {fit_on_key: data[fit_on_key]}
-            return strategy._prepare_chunks_for_split(
-                fit_data, fit_on_split, is_multi_unit
-            )
+            return strategy._prepare_chunks_for_split(fit_data, fit_on_split)
 
         context.build_transform_chunks = build_transform_chunks
         context.build_fit_chunks = build_fit_chunks
@@ -220,8 +217,7 @@ class FitStep:
     Run the transform's fit on fit chunks (one split, one key).
 
     Uses context.build_fit_chunks() if set, otherwise builds chunks via strategy
-    for fit_on_split/fit_on_key. Calls fit_data (single chunk) or
-    fit_multi_source (list of chunks) depending on context.data.is_multi_unit.
+    for fit_on_split/fit_on_key. Always calls fit_multi_source(list of chunks).
     """
 
     def run(self, context: TransformContext) -> TransformContext:
@@ -245,7 +241,7 @@ class FitStep:
             )
             fit_data = {context.fit_on_key: context.data[context.fit_on_key]}
             fit_chunks = context.strategy._prepare_chunks_for_split(
-                fit_data, context.fit_on_split, context.data.is_multi_unit
+                fit_data, context.fit_on_split
             )
         else:
             return context
@@ -262,11 +258,7 @@ class FitStep:
         if context.include_slice_info_in_metadata and context.slice_info is not None:
             metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
 
-        if context.data.is_multi_unit:
-            context.transform_instance.fit_multi_source(fit_chunks, metadata=metadata)
-        else:
-            context.transform_instance.fit_data(fit_chunks[0], metadata=metadata)
-
+        context.transform_instance.fit_multi_source(fit_chunks, metadata=metadata)
         return context
 
 
@@ -275,9 +267,9 @@ class TransformStep:
     Run the transform on each split's chunks and store raw results.
 
     For each split: get chunks via build_transform_chunks(split) or strategy;
-    call transform_data (single chunk) or transform_multi_source (list);
-    store (transformed_chunks, metadata) in context._raw_transformed_by_split.
-    PostprocessStep and MergeStep consume this later.
+    call transform_multi_source(chunks); store (transformed_chunks, metadata)
+    in context._raw_transformed_by_split. PostprocessStep and MergeStep consume
+    this later.
     """
 
     def run(self, context: TransformContext) -> TransformContext:
@@ -296,7 +288,7 @@ class TransformStep:
                 )
                 target_data = {key: context.data[key] for key in context.apply_to_keys}
                 chunks = context.strategy._prepare_chunks_for_split(
-                    target_data, split, context.data.is_multi_unit
+                    target_data, split
                 )
             else:
                 continue
@@ -310,21 +302,12 @@ class TransformStep:
             if context.include_slice_info_in_metadata and context.slice_info is not None:
                 metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
 
-            # Single-source: one chunk per split; multi-source: list of chunks, optional log.
-            if context.data.is_multi_unit:
-                transformed_chunks, log = (
-                    context.transform_instance.transform_multi_source(
-                        chunks, metadata=metadata
-                    )
+            transformed_chunks, log = (
+                context.transform_instance.transform_multi_source(
+                    chunks, metadata=metadata
                 )
-                context.log[split] = log
-            else:
-                transformed_chunks = [
-                    context.transform_instance.transform_data(
-                        chunks[0], metadata=metadata
-                    )
-                ]
-
+            )
+            context.log[split] = log
             context._raw_transformed_by_split[split] = (transformed_chunks, metadata)
 
         return context

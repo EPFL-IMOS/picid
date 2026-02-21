@@ -232,7 +232,6 @@ class TransformStrategy:
         self,
         data_to_prepare: Dict[str, Any],
         split: str,
-        is_multi_unit: bool,
     ) -> List[NamedTransformInput]:
         """
         Build one NamedTransformInput per unit for the given split.
@@ -253,12 +252,12 @@ class TransformStrategy:
         if not keys:
             return []
 
-        num_units = len(data_to_prepare[keys[0]][split])
-
-        if is_multi_unit:
-            assert isinstance(data_to_prepare[keys[0]][split], list), (
-                "is_multi_unit=True but split data is not a list."
-            )
+        first_val = data_to_prepare[keys[0]][split]
+        assert isinstance(first_val, list), (
+            f"data['{keys[0]}']['{split}'] must be List[array] (one per unit). "
+            "See docs/reference/datasources.md#loader-data-contract."
+        )
+        num_units = len(first_val)
 
         return [
             NamedTransformInput(**{

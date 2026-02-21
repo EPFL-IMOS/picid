@@ -8,10 +8,10 @@ from test.transforms.base.conftest import create_dummy_single_unit_container
 
 
 def test_strategy_wraps_transform_failure_with_context():
-    """When transform_data raises, strategy re-raises TransformError with step_id and class."""
+    """When transform_multi_source raises, strategy re-raises TransformError with step_id and class."""
 
     class FailingTransform:
-        def transform_data(self, data, metadata=None):
+        def transform_multi_source(self, chunks, metadata=None):
             raise ValueError("expected failure")
 
     strategy = TransformStrategy()
