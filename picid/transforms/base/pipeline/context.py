@@ -44,8 +44,10 @@ class TransformContext:
     ---------------------------------------------------------------
     data, transform_instance, apply_to_keys, assign_to_keys,
     assign_to_keys_map, fit_on_split, fit_on_key, transform_on_keys,
-    strategy, postprocess_fn, slice_info,
+    include_slice_info_in_metadata, strategy, postprocess_fn, slice_info,
     integrity_checks_before, integrity_checks_after.
+    When include_slice_info_in_metadata is True, FitStep and TransformStep
+    add slice_info (serialized to a dict) to the metadata passed to the transform.
 
     Chunk builders (set by RegisterChunkBuilderStep)
     ------------------------------------------------
@@ -71,6 +73,7 @@ class TransformContext:
     fit_on_split: Optional[str] = None
     fit_on_key: Optional[str] = None
     transform_on_keys: Optional[List[str]] = None
+    include_slice_info_in_metadata: bool = False
 
     # --- Infrastructure ---
     strategy: Optional[Any] = None

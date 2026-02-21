@@ -43,8 +43,17 @@ class BaseTransform(ABC):
         ----------
         data : Any
             The data to transform
-        metadata : Optional[Dict[str, Any]]
-            Additional data needed for transformation, Transformation mode (e.g., 'train', 'val', 'test')
+        metadata : Dict[str, Any]
+            Additional data needed for transformation. May contain:
+            mode : str
+                Transformation mode (e.g. 'train', 'val', 'test').
+            apply_to_keys, assign_to_keys, assign_to_map
+                Pipeline key configuration.
+            slice_info : dict, optional
+                Serialized slice (split, unit_ids, cycle_ids, bounds, index_map).
+                Only present when the transform's config sets
+                metadata.include_slice_info_in_metadata: true and the container
+                has slice_info set.
         """
         pass
 
@@ -52,6 +61,14 @@ class BaseTransform(ABC):
         """
         Fit the transform on data. Default implementation does nothing (for stateless transforms).
         Override this method for transforms that need fitting.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            The data to fit on.
+        metadata : Dict[str, Any]
+            Same keys as for transform_data (mode, apply_to_keys, assign_to_map,
+            and optionally slice_info when metadata.include_slice_info_in_metadata is true).
         """
         pass
 

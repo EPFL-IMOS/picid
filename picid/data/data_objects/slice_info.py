@@ -19,7 +19,9 @@ class SliceInfo:
 
     Optional fields allow datasource or preprocessing to record which units,
     cycles, or time range the container represents. Transforms can read this
-    from the container or from TransformContext.slice_info.
+    from the container or from TransformContext.slice_info, or from the
+    metadata dict passed to transform_data/fit_data (under the key "slice_info",
+    as a dict), when the transform opts in via metadata.include_slice_info_in_metadata: true.
 
     Attributes
     ----------

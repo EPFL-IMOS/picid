@@ -24,11 +24,12 @@ import datetime
 import logging
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import awkward as ak
 
 from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.slice_info import SliceInfo
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
@@ -40,6 +41,21 @@ from picid.transforms.base.pipeline.checks import _run_scoped_checks
 from picid.transforms.base.pipeline.context import TransformContext
 
 logger = logging.getLogger(__name__)
+
+
+def _slice_info_to_metadata(
+    slice_info: Optional[SliceInfo],
+) -> Optional[Dict[str, Any]]:
+    """Serialize SliceInfo to a dict for inclusion in transform metadata."""
+    if slice_info is None:
+        return None
+    return {
+        "split": slice_info.split,
+        "unit_ids": slice_info.unit_ids,
+        "cycle_ids": slice_info.cycle_ids,
+        "bounds": slice_info.bounds,
+        "index_map": slice_info.index_map,
+    }
 
 
 class CopyStep:
@@ -243,6 +259,8 @@ class FitStep:
             "assign_to_keys": context.assign_to_keys,
             "assign_to_map": context.assign_to_keys_map,
         }
+        if context.include_slice_info_in_metadata and context.slice_info is not None:
+            metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
 
         if context.data.is_multi_unit:
             context.transform_instance.fit_multi_source(fit_chunks, metadata=metadata)
@@ -289,6 +307,8 @@ class TransformStep:
                 "assign_to_keys": context.assign_to_keys,
                 "assign_to_map": context.assign_to_keys_map,
             }
+            if context.include_slice_info_in_metadata and context.slice_info is not None:
+                metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
 
             # Single-source: one chunk per split; multi-source: list of chunks, optional log.
             if context.data.is_multi_unit:

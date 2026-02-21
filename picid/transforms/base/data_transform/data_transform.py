@@ -166,6 +166,11 @@ class DataTransform:
                 Restrict transformation to these splits.
             validate_output : bool  (default True)
                 When True, default structural before/after checks run.
+            include_slice_info_in_metadata : bool  (optional, default False)
+                When True, the pipeline adds the container's slice (split, unit_ids,
+                cycle_ids, bounds, index_map) to the metadata dict passed to
+                transform_data and fit_data, under the key "slice_info". Use when
+                the transform needs to know which slice of the dataset it is processing.
             integrity_checks_before : list  (optional)
                 Custom before-checks (name, fn, policy) triples.
             integrity_checks_after : list  (optional)
@@ -208,6 +213,9 @@ class DataTransform:
         # validate_output=True: default structural before/after checks run.
         # validate_output=False: no defaults; custom lists still apply if provided.
         self.validate_output: bool = metadata.get("validate_output", True)
+        self.include_slice_info_in_metadata: bool = metadata.get(
+            "include_slice_info_in_metadata", False
+        )
 
         # Custom integrity checks (set programmatically or from config).
         self.integrity_checks_before: Optional[List[Tuple]] = metadata.get(
@@ -321,4 +329,5 @@ class DataTransform:
             integrity_checks_before=self.integrity_checks_before,
             integrity_checks_after=self.integrity_checks_after,
             validate_output=self.validate_output,
+            include_slice_info_in_metadata=self.include_slice_info_in_metadata,
         )

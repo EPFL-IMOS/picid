@@ -144,6 +144,7 @@ class TransformStrategy:
         integrity_checks_before: Optional[List[Tuple]] = None,
         integrity_checks_after: Optional[List[Tuple]] = None,
         validate_output: bool = True,
+        include_slice_info_in_metadata: bool = False,
     ) -> Tuple[SplitDatasetContainer, Dict[str, Any]]:
 
         # --- Normalise key lists ---
@@ -185,6 +186,7 @@ class TransformStrategy:
             fit_on_split=fit_on_split,
             fit_on_key=fit_on_key,
             transform_on_keys=transform_on_keys,
+            include_slice_info_in_metadata=include_slice_info_in_metadata,
             strategy=self,
             postprocess_fn=postprocess_transformed_data,
             slice_info=getattr(data, "slice_info", None),
