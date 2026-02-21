@@ -5,11 +5,12 @@ import numpy as np
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SeasonalDummyTransform(DenseTransform):
+class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def __init__(self, shift: int, seq_len: int = 168, **kwargs):
         """

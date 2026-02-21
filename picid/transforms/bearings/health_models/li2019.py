@@ -29,7 +29,7 @@ TEST_RULS = {
 }
 
 
-class Li2019FPTCutTransform(DenseTransform, NoFitPerSegmentMixin):
+class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "2*sigma interval of kurtosis" method from Li et al. 2019.

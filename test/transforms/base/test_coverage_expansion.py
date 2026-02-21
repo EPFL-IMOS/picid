@@ -50,7 +50,7 @@ class TestBaseTransformCoverage:
     def test_default_fit_data_body_executed(self):
         """Ensure BaseTransform.fit_data default implementation (pass) is executed."""
         # Use a subclass that does not override fit_data
-        class OnlyTransformData(BaseTransform):
+        class OnlyTransformData(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
                 return data
 
@@ -61,7 +61,7 @@ class TestBaseTransformCoverage:
 
     def test_base_transform_fit_data_pass_line(self):
         """Cover line 40: BaseTransform.fit_data body (pass) via subclass that does not override it."""
-        class NoFitOverride(DenseTransform):
+        class NoFitOverride(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata): return data[list(data.keys())[0]]
 
         t = NoFitOverride()
@@ -70,7 +70,7 @@ class TestBaseTransformCoverage:
 
     def test_base_transform_abstract_transform_data_body(self):
         """Line 33: BaseTransform.transform_data abstract body (pass) executed via super().transform_data."""
-        class CallsSuperTransform(DenseTransform):
+        class CallsSuperTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 return super().transform_data(data, metadata)  # hits BaseTransform pass
 
@@ -460,7 +460,7 @@ class TestMultisourceCoverage:
 
     def test_fit_unsupported_data_type_raises(self):
         """Line 309: fit when transform does not support data type."""
-        class RaggedOnlyTransform(RaggedTransform, ConcatFitAndPerSegmentTransformMixin):
+        class RaggedOnlyTransform(ConcatFitAndPerSegmentTransformMixin, RaggedTransform):
             def fit_data(self, data, metadata): ...
             def transform_data(self, data, metadata): return data[list(data.keys())[0]]
 
@@ -474,7 +474,7 @@ class TestMultisourceCoverage:
     )
     def test_transform_unsupported_data_type_raises(self):
         """Line 533: transform_multi_source when data type not supported hits else and raises ValueError."""
-        class RaggedOnlyTransform(RaggedTransform, NoFitPerSegmentMixin):
+        class RaggedOnlyTransform(NoFitPerSegmentMixin, RaggedTransform):
             def transform_data(self, data, metadata): return data[list(data.keys())[0]]
 
         t = RaggedOnlyTransform()
@@ -537,7 +537,7 @@ class TestMultisourceCoverage:
 
     def test_transform_multi_source_ragged_to_dense_exception_logging(self):
         """Lines 533-598: exception in transform_function_to_data_segments is logged and re-raised."""
-        class RaisingTransform(DenseTransform, NoFitPerSegmentMixin):
+        class RaisingTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 raise RuntimeError("test error in transform")
 
@@ -572,7 +572,7 @@ class TestMultisourceCoverage:
         from picid.data.data_objects.base import BaseDataObjectWithMetadata
         regular_ak = ak.from_numpy(np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]))
 
-        class ReturnNamedInput(DenseTransform, NoFitPerSegmentMixin):
+        class ReturnNamedInput(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 out = data[list(data.keys())[0]] * 2
                 return NamedTransformInput(features=out)
@@ -652,7 +652,7 @@ class TestMultisourceCoverage:
 
     def test_ragged_to_dense_exception_after_index_depth_set(self):
         """Lines 567-568, 575-584: exception in ragged-to-dense loop triggers case analysis with index_depth."""
-        class RaiseOnSecondCoord(DenseTransform, NoFitPerSegmentMixin):
+        class RaiseOnSecondCoord(NoFitPerSegmentMixin, DenseTransform):
             def __init__(self):
                 self._count = 0
             def transform_data(self, data, metadata):
@@ -670,7 +670,7 @@ class TestMultisourceCoverage:
 
     def test_ragged_to_dense_reassembly_regular_output_hits_from_regular(self):
         """Line 515: reassembly with len(var_dims)==0 after regularize uses ak.from_regular."""
-        class SameShapeTransform(DenseTransform, NoFitPerSegmentMixin):
+        class SameShapeTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 return np.array([[1.0, 2.0]])  # same shape (1,2) per segment -> regular output
 

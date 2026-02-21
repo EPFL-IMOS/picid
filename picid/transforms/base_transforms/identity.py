@@ -4,7 +4,7 @@ from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 
-class IdentityPassThrough(DenseTransform, NoFitPerSegmentMixin):
+class IdentityPassThrough(NoFitPerSegmentMixin, DenseTransform):
     """
     An identity transform that passes the input data straight through
     without modification in both the fit and transform stages.

@@ -10,7 +10,7 @@ from picid.transforms.base.multisource import (
 from picid.transforms.battery.utils import get_mode_change_right_indices
 
 
-class FilterDataFrameColumns(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+class FilterDataFrameColumns(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     """
     Filter features of NB1 dataset (NASA Randomized Battery Usage Dataset) according to the Bosello work. keep solely charge/discharge and voltage, current and temperature as features.
     """
@@ -33,7 +33,7 @@ class FilterDataFrameColumns(DenseTransform, ConcatFitAndPerSegmentTransformMixi
         return data_segment
 
 
-class UpdateTarget(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+class UpdateTarget(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     """
     Update the target column to be the one specified in the config.
     This update takes a column from the "features" and returns it
@@ -61,7 +61,7 @@ class UpdateTarget(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
         return out
 
 
-class AssignNaiveTimefeatures(DenseTransform, NoFitPerSegmentMixin):
+class AssignNaiveTimefeatures(NoFitPerSegmentMixin, DenseTransform):
     """
     Replace the time features with a range from 0 to len(feature)
     """
@@ -78,7 +78,7 @@ class AssignNaiveTimefeatures(DenseTransform, NoFitPerSegmentMixin):
         return data_segment
 
 
-class Cycles2Statistics(DenseTransform, NoFitPerSegmentMixin):
+class Cycles2Statistics(NoFitPerSegmentMixin, DenseTransform):
     """
     Compress cycles to the mean/std representations of the cycles for NB1 dataset
     """

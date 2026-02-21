@@ -12,7 +12,7 @@ from picid.data.data_objects.data import NamedTransformInput
 from test.transforms.base.conftest import create_dummy_split_container
 
 
-class MetadataRecordingTransform(DenseTransform, NoFitPerSegmentMixin):
+class MetadataRecordingTransform(NoFitPerSegmentMixin, DenseTransform):
     """Transform that records the metadata it receives in transform_data."""
 
     def __init__(self):

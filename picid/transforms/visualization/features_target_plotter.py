@@ -24,7 +24,7 @@ plt.switch_backend("Agg")
 logger = logging.getLogger(__name__)
 
 
-class FeatureTargetPlotter(RaggedOrDenseTransform, NoFitPerSegmentMixin):
+class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     """
     A pass-through transform that plots features and/or targets
     from `awkward` arrays.

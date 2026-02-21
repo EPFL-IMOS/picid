@@ -265,3 +265,4 @@ NoFitMultiSourceTransformMixin = NoFitPerSegmentMixin
 ConcatenateUnitsMixing = NoFitConcatAlongAxisMixin
 ConcatenatedMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
 FitMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
+FitOnConcatenatedMixin = FitByConcatenationMixin

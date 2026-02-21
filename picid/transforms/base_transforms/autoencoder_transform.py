@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class BaseAutoencoderTransform(
-    RaggedOrDenseTransform,
     NoFitPerSegmentMixin,
+    RaggedOrDenseTransform,
 ):
     """
     Compresses battery  data into a mean/std representation using a pre-trained Autoencoder.

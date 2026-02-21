@@ -11,7 +11,7 @@ _plt.switch_backend("Agg")
 from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
 
 
-class PlotFeatures(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+class PlotFeatures(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     """
     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.
     Handles various input data types by converting them to numpy.ndarray internally

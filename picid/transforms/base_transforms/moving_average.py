@@ -13,7 +13,7 @@ from picid.data.optimization.sequencer import DenseArraySequencer
 logger = logging.getLogger(__name__)
 
 
-class MovingAverageTransform(DenseTransform, NoFitPerSegmentMixin):
+class MovingAverageTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Applies a moving average filter to smooth time-domain signals.
 

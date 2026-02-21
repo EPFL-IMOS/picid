@@ -11,7 +11,7 @@ from picid.data.data_objects.utils import convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class STFTTransform(DenseTransform, NoFitPerSegmentMixin):
+class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
     def __init__(
         self,
         win_len: int = 256,

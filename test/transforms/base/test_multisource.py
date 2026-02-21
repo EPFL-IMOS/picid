@@ -88,8 +88,8 @@ class TestConcatenatedAndFitMultiSourceMixinsComposition:
         """Confirm a class using ConcatFitAndPerSegmentTransformMixin (new design) behaves like the old ConcatinatedFit mixin."""
 
         class FittableWithNewMixins(
-            DenseTransform,
             ConcatFitAndPerSegmentTransformMixin,
+            DenseTransform,
         ):
             def __init__(self):
                 super().__init__()

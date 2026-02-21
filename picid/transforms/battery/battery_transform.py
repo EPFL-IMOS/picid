@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 import numpy as np
 
 from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 # Assuming this import path is correct for your project
 
@@ -11,7 +12,7 @@ from picid.transforms.base.base_transform import DenseTransform
 logger = logging.getLogger(__name__)
 
 
-class BatteryTransform(DenseTransform):
+class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs

@@ -171,7 +171,7 @@ class TestMultisourceFitCharacterization:
 
     def test_fit_multi_source_ragged_ragged_supporting_concatenates_ak(self):
         """Ragged data + ragged-supporting transform: fit receives single ak array."""
-        class FitCaptureRagged(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+        class FitCaptureRagged(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
             def __init__(self):
                 super().__init__()
                 self.fitted = False
@@ -185,7 +185,7 @@ class TestMultisourceFitCharacterization:
                 return data[list(data.keys())[0]] * 2
 
         # RaggedTransform marker so path is ragged-supporting
-        class FitCaptureRaggedMarked(RaggedTransform, FitCaptureRagged):
+        class FitCaptureRaggedMarked(FitCaptureRagged, RaggedTransform):
             pass
 
         transform = FitCaptureRaggedMarked()
@@ -291,7 +291,7 @@ class TestMetadataPropagation:
         """Strategy passes mode and apply_to_keys in metadata to transform_data."""
         captured = {}
 
-        class CaptureMetaTransform(DenseTransform, NoFitPerSegmentMixin):
+        class CaptureMetaTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
                 captured["metadata"] = copy.deepcopy(metadata)
                 return data[list(data.keys())[0]] * 2
@@ -315,7 +315,7 @@ class TestMetadataPropagation:
         """Fit phase receives mode=fit_on_split and apply_to_keys."""
         captured = {}
 
-        class CaptureFitMeta(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+        class CaptureFitMeta(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
             def __init__(self):
                 super().__init__()
                 self.fitted = False
@@ -410,7 +410,7 @@ class TestNoFitConcatAlongAxisMixinCharacterization:
 # -----------------------------------------------------------------------------
 
 
-class DummyInverseTransform(DenseTransform, NoFitPerSegmentMixin, InverseTransformMixin):
+class DummyInverseTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     """Dummy transform with inverse for Phase 1 characterization."""
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:

@@ -15,7 +15,7 @@ from picid.utils.awkward_utils import ak_find_var_dims
 logger = logging.getLogger(__name__)
 
 
-class ConcatenateTransform(DenseTransform, NoFitPerSegmentMixin):
+class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, dim: int = 1, **kwargs):
         """
         Initialize the transform.
@@ -156,7 +156,7 @@ class ConcatenateTransform(DenseTransform, NoFitPerSegmentMixin):
         return self.transform_data(data, metadata)
 
 
-class RuggedToDenseTransform(RaggedTransform, NoFitPerSegmentMixin):
+class RuggedToDenseTransform(NoFitPerSegmentMixin, RaggedTransform):
     def __init__(self, **kwargs):
         """
         Initialize the transform.
@@ -184,7 +184,7 @@ class RuggedToDenseTransform(RaggedTransform, NoFitPerSegmentMixin):
         return data
 
 
-class MultiDatasetRuggedToDenseTransform(RaggedTransform, NoFitConcatAlongAxisMixin):
+class MultiDatasetRuggedToDenseTransform(NoFitConcatAlongAxisMixin, RaggedTransform):
     def __init__(self, axis: int, **kwargs):
         """
         Initialize the transform.

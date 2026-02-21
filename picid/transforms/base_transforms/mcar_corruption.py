@@ -11,7 +11,7 @@ from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
 logger = logging.getLogger(__name__)
 
 
-class MCARCorruptorTransform(DenseTransform, NoFitMultiSourceTransformMixin):
+class MCARCorruptorTransform(NoFitMultiSourceTransformMixin, DenseTransform):
     """
     Injects Missing Completely At Random (MCAR) faults into time-series data.
 

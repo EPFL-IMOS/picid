@@ -7,7 +7,7 @@ mixins (e.g. ConcatFitAndPerSegmentTransformMixin) and optionally with RaggedTra
 DenseTransform / RaggedOrDenseTransform to declare capability for handler dispatch.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.utils.decorators import check_transform_output_consistency
@@ -56,6 +56,34 @@ class BaseTransform(ABC):
                 has slice_info set.
         """
         pass
+
+    @abstractmethod
+    def transform_multi_source(
+        self,
+        chunks: List[NamedTransformInput],
+        metadata: Dict[str, Any],
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        """
+        Transform all units for a given split.
+
+        TransformStep always calls this method. Subclasses must provide it,
+        either by inheriting a mixin or by implementing it directly.
+
+        Parameters
+        ----------
+        chunks : List[NamedTransformInput]
+            One chunk per unit for this split, in unit order.
+        metadata : dict
+            Pipeline metadata (same as transform_data receives).
+
+        Returns
+        -------
+        results : List[Any]
+            One transformed result per input chunk, in the same order.
+        log : dict
+            Per-split log information. Use {} if nothing to log.
+        """
+        raise NotImplementedError
 
     def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
         """

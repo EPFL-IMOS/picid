@@ -10,7 +10,7 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 logger = logging.getLogger(__name__)
 
 
-class ReshapeTransform(DenseTransform, NoFitPerSegmentMixin):
+class ReshapeTransform(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, pattern: str, **kwargs):
         """
         Initialize the transform.

@@ -13,7 +13,7 @@ from picid.transforms.utils import _convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class RuggedDimensionSwap(RaggedTransform, NoFitPerSegmentMixin):
+class RuggedDimensionSwap(NoFitPerSegmentMixin, RaggedTransform):
     """
     Swap rugged dimension
     """

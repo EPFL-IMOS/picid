@@ -10,7 +10,8 @@ from typing import Any, Dict, List
 from omegaconf import DictConfig, OmegaConf
 import inspect
 
-from picid.transforms.base.base_transform import BaseTransform
+from picid.transforms.base.base_transform import BaseTransform, DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.transforms.base.data_transform import DataTransform, _type_matches, _matches
 from picid.data.data_objects.data import (
     NamedTransformInput,
@@ -325,7 +326,7 @@ class TestDataTransformAdvanced:
     
     def test_named_parameter_missing_metadata_error(self):
         """Test that named parameter transform without metadata raises error."""
-        class TransformWithoutMetadata(BaseTransform):
+        class TransformWithoutMetadata(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, features: np.ndarray):  # No metadata
                 return features * 2
         
@@ -337,7 +338,7 @@ class TestDataTransformAdvanced:
     
     def test_named_parameter_wrong_count_error(self):
         """Test that wrong number of named parameters raises error."""
-        class WrongCountTransform(BaseTransform):
+        class WrongCountTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, features: np.ndarray, extra: np.ndarray, metadata: Dict):
                 return features * 2
         
@@ -349,7 +350,7 @@ class TestDataTransformAdvanced:
     
     def test_named_parameter_missing_key_error(self):
         """Test that missing key in named parameters raises error."""
-        class MissingKeyTransform(BaseTransform):
+        class MissingKeyTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, wrong_name: np.ndarray, metadata: Dict):
                 return wrong_name * 2
         

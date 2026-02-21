@@ -13,7 +13,7 @@ from picid.data.data_objects.utils import convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class Ahmad2019FPTCutTransform(DenseTransform, NoFitPerSegmentMixin):
+class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "Alarm bound technique" from Ahmad et al. 2019.

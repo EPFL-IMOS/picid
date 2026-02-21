@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(DenseTransform, NoFitPerSegmentMixin):
+class TimeseriesTabularizer(NoFitPerSegmentMixin, DenseTransform):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

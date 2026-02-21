@@ -16,7 +16,7 @@ from picid.utils.awkward_utils import ak_find_var_dims
 logger = logging.getLogger(__name__)
 
 
-class RegularizeRaggedDataTransform(RaggedTransform, NoFitPerSegmentMixin):
+class RegularizeRaggedDataTransform(NoFitPerSegmentMixin, RaggedTransform):
     def __init__(self, **kwargs):
         """
         This transform regularizes ragged arrays to have uniform length.
@@ -40,7 +40,7 @@ class RegularizeRaggedDataTransform(RaggedTransform, NoFitPerSegmentMixin):
 
 
 class ExpandScalarToReferenceFeatureSize(
-    DenseTransform, NoFitPerSegmentMixin
+    NoFitPerSegmentMixin, DenseTransform
 ):
     def __init__(self, scalar_key: str, **kwargs):
         """
@@ -111,7 +111,7 @@ class ExpandScalarToReferenceFeatureSize(
         return output_array
 
 
-class RaggedToDenseTransform(RaggedTransform, NoFitPerSegmentMixin):
+class RaggedToDenseTransform(NoFitPerSegmentMixin, RaggedTransform):
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Concatenate ragged arrays along a single ragged dimension

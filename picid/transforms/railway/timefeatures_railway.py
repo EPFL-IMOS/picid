@@ -5,11 +5,12 @@ import pandas as pd
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 # Assuming this import path is correct for your project
 
 
-class RailwayTimeFeaturesTransform(DenseTransform):
+class RailwayTimeFeaturesTransform(NoFitPerSegmentMixin, DenseTransform):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

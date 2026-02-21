@@ -9,7 +9,7 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 logger = logging.getLogger(__name__)
 
 
-class First(DenseTransform, NoFitPerSegmentMixin):
+class First(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, **kwargs):
         """
         Initialize the transform.

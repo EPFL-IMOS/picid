@@ -260,7 +260,7 @@ class BlockwisePastCopyImputation:
         return X_imp
 
 
-class ImputationTransform(DenseTransform, ConcatinatedFitMultiSourceTransformMixin):
+class ImputationTransform(ConcatinatedFitMultiSourceTransformMixin, DenseTransform):
     """
     Imputes missing values (NaNs) in time-series data using configurable strategies.
 

@@ -13,7 +13,7 @@ from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
 logger = logging.getLogger(__name__)
 
 
-class MissingValuesStatsLogger(DenseTransform, NoFitMultiSourceTransformMixin):
+class MissingValuesStatsLogger(NoFitMultiSourceTransformMixin, DenseTransform):
     """
     Analyzes and logs missing value (NaN) statistics for time-series data.
     Supports both Dense (NumPy) and Ragged (Awkward) arrays.

@@ -29,7 +29,7 @@ def hankel_svdvals(data, hankel_window_size, slice_window_size):
     return np.array(hankel_svd).mean(axis=0)
 
 
-class TimeStatsTransform(DenseTransform, NoFitPerSegmentMixin):
+class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Computes global statistical features directly from time-domain signals.
 

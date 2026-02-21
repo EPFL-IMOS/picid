@@ -15,7 +15,7 @@ from picid.data.optimization.sequencer import DenseArraySequencer
 logger = logging.getLogger(__name__)
 
 
-class MovingRMSTransform(DenseTransform, NoFitPerSegmentMixin):
+class MovingRMSTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Calculates the Root Mean Square (RMS) of time-domain signals
     using either an expanding or a strided-sliding window.

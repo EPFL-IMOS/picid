@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ExtractSequenceStartTime(DenseTransform, NoFitPerSegmentMixin):
+class ExtractSequenceStartTime(NoFitPerSegmentMixin, DenseTransform):
     """
     Extracts the first time step from a time-feature sequence to represent
     the starting time of the event.

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConstantScaler(
-    DenseTransform, ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin
+    ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
 ):
     def __init__(self, factor=1.0):
         super().__init__()
@@ -47,7 +47,7 @@ class ConstantScaler(
 
 
 class MinMaxScalerSklearn(
-    DenseTransform, ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin
+    ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
 ):
     """
     An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.
@@ -116,7 +116,7 @@ class MinMaxScalerSklearn(
 
 
 class StandardScalerSklearn(
-    DenseTransform, ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin
+    ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
 ):
     """
     An adapter for sklearn.preprocessing.StandardScaler, conforming to BaseTransform interface.

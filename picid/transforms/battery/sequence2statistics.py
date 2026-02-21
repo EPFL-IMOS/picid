@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Sequence2Statistics(DenseTransform, NoFitPerSegmentMixin):
+class Sequence2Statistics(NoFitPerSegmentMixin, DenseTransform):
     """
     Transforms sequence data by computing the mean and standard deviation
     for each cycle, ignoring a specified padding value and np.nan.

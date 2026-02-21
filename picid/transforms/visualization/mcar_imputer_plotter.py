@@ -16,7 +16,7 @@ plt.switch_backend("Agg")
 logger = logging.getLogger(__name__)
 
 
-class MCARImputationPlotter(DenseTransform, NoFitMultiSourceTransformMixin):
+class MCARImputationPlotter(NoFitMultiSourceTransformMixin, DenseTransform):
     """
     Visualizes MCAR imputation results with high-precision, publication-ready alignment.
     """

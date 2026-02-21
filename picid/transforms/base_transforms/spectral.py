@@ -13,7 +13,7 @@ from picid.data.data_objects.utils import convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class SpectralStatsTransform(DenseTransform, NoFitPerSegmentMixin):
+class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Computes global statistical features from the frequency spectrum of signals.
 

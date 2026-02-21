@@ -5,9 +5,10 @@ import numpy as np
 import pandas as pd
 
 from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
-class AutocorrFeatureDropTransform(DenseTransform):
+class AutocorrFeatureDropTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def __init__(self, correlation_threshold: float = 0.95, method: str = 'pearson', 
                  keep_first: bool = True, exclude_columns: Optional[List[int]] = None, **kwargs):
@@ -184,4 +185,4 @@ class AutocorrFeatureDropTransform(DenseTransform):
         }
 
     def __call__(self, data_segment: Any) -> Any:
-        return self.transform_data(data_segment)        return self.transform_data(data_segment)
+        return self.transform_data(data_segment)

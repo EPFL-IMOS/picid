@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PadToLength(DenseTransform, NoFitPerSegmentMixin):
+class PadToLength(NoFitPerSegmentMixin, DenseTransform):
     """
     Pads a numpy array along a chosen axis to reach at least `target_length`.
     Useful when sequences are shorter than a required sliding-window size.

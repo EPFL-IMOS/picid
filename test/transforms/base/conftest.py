@@ -33,7 +33,7 @@ from picid.data.data_objects.data import (
 # DUMMY TRANSFORMS FOR TESTING
 # ============================================================================
 
-class DummyStatelessTransform(DenseTransform, NoFitPerSegmentMixin):
+class DummyStatelessTransform(NoFitPerSegmentMixin, DenseTransform):
     """A stateless transform that multiplies by 2."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
@@ -41,7 +41,7 @@ class DummyStatelessTransform(DenseTransform, NoFitPerSegmentMixin):
         return data[key] * 2
 
 
-class DummyFittableTransform(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+class DummyFittableTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     """A fittable transform that learns a scaling factor."""
     
     def __init__(self, initial_factor=1.0):
@@ -62,7 +62,7 @@ class DummyFittableTransform(DenseTransform, ConcatFitAndPerSegmentTransformMixi
         return data[key] * self.factor
 
 
-class DummyMultiKeyTransform(DenseTransform, NoFitPerSegmentMixin):
+class DummyMultiKeyTransform(NoFitPerSegmentMixin, DenseTransform):
     """A transform that takes multiple keys and returns a dict."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -72,7 +72,7 @@ class DummyMultiKeyTransform(DenseTransform, NoFitPerSegmentMixin):
         return result
 
 
-class DummyRaggedTransform(RaggedTransform, NoFitPerSegmentMixin):
+class DummyRaggedTransform(NoFitPerSegmentMixin, RaggedTransform):
     """A transform that works with ragged arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> ak.Array:
@@ -81,7 +81,7 @@ class DummyRaggedTransform(RaggedTransform, NoFitPerSegmentMixin):
         return data[key] * 2
 
 
-class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitPerSegmentMixin):
+class DummyRaggedOrDenseTransform(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     """A transform that works with both ragged and dense arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
@@ -93,7 +93,7 @@ class DummyRaggedOrDenseTransform(RaggedOrDenseTransform, NoFitPerSegmentMixin):
         return result
 
 
-class DummyInverseTransform(DenseTransform, NoFitPerSegmentMixin, InverseTransformMixin):
+class DummyInverseTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     """Minimal transform implementing InverseTransformMixin for get_inverter_for_key tests."""
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
@@ -122,7 +122,7 @@ class DummyTransformWithMetadata(DenseTransform, NoFitPerSegmentMixin):
         return data[key] * multiplier
 
 
-class NamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
+class NamedParameterTransform(NoFitPerSegmentMixin, DenseTransform):
     """Transform that uses named parameters matching apply_to keys."""
     
     def transform_data(self, features: np.ndarray, metadata: Dict[str, Any]) -> np.ndarray:
@@ -130,7 +130,7 @@ class NamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
         return features * 2
 
 
-class MultiNamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
+class MultiNamedParameterTransform(NoFitPerSegmentMixin, DenseTransform):
     """Transform with multiple named parameters."""
     
     def transform_data(self, features: np.ndarray, target: np.ndarray, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -141,14 +141,14 @@ class MultiNamedParameterTransform(DenseTransform, NoFitPerSegmentMixin):
         }
 
 
-class BadSignatureTransform(BaseTransform):
+class BadSignatureTransform(NoFitPerSegmentMixin, DenseTransform):
     """Transform with invalid signature for testing."""
     
     def transform_data(self, data):  # Missing metadata parameter
         return data
 
 
-class TransformReturningDict(DenseTransform, NoFitPerSegmentMixin):
+class TransformReturningDict(NoFitPerSegmentMixin, DenseTransform):
     """Transform that returns a dictionary."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Dict[str, np.ndarray]:
@@ -158,14 +158,14 @@ class TransformReturningDict(DenseTransform, NoFitPerSegmentMixin):
         return result
 
 
-class TransformReturningList(DenseTransform, NoFitPerSegmentMixin):
+class TransformReturningList(NoFitPerSegmentMixin, DenseTransform):
     """Transform that returns a list of arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> List[np.ndarray]:
         return [value * 2 for value in data.values()]
 
 
-class RaggedSupportingTransform(RaggedTransform, NoFitPerSegmentMixin):
+class RaggedSupportingTransform(NoFitPerSegmentMixin, RaggedTransform):
     """Transform that supports ragged arrays."""
     
     def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> ak.Array:
@@ -173,7 +173,7 @@ class RaggedSupportingTransform(RaggedTransform, NoFitPerSegmentMixin):
         return data[key] * 2
 
 
-class ConcatenateUnitsTransform(DenseTransform, NoFitConcatAlongAxisMixin):
+class ConcatenateUnitsTransform(NoFitConcatAlongAxisMixin, DenseTransform):
     """Transform that concatenates units."""
     
     def __init__(self, axis: int = 0):

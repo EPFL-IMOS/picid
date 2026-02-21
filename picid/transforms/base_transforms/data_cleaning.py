@@ -12,7 +12,7 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 logger = logging.getLogger(__name__)
 
 
-class FillTransform(DenseTransform, NoFitPerSegmentMixin):
+class FillTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs

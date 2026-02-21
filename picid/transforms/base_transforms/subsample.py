@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class SubsampleTransform(DenseTransform, NoFitPerSegmentMixin):
+class SubsampleTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def __init__(
         self,
@@ -49,7 +49,7 @@ class SubsampleTransform(DenseTransform, NoFitPerSegmentMixin):
         return self.transform_data(data, None)
 
 
-class WindowedAggregationTransform(DenseTransform, NoFitPerSegmentMixin):
+class WindowedAggregationTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Applies a non-overlapping window aggregation to the input data.
     """

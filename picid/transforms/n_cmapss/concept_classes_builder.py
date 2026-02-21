@@ -32,7 +32,7 @@ class ClassLabelLookup:
         return self.table[key]
 
 
-class ConceptClassesBuilder(DenseTransform, ConcatFitAndPerSegmentTransformMixin):
+class ConceptClassesBuilder(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     def __init__(
         self,
         **kwargs,
