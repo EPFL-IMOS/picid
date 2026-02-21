@@ -78,15 +78,15 @@ unless you are extending core logic.
 
 All multi-unit behavior lives in `picid/transforms/base/multisource.py`. Prefer the current names:
 
-- **`ConcatFitAndPerSegmentTransformMixin`** (formerly `StandardFitTransformMixin`; alias: `ConcatinatedFitMultiSourceTransformMixin`)
+- **`ConcatFitAndPerSegmentTransformMixin`**
   - Fit: concatenate all sources, then fit once
   - Transform: apply per segment
   - Ragged handling: dense-only (flatten → NumPy → reassemble) or ragged-native (Awkward directly)
 
-- **`NoFitPerSegmentMixin`** (formerly `StatelessPerSegmentMixin`; alias: `NoFitMultiSourceTransformMixin`)
+- **`NoFitPerSegmentMixin`**
   - No fit; transform applied per segment. Raises if `fit_multi_source` is called.
 
-- **`NoFitConcatAlongAxisMixin`** (formerly `StatelessConcatenateMixin`; alias: `ConcatenateUnitsMixing`)
+- **`NoFitConcatAlongAxisMixin`**
   - No fit; concatenates all sources along a required `axis`, then one `transform_data` call.
 
 - **`InverseTransformMixin`**

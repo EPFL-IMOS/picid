@@ -253,7 +253,7 @@ These classes determine how the transform "sees" the data: does it learn from al
 Below is a guide to the mixins available in `picid.transforms.base.base_transform`. Your custom transform should inherit from `BaseTransform` **and** one of these mixins depending on the desired behavior.
 
 #### A. `ConcatFitAndPerSegmentTransformMixin`
-**"Fit Global, Transform Local"** (legacy alias: `ConcatinatedFitMultiSourceTransformMixin`)
+**"Fit Global, Transform Local"**
 
 * **Behavior:**
     * **Fitting:** Concatenates data from *all* sources (units) into one large dataset to learn global parameters (e.g., a global min/max for scaling).
@@ -262,7 +262,7 @@ Below is a guide to the mixins available in `picid.transforms.base.base_transfor
 * **Use Case:** Scalers (`MinMaxScaler`, `StandardScaler`), PCA, Autoencoders, or any model that needs to learn the statistical properties of the *entire* dataset but preserve the original split structure.
 
 #### B. `NoFitPerSegmentMixin`
-**"Stateless Multi-Source"** (legacy alias: `NoFitMultiSourceTransformMixin`)
+**"Stateless Multi-Source"**
 
 * **Behavior:**
     * No fitting; transform applied per segment.
@@ -270,7 +270,7 @@ Below is a guide to the mixins available in `picid.transforms.base.base_transfor
 * **Use Case:** Stateless operations that don't need to "learn" anything but still need to handle list-of-dicts input. Examples: Casting data types, log-transforms, simple mathematical operations.
 
 #### C. `NoFitConcatAlongAxisMixin`
-**"Many-to-One Aggregator"** (legacy alias: `ConcatenateUnitsMixing`)
+**"Many-to-One Aggregator"**
 
 * **Behavior:**
     * Takes a list of data segments (N sources).

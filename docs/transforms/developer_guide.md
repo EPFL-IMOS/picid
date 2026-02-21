@@ -324,8 +324,6 @@ The multi-source mixins (in `picid/transforms/base/multisource.py`) handle data 
 | `NoFitPerSegmentMixin` | No fit; transform applied per segment (e.g. reshape, concatenate inputs). |
 | `NoFitConcatAlongAxisMixin` | No fit; concatenate all segments along an axis, then one `transform_data` call. Requires `axis` in `__init__`. |
 
-Backward-compatibility aliases: `ConcatFitAndPerSegmentTransformMixin`, `StatelessPerSegmentMixin`, `StatelessConcatenateMixin`, and legacy names `ConcatinatedFitMultiSourceTransformMixin`, `NoFitMultiSourceTransformMixin`, `ConcatenateUnitsMixing` still work.
-
 ### Composable mixins (advanced)
 
 Combine one fit-policy and one transform-policy mixin:
