@@ -76,7 +76,7 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
 
         # Standard boilerplate flags
         self.data_path = data_dir
-        self._is_isplitted = False
+        self._is_splitted = False
         self._is_loaded = False
         self.data_dict = None
         self.meta_data = {}
@@ -92,7 +92,7 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
         print(f"[{self.data_name}] Loading Started...")
         self.data_dict = self._load_data()
         self._is_loaded = True
-        self._is_isplitted = True
+        self._is_splitted = True
         print(f"[{self.data_name}] Loading Complete.")
 
     @override

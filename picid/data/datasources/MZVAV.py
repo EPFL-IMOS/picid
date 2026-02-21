@@ -42,7 +42,7 @@ class MZVAVLoader(SingleSourceLoader):
         """Load data from the data source."""
         self.data_dict = self._load_data()
         self._is_loaded = True
-        self._is_isplitted = True
+        self._is_splitted = True
 
     @override
     def get_data(self) -> dict | list[dict]:
@@ -53,7 +53,7 @@ class MZVAVLoader(SingleSourceLoader):
 
         """
         assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_isplitted is True, "Data must be splitted before getting data."
+        assert self._is_splitted is True, "Data must be splitted before getting data."
 
         return SplitDatasetContainer(**self.data_dict)
 

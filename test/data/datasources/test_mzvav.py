@@ -47,7 +47,7 @@ def test_mzvav_load_data_returns_split_structure(mzvav_kwargs, mock_mzvav_read_d
         loader = MZVAVLoader(**mzvav_kwargs)
         loader.load_data()
     assert loader._is_loaded
-    assert getattr(loader, "_is_isplitted", loader._is_loaded)  # MZVAV uses _is_isplitted
+    assert getattr(loader, "_is_splitted", loader._is_loaded)  # MZVAV uses _is_splitted
     data = loader.get_data()
     assert "features" in data
     assert "train" in data["features"]
