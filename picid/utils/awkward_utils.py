@@ -66,8 +66,10 @@ def find_singular_ragged_dim(
     var_dims = [ak_find_var_dims(arr) for arr in arrays]
     unique_var_dims = set(x for row in var_dims for x in row)
     if len(unique_var_dims) == 0:
+        # No ragged dimensions found; the data is regular in structure.
         return None
     elif len(unique_var_dims) == 1:
+        # Exactly one ragged dimension found, as expected.
         return unique_var_dims.pop()
     else:
         raise ValueError(
