@@ -5,8 +5,7 @@ import awkward as ak
 import numpy as np
 import torch
 
-from picid.transforms.base.multisource import find_singular_ragged_dim
-from picid.utils.awkward_utils import get_ak_shape, ragged_index_tuples
+from picid.utils.awkward_utils import find_singular_ragged_dim, get_ak_shape, ragged_index_tuples
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +145,7 @@ class AkwardJaggedAutoregressiveSequencer:
         assert features.ndim < 4, "Features dim greater than 3 has not been tested"
 
         # Determine which axis is ragged
-        self.ragged_dim = find_singular_ragged_dim({"features": self.features})
+        self.ragged_dim = find_singular_ragged_dim(self.features)
         self.is_ragged = True
 
         if self.ragged_dim is None:

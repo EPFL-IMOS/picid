@@ -8,7 +8,7 @@ import torch
 from picid.data.optimization.ak_jagged_sequencer import (
     AkwardJaggedAutoregressiveSequencer,
 )
-from picid.transforms.base.multisource import find_singular_ragged_dim
+from picid.utils.awkward_utils import find_singular_ragged_dim
 import logging
 
 ArrayLike = Union[np.ndarray, torch.Tensor, ak.Array]
@@ -82,7 +82,7 @@ class RaggedArraySequencer(BaseSequencer):
         warmup_steps: int = None,
     ):
         array = ak.values_astype(array, np.float32)
-        ragged_dim = find_singular_ragged_dim({"array": array})  # validate ragged dim
+        ragged_dim = find_singular_ragged_dim(array)  # validate ragged dim
 
         if ragged_dim is None:
             # TODO: Proposed fix to ensure we always have 3dim output of self.driver.sequences_batch(idx) as one dim is added within.

@@ -26,7 +26,10 @@ from picid.transforms.base.data_kind import (
     DATA_KIND_RAGGED,
     DATA_KIND_RAGGED_REGULAR,
 )
-from picid.utils.awkward_utils import ak_find_var_dims, get_ak_shape
+from picid.utils.awkward_utils import (
+    find_singular_ragged_dim as find_singular_ragged_dim_from_arrays,
+    get_ak_shape,
+)
 from picid.utils.rich_output import build_transform_error_renderables, describe_data_type
 from rich.console import Console
 from sortedcontainers import SortedDict
@@ -38,24 +41,9 @@ def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
     """
     Find the single variable-length (ragged) dimension in a NamedTransformInput.
 
-    Used by infer_data_kind (data_kind) to classify data as dense vs ragged.
-    Returns None if all arrays are regular; raises ValueError if more than one
-    variable-length dimension is found.
+    Delegates to picid.utils.awkward_utils.find_singular_ragged_dim(nti.values()).
     """
-    var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
-    if any([len(dim) == 0 for dim in var_dims]):
-        idx = [len(dim) == 0 for dim in var_dims].index(True)
-        pass  # optional warning
-    unique_var_dims = set([x for row in var_dims for x in row])
-
-    if len(unique_var_dims) == 0:
-        return None
-    elif len(unique_var_dims) == 1:
-        return unique_var_dims.pop()
-    else:
-        raise ValueError(
-            f"Expected at most one variable-length dimension, found {len(unique_var_dims)}: {unique_var_dims}"
-        )
+    return find_singular_ragged_dim_from_arrays(nti.values())
 
 
 def tolist(d):

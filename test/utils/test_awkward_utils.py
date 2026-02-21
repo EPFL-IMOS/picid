@@ -8,6 +8,7 @@ from picid.utils.awkward_utils import (
     ak_flatten_variable_dims,
     ak_unflatten_discontinous_groups,
     ak_find_var_dims,
+    find_singular_ragged_dim,
     ragged_index_tuples,
     iterate_ragged_sub_blocks,
     blocks_to_ragged_array,
@@ -236,3 +237,37 @@ def test_get_ak_shape():
     # The test expectation was wrong.
     arr_inner_ragged = ak.Array([[[1, 2], [3]], [[4, 5, 6], [7]]])
     assert get_ak_shape(arr_inner_ragged) == [2, "var", "var"]
+
+
+class TestFindSingularRaggedDim:
+    """Tests for find_singular_ragged_dim (ragged-dimension detection)."""
+
+    def test_find_singular_ragged_dim_none_regular_array(self):
+        """No variable-length dim (regular array) returns None."""
+        regular = ak.from_numpy(np.zeros((2, 3, 4)))
+        result = find_singular_ragged_dim(regular)
+        assert result is None
+
+    def test_find_singular_ragged_dim_none_iterable_of_regular(self):
+        """Iterable of regular arrays returns None."""
+        regular = ak.from_numpy(np.zeros((2, 3)))
+        result = find_singular_ragged_dim([regular])
+        assert result is None
+
+    def test_find_singular_ragged_dim_single_ragged(self):
+        """Single ragged dim returns that axis index."""
+        ragged = ak.Array([[1.0, 2.0], [3.0]])  # (n, var) -> axis 1 is ragged
+        result = find_singular_ragged_dim(ragged)
+        assert result == 1
+
+    def test_find_singular_ragged_dim_single_ragged_iterable(self):
+        """Single ragged dim from iterable (e.g. nti.values()) returns axis."""
+        ragged = ak.Array([[1.0, 2.0], [3.0]])  # (n, var) -> axis 1 is ragged
+        result = find_singular_ragged_dim([ragged])
+        assert result == 1
+
+    def test_find_singular_ragged_dim_multiple_ragged_dims_raises(self):
+        """More than one variable-length dim raises ValueError."""
+        arr_two_var = ak.Array([[[1.0], [2.0, 3.0]], [[4.0]]])
+        with pytest.raises(ValueError, match="Expected at most one variable-length dimension"):
+            find_singular_ragged_dim(arr_two_var)

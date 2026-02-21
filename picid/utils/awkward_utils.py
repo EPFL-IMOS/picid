@@ -2,7 +2,7 @@
 
 import awkward as ak
 import numpy as np
-from typing import List, Union, Optional
+from typing import Iterable, List, Optional, Union
 
 
 def ak_unflatten_discontinous_groups(
@@ -49,6 +49,30 @@ def ak_find_var_dims(arr: ak.Array) -> List[int]:
         t = t.content
         axis += 1
     return axes
+
+
+def find_singular_ragged_dim(
+    arrays: Union[ak.Array, Iterable[ak.Array]],
+) -> Optional[int]:
+    """
+    Find the single variable-length (ragged) dimension across one or more arrays.
+
+    Returns None if all arrays are regular; returns the unique ragged axis index
+    if exactly one; raises ValueError if more than one variable-length dimension
+    is present across the arrays.
+    """
+    if isinstance(arrays, ak.Array):
+        arrays = [arrays]
+    var_dims = [ak_find_var_dims(arr) for arr in arrays]
+    unique_var_dims = set(x for row in var_dims for x in row)
+    if len(unique_var_dims) == 0:
+        return None
+    elif len(unique_var_dims) == 1:
+        return unique_var_dims.pop()
+    else:
+        raise ValueError(
+            f"Expected at most one variable-length dimension, found {len(unique_var_dims)}: {unique_var_dims}"
+        )
 
 
 def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
