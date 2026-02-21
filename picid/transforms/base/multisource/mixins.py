@@ -252,17 +252,3 @@ class InverseTransformMixin(ABC):
             self.inverse_transform_data(seg, metadata=copy.deepcopy(metadata))
             for seg in data_segments
         ]
-
-
-# ---------------------------------------------------------------------------
-# Backward compatibility aliases (old names still used in configs or downstream)
-# ---------------------------------------------------------------------------
-StatelessPerSegmentMixin = NoFitPerSegmentMixin
-StandardFitTransformMixin = ConcatFitAndPerSegmentTransformMixin
-StatelessConcatenateMixin = NoFitConcatAlongAxisMixin
-ConcatinatedFitMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
-NoFitMultiSourceTransformMixin = NoFitPerSegmentMixin
-ConcatenateUnitsMixing = NoFitConcatAlongAxisMixin
-ConcatenatedMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
-FitMultiSourceTransformMixin = ConcatFitAndPerSegmentTransformMixin
-FitOnConcatenatedMixin = FitByConcatenationMixin

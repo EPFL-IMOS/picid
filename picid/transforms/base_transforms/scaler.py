@@ -7,6 +7,7 @@ from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
+    NoFitPerSegmentMixin,
     InverseTransformMixin,
 )
 from picid.transforms.utils import _convert_to_numpy
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConstantScaler(
-    ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
+    NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
 ):
     def __init__(self, factor=1.0):
         super().__init__()
