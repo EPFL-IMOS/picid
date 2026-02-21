@@ -1,0 +1,62 @@
+# These scalers are pre-computed and do not need to be fitted on the data.
+scaler_features:
+  transform:
+    _target_: picid.transforms.n_cmapss.n_cmapss_scalers.N_CMAPSSFeaturesScaler # Your wrapper class
+    scaling: standard
+
+  metadata:
+    apply_to: features
+
+scaler_descriptors:
+  transform:
+    _target_: picid.transforms.n_cmapss.n_cmapss_scalers.N_CMAPSSDescriptorsScaler # Your wrapper class
+    scaling: standard
+
+  metadata:
+    apply_to: descriptors
+
+scaler_rul:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.ConstantScaler # Your wrapper class
+    factor: 0.01
+
+  metadata:
+    apply_to: rul
+
+# The paper describes:
+# https://www.sciencedirect.com/science/article/pii/S0952197622005723
+#  For each flight 𝑓 ≤ 𝑓 𝑒
+# a performed by engine 𝑒, we consider time-windows with
+# a size of 60, 70, 80, … , 𝑛𝑒,𝑓 − 10, 𝑛𝑒,𝑓 time-steps. These time-windows
+# are rolled over flight 𝑓 of engine 𝑒 with a step size (i.e., stride) of
+# 5 min. In this way, we subtract for each time-window with a size of
+# 60, 70, 80, … , 𝑛𝑒,𝑓 −10, 𝑛𝑒,𝑓 time-steps, several time-series of multi-sensor
+# measurements (i.e., data samples) from flight 𝑓 of engine 𝑒. With this
+# approach, 25433 data samples are obtained to train the LSTM-AE.
+
+subsample_features_target:
+  transform:
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: 60
+    aggregation: mean
+  metadata:
+    apply_to: [features, descriptors, concepts]
+
+subsample_others:
+  transform:
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 60
+    window_size: 60
+    aggregation: last
+  metadata:
+    apply_to: [unit, timestamps, health_states, rul]
+
+concatenate_features:
+  # Concatenate time-features to the feature set
+  transform:
+    _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
+
+  metadata:
+    apply_to: ["features", "descriptors"]
+    assign_to: features

@@ -1,0 +1,9 @@
+defaults:
+  - concepts_n_cmapss_ds03_da/depater2023_default@_here_
+# The ConceptRULDataset applies padding by unit, so we can concatenate all units here.
+# concatenate_units:
+#   transform:
+#     _target_: picid.transforms.base_transforms.concatenate.RuggedToDenseTransform
+#   metadata:
+#     apply_to:
+#       [features, descriptors, rul, unit, concepts, timestamps, health_states]

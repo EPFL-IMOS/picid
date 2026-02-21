@@ -1,0 +1,18 @@
+#@package _global_
+
+defaults:
+  -  nb14/prognostics/base
+  - /model_configs/prognostics/stf
+  - override /transforms: battery/nb14/residual_autoencoder
+
+transforms:
+  autoencoder:
+    transform:
+      _target_:  picid.transforms.battery.autoencoder_transform.AutoencoderTransform  # Your wrapper class
+      folder_name: ${paths.root_dir}/artifacts/debug/runs/debug+nb14+reconstruction+residual_autoencoder/2025-11-10_01-36-21 # TODO, define the path where the autoencoder artifacts are stored
+
+    metadata:
+      apply_to: ['features', 'target']
+      assign_to: 
+        features: features
+        target: target

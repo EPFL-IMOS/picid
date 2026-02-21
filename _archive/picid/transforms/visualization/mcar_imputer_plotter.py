@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
-from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.data.data_objects.utils import convert_to_numpy
 
 # Set backend for non-interactive environments
@@ -16,7 +16,7 @@ plt.switch_backend("Agg")
 logger = logging.getLogger(__name__)
 
 
-class MCARImputationPlotter(NoFitMultiSourceTransformMixin, DenseTransform):
+class MCARImputationPlotter(NoFitPerSegmentMixin, DenseTransform):
     """
     Visualizes MCAR imputation results with high-precision, publication-ready alignment.
     """
