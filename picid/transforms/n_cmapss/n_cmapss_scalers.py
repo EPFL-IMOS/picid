@@ -9,7 +9,7 @@ from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
-from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
@@ -18,16 +18,12 @@ def ak_bc(arr):
 
 
 class N_CMAPSSDescriptorsScaler(
-    RaggedOrDenseTransform, ConcatFitAndPerSegmentTransformMixin
+    NoFitPerSegmentMixin, RaggedOrDenseTransform
 ):
     def __init__(self, scaling="standard"):
 
         super().__init__()
         self.scaling = scaling
-
-    def fit_data(self, data: NamedTransformInput, metadata: Dict):
-        """This transform do not require fitting."""
-        return self
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 
@@ -73,14 +69,10 @@ class N_CMAPSSDescriptorsScaler(
 
 
 class N_CMAPSSFeaturesScaler(
-    RaggedOrDenseTransform, ConcatFitAndPerSegmentTransformMixin
+    NoFitPerSegmentMixin, RaggedOrDenseTransform
 ):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
-
-    def fit_data(self, data: NamedTransformInput, metadata: Dict):
-        """This transform do not require fitting."""
-        return self
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
 

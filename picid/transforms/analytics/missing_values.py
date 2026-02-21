@@ -8,12 +8,12 @@ from collections import defaultdict
 from picid.data.data_objects.data import NamedTransformInput
 from picid.data.data_objects.utils import convert_to_numpy
 from picid.transforms.base.base_transform import DenseTransform
-from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class MissingValuesStatsLogger(NoFitMultiSourceTransformMixin, DenseTransform):
+class MissingValuesStatsLogger(NoFitPerSegmentMixin, DenseTransform):
     """
     Analyzes and logs missing value (NaN) statistics for time-series data.
     Supports both Dense (NumPy) and Ragged (Awkward) arrays.

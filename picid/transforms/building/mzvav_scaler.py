@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class MinMaxScalerMZVAV(
-    DenseTransform, ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin
+    ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
 ):
     """
     An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.

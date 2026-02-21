@@ -6,12 +6,12 @@ import numpy as np
 from picid.data.data_objects.data import NamedTransformInput
 from picid.data.data_objects.utils import convert_to_numpy
 from picid.transforms.base.base_transform import DenseTransform
-from picid.transforms.base.multisource import NoFitMultiSourceTransformMixin
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logger = logging.getLogger(__name__)
 
 
-class MCARCorruptorTransform(NoFitMultiSourceTransformMixin, DenseTransform):
+class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
     """
     Injects Missing Completely At Random (MCAR) faults into time-series data.
 
