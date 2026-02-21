@@ -136,8 +136,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     ) -> None:
         """
         Initializes the chunk, normalizing all split data to be a list of units.
-        By default a new MetadataManifest is attached (Phase 4.1); pass manifest=
-        to override. Optional slice_info= for slice-awareness (Phase 4.2).
+        By default a new MetadataManifest is attached; pass manifest= to override.
+        Optional slice_info= for slice-awareness (see SliceInfo).
         """
         self.is_multi_unit: bool = is_multi_unit
         self.manifest: Optional[MetadataManifest] = (

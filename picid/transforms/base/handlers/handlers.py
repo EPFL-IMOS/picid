@@ -1,5 +1,5 @@
 """
-Phase 2.2: Transform handler protocol and registry for dispatch (data_kind × capability).
+Transform handler protocol and registry for dispatch (data_kind × capability).
 
 Handlers encapsulate fit/transform logic that was in multisource mixins.
 Registry: (DataKind, TransformCapability) -> TransformHandler.

@@ -1,5 +1,5 @@
 """
-Phase 4.3: Integrity guards — policy-driven invariants and validators.
+Integrity guards — policy-driven invariants and validators.
 
 IntegrityPolicy controls whether a check violation fails, warns, or is allowed.
 Checks can be injected into the pipeline via IntegrityCheckStep (optional).

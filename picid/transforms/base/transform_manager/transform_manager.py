@@ -268,7 +268,7 @@ class ConfigTransformManager:
     def get_cache_point_names(self) -> List[str]:
         """
         Return transform names that are cache points (metadata.cache_point is True),
-        in pipeline order. Used for Phase 5.1 boundary caching.
+        in pipeline order. Used for boundary caching.
 
         Returns:
             List of transform names that are marked as cache_point.

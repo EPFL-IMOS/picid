@@ -1,5 +1,5 @@
 """
-Phase 5.2: Structural dry run — validate transform pipeline without executing heavy math.
+Structural dry run — validate transform pipeline without executing heavy math.
 
 Checks per transform: apply_to keys available (in initial data or produced by earlier
 transforms via assign_to), handler available for (data_kind, capability) when segment

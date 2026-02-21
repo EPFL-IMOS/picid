@@ -1,5 +1,5 @@
 """
-Phase 2: Data kind and transform capability for registry-based dispatching.
+Data kind and transform capability for registry-based dispatching.
 
 Provides:
 - DataKind: classification of data (dense, ragged, ragged_regular)

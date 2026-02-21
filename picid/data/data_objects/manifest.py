@@ -1,5 +1,5 @@
 """
-Phase 4.1: Metadata manifest — versioned, queryable metadata attached to the container.
+Metadata manifest — versioned, queryable metadata attached to the container.
 
 Schema: each entry has schema_version, producer_version, category (datasource | transform),
 optional scope (step_id, key, split), and a payload dict. Queryable by step_id, key, split.

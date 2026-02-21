@@ -1,5 +1,5 @@
 """
-Phase 4.2: Slice-awareness — coordinate selections and bounds attached to the container.
+Slice-awareness — coordinate selections and bounds attached to the container.
 
 Enables downstream transforms to query "what slice am I operating on?" and
 "what coordinate system is this input under?" without changing existing APIs.
