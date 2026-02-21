@@ -182,10 +182,15 @@ metadata:
 | `transform_on_keys` | No | Restrict which splits are transformed; default is all splits. |
 | `multi_source_fit` | No | If `true`, fit across all units in the fit split (concatenate then fit). Default `false`. |
 | `validate_output` | No | If `false`, skip built-in structural validation after the transform. Default `true`. |
+| `include_slice_info_in_metadata` | No | If `true`, the pipeline adds the container's slice (split, unit_ids, cycle_ids, bounds, index_map) to the `metadata` dict passed to `transform_data` and `fit_data` under the key `"slice_info"`. Use when the transform needs to know which slice of the dataset it is processing. The container must have `slice_info` set. See [Data objects — SliceInfo](../reference/dataobject.md). Default `false`. |
 | `integrity_checks` | No | Optional list of `(name, check_fn, policy)` for pipeline IntegrityCheckStep; set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
 
 \* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.  
 \** Required when `apply_to` is a list and `fit_on` is set.
+
+### Slice info in transforms
+
+When the container has optional [SliceInfo](../reference/dataobject.md) set (by the datasource or preprocessing when building the container), transforms can receive it in the `metadata` dict passed to `transform_data` and `fit_data`. Set `include_slice_info_in_metadata: true` in the transform's metadata to get `metadata["slice_info"]` (a dict with `split`, `unit_ids`, `cycle_ids`, `bounds`, `index_map`). This is useful when the transform needs to know which slice of the dataset it is processing.
 
 ### Turning off post-transform validation
 

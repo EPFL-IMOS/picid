@@ -6,6 +6,20 @@ In this framework, a **datasource** is *data-centric* (raw files, I/O, split lay
 
 ---
 
+## Loader data contract {#loader-data-contract}
+
+Every datasource loader's `get_data()` must return a `SplitDatasetContainer` where each split value is a **list of arrays** (one array per unit). The structure is:
+
+```text
+data[key][split] = List[ndarray | ak.Array]  # one array per unit
+```
+
+Single-unit loaders (e.g. one bearing) wrap the single array as `[array]` so the pipeline always receives lists. This unified contract enables transforms to process data consistently regardless of unit count.
+
+If your custom loader returns bare arrays instead of lists, the transform pipeline will raise a clear assertion. See the error message for the expected structure.
+
+---
+
 ## Summary table
 
 | Datasource | Module | Domain / type | Tasks supported | Key features |

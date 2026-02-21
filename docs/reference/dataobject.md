@@ -94,6 +94,16 @@ The data objects follow a strict inheritance ladder, each adding specific capabi
 *Inherits from `DatasetContainer`.*
 * **Cross-Split Validation:** Its `validate()` method ensures semantic consistency (e.g., `features.train` and `target.train` must have the same number of units).
 
+### SliceInfo (optional container-level metadata)
+
+**What it is:** `SliceInfo` is an optional dataclass attached to the container (`container.slice_info`) that describes *which slice of the dataset* the container represents (e.g. which split, which unit IDs, which cycles).
+
+**Fields (all optional):** `split` (e.g. `"train"`, `"val"`, `"test"`), `unit_ids`, `cycle_ids`, `bounds`, `index_map`.
+
+**How it is created:** It is **not** set automatically. A datasource or preprocessing step can set it when building the container by passing `slice_info=SliceInfo(...)` into `SplitDatasetContainer(...)`. If not set, `container.slice_info` is `None`. See `picid.data.data_objects.slice_info.SliceInfo`.
+
+**Transforms:** Transforms can receive this information in their `metadata` dict (under the key `"slice_info"`, as a serialized dict) by opting in in config: see the transform metadata key `include_slice_info_in_metadata` in the [Transforms guide](../transforms/guide.md).
+
 ---
 
 ## 4. The Interplay: Datasource $\to$ Container
