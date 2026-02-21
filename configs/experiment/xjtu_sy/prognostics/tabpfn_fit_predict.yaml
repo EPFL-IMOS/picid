@@ -1,8 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/base
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/tabpfn_fit_predict
-  
-  - override /transforms: bearings/default_rul

@@ -1,8 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/base
-  - xjtu_sy/diagnostics/base
-  - /model_configs/diagnostics/tabpfn_batch_context
-  - override /transforms: bearings/default_rul
-  

@@ -1,8 +1,0 @@
-first:
-  transform:
-    _target_:  picid.transforms.rigid_body_dynamics.transforms.First  # Your wrapper class
-   
-  
-  metadata:
-    apply_to: ['x0', 'x1']
-    assign_to: features

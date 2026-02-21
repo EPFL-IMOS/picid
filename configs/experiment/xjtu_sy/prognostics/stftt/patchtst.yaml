@@ -1,8 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/patchtst
-
-  # - override /dataset: prognostics/rul_multiunit_dataset
-  - override /transforms: bearings/xjtu_sy/stftt
