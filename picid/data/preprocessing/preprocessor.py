@@ -8,7 +8,7 @@ datasets for both framework and library users.
 Framework users (run.py)
 ------------------------
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
-    preprocessor = PreProcessor("per_unit", datasource, transforms_manager)
+    preprocessor = PreProcessor(datasource=datasource, transforms=transforms_manager)
     data = preprocessor.pipeline(cache_paths=..., cache_preprocessed=True)
 
 Library users
@@ -25,7 +25,7 @@ Library users
     data = pipeline.run(data)
 
     # With the same three-tier caching as the framework:
-    preprocessor = PreProcessor("per_unit", datasource, pipeline)
+    preprocessor = PreProcessor(datasource=datasource, transforms=pipeline)
     data = preprocessor.pipeline(
         data_cache_path=".cache",
         data_library_part_path="./picid/data/datasources",
@@ -61,8 +61,7 @@ from picid.data.data_objects.manifest import (
     ManifestEntry,
     MetadataManifest,
 )
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.preprocessing.base import PreProcessorInterface
 from picid.exceptions import TransformError
 from picid.transforms.base.data_transform import DataTransform
@@ -97,6 +96,12 @@ class PreProcessor(PreProcessorInterface):
     """
     Orchestrates loading, splitting, transformation, and caching of datasets.
 
+    The `mode` ("per_unit" / "cross_unit") parameter has been removed.
+    If split mode is needed for logging or evaluator config selection,
+    read it from the datasource before constructing PreProcessor:
+        split_mode = datasource.get_split_mode()
+        preprocessor = PreProcessor(datasource=datasource, transforms=manager)
+
     Accepts either a ConfigTransformManager (framework path, YAML-driven) or a
     TransformPipeline (library path, Python-only) as the transforms argument.
     Both satisfy TransformSequenceProtocol and are handled identically by the
@@ -104,9 +109,7 @@ class PreProcessor(PreProcessorInterface):
 
     Attributes
     ----------
-    mode : str
-        "per_unit" or "cross_unit".
-    datasource : SingleSourceLoader | MultiSourceLoader
+    datasource : AbstractDataSourceLoader
     transforms : ConfigTransformManager | TransformPipeline
     data : Optional[DatasetContainer]
         None until pipeline() or fetch_data() + apply_transforms() is called.
@@ -114,17 +117,10 @@ class PreProcessor(PreProcessorInterface):
 
     def __init__(
         self,
-        mode: str,
-        datasource: Union[SingleSourceLoader, MultiSourceLoader],
+        datasource: AbstractDataSourceLoader,
         transforms: Optional[AnyTransformSequence] = None,
         **kwargs,
     ):
-        if mode not in ("per_unit", "cross_unit"):
-            raise ValueError(
-                f"Unsupported mode: {mode!r}. "
-                "Supported modes are 'per_unit' and 'cross_unit'."
-            )
-
         if transforms is None:
             transforms = ConfigTransformManager(transforms_config=None)
             logger.info("No transforms provided; using empty ConfigTransformManager.")
@@ -137,7 +133,6 @@ class PreProcessor(PreProcessorInterface):
 
         super().__init__(datasource=datasource, transforms=transforms)
 
-        self.mode = mode
         self._is_preprocessed = False
         self.data: Optional[DatasetContainer] = None
         self.meta_data: dict = {}

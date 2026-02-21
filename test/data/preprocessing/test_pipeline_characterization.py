@@ -50,7 +50,6 @@ def test_pipeline_mock_datasource_real_manager_output_shape():
     datasource = _PicklableDatasource(seed=1, n_units=2, n_samples=20, n_features=3)
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode="per_unit",
         datasource=datasource,
         transforms=manager,
     )
@@ -69,7 +68,6 @@ def test_pipeline_get_processed_data_dict_shape():
     datasource = _PicklableDatasource(seed=2, n_units=1, n_samples=10, n_features=2)
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode="per_unit",
         datasource=datasource,
         transforms=manager,
     )
@@ -83,7 +81,6 @@ def test_pipeline_get_meta_data_dict():
     datasource = _PicklableDatasource(seed=3, n_units=1, n_samples=10, n_features=2)
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode="per_unit",
         datasource=datasource,
         transforms=manager,
     )
@@ -104,7 +101,6 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
     datasource = _PicklableDatasource(seed=4, n_units=1, n_samples=15, n_features=2)
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode="per_unit",
         datasource=datasource,
         transforms=manager,
     )
@@ -119,7 +115,6 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
     # Second run: should hit cache
     datasource2 = _PicklableDatasource(seed=4, n_units=1, n_samples=15, n_features=2)
     preprocessor2 = PreProcessor(
-        mode="per_unit",
         datasource=datasource2,
         transforms=manager,
     )
@@ -153,15 +148,12 @@ def picklable_datasource_with_split_mode():
 
 
 def test_run_contract_get_split_mode_then_pipeline(picklable_datasource_with_split_mode):
-    """run.py contract: mode = datasource.get_split_mode(), PreProcessor(mode=..., datasource, transforms), pipeline(), then assert data_dict and meta_data."""
+    """run.py contract: datasource.get_split_mode() for logging; PreProcessor(datasource=..., transforms=...), pipeline(), then assert data_dict and meta_data."""
     datasource = picklable_datasource_with_split_mode
     if hasattr(datasource, "get_split_mode"):
-        mode = datasource.get_split_mode()
-    else:
-        mode = "per_unit"
+        datasource.get_split_mode()  # Split mode from datasource; PreProcessor no longer takes mode.
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode=mode,
         datasource=datasource,
         transforms=manager,
     )
@@ -187,11 +179,9 @@ def test_run_contract_with_real_loader():
     loader = InMemorySingleSourceLoader(n_samples=80, n_features=3, data_name="run_contract")
     loader.load_data()
     loader.split_data()
-    mode = loader.get_split_mode()
-    assert mode == "per_unit"
+    assert loader.get_split_mode() == "per_unit"
     manager = _make_manager()
     preprocessor = PreProcessor(
-        mode=mode,
         datasource=loader,
         transforms=manager,
     )

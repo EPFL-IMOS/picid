@@ -47,11 +47,10 @@ print(f"PROJECT_ROOT={os.environ['PROJECT_ROOT']}")
 
 
 def load_dataset_from_cfg(cfg: OmegaConf) -> dict:
-    preprocessor_mode = "per_unit"
     dataset_source = instantiate(cfg.datasource)
 
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
-    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
+    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
 
     # Get cache dirs and flags
     data_cache_path = (

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 0: Generate pipeline snapshots for phme20 and unibo21_bosello.
+Generate pipeline snapshots for phme20 and unibo21_bosello.
 
 Saves slices after load and after transforms; records preprocessing_time_seconds
 for the transformed stage. Run from project root; requires data and configs.
@@ -85,9 +85,7 @@ def run_one(
             ds_cfg = resolve_paths(ds_cfg, data_dir)
         datasource = instantiate(ds_cfg)
         transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
-        # Assume per_unit for both
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=transforms_manager,
         )
@@ -137,7 +135,7 @@ def run_one(
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Generate pipeline snapshots for Phase 0 real-data tests.")
+    ap = argparse.ArgumentParser(description="Generate pipeline snapshots for real-data tests.")
     ap.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "test/data/fixtures/pipeline_snapshots")
     ap.add_argument("--data-dir", type=Path, default=None, help="Override paths.data_dir for configs")
     ap.add_argument("--max-rows", type=int, default=100)

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Iterable
 
 import hydra
+
+log = logging.getLogger(__name__)
 import lightning as L
 from hydra import (
     initialize as hydra_initialize,
@@ -18,25 +21,8 @@ from hydra.core.hydra_config import HydraConfig
 from picid.run import create_lightning_module, rerun_best_model_checkpoint
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.transforms.base.transform_manager import ConfigTransformManager
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from picid.data.datasources.kubric_movie.loader import MOViLoader
-from picid.data.datasources.nb14.loader import NB14Loader
-from picid.data.datasources.unibo.loader import UNIBO21Loader
-from picid.data.datasources.MZVAV import MZVAVLoader
 from picid.utils import instantiate_callbacks, instantiate_loggers
 from picid.data.cache.file_lock import FileLock
-
-# Classes considered single-source to decide preprocessing mode.
-SINGLE_SOURCE_TYPES: tuple[type, ...] = (
-    SingleSourceLoader,
-    PHMDMultiSourceLoader,
-    MOViLoader,
-    NB14Loader,
-    UNIBO21Loader,
-    MZVAVLoader,
-)
-
 
 class Experiment:
     """Compose Hydra config with overrides while hiding Hydra from consumers."""
@@ -66,9 +52,9 @@ class Loader:
         source = hydra.utils.instantiate(self.cfg.datasource)
         transform_manager = self.transforms.manager
 
-        # Choose per-unit vs cross-unit preprocessing.
-        mode = "per_unit" if isinstance(source, SINGLE_SOURCE_TYPES) else "cross_unit"
-        preprocessor = PreProcessor(mode, source, transform_manager)
+        split_mode = source.get_split_mode()
+        log.info("Datasource split mode: %s", split_mode)
+        preprocessor = PreProcessor(datasource=source, transforms=transform_manager)
 
         # Cache settings (mirrors run.py).
         use_cache = (

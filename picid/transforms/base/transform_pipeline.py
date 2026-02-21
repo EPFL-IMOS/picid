@@ -35,7 +35,7 @@ Library usage — with caching (same three-tier system as framework):
     # Mark a heavy transform as a cache boundary:
     DataTransform("window", windower, {"apply_to": "features", "cache_point": True})
 
-    preprocessor = PreProcessor("per_unit", datasource, pipeline)
+    preprocessor = PreProcessor(datasource=datasource, transforms=pipeline)
     data = preprocessor.pipeline(
         data_cache_path=".cache",
         data_library_part_path="./picid/data/datasources",

@@ -3,7 +3,7 @@
 Pseudo-run: load data + run transforms only (no training).
 
 Use this script to see loading and transform pipeline behaviour in action,
-including the MetadataManifest (Phase 4.1) and how new functionality is integrated.
+including the MetadataManifest and how new functionality is integrated.
 
 Inspired by picid/run.py; runs only:
   - datasource load + split
@@ -42,10 +42,6 @@ from omegaconf import DictConfig, OmegaConf
 # Resolvers used by configs (same as picid/run.py) so Hydra can resolve e.g. hydra.run.dir
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
 
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.datasources.unibo.loader import UNIBO21Loader
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.transforms.base.transform_manager import ConfigTransformManager
 
@@ -57,7 +53,7 @@ def _print_section(title: str) -> None:
 
 
 def _print_manifest(container) -> None:
-    """Print MetadataManifest entries so we see Phase 4.1 in action."""
+    """Print MetadataManifest entries for inspection."""
     manifest = getattr(container, "manifest", None)
     if manifest is None:
         print("  (no manifest on container)")
@@ -95,21 +91,10 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
     print(f"  Transform names: {names}")
 
     _print_section("3. Preprocessor mode + pipeline")
-    single_source_types = (
-        SingleSourceLoader,
-        PHMDMultiSourceLoader,
-        UNIBO21Loader,
-    )
-    if isinstance(dataset_source, single_source_types):
-        preprocessor_mode = "per_unit"
-    elif isinstance(dataset_source, MultiSourceLoader):
-        preprocessor_mode = "cross_unit"
-    else:
-        preprocessor_mode = "per_unit"
-        print(f"  (unknown loader type, using mode={preprocessor_mode!r})")
-    print(f"  mode: {preprocessor_mode!r}")
+    split_mode = dataset_source.get_split_mode()
+    print(f"  split mode: {split_mode!r}")
 
-    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
+    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
 
     data_cache_path = cfg.paths.cache_path if (cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms) else None
     data_library = Path(cfg.paths.root_dir) / "picid/data/datasources" if data_cache_path else None
@@ -141,7 +126,7 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
                 else:
                     print(f"    {k}: type={type(v).__name__} len={len(v) if hasattr(v, '__len__') else '?'}")
 
-    print("\n  --- MetadataManifest (Phase 4.1) ---")
+    print("\n  --- MetadataManifest ---")
     _print_manifest(data)
 
     _print_section("Done (no training)")

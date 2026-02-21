@@ -64,13 +64,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from picid.data.cache.file_lock import FileLock
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.datasources.kubric_movie.loader import MOViLoader
-from picid.data.datasources.nb14.loader import NB14Loader
-from picid.data.datasources.unibo.loader import UNIBO21Loader
-from picid.data.datasources.MZVAV import MZVAVLoader
-from picid.data.datasources.airbus_helicopter import AirbusHelicopterLoader
 
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.evaluator.base import AbstractEvaluator
@@ -573,25 +567,10 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # feature_transforms = transforms_manager.get_transforms_by_apply_to("features")
     # log.info("Feature transforms:" + str(list(feature_transforms.keys())))
 
-    single_source_types = (
-        SingleSourceLoader,
-        PHMDMultiSourceLoader,
-        MOViLoader,
-        NB14Loader,
-        UNIBO21Loader,
-        MZVAVLoader,
-        AirbusHelicopterLoader,
-    )
-    if isinstance(dataset_source, single_source_types):
-        preprocessor_mode = "per_unit"
+    split_mode = dataset_source.get_split_mode()
+    log.info("Datasource split mode: %s", split_mode)
 
-    elif isinstance(dataset_source, MultiSourceLoader):
-        preprocessor_mode = "cross_unit"
-
-    else:
-        raise ValueError("Invalid dataset source type")
-
-    preprocessor = PreProcessor(preprocessor_mode, dataset_source, transforms_manager)
+    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
 
     # Get cache dirs and flags
     data_cache_path = (
@@ -748,7 +727,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
         inverse_transform = None
         if inverse_transform_required:
-            # Prefer key-based lookup (Phase 5.3): discover inverter from registry
+            # Prefer key-based lookup: discover inverter from registry
             if inverse_transform_key is not None:
                 inverse_transform, chosen_name = transforms_manager.get_inverter_for_key_with_name(
                     inverse_transform_key, which=inverse_transform_which

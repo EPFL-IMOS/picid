@@ -127,7 +127,6 @@ def test_transformed_slices_match_saved(config_name: str):
     datasource = instantiate(ds_cfg)
     transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
     preprocessor = PreProcessor(
-        mode="per_unit",
         datasource=datasource,
         transforms=transforms_manager,
     )

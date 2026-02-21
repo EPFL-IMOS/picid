@@ -11,12 +11,12 @@ to accelerate experiment iteration.
 
 Test Coverage Strategy:
 ----------------------
-1. **Initialization Tests**: Mode validation and parameter storage
+1. **Initialization Tests**: Parameter storage (datasource, transforms)
 2. **Data Fetching**: Loading data from sources
 3. **Transform Application**: Applying transform pipelines
 4. **Pipeline Execution**: Full preprocessing workflow
 5. **Caching Integration**: Cache handling for speed
-6. **Error Handling**: Invalid modes, transform failures
+6. **Error Handling**: Transform failures
 """
 import numpy as np
 import pytest
@@ -30,63 +30,26 @@ from picid.data.preprocessing.base import PreProcessorInterface
 class TestPreProcessorInitialization:
     """Tests for PreProcessor initialization."""
     
-    def test_init_per_unit_mode(self, mock_single_source_loader, mock_transform_manager):
-        """Test initialization with per_unit mode.
+    def test_init_stores_datasource_and_transforms(self, mock_single_source_loader, mock_transform_manager):
+        """Test initialization stores datasource, transforms, and default state.
         
-        **PHM Logic**: per_unit mode processes each unit independently.
+        **PHM Logic**: PreProcessor orchestrates datasource and transform pipeline.
         
-        **Methodology**: Create PreProcessor with mode="per_unit".
+        **Methodology**: Create PreProcessor with datasource and transforms.
         
-        **Expected**: Mode stored correctly, not preprocessed flag set.
+        **Expected**: Datasource and transforms stored, not preprocessed flag set.
         
-        Validates: Requirement PP-1.1 - Per-unit mode initialization
+        Validates: Requirement PP-1.1 - Initialization
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
         
-        assert preprocessor.mode == "per_unit"
+        assert preprocessor.datasource is mock_single_source_loader
+        assert preprocessor.transforms is mock_transform_manager
         assert preprocessor._is_preprocessed == False
         assert preprocessor.data is None
-    
-    def test_init_cross_unit_mode(self, mock_single_source_loader, mock_transform_manager):
-        """Test initialization with cross_unit mode.
-        
-        **PHM Logic**: cross_unit mode processes all units together.
-        
-        **Methodology**: Create PreProcessor with mode="cross_unit".
-        
-        **Expected**: Mode stored correctly.
-        
-        Validates: Requirement PP-1.2 - Cross-unit mode initialization
-        """
-        preprocessor = PreProcessor(
-            mode="cross_unit",
-            datasource=mock_single_source_loader,
-            transforms=mock_transform_manager
-        )
-        
-        assert preprocessor.mode == "cross_unit"
-    
-    def test_init_invalid_mode_error(self, mock_single_source_loader, mock_transform_manager):
-        """Test that invalid mode raises error.
-        
-        **PHM Logic**: Only per_unit and cross_unit modes are supported.
-        
-        **Methodology**: Pass invalid mode string.
-        
-        **Expected**: ValueError raised.
-        
-        Validates: Requirement PP-1.3 - Mode validation
-        """
-        with pytest.raises(ValueError):
-            PreProcessor(
-                mode="invalid_mode",
-                datasource=mock_single_source_loader,
-                transforms=mock_transform_manager
-            )
     
     def test_init_stores_datasource(self, mock_single_source_loader, mock_transform_manager):
         """Test that datasource is stored correctly.
@@ -100,7 +63,6 @@ class TestPreProcessorInitialization:
         Validates: Requirement PP-1.4 - Datasource storage
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -119,7 +81,6 @@ class TestPreProcessorInitialization:
         Validates: Requirement PP-1.5 - Transform storage
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -142,7 +103,6 @@ class TestPreProcessorMetaData:
         Validates: Requirement PP-2.1 - Default metadata
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -165,7 +125,6 @@ class TestPreProcessorMetaData:
         mock_single_source_loader.get_data.return_value = sample_dataset_container
         
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -193,7 +152,6 @@ class TestPreProcessorFetchData:
         mock_single_source_loader.get_data.return_value = sample_dataset_container
         
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -216,7 +174,6 @@ class TestPreProcessorFetchData:
         mock_single_source_loader.get_data.return_value = sample_dataset_container
         
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -241,7 +198,6 @@ class TestPreProcessorGetProcessedData:
         Validates: Requirement PP-4.1 - Pre-pipeline error
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -265,7 +221,6 @@ class TestPreProcessorApplyTransforms:
         Validates: Requirement PP-5.1 - Empty transform handling
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -292,7 +247,6 @@ class TestPreProcessorGetCachedTransformManager:
         Validates: Requirement PP-6.1 - Transform manager retrieval
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -331,7 +285,6 @@ class TestPreProcessorInterface:
         Validates: Requirement PPI-1.2 - Interface implementation
         """
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager
         )
@@ -368,7 +321,6 @@ class TestPreProcessorEdgeCases:
         # This may or may not be allowed depending on implementation
         try:
             preprocessor = PreProcessor(
-                mode="per_unit",
                 datasource=None,
                 transforms=mock_transform_manager
             )
@@ -391,11 +343,10 @@ class TestPreProcessorEdgeCases:
         """
         # Should not raise
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=mock_single_source_loader,
             transforms=mock_transform_manager,
             extra_param="value",
             another_param=42
         )
         
-        assert preprocessor.mode == "per_unit"
+        assert preprocessor.datasource is mock_single_source_loader

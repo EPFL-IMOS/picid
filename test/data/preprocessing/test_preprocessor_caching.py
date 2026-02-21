@@ -174,7 +174,6 @@ class TestPipelinePreprocessedCache:
         self, cache_dir, library_dir, datasource, manager_no_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_no_cache_point,
         )
@@ -210,7 +209,6 @@ class TestPipelinePreprocessedCache:
         self, cache_dir, library_dir, datasource, manager_no_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_no_cache_point,
         )
@@ -231,7 +229,6 @@ class TestPipelinePreprocessedCache:
     def test_cache_disabled_no_preprocessed_write(self, tmp_path, datasource, manager_no_cache_point):
         """With cache paths None and cache_preprocessed False, pipeline runs but does not use cache."""
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_no_cache_point,
         )
@@ -258,7 +255,6 @@ class TestPipelineStage1Cache:
         self, cache_dir, library_dir, datasource, manager_no_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_no_cache_point,
         )
@@ -279,7 +275,6 @@ class TestPipelineStage1Cache:
     ):
         """When no transform has cache_point, pipeline never touches boundary stage."""
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_no_cache_point,
         )
@@ -305,7 +300,6 @@ class TestPipelineBoundaryCache:
         self, cache_dir, library_dir, datasource, manager_with_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_with_cache_point,
         )
@@ -341,7 +335,6 @@ class TestPipelineBoundaryCache:
         self, cache_dir, library_dir, datasource, manager_with_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_with_cache_point,
         )
@@ -365,7 +358,6 @@ class TestPipelineBoundaryCache:
     ):
         # Run 1: full pipeline with cache_point → boundary + preprocessed written
         preprocessor1 = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_with_cache_point,
         )
@@ -378,7 +370,6 @@ class TestPipelineBoundaryCache:
         )
         # Run 2: "light" config changed → full preprocessed miss, boundary hit, run only light
         preprocessor2 = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_light_changed,
         )
@@ -403,7 +394,6 @@ class TestPipelineBoundaryCache:
         self, cache_dir, library_dir, datasource, manager_with_cache_point
     ):
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=manager_with_cache_point,
         )
@@ -441,7 +431,6 @@ class TestPreProcessorWithTransformPipelineNoCache:
             ),
         ])
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=pipeline,
         )
@@ -465,7 +454,6 @@ class TestPreProcessorWithTransformPipelineWithCache:
             ),
         ])
         preprocessor = PreProcessor(
-            mode="per_unit",
             datasource=datasource,
             transforms=pipeline,
         )
