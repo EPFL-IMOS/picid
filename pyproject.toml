@@ -1,8 +1,15 @@
 [project]
 name = "TabPHM"
 version = "0.1.0"
-description = "Add your description here"
+description = "Prognostics, Health Management (PHM) and Forecasting Benchmark Arena — a unified, config-driven framework for PHM and forecasting experiments from data loading to evaluation."
 readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    # License: to be decided
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
 requires-python = ">=3.12"
 dependencies = [
     "numpy<=2.3.0",
