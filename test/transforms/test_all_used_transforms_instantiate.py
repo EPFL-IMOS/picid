@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import tempfile
 
+import hydra
 import pytest
-from pathlib import Path
-
 from hydra import compose
+from hydra.core.global_hydra import GlobalHydra
+from pathlib import Path
 
 from picid.transforms.base.transform_manager import ConfigTransformManager
 
@@ -20,6 +21,21 @@ PATHS_OVERRIDES = [
     f"paths.output_dir={TEST_OUTPUT_DIR}",
     f"paths.work_dir={TEST_OUTPUT_DIR}",
 ]
+
+
+@pytest.fixture(autouse=True)
+def hydra_initialized():
+    """Ensure Hydra is initialized before each test.
+
+    Other tests (e.g. baselines) may clear GlobalHydra. This fixture guarantees
+    a valid context for compose() so tests pass regardless of execution order.
+    """
+    GlobalHydra.instance().clear()
+    # config_path is relative to cwd; from test/transforms/ need ../../configs
+    with hydra.initialize(
+        version_base="1.3", config_path="../../configs", job_name="test_run"
+    ):
+        yield
 
 # Transform paths from override /transforms: in configs/experiment/ (unique set)
 USED_TRANSFORM_PATHS = [
@@ -66,7 +82,6 @@ USED_TRANSFORM_PATHS = [
     "railway/context_paper",
     "railway/railway_no_leak",
     "railway/railway_seasonal_leak",
-    "railway/timepfn",
     "shared/reconstruction/residual_autoencoder",
 ]
 
