@@ -1,4 +1,0 @@
-_target_: picid.model.wrappers.timellm_wrapper.TimeLLMWrapper
-task_type: ${task_definition.task_type}
-in_channels: null
-seq_len: null
