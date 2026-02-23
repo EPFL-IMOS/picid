@@ -227,6 +227,8 @@ ragged2regular:
 ### 3.4 Multi-Source Transforms (Concatenation & Autoencoders)
 **Use Case:** Merging different feature sets or training models that require both features and targets (like reconstruction tasks).
 
+*Note: The battery and bearings autoencoder transforms (`BaseAutoencoderTransform`, `AutoencoderTransform`, `BearingAutoencoderTransform`) and related reconstruction experiment configs have been moved to `_archive/` (2026-02).*
+
 **Trick:** Pass a list to `apply_to`. The order in the list determines the order of arguments passed to the Python class.
 
 ```yaml

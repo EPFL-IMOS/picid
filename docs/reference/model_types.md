@@ -28,7 +28,7 @@ Models that consume **batched windows** at each step. Each batch has a fixed seq
   - Context history: `(B, T_in, F)`
   - Context future: `(B, T_out, F)`
 - **Pipeline:** Uses `ContextBatchDataset` or `RULContextBatchDataset` (via `HydraConcatDataset` + `SlidingWindowBatchDataset`). Training is typically Lightning-based with a feed-forward wrapper.
-- **Examples:** MLP, CNN1D, LSTM, PatchTST, TimeLLM, batch-context XGBoost/TabPFN/TimePFN, statistical baselines, autoencoder.
+- **Examples:** MLP, CNN1D, LSTM, PatchTST, TimeLLM, batch-context XGBoost/TabPFN, statistical baselines, autoencoder.
 
 ### 3. Full-batch windowed (under discussion)
 
