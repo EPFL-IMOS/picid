@@ -26,14 +26,14 @@ from omegaconf import OmegaConf
 from picid.data.data_objects.data import NamedTransformInput
 from picid.data.datasets.subset_sampling import make_subset_blocks_indices
 from picid.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
-from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.base_transform.base_transform import RaggedOrDenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TimeseriesTabularizer(NoFitPerSegmentMixin, DenseTransform):
+class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     r"""Extracts time features from the input data.
 
     This transform processes time-series data to generate additional features

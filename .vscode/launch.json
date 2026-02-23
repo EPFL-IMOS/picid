@@ -832,6 +832,22 @@
             }
         },
         {
+            "name": "Concepts N-CMAPSS (MULTI): XGBOOST Fit-Predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "paths=rt_local",
+                "experiment=concepts_n_cmapss_multi/diagnostics/xgboost_fit_predict",
+                "debug=default"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "NB1 Battery: TabPFN batch_context",
             "type": "debugpy",
             "request": "launch",

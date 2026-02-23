@@ -20,6 +20,7 @@ Compositions:
 
 InverseTransformMixin is optional and provides inverse_transform_data / inverse_transform_multi_source.
 """
+
 from __future__ import annotations
 
 import copy
@@ -41,7 +42,7 @@ from picid.transforms.base.multisource.utils import (
 )
 
 
-class MultiSourceTransformInterface(ABC):
+class MultiSourceFitInterface(ABC):
     """Abstract contract: every multi-source mixin must implement fit_multi_source and transform_multi_source."""
 
     @abstractmethod
@@ -49,16 +50,16 @@ class MultiSourceTransformInterface(ABC):
         self,
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
+
+class MultiSourceTransformInterface(ABC):
     @abstractmethod
     def transform_multi_source(
         self,
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[List[Any], Dict[str, Any]]:
-        ...
+    ) -> Tuple[List[Any], Dict[str, Any]]: ...
 
 
 class _BaseDispatcher(MultiSourceTransformInterface, ABC):
@@ -119,9 +120,7 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
                 f"data_kind={data_kind!r} with capability={capability!r}."
             )
         except Exception:
-            _log_transform_error(
-                self, data_segments, metadata, data_kind, capability
-            )
+            _log_transform_error(self, data_segments, metadata, data_kind, capability)
             raise
 
         log["flags"] = _build_flags(data_kind, capability)
@@ -136,9 +135,7 @@ class FitByConcatenationMixin(_BaseDispatcher):
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self._dispatch_fit(
-            data_segments, self.fit_data, copy.deepcopy(metadata)
-        )
+        self._dispatch_fit(data_segments, self.fit_data, copy.deepcopy(metadata))
 
 
 class NoFitMixin(_BaseDispatcher):
@@ -191,12 +188,12 @@ class ConcatenateBeforeTransformMixin(_BaseDispatcher):
 
         merged = _concatenate_segments(data_segments, apply_to_keys, self.axis)
 
-        return self._dispatch_transform(
-            [merged], self.transform_data, metadata_copy
-        )
+        return self._dispatch_transform([merged], self.transform_data, metadata_copy)
 
 
-class ConcatFitAndPerSegmentTransformMixin(FitByConcatenationMixin, PerSegmentTransformMixin):
+class ConcatFitAndPerSegmentTransformMixin(
+    FitByConcatenationMixin, PerSegmentTransformMixin
+):
     """Fit on concatenated segments; transform per segment. Common for fittable per-unit transforms."""
 
 
@@ -222,7 +219,9 @@ class InverseTransformMixin(ABC):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not hasattr(self, "inverse_transform") and not hasattr(self, "inverse_transform_data"):
+        if not hasattr(self, "inverse_transform") and not hasattr(
+            self, "inverse_transform_data"
+        ):
             raise TypeError(
                 "InverseTransformMixin requires the class to implement "
                 "inverse_transform or inverse_transform_data."
@@ -240,8 +239,7 @@ class InverseTransformMixin(ABC):
         self,
         data: NamedTransformInput,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     def inverse_transform_multi_source(
         self,

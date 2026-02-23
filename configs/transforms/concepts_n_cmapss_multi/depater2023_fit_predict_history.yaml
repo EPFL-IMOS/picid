@@ -189,12 +189,11 @@ tabularize_y_val_test_concepts:
     apply_to: ["concepts"]
     assign_to: concepts
     transform_on_keys: ["val", "test"]
-
-concatenate_units:
-  transform:
-    _target_: picid.transforms.base_transforms.concatenate.RuggedToDenseTransform
-  metadata:
-    apply_to: [features, rul, health_states, concepts]
+# concatenate_units:
+#   transform:
+#     _target_: picid.transforms.base_transforms.concatenate.RuggedToDenseTransform
+#   metadata:
+#     apply_to: [features, rul, health_states, concepts]
 #rename_target_to_fault_classification:
 #  transform:
 #    _target_: picid.transforms.base_transforms.identity.IdentityPassThrough
