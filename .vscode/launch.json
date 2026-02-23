@@ -273,22 +273,6 @@
             }
         },
         {
-            "name": "ETTh: TimePFN Batch-Context",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "picid/run.py",
-            "console": "integratedTerminal",
-            "args": [
-                "paths=rt_local",
-                "experiment=etth/multivariate/timepfn_batch_context",
-                "debug=default"
-            ],
-            "env": {
-                "HYDRA_FULL_ERROR": "1",
-                "PYTHONFAULTHANDLER": "1"
-            }
-        },
-        {
             "name": "ETTh: Naive",
             "type": "debugpy",
             "request": "launch",
@@ -1429,9 +1413,7 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "paths=rt_local",
                 "experiment=phme20/prognostics/ablation/missing_values/tabpfn_fit_predict_nan",
-                "debug=default"
             ],
         },
         {
@@ -1444,6 +1426,31 @@
             "args": [
                 "experiment=mzvav/diagnostics/stf",
             ],
+        },
+        {
+            "name": "unibo anomaly detection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "dry_run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "experiment=unibo/anomaly_detection/isolation_forest",
+            ],
+        },
+        {
+            "name": "DS02: LSTM",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "experiment=concepts_n_cmapss_ds02/prognostics/lstm",
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
         },
     ]
 }

@@ -1,0 +1,29 @@
+---
+description: Task file conventions—one task per orchestration, archive when done
+alwaysApply: true
+---
+
+# Task Management
+
+## Creating Tasks
+
+- **One task file per orchestration.** Do not mix multiple workstreams in a single `tasks/*.md` file.
+- Create a new file in `tasks/` for each distinct orchestration or project: `tasks/<task-name>-YYYY-MM-DD.md`
+- **Update `tasks/todo.md` with all tasks and their status.** When new tasks are found or created, add them to `todo.md` with a checkbox (`- [ ]`). This file is the single source of truth for task status.
+
+## Keeping todo.md Updated
+
+- When a **sub-task** is completed: mark its checkbox in `todo.md` as `[x]`. Keep the orchestration file in sync.
+- When an **orchestration's goal** is fully finished: archive the task file and remove its tasks from `todo.md`.
+
+## Archiving Completed Tasks
+
+When a **whole orchestration's goal** is finished (all sub-tasks done, verified):
+
+1. Move the task file to `tasks/archive/YYYY-MM-DD/<task_name>.md`
+2. Remove its tasks from `tasks/todo.md`
+3. Use the completion date for the archive folder (e.g. `2026-02-23`)
+
+Example:
+- Before: `tasks/four-task-orchestration-2026-02-23.md`
+- After: `tasks/archive/2026-02-23/four-task-orchestration.md`
