@@ -146,3 +146,72 @@ def test_n_cmapss_load_data_raises_when_file_missing():
     )
     with pytest.raises(FileNotFoundError, match="File not found"):
         ds._load_data()
+
+
+def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
+    """Exercise full _load_data path with a minimal valid HDF5 fixture."""
+    import h5py
+
+    n_rows = 50
+    # Minimal N-CMAPSS-like structure
+    A_var = ["unit", "cycle", "Fc", "hs"]
+    A = np.column_stack([
+        np.ones(n_rows, dtype=int),           # unit
+        np.arange(1, n_rows + 1, dtype=int),  # cycle
+        np.ones(n_rows, dtype=int) * 2,        # Fc
+        np.zeros(n_rows, dtype=int),           # hs (healthy)
+    ])
+    W_var = ["alt", "Mach", "TRA", "T2"]
+    W = np.ones((n_rows, 4)) * 0.5
+    T_var = [
+        "fan_eff_mod", "fan_flow_mod",
+        "LPC_eff_mod", "LPC_flow_mod",
+        "HPC_eff_mod", "HPC_flow_mod",
+        "LPT_eff_mod", "LPT_flow_mod",
+        "HPT_eff_mod", "HPT_flow_mod",
+    ]
+    T = np.ones((n_rows, 10)) * -0.02  # Slightly degraded
+    X_s_var = [f"s{i}" for i in range(5)]
+    X_s = np.random.randn(n_rows, 5).astype(np.float32)
+    Y = np.arange(n_rows, 0, -1, dtype=np.float32).reshape(-1, 1)
+
+    h5_path = tmp_path / "N-CMAPSS_DS1.h5"
+    with h5py.File(h5_path, "w") as f:
+        f.create_dataset("W_dev", data=W)
+        f.create_dataset("X_s_dev", data=X_s)
+        f.create_dataset("X_v_dev", data=np.zeros((n_rows, 2)))
+        f.create_dataset("T_dev", data=T)
+        f.create_dataset("Y_dev", data=Y)
+        f.create_dataset("A_dev", data=A)
+        f.create_dataset("W_var", data=np.array(W_var, dtype="S20"))
+        f.create_dataset("X_s_var", data=np.array(X_s_var, dtype="S20"))
+        f.create_dataset("X_v_var", data=np.array(["v1", "v2"], dtype="S20"))
+        f.create_dataset("T_var", data=np.array(T_var, dtype="S20"))
+        f.create_dataset("A_var", data=np.array(A_var, dtype="S20"))
+
+    class LoadArgs:
+        mode = "train"
+        n_DS = 1
+        concepts = ["LPT", "HPT"]
+
+        @staticmethod
+        def get(k, d=None):
+            if k == "units":
+                return None
+            if k == "fc":
+                return 2
+            return d
+
+    ds = N_CMAPSSDataSource(
+        path=str(tmp_path),
+        load_arguments=LoadArgs(),
+        data_name="N_CMAPSS",
+        task_mode="rul",
+        group_by_unit=False,
+    )
+    result = ds._load_data()
+    assert "features" in result
+    assert "rul" in result
+    assert "concepts" in result
+    assert result["features"].shape[0] == n_rows
+    assert result["concepts"].shape[0] == n_rows

@@ -1,4 +1,4 @@
-"""LMETK Package with automatic path detection."""
+"""PICID Package with automatic path detection."""
 
 import os
 from pathlib import Path

@@ -23,7 +23,7 @@ PATHS_OVERRIDES = [
 ]
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def hydra_initialized():
     """Ensure Hydra is initialized before each test.
 
@@ -82,7 +82,6 @@ USED_TRANSFORM_PATHS = [
     "railway/context_paper",
     "railway/railway_no_leak",
     "railway/railway_seasonal_leak",
-    "shared/reconstruction/residual_autoencoder",
 ]
 
 

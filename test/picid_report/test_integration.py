@@ -66,7 +66,8 @@ class TestPipelineIntegration:
             "optimization.lr": [0.001, 0.0005],
         }
         # New structure: {dataset: {model: {hp: [values]}}}
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+        # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
+        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
             "DS1": {
                 "baselines.tide_model.TiDE_Forecaster": grid,
             }

@@ -1,6 +1,15 @@
 import pytest
 import torch
-from picid.loss.default import MSELoss
+from picid.loss.default import (
+    MSELoss,
+    MAELoss,
+    HuberLoss,
+    QuantileLoss,
+    MAPELoss,
+    SMAPELoss,
+    WeightedMSELoss,
+    CombinedLoss,
+)
 from picid.loss.cross_entropy import (
     CrossEntropyLoss,
 )
@@ -166,3 +175,177 @@ def test_ce_loss_dtype_casting():
     # Should not raise runtime error about expecting Long
     result = loss_fn(model_out, {})
     assert result["loss"] is not None
+
+
+# =========================================================================
+# 3. MAE, Huber, Quantile, MAPE, SMAPE, WeightedMSE Loss Tests
+# =========================================================================
+
+
+def _make_model_out_batch(predictions=None, targets=None):
+    preds = predictions if predictions is not None else torch.tensor([[[1.0], [3.0]]])
+    targs = targets if targets is not None else torch.tensor([[[2.0], [4.0]]])
+    # MSELoss uses model_out['targets']; others use batch['targets']
+    model_out = {"predictions": preds, "targets": targs, "other": preds}
+    batch = {"targets": targs}
+    return model_out, batch
+
+
+def test_mae_loss_correctness():
+    """MAE: |pred - target|, uses batch['targets']."""
+    loss_fn = MAELoss(reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    # |1-2| + |3-4| = 1 + 1 = 2, mean = 1.0
+    assert torch.isclose(result["loss"], torch.tensor(1.0))
+    assert "other" in result
+
+
+def test_mae_loss_reduction_sum():
+    loss_fn = MAELoss(reduction="sum")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert torch.isclose(result["loss"], torch.tensor(2.0))
+
+
+def test_huber_loss_forward():
+    loss_fn = HuberLoss(delta=1.0, reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert isinstance(result["loss"], torch.Tensor)
+    assert result["loss"].dim() == 0
+    assert result["loss"].item() > 0
+
+
+def test_huber_loss_delta():
+    loss_fn = HuberLoss(delta=0.5, reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].item() > 0
+
+
+def test_quantile_loss_median():
+    """Quantile 0.5 approximates MAE behavior."""
+    loss_fn = QuantileLoss(quantile=0.5, reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert isinstance(result["loss"], torch.Tensor)
+    assert result["loss"].item() > 0
+
+
+def test_quantile_loss_quantile_025():
+    loss_fn = QuantileLoss(quantile=0.25, reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].item() >= 0
+
+
+def test_quantile_loss_reduction_sum():
+    loss_fn = QuantileLoss(quantile=0.5, reduction="sum")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].dim() == 0
+
+
+def test_quantile_loss_invalid_raises():
+    with pytest.raises(ValueError, match="Quantile must be between 0 and 1"):
+        QuantileLoss(quantile=0.0)
+    with pytest.raises(ValueError, match="Quantile must be between 0 and 1"):
+        QuantileLoss(quantile=1.0)
+
+
+def test_mape_loss_forward():
+    loss_fn = MAPELoss(epsilon=1e-8, reduction="mean")
+    model_out, batch = _make_model_out_batch(
+        predictions=torch.tensor([[[2.0], [6.0]]]),
+        targets=torch.tensor([[[2.0], [4.0]]]),
+    )
+    result = loss_fn(model_out, batch)
+    assert isinstance(result["loss"], torch.Tensor)
+    assert result["loss"].item() >= 0
+
+
+def test_mape_loss_epsilon_avoids_divzero():
+    """Small targets get epsilon treatment to avoid div by zero."""
+    loss_fn = MAPELoss(epsilon=1e-2, reduction="mean")
+    model_out, batch = _make_model_out_batch(
+        predictions=torch.tensor([[[0.1], [0.2]]]),
+        targets=torch.tensor([[[1e-10], [1e-10]]]),
+    )
+    result = loss_fn(model_out, batch)
+    assert not torch.isnan(result["loss"])
+    assert not torch.isinf(result["loss"])
+
+
+def test_smape_loss_forward():
+    loss_fn = SMAPELoss(epsilon=1e-8, reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert isinstance(result["loss"], torch.Tensor)
+    assert result["loss"].item() >= 0
+    assert result["loss"].item() <= 2.0  # SMAPE is bounded
+
+
+def test_smape_loss_reduction_none():
+    loss_fn = SMAPELoss(epsilon=1e-8, reduction="none")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].shape == model_out["predictions"].shape
+
+
+def test_weighted_mse_loss_uniform_weights():
+    """Without weights, should behave like MSE (weights=1)."""
+    loss_fn = WeightedMSELoss(reduction="mean")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    # MSE: (1-2)^2 + (3-4)^2 = 1+1=2, mean=1.0
+    assert torch.isclose(result["loss"], torch.tensor(1.0))
+
+
+def test_weighted_mse_loss_explicit_weights():
+    loss_fn = WeightedMSELoss(reduction="mean")
+    model_out = {"predictions": torch.tensor([[[1.0], [3.0]]])}
+    batch = {
+        "targets": torch.tensor([[[2.0], [4.0]]]),
+        "weights": torch.tensor([[[2.0], [1.0]]]),
+    }
+    result = loss_fn(model_out, batch)
+    assert isinstance(result["loss"], torch.Tensor)
+    assert result["loss"].item() > 0
+
+
+def test_weighted_mse_loss_reduction_sum():
+    loss_fn = WeightedMSELoss(reduction="sum")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].dim() == 0
+
+
+def test_weighted_mse_loss_reduction_none():
+    loss_fn = WeightedMSELoss(reduction="none")
+    model_out, batch = _make_model_out_batch()
+    result = loss_fn(model_out, batch)
+    assert result["loss"].shape == model_out["predictions"].shape
+
+
+def test_combined_loss_forward():
+    mae = MAELoss(reduction="mean")
+    mse = MSELoss(reduction="mean")
+    combined = CombinedLoss({"mae": mae, "mse": mse})
+    model_out, batch = _make_model_out_batch()
+    result = combined(model_out, batch)
+    assert "loss" in result
+    assert "mae_loss" in result
+    assert "mse_loss" in result
+    assert torch.isclose(result["loss"], (result["mae_loss"] + result["mse_loss"]) / 2)
+
+
+def test_combined_loss_with_weights():
+    mae = MAELoss(reduction="mean")
+    mse = MSELoss(reduction="mean")
+    combined = CombinedLoss({"mae": mae, "mse": mse}, weights={"mae": 2.0, "mse": 1.0})
+    model_out, batch = _make_model_out_batch()
+    result = combined(model_out, batch)
+    total = 2.0 * result["mae_loss"] + 1.0 * result["mse_loss"]
+    expected = total / 3.0  # normalized
+    assert torch.isclose(result["loss"], expected)

@@ -139,7 +139,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
                         f"'{key}' is already split. This configuration is not supported."
                     )
             else:
-                if getattr(datasource, "_is_splitted", False):
+                # When no multisource splitter: each child splits itself before get_data().
+                if not getattr(datasource, "_is_splitted", False):
                     datasource.split_data()
 
             data_lst.append(datasource.get_data())

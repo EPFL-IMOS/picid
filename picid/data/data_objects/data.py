@@ -201,14 +201,38 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
             object.__setattr__(new, "slice_info", slice_src.copy(deep=deep))
         return new
 
+    def _repr_summary(self) -> str:
+        """Safe summary: keys, splits, unit counts. No recursion into nested containers."""
+        if not self:
+            return "empty"
+        parts = []
+        for key in list(self.keys())[:5]:
+            val = self[key]
+            if isinstance(val, Mapping):
+                splits = list(val.keys())
+                n_units = {s: len(val[s]) for s in splits} if splits else {}
+                parts.append(f"{key}=[{','.join(splits)}]({n_units})")
+            else:
+                parts.append(f"{key}={type(val).__name__}")
+        if len(self) > 5:
+            parts.append("...")
+        return ", ".join(parts)
+
+    def __repr__(self) -> str:
+        summary = self._repr_summary()
+        multi = f", is_multi_unit={self.is_multi_unit}" if hasattr(self, "is_multi_unit") else ""
+        return f"{self.__class__.__name__}({summary}{multi})"
+
 
 class SplitDatasetContainer(DatasetContainer, Generic[T]):
 
-    def __init__(self, *args, is_multi_unit=True, **kwargs: Any):
+    def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any):
+        """
+        Default is_multi_unit=True because most PHM datasources produce multiple units per split.
+        When DatasetContainer receives non-list data, it wraps it and sets is_multi_unit=False.
+        See to_split_dict for the unwrap behavior when is_multi_unit=False.
+        """
         super().__init__(*args, is_multi_unit=is_multi_unit, **kwargs)
-        """
-        TODO: Why there is is_multi_unit=True but default? 
-        """
 
     def validate(self):
         super().validate()
@@ -286,6 +310,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
                             "The number of units is greater than 1, although "
                             "the data is set to be not multi_unit"
                         )
+                        # Single-source data is represented as list-of-1 for API consistency.
+                        # Unwrap here so downstream receives a single array, not list of one.
                         split_dict[split][data_key] = unit_list[0]
                     else:
                         split_dict[split][data_key] = unit_list
@@ -333,7 +359,3 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
                 if unit_data:
                     grouped_dict[split].append(BaseDataObjectWithMetadata(**unit_data))
         return grouped_dict
-
-    def __repr__(self):
-        # TODO: solve it somehow else
-        return f"{self.__class__.__name__}(...)"

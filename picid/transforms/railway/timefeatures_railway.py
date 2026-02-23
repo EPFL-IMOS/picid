@@ -38,13 +38,12 @@ class RailwayTimeFeaturesTransform(NoFitPerSegmentMixin, DenseTransform):
         self.normalize_time_features = normalize_time_features
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
         # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
-        # but your original TimePFNTimeFeaturesTransform did, so keeping it consistent for your repr)
+        # but the base transform pattern does, so keeping it consistent for your repr)
         self._init_kwargs = kwargs
 
     def __repr__(self):
-        # Ensure 'freq' is included in the representation, along with any other init args
         args = ", ".join(f"{k}={v!r}" for k, v in self._init_kwargs.items())
-        return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
+        return f"{self.__class__.__name__}(use_features={self.use_features!r}, normalize_time_features={self.normalize_time_features!r}, {args})"
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         r"""Applies the time features extraction to the input data.

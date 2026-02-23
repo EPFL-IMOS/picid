@@ -155,21 +155,11 @@ class WandBEvaluation:
 
     def to_latex(self):
 
-        # header = r"""
-        # & \multicolumn{2}{l}{P} & \multicolumn{2}{l}{Q}  & \multicolumn{2}{l}{U}  & \multicolumn{2}{l}{I} \\
-        # \cmidrule(l){2-3} \cmidrule(l){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
-        # Ablation & NMAE & NRMSE & NMAE & NRMSE  & NMAE & NRMSE  & NMAE & NRMSE     \\
-        # """
 
         if not hasattr(self, "rdf"):
             raise RuntimeError("No runs loaded. Call load_runs() first.")
 
         # Convert the DataFrame to LaTeX format
         latex_code = self.rdf.to_latex(escape=False, index=True)
-        # lines = latex_code.splitlines()
-
-        # TODO: Modify the header to include the new header later
-        # toprule_index = lines.index("\\toprule")
-        # midrule_index = lines.index("\\midrule")
-        # modified_latex_code = "\n".join(lines[:toprule_index+1] + header.splitlines()[:] + lines[midrule_index:])
+        
         return latex_code

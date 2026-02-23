@@ -407,8 +407,8 @@ class TestSavePerDatasetRankPlots:
 
     def test_saves_one_png_per_dataset(self, tmp_path):
         records_with_metric = [
-            ("run1::DS1", "M1", 0.3, "mae_normalized"),
-            ("run1::DS1", "M2", 0.5, "mae_normalized"),
+            ("run1::DS1", "M1", 0.3, None, None, "mae_normalized"),
+            ("run1::DS1", "M2", 0.5, None, None, "mae_normalized"),
         ]
         pa._save_per_dataset_rank_plots(
             records_with_metric, tmp_path, rank_mode="min", task_label="regression"
@@ -420,9 +420,9 @@ class TestSavePerDatasetRankPlots:
 
     def test_two_datasets_two_files(self, tmp_path):
         records_with_metric = [
-            ("r1::D1", "M1", 0.4, "loss"),
-            ("r1::D1", "M2", 0.6, "loss"),
-            ("r2::D2", "M1", 0.5, "loss"),
+            ("r1::D1", "M1", 0.4, None, None, "loss"),
+            ("r1::D1", "M2", 0.6, None, None, "loss"),
+            ("r2::D2", "M1", 0.5, None, None, "loss"),
         ]
         pa._save_per_dataset_rank_plots(
             records_with_metric, tmp_path, rank_mode="min", task_label="regression"

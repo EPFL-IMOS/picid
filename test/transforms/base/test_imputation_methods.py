@@ -549,3 +549,55 @@ def test_impute_spectral_no_history():
     # Should fallback to 0.0
     expected = np.array([[0.0], [0.0], [1.0], [1.0]])
     np.testing.assert_array_equal(out["features"], expected)
+
+
+# =========================================================================
+# Parametrized strategy tests
+# =========================================================================
+
+
+@pytest.mark.parametrize(
+    "strategy,data_input,expected_nan_free",
+    [
+        ("zero", {"features": np.array([[1.0, np.nan], [np.nan, 2.0]])}, True),
+        ("mean", {"features": np.array([[10.0, np.nan], [20.0, 20.0]])}, True),
+        ("locf", {"features": np.array([[1.0, np.nan, 2.0, np.nan]]).T}, True),
+        ("linear", {"features": np.array([[1.0, np.nan, 3.0]]).T}, True),
+    ],
+    ids=["zero", "mean", "locf", "linear"],
+)
+def test_impute_strategies_parametrized(strategy, data_input, expected_nan_free):
+    """Parametrized tests for core imputation strategies."""
+    t = ImputationTransform(strategy=strategy)
+    if strategy == "mean":
+        t.fit_data(data_input, metadata={})
+    out = t.transform_data(data_input, metadata={})
+    if expected_nan_free:
+        assert not np.isnan(out["features"]).any()
+    assert out["features"].shape == data_input["features"].shape
+
+
+def test_impute_copy_past_logic():
+    """Test copy_past (blockwise past copy) strategy."""
+    # Periodic signal: [1,2,3,1,2,3,...] with a gap
+    x = np.array([[1.0], [2.0], [3.0], [np.nan], [np.nan], [3.0]])
+    data = {"features": x}
+    t = ImputationTransform(strategy="copy_past")
+    out = t.transform_data(data, metadata={})
+    assert not np.isnan(out["features"]).any()
+    assert out["features"].shape == x.shape
+
+
+def test_impute_spectral_match_variance():
+    """Test spectral imputation with match_variance=True."""
+    np.random.seed(42)
+    t = np.linspace(0, 4 * np.pi, 64)
+    x = np.sin(t) + 0.1 * np.random.randn(64)
+    x = x.reshape(1, -1, 1)
+    x[0, 20:30, 0] = np.nan
+    data = {"features": x}
+    t_imp = ImputationTransform(
+        strategy="spectral", spectral_match_variance=True, spectral_window_len=20
+    )
+    out = t_imp.transform_data(data, metadata={})
+    assert not np.isnan(out["features"]).any()

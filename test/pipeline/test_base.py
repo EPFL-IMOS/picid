@@ -17,7 +17,6 @@ from picid.pipeline.base import (
     CustomEvaluatorLightningModule,
     BackboneWrapperLightningModule,
     FitPredictWrapperLightningModule,
-    CustomTimePFNLightningModule,
     ConstantLossLightningModule,
     TrainingLightningModule,
 )
@@ -278,6 +277,30 @@ class TestBackboneWrapperLightningModule:
         )
         module.setup("fit")
 
+    def test_validation_step_calls_model_step_val(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+        """BackboneWrapperLightningModule._validation_step calls model_step with stage=val (lines 396-397)."""
+        module = TrainingLightningModule(
+            backbone=mock_backbone,
+            loss=mock_loss,
+            evaluators=mock_evaluators,
+            optimizer_factory=MagicMock(),
+            scheduler_factory=MagicMock(),
+        )
+        module.validation_step(phm_batch_rul, 0)
+        assert phm_batch_rul["model_state"] == "val"
+
+    def test_test_step_calls_model_step_test(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+        """BackboneWrapperLightningModule._test_step calls model_step with stage=test (lines 409-410, 422-423)."""
+        module = TrainingLightningModule(
+            backbone=mock_backbone,
+            loss=mock_loss,
+            evaluators=mock_evaluators,
+            optimizer_factory=MagicMock(),
+            scheduler_factory=MagicMock(),
+        )
+        module.test_step(phm_batch_rul, 0)
+        assert phm_batch_rul["model_state"] == "test"
+
     def test_repr_includes_backbone_and_loss(self, mock_evaluators, mock_backbone, mock_loss):
         """Doc: pipeline/base.py - __repr__ includes backbone and loss."""
         module = BackboneWrapperLightningModule(
@@ -386,6 +409,39 @@ class TestFitPredictWrapperLightningModule:
         assert out["targets"].ndim == 3
         assert out["loss"].item() == 1
 
+    def test_model_step_predict_multi_target_loads_per_target(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch_multi_target
+    ):
+        """model_step_predict with allows_multi_target=False and n_targets>1 loads each target model (lines 591-596)."""
+        module = FitPredictWrapperLightningModule(
+            backbone=mock_fit_predict_backbone,
+            evaluators=mock_evaluators,
+        )
+        module.model_step_fit(phm_fit_predict_batch_multi_target)
+        out = module.model_step_predict(phm_fit_predict_batch_multi_target)
+        assert out["predictions"].ndim == 3
+        assert "0_0" in mock_fit_predict_backbone._models and "0_1" in mock_fit_predict_backbone._models
+
+    def test_validation_step_calls_model_step_predict(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+        """FitPredictWrapperLightningModule._validation_step calls model_step_predict (lines 653-654)."""
+        module = FitPredictWrapperLightningModule(
+            backbone=mock_fit_predict_backbone,
+            evaluators=mock_evaluators,
+        )
+        module.model_step_fit(phm_fit_predict_batch)
+        module.validation_step(phm_fit_predict_batch, 0)
+        assert mock_evaluators["val"]._updates
+
+    def test_test_step_calls_model_step_predict(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+        """FitPredictWrapperLightningModule._test_step calls model_step_predict (lines 666-667)."""
+        module = FitPredictWrapperLightningModule(
+            backbone=mock_fit_predict_backbone,
+            evaluators=mock_evaluators,
+        )
+        module.model_step_fit(phm_fit_predict_batch)
+        module.test_step(phm_fit_predict_batch, 0)
+        assert mock_evaluators["test"]._updates
+
     def test_model_step_fit_with_predict_after_training_returns_predict_step(
         self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
     ):
@@ -447,27 +503,6 @@ class TestFitPredictWrapperLightningModule:
             evaluators=mock_evaluators,
         )
         module.setup("fit")
-
-
-# -----------------------------------------------------------------------------
-# Test: CustomTimePFNLightningModule (deprecated)
-# -----------------------------------------------------------------------------
-
-
-class TestCustomTimePFNLightningModule:
-    """Validates deprecated class raises NotImplementedError in __init__."""
-
-    def test_init_raises_not_implemented_error(self, mock_evaluators):
-        """Doc: pipeline/base.py - CustomTimePFNLightningModule __init__ raises NotImplementedError. Need concrete step impl to reach __init__."""
-        class ConcreteTimePFN(CustomTimePFNLightningModule):
-            def _training_step(self, batch, batch_idx):
-                return {"predictions": torch.zeros(1, 1, 1), "targets": torch.zeros(1, 1, 1), "loss": torch.tensor(0.0)}
-            def _validation_step(self, batch, batch_idx):
-                return {"predictions": torch.zeros(1, 1, 1), "targets": torch.zeros(1, 1, 1), "loss": torch.tensor(0.0)}
-            def _test_step(self, batch, batch_idx):
-                return {"predictions": torch.zeros(1, 1, 1), "targets": torch.zeros(1, 1, 1), "loss": torch.tensor(0.0)}
-        with pytest.raises(NotImplementedError, match="deprecated"):
-            ConcreteTimePFN(evaluators=mock_evaluators)
 
 
 # -----------------------------------------------------------------------------

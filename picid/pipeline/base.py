@@ -677,51 +677,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return None
 
 
-class CustomTimePFNLightningModule(CustomEvaluatorLightningModule):
-
-    def process_outputs(self, model_out: dict, batch) -> dict:
-        """Handle model outputs.
-
-        Parameters
-        ----------
-        model_out : dict
-            Dictionary containing the model output.
-        batch : dict
-            Batch object containing the batched data.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the updated model output.
-        """
-
-        # TODO: (Raffael)  this is a hack to make sure the model outputs are in the right format
-        # Determine the effective prediction length, defaulting to 0 if not set
-        effective_pred_len = getattr(self.evaluator, "effective_pred_len", None)
-        model_out["predictions"] = (
-            model_out["predictions"][:, :effective_pred_len, :].detach().cpu().numpy()
-        )
-        model_out["targets"] = (
-            model_out["targets"][:, :effective_pred_len, :].detach().cpu().numpy()
-        )
-        return model_out
-
-    def __init__(
-        self,
-        evaluators,
-        **kwargs,
-    ):
-
-        super().__init__(
-            evaluators,
-            **kwargs,
-        )
-
-        raise NotImplementedError(
-            "This class is deprecated. optimizer / backbone handling is not implemented properly."
-        )
-
-
 class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
     def __init__(
@@ -744,7 +699,7 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
     def model_step(self, batch, stage: str) -> dict:
         model_out = super().model_step(batch, stage)
-        # TODO: (Raffael)  what is going on here?
+        # This is a dummy loss to make the training work with lightning.
         model_out["loss"] = torch.tensor([1])
         return model_out
 

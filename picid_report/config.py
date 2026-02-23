@@ -194,6 +194,8 @@ REQUIRED_COLUMNS = [
 # }
 
 # Import new config functions (backward compatible)
+from picid_report.configs import EXPECTED_SEARCH_SPACE
+
 try:
     from picid_report.configs import (
         get_search_space,

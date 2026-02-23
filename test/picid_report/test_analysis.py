@@ -470,7 +470,8 @@ class TestAnalyzeResultsSchemaFirst:
         Uses new dataset/model structure.
         """
         # New structure: {dataset: {model: {hp: [values]}}}
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+        # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
+        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
             "DS1": {
                 "baselines.tide_model.TiDE_Forecaster": expected_grid,
             }
@@ -506,7 +507,8 @@ class TestAnalyzeResultsSchemaFirst:
             "task_definition.seq_len": [10, 20],
         }
         # New structure: {dataset: {model: {hp: [values]}}}
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+        # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
+        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
             "DS1": {
                 "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": grid,
             }
@@ -804,7 +806,7 @@ class TestAnalyzeResultsAdditionalBranches:
         Uses new dataset/model structure but model not found, so falls back to data-first."""
         # New structure: {dataset: {model: {hp: [values]}}}
         # Model "OtherModel" not in "DS1", so should fall back to data-first
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
+        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
             "DS1": {"OtherModel": {"lr": [0.01]}}  # Different model, so current model uses data-first
         }):
             results = analysis.analyze_results(mock_df_multi_seed_runs, **default_analysis_kwargs)

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
     """
-    A unified wrapper for training statistical baselines within the LMETK framework.
+    A unified wrapper for training statistical baselines within the PICID framework.
 
     This wrapper orchestrates the initialization of Linear, Polynomial, and
     Exponential baselines and handles the necessary data reshaping to support:

@@ -199,6 +199,44 @@ def test_subset_range_skipped_when_start_gt_len(tiny_sliding_dataset):
     assert dm.dataset_train is tiny_sliding_dataset
 
 
+def test_val_subset_ratio(tiny_sliding_dataset, caplog):
+    """val_subset_ratio < 1 subsets the validation dataset in _create_dataloader."""
+    with caplog.at_level("INFO"):
+        dm = BaseDataModule(
+            dataset_train=tiny_sliding_dataset,
+            dataset_val=tiny_sliding_dataset,
+            dataset_test=tiny_sliding_dataset,
+            train_batch_size=4,
+            val_batch_size=2,
+            test_batch_size=2,
+            num_workers=0,
+            use_batch_sampler=True,
+            val_subset_ratio=0.3,
+            subset_seed=42,
+        )
+        dl = dm.val_dataloader()
+    assert "Subset" in caplog.text or "subset" in caplog.text.lower()
+
+
+def test_test_subset_ratio(tiny_sliding_dataset, caplog):
+    """test_subset_ratio < 1 subsets the test dataset in _create_dataloader."""
+    with caplog.at_level("INFO"):
+        dm = BaseDataModule(
+            dataset_train=tiny_sliding_dataset,
+            dataset_val=tiny_sliding_dataset,
+            dataset_test=tiny_sliding_dataset,
+            train_batch_size=4,
+            val_batch_size=2,
+            test_batch_size=2,
+            num_workers=0,
+            use_batch_sampler=True,
+            test_subset_ratio=0.4,
+            subset_seed=42,
+        )
+        dl = dm.test_dataloader()
+    assert "Subset" in caplog.text or "subset" in caplog.text.lower()
+
+
 def test_train_subset_ratio(tiny_sliding_dataset, caplog):
     """train_subset_ratio < 1 subsets the dataset in _create_dataloader."""
     with caplog.at_level("INFO"):
@@ -268,6 +306,13 @@ def test_drop_last_when_remainder_one():
     assert all(b["f_seq_x"].shape[0] == batch_size for b in batches)
 
 
+def test_train_dataloader_cached(base_datamodule):
+    """Second call to train_dataloader returns same loader (line 319)."""
+    dl1 = base_datamodule.train_dataloader()
+    dl2 = base_datamodule.train_dataloader()
+    assert dl1 is dl2
+
+
 def test_val_dataloader_cached(base_datamodule):
     """Second call to val_dataloader returns same loader."""
     dl1 = base_datamodule.val_dataloader()
@@ -280,6 +325,75 @@ def test_test_dataloader_cached(base_datamodule):
     dl1 = base_datamodule.test_dataloader()
     dl2 = base_datamodule.test_dataloader()
     assert dl1 is dl2
+
+
+def test_prepare_data_no_op(base_datamodule):
+    """prepare_data() is a no-op (pass)."""
+    base_datamodule.prepare_data()
+
+
+def test_setup_no_op(base_datamodule):
+    """setup(stage) is a no-op (pass)."""
+    base_datamodule.setup(stage="fit")
+
+
+def test_val_dataloader_full_batch_size(tiny_sliding_dataset):
+    """val_batch_size='full' uses full validation dataset as one batch."""
+    dm = BaseDataModule(
+        dataset_train=tiny_sliding_dataset,
+        dataset_val=tiny_sliding_dataset,
+        dataset_test=tiny_sliding_dataset,
+        train_batch_size=4,
+        val_batch_size="full",
+        test_batch_size=2,
+        num_workers=0,
+        use_batch_sampler=True,
+    )
+    dl = dm.val_dataloader()
+    batch = next(iter(dl))
+    assert batch["f_seq_x"].shape[0] == len(tiny_sliding_dataset)
+
+
+def test_test_dataloader_full_batch_size(tiny_sliding_dataset):
+    """test_batch_size='full' uses full test dataset as one batch."""
+    dm = BaseDataModule(
+        dataset_train=tiny_sliding_dataset,
+        dataset_val=tiny_sliding_dataset,
+        dataset_test=tiny_sliding_dataset,
+        train_batch_size=4,
+        val_batch_size=2,
+        test_batch_size="full",
+        num_workers=0,
+        use_batch_sampler=True,
+    )
+    dl = dm.test_dataloader()
+    batch = next(iter(dl))
+    assert batch["f_seq_x"].shape[0] == len(tiny_sliding_dataset)
+
+
+def test_create_dataloader_without_batch_sampler(tiny_sliding_dataset):
+    """_create_dataloader with use_batch_sampler=False uses batch_size and collate_fn (line 319)."""
+    dm = BaseDataModule(
+        dataset_train=tiny_sliding_dataset,
+        dataset_val=tiny_sliding_dataset,
+        dataset_test=tiny_sliding_dataset,
+        train_batch_size=4,
+        val_batch_size=2,
+        test_batch_size=2,
+        num_workers=0,
+        use_batch_sampler=False,
+    )
+    loader = dm._create_dataloader(
+        dm.dataset_train,
+        batch_size=4,
+        shuffle=True,
+        drop_last=False,
+        collate_fn=dm.collate_fn_train,
+        subset_ratio=None,
+        split_name="train",
+    )
+    assert loader.batch_size == 4
+    assert loader.collate_fn is not None
 
 
 def test_profiled_loader_path(tiny_sliding_dataset):
@@ -306,3 +420,5 @@ def test_profiled_loader_path(tiny_sliding_dataset):
     # Consume one batch to exercise profiled generator (schedule stays active, no exit)
     batch = next(iter(dl))
     assert isinstance(batch, dict)
+
+

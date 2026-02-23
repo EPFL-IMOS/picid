@@ -24,7 +24,8 @@ from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
 from picid.data.data_objects.data import NamedTransformInput
-from picid.data.optimization.sequencer import DenseArraySequencer
+from picid.data.datasets.subset_sampling import make_subset_blocks_indices
+from picid.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
@@ -97,7 +98,7 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, DenseTransform):
 
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
         # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
-        # but your original TimePFNTimeFeaturesTransform did, so keeping it consistent for your repr)
+        # but the base transform pattern does, so keeping it consistent for your repr)
         self._init_kwargs = kwargs
 
     def __repr__(self):

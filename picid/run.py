@@ -95,7 +95,6 @@ from picid.utils import (
 from picid.utils.logging_utils import get_hydra_override
 from picid.utils.awkward_utils import get_ak_shape
 from picid.utils.examine_model import get_model_summary
-from picid.model.autoencoder.utils import get_autoencoder_summary_and_tags
 
 # register resolver before hydra.main
 OmegaConf.register_new_resolver("flat", lambda s: s.replace("/", "+"))
@@ -541,14 +540,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
     display_targets(cfg)
-    if cfg.model._target_ == "picid.model.autoencoder.wrapper.AutoencoderWrapper":
-        model_summary_table, model_tags_list = get_autoencoder_summary_and_tags(
-            cfg.model
-        )
-        # check if cfg.logger.wandb exists
-        if cfg.logger.get("wandb", False):
-            cfg.logger.wandb["tags"] = [tag for tag in model_tags_list]
-        log.info(model_summary_table)
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))

@@ -345,6 +345,13 @@ class TestForecasterInitialization:
         assert forecaster.use_revin is True
         assert hasattr(forecaster, 'revin')
     
+    def test_set_inv_scaler_and_set_scaler(self, forecaster_regression):
+        """set_inv_scaler and set_scaler update the internal scalers."""
+        forecaster_regression.set_inv_scaler(lambda x: x * 2)
+        forecaster_regression.set_scaler(lambda x: x / 2)
+        assert callable(forecaster_regression._inv_scaler)
+        assert hasattr(forecaster_regression, "_scaler")
+
     def test_init_with_seasonal_decomp(self, mock_optimizer_factory, mock_scheduler_factory):
         """Test initialization with seasonal decomposition.
         
@@ -644,6 +651,27 @@ class TestForecasterForecastingLoss:
 
 
 # =============================================================================
+# PREDICT TESTS
+# =============================================================================
+
+class TestForecasterPredict:
+    """Tests for predict method."""
+
+    def test_predict_returns_scaled_predictions(
+        self, forecaster_forecasting, mock_optimizer_factory, mock_scheduler_factory
+    ):
+        """predict() scales inputs, runs forward, inverse-scales outputs (lines 197-221)."""
+        forecaster_forecasting.set_scaler(lambda x: x)
+        forecaster_forecasting.set_inv_scaler(lambda x: x)
+        x_c = torch.randn(2, 10, 4)
+        y_c = torch.randn(2, 10, 2)
+        x_t = torch.randn(2, 5, 4)
+        preds = forecaster_forecasting.predict(x_c, y_c, x_t)
+        assert preds.shape == (2, 5, 2)
+        assert isinstance(preds, torch.Tensor)
+
+
+# =============================================================================
 # CLASSIFICATION LOSS TESTS
 # =============================================================================
 
@@ -693,6 +721,14 @@ class TestForecasterClassificationLoss:
         
         loss = forecaster_classification.classification_loss(outputs, y_t, mask)
         
+        assert torch.isfinite(loss)
+
+    def test_classification_loss_with_mask_branch(self, forecaster_classification):
+        """classification_loss with mask not None uses mask_flat (lines 162-163)."""
+        outputs = torch.tensor([[[1.0, 2.0, 0.5]], [[0.5, 1.0, 2.0]]])
+        y_t = torch.tensor([[0], [2]])
+        mask = torch.tensor([[1.0], [0.5]])
+        loss = forecaster_classification.classification_loss(outputs, y_t, mask)
         assert torch.isfinite(loss)
 
 
@@ -784,6 +820,25 @@ class TestForecasterBatchMapping:
         assert x_t.shape == (2, 10, 4)
         assert y_t.shape == (2, 1, 1)  # Expanded to 3D
     
+    def test_map_batch_regression_target_dim2(self, forecaster_regression):
+        """_map_batch_to_task with target dim 2 uses rearrange b f -> b 1 f (lines 359-361)."""
+        batch = {"features": torch.randn(2, 10, 4), "rul": torch.randn(2, 1)}
+        x_c, y_c, x_t, y_t = forecaster_regression._map_batch_to_task(batch)
+        assert y_t.shape == (2, 1, 1)
+
+    def test_map_batch_regression_target_dim1(self, forecaster_regression):
+        """_map_batch_to_task with target dim 1 uses rearrange b -> b 1 1 (lines 364-366)."""
+        batch = {"features": torch.randn(2, 10, 4), "rul": torch.randn(2)}
+        x_c, y_c, x_t, y_t = forecaster_regression._map_batch_to_task(batch)
+        assert y_t.shape == (2, 1, 1)
+
+    def test_map_batch_unrecognized_task_raises(self, forecaster_regression):
+        """_map_batch_to_task with unrecognized task raises ValueError (line 353)."""
+        forecaster_regression.task_type = "invalid_task"
+        batch = {"features": torch.randn(2, 10, 4)}
+        with pytest.raises(ValueError, match="Unrecognized task type"):
+            forecaster_regression._map_batch_to_task(batch)
+
     def test_map_batch_classification(self, forecaster_classification):
         """Test batch mapping for classification task.
         
@@ -850,6 +905,23 @@ class TestForecasterOptimizers:
     Validates optimizer and scheduler setup for training.
     """
     
+    def test_configure_optimizers_without_scheduler_raises(self, mock_optimizer_factory):
+        """configure_optimizers with scheduler_factory=None raises NotImplementedError (lines 392-396)."""
+        evaluators = {split: MockEvaluator() for split in ("train", "val", "test")}
+        forecaster = ConcreteForecaster(
+            optimizer_factory=mock_optimizer_factory,
+            scheduler_factory=None,
+            d_x=4,
+            d_yc=2,
+            d_yt=1,
+            task_type="rul",
+            loss="mse",
+            evaluators=evaluators,
+        )
+        forecaster.dummy_param = nn.Parameter(torch.randn(5))
+        with pytest.raises(NotImplementedError, match="Check this branch"):
+            forecaster.configure_optimizers()
+
     def test_configure_optimizers_with_scheduler(self, forecaster_regression):
         """Test optimizer configuration with scheduler.
         
@@ -988,3 +1060,59 @@ class TestTransformerForecaster:
         
         assert forecaster.scheduler_Loss_monitor == "forecast_loss"
         assert forecaster.validation_step_outputs == []
+
+    def test_transformer_forecaster_validation_epoch_end(
+        self, mock_optimizer_factory
+    ):
+        """TransformerForecaster on_validation_epoch_end steps scheduler (lines 411-428)."""
+        mock_sched = MagicMock()
+        def sched_factory(optimizer):
+            return mock_sched
+
+        evaluators = {split: MockEvaluator() for split in ("train", "val", "test")}
+        forecaster = ConcreteTransformerForecaster(
+            optimizer_factory=mock_optimizer_factory,
+            scheduler_factory=sched_factory,
+            d_x=4,
+            d_yc=2,
+            d_yt=1,
+            task_type="rul",
+            loss="mse",
+            evaluators=evaluators,
+            scheduler_Loss_monitor="loss",
+        )
+        forecaster.dummy_param = nn.Parameter(torch.randn(5))
+        forecaster.configure_optimizers()
+        batch = (
+            None,
+            None,
+            torch.randn(2, 10, 4),
+            torch.randn(2, 1, 1),
+        )
+        forecaster.validation_step_outputs = [forecaster.step(batch, train=False)]
+        forecaster.on_validation_epoch_end()
+        assert forecaster.validation_step_outputs == []
+
+    def test_transformer_forecaster_training_step(
+        self, mock_optimizer_factory, mock_scheduler_factory
+    ):
+        """TransformerForecaster training_step calls super and scheduler.step (lines 431-433)."""
+        evaluators = {split: MockEvaluator() for split in ("train", "val", "test")}
+        forecaster = ConcreteTransformerForecaster(
+            optimizer_factory=mock_optimizer_factory,
+            scheduler_factory=mock_scheduler_factory,
+            d_x=4,
+            d_yc=2,
+            d_yt=1,
+            task_type="rul",
+            loss="mse",
+            evaluators=evaluators,
+        )
+        forecaster.dummy_param = nn.Parameter(torch.randn(5))
+        forecaster.configure_optimizers()
+        batch = {
+            "features": torch.randn(2, 10, 4),
+            "rul": torch.randn(2, 1),
+        }
+        out = forecaster.training_step(batch, 0)
+        assert isinstance(out, torch.Tensor)
