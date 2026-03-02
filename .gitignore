@@ -44,6 +44,7 @@ scratch.ipynb
 /output
 /plot_dir
 /scripts/to_finish_large/
+lmetk_report_artifacts
 
 # Generated report output (tables, plots, report.html)
 report_output/
