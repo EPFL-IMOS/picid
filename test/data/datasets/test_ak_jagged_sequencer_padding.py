@@ -480,3 +480,231 @@ def test_offset_with_padding_edge(dense_data):
 
     np.testing.assert_array_equal(x_last.numpy(), expected_x_last)
     np.testing.assert_array_equal(y_last.numpy(), expected_y_last)
+
+
+# =========================================================================
+# === PART 4: seq_len=0 Edge Cases ===
+# =========================================================================
+
+
+def test_seq_len_zero_strict_dense(dense_data):
+    """
+    seq_len=0 should return empty encoder windows and valid targets in strict mode.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=0,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=False,
+    )
+
+    # Required len = pred_len = 1 -> all 5 target positions are valid.
+    assert len(seq) == 5
+
+    x, y = seq.sequences_batch([0])
+    assert x.shape == (1, 0, 1)
+    np.testing.assert_array_equal(
+        y.numpy(), np.array([10], dtype=np.float32).reshape(1, 1, 1)
+    )
+
+
+def test_seq_len_zero_padding_default_warmup_dense(dense_data):
+    """
+    With seq_len=0 and default warmup in padding mode, first index is skipped.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=0,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="zero",
+    )
+
+    # Default index_start_offset = -(seq_len - 1) = 1
+    assert len(seq) == 4
+    np.testing.assert_array_equal(
+        seq.get_index_array(),
+        np.array([[1], [2], [3], [4]]),
+    )
+
+    x, y = seq.sequences_batch([0])
+    assert x.shape == (1, 0, 1)
+    np.testing.assert_array_equal(
+        y.numpy(), np.array([11], dtype=np.float32).reshape(1, 1, 1)
+    )
+
+
+def test_seq_len_zero_padding_warmup_zero_dense(dense_data):
+    """
+    Explicit warmup_steps=0 with seq_len=0 should include index 0.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=0,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="edge",
+        warmup_steps=0,
+    )
+
+    assert len(seq) == 5
+    np.testing.assert_array_equal(
+        seq.get_index_array(),
+        np.array([[0], [1], [2], [3], [4]]),
+    )
+
+    x, y = seq.sequences_batch([0])
+    assert x.shape == (1, 0, 1)
+    np.testing.assert_array_equal(
+        y.numpy(), np.array([10], dtype=np.float32).reshape(1, 1, 1)
+    )
+
+
+def test_seq_len_zero_strict_jagged(jagged_data):
+    """
+    seq_len=0 should work on jagged arrays and preserve per-unit target counts.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_data,
+        seq_len=0,
+        pred_len=1,
+        label_len=0,
+        padding_left_flag=False,
+    )
+
+    indices = seq.get_index_array()
+    u0_indices = indices[indices[:, 0] == 0]
+    u1_indices = indices[indices[:, 0] == 1]
+
+    # Unit 0 len=3 -> 3 windows; Unit 1 len=5 -> 5 windows.
+    assert len(u0_indices) == 3
+    assert len(u1_indices) == 5
+
+
+# =========================================================================
+# === PART 5: pred_len=0 Edge Cases ===
+# =========================================================================
+
+
+def test_pred_len_zero_strict_dense_returns_empty_target(dense_data):
+    """
+    pred_len=0 with label_len=0 should return empty targets in strict mode.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=2,
+        pred_len=0,
+        label_len=0,
+        padding_left_flag=False,
+    )
+
+    # Logic:
+    # required_len = seq_len + pred_len + pred_offset = 2 + 0 + 0 = 2
+    # Dense len=5 -> valid starts are [0, 1, 2, 3] => 4 windows.
+    assert len(seq) == 4
+
+    x, y = seq.sequences_batch([0])
+
+    # Window start t=0:
+    # x = indices [0, 1] -> [10, 11]
+    # y length = label_len + pred_len = 0 -> empty target sequence.
+    expected_x = np.array([10, 11], dtype=np.float32).reshape(1, 2, 1)
+    expected_y = np.empty((1, 0, 1), dtype=np.float32)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+
+def test_pred_len_zero_with_label_len_dense(dense_data):
+    """
+    pred_len=0 still returns decoder-label context when label_len > 0.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=2,
+        pred_len=0,
+        label_len=1,
+        padding_left_flag=False,
+    )
+
+    # Logic:
+    # required_len = 2 + 0 + 0 = 2 -> starts [0, 1, 2, 3], so 4 windows.
+    # y start formula:
+    # y starts at t + seq_len - label_len = t + 2 - 1 = t + 1, with length 1.
+    assert len(seq) == 4
+
+    x, y = seq.sequences_batch([0])
+
+    # Window start t=0:
+    # x = [10, 11]
+    # y = index [1] -> [11]
+    expected_x = np.array([10, 11], dtype=np.float32).reshape(1, 2, 1)
+    expected_y = np.array([11], dtype=np.float32).reshape(1, 1, 1)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)
+
+
+def test_pred_len_zero_padding_zero_warmup_dense(dense_data):
+    """
+    pred_len=0 with left padding should zero-pad only encoder history.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=dense_data,
+        seq_len=3,
+        pred_len=0,
+        label_len=0,
+        padding_left_flag=True,
+        padding_mode="zero",
+        warmup_steps=2,
+    )
+
+    # Logic:
+    # warmup_steps=2 -> first start t=-2.
+    # required_len = 3 + 0 + 0 = 3, len=5 -> starts [-2, -1, 0, 1, 2] => 5 windows.
+    assert len(seq) == 5
+
+    x0, y0 = seq.sequences_batch([0])
+
+    # Window start t=-2:
+    # x indices [-2, -1, 0] -> zero padding for negative positions => [0, 0, 10]
+    # y length is 0 -> empty target
+    expected_x0 = np.array([0, 0, 10], dtype=np.float32).reshape(1, 3, 1)
+    expected_y0 = np.empty((1, 0, 1), dtype=np.float32)
+
+    np.testing.assert_array_equal(x0.numpy(), expected_x0)
+    np.testing.assert_array_equal(y0.numpy(), expected_y0)
+
+
+def test_pred_len_zero_strict_jagged_counts(jagged_data):
+    """
+    pred_len=0 should preserve strict per-unit counts on jagged data.
+    """
+    seq = AkwardJaggedAutoregressiveSequencer(
+        features=jagged_data,
+        seq_len=2,
+        pred_len=0,
+        label_len=0,
+        padding_left_flag=False,
+    )
+
+    indices = seq.get_index_array()
+    u0_indices = indices[indices[:, 0] == 0]
+    u1_indices = indices[indices[:, 0] == 1]
+
+    # Logic:
+    # Unit 0 len=3, required_len=2 -> starts [0, 1] => 2 windows.
+    # Unit 1 len=5, required_len=2 -> starts [0, 1, 2, 3] => 4 windows.
+    assert len(u0_indices) == 2
+    assert len(u1_indices) == 4
+
+    # First global window belongs to Unit 0 at start t=0.
+    x, y = seq.sequences_batch([0])
+    expected_x = np.array([10, 11], dtype=np.float32).reshape(1, 2, 1)
+    expected_y = np.empty((1, 0, 1), dtype=np.float32)
+
+    np.testing.assert_array_equal(x.numpy(), expected_x)
+    np.testing.assert_array_equal(y.numpy(), expected_y)

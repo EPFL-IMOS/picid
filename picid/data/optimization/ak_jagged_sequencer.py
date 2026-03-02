@@ -5,7 +5,11 @@ import awkward as ak
 import numpy as np
 import torch
 
-from picid.utils.awkward_utils import find_singular_ragged_dim, get_ak_shape, ragged_index_tuples
+from picid.utils.awkward_utils import (
+    find_singular_ragged_dim,
+    get_ak_shape,
+    ragged_index_tuples,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -337,4 +341,23 @@ class AkwardJaggedAutoregressiveSequencer:
     ) -> Tuple[
         torch.Tensor, torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]
     ]:
+        """Return a batch of input and target windows for sequencer indices.
+
+        Args:
+            batch_idx: Integer indices into the precomputed window index table returned
+                by ``get_index_array()``.
+
+        Returns:
+            A tuple ``(seq_x, seq_y)`` where:
+
+            - ``seq_x`` has shape ``(batch, seq_len, num_features)`` and contains the
+              encoder/history window.
+            - ``seq_y`` has shape ``(batch, label_len + pred_len, num_features)`` and
+              contains the decoder overlap plus forecast horizon.
+
+        Notes:
+            When left padding is enabled, early windows may include padded history in
+            ``seq_x``. Padding uses the configured ``padding_mode``; ``seq_y`` always
+            contains real observations from the source segment.
+        """
         return self._get_window_for_index(batch_idx)
