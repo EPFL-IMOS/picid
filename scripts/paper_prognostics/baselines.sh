@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=200
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="02_03_2026_refactor_transforms_plus_pred_len_0_no_padding_left"
+wandb_log_folder="02_03_2026"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -32,26 +32,26 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 datasets=(
 #   "nb14|raw|prognostics"
   "nb14|combined|prognostics"
-#   "unibo|combined|prognostics"
-#   "phme20|raw|prognostics"
-#   "concepts_n_cmapss||prognostics"
-#   "concepts_n_cmapss_ds02||prognostics"
-# #   "pronostia|raw|prognostics"
-#   "pronostia|combined|prognostics"
-#   "xjtu_sy|combined|prognostics"
+  "unibo|combined|prognostics"
+  "phme20|raw|prognostics"
+  "concepts_n_cmapss||prognostics"
+  "concepts_n_cmapss_ds02||prognostics"
+#   "pronostia|raw|prognostics"
+  "pronostia|combined|prognostics"
+  "xjtu_sy|combined|prognostics"
 )
 
 model_names=(
     lstm
-    # cnn_1d
-    # mlp
-    # linear_regression
-    # exponential_regression
-    # stf
-    # crossformer
-    # timeseries_transformer
-    # tide
-    # patchtst
+    cnn_1d
+    mlp
+    linear_regression
+    exponential_regression
+    stf
+    crossformer
+    timeseries_transformer
+    tide
+    patchtst
 )
 
 BATCH_SIZES=(512)
@@ -130,7 +130,6 @@ for dataset in "${datasets[@]}"; do
                             cache.use_cache_after_transfroms=True \
                             cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
                             cache.preprocessing_file_lock_path=/tmp/picid_preprocess.lock \
-                            task_definition.padding_left_flag=False \
                             enable_progress_bar=False \
                             seed=${seed}
                         )
