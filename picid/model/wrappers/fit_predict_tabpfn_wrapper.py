@@ -41,7 +41,9 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         self.supported_types = self.regression_tasks + self.classification_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for FitPredictTabPFNWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for FitPredictTabPFNWrapper."
+            )
 
         self.task_type = task_type
 
@@ -83,7 +85,17 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         if self.task_type in CLASSIFICATION_TASKS:
             return torch.Tensor(self.backbone.predict_proba(X.numpy()))
         else:
-            return torch.Tensor(self.backbone.predict(X.numpy()))
+            if self.full_outputs_path is not None:
+                output = self.backbone.predict(X, output_type=self.output_type)
+                output["criterion"] = output["criterion"].cpu()
+                output["logits"] = output["logits"].cpu()
+                output_file = Path(self.full_outputs_path) / "predictions.pt"
+                torch.save(output, output_file)
+                if self.output_type == "full":
+                    output = output["mean"]
+
+            else:
+                return torch.Tensor(self.backbone.predict(X.numpy()))
 
     # @override
     # def _call_predict(self, X: torch.Tensor) -> torch.Tensor:

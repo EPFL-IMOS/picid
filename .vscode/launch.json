@@ -1250,10 +1250,10 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/cnn_1d",
-                "task_definition.subset_ratio=0.1",
-                "+task_definition.subset_blocks=20",
+                // "task_definition.subset_ratio=0.1",
+                // "+task_definition.subset_blocks=20",
                 "debug=default",
-                "logger=wandb"
+                // "logger=wandb"
             ],
             "env": {
                 "HYDRA_FULL_ERROR": "1",
@@ -1290,7 +1290,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=unibo/prognostics/combined/tabpfn_fit_predict",
-                "debug=pronostia",
+                "debug=nox_testing_fit_predict",
                 "+model.full_outputs_path='${paths.output_dir}'",
                 "+model.output_type='full'"
             ],

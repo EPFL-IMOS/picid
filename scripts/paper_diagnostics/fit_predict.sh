@@ -37,6 +37,8 @@ datasets=(
   "concepts_n_cmapss_multi||diagnostics"
 )
 
+SEEDS=(72 88 101 666 226688)
+
 model_names=(
     # xgboost_fit_predict
     tabdpt_fit_predict
@@ -51,9 +53,7 @@ context_stride_pairs=(
   "10:5"
   "20:5"
   "50:50"
-  "100:100"
 )
-seed=72
 
 # ========================================================================
 # Main Loop with Execution Tracking
@@ -84,59 +84,61 @@ pids=()
 trap 'echo "Caught interrupt, killing jobs (${pids[*]})..."; kill "${pids[@]}" 2>/dev/null; exit 1' SIGINT SIGTERM
 
 
-for dataset in "${datasets[@]}"; do
-    for model_name in "${model_names[@]}"; do
-        for cs_pair in "${context_stride_pairs[@]}"; do
-            # --- 3. Create a unique and descriptive name for this specific run ---
-            # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
-            IFS=':' read -r context_length train_set_stride <<< "$cs_pair"
-            IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
-            exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
-            dataset_run_name="${dataset_key//\//_}"
-            run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
-            final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
+for seed in "${SEEDS[@]}"; do
+    for dataset in "${datasets[@]}"; do
+        for model_name in "${model_names[@]}"; do
+            for cs_pair in "${context_stride_pairs[@]}"; do
+                # --- 3. Create a unique and descriptive name for this specific run ---
+                # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
+                IFS=':' read -r context_length train_set_stride <<< "$cs_pair"
+                IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
+                exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
+                dataset_run_name="${dataset_key//\//_}"
+                run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
+                final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
 
-            # --- 4. Build the full command as a single string ---
-            # Note the escaped quotes \"...\" for parameters that are lists.
-            command_to_run=(
-                python picid/run.py \
-                paths=runai \
-                experiment=${exp_name} \
-                # trainer.devices=[${device}] \
-                logger.wandb.project=${final_log_folder} \
-                task_definition.seq_len=${context_length} \
-                task_definition.stride_train=${train_set_stride} \
-                cache.use_cache_after_loading=True \
-                cache.use_cache_after_transfroms=True
-            )
-            # debug=train_debug
+                # --- 4. Build the full command as a single string ---
+                # Note the escaped quotes \"...\" for parameters that are lists.
+                command_to_run=(
+                    python picid/run.py \
+                    paths=runai \
+                    experiment=${exp_name} \
+                    # trainer.devices=[${device}] \
+                    logger.wandb.project=${final_log_folder} \
+                    task_definition.seq_len=${context_length} \
+                    task_definition.stride_train=${train_set_stride} \
+                    cache.use_cache_after_loading=True \
+                    cache.use_cache_after_transfroms=True \
+                    seed=${seed}
+                )
 
-            final_command="${command_to_run[*]}"
+                final_command="${command_to_run[*]}"
 
-            success_key="${run_name}|${final_command}"
+                success_key="${run_name}|${final_command}"
 
-            # Skip if this exact run/command pair already succeeded in a previous attempt
-            if [ -f "${SUCCESS_LOG}" ]; then
-                if grep -Fq "${success_key}" "${SUCCESS_LOG}"; then
-                    echo "Skipping ${run_name} (command already recorded as successful)."
-                    ((run_counter++))
-                    continue
+                # Skip if this exact run/command pair already succeeded in a previous attempt
+                if [ -f "${SUCCESS_LOG}" ]; then
+                    if grep -Fq "${success_key}" "${SUCCESS_LOG}"; then
+                        echo "Skipping ${run_name} (command already recorded as successful)."
+                        ((run_counter++))
+                        continue
+                    fi
                 fi
-            fi
-            # --- 5. Execute using the logger and run in the background (&) ---
-            run_and_log "${command_to_run[*]}" "$run_name" "$DEBUG_SKIP" &
-            pid=$!
-            pids+=($pid)
-            # --- 6. Increment counters and manage parallel jobs ---
-            ((run_counter++))
-            ((job_counter++))
-            # First, check if all our "slots" are full.
-            if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
-                # If they are, wait for any single job to finish.
-                wait -n
-                # Decrement the counter because a slot just opened up.
-                ((job_counter--))
-            fi
+                # --- 5. Execute using the logger and run in the background (&) ---
+                run_and_log "${command_to_run[*]}" "$run_name" "$DEBUG_SKIP" &
+                pid=$!
+                pids+=($pid)
+                # --- 6. Increment counters and manage parallel jobs ---
+                ((run_counter++))
+                ((job_counter++))
+                # First, check if all our "slots" are full.
+                if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
+                    # If they are, wait for any single job to finish.
+                    wait -n
+                    # Decrement the counter because a slot just opened up.
+                    ((job_counter--))
+                fi
+            done
         done
     done
 done
