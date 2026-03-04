@@ -8,8 +8,8 @@ from .base import AbsModelConfig
 class LSTMConfig(AbsModelConfig):
     config_name : str = Field('lstm', frozen=True)
 
-    # lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('picid.baselines.lstm_model.LSTM_Forecaster',
+    lightning_model: bool = Field(True, frozen=True)
+    model_class : str = Field('lmetk.baselines.lstm_model.LSTM_Forecaster',
                                  frozen=True, serialization_alias='_target_')
 
     d_x: Optional[int] = Field(None)

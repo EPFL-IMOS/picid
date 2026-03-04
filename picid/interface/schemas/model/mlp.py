@@ -6,8 +6,8 @@ from .base import AbsModelConfig
 class MLPConfig(AbsModelConfig):
     config_name : str = Field('mlp', frozen=True)
 
-    # lightning_model: bool = Field(True, frozen=True)
-    model_class: str = Field('picid.model.wrappers.mlp_wrapper.MLPWrapper',
+    lightning_model: bool = Field(True, frozen=True)
+    model_class: str = Field('lmetk.model.wrappers.mlp_wrapper.MLPWrapper',
                                 frozen=True, serialization_alias='_target_')
 
     input_channels: int = Field(ge=1)
