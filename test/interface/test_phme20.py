@@ -2,8 +2,9 @@ from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 
 from picid.interface import EasyInterface
-from picid.interface.schemas import LSTMConfig, Prognostic
 from picid.interface.schemas.loggers import CsvLogger
+from picid.interface.schemas.model import LSTMConfig
+from picid.interface.schemas.task_definition import Prognostic
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
