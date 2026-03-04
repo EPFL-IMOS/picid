@@ -13,8 +13,8 @@ from omegaconf import OmegaConf, DictConfig
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.interface.schemas import AbsModelConfig
 from picid.interface.schemas.loggers import BaseLogger
+from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
 from picid.interface.utils import ProcessedDatasource, EasyPreProcessor, register_data_dim_resolver, \
     create_lightning_module
