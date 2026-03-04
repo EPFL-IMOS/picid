@@ -19,6 +19,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "torch",
     "numpy<=2.3.0",
     "hydra-core>=1.3.2",
     "hydra-colorlog>=1.2.0",
@@ -52,8 +53,10 @@ dependencies = [
     "huggingface-hub>=0.35.3",
     # Local submodule dependencies
     # uv will resolve these using [tool.uv.sources]
+    "pydantic_settings",
+    "pydantic",
     "tabdpt",
-    "carte-ai",
+#    "carte-ai",
     "phmd",
     "TabPFN",
     "rul-datasets",
@@ -86,6 +89,7 @@ dev = [
     "panel>=1.8.1",
     "holoviews>=1.21.0",
 ]
+carte-ai = ['carte']
 
 # If your package lives under src/, replace with:
 # [tool.setuptools.packages.find]
@@ -213,20 +217,26 @@ exclude_lines = [
 
 
 [tool.uv.sources]
-phmd = { path = "./local_packages/phmd", editable = true }
-TabPFN = { path = "./local_packages/TabPFN", editable = true }
-tabdpt = { path = "./local_packages/TabDPT", editable = true }
-carte-ai = { path = "./local_packages/carte-ai", editable = true }
-# obsolete: rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
-# obsolete: uni2ts = { path = "./local_packages/uni2ts", editable = true }
+#phmd = { path = "./local_packages/phmd", editable = true }
+#TabPFN = { path = "./local_packages/TabPFN", editable = true }
+#tabdpt = { path = "./local_packages/TabDPT", editable = true }
+#carte-ai = { path = "./local_packages/carte-ai", editable = true }
+#rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
+# uni2ts = { path = "./local_packages/uni2ts", editable = true }
+phmd = { git = "https://github.com/EPFL-IMOS/imos_phmd.git", branch='collab_lalr' }
+TabPFN = { git = "https://github.com/EPFL-IMOS/TabPFN-IMOS.git", branch='collab_lalr' }
+tabdpt = { git = "https://github.com/layer6ai-labs/TabDPT" }
+carte-ai = { git = "https://github.com/soda-inria/carte"}
+rul-datasets = { git = "https://github.com/tilman151/rul-datasets" }
+chronosx = { git = "https://github.com/amazon-science/chronos-forecasting.git", rev = "chronosx" }
 
 torch = [
-    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
-    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+#    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
+    { index = "pytorch-cu128" },
 ]
 torchvision = [
-    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
-    { index = "pytorch-cu128", marker = "sys_platform == 'linux'" },
+#    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
+    { index = "pytorch-cu128" },
 ]
 chronosx = { git = "https://github.com/amazon-science/chronos-forecasting.git", rev = "chronosx" }
 
