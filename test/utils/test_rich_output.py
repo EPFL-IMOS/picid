@@ -31,6 +31,9 @@ from picid.utils.rich_output import (
     extract_targets,
     get_config_info,
     build_transform_error_renderables,
+    display_targets,
+    display_config_sources,
+    print_transforms_summary,
 )
 
 
@@ -424,6 +427,37 @@ class TestExtractTargets:
     def test_extract_targets_empty_dict(self):
         assert extract_targets(OmegaConf.create({})) == []
 
+    def test_extract_targets_non_dict_returns_empty(self):
+        """OmegaConf non-dict (e.g. list or scalar) returns empty list."""
+        cfg = OmegaConf.create([1, 2, 3])
+        assert extract_targets(cfg) == []
+
+    def test_extract_targets_target_ending_with_py(self):
+        """Target string ending with .py gets empty module_path."""
+        cfg = OmegaConf.create({"x": {"_target_": "mymodule.py"}})
+        targets = extract_targets(cfg)
+        assert len(targets) == 1
+        assert targets[0][2] == ""
+
+    def test_extract_targets_nested_recursion(self):
+        """Recurse into nested _target_ configs."""
+        cfg = OmegaConf.create({
+            "a": {"_target_": "foo.Bar", "nested": {"_target_": "baz.Quux"}},
+        })
+        targets = extract_targets(cfg)
+        assert len(targets) == 2
+        assert targets[0][0] == "a"
+        assert targets[1][0] == "a.nested"
+
+
+class TestDisplayTargets:
+    def test_display_targets_prints_table(self):
+        """display_targets builds and prints table without error."""
+        cfg = OmegaConf.create({"model": {"_target_": "torch.nn.Linear"}})
+        with patch("picid.utils.rich_output.Console") as mock_console:
+            display_targets(cfg)
+        mock_console.return_value.print.assert_called_once()
+
 
 class TestGetConfigInfo:
     def test_get_config_info_returns_table_data(self):
@@ -447,3 +481,99 @@ class TestBuildTransformErrorRenderables:
         )
         assert len(out) >= 3
         assert any(hasattr(r, "title") or "Transform Error" in str(r) for r in out)
+
+    def test_builds_without_first_segment(self):
+        """When first_segment_keys is None or first_segment_rows empty, no segment table."""
+        out = build_transform_error_renderables(
+            "T", {}, {}, None, [], "case"
+        )
+        assert len(out) >= 3
+
+
+class TestDescribeDataTypeEdgeCases:
+    """Additional tests for describe_data_type uncovered branches."""
+
+    def test_describe_empty_list(self):
+        assert describe_data_type([]) == "list<empty> x 0"
+
+    def test_describe_list_of_ak_arrays(self):
+        arr = ak.Array([[1, 2], [3, 4, 5]])
+        desc = describe_data_type([arr, arr], calculate_stat=False)
+        assert "list<ak.Array>" in desc
+
+    def test_describe_list_of_ak_arrays_with_stat(self):
+        arr = ak.Array([[1, 2], [3, 4, 5], [6]])
+        desc = describe_data_type([arr, arr], calculate_stat=True)
+        assert "list<ak.Array>" in desc
+        assert "min" in desc or "var" in desc or "dim" in desc.lower()
+
+    def test_describe_list_of_non_ak_arrays(self):
+        """Fallback for list of non-ak types."""
+        data = [np.array([1, 2]), np.array([3, 4])]
+        desc = describe_data_type(data)
+        assert "ndarray" in desc or "list" in desc
+
+    def test_describe_unknown_type(self):
+        """Fallback returns type name for unknown types."""
+        class Custom:
+            pass
+        assert "Custom" in describe_data_type(Custom())
+
+
+class TestToDescriptiveDictBaseDataObject:
+    """Test to_descriptive_dict with BaseDataObject."""
+
+    def test_base_data_object_conversion(self):
+        """to_descriptive_dict handles BaseDataObject like dict."""
+        from picid.data.data_objects.base import BaseDataObject
+
+        obj = BaseDataObject(x=np.array([1, 2, 3]))
+        result = to_descriptive_dict(obj)
+        assert "x" in result
+        assert isinstance(result["x"], str)
+
+
+class TestPrintDataDictStructureEdgeCases:
+    """Test add_to_tree else branch (non-dict leaf)."""
+
+    def test_tree_with_leaf_value(self):
+        """add_to_tree with leaf value (not dict) adds describe_data_type."""
+        data = {"x": np.array([1, 2])}
+        tree = print_data_dict_structure(data)
+        assert tree is not None
+
+
+class TestDisplayConfigSources:
+    def test_display_config_sources_prints_table(self):
+        """display_config_sources calls get_config_info and prints table."""
+        cfg = OmegaConf.create({"a": 1, "b": 2})
+        with patch("picid.utils.rich_output.get_config_info", return_value=[("a", "1", "", "")]):
+            with patch("picid.utils.rich_output.Console") as mock_console:
+                display_config_sources(cfg)
+        mock_console.return_value.print.assert_called_once()
+
+
+class TestPrintTransformsSummary:
+    def test_print_transforms_summary(self):
+        summary = [
+            {
+                "transform_name": "T1",
+                "time": "0.1",
+                "status": "ok",
+                "details": "d",
+                "changes": "c",
+                "added": "a",
+                "removed": "r",
+                "inputs": "i",
+            },
+        ]
+        with patch("picid.utils.rich_output.Console") as mock_console:
+            print_transforms_summary(summary)
+        mock_console.return_value.print.assert_called_once()
+
+    def test_print_transforms_summary_with_missing_keys(self):
+        """Handles summary dicts with missing optional keys."""
+        summary = [{"transform_name": "T", "time": "0", "status": "ok", "details": ""}]
+        with patch("picid.utils.rich_output.Console") as mock_console:
+            print_transforms_summary(summary)
+        mock_console.return_value.print.assert_called_once()
