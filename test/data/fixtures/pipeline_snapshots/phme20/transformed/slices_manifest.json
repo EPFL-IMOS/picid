@@ -1,0 +1,258 @@
+{
+  "schema_version": "1.0",
+  "splits": {
+    "train": {
+      "features": [
+        {
+          "shape": [
+            3270,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_0.npy"
+        },
+        {
+          "shape": [
+            3540,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_1.npy"
+        },
+        {
+          "shape": [
+            3120,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_2.npy"
+        },
+        {
+          "shape": [
+            2920,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_3.npy"
+        },
+        {
+          "shape": [
+            3060,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_4.npy"
+        },
+        {
+          "shape": [
+            3054,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_5.npy"
+        },
+        {
+          "shape": [
+            2980,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_6.npy"
+        },
+        {
+          "shape": [
+            2650,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_7.npy"
+        },
+        {
+          "shape": [
+            2550,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_8.npy"
+        },
+        {
+          "shape": [
+            2390,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_9.npy"
+        },
+        {
+          "shape": [
+            2300,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_10.npy"
+        },
+        {
+          "shape": [
+            2190,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_11.npy"
+        },
+        {
+          "shape": [
+            2260,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_12.npy"
+        },
+        {
+          "shape": [
+            2210,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_13.npy"
+        },
+        {
+          "shape": [
+            2020,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_14.npy"
+        },
+        {
+          "shape": [
+            2000,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "train_features_15.npy"
+        }
+      ]
+    },
+    "val": {
+      "features": [
+        {
+          "shape": [
+            2480,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "val_features_0.npy"
+        },
+        {
+          "shape": [
+            2040,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "val_features_1.npy"
+        },
+        {
+          "shape": [
+            2430,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "val_features_2.npy"
+        },
+        {
+          "shape": [
+            2190,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "val_features_3.npy"
+        },
+        {
+          "shape": [
+            2340,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "val_features_4.npy"
+        }
+      ]
+    },
+    "test": {
+      "features": [
+        {
+          "shape": [
+            3250,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_0.npy"
+        },
+        {
+          "shape": [
+            2550,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_1.npy"
+        },
+        {
+          "shape": [
+            2370,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_2.npy"
+        },
+        {
+          "shape": [
+            2420,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_3.npy"
+        },
+        {
+          "shape": [
+            2390,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_4.npy"
+        },
+        {
+          "shape": [
+            2380,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_5.npy"
+        },
+        {
+          "shape": [
+            2400,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_6.npy"
+        },
+        {
+          "shape": [
+            2030,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_7.npy"
+        },
+        {
+          "shape": [
+            2010,
+            5
+          ],
+          "dtype": "float64",
+          "slice_path": "test_features_8.npy"
+        }
+      ]
+    }
+  },
+  "preprocessing_time_seconds": 0.1248
+}
