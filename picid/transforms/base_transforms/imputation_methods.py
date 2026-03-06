@@ -287,7 +287,7 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     | ``"spectral"`` | **Causal** | **Periodic/Rhythmic signals** (e.g., vibration). | **+** Restores underlying waveform.<br>**-** Computationally heavier; assumes periodicity. |
     | ``"copy_past"``| **Causal** | **Repetitive/Cyclic signals** (e.g. engine cycles). | **+** Iteratively copies immediate history.<br>**-** Requires history; safe with clamping. |
 
-    *\* Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
+    * Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
 
     Attributes:
         strategy (Union[str, List[str]]): The imputation strategy to use.
