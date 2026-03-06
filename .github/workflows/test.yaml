@@ -61,9 +61,15 @@ jobs:
           uv sync
           uv pip install -e ".[dev]"
 
+      # IMPORTANT: PHME20 is required when running pipeline snapshot tests (requires_snapshots).
+      # Without this, those tests skip due to missing data. Pre-download ensures data is ready if marker filter is relaxed.
+      - name: Download PHME20 (for pipeline snapshot tests)
+        run: |
+          uv run python -c "from phmd.download import download; download('PHME20', cache_dir='datasets/phmd_cache', unzip=True)"
+
       - name: Test with pytest
         run: |
-          uv run pytest --cov=picid --cov-report=xml:coverage.xml --cov-fail-under=74 test/
+          uv run pytest --cov=picid --cov-report=xml:coverage.xml --cov-fail-under=74 test/ -m 'not slow and not requires_snapshots'
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
