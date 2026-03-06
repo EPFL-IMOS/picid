@@ -2,13 +2,17 @@
 	path = local_packages/TabPFN
 	url = git@github.com:EPFL-IMOS/TabPFN-IMOS.git
 	branch = collab_lalr
+	ignore = all
 [submodule "local_packages/phmd"]
 	path = local_packages/phmd
 	url = https://github.com/EPFL-IMOS/imos_phmd.git
 	branch = collab_lalr
+	ignore = all
 [submodule "local_packages/TabDPT"]
 	path = local_packages/TabDPT
 	url = https://github.com/layer6ai-labs/TabDPT.git
+	ignore = all
 [submodule "local_packages/carte-ai"]
 	path = local_packages/carte-ai
 	url = https://github.com/soda-inria/carte.git
+	ignore = all
