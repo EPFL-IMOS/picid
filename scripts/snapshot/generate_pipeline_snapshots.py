@@ -40,6 +40,11 @@ CONFIGS = {
     ),
 }
 
+# Keys per config (must match datasource output; phme20 uses "rul" not "target")
+CONFIG_KEYS = {
+    "phme20": ["features", "rul"],
+}
+
 
 def load_config(path: str, overrides: dict | None = None) -> OmegaConf:
     """Load YAML config and optionally merge overrides (e.g. paths)."""
@@ -139,7 +144,6 @@ def main():
     ap.add_argument("--config", choices=list(CONFIGS.keys()), default=None, help="Run only this config")
     args = ap.parse_args()
 
-    keys = ["features", "target"]
     if getattr(args, "config", None):
         to_run = {args.config: CONFIGS[args.config]}
     else:
@@ -147,6 +151,7 @@ def main():
 
     success = 0
     for name, (ds_path, tf_path) in to_run.items():
+        keys = CONFIG_KEYS.get(name, ["features", "target"])
         if run_one(
             name,
             ds_path,
