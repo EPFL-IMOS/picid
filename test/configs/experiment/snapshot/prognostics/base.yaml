@@ -1,0 +1,13 @@
+#@package _global_
+
+defaults:
+  - override /datasource: snapshot_prognostics
+  - override /evaluator: rul
+  - override /task_definition: snapshot/prognostics
+  - override /transforms: snapshot/minimal_prognostics
+  - override /logger: csv
+
+evaluator:
+  train: { save_predictions: false, apply_inverse_scaling: false }
+  val: { save_predictions: false, apply_inverse_scaling: false }
+  test: { save_predictions: false, apply_inverse_scaling: false }
