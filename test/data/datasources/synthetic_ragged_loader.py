@@ -1,7 +1,9 @@
-"""Synthetic loader that produces ragged (variable-length) data mimicking unibo/pronostia/xjtu."""
+"""File-based synthetic ragged loader for pipeline snapshot tests. Reads pre-generated fixtures."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import pickle
+from pathlib import Path
+from typing import Any, Dict
 
 import numpy as np
 
@@ -25,16 +27,15 @@ def _length_of_array(arr: Any) -> int:
     return len(arr)
 
 
-class SyntheticRaggedLoader(SingleSourceLoader):
+class SyntheticRaggedFromFileLoader(SingleSourceLoader):
     """
-    Produces ragged data: list of ak.Array per split, variable-length sequences per unit.
+    Loads pre-generated ragged data from pickle. Deterministic across machines.
     Mimics structure of unibo (battery), pronostia, xjtu (bearings).
     """
 
     def __init__(
         self,
-        seed: int = 42,
-        n_units: int = 3,
+        data_path: str,
         data_name: str = "synthetic_ragged",
         task_mode: str = "rul",
         **kwargs: Any,
@@ -45,8 +46,7 @@ class SyntheticRaggedLoader(SingleSourceLoader):
             task_mode=task_mode,
             **kwargs,
         )
-        self._seed = seed
-        self._n_units = n_units
+        self._data_path = Path(data_path)
 
     def split_data(self) -> None:
         """Assign units to train/val/test (unit 0->train, 1->val, 2->test)."""
@@ -73,22 +73,13 @@ class SyntheticRaggedLoader(SingleSourceLoader):
 
     def _load_data(self) -> Dict[str, Any]:
         if ak is None:
-            raise ImportError("awkward required for SyntheticRaggedLoader")
-        rng = np.random.default_rng(self._seed)
-        # Per unit: variable-length sequences (n_cycles varies)
-        lengths = [50 + int(rng.integers(0, 30)) for _ in range(self._n_units)]
-        features_list: List[ak.Array] = []
-        rul_list: List[ak.Array] = []
-        unit_id_list: List[np.ndarray] = []
-        for i, L in enumerate(lengths):
-            # 2D features (L, n_features) for minimal_prognostics; mimics cycle-level stats
-            feat = rng.standard_normal((L, 3)).astype(np.float32)
-            features_list.append(ak.Array(feat))
-            rul_list.append(ak.Array(np.linspace(1.0, 0.0, L).astype(np.float32)))
-            unit_id_list.append(np.full((L, 1), i, dtype=np.int64))
+            raise ImportError("awkward required for SyntheticRaggedFromFileLoader")
+        with open(self._data_path, "rb") as f:
+            data = pickle.load(f)
+        # Convert to ak.Array for transform compatibility
         return {
-            "features": features_list,
-            "rul": rul_list,
-            "target": rul_list,
-            "unit_id": unit_id_list,
+            "features": [ak.Array(a) for a in data["features"]],
+            "rul": [ak.Array(a) for a in data["rul"]],
+            "target": [ak.Array(a) for a in data["target"]],
+            "unit_id": data["unit_id"],
         }
