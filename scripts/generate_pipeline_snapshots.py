@@ -38,9 +38,6 @@ CONFIGS = {
         "configs/datasource/phme20.yaml",
         "configs/transforms/phme20/normalize_feature_target.yaml",
     ),
-    "unibo21_bosello": (
-        "configs/datasource/unibo21_bosello.yaml",
-        "configs/transforms/battery/unibo/combined.yaml",
 }
 
 
@@ -137,7 +134,8 @@ def run_one(
 def main():
     ap = argparse.ArgumentParser(description="Generate pipeline snapshots for real-data tests.")
     ap.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "test/data/fixtures/pipeline_snapshots")
-    ap.add_argument("--data-dir", type=Path, default=None, help="Override paths.data_dir for configs")
+    default_data_dir = PROJECT_ROOT / "datasets" if (PROJECT_ROOT / "datasets").exists() else None
+    ap.add_argument("--data-dir", type=Path, default=default_data_dir, help="Override paths.data_dir for configs")
     ap.add_argument("--max-rows", type=int, default=100)
     ap.add_argument("--config", choices=list(CONFIGS.keys()), default=None, help="Run only this config")
     args = ap.parse_args()
