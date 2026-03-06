@@ -25,3 +25,8 @@
 
 # mkdir -p datasets/N-CMAPSS
 gdown --folder https://drive.google.com/drive/folders/1iWx09Pam7aCra5-C4Qba15kgUFqtwBGk -O datasets/N-CMAPSS
+
+# IMPORTANT: PHME20 is required for phme20 pipeline tests, snapshot generation, and experiments.
+# The phmd library can auto-download on first load, but that fails in CI and is slow for new setups.
+# Pre-downloading here ensures datasets/phmd_cache/datasets/ is populated before any loader runs.
+uv run python -c "from phmd.download import download; download('PHME20', cache_dir='datasets/phmd_cache', unzip=True)"
