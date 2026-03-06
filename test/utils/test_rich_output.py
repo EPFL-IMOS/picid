@@ -28,6 +28,9 @@ from picid.utils.rich_output import (
     to_descriptive_dict,
     descriptive_dict_differences_str,
     print_data_dict_structure,
+    extract_targets,
+    get_config_info,
+    build_transform_error_renderables,
 )
 
 
@@ -408,3 +411,39 @@ class TestPrintDataDictStructure:
         
         # Should not crash
         assert tree is not None
+
+
+class TestExtractTargets:
+    def test_extract_targets_from_dictconfig(self):
+        cfg = OmegaConf.create({"model": {"_target_": "torch.nn.Linear"}})
+        targets = extract_targets(cfg)
+        assert len(targets) == 1
+        assert targets[0][0] == "model"
+        assert targets[0][1] == "torch.nn.Linear"
+
+    def test_extract_targets_empty_dict(self):
+        assert extract_targets(OmegaConf.create({})) == []
+
+
+class TestGetConfigInfo:
+    def test_get_config_info_returns_table_data(self):
+        cfg = OmegaConf.create({"a": 1, "b": 2})
+        cfg._metadata.config_sources = {}  # Avoid AttributeError in recurse
+        with patch("picid.utils.rich_output.HydraConfig") as m:
+            m.get.return_value.overrides.task = []
+            data = get_config_info(cfg)
+        assert isinstance(data, list)
+
+
+class TestBuildTransformErrorRenderables:
+    def test_builds_rule_table_panel(self):
+        out = build_transform_error_renderables(
+            "TestTransform",
+            {"flag1": True},
+            {"meta": "data"},
+            ["k1"],
+            [("k1", "np.ndarray", "desc")],
+            "case analysis line",
+        )
+        assert len(out) >= 3
+        assert any(hasattr(r, "title") or "Transform Error" in str(r) for r in out)
