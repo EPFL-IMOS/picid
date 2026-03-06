@@ -1,0 +1,5 @@
+_target_: test.data.datasources.synthetic_ragged_loader.SyntheticRaggedLoader
+seed: 42
+n_units: 3
+data_name: snapshot_ragged
+task_mode: rul

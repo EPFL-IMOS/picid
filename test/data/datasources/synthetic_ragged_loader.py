@@ -54,7 +54,7 @@ class SyntheticRaggedLoader(SingleSourceLoader):
             return
         assert self._is_loaded, "Data must be loaded before splitting."
         splits = ["train", "val", "test"]
-        for key in ["features", "rul", "unit_id"]:
+        for key in ["features", "rul", "target", "unit_id"]:
             data = self.data_dict[key]
             if not isinstance(data, list):
                 raise ValueError(f"Expected list for {key}, got {type(data)}")
@@ -81,13 +81,14 @@ class SyntheticRaggedLoader(SingleSourceLoader):
         rul_list: List[ak.Array] = []
         unit_id_list: List[np.ndarray] = []
         for i, L in enumerate(lengths):
-            seq_len = 20 + int(rng.integers(0, 10))
-            feat = rng.standard_normal((L, seq_len, 3)).astype(np.float32)
+            # 2D features (L, n_features) for minimal_prognostics; mimics cycle-level stats
+            feat = rng.standard_normal((L, 3)).astype(np.float32)
             features_list.append(ak.Array(feat))
             rul_list.append(ak.Array(np.linspace(1.0, 0.0, L).astype(np.float32)))
             unit_id_list.append(np.full((L, 1), i, dtype=np.int64))
         return {
             "features": features_list,
             "rul": rul_list,
+            "target": rul_list,
             "unit_id": unit_id_list,
         }
