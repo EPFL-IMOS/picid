@@ -24,6 +24,7 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "patchtst"),
     ("prognostics", "snapshot/prognostics", "crossformer"),
     ("diagnostics", "snapshot/diagnostics", "linear_classifier"),
+    ("prognostics_ragged", "snapshot/ragged_prognostics", "linear_regression"),
 ]
 
 PRECISION = 4

@@ -41,5 +41,12 @@
     "test/precision": 0.2241,
     "test/recall": 0.2502,
     "test/auroc": 0.5611
+  },
+  "prognostics_ragged/linear_regression": {
+    "test/loss": 2.6115,
+    "test/mae_normalized": 1.2788,
+    "test/mse_normalized": 2.6115,
+    "test/rmse_normalized": 1.616,
+    "test/nasa_score_normalized": 0.1325
   }
 }
