@@ -36,6 +36,22 @@
 
 ---
 
+## Test Coverage: picid/lr_scheduler & picid/utils (2026-03-06)
+
+**File:** [2026-03-06-test-coverage-picid-utils-lr-scheduler.md](../docs/plans/2026-03-06-test-coverage-picid-utils-lr-scheduler.md)
+
+- [x] **C1** lr_scheduler: LearningRateScheduler, WarmupLRScheduler, ReduceLROnPlateauScheduler
+- [x] **C2** lr_scheduler: WarmupReduceLROnPlateauScheduler, TransformerLRScheduler
+- [x] **C3** omegaconf_utils: find_config_file
+- [x] **C4** pylogger: RankedLogger
+- [x] **C5** logging_utils: get_hydra_override, log_hyperparameters
+- [x] **C6** rich_output: extract_targets, get_config_info, build_transform_error_renderables
+- [x] **C7** rich_utils: print_config_tree, enforce_tags
+- [x] **C8** torch_utils: correct_state_dict_keys, load_model_from_checkpoint
+- [x] **C9** utils: extras, get_metric_value, task_wrapper
+
+---
+
 ## Archive
 
 Completed tasks are in `tasks/archive/YYYY-MM-DD/`. See [archive/README.md](archive/README.md).
