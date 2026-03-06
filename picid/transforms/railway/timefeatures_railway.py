@@ -104,10 +104,15 @@ def time_features(
         use_features = ["year", "month", "day", "weekday", "hour", "minute"]
 
     if not isinstance(dates, pd.Series):
-        raise ValueError("dates should be a pandas Series")
+        dates = pd.Series(dates)
 
     if not pd.api.types.is_datetime64_any_dtype(dates):
-        dates = pd.to_datetime(dates)
+        # Numeric timestamps: if max < 1e12 assume seconds (Unix epoch)
+        s = dates if isinstance(dates, pd.Series) else pd.Series(dates)
+        if np.issubdtype(s.dtype, np.number) and s.abs().max() < 1e12:
+            dates = pd.to_datetime(dates, unit="s")
+        else:
+            dates = pd.to_datetime(dates)
 
     df = pd.DataFrame()
 
