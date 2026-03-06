@@ -63,7 +63,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          uv run pytest --cov --cov-report=xml:coverage.xml test/
+          uv run pytest --cov=picid --cov-report=xml:coverage.xml --cov-fail-under=74 test/
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5

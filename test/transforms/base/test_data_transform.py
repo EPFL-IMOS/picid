@@ -236,17 +236,12 @@ class TestDataTransform:
         assert "target" in dt.apply_to
     
     def test_data_transform_process_assign_to_mapping_error(self):
-        """Test _process_assign_to with mapping but no assign_to."""
+        """Test apply_to as mapping - init succeeds and processes mapping."""
         transform = DummyMultiKeyTransform()
-        # This will fail earlier in _process_apply_to, so we test that path
         metadata = {"apply_to": {"feat": "features", "targ": "target"}}
-        # The error occurs during initialization, but the exact error depends on implementation
-        # Let's test that it raises an error
-        try:
-            DataTransform("test", transform, metadata)
-            # If no error, that's also acceptable if the implementation handles it
-        except (ValueError, KeyError):
-            pass  # Expected
+        dt = DataTransform("test", transform, metadata)
+        assert dt.apply_to_map == ["feat", "targ"]
+        assert "features" in dt.apply_to and "target" in dt.apply_to
     
     def test_data_transform_process_assign_to_unsupported_type_error(self):
         """Test _process_assign_to with unsupported type."""
