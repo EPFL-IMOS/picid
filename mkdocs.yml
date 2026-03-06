@@ -39,6 +39,7 @@ nav:
     - OmegaConf resolvers: guides/omegaconf_resolvers.md
     - Adding a new model: guides/how_to_add_a_new_model.md
     - RunAI (cluster): guides/runai.md
+    - Experiment Generator: guides/experiment_generator.md
   - Examples:
     - Overview: examples/index.md
     - Unibo battery RUL: examples/unibo_rul.md
