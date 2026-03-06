@@ -8,7 +8,11 @@ from picid.lr_scheduler.lr_scheduler import LearningRateScheduler
 from picid.lr_scheduler.reduce_lr_on_plateau_lr_scheduler import (
     ReduceLROnPlateauScheduler,
 )
+from picid.lr_scheduler.transformer_lr_scheduler import TransformerLRScheduler
 from picid.lr_scheduler.warmup_lr_scheduler import WarmupLRScheduler
+from picid.lr_scheduler.warmup_reduce_lr_on_plateau_scheduler import (
+    WarmupReduceLROnPlateauScheduler,
+)
 
 
 class TestLearningRateScheduler:
@@ -94,3 +98,60 @@ class TestReduceLROnPlateauScheduler:
         )
         scheduler.step(torch.tensor(1.0))
         assert scheduler.best_val_loss == 1.0
+
+
+class TestTransformerLRScheduler:
+    def test_warmup_then_decay_then_final(self):
+        model = nn.Linear(2, 2)
+        optimizer = SGD(model.parameters(), lr=0.01)
+        scheduler = TransformerLRScheduler(
+            optimizer,
+            init_lr=0.01,
+            peak_lr=0.1,
+            final_lr=0.001,
+            final_lr_scale=0.01,
+            warmup_steps=2,
+            decay_steps=3,
+        )
+        lrs = []
+        for _ in range(8):
+            lr = scheduler.step()
+            lrs.append(lr)
+        assert lrs[0] < lrs[1]
+        assert lrs[1] == pytest.approx(0.1)
+        assert lrs[-1] == 0.001
+
+    def test_warmup_steps_non_int_raises(self):
+        model = nn.Linear(2, 2)
+        optimizer = SGD(model.parameters(), lr=0.01)
+        with pytest.raises(AssertionError, match="warmup_steps"):
+            TransformerLRScheduler(
+                optimizer, 0.01, 0.1, 0.001, 0.01, warmup_steps=2.5, decay_steps=3
+            )
+
+
+class TestWarmupReduceLROnPlateauScheduler:
+    def test_warmup_phase_then_reduce_phase(self):
+        model = nn.Linear(2, 2)
+        optimizer = SGD(model.parameters(), lr=0.01)
+        scheduler = WarmupReduceLROnPlateauScheduler(
+            optimizer, init_lr=0.01, peak_lr=0.1, warmup_steps=3, patience=1, factor=0.5
+        )
+        for _ in range(3):
+            scheduler.step(val_loss=1.0, is_end_epoch=False)
+        assert optimizer.param_groups[0]["lr"] == pytest.approx(0.1)
+        scheduler.step(val_loss=1.5, is_end_epoch=True)
+        scheduler.step(val_loss=1.6, is_end_epoch=True)
+        assert optimizer.param_groups[0]["lr"] < 0.1
+
+    def test_state_dict_roundtrip(self):
+        model = nn.Linear(2, 2)
+        optimizer = SGD(model.parameters(), lr=0.01)
+        scheduler = WarmupReduceLROnPlateauScheduler(
+            optimizer, init_lr=0.01, peak_lr=0.1, warmup_steps=5, patience=1, factor=0.5
+        )
+        scheduler.step(val_loss=1.0, is_end_epoch=False)
+        state = scheduler.state_dict()
+        assert "update_steps" in state
+        assert "warmup" in state
+        assert "reduce_lr_on_plateau" in state
