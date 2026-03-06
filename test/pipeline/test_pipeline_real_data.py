@@ -40,7 +40,7 @@ def test_loaded_slices_match_saved(config_name: str):
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
-            "Run: uv run python scripts/generate_pipeline_snapshots.py"
+            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py"
         )
     # Import here so slice_utils is only needed when snapshots exist
     from omegaconf import OmegaConf
@@ -95,7 +95,7 @@ def test_transformed_slices_match_saved(config_name: str):
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
-            "Run: uv run python scripts/generate_pipeline_snapshots.py"
+            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py"
         )
     from omegaconf import OmegaConf
     from hydra.utils import instantiate

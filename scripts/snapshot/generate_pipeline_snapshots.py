@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Generate pipeline snapshots for phme20 and unibo21_bosello.
+Generate pipeline snapshots for phme20 (real-data tests).
 
 Saves slices after load and after transforms; records preprocessing_time_seconds
 for the transformed stage. Run from project root; requires data and configs.
 
 Usage:
-  uv run python scripts/generate_pipeline_snapshots.py
-  uv run python scripts/generate_pipeline_snapshots.py --output-dir test/data/fixtures/pipeline_snapshots
+  uv run python scripts/snapshot/generate_pipeline_snapshots.py
+  uv run python scripts/snapshot/generate_pipeline_snapshots.py --output-dir test/data/fixtures/pipeline_snapshots
 
 Output:
-  {output_dir}/{phme20|unibo21_bosello}/{loaded|transformed}/slices_manifest.json
-  {output_dir}/{phme20|unibo21_bosello}/{loaded|transformed}/*.npy
+  {output_dir}/phme20/{loaded|transformed}/slices_manifest.json
+  {output_dir}/phme20/{loaded|transformed}/*.npy
 """
 from __future__ import annotations
 
@@ -20,8 +20,8 @@ import sys
 import time
 from pathlib import Path
 
-# Add project root
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# Add project root (scripts/snapshot/ -> project root)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -94,7 +94,6 @@ def run_one(
 
         from test.data.fixtures.pipeline_snapshots.slice_utils import (
             container_to_slice_manifest,
-            SLICE_MANIFEST_VERSION,
         )
         import json
 

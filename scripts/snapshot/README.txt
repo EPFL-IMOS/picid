@@ -23,6 +23,38 @@ When to use:
   - If fixtures are missing or corrupted
 
 
+generate_snapshot_ragged_fixtures.py
+------------------------------------
+
+What it does:
+  Creates synthetic ragged .pkl data for prognostics_ragged snapshot tests.
+  Uses a fixed seed (42) for reproducibility across machines.
+  Output: test/fixtures/snapshot/ragged_prognostics.pkl
+
+How to use:
+  uv run python scripts/snapshot/generate_snapshot_ragged_fixtures.py
+
+When to use:
+  - Once when setting up the ragged snapshot tests
+  - If ragged fixtures are missing or corrupted
+
+
+generate_pipeline_snapshots.py
+------------------------------
+
+What it does:
+  Generates real-data pipeline snapshots for phme20 (loaded + transformed slices).
+  Used by test_pipeline_real_data.py. Requires datasets and --data-dir.
+
+How to use:
+  uv run python scripts/snapshot/generate_pipeline_snapshots.py
+  uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir "$(pwd)/datasets"
+
+When to use:
+  - When setting up real-data pipeline tests (requires_snapshots)
+  - After changing phme20 or transforms that affect output
+
+
 generate_snapshot_reference.py
 ------------------------------
 
@@ -49,5 +81,10 @@ Order of operations
 -------------------
 
 1. Run generate_snapshot_fixtures.py (creates .npz files)
-2. Run generate_snapshot_reference.py (creates reference.json)
-3. Run tests: uv run pytest test/pipeline/test_snapshot.py -v
+2. Run generate_snapshot_ragged_fixtures.py (creates ragged_prognostics.pkl)
+3. Run generate_snapshot_reference.py (creates reference.json)
+4. Run tests: uv run pytest test/pipeline/test_snapshot.py -v
+
+For real-data pipeline tests (phme20):
+  - Run generate_pipeline_snapshots.py --data-dir "$(pwd)/datasets"
+  - Then: uv run pytest test/pipeline/test_pipeline_real_data.py -v
