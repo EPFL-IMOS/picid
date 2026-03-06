@@ -11,7 +11,6 @@ TabPHM uses git submodules in `local_packages/`. All are required for full funct
 |-----------|-----|----------|
 | TabPFN | `git@github.com:EPFL-IMOS/TabPFN-IMOS.git` | SSH |
 | phmd | `https://github.com/EPFL-IMOS/imos_phmd.git` | HTTPS |
-| rul-datasets | `https://github.com/tilman151/rul-datasets` | HTTPS |
 | TabDPT | `https://github.com/layer6ai-labs/TabDPT.git` | HTTPS |
 | carte-ai | `https://github.com/soda-inria/carte.git` | HTTPS |
 
@@ -37,7 +36,7 @@ To run the project, you must create a path config in `configs/paths/`. Copy [def
 
 Datasets are stored under the path specified in your path config (typically `${paths.root_dir}/datasets`). **Datasets are not bundled**—users need to obtain them separately. Access and download links depend on the dataset:
 
-- **phmd**, **rul-datasets**, and others have their own sources and may require registration or specific access.
+- **phmd** and others have their own sources and may require registration or specific access.
 - See individual datasource documentation or dataset provider websites for download and access instructions.
 
 ## How to Run an Experiment

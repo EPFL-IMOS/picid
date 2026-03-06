@@ -6,9 +6,6 @@
 	path = local_packages/phmd
 	url = https://github.com/EPFL-IMOS/imos_phmd.git
 	branch = collab_lalr
-[submodule "local_packages/rul-datasets"]
-	path = local_packages/rul-datasets
-	url = https://github.com/tilman151/rul-datasets
 [submodule "local_packages/TabDPT"]
 	path = local_packages/TabDPT
 	url = https://github.com/layer6ai-labs/TabDPT.git
