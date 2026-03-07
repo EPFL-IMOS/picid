@@ -16,7 +16,7 @@ from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
-from picid.interface.utils import ProcessedDatasource, EasyPreProcessor, register_data_dim_resolver, \
+from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
     create_lightning_module
 from picid.transforms.base.data_transform import DataTransform
 
@@ -62,7 +62,7 @@ class EasyInterface:
                            transforms: list[DataTransform]):
         """
                 Applies a sequence of data transformations to a data source using
-                a EasyPreProcessor.
+                a InterfacePreProcessor.
 
                 Args:
                     datasource (str | AbstractDataSourceLoader): The datasource to process.
@@ -74,15 +74,15 @@ class EasyInterface:
                         typically containing features and targets.
         """
 
-        preprocessor_mode = "per_unit"
+        # preprocessor_mode = "per_unit"
+        #
+        # if isinstance(datasource, MultiSourceLoader):
+        #     preprocessor_mode = "cross_unit"
 
-        if isinstance(datasource, MultiSourceLoader):
-            preprocessor_mode = "cross_unit"
-
-        preprocessor = EasyPreProcessor(preprocessor_mode,
-                                        datasource,
-                                        transforms,
-                                        cache_path=project_config.cache_path)
+        preprocessor = InterfacePreProcessor(datasource,
+                                             transforms,
+                                             preprocessor_mode=None,
+                                             cache_path=project_config.cache_path)
 
         return preprocessor.pipeline()
 
