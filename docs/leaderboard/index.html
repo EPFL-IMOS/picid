@@ -24,7 +24,7 @@
     <h1>TabPHM Leaderboard</h1>
     <p>
       Results submitted by the community. Each row links to a reproducible run on Google Drive.<br>
-      <a href="../guides/submit_run_to_leaderboard.html">How to submit your run →</a>
+      <a href="../guides/submit_run_to_leaderboard/">How to submit your run →</a>
     </p>
 
     <div id="leaderboard-root">Loading leaderboard...</div>
@@ -136,7 +136,7 @@
       const root = document.getElementById('leaderboard-root');
 
       if (!data.datasets || data.datasets.length === 0) {
-        root.innerHTML = '<p class="no-submissions">No submissions yet. <a href="../guides/submit_run_to_leaderboard.html">Be the first →</a></p>';
+        root.innerHTML = '<p class="no-submissions">No submissions yet. <a href="../guides/submit_run_to_leaderboard/">Be the first →</a></p>';
         return;
       }
 

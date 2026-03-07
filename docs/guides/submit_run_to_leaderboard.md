@@ -83,4 +83,4 @@ Open [http://127.0.0.1:8000/leaderboard/](http://127.0.0.1:8000/leaderboard/) to
 - Sortable columns (click headers)
 - 📂 Run link → Google Drive folder if uploaded
 
-[**Open Leaderboard →**](../leaderboard/index.html)
+[**Open Leaderboard →**](../leaderboard/)
