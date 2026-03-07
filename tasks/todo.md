@@ -70,8 +70,8 @@
 - [x] **T5** Phase 3: Experiment Generator UI (HTML + JS)
 - [x] **T6** Phase 4: Test instructions, README, docs links
 - [x] **T7** Phase 4: Website README, GitHub Pages deployment
-- [ ] **T8** Phase 5: Run & Upload workflow + submit_run_to_leaderboard guide
-- [ ] **T9** Phase 5: Leaderboard page and data source (depends on Publish P1–P2)
+- [x] **T8** Phase 5: Run & Upload workflow + submit_run_to_leaderboard guide
+- [x] **T9** Phase 5: Leaderboard page and data source (depends on Publish P1–P2)
 
 ---
 
