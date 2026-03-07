@@ -211,6 +211,12 @@ class CustomMultiSourceLoader(MultiSourceLoader):
         super().__init__(source_list=sources, data_name=data_name, task_mode=task_mode,
                          multisource_data_splitter=multisource_data_splitter, **kwargs)
 
+        if multisource_data_splitter:
+            check = [s.data_splitter is None for s in self.data_source_dict.values()]
+            assert all(check), \
+                (f'If multisource_data_splitter is not None, '
+                 f'the sources cannot have data_splitter != None (given {check}).')
+
     @classmethod
     def load_from_primitive(cls, sources: dict[str, np.ndarray | DataFrame],
                             target_column: int | str, task_mode: str,
@@ -218,12 +224,9 @@ class CustomMultiSourceLoader(MultiSourceLoader):
                             **kwargs):
         _sources = []
 
-        # TODO: better checks
-
         is_part_of_multisource = False
         if isinstance(data_splitter, BySourceSplitter):
             is_part_of_multisource = True
-            # data_splitter = {k: None for k in sources}
         else:
             assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None the number of '
                                                                       'sources must be equal to the number of '
@@ -231,18 +234,20 @@ class CustomMultiSourceLoader(MultiSourceLoader):
 
         _sources = {}
         for s, source in sources.items():
+
+            ints = \
+                {
+                'source': source,
+                'data_splitter': data_splitter.get(s) if not is_part_of_multisource else None,
+                'target_column': target_column,
+                'task_mode' : task_mode,
+                'is_part_of_multisource' : is_part_of_multisource
+                }
+
             if isinstance(source, np.ndarray):
-                source = CustomSingleSourceLoader.load_from_numpy(source,
-                                                             data_splitter=data_splitter.get(s) if not is_part_of_multisource else None,
-                                                             target_column=target_column,
-                                                             task_mode=task_mode,
-                                                             is_part_of_multisource=is_part_of_multisource)
+                source = CustomSingleSourceLoader.load_from_numpy(**ints)
             elif isinstance(source, DataFrame):
-                source = CustomSingleSourceLoader.load_from_csv(source,
-                                                           data_splitter=data_splitter.get(s) if not is_part_of_multisource else None,
-                                                           target_column=target_column,
-                                                           task_mode=task_mode,
-                                                           is_part_of_multisource=is_part_of_multisource)
+                source = CustomSingleSourceLoader.load_from_csv(**ints)
 
             _sources[s] = source
 
