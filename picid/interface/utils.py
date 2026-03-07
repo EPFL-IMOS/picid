@@ -174,9 +174,9 @@ class ProcessedDatasource:
             return getattr(self._datasource, item)
 
 
-class EasyPreProcessor:
+class InterfacePreProcessor:
     """
-        EasyPreProcessor is a data preprocessing class that orchestrates the loading, splitting,
+        InterfacePreProcessor is a data preprocessing class that orchestrates the loading, splitting,
         transformation, and management of datasources.
 
         See also:
@@ -208,21 +208,22 @@ class EasyPreProcessor:
                 Executes the full preprocessing pipeline: loads, splits, fetches,
                 transforms, and returns the processed data.
         """
-    def     __init__(self, mode, datasource, transforms, cache_path=None, **kwargs):
+    def     __init__(self, datasource, transforms, cache_path=None, **kwargs):
 
         self.datasource = datasource
         self.transforms = transforms
         self.memory = Memory(cache_path, verbose=20)
 
-        assert mode in [
-            "per_unit",
-            "cross_unit",
-        ], (
-            f"Unsupported mode: {mode}. Supported modes are 'per_unit'"
-            " and 'cross_unit'."
-        )
+        # assert mode in [
+        #     "per_unit",
+        #     "cross_unit",
+        # ], (
+        #     f"Unsupported mode: {mode}. Supported modes are 'per_unit'"
+        #     " and 'cross_unit'."
+        # )
+        #
+        # self.mode = mode
 
-        self.mode = mode
         self._is_preprocessed = False
         self.data: Optional[DatasetContainer] = None
         self.meta_data: dict = {}

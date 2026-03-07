@@ -1,6 +1,7 @@
 testwdir
 test/.pytest_tmp
 __pycache__
+.idea
 *.pyc
 # TabPFN
 tabpfn-extensions

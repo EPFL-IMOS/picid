@@ -75,22 +75,29 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         self._is_loaded = False
 
         # Instantiate multisource_data_splitter if is not none
-        self.multisource_data_splitter = (
-            instantiate(multisource_data_splitter)
-            if multisource_data_splitter is not None
-            else None
-        )
+        self.multisource_data_splitter = multisource_data_splitter
 
-        for key in self.source_names:
-            src_params = OmegaConf.to_container(kwargs[key], resolve=True)
-            self.source_params.append(src_params)
-
-            datasource = instantiate(
-                kwargs[key],
-                is_part_of_multisource=(
-                    True if self.multisource_data_splitter else False
-                ),
+        if not isinstance(self.multisource_data_splitter, BySourceSplitter):
+            self.multisource_data_splitter = (
+                instantiate(multisource_data_splitter)
+                if multisource_data_splitter is not None
+                else None
             )
+
+        for key, value in source_list.items():
+            if isinstance(value, dict):
+                src_params = OmegaConf.to_container(kwargs[key], resolve=True)
+                self.source_params.append(src_params)
+
+                datasource = instantiate(
+                    kwargs[key],
+                    is_part_of_multisource=(
+                        True if self.multisource_data_splitter else False
+                    ),
+                )
+            else:
+                datasource = value
+
             self.data_source_dict[key] = datasource
 
     def __repr__(self) -> str:

@@ -1,11 +1,13 @@
 from copy import deepcopy
-from typing import Literal, Callable
+from typing import Literal, Callable, Any
 
 import numpy as np
 from pandas import DataFrame
 
 from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.preprocessing import BySourceSplitter
 
 
 class CustomSingleSourceLoader(SingleSourceLoader):
@@ -90,37 +92,37 @@ class CustomSingleSourceLoader(SingleSourceLoader):
 
         return data, target
 
-    def split_data(self):
-        """
-                Splits the loaded data into train/test sets using the provided data_splitter.
-
-                This method updates `self.data_dict` by applying the splitting masks to
-                every feature and target key in the dictionary.
-
-                Raises:
-                    AssertionError: If data_splitter is not defined or the splitter fails
-                                    to provide 'train' and 'test' keys.
-        """
-
-        if not self.is_part_of_multisource:
-            if not self._is_splitted:
-                assert self.data_splitter is not None, "Data splitter must be set."
-
-                masks = self.data_splitter(self.data_dict)
-                assert all(v in masks.keys() for v in ['train', 'test']), f'Splitted data must have at least train and test values. {list(masks.keys())} given.'
-
-                new_datadict = deepcopy(self.data_dict)
-
-                for f, v in self.data_dict.items():
-                    d = {}
-                    for k, mask in masks.items():
-                        d[k] = [v[mask]]
-
-                    # new_datadict[k] = d
-                    new_datadict.update({f : d})
-
-                self.data_dict = new_datadict
-                self._is_splitted = True
+    # def split_data(self):
+    #     """
+    #             Splits the loaded data into train/test sets using the provided data_splitter.
+    #
+    #             This method updates `self.data_dict` by applying the splitting masks to
+    #             every feature and target key in the dictionary.
+    #
+    #             Raises:
+    #                 AssertionError: If data_splitter is not defined or the splitter fails
+    #                                 to provide 'train' and 'test' keys.
+    #     """
+    #
+    #     if not self.is_part_of_multisource:
+    #         if not self._is_splitted:
+    #             assert self.data_splitter is not None, "Data splitter must be set."
+    #
+    #             masks = self.data_splitter(self.data_dict)
+    #             assert all(v in masks.keys() for v in ['train', 'test']), f'Splitted data must have at least train and test values. {list(masks.keys())} given.'
+    #
+    #             new_datadict = deepcopy(self.data_dict)
+    #
+    #             for f, v in self.data_dict.items():
+    #                 d = {}
+    #                 for k, mask in masks.items():
+    #                     d[k] = [v[mask]]
+    #
+    #                 # new_datadict[k] = d
+    #                 new_datadict.update({f : d})
+    #
+    #             self.data_dict = new_datadict
+    #             self._is_splitted = True
 
     def _load_data(self):
         """
@@ -177,17 +179,75 @@ class CustomSingleSourceLoader(SingleSourceLoader):
 
         return cls(numpy, target_column, data_splitter=data_splitter, loading_type='numpy', task_mode=task_mode, **kwargs)
 
-    def get_data(self) -> dict | list[dict]:
-        """
-                Retrieves the processed data wrapped in a SplitDatasetContainer, ready to be used as datasource.
+    # def get_data(self) -> dict | list[dict]:
+    #     """
+    #             Retrieves the processed data wrapped in a SplitDatasetContainer, ready to be used as datasource.
+    #
+    #             Returns:
+    #                 SplitDatasetContainer: The container containing the split and loaded data.
+    #
+    #             Raises:
+    #                 AssertionError: If the data has not been loaded or split yet.
+    #     """
+    #
+    #     assert self._is_loaded is True, "Data must be loaded before getting data."
+    #     assert self._is_splitted is True, "Data must be splitted before getting data."
+    #     return SplitDatasetContainer(**self.data_dict)
 
-                Returns:
-                    SplitDatasetContainer: The container containing the split and loaded data.
 
-                Raises:
-                    AssertionError: If the data has not been loaded or split yet.
-        """
+class CustomMultiSourceLoader(MultiSourceLoader):
+    """
+    A data source loader class designed to handle single-source data from either CSV (DataFrame)
+    or NumPy formats, supporting custom splitting and task-specific formatting.
+    """
 
-        assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_splitted is True, "Data must be splitted before getting data."
-        return SplitDatasetContainer(**self.data_dict)
+    def __init__(self,
+                 sources: dict[str, CustomSingleSourceLoader],
+                 task_mode: str,
+                 multisource_data_splitter: BySourceSplitter | None = None,
+                 data_name: str = 'custom multi source datasource',
+                 **kwargs):
+
+        super().__init__(source_list=sources, data_name=data_name, task_mode=task_mode,
+                         multisource_data_splitter=multisource_data_splitter, **kwargs)
+
+    @classmethod
+    def load_from_primitive(cls, sources: dict[str, np.ndarray | DataFrame],
+                            target_column: int | str, task_mode: str,
+                            data_splitter: dict[str, Any] | None | BySourceSplitter = None,
+                            **kwargs):
+        _sources = []
+
+        # TODO: better checks
+
+        is_part_of_multisource = False
+        if isinstance(data_splitter, BySourceSplitter):
+            is_part_of_multisource = True
+            # data_splitter = {k: None for k in sources}
+        else:
+            assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None the number of '
+                                                                      'sources must be equal to the number of '
+                                                                      'single_source_data_splitter.')
+
+        _sources = {}
+        for s, source in sources.items():
+            if isinstance(source, np.ndarray):
+                source = CustomSingleSourceLoader.load_from_numpy(source,
+                                                             data_splitter=data_splitter.get(s) if not is_part_of_multisource else None,
+                                                             target_column=target_column,
+                                                             task_mode=task_mode,
+                                                             is_part_of_multisource=is_part_of_multisource)
+            elif isinstance(source, DataFrame):
+                source = CustomSingleSourceLoader.load_from_csv(source,
+                                                           data_splitter=data_splitter.get(s) if not is_part_of_multisource else None,
+                                                           target_column=target_column,
+                                                           task_mode=task_mode,
+                                                           is_part_of_multisource=is_part_of_multisource)
+
+            _sources[s] = source
+
+        return cls(_sources,
+                   target_column=target_column,
+                   task_mode=task_mode,
+                   multisource_data_splitter=data_splitter if is_part_of_multisource else None,
+                   **kwargs)
