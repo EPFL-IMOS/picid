@@ -33,7 +33,7 @@
 | [Concepts](concepts/index.md) | [From data to prediction](concepts/from_data_to_prediction.md) — data flow in one PHM run. |
 | [Guides](guides/index.md) | [Config and overrides](guides/configs_and_overrides.md), [OmegaConf resolvers](guides/omegaconf_resolvers.md), [Adding a model](guides/how_to_add_a_new_model.md), [RunAI](guides/runai.md). |
 | [Examples](examples/index.md) | [Unibo RUL](examples/unibo_rul.md) — battery RUL with config variants. |
-| [Reference](reference/index.md) | Datasources, datasets, transforms, evaluators, model types, API. |
+| [Reference](reference/index.md) | Datasources, datasets, transforms, evaluators, model types, API, [scripts](reference/scripts.md). |
 
 ---
 

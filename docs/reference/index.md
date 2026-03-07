@@ -10,5 +10,6 @@ Detailed reference for datasources, datasets, transforms, evaluators, models, an
 - [Evaluators](evaluators.md) — Evaluator subsystem (classification, forecasting, multi-unit, reconstruction, hooks).
 - [Model types](model_types.md) — Fit-predict vs batchwise and current limitations.
 - [API](api.md) — API documentation for core modules.
+- [Scripts](scripts.md) — Scripts for setup, reproducibility, and snapshot tests.
 
 [← Back to documentation index](../index.md)
