@@ -42,9 +42,9 @@
 **Plan:** [docs/plans/2026-03-06-publish-submit-leaderboard.md](../docs/plans/2026-03-06-publish-submit-leaderboard.md)
 
 - [x] **P1** Phase 1 Task 1: build_submission_message.py + README + test
-- [ ] **P2** Phase 1 Task 2: push_run_to_gdrive.py + gdrive_config
-- [ ] **P3** Phase 1 Task 3: Wire message + push; CLI (depends on P2)
-- [ ] **P4** Phase 1 Task 4: Dataset-specific submission schema (stub)
+- [x] **P2** Phase 1 Task 2: push_run_to_gdrive.py + gdrive_config (dry-run mock; real upload TODO)
+- [x] **P3** Phase 1 Task 3: Wire message + push; CLI (`--print-message` flag)
+- [x] **P4** Phase 1 Task 4: Dataset-specific submission schema (datasets.yaml stub)
 
 ---
 
