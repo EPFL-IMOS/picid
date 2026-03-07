@@ -293,11 +293,14 @@ def log_training_run_config(
     resolved_cfg = OmegaConf.create(cfg_container)
     OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
 
-    cfg_container["hydra_cfg"] = OmegaConf.to_container(
-        # cannot resolve because not all interpolations are covered by us for now
-        HydraConfig.get(),
-        resolve=False,
-    )
+    try:
+        if HydraConfig.initialized():
+            cfg_container["hydra_cfg"] = OmegaConf.to_container(
+                HydraConfig.get(),
+                resolve=False,
+            )
+    except Exception:
+        pass  # e.g. when running from reproduce_from_run.py without Hydra context
 
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
