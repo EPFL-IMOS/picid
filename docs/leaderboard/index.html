@@ -1,24 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard | TabPHM</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
-    .dataset-section { margin-bottom: 3rem; }
-    .metric-col { font-variant-numeric: tabular-nums; }
-    .rank-1 { font-weight: bold; color: #d4a017; }
-    .rank-2 { color: #888; }
-    .rank-3 { color: #cd7f32; }
-    .reproduce-link { font-size: 0.85rem; }
-    .no-submissions { color: #888; font-style: italic; }
-    th[data-sort] { cursor: pointer; user-select: none; }
-    th[data-sort]:after { content: " ↕"; opacity: 0.4; font-size: 0.8em; }
-    th[data-sort].asc:after { content: " ↑"; opacity: 1; }
-    th[data-sort].desc:after { content: " ↓"; opacity: 1; }
+    .dataset-section {
+      margin-bottom: 3rem;
+    }
+
+    .metric-col {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank-1 {
+      font-weight: bold;
+      color: #d4a017;
+    }
+
+    .rank-2 {
+      color: #888;
+    }
+
+    .rank-3 {
+      color: #cd7f32;
+    }
+
+    .reproduce-link {
+      font-size: 0.85rem;
+    }
+
+    .no-submissions {
+      color: #888;
+      font-style: italic;
+    }
+
+    th[data-sort] {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th[data-sort]:after {
+      content: " ↕";
+      opacity: 0.4;
+      font-size: 0.8em;
+    }
+
+    th[data-sort].asc:after {
+      content: " ↑";
+      opacity: 1;
+    }
+
+    th[data-sort].desc:after {
+      content: " ↓";
+      opacity: 1;
+    }
   </style>
 </head>
+
 <body>
   <main class="container">
     <h1>TabPHM Leaderboard</h1>
@@ -153,4 +194,5 @@
     });
   </script>
 </body>
+
 </html>
