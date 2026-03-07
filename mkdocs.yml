@@ -40,6 +40,7 @@ nav:
     - Adding a new model: guides/how_to_add_a_new_model.md
     - RunAI (cluster): guides/runai.md
     - Experiment Generator: guides/experiment_generator.md
+    - Submit to Leaderboard: guides/submit_run_to_leaderboard.md
   - Examples:
     - Overview: examples/index.md
     - Unibo battery RUL: examples/unibo_rul.md
@@ -61,3 +62,4 @@ nav:
   - Archive:
     - Legacy setup (RunAI/Guild): old_setup.md
     - Documentation update plan: plans/2025-02-19-docs-webpage-refactor.md
+  - Leaderboard: leaderboard/index.html

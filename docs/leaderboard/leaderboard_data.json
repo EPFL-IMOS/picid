@@ -1,0 +1,20 @@
+{
+  "datasets": [
+    {
+      "dataset": "phme20",
+      "rows": [
+        {
+          "experiment_key": "phme20/prognostics/raw/xgboost_fit_predict",
+          "submitter": "leone",
+          "timestamp": "2026-03-06",
+          "gdrive_link": "",
+          "metrics": {
+            "rmse": 0.042,
+            "mae": 0.031
+          },
+          "notes": "Baseline XGBoost, default hyperparams (example entry)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+# Leaderboard submissions registry.
+#
+# To submit your run:
+# 1. Run experiment: uv run python picid/run.py paths=rt_local experiment=<key>
+# 2. (Optional) Upload to Drive: uv run python scripts/publish/push_run_to_gdrive.py <run_dir> --dry-run
+# 3. Add an entry below with your metrics (from csv_logs/ in the run dir).
+# 4. Commit and rebuild the docs site: uv run mkdocs build
+#
+# Fields:
+#   experiment_key  Full Hydra experiment key used (e.g. phme20/prognostics/raw/xgboost_fit_predict)
+#   submitter       Your name or alias
+#   timestamp       ISO date of the run (YYYY-MM-DD)
+#   gdrive_link     (Optional) Shareable Google Drive folder link to the run dir
+#   metrics         Dict of metric_name: value (float). Common: rmse, mae, r2
+#   notes           (Optional) Short note about the run (e.g. default hyperparams, ablation)
+
+phme20:
+  - experiment_key: phme20/prognostics/raw/xgboost_fit_predict
+    submitter: leone
+    timestamp: "2026-03-06"
+    gdrive_link: ""
+    metrics:
+      rmse: 0.042
+      mae: 0.031
+    notes: "Baseline XGBoost, default hyperparams (example entry)"
+
+pronostia: []
+
+unibo: []
+
+concepts_n_cmapss: []
