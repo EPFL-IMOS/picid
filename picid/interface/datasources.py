@@ -69,8 +69,12 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     tuple: A tuple containing (features_dataframe, target_series).
         """
 
-        df_target = self._inner_data[self._target_column].to_frame().copy()
-        data = self._inner_data.drop(columns=[self._target_column], inplace=False)
+        if isinstance(self._target_column, str):
+            df_target = self._inner_data[self._target_column].to_frame().copy()
+            data = self._inner_data.drop(columns=[self._target_column], inplace=False)
+        else:
+            df_target = self._inner_data.iloc[:, self._target_column].to_frame().copy()
+            data = self._inner_data.drop(self._inner_data.columns[self._target_column], axis=1, inplace=False)
 
         return data, df_target
 
