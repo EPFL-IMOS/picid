@@ -1,9 +1,17 @@
 """Tests for picid.utils.utils (main utils module)."""
-import pytest
-from unittest.mock import patch, MagicMock
-from omegaconf import OmegaConf
+from pathlib import Path
 
-from picid.utils.utils import extras, task_wrapper, get_metric_value
+import pytest
+from omegaconf import OmegaConf
+from unittest.mock import patch, MagicMock
+
+from picid.utils.utils import (
+    extras,
+    task_wrapper,
+    get_metric_value,
+    _save_uv_lock_to_run,
+    _write_reproduce_guide,
+)
 
 
 class TestExtras:
@@ -106,3 +114,65 @@ class TestTaskWrapper:
             with patch.dict("sys.modules", {"wandb": mock_wandb}):
                 m, o = task(cfg)
         mock_wandb.finish.assert_called_once_with(exit_code=0)
+
+
+class TestSaveUvLockToRun:
+    def test_copies_uv_lock_to_output_dir(self, tmp_path):
+        """_save_uv_lock_to_run copies uv.lock to run output dir when present."""
+        root = tmp_path / "project"
+        root.mkdir()
+        uv_lock = root / "uv.lock"
+        uv_lock.write_text("lock content")
+        out_dir = tmp_path / "run_output"
+        cfg = OmegaConf.create({
+            "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
+        })
+        _save_uv_lock_to_run(cfg)
+        assert (out_dir / "uv.lock").read_text() == "lock content"
+
+    def test_skips_when_no_paths(self):
+        cfg = OmegaConf.create({})
+        _save_uv_lock_to_run(cfg)  # no-op, no raise
+
+    def test_skips_when_uv_lock_missing(self, tmp_path):
+        out_dir = tmp_path / "run"
+        out_dir.mkdir()
+        cfg = OmegaConf.create({
+            "paths": {"root_dir": str(tmp_path), "output_dir": str(out_dir)},
+        })
+        _save_uv_lock_to_run(cfg)
+        assert not (out_dir / "uv.lock").exists()
+
+
+class TestWriteReproduceGuide:
+    def test_writes_reproduce_md_to_output_dir(self, tmp_path):
+        """_write_reproduce_guide creates REPRODUCE.md with env setup, run command, debug config."""
+        root = tmp_path / "project"
+        root.mkdir()
+        out_dir = tmp_path / "run_output"
+        cfg = OmegaConf.create({
+            "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
+        })
+        _write_reproduce_guide(cfg)
+        dest = out_dir / "REPRODUCE.md"
+        assert dest.exists()
+        content = dest.read_text()
+        assert "How to Reproduce This Experiment" in content
+        assert str(out_dir) in content
+        assert "Environment setup" in content
+        assert "Run the model" in content
+        assert "Option A" in content
+        assert "Option B" in content
+        assert "reproduce_from_run" in content
+        assert "Debug configuration" in content
+        assert "uv sync" in content
+        assert "picid/run.py" in content
+        assert "debugpy" in content or '"type": "debugpy"' in content
+
+    def test_skips_when_no_paths(self):
+        cfg = OmegaConf.create({})
+        _write_reproduce_guide(cfg)  # no-op, no raise
+
+    def test_skips_when_no_output_dir(self):
+        cfg = OmegaConf.create({"paths": {"root_dir": "/tmp"}})
+        _write_reproduce_guide(cfg)  # no-op, no raise

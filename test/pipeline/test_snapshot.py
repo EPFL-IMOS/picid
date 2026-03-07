@@ -40,6 +40,35 @@ def round_metrics(obj):
     return obj
 
 
+def _run_experiment_to_dir(
+    exp: str,
+    out_dir: Path,
+    metrics_path: Path | None,
+    epochs: int = 5,
+) -> int:
+    """Run experiment to out_dir, optionally capture metrics. Returns exit code."""
+    env = os.environ.copy()
+    env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+    env["HYDRA_FULL_ERROR"] = "1"
+    if metrics_path:
+        env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_path)
+    root = str(PROJECT_ROOT).replace("\\", "/")
+    searchpath = f"file://{root}/test/configs,file://{root}/configs"
+    cmd = [
+        sys.executable,
+        "picid/run.py",
+        f"experiment={exp}",
+        "paths=default",
+        "debug=nox_testing_fit_predict",
+        f"trainer.max_epochs={epochs}",
+        "num_threads=1",
+        "seed=42",
+        f"hydra.run.dir={out_dir}",
+        f"hydra.searchpath=[{searchpath}]",
+    ]
+    return subprocess.run(cmd, env=env, cwd=PROJECT_ROOT).returncode
+
+
 @pytest.mark.skipif(not REF_PATH.exists(), reason="Run scripts/snapshot/generate_snapshot_reference.py first")
 @pytest.mark.parametrize("task_type,exp_base,model", EXPERIMENTS)
 def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
@@ -81,3 +110,39 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
         assert current[k] == ref[k], (
             f"{k}: current={current[k]} ref={ref[k]} (must match to 4 decimals)"
         )
+
+
+def test_reproduce_from_run_matches_overrides():
+    """Run via overrides and via reproduce_from_run produce matching metrics (5 epochs)."""
+    import tempfile
+
+    exp = "snapshot/prognostics/linear_regression"
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp) / "run_a"
+        run_dir.mkdir()
+        metrics_a = Path(tmp) / "metrics_a.json"
+        metrics_b = Path(tmp) / "metrics_b.json"
+
+        rc = _run_experiment_to_dir(exp, run_dir, metrics_a, epochs=5)
+        assert rc == 0, "Initial run failed"
+        assert metrics_a.exists(), "Metrics not captured"
+
+        env = os.environ.copy()
+        env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+        env["HYDRA_FULL_ERROR"] = "1"
+        env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_b)
+        rc = subprocess.run(
+            [sys.executable, "scripts/reproducibility/reproduce_from_run.py", str(run_dir)],
+            env=env,
+            cwd=PROJECT_ROOT,
+        )
+        assert rc.returncode == 0, "reproduce_from_run failed"
+        assert metrics_b.exists(), "Reproduce metrics not captured"
+
+        a = round_metrics(json.loads(metrics_a.read_text()))
+        b = round_metrics(json.loads(metrics_b.read_text()))
+        for k in a:
+            assert k in b, f"Missing {k} in reproduce output"
+            assert a[k] == b[k], (
+                f"{k}: overrides={a[k]} reproduce={b[k]} (must match to {PRECISION} decimals)"
+            )
