@@ -64,7 +64,7 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         kwargs.update(multisource_data_splitter=multisource_data_splitter)
         super().__init__(**kwargs)
 
-        self.data_source_dict: dict[SingleSourceLoader] = {}
+        self.data_source_dict: dict[str, SingleSourceLoader] = {}
         self.source_params: list[dict] = []
         self.source_names: list[str] = list(source_list.keys())
 
