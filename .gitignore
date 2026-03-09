@@ -54,3 +54,6 @@ local_packages/
 
 # uv.lock is committed for reproducible installs across machines and time.
 lmetk_report_artifacts
+
+# Git worktrees (isolated feature branches)
+.worktrees/
