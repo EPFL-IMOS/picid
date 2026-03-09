@@ -26,10 +26,14 @@ class CrossEntropyLoss(AbstractLoss):
         """
         Initialize CrossEntropyLoss.
 
-        Args:
-            reduction: Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
-            ignore_index: Specifies a target value that is ignored and does not contribute to the gradient.
-            label_smoothing: A float in [0.0, 1.0]. Specifies the amount of smoothing.
+        Parameters
+        ----------
+        reduction :
+            Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
+        ignore_index :
+            Specifies a target value that is ignored and does not contribute to the gradient.
+        label_smoothing :
+            A float in [0.0, 1.0]. Specifies the amount of smoothing.
         """
         super().__init__()
         self.loss_fn = nn.CrossEntropyLoss(
@@ -44,11 +48,16 @@ class CrossEntropyLoss(AbstractLoss):
         """
         Compute Cross Entropy loss.
 
-        Args:
-            model_out: Dict with 'predictions' of shape (Batch, Seq, Num_Classes) or (Batch, 1, Num_Classes)
-            batch: Dict with 'targets' of shape (Batch, Seq) or (Batch, Seq, 1) or (Batch, 1, 1)
+        Parameters
+        ----------
+        model_out :
+            Dict with 'predictions' of shape (Batch, Seq, Num_Classes) or (Batch, 1, Num_Classes)
+        batch :
+            Dict with 'targets' of shape (Batch, Seq) or (Batch, Seq, 1) or (Batch, 1, 1)
 
-        Returns:
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dict with original model output plus 'loss' key.
         """
         # Predictions: (Batch, Seq, Classes)

@@ -15,20 +15,29 @@ class MLP(nn.Module):
                 -> [Linear(Hidden->Hidden) -> LN -> ReLU] (Layers 2..L-1)
                 -> Linear(Hidden->Out) (Layer L)
 
-    Attributes:
-        input_dim (int): Seq_Len * Input_Channels.
-        hidden_dim (int): Size of the hidden layers.
-        output_dim (int): Number of regression targets or classification classes.
-        num_layers (int): Total number of linear transformations.
+    Attributes
+    ----------
+    input_dim : int
+        Seq_Len * Input_Channels.
+    hidden_dim : int
+        Size of the hidden layers.
+    output_dim : int
+        Number of regression targets or classification classes.
+    num_layers : int
+        Total number of linear transformations.
     """
 
     def __init__(self, config: Dict[str, Any], task_type: str, num_targets: int):
         """
-        Args:
-            config (Dict): Must contain 'seq_len', 'input_channels'.
-                           Optional 'hidden_dim' (default 64) and 'num_layers' (default 2).
-            task_type (str): 'regression' or 'classification'.
-            num_targets (int): Output dimension.
+        Parameters
+        ----------
+        config : Dict
+            Must contain 'seq_len', 'input_channels'.
+            Optional 'hidden_dim' (default 64) and 'num_layers' (default 2).
+        task_type : str
+            'regression' or 'classification'.
+        num_targets : int
+            Output dimension.
         """
         super().__init__()
 

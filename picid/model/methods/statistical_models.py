@@ -17,26 +17,34 @@ class LinearBaseline(nn.Module):
     Equation:
         y = Wx + b
 
-    Attributes:
-        input_dim (int): The total number of flattened input features.
-        output_dim (int): The dimension of the prediction (num_targets or num_classes).
-        linear (nn.Linear): The linear transformation layer.
+    Attributes
+    ----------
+    input_dim : int
+        The total number of flattened input features.
+    output_dim : int
+        The dimension of the prediction (num_targets or num_classes).
+    linear : nn.Linear
+        The linear transformation layer.
     """
 
     def __init__(self, config: Dict[str, int], task_type: str, num_targets: int = 1):
         """
         Initializes the LinearBaseline.
 
-        Args:
-            config (Dict[str, int]): Configuration dictionary containing:
-                - 'seq_len': Length of the input time series.
-                - 'input_channels': Number of sensor channels.
-            task_type (str): The type of task ('regression' or 'classification').
-            num_targets (int, optional): The output dimension.
-                - For Univariate Regression: 1
-                - For Multivariate Regression: N (number of targets)
-                - For Classification: N (number of classes)
-                Defaults to 1.
+        Parameters
+        ----------
+        config : Dict[str, int]
+            Configuration dictionary containing:
+            - 'seq_len': Length of the input time series.
+            - 'input_channels': Number of sensor channels.
+        task_type : str
+            The type of task ('regression' or 'classification').
+        num_targets : int, optional
+            The output dimension.
+            - For Univariate Regression: 1
+            - For Multivariate Regression: N (number of targets)
+            - For Classification: N (number of classes)
+            Defaults to 1.
         """
         super(LinearBaseline, self).__init__()
         self.config = config
@@ -56,8 +64,10 @@ class LinearBaseline(nn.Module):
         """
         Applies Kaiming Normal initialization to Linear layers.
 
-        Args:
-            m (nn.Module): The module to initialize.
+        Parameters
+        ----------
+        m : nn.Module
+            The module to initialize.
         """
         if isinstance(m, nn.Linear):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="linear")
@@ -68,11 +78,15 @@ class LinearBaseline(nn.Module):
         """
         Performs the forward pass.
 
-        Args:
-            x (torch.Tensor): Input tensor of shape (Batch, Channels, Seq_Len).
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (Batch, Channels, Seq_Len).
 
-        Returns:
-            torch.Tensor: Prediction tensor of shape (Batch, num_targets).
+        Returns
+        -------
+        torch.Tensor
+            Prediction tensor of shape (Batch, num_targets).
         """
         # x: (Batch, Channels, Seq_Len) -> Flatten to (Batch, Features)
         b = x.size(0)
@@ -92,23 +106,31 @@ class PolynomialBaseline(nn.Module):
     Equation:
         y = W * [x, x^2, ..., x^d] + b
 
-    Attributes:
-        degree (int): The polynomial degree (d).
-        expanded_dim (int): The dimension of the expanded feature space.
-        linear (nn.Linear): The linear transformation layer.
+    Attributes
+    ----------
+    degree : int
+        The polynomial degree (d).
+    expanded_dim : int
+        The dimension of the expanded feature space.
+    linear : nn.Linear
+        The linear transformation layer.
     """
 
     def __init__(self, config: Dict[str, Any], task_type: str, num_targets: int = 1):
         """
         Initializes the PolynomialBaseline.
 
-        Args:
-            config (Dict[str, Any]): Configuration dictionary. Must contain:
-                - 'seq_len': Length of the input time series.
-                - 'input_channels': Number of sensor channels.
-                - 'poly_degree' (optional): The degree of the polynomial expansion (default: 2).
-            task_type (str): The type of task ('regression' or 'classification').
-            num_targets (int, optional): The output dimension (targets or classes).
+        Parameters
+        ----------
+        config : Dict[str, Any]
+            Configuration dictionary. Must contain:
+            - 'seq_len': Length of the input time series.
+            - 'input_channels': Number of sensor channels.
+            - 'poly_degree' (optional): The degree of the polynomial expansion (default: 2).
+        task_type : str
+            The type of task ('regression' or 'classification').
+        num_targets : int, optional
+            The output dimension (targets or classes).
         """
         super(PolynomialBaseline, self).__init__()
         self.config = config
@@ -136,11 +158,15 @@ class PolynomialBaseline(nn.Module):
         """
         Performs the forward pass with polynomial expansion.
 
-        Args:
-            x (torch.Tensor): Input tensor of shape (Batch, Channels, Seq_Len).
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (Batch, Channels, Seq_Len).
 
-        Returns:
-            torch.Tensor: Prediction tensor of shape (Batch, num_targets).
+        Returns
+        -------
+        torch.Tensor
+            Prediction tensor of shape (Batch, num_targets).
         """
         b = x.size(0)
         x_flat = x.reshape(b, -1)
@@ -171,13 +197,19 @@ class ExponentialBaseline(nn.Module):
         """
         Initializes the ExponentialBaseline.
 
-        Args:
-            config (Dict[str, int]): Configuration dictionary.
-            task_type (str): Must be 'regression'. Classification is not supported.
-            num_targets (int, optional): Number of regression targets. Defaults to 1.
+        Parameters
+        ----------
+        config : Dict[str, int]
+            Configuration dictionary.
+        task_type : str
+            Must be 'regression'. Classification is not supported.
+        num_targets : int, optional
+            Number of regression targets. Defaults to 1.
 
-        Raises:
-            ValueError: If task_type is 'classification'.
+        Raises
+        ------
+        ValueError
+            If task_type is 'classification'.
         """
         super(ExponentialBaseline, self).__init__()
         self.config = config
@@ -211,11 +243,15 @@ class ExponentialBaseline(nn.Module):
         """
         Performs the forward pass with exponential activation.
 
-        Args:
-            x (torch.Tensor): Input tensor of shape (Batch, Channels, Seq_Len).
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (Batch, Channels, Seq_Len).
 
-        Returns:
-            torch.Tensor: Positive prediction tensor of shape (Batch, num_targets).
+        Returns
+        -------
+        torch.Tensor
+            Positive prediction tensor of shape (Batch, num_targets).
         """
         b = x.size(0)
         x_flat = x.reshape(b, -1)

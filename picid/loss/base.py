@@ -31,15 +31,20 @@ class AbstractLoss(ABC):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute loss based on model output and batch data.
-        
+
         This method serves as the main entry point for loss computation.
         It delegates to the forward method which must be implemented by subclasses.
-        
-        Args:
-            model_out: Dictionary containing the model output tensors
-            batch: Dictionary containing the batch data tensors
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing the model output tensors
+        batch :
+            Dictionary containing the batch data tensors
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary containing the model output with computed loss
         """
         return self.forward(model_out, batch)
@@ -52,17 +57,22 @@ class AbstractLoss(ABC):
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass for loss computation.
-        
+
         This method must be implemented by subclasses to define the specific
         loss computation logic.
-        
-        Args:
-            model_out: Dictionary containing the model output tensors.
-                      Typically includes keys like 'predictions', 'logits', etc.
-            batch: Dictionary containing the batch data tensors.
-                   Typically includes keys like 'targets', 'labels', 'input_ids', etc.
-                   
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing the model output tensors.
+            Typically includes keys like 'predictions', 'logits', etc.
+        batch :
+            Dictionary containing the batch data tensors.
+            Typically includes keys like 'targets', 'labels', 'input_ids', etc.
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary containing the original model output with added loss information.
             Should include at least a 'loss' key with the computed loss tensor.
         """

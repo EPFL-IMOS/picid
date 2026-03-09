@@ -31,15 +31,24 @@ class MLPWrapper(AbstractFeedForwardTrainingWrapper):
         **kwargs: Any,
     ):
         """
-        Args:
-            task_type: Task name.
-            seq_len: Input sequence length.
-            input_channels: Number of input channels (required).
-            num_targets: Output dimension for regression (optional, default 1).
-            num_classes: Number of classes for classification (required for classification).
-            output_dim: Deprecated. Use num_targets for regression.
-            hidden_dim: Hidden layer size (default 64).
-            num_layers: Number of layers (default 2).
+        Parameters
+        ----------
+        task_type :
+            Task name.
+        seq_len :
+            Input sequence length.
+        input_channels :
+            Number of input channels (required).
+        num_targets :
+            Output dimension for regression (optional, default 1).
+        num_classes :
+            Number of classes for classification (required for classification).
+        output_dim :
+            Deprecated. Use num_targets for regression.
+        hidden_dim :
+            Hidden layer size (default 64).
+        num_layers :
+            Number of layers (default 2).
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS

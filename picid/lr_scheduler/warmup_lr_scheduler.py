@@ -31,8 +31,10 @@ class WarmupLRScheduler(LearningRateScheduler):
     """
     Warmup learning rate until `total_steps`
 
-    Args:
-        optimizer (Optimizer): wrapped optimizer.
+    Parameters
+    ----------
+    optimizer : Optimizer
+        wrapped optimizer.
 
     """
 

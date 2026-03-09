@@ -25,9 +25,12 @@ class MeanPercentageErrorMetric(AbstractMetric):
         """
         Processes a batch of predictions and targets to update the metric's state.
 
-        Args:
-            predictions (np.ndarray): The estimated RUL values from the model.
-            targets (np.ndarray): The actual RUL values.
+        Parameters
+        ----------
+        predictions : np.ndarray
+            The estimated RUL values from the model.
+        targets : np.ndarray
+            The actual RUL values.
         """
         assert (
             predictions.shape == targets.shape
@@ -47,8 +50,10 @@ class MeanPercentageErrorMetric(AbstractMetric):
         """
         Computes the final mean percentage error over all updated batches.
 
-        Returns:
-            float: The final metric value.
+        Returns
+        -------
+        float
+            The final metric value.
         """
         if self.total_count == 0:
             raise ValueError("Metric has not been updated with any data.")

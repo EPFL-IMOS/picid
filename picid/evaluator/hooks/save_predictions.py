@@ -21,10 +21,12 @@ class SavePredictionsHook(BaseEvalHook):
 
     def __init__(self, dims: Optional[List[str]] = None):
         """
-        Args:
-            dims: Explicit dimension names for 3D tensors.
-                 Required to be set, usually: ["sample", "time", "feature"].
-                 If not provided, a ValueError is raised during formatting.
+        Parameters
+        ----------
+        dims :
+            Explicit dimension names for 3D tensors.
+            Required to be set, usually: ["sample", "time", "feature"].
+            If not provided, a ValueError is raised during formatting.
         """
         self.dims = dims
 

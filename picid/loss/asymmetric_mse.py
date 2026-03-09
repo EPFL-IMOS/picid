@@ -27,11 +27,15 @@ class AsymmetricMSELoss(AbstractLoss):
         """
         Initialize AsymmetricMSELoss.
 
-        Args:
-            overestimate_penalty: Alpha penalty for overestimation (y_pred > y_true).
-                                  Default 10.0 means 10x penalty for dangerous errors.
-            reduction: 'mean', 'sum', or 'none'.
-            debug: If True, prints the percentage of samples triggering the penalty per batch.
+        Parameters
+        ----------
+        overestimate_penalty :
+            Alpha penalty for overestimation (y_pred > y_true).
+            Default 10.0 means 10x penalty for dangerous errors.
+        reduction :
+            'mean', 'sum', or 'none'.
+        debug :
+            If True, prints the percentage of samples triggering the penalty per batch.
         """
         super().__init__()
         self.alpha = float(overestimate_penalty)
