@@ -223,3 +223,5 @@ Phases 0–3 are done. Behaviour is preserved; interfaces updated as described.
 **Tests:** `pytest test/transforms/base/` — 318 passed, 1 skipped. One failure in `test/transforms/base_transforms/test_autoencoder.py::test_transform_data_integration` (StopIteration from mock `side_effect` exhaustion) is outside the refactor; that test calls `transform_data` directly and does not use pipeline/strategy/DataTransform.
 
 **Phase 4 (optional):** Add tests for new steps (RegisterChunkBuilderStep, IntegrityCheckBefore/AfterStep, MergeStep warnings), update developer docs, remove `*_new.py` drafts and legacy `IntegrityCheckStep` when ready.
+
+- [x] Documentation: `docs/transforms/developer_guide.md` and `docs/transforms/guide.md` updated (2026-03-09) — pipeline order, validation/integrity, DataTransform forward, metadata reference.

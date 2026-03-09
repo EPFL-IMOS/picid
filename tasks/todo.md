@@ -10,10 +10,10 @@
 
 **File:** [four-task-orchestration-2026-02-23.md](four-task-orchestration-2026-02-23.md)
 
-- [x] **Task 1** DatasetContainer `__repr__` — [Plan 1](../docs/plans/2026-02-23-plan-1-dataset-container-repr.md)
-- [x] **Task 2** SplitDatasetContainer `is_multi_unit` — [Plan 2](../docs/plans/2026-02-23-plan-2-split-dataset-container-is-multi-unit.md)
+- [x] **Task 1** DatasetContainer `__repr__` — [Plan 1](../docs/plans/archive/2026-02-23-plan-1-dataset-container-repr.md)
+- [x] **Task 2** SplitDatasetContainer `is_multi_unit` — [Plan 2](../docs/plans/archive/2026-02-23-plan-2-split-dataset-container-is-multi-unit.md)
 - [ ] **Task 3** HydraConcatDataset unit_id from SliceInfo — [Plan 3](../docs/plans/2026-02-23-plan-3-hydra-concat-unit-id-from-slice-info.md) (investigation)
-- [x] **Task 4** Archive autoencoder reconstruction — [Plan 4](../docs/plans/2026-02-23-plan-4-archive-autoencoder-reconstruction.md)
+- [x] **Task 4** Archive autoencoder reconstruction — [Plan 4](../docs/plans/archive/2026-02-23-plan-4-archive-autoencoder-reconstruction.md)
 
 ---
 
@@ -39,7 +39,7 @@
 ## Publish / Submit to Leaderboard (2026-03-06)
 
 **File:** [publish-submit-leaderboard-2026-03-06.md](publish-submit-leaderboard-2026-03-06.md)  
-**Plan:** [docs/plans/2026-03-06-publish-submit-leaderboard.md](../docs/plans/2026-03-06-publish-submit-leaderboard.md)
+**Plan:** [docs/plans/archive/2026-03-06-publish-submit-leaderboard.md](../docs/plans/archive/2026-03-06-publish-submit-leaderboard.md)
 
 - [x] **P1** Phase 1 Task 1: build_submission_message.py + README + test
 - [x] **P2** Phase 1 Task 2: push_run_to_gdrive.py + gdrive_config (dry-run mock; real upload TODO)
@@ -61,7 +61,7 @@
 ## Docs Site & Hydra Experiment Generator (2026-03-07)
 
 **File:** [docs-site-hydra-experiment-generator-2026-03-07.md](docs-site-hydra-experiment-generator-2026-03-07.md)  
-**Plan:** [docs/plans/2026-03-07-docs-site-hydra-experiment-generator.md](../docs/plans/2026-03-07-docs-site-hydra-experiment-generator.md)
+**Plan:** [docs/plans/archive/2026-03-07-docs-site-hydra-experiment-generator.md](../docs/plans/archive/2026-03-07-docs-site-hydra-experiment-generator.md)
 
 - [x] **T1** Phase 1: MkDocs placeholder, guide page, nav
 - [x] **T2** Phase 1: Scripts directory README
@@ -72,6 +72,20 @@
 - [x] **T7** Phase 4: Website README, GitHub Pages deployment
 - [x] **T8** Phase 5: Run & Upload workflow + submit_run_to_leaderboard guide
 - [x] **T9** Phase 5: Leaderboard page and data source (depends on Publish P1–P2)
+
+---
+
+## Transforms Documentation Refactor Sync (2026-03-09)
+
+**File:** [docs/plans/2026-03-09-transforms-docs-refactor-sync.md](../docs/plans/2026-03-09-transforms-docs-refactor-sync.md)
+
+- [ ] **T1** Verify Easy-tier docs (quick_start, intro_5min)
+- [ ] **T2** Update guide.md metadata reference (integrity_checks_before/after)
+- [ ] **T3** Update developer_guide.md pipeline steps and hooks
+- [ ] **T4** Update developer_guide.md validation and integrity
+- [ ] **T5** Update developer_guide.md DataTransform forward, strategy, CopyStep
+- [ ] **T6** Add 3-tier structure headers (optional)
+- [ ] **T7** Final verification (mkdocs build, grep stale refs)
 
 ---
 
