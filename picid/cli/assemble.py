@@ -210,7 +210,7 @@ def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
     """Prompt for parameter overrides based on tier. Return override strings.
 
     Medium: paths, debug (optional).
-    Hard: optimizer, learning rate.
+    Hard: optimizer, learning rate, trainer.max_epochs.
     """
     import questionary
 
@@ -262,6 +262,13 @@ def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
             ).ask()
             if lr_prompt is not None and lr_prompt.strip():
                 overrides.append(f"optimization.lr={lr_prompt.strip()}")
+
+        epochs = questionary.text(
+            "trainer.max_epochs (optional, e.g. 100):",
+            default="",
+        ).ask()
+        if epochs is not None and epochs.strip():
+            overrides.append(f"trainer.max_epochs={epochs.strip()}")
 
     return overrides
 
