@@ -30,20 +30,33 @@ class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
     ):
         """Initialize STFT transform using scipy's ShortTimeFFT.
 
-        Args:
-            win_len: Window length in samples
-            hop: Window shift increment. Defaults to win_len // 4 if None
-            fs: Sampling frequency in Hz
-            fft_mode: FFT mode ('onesided', 'twosided', 'centered', 'onesided2X')
-            mfft: FFT length for zero-padding. Uses win_len if None
-            dual_win: Dual window array. Auto-calculated if None
-            scale_to: Scaling mode (None, 'magnitude', 'psd')
-            phase_shift: Linear phase shift per frequency bin
-            window_type: Window function type ('hann', 'hamming', etc.)
-            output_format: Output format ('magnitude', 'phase', 'complex', 'power', 'log_power')
-            apply_to_columns: If True, apply STFT to columns (each column is a signal).
-                            If False, apply to rows (each row is a signal)
-            **kwargs: Additional arguments for BaseTransform
+        Parameters
+        ----------
+        win_len : int
+            Window length in samples
+        hop : int, optional
+            Window shift increment. Defaults to win_len // 4 if None
+        fs : float
+            Sampling frequency in Hz
+        fft_mode : str
+            FFT mode ('onesided', 'twosided', 'centered', 'onesided2X')
+        mfft : int, optional
+            FFT length for zero-padding. Uses win_len if None
+        dual_win : np.ndarray, optional
+            Dual window array. Auto-calculated if None
+        scale_to : str, optional
+            Scaling mode (None, 'magnitude', 'psd')
+        phase_shift : int
+            Linear phase shift per frequency bin
+        window_type : str
+            Window function type ('hann', 'hamming', etc.)
+        output_format : str
+            Output format ('magnitude', 'phase', 'complex', 'power', 'log_power')
+        apply_to_columns : bool
+            If True, apply STFT to columns (each column is a signal).
+            If False, apply to rows (each row is a signal)
+        **kwargs
+            Additional arguments for BaseTransform
         """
         super().__init__(**kwargs)
 
@@ -179,11 +192,17 @@ class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Compute frequency-domain statistical features F12–F24 using NumPy.
 
-        Args:
-            S (np.ndarray): magnitude spectrum, shape (K, T)
-            freqs (np.ndarray): frequency values, shape (K,)
-        Returns:
-            dict: feature arrays of shape (T,)
+        Parameters
+        ----------
+        S : np.ndarray
+            magnitude spectrum, shape (K, T)
+        freqs : np.ndarray
+            frequency values, shape (K,)
+
+        Returns
+        -------
+        dict
+            feature arrays of shape (T,)
         """
         K, T = S.shape
         eps = 1e-12
@@ -297,11 +316,16 @@ class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """Apply STFT to signals and concatenate results.
 
-        Args:
-            data: Dictionary containing 2D numpy arrays (n_rows, n_columns)
-            metadata: Dictionary containing auxiliary metadata (unused in this transform)
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing 2D numpy arrays (n_rows, n_columns)
+        metadata : dict
+            Dictionary containing auxiliary metadata (unused in this transform)
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Concatenated STFT results as numpy array with shape (n_time_frames, total_features)
         """
 
@@ -354,11 +378,16 @@ class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Generate feature names for the STFT output.
 
-        Args:
-            input_keys: List of input data keys
-            input_shapes: Dictionary mapping keys to their (n_rows, n_columns) shapes
+        Parameters
+        ----------
+        input_keys : list
+            List of input data keys
+        input_shapes : dict
+            Dictionary mapping keys to their (n_rows, n_columns) shapes
 
-        Returns:
+        Returns
+        -------
+        list
             List of feature names
         """
         feature_names = []
@@ -387,7 +416,9 @@ class STFTTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Get information about the time-frequency grid of the STFT.
 
-        Returns:
+        Returns
+        -------
+        dict
             Dictionary containing STFT grid information
         """
         return {

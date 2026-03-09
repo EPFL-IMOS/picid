@@ -21,9 +21,11 @@ class Sequence2Statistics(NoFitPerSegmentMixin, DenseTransform):
         padding_value: Optional[float] = None,
     ):
         """
-        Args:
-            padding_value (Optional[float]): A numerical value to be treated
-                as padding and ignored during calculations. np.nan is always ignored.
+        Parameters
+        ----------
+        padding_value : float, optional
+            A numerical value to be treated
+            as padding and ignored during calculations. np.nan is always ignored.
         """
         super().__init__()
         self.padding_value = padding_value

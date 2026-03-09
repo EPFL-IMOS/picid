@@ -34,9 +34,12 @@ class ConfigTransformManager:
         """
         Initialize transform manager with configuration.
 
-        Args:
-            transforms_config: Transforms configuration dictionary or DictConfig
-            lazy_instantiation: If False (default), instantiate transforms immediately
+        Parameters
+        ----------
+        transforms_config : dict or DictConfig, optional
+            Transforms configuration dictionary or DictConfig
+        lazy_instantiation : bool
+            If False (default), instantiate transforms immediately
         """
         self.config = self._ensure_dict_config(transforms_config or {})
         self.lazy_instantiation = lazy_instantiation
@@ -106,12 +109,17 @@ class ConfigTransformManager:
         """
         Add transforms from configuration.
 
-        Args:
-            transforms_config: Configuration dictionary with transform definitions
+        Parameters
+        ----------
+        transforms_config : dict or DictConfig
+            Configuration dictionary with transform definitions
 
-        Raises:
-            RuntimeError: If transforms are already instantiated (must clear cache first)
-            KeyError: If transform name already exists
+        Raises
+        ------
+        RuntimeError
+            If transforms are already instantiated (must clear cache first)
+        KeyError
+            If transform name already exists
         """
         if self._is_instantiated:
             raise RuntimeError(
@@ -139,11 +147,15 @@ class ConfigTransformManager:
         """
         Update/replace transforms configuration.
 
-        Args:
-            transforms_config: New transforms configuration
+        Parameters
+        ----------
+        transforms_config : dict or DictConfig
+            New transforms configuration
 
-        Raises:
-            RuntimeError: If transforms are already instantiated (must clear cache first)
+        Raises
+        ------
+        RuntimeError
+            If transforms are already instantiated (must clear cache first)
         """
         if self._is_instantiated:
             raise RuntimeError(
@@ -173,10 +185,14 @@ class ConfigTransformManager:
         """
         Get configuration for a specific transform.
 
-        Args:
-            name: Transform name
+        Parameters
+        ----------
+        name : str
+            Transform name
 
-        Returns:
+        Returns
+        -------
+        DictConfig
             Transform configuration
         """
         if name not in self.config:
@@ -189,7 +205,9 @@ class ConfigTransformManager:
         Get all instantiated DataTransform objects as OrderedDict.
         This is the primary method for accessing DataTransform objects.
 
-        Returns:
+        Returns
+        -------
+        OrderedDict
             OrderedDict with all instantiated DataTransform objects
         """
         if not self._is_instantiated:
@@ -202,10 +220,14 @@ class ConfigTransformManager:
         Get specific instantiated DataTransform object by name.
         Efficient - no re-instantiation, direct access from memory.
 
-        Args:
-            name: Transform name
+        Parameters
+        ----------
+        name : str
+            Transform name
 
-        Returns:
+        Returns
+        -------
+        DataTransform
             DataTransform object
         """
         if not self._is_instantiated:
@@ -221,7 +243,9 @@ class ConfigTransformManager:
         Get DataTransform objects as list.
         Efficient - returns from already instantiated DataTransform objects.
 
-        Returns:
+        Returns
+        -------
+        list
             List of DataTransform objects
         """
         data_transforms = self.get_data_transforms()
@@ -231,11 +255,15 @@ class ConfigTransformManager:
         """
         Get DataTransform objects that apply to a specific data type.
 
-        Args:
-            apply_to: Data type (e.g., 'features', 'target', 'timestamps')
+        Parameters
+        ----------
+        apply_to : str
+            Data type (e.g., 'features', 'target', 'timestamps')
 
-        Returns:
-            List of DataTransform objects filtered by apply_to
+        Returns
+        -------
+        OrderedDict
+            DataTransform objects filtered by apply_to
         """
         data_transforms = self.get_data_transforms()
         return OrderedDict(
@@ -248,11 +276,15 @@ class ConfigTransformManager:
         """
         Get DataTransform objects that should be fit on specific split.
 
-        Args:
-            fit_on: Split name (e.g., 'train', 'val')
+        Parameters
+        ----------
+        fit_on : str
+            Split name (e.g., 'train', 'val')
 
-        Returns:
-            List of DataTransform objects filtered by fit_on
+        Returns
+        -------
+        OrderedDict
+            DataTransform objects filtered by fit_on
         """
         data_transforms = self.get_data_transforms()
         return OrderedDict(
@@ -270,7 +302,9 @@ class ConfigTransformManager:
         Return transform names that are cache points (metadata.cache_point is True),
         in pipeline order. Used for boundary caching.
 
-        Returns:
+        Returns
+        -------
+        list
             List of transform names that are marked as cache_point.
         """
         order = self._pipeline_order()
@@ -289,10 +323,14 @@ class ConfigTransformManager:
         Return transform names that come after the given name in pipeline order
         (exclusive). Used to resume from a boundary cache.
 
-        Args:
-            transform_name: Name of the transform we have already applied (boundary).
+        Parameters
+        ----------
+        transform_name : str
+            Name of the transform we have already applied (boundary).
 
-        Returns:
+        Returns
+        -------
+        list
             List of transform names to run after this boundary.
         """
         order = self._pipeline_order()
@@ -308,10 +346,14 @@ class ConfigTransformManager:
         including the given transform name (pipeline order). Used to compute
         boundary cache keys.
 
-        Args:
-            transform_name: Last transform name to include.
+        Parameters
+        ----------
+        transform_name : str
+            Last transform name to include.
 
-        Returns:
+        Returns
+        -------
+        dict
             Plain dict suitable for hashing (e.g. compute_cache_key).
         """
         order = self._pipeline_order()
@@ -326,11 +368,15 @@ class ConfigTransformManager:
         """
         Remove a transform from configuration.
 
-        Args:
-            name: Transform name to remove
+        Parameters
+        ----------
+        name : str
+            Transform name to remove
 
-        Raises:
-            RuntimeError: If transforms are already instantiated (must clear cache first)
+        Raises
+        ------
+        RuntimeError
+            If transforms are already instantiated (must clear cache first)
         """
         if self._is_instantiated:
             raise RuntimeError(
@@ -388,11 +434,16 @@ class ConfigTransformManager:
         order is used: "last" (default) returns the one that last wrote to the key
         (typical for inverse scaling); "first" returns the first such transform.
 
-        Args:
-            key: Data key the transform assigns to (e.g. "target", "features").
-            which: "last" (default) or "first" — which matching transform in pipeline order.
+        Parameters
+        ----------
+        key : str
+            Data key the transform assigns to (e.g. "target", "features").
+        which : str
+            "last" (default) or "first" — which matching transform in pipeline order.
 
-        Returns:
+        Returns
+        -------
+        InverseTransformMixin or None
             The transform instance implementing InverseTransformMixin, or None if no match.
         """
         if which not in ("first", "last"):
@@ -423,7 +474,9 @@ class ConfigTransformManager:
         """
         Like get_inverter_for_key but also returns the transform config name (for logging).
 
-        Returns:
+        Returns
+        -------
+        tuple
             (transform_instance, transform_name); (None, None) if no match.
         """
         if which not in ("first", "last"):
@@ -473,12 +526,18 @@ def create_transform_manager_from_config(
     """
     Create transform manager from configuration file or dictionary.
 
-    Args:
-        config_path: Path to YAML configuration file
-        config_dict: Configuration dictionary
-        lazy_instantiation: If False (default), instantiate transforms immediately
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to YAML configuration file
+    config_dict : dict, optional
+        Configuration dictionary
+    lazy_instantiation : bool
+        If False (default), instantiate transforms immediately
 
-    Returns:
+    Returns
+    -------
+    ConfigTransformManager
         ConfigTransformManager instance
     """
     if config_path:

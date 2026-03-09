@@ -108,17 +108,23 @@ class HealthIndexTransform(
         """
         Initialize the HealthIndexTransform.
 
-        Args:
-            runtime_key: The key in the `data` dict to find the 1D
-                runtime vector (e.g., 'cycle').
-            unit_key: The key in the `metadata` dict to find the
-                unit identifier (e.g., 'unit_id'). This is required
-                in metadata to enable inverse_transform.
-            dataset_name: The name of the current dataset (e.g., "PRONOSTIA").
-            total_life_lookup: A nested dictionary.
-                Format: {dataset_name: {unit_key: total_life_float, ...}}
-                If None, defaults to `DEFAULT_TOTAL_LIFE_LOOKUP`.
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        runtime_key : str
+            The key in the `data` dict to find the 1D
+            runtime vector (e.g., 'cycle').
+        unit_key : str
+            The key in the `metadata` dict to find the
+            unit identifier (e.g., 'unit_id'). This is required
+            in metadata to enable inverse_transform.
+        dataset_name : str
+            The name of the current dataset (e.g., "PRONOSTIA").
+        total_life_lookup : dict, optional
+            A nested dictionary.
+            Format: {dataset_name: {unit_key: total_life_float, ...}}
+            If None, defaults to `DEFAULT_TOTAL_LIFE_LOOKUP`.
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.runtime_key = runtime_key
@@ -224,12 +230,17 @@ class HealthIndexTransform(
         """
         Calculates the HI vector for the unit specified in the metadata.
 
-        Args:
-            data: Dictionary containing 1D runtime vector
-                  at data[self.runtime_key].
-            metadata: Dictionary containing unit ID at metadata[self.unit_key].
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing 1D runtime vector
+            at data[self.runtime_key].
+        metadata : dict
+            Dictionary containing unit ID at metadata[self.unit_key].
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             A 2D numpy array of shape (n_rows, 1) containing the HI.
         """
         # 1. Get Runtime vector from data
@@ -322,13 +333,18 @@ class HealthIndexTransform(
         Reverses the HI calculation to estimate the Runtime.
         Formula: Runtime = (1 - HI) * Total_Life
 
-        Args:
-            data: Input data dictionary. Assumed to be the output of
-                  transform_data, e.g., {'features': hi_vector}.
-            metadata: Dictionary containing the unit ID at
-                      metadata[self.unit_key]. This is required.
+        Parameters
+        ----------
+        data : dict
+            Input data dictionary. Assumed to be the output of
+            transform_data, e.g., {'features': hi_vector}.
+        metadata : dict
+            Dictionary containing the unit ID at
+            metadata[self.unit_key]. This is required.
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             A 2D numpy array of shape (n_rows, 1) containing the
             reconstructed Runtime.
         """
