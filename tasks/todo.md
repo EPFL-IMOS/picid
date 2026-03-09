@@ -106,6 +106,14 @@
 
 ---
 
+## Dynamic Config Assembler (2026-03-09)
+
+**File:** (feature worktree `feature-dynamic-config-assembler`)
+
+- [x] **Task 10** Final verification and cleanup — CLI tests, smoke test (Hydra experiment key), todo update
+
+---
+
 ## Archive
 
 Completed tasks are in `tasks/archive/YYYY-MM-DD/`. See [archive/README.md](archive/README.md).
