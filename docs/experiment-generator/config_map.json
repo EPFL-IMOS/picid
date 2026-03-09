@@ -1,503 +1,6 @@
 {
-  "experiment": {
-    "airbus_helicopter": {
-      "anomaly_detection": {
-        "isolation_forest": null
-      },
-      "base": null
-    },
-    "concepts_n_cmapss": {
-      "prognostics": {
-        "base": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "exponential_regression": null,
-        "linear_regression": null,
-        "lstm": null,
-        "mlp": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      }
-    },
-    "concepts_n_cmapss_ds02": {
-      "diagnostics": {
-        "ablation": {
-          "missing_values": {
-            "carte_fit_predict": null,
-            "cnn_1d": null,
-            "crossformer": null,
-            "exponential_regression": null,
-            "linear_regression": null,
-            "lstm": null,
-            "mlp": null,
-            "patchtst": null,
-            "stf": null,
-            "tabdpt_fit_predict": null,
-            "tabpfn_fit_predict": null,
-            "tide": null,
-            "timeseries_transformer": null,
-            "xgboost_fit_predict": null
-          }
-        },
-        "base": null,
-        "carte_fit_predict": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "linear_classifier": null,
-        "lstm": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      },
-      "prognostics": {
-        "ablation": {
-          "missing_values": {
-            "carte_fit_predict": null,
-            "cnn_1d": null,
-            "crossformer": null,
-            "exponential_regression": null,
-            "linear_regression": null,
-            "lstm": null,
-            "mlp": null,
-            "patchtst": null,
-            "stf": null,
-            "tabdpt_fit_predict": null,
-            "tabpfn_fit_predict": null,
-            "tide": null,
-            "timeseries_transformer": null,
-            "xgboost_fit_predict": null
-          }
-        },
-        "base": null,
-        "carte_fit_predict": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "exponential_regression": null,
-        "linear_regression": null,
-        "lstm": null,
-        "mlp": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timellm": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      },
-      "state_forecasting": {
-        "base": null,
-        "crossformer": null,
-        "lstm": null,
-        "patchtst": null,
-        "stf": null,
-        "tide": null,
-        "timeseries_transformer": null
-      }
-    },
-    "concepts_n_cmapss_multi": {
-      "diagnostics": {
-        "base": null,
-        "carte_fit_predict": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "linear_classifier": null,
-        "lstm": null,
-        "mlp": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      },
-      "prognostics": {
-        "base": null,
-        "carte_fit_predict": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "exponential_regression": null,
-        "linear_regression": null,
-        "lstm": null,
-        "mlp": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timellm": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      }
-    },
-    "hsf15": {
-      "accumulator": {
-        "base": null,
-        "diagnostics": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "linear_classifier": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      },
-      "base": null,
-      "cooler": {
-        "base": null,
-        "diagnostics": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "linear_classifier": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      },
-      "pump": {
-        "base": null,
-        "diagnostics": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "linear_classifier": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      },
-      "valve": {
-        "base": null,
-        "diagnostics": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "linear_classifier": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      }
-    },
-    "mzvav": {
-      "diagnostics": {
-        "base": null,
-        "carte_fit_predict": null,
-        "cnn_1d": null,
-        "crossformer": null,
-        "linear_classifier": null,
-        "lstm": null,
-        "mlp": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tide": null,
-        "timellm": null,
-        "timeseries_transformer": null,
-        "xgboost_fit_predict": null
-      }
-    },
-    "nb14": {
-      "base": null,
-      "prognostics": {
-        "base": null,
-        "combined": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        },
-        "raw": {
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      }
-    },
-    "phme20": {
-      "prognostics": {
-        "ablation": {
-          "missing_values": {
-            "carte_fit_predict": null,
-            "cnn_1d": null,
-            "crossformer": null,
-            "exponential_regression": null,
-            "linear_regression": null,
-            "lstm": null,
-            "mlp": null,
-            "patchtst": null,
-            "stf": null,
-            "tabdpt_fit_predict": null,
-            "tabpfn_fit_predict": null,
-            "tabpfn_fit_predict_nan": null,
-            "tide": null,
-            "timeseries_transformer": null,
-            "xgboost_fit_predict": null
-          }
-        },
-        "base": null,
-        "raw": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        }
-      }
-    },
-    "pronostia": {
-      "base": null,
-      "prognostics": {
-        "base": null,
-        "combined": {
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        },
-        "raw": {
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tide": null,
-          "timeseries_transformer": null
-        },
-        "spectral": {
-          "cnn_1d": null,
-          "lstm": null,
-          "patchtst": null,
-          "stf": null,
-          "xgboost_fit_predict": null
-        },
-        "statistics": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "lstm": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        },
-        "stftt": {
-          "cnn_1d": null,
-          "lstm": null,
-          "patchtst": null,
-          "stf": null,
-          "xgboost_fit_predict": null
-        }
-      }
-    },
-    "railway_traction": {
-      "forecasting": {
-        "autogluon_railway_fit_predict": null,
-        "base": null,
-        "carte_fit_predict": null,
-        "crossformer": null,
-        "linear": null,
-        "lstm": null,
-        "patchtst": null,
-        "stf": null,
-        "tabdpt_fit_predict": null,
-        "tabpfn_fit_predict": null,
-        "tabpfn_no_target_context": null,
-        "tabpfn_railway_seasonal_context": null,
-        "tide": null,
-        "timeseries_transformer": null,
-        "xgboost_railway_seasonal_context": null
-      }
-    },
-    "unibo": {
-      "anomaly_detection": {
-        "base": null,
-        "isolation_forest": null
-      },
-      "base": null,
-      "prognostics": {
-        "ablation": {
-          "missing_values": {
-            "carte_fit_predict": null,
-            "cnn_1d": null,
-            "crossformer": null,
-            "exponential_regression": null,
-            "linear_regression": null,
-            "lstm": null,
-            "mlp": null,
-            "patchtst": null,
-            "stf": null,
-            "tabdpt_fit_predict": null,
-            "tabpfn_fit_predict": null,
-            "tide": null,
-            "timeseries_transformer": null,
-            "xgboost_fit_predict": null
-          }
-        },
-        "base": null,
-        "combined": {
-          "carte_fit_predict": null,
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "polynomial_regression": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timellm": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        },
-        "raw": {
-          "cnn_1d": null,
-          "crossformer": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "timeseries_transformer": null
-        }
-      }
-    },
-    "xjtu_sy": {
-      "base": null,
-      "prognostics": {
-        "base": null,
-        "combined": {
-          "cnn_1d": null,
-          "crossformer": null,
-          "exponential_regression": null,
-          "linear_regression": null,
-          "lstm": null,
-          "mlp": null,
-          "patchtst": null,
-          "stf": null,
-          "tabdpt_fit_predict": null,
-          "tabpfn_fit_predict": null,
-          "tide": null,
-          "timeseries_transformer": null,
-          "xgboost_fit_predict": null
-        },
-        "raw": {
-          "cnn_1d": null
-        }
-      }
-    }
-  },
-  "paths": [
-    "default",
-    "rt_local",
-    "runai"
-  ],
-  "debug": [
-    "default",
-    "nb14",
-    "nox_testing",
-    "nox_testing_fit_predict",
-    "pronostia",
-    "small_epoch",
-    "stf",
-    "train_debug",
-    "unibo",
-    "xjtu"
-  ],
   "experiment_keys": [
     "airbus_helicopter/anomaly_detection/isolation_forest",
-    "airbus_helicopter/base",
     "concepts_n_cmapss/prognostics/base",
     "concepts_n_cmapss/prognostics/cnn_1d",
     "concepts_n_cmapss/prognostics/crossformer",
@@ -621,7 +124,6 @@
     "hsf15/accumulator/diagnostics/timellm",
     "hsf15/accumulator/diagnostics/timeseries_transformer",
     "hsf15/accumulator/diagnostics/xgboost_fit_predict",
-    "hsf15/base",
     "hsf15/cooler/base",
     "hsf15/cooler/diagnostics/carte_fit_predict",
     "hsf15/cooler/diagnostics/cnn_1d",
@@ -682,7 +184,6 @@
     "mzvav/diagnostics/timellm",
     "mzvav/diagnostics/timeseries_transformer",
     "mzvav/diagnostics/xgboost_fit_predict",
-    "nb14/base",
     "nb14/prognostics/base",
     "nb14/prognostics/combined/carte_fit_predict",
     "nb14/prognostics/combined/cnn_1d",
@@ -743,7 +244,6 @@
     "phme20/prognostics/raw/tide",
     "phme20/prognostics/raw/timeseries_transformer",
     "phme20/prognostics/raw/xgboost_fit_predict",
-    "pronostia/base",
     "pronostia/prognostics/base",
     "pronostia/prognostics/combined/cnn_1d",
     "pronostia/prognostics/combined/crossformer",
@@ -807,7 +307,6 @@
     "railway_traction/forecasting/xgboost_railway_seasonal_context",
     "unibo/anomaly_detection/base",
     "unibo/anomaly_detection/isolation_forest",
-    "unibo/base",
     "unibo/prognostics/ablation/missing_values/carte_fit_predict",
     "unibo/prognostics/ablation/missing_values/cnn_1d",
     "unibo/prognostics/ablation/missing_values/crossformer",
@@ -847,7 +346,6 @@
     "unibo/prognostics/raw/patchtst",
     "unibo/prognostics/raw/stf",
     "unibo/prognostics/raw/timeseries_transformer",
-    "xjtu_sy/base",
     "xjtu_sy/prognostics/base",
     "xjtu_sy/prognostics/combined/cnn_1d",
     "xjtu_sy/prognostics/combined/crossformer",
@@ -863,5 +361,22 @@
     "xjtu_sy/prognostics/combined/timeseries_transformer",
     "xjtu_sy/prognostics/combined/xgboost_fit_predict",
     "xjtu_sy/prognostics/raw/cnn_1d"
+  ],
+  "paths": [
+    "default",
+    "rt_local",
+    "runai"
+  ],
+  "debug": [
+    "default",
+    "nb14",
+    "nox_testing",
+    "nox_testing_fit_predict",
+    "pronostia",
+    "small_epoch",
+    "stf",
+    "train_debug",
+    "unibo",
+    "xjtu"
   ]
 }
