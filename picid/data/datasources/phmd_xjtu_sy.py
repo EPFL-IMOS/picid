@@ -65,20 +65,30 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         It also supports a 'ragged' mode, where continuous time-series data is
         reshaped into fixed-size sequences, creating a ragged array structure.
 
-        Args:
-            df_unit (pd.DataFrame): The DataFrame containing data for a single unit.
-            unit_name (str): The identifier for the unit (e.g., 'Bearing1_3_1').
-            features_col (list): A list of column names to be used as features.
-            target_col (str): The name of the primary target column (used for RUL).
+        Parameters
+        ----------
+        df_unit : pd.DataFrame
+            The DataFrame containing data for a single unit.
+        unit_name : str
+            The identifier for the unit (e.g., 'Bearing1_3_1').
+        features_col : list
+            A list of column names to be used as features.
+        target_col : str
+            The name of the primary target column (used for RUL).
 
-        Returns:
-            dict: A dictionary containing the processed 'features', 'target', and
-                'metadata' for the unit.
+        Returns
+        -------
+        dict
+            A dictionary containing the processed 'features', 'target', and
+            'metadata' for the unit.
 
-        Raises:
-            ValueError: If an unknown 'task_mode' is specified or if data length
-                        is incompatible with the ragged processing mode.
-            NotImplementedError: If ragged mode is attempted with the 'fault' task.
+        Raises
+        ------
+        ValueError
+            If an unknown 'task_mode' is specified or if data length
+            is incompatible with the ragged processing mode.
+        NotImplementedError
+            If ragged mode is attempted with the 'fault' task.
         """
         # --- 1. Prepare Features and Targets based on Task Mode ---
 
@@ -173,16 +183,23 @@ def merge_data_folds_on_key(main_fold, aux_fold, key="bearing", how="left"):
     main_fold, finds the corresponding split in the aux_fold, and performs a
     merge based on the specified key.
 
-    Args:
-        main_fold (dict): Dictionary of data splits (e.g., {'train': pd.DataFrame})
-                          to which data will be added.
-        aux_fold (dict): Dictionary of data splits containing the auxiliary
-                         information to merge.
-        key (str): The column name to merge on. Defaults to 'bearing'.
-        how (str): The type of merge ('left', 'inner', etc.). Defaults to 'left'.
+    Parameters
+    ----------
+    main_fold : dict
+        Dictionary of data splits (e.g., {'train': pd.DataFrame})
+        to which data will be added.
+    aux_fold : dict
+        Dictionary of data splits containing the auxiliary
+        information to merge.
+    key : str
+        The column name to merge on. Defaults to 'bearing'.
+    how : str
+        The type of merge ('left', 'inner', etc.). Defaults to 'left'.
 
-    Returns:
-        dict: A new dictionary containing the merged DataFrames.
+    Returns
+    -------
+    dict
+        A new dictionary containing the merged DataFrames.
     """
     merged_folds = {}  # Create a new dictionary for the results
 

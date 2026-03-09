@@ -26,12 +26,16 @@ class ModelDataHandler:
         """
         Initializes the data handler.
 
-        Args:
-            dataset: An instantiated `UniboPowertoolsData` object that has already
-                     called its `prepare_data` method.
-            x_indices: A list of column indices from the raw cycle data to be
-                       used as features (e.g., [CycleCols.VOLTAGE, ...]).
-            scaler_type: The scaler class to use (e.g., MinMaxScaler).
+        Parameters
+        ----------
+        dataset
+            An instantiated `UniboPowertoolsData` object that has already
+            called its `prepare_data` method.
+        x_indices
+            A list of column indices from the raw cycle data to be
+            used as features (e.g., [CycleCols.VOLTAGE, ...]).
+        scaler_type
+            The scaler class to use (e.g., MinMaxScaler).
         """
         self.logger = logging.getLogger()
         self.dataset = dataset

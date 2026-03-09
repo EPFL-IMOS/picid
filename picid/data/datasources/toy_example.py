@@ -62,10 +62,14 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
         **kwargs,
     ):
         """
-        Args:
-            data_dir: Where data is stored (not used in this toy example as we generate data).
-            data_name: Unique identifier for the dataset.
-            task_mode: 'anomaly_detection', 'diagnosis', or 'rul'.
+        Parameters
+        ----------
+        data_dir
+            Where data is stored (not used in this toy example as we generate data).
+        data_name
+            Unique identifier for the dataset.
+        task_mode
+            'anomaly_detection', 'diagnosis', or 'rul'.
         """
         super().__init__(
             data_name=data_name,
@@ -230,7 +234,11 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
     def generate_synthetic_data(self):
         """
         Generates dummy data to make this example runnable.
-        Returns: Dict with 'train' and 'test' lists of numpy arrays.
+
+        Returns
+        -------
+        dict
+            Dict with 'train' and 'test' lists of numpy arrays.
         """
         print("Generating Synthetic Ragged Data...")
         rng = np.random.default_rng(42)

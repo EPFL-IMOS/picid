@@ -18,13 +18,18 @@ class MultiSourceLoader(AbstractDataSourceLoader):
     This class manages the instantiation and loading of multiple data sources, optionally applying
     a multisource data splitter for joint data splitting across sources. It provides methods to
     retrieve loaded data, metadata, source names, and the splitter instance.
-    Args:
-        **kwargs: Keyword arguments containing configuration for each data source and optional
-            multisource_data_splitter. Expected keys:
-                - source_list: dict mapping source names to their configuration.
-                - multisource_data_splitter: Optional splitter instance for joint splitting.
-                - <source_name>: Configuration for each individual source.
-    Attributes:
+
+    Parameters
+    ----------
+    **kwargs
+        Keyword arguments containing configuration for each data source and optional
+        multisource_data_splitter. Expected keys:
+            - source_list: dict mapping source names to their configuration.
+            - multisource_data_splitter: Optional splitter instance for joint splitting.
+            - <source_name>: Configuration for each individual source.
+
+    Attributes
+    ----------
         data_source_dict (dict): Mapping of source names to instantiated data source objects.
         source_params (list): List of parameter dicts for each source.
         source_names (list): List of source names.
@@ -86,8 +91,10 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         Loads data from all data sources in the data_source_dict.
         Iterates over each data source object in the data_source_dict and calls its
         load_data() method to perform the data loading operation.
-        Returns:
-            None
+
+        Returns
+        -------
+        None
         """
         for ds in self.data_source_dict.values():
             ds.load_data()
@@ -107,10 +114,15 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         If a `multisource_data_splitter` is provided, it validates that none of the sources
         are already split and uses the splitter to combine data from all sources.
         If no splitter is provided, each source is split individually.
-        Raises:
-            RuntimeError: If attempting to load data twice, if a source is not loaded,
+
+        Raises
+        ------
+        RuntimeError
+            If attempting to load data twice, if a source is not loaded,
             or if the splitting configuration is invalid.
-        Side Effects:
+
+        Side Effects
+        ------------
             - Populates `self.container` with the split data.
             - Sets `self._is_loaded` to True after successful loading and splitting.
         """
@@ -186,8 +198,11 @@ class MultiSourceLoader(AbstractDataSourceLoader):
     @override
     def get_data(self) -> SplitDatasetContainer:
         """Return data sources.
-        Returns:
-            dict | list[dict] : either dict in case we use multisource_data_splitter
+
+        Returns
+        -------
+        dict | list[dict]
+            Either dict in case we use multisource_data_splitter
             or list of dicts in case we use data_splitter
 
         """
