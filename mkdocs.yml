@@ -63,6 +63,8 @@ nav:
     - Model types: reference/model_types.md
     - API:
       - Package Reference: reference/api/package_reference.md
+      - picid: reference/api/picid.md
+      - picid.transforms: reference/api/picid_transforms.md
       - picid.data.data_objects: reference/api/picid_data_data_objects.md
       - picid.data: reference/api/picid_data.md
       - picid.data.datasources: reference/api/picid_data_datasources.md
