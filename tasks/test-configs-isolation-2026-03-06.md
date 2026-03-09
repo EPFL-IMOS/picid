@@ -1,6 +1,6 @@
 # Test Configs Isolation (2026-03-06)
 
-**Plan:** [docs/plans/2026-03-06-test-configs-isolation.md](../docs/plans/2026-03-06-test-configs-isolation.md)
+**Plan:** [docs/plans/archive/2026-03-06-test-configs-isolation.md](../docs/plans/archive/2026-03-06-test-configs-isolation.md)
 
 ## Status: Complete
 

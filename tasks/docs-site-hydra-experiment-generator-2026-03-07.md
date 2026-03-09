@@ -1,6 +1,6 @@
 # Docs Site & Hydra Experiment Generator (2026-03-07)
 
-**Plan:** [docs/plans/2026-03-07-docs-site-hydra-experiment-generator.md](../docs/plans/2026-03-07-docs-site-hydra-experiment-generator.md)
+**Plan:** [docs/plans/archive/2026-03-07-docs-site-hydra-experiment-generator.md](../docs/plans/archive/2026-03-07-docs-site-hydra-experiment-generator.md)
 
 - [ ] **T1** Phase 1: MkDocs placeholder, guide page, nav
 - [ ] **T2** Phase 1: Scripts directory README

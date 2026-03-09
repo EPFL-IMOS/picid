@@ -1,6 +1,6 @@
 # Test Suite Production Hardening (2026-03-06)
 
-**Plan:** [docs/plans/2026-03-06-test-suite-production-hardening.md](../../../docs/plans/2026-03-06-test-suite-production-hardening.md)
+**Plan:** [docs/plans/archive/2026-03-06-test-suite-production-hardening.md](../../../docs/plans/archive/2026-03-06-test-suite-production-hardening.md)
 
 ## Status: Complete
 
