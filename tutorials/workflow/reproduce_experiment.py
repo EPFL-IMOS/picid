@@ -6,7 +6,7 @@ This script demonstrates:
 2. Reproducing from a run's saved config (Option B: reproduce_from_run)
 
 Run from project root:
-    uv run python tutorials/reproduce_experiment.py
+    uv run python tutorials/workflow/reproduce_experiment.py
 
 Requires: PROJECT_ROOT env var, datasets (or use snapshot experiment).
 """
@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent))
+PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent))
 
 print("=" * 60)
 print("Tutorial: Run and Reproduce Experiments")

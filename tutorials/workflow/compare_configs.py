@@ -3,8 +3,10 @@
 
 When metrics differ between runs, compare resolved configs to find what changed.
 
+Canonical script: scripts/reproducibility/compare_configs.py
+
 Run from project root:
-    uv run python tutorials/compare_configs.py [config_a.yaml] [config_b.yaml]
+    uv run python tutorials/workflow/compare_configs.py [config_a.yaml] [config_b.yaml]
 
 If no args: uses two example configs from a recent run (if available).
 """
@@ -14,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent))
+PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent))
 
 # Try to use picid.utils.config_diff if it exists
 try:
@@ -56,7 +58,8 @@ def main():
         artifacts = PROJECT_ROOT / "artifacts"
         configs = list(artifacts.rglob("config_resolved.yaml"))[:2]
         if len(configs) < 2:
-            print("\nUsage: uv run python tutorials/compare_configs.py <config_a.yaml> <config_b.yaml>")
+            print("\nUsage: uv run python tutorials/workflow/compare_configs.py <config_a.yaml> <config_b.yaml>")
+            print("Or:    uv run python scripts/reproducibility/compare_configs.py <config_a.yaml> <config_b.yaml>")
             print("Or run an experiment first to generate configs.")
             sys.exit(1)
         path_a, path_b = str(configs[0]), str(configs[1])

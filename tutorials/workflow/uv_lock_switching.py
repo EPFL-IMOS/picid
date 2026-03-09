@@ -5,7 +5,7 @@ Run experiments with different dependency sets (e.g. CPU vs CUDA) by swapping
 the lock file before uv sync.
 
 Run from project root:
-    uv run python tutorials/uv_lock_switching.py
+    uv run python tutorials/workflow/uv_lock_switching.py
 
 Note: uv does not support --lockfile for alternative lock files. Use copy + sync.
 """
@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 print("=" * 60)
 print("Tutorial: Switching uv.lock for Different Environments")
