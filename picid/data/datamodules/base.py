@@ -193,9 +193,12 @@ class BaseDataModule(LightningDataModule):
         automatically by `pytorch_lightning` and executed on the first GPU in
         distributed mode.
 
-        Args:
-            *args: Ignored. Only for adhering to parent class interface.
-            **kwargs: Ignored. Only for adhering to parent class interface.
+        Parameters
+        ----------
+        *args
+            Ignored. Only for adhering to parent class interface.
+        **kwargs
+            Ignored. Only for adhering to parent class interface.
         """
         pass
 
@@ -212,8 +215,10 @@ class BaseDataModule(LightningDataModule):
         the feature windows are passed to the feature extractor. The resulting,
         new features may be re-windowed.
 
-        Args:
-            stage: Ignored. Only for adhering to parent class interface.
+        Parameters
+        ----------
+        stage
+            Ignored. Only for adhering to parent class interface.
         """
         pass
 
@@ -289,12 +294,16 @@ class BaseDataModule(LightningDataModule):
         The whole split is held in memory. Therefore, the `num_workers` are set to
         zero which uses the main process for creating batches.
 
-        Args:
-            *args: Ignored. Only for adhering to parent class interface.
-            **kwargs: Ignored. Only for adhering to parent class interface.
+        Parameters
+        ----------
+        *args
+            Ignored. Only for adhering to parent class interface.
+        **kwargs
+            Ignored. Only for adhering to parent class interface.
 
-        Returns:
-            The training data loader
+        Returns
+        -------
+        The training data loader
         """
 
         if self.hparams.train_batch_size == "full":
@@ -330,12 +339,16 @@ class BaseDataModule(LightningDataModule):
         The whole split is held in memory. Therefore, the `num_workers` are set to
         zero which uses the main process for creating batches.
 
-        Args:
-            *args: Ignored. Only for adhering to parent class interface.
-            **kwargs: Ignored. Only for adhering to parent class interface.
+        Parameters
+        ----------
+        *args
+            Ignored. Only for adhering to parent class interface.
+        **kwargs
+            Ignored. Only for adhering to parent class interface.
 
-        Returns:
-            The validation data loader
+        Returns
+        -------
+        The validation data loader
         """
 
         if self.hparams.val_batch_size == "full":
@@ -368,12 +381,16 @@ class BaseDataModule(LightningDataModule):
         The whole split is held in memory. Therefore, the `num_workers` are set to
         zero which uses the main process for creating batches.
 
-        Args:
-            *args: Ignored. Only for adhering to parent class interface.
-            **kwargs: Ignored. Only for adhering to parent class interface.
+        Parameters
+        ----------
+        *args
+            Ignored. Only for adhering to parent class interface.
+        **kwargs
+            Ignored. Only for adhering to parent class interface.
 
-        Returns:
-            The test data loader
+        Returns
+        -------
+        The test data loader
         """
         if self.hparams.test_batch_size == "full":
             batch_size = len(self.dataset_test)

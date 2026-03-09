@@ -37,8 +37,10 @@ class FileLock:
         """
         Initialize a FileLock instance.
 
-        Args:
-            path (str, optional): The path to the lock file. Defaults to LOCK_FILE.
+        Parameters
+        ----------
+        path : str, optional
+            The path to the lock file. Defaults to LOCK_FILE.
         """
         self.path = path
         self.handle = None
