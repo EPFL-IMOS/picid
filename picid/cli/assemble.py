@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from rich.console import Console
+from rich.tree import Tree
+
 from picid.cli.config_discovery import (
     CONFIGS_ROOT,
     DatasetGroupInfo,
@@ -12,6 +15,26 @@ from picid.cli.config_discovery import (
     list_model_configs,
     list_task_definitions,
 )
+
+console = Console()
+
+
+def _show_tree_navigation(paths: list[str], title: str = "Configs read") -> None:
+    """Show which config paths are being read using rich.tree.Tree."""
+    tree = Tree(title)
+    # Build tree from path segments: "a/b/c.yaml" -> a -> b -> c.yaml
+    roots: dict[str, Tree] = {}
+    for path_str in sorted(paths):
+        parts = path_str.replace("\\", "/").split("/")
+        if not parts:
+            continue
+        parent = tree
+        for i, part in enumerate(parts):
+            key = "/".join(parts[: i + 1])
+            if key not in roots:
+                roots[key] = parent.add(part)
+            parent = roots[key]
+    console.print(tree)
 
 
 def main() -> None:
@@ -52,6 +75,10 @@ def _funnel_task_first() -> None:
         _no_data("task definitions")
         return
 
+    _show_tree_navigation(
+        [str(t.path.relative_to(CONFIGS_ROOT)) for t in tasks],
+        title="task_definition/",
+    )
     task_choices = [
         questionary.Choice(f"{t.task_type}/{t.name}", value=t) for t in tasks
     ]
@@ -68,6 +95,10 @@ def _funnel_task_first() -> None:
         _no_data(f"experiments for task {task.task_type}")
         return
 
+    _show_tree_navigation(
+        [f"experiment/{exp}.yaml" for exp in experiments],
+        title="experiment/<group>/<task>/",
+    )
     exp_choice = questionary.select("Select experiment", choices=experiments).ask()
     if exp_choice is None:
         return
@@ -111,6 +142,10 @@ def _funnel_dataset_first() -> None:
         _no_data(f"experiments for {group.name}/{task_choice}")
         return
 
+    _show_tree_navigation(
+        [f"experiment/{exp}.yaml" for exp in experiments],
+        title=f"experiment/{group.name}/{task_choice}/",
+    )
     exp_choice = questionary.select("Select experiment", choices=experiments).ask()
     if exp_choice is None:
         return
@@ -145,6 +180,10 @@ def _funnel_model_first() -> None:
         _no_data(f"experiments using model {model.model}")
         return
 
+    _show_tree_navigation(
+        [f"experiment/{exp}.yaml" for exp in experiments],
+        title="experiment/<group>/<task>/",
+    )
     exp_choice = questionary.select("Select experiment", choices=experiments).ask()
     if exp_choice is None:
         return
@@ -152,11 +191,41 @@ def _funnel_model_first() -> None:
     _show_final_command(exp_choice)
 
 
+def _preview_config(experiment_key: str) -> None:
+    """Compose config with Hydra (without running) and show task_definition, model, datasource."""
+    import hydra
+    from hydra.core.global_hydra import GlobalHydra
+    from omegaconf import OmegaConf
+
+    # Hydra requires config_path relative to module __file__; CONFIGS_ROOT = project_root/configs
+    hydra.initialize(
+        version_base="1.3",
+        config_path="../../configs",
+        job_name="assemble_preview",
+    )
+    try:
+        cfg = hydra.compose(
+            config_name="run.yaml",
+            overrides=[f"experiment={experiment_key}"],
+        )
+        subset = {
+            "task_definition": cfg.get("task_definition"),
+            "model": cfg.get("model"),
+            "datasource": cfg.get("datasource"),
+        }
+        yaml_str = OmegaConf.to_yaml(subset)
+        console.print("[bold]Config preview (task_definition, model, datasource):[/bold]")
+        console.print(yaml_str)
+    finally:
+        GlobalHydra.instance().clear()
+
+
 def _show_final_command(experiment_key: str) -> None:
     """Print the run command for the selected experiment."""
+    _preview_config(experiment_key)
     cmd = f"uv run python picid/run.py paths=default experiment={experiment_key}"
-    print(cmd)
-    print("Copy and run from project root.")
+    console.print(cmd)
+    console.print("Copy and run from project root.")
 
 
 def _no_data(msg: str) -> None:
