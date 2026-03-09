@@ -3,7 +3,7 @@
 
 Usage::
 
-    uv run python scripts/compare_configs.py <config_a.yaml> <config_b.yaml>
+    uv run python scripts/reproducibility/compare_configs.py <config_a.yaml> <config_b.yaml>
 
 Symbols:
   ~  key present in both but values differ
@@ -15,7 +15,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from picid.utils.config_diff import diff_configs  # noqa: E402
