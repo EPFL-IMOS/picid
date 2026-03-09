@@ -30,6 +30,17 @@ def _extract_optimization_from_defaults(defaults: list[Any]) -> str | None:
     return None
 
 
+def get_model_specific_params(model_name: str, task_type: str) -> dict[str, Any]:
+    """Load configs/model_configs/<task_type>/<model_name>.yaml, return the loaded dict.
+
+    Returns {} if the file does not exist.
+    """
+    path = CONFIGS_ROOT / "model_configs" / task_type / f"{model_name}.yaml"
+    if not path.exists():
+        return {}
+    return load_yaml(path)
+
+
 def get_overridable_from_experiment(experiment_key: str) -> dict[str, Any]:
     """Parse experiment YAML defaults to find base and model_configs.
 

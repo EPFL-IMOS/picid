@@ -10,6 +10,7 @@ from picid.cli.config_discovery import (
     DatasetGroupInfo,
     ModelInfo,
     TaskInfo,
+    get_task_type_from_experiment,
     list_debug_configs,
     list_experiment_groups,
     list_experiments_for_group_task,
@@ -17,7 +18,10 @@ from picid.cli.config_discovery import (
     list_paths_configs,
     list_task_definitions,
 )
-from picid.cli.parameter_injection import get_overridable_from_experiment
+from picid.cli.parameter_injection import (
+    get_model_specific_params,
+    get_overridable_from_experiment,
+)
 
 console = Console()
 
@@ -269,6 +273,19 @@ def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
         ).ask()
         if epochs is not None and epochs.strip():
             overrides.append(f"trainer.max_epochs={epochs.strip()}")
+
+        # Model-specific params: cnn_1d dropout_prob
+        model_name = experiment_key.split("/")[-1]
+        task_type = get_task_type_from_experiment(experiment_key)
+        if model_name == "cnn_1d" and task_type:
+            params = get_model_specific_params("cnn_1d", task_type)
+            if "dropout_prob" in params.get("model", {}):
+                dropout_val = questionary.text(
+                    "dropout_prob (optional):",
+                    default="",
+                ).ask()
+                if dropout_val is not None and dropout_val.strip():
+                    overrides.append(f"model.dropout_prob={dropout_val.strip()}")
 
     return overrides
 
