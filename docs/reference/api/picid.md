@@ -1,6 +1,6 @@
 # picid
 
-Root package. Exposes `data`, `transforms`, `model`, `evaluator`, etc.
+Root package. Subpackages: `data`, `transforms`, `model`, `evaluator`, `pipeline`, `utils`.
 
 ::: picid
     options:
