@@ -30,7 +30,7 @@ either by using VSCode run config in `.vscode/launch.json`
 
 Configs resolve paths using `PROJECT_ROOT` (or the current working directory when run from the project root). The `picid` package sets `PROJECT_ROOT` automatically when imported.
 
-To run the project, you must create a path config in `configs/paths/`. Copy [default.yaml](../../configs/paths/default.yaml) and set `data_dir`, `root_dir`, etc. for your system. Path configs define where data and artifacts live.
+To run the project, you must create a path config in `configs/paths/`. Copy [default.yaml](https://github.com/epfl-imos/TabPHM/blob/main/configs/paths/default.yaml) and set `data_dir`, `root_dir`, etc. for your system. Path configs define where data and artifacts live.
 
 ## Dataset Access
 
