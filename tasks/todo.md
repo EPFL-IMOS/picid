@@ -75,17 +75,34 @@
 
 ---
 
+## Docs Production Readiness (2026-03-09)
+
+**File:** [docs-production-readiness-2026-03-09.md](docs-production-readiness-2026-03-09.md)  
+**Plan:** [docs/plans/2026-03-09-docs-production-readiness.md](../docs/plans/2026-03-09-docs-production-readiness.md)
+
+- [x] **D1** Remove Archive from nav
+- [x] **D2** Fix old_setup.md RunAI link
+- [x] **D3** Fix setup.md configs link
+- [x] **D4** Fix reproducibility.md scripts link
+- [x] **D5** Fix reference/api.md evaluators link
+- [x] **D6** Fix reference/model_types.md how_to_add link
+- [x] **D7** Add Reproducibility to nav
+- [x] **D8** Update docs index and quick start
+- [x] **D9** Final verification (clean build, spot-check)
+
+---
+
 ## Transforms Documentation Refactor Sync (2026-03-09)
 
 **File:** [docs/plans/2026-03-09-transforms-docs-refactor-sync.md](../docs/plans/2026-03-09-transforms-docs-refactor-sync.md)
 
-- [ ] **T1** Verify Easy-tier docs (quick_start, intro_5min)
-- [ ] **T2** Update guide.md metadata reference (integrity_checks_before/after)
-- [ ] **T3** Update developer_guide.md pipeline steps and hooks
-- [ ] **T4** Update developer_guide.md validation and integrity
-- [ ] **T5** Update developer_guide.md DataTransform forward, strategy, CopyStep
-- [ ] **T6** Add 3-tier structure headers (optional)
-- [ ] **T7** Final verification (mkdocs build, grep stale refs)
+- [x] **T1** Verify Easy-tier docs (quick_start, intro_5min)
+- [x] **T2** Update guide.md metadata reference (integrity_checks_before/after)
+- [x] **T3** Update developer_guide.md pipeline steps and hooks
+- [x] **T4** Update developer_guide.md validation and integrity
+- [x] **T5** Update developer_guide.md DataTransform forward, strategy, CopyStep
+- [x] **T6** Add 3-tier structure headers (optional) — skipped; nav already provides tier separation
+- [x] **T7** Final verification (mkdocs build, grep stale refs)
 
 ---
 
