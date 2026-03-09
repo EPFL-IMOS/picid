@@ -57,6 +57,7 @@ nav:
     - Model types: reference/model_types.md
     - API:
       - Package Reference: reference/api/package_reference.md
+      - picid.data.data_objects: reference/api/picid_data_data_objects.md
   - Transforms (deep dives):
     - Quick start: transforms/quick_start.md
     - User guide: transforms/guide.md
