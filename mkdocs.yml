@@ -47,6 +47,7 @@ nav:
     - Adding a new model: guides/how_to_add_a_new_model.md
     - RunAI (cluster): guides/runai.md
     - Experiment Generator: guides/experiment_generator.md
+    - Dynamic Config Assembler: guides/dynamic-config-assembler.md
     - Submit to Leaderboard: guides/submit_run_to_leaderboard.md
   - Examples:
     - Overview: examples/index.md
