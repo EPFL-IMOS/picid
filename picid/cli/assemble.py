@@ -10,9 +10,11 @@ from picid.cli.config_discovery import (
     DatasetGroupInfo,
     ModelInfo,
     TaskInfo,
+    list_debug_configs,
     list_experiment_groups,
     list_experiments_for_group_task,
     list_model_configs,
+    list_paths_configs,
     list_task_definitions,
 )
 from picid.cli.parameter_injection import get_overridable_from_experiment
@@ -205,36 +207,61 @@ def _funnel_model_first(tier: str) -> None:
 
 
 def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
-    """Prompt for parameter overrides when tier is Hard. Return override strings."""
-    if tier != "Hard: Override optimizer, learning rate, transforms":
-        return []
+    """Prompt for parameter overrides based on tier. Return override strings.
 
+    Medium: paths, debug (optional).
+    Hard: optimizer, learning rate.
+    """
     import questionary
 
     overrides: list[str] = []
-    overridable = get_overridable_from_experiment(experiment_key)
 
-    opt_choice = questionary.select(
-        "Override optimizer?",
-        choices=[
-            "No",
-            "Yes AdamW",
-            "Yes SGD",
-        ],
-    ).ask()
+    # Medium tier: paths and debug
+    if "Medium" in tier:
+        paths_choices = list_paths_configs()
+        if paths_choices:
+            paths_choice = questionary.select(
+                "Paths config:",
+                choices=paths_choices,
+                default="default",
+            ).ask()
+            if paths_choice is not None and paths_choice != "default":
+                overrides.append(f"paths={paths_choice}")
 
-    if opt_choice == "Yes AdamW":
-        overrides.append("optimization=reduce_on_plateau")
-    elif opt_choice == "Yes SGD":
-        overrides.append("optimization=sgd")
+        debug_choices = ["- None -"] + list_debug_configs()
+        if len(debug_choices) > 1:
+            debug_choice = questionary.select(
+                "Debug (optional):",
+                choices=debug_choices,
+            ).ask()
+            if debug_choice is not None and debug_choice != "- None -":
+                overrides.append(f"debug={debug_choice}")
 
-    if overridable.get("model_params") and "lr" in overridable["model_params"]:
-        lr_prompt = questionary.text(
-            "Learning rate override (leave empty to keep default):",
-            default="",
+    # Hard tier: optimizer and learning rate
+    if "Hard" in tier:
+        overridable = get_overridable_from_experiment(experiment_key)
+
+        opt_choice = questionary.select(
+            "Override optimizer?",
+            choices=[
+                "No",
+                "Yes AdamW",
+                "Yes SGD",
+            ],
         ).ask()
-        if lr_prompt is not None and lr_prompt.strip():
-            overrides.append(f"optimization.lr={lr_prompt.strip()}")
+
+        if opt_choice == "Yes AdamW":
+            overrides.append("optimization=reduce_on_plateau")
+        elif opt_choice == "Yes SGD":
+            overrides.append("optimization=sgd")
+
+        if overridable.get("model_params") and "lr" in overridable["model_params"]:
+            lr_prompt = questionary.text(
+                "Learning rate override (leave empty to keep default):",
+                default="",
+            ).ask()
+            if lr_prompt is not None and lr_prompt.strip():
+                overrides.append(f"optimization.lr={lr_prompt.strip()}")
 
     return overrides
 
@@ -272,8 +299,15 @@ def _show_final_command(experiment_key: str, tier: str = "Easy: Use defaults onl
     """Print the run command for the selected experiment."""
     _preview_config(experiment_key)
     overrides = _parameter_injection_phase(experiment_key, tier)
-    cmd_parts = ["uv run python picid/run.py", "paths=default", f"experiment={experiment_key}"]
-    cmd_parts.extend(overrides)
+    cmd_parts = ["uv run python picid/run.py", f"experiment={experiment_key}"]
+
+    paths_override = next((o for o in overrides if o.startswith("paths=")), None)
+    cmd_parts.append(paths_override if paths_override else "paths=default")
+
+    for o in overrides:
+        if not o.startswith("paths="):
+            cmd_parts.append(o)
+
     cmd = " ".join(cmd_parts)
     console.print(cmd)
     console.print("Copy and run from project root.")

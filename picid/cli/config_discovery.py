@@ -95,6 +95,22 @@ def list_experiments_for_group_task(group: str, task_type: str) -> list[str]:
     return sorted(result)
 
 
+def list_paths_configs() -> list[str]:
+    """Return stem of each YAML in configs/paths/."""
+    root = CONFIGS_ROOT / "paths"
+    if not root.exists():
+        return []
+    return sorted(p.stem for p in root.glob("*.yaml"))
+
+
+def list_debug_configs() -> list[str]:
+    """Return stem of each YAML in configs/debug/."""
+    root = CONFIGS_ROOT / "debug"
+    if not root.exists():
+        return []
+    return sorted(p.stem for p in root.glob("*.yaml"))
+
+
 def get_task_type_from_experiment(experiment_key: str) -> str | None:
     """Extract task type from experiment key.
 

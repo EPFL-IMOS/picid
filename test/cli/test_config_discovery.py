@@ -1,9 +1,11 @@
 """Tests for picid.cli.config_discovery."""
 
 from picid.cli.config_discovery import (
+    list_debug_configs,
     list_experiment_groups,
     list_experiments_for_group_task,
     list_model_configs,
+    list_paths_configs,
     list_task_definitions,
     get_task_type_from_experiment,
 )
@@ -57,6 +59,23 @@ def test_get_task_type_from_experiment():
     assert get_task_type_from_experiment("group/task") == "task"
     assert get_task_type_from_experiment("only_one") is None
     assert get_task_type_from_experiment("") is None
+
+
+def test_list_paths_configs_returns_stems():
+    """list_paths_configs returns stem of each yaml in configs/paths/."""
+    stems = list_paths_configs()
+    # May be empty if configs/paths doesn't exist in worktree
+    assert isinstance(stems, list)
+    assert all(isinstance(s, str) for s in stems)
+    if stems:
+        assert "default" in stems
+
+
+def test_list_debug_configs_returns_stems():
+    """list_debug_configs returns stem of each yaml in configs/debug/."""
+    stems = list_debug_configs()
+    assert isinstance(stems, list)
+    assert all(isinstance(s, str) for s in stems)
 
 
 def test_list_experiments_for_group_task_returns_full_keys():
