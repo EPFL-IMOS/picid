@@ -131,14 +131,10 @@ The system validates that transform signatures match the metadata:
 
 ```python
 def forward(self, data: SplitDatasetContainer) -> SplitDatasetContainer:
-    # 1. Delegate to strategy
+    # Delegates entirely to strategy.apply(); no validation here.
+    # Structural validation is performed by IntegrityCheckAfterStep
+    # when validate_output=True.
     transformed_data, transform_log = self.strategy.apply(...)
-    
-    # 2. Validate outputs
-    # - Check structure matches input
-    # - Check splits are preserved
-    # - Check types are consistent
-    
     return transformed_data, transform_log
 ```
 
@@ -205,6 +201,8 @@ def _prepare_chunks_for_split(self, data_to_prepare, split, is_multi_unit):
     
     return chunks
 ```
+
+No sanitization is performed here; that is IntegrityCheckBeforeStep's responsibility. Chunks hold references to underlying arrays (no copy of array data).
 
 ## Data Flow
 
@@ -593,17 +591,46 @@ class CustomScaler(
 
 ### Pipeline steps and hooks
 
-The pipeline runs in order: **CopyStep** → **IntegrityCheckStep** → **FitStep** → **TransformStep** → **PostprocessStep** → **MergeStep** → **RecordManifestStep**. Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `picid.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
+The pipeline runs in order:
+
+1. **CopyStep** — Shallow copy container; per-key copy uses `_first_leaf` (ak.Array → shallow, else deep).
+2. **RegisterChunkBuilderStep** — Registers `build_fit_chunks` and `build_transform_chunks` on context; chunks are streamed per split, not stored.
+3. **IntegrityCheckBeforeStep** — Runs before-checks (e.g. no NaNs, length consistency) on apply_to chunks per split.
+4. **FitStep** — Calls `fit_multi_source` on fit chunks.
+5. **TransformStep** — Calls `transform_multi_source` per split.
+6. **PostprocessStep** — Postprocesses raw results.
+7. **MergeStep** — Merges transformed data; emits diagnostic warnings (type change, unit-count change).
+8. **IntegrityCheckAfterStep** — Runs after-checks (structure, split preservation) on assign_to slice.
+9. **RecordManifestStep** — Appends manifest entry.
+
+```mermaid
+flowchart LR
+    A[CopyStep] --> B[RegisterChunkBuilderStep]
+    B --> C[IntegrityCheckBeforeStep]
+    C --> D[FitStep]
+    D --> E[TransformStep]
+    E --> F[PostprocessStep]
+    F --> G[MergeStep]
+    G --> H[IntegrityCheckAfterStep]
+    H --> I[RecordManifestStep]
+```
+
+Lifecycle events (`on_pipeline_start`, `before_transform`, `after_transform`, `on_transform_error`, `on_pipeline_end`) can be subscribed to via `register_hook(event, callback)` in `picid.transforms.base.pipeline`. For examples (e.g. error logging, debugging), see [Hooks examples](HOOKS_EXAMPLES.md).
 
 ### Validation and integrity
 
-Transform metadata supports two validation-related options:
+Structural validation and integrity checks are owned by the pipeline, not by DataTransform.
 
-1. **Built-in post-transform validation**  
-   After each transform, `DataTransform.forward()` runs structural checks (return type, keys present, splits preserved). You can turn this off per transform with **`validate_output: false`** in metadata (e.g. for debugging or trusted pipelines). Default is `true`.
+1. **Built-in post-transform validation**
+   When **`validate_output: true`** (default), **IntegrityCheckAfterStep** runs default after-checks (return type, keys present, splits preserved) on the assign_to slice. DataTransform does not perform validation. Set **`validate_output: false`** per transform to skip these checks (e.g. for debugging or trusted pipelines).
 
-2. **Optional pipeline integrity checks**  
-   The pipeline runs an **IntegrityCheckStep** after CopyStep. It executes a list of `(name, check_fn, policy)` where `policy` is `"fail"`, `"warn"`, or `"allow"`. You can pass **`integrity_checks`** in metadata: a list of `(name, check_fn, policy)` tuples. Each `check_fn` must be a no-arg callable that may raise; it is run during the step. Because callables cannot be expressed in YAML, **`integrity_checks`** is set **programmatically** when building the transform config (e.g. when constructing the metadata dict before passing it to `DataTransform` or `ConfigTransformManager`). Helpers: `picid.transforms.base.integrity.run_check`, `run_checks`. Integrity checks run **before** FitStep and TransformStep.
+2. **Optional pipeline integrity checks**
+   The pipeline runs two integrity steps:
+
+   - **IntegrityCheckBeforeStep** — Uses `integrity_checks_before` from metadata. Check functions receive `Dict[str, List[NamedTransformInput]]` (per-split chunks). Default checks: no NaNs, length consistency.
+   - **IntegrityCheckAfterStep** — Uses `integrity_checks_after` from metadata. Check functions receive `Dict[str, Any]` (assign_to slice). Default checks: structure, split preservation.
+
+   Each check is a `(name, check_fn, policy)` tuple; `policy` is `"fail"`, `"warn"`, or `"allow"`. Check functions must accept the data slice as the first argument. Legacy no-arg callables are supported with a deprecation warning. Because callables cannot be expressed in YAML, **`integrity_checks_before`** and **`integrity_checks_after`** are set **programmatically** when building the transform config. Legacy **`integrity_checks`** maps to `integrity_checks_before` with deprecation.
 
 ## Advanced Topics
 
@@ -661,18 +688,17 @@ The system uses return objects to standardize outputs:
 
 ### Copying Strategy
 
-The system uses efficient copying:
+CopyStep uses `_first_leaf()` to unwrap nested structure and detect the first array. Awkward arrays get shallow copy; other types get deep copy:
 
 ```python
-# Shallow copy for most data
-transformed_data = data.copy(deep=False)
-
-# Deep copy only for keys that will be modified
+# CopyStep uses _first_leaf() to unwrap nested structure and detect
+# the first array. ak.Array → shallow copy; other types → deep copy.
 for key in keys_to_modify:
-    if data[key].get_instance_cls() is not ak.Array:
-        transformed_data[key] = data[key].copy(deep=True)  # NumPy: deep copy
+    first_leaf = _first_leaf(data[key])
+    if isinstance(first_leaf, ak.Array):
+        transformed_data[key] = data[key].copy(deep=False)
     else:
-        transformed_data[key] = data[key].copy(deep=False)  # Awkward: shallow
+        transformed_data[key] = data[key].copy(deep=True)
 ```
 
 ## Debugging
