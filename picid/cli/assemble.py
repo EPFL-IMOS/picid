@@ -15,6 +15,7 @@ from picid.cli.config_discovery import (
     list_model_configs,
     list_task_definitions,
 )
+from picid.cli.parameter_injection import get_overridable_from_experiment
 
 console = Console()
 
@@ -46,6 +47,18 @@ def run_assemble() -> None:
     """Run the interactive config assembler with funnel path selection."""
     import questionary
 
+    tier = questionary.select(
+        "Configuration complexity:",
+        choices=[
+            "Easy: Use defaults only",
+            "Medium: Override paths, debug",
+            "Hard: Override optimizer, learning rate, transforms",
+        ],
+    ).ask()
+
+    if tier is None:
+        return
+
     choice = questionary.select(
         "How do you want to assemble your experiment?",
         choices=[
@@ -59,14 +72,14 @@ def run_assemble() -> None:
         return
 
     if choice == "task":
-        _funnel_task_first()
+        _funnel_task_first(tier)
     elif choice == "dataset":
-        _funnel_dataset_first()
+        _funnel_dataset_first(tier)
     elif choice == "model":
-        _funnel_model_first()
+        _funnel_model_first(tier)
 
 
-def _funnel_task_first() -> None:
+def _funnel_task_first(tier: str) -> None:
     """Task → experiments for that task → select experiment → show command."""
     import questionary
 
@@ -103,10 +116,10 @@ def _funnel_task_first() -> None:
     if exp_choice is None:
         return
 
-    _show_final_command(exp_choice)
+    _show_final_command(exp_choice, tier)
 
 
-def _funnel_dataset_first() -> None:
+def _funnel_dataset_first(tier: str) -> None:
     """Group → task (subdirs under experiment/group/) → experiment → show command."""
     import questionary
 
@@ -150,10 +163,10 @@ def _funnel_dataset_first() -> None:
     if exp_choice is None:
         return
 
-    _show_final_command(exp_choice)
+    _show_final_command(exp_choice, tier)
 
 
-def _funnel_model_first() -> None:
+def _funnel_model_first(tier: str) -> None:
     """Model → filter experiments using that model → select experiment → show command."""
     import questionary
 
@@ -188,7 +201,42 @@ def _funnel_model_first() -> None:
     if exp_choice is None:
         return
 
-    _show_final_command(exp_choice)
+    _show_final_command(exp_choice, tier)
+
+
+def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
+    """Prompt for parameter overrides when tier is Hard. Return override strings."""
+    if tier != "Hard: Override optimizer, learning rate, transforms":
+        return []
+
+    import questionary
+
+    overrides: list[str] = []
+    overridable = get_overridable_from_experiment(experiment_key)
+
+    opt_choice = questionary.select(
+        "Override optimizer?",
+        choices=[
+            "No",
+            "Yes AdamW",
+            "Yes SGD",
+        ],
+    ).ask()
+
+    if opt_choice == "Yes AdamW":
+        overrides.append("optimization=reduce_on_plateau")
+    elif opt_choice == "Yes SGD":
+        overrides.append("optimization=sgd")
+
+    if overridable.get("model_params") and "lr" in overridable["model_params"]:
+        lr_prompt = questionary.text(
+            "Learning rate override (leave empty to keep default):",
+            default="",
+        ).ask()
+        if lr_prompt is not None and lr_prompt.strip():
+            overrides.append(f"optimization.lr={lr_prompt.strip()}")
+
+    return overrides
 
 
 def _preview_config(experiment_key: str) -> None:
@@ -220,10 +268,13 @@ def _preview_config(experiment_key: str) -> None:
         GlobalHydra.instance().clear()
 
 
-def _show_final_command(experiment_key: str) -> None:
+def _show_final_command(experiment_key: str, tier: str = "Easy: Use defaults only") -> None:
     """Print the run command for the selected experiment."""
     _preview_config(experiment_key)
-    cmd = f"uv run python picid/run.py paths=default experiment={experiment_key}"
+    overrides = _parameter_injection_phase(experiment_key, tier)
+    cmd_parts = ["uv run python picid/run.py", "paths=default", f"experiment={experiment_key}"]
+    cmd_parts.extend(overrides)
+    cmd = " ".join(cmd_parts)
     console.print(cmd)
     console.print("Copy and run from project root.")
 
