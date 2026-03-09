@@ -36,6 +36,7 @@ nav:
   - Guides:
     - Overview: guides/index.md
     - Config and overrides: guides/configs_and_overrides.md
+    - Reproducibility: guides/reproducibility.md
     - OmegaConf resolvers: guides/omegaconf_resolvers.md
     - Adding a new model: guides/how_to_add_a_new_model.md
     - RunAI (cluster): guides/runai.md
@@ -46,6 +47,7 @@ nav:
     - Unibo battery RUL: examples/unibo_rul.md
   - Reference:
     - Overview: reference/index.md
+    - Scripts: reference/scripts.md
     - Datasources: reference/datasources.md
     - Data objects & containers: reference/dataobject.md
     - Datasets: reference/datasets.md
@@ -53,13 +55,11 @@ nav:
     - Transforms: reference/transforms.md
     - Evaluators: reference/evaluators.md
     - Model types: reference/model_types.md
-    - API: reference/api.md
+    - API:
+      - Package Reference: reference/api/package_reference.md
   - Transforms (deep dives):
     - Quick start: transforms/quick_start.md
     - User guide: transforms/guide.md
     - Developer guide: transforms/developer_guide.md
     - Hooks examples: transforms/HOOKS_EXAMPLES.md
-  - Archive:
-    - Legacy setup (RunAI/Guild): old_setup.md
-    - Documentation update plan: plans/2025-02-19-docs-webpage-refactor.md
   - Leaderboard: leaderboard/index.html
