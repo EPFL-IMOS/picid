@@ -18,60 +18,70 @@ class FaultClassificationBatchDataset(RULContextBatchDataset):
     target fault class  sequence also has length `seq_len`. In a typical training loop,
     the target label is then taken as the **last value** of this fault class sequence.
 
-    Args:
-        data_dict (dict[str, ndarray | list[ndarray]]): A dictionary mapping string
-            keys (e.g., 'features', 'fault_class') to the time-series data arrays. The
-            arrays can be NumPy arrays, PyTorch Tensors, or Awkward Arrays.
-        task_type (str): A string identifier for the task type (e.g., 'regression'),
-            used by parent classes.
-        seq_len (int): The length of the sliding window, defining the number of
-            historical time steps in each input sample.
-        label_len (int): The length of the "label" or "overlap" portion of the
-            sequence, used by the underlying sequencer. It defines the starting
-            point of the target sequence relative to the input sequence.
-        pred_len (int): The prediction horizon. **Note: This argument is ignored
-            and internally overridden to 0** to make the target window align
-            perfectly with the input window.
-        stride (int, optional): The step size the sliding window takes across the
-            data between generating consecutive sequences. Defaults to 1.
-        **kwargs: Additional keyword arguments passed to the parent `ContextBatchDataset`.
+    Parameters
+    ----------
+    data_dict : dict[str, ndarray | list[ndarray]]
+        A dictionary mapping string keys (e.g., 'features', 'fault_class') to the
+        time-series data arrays. The arrays can be NumPy arrays, PyTorch Tensors,
+        or Awkward Arrays.
+    task_type : str
+        A string identifier for the task type (e.g., 'regression'), used by
+        parent classes.
+    seq_len : int
+        The length of the sliding window, defining the number of historical
+        time steps in each input sample.
+    label_len : int
+        The length of the "label" or "overlap" portion of the sequence, used
+        by the underlying sequencer. It defines the starting point of the
+        target sequence relative to the input sequence.
+    pred_len : int
+        The prediction horizon. **Note: This argument is ignored and internally
+        overridden to 0** to make the target window align perfectly with the
+        input window.
+    stride : int, optional
+        The step size the sliding window takes across the data between
+        generating consecutive sequences. Defaults to 1.
+    **kwargs
+        Additional keyword arguments passed to the parent `ContextBatchDataset`.
 
-    Example:
-        >>> import numpy as np
-        >>> # Example data: 100 time steps, 3 features
-        >>> features = np.random.rand(100, 3)
-        >>> # Fault classes are integers from 0 to 4
-        >>> fault_classes = np.random.randint(0, 5, size=(100, 1))
-        >>> data = {'features': features, 'fault_class': fault_classes}
-        ...
-        >>> # Create a dataset with a window size of 20
-        >>> dataset = FaultClassificationBatchDataset(
-        ...     data_dict=data,
-        ...     task_type='fault_classification',
-        ...     seq_len=20,
-        ...     label_len=10,
-        ...     pred_len=5  # This will be forced to 0
-        ... )
-        ...
-        >>> # Get the first sample from the dataset
-        >>> first_sample = dataset[0]
-        >>> input_features = first_sample['features']
-        >>> target_fault_class_sequence = first_sample['fault_class']
-        ...
-        >>> print(f"Input features shape: {input_features.shape}")
-        Input features shape: (20, 3)
-        >>> print(f"Target fault class sequence shape: {target_fault_class_sequence.shape}")
-        Target fault class sequence shape: (20, 1)
-        ...
-        >>> # In training, the target is the last value of the fault class sequence.
-        >>> # Corresponds to the fault class at the end of the 20-step feature window.
-        >>> final_target_fault_class = target_fault_class_sequence[-1]
-        >>> print(f"Final target fault class value: {final_target_fault_class}")
-        Final target fault class value: [4]
+    Examples
+    --------
+    >>> import numpy as np
+    >>> # Example data: 100 time steps, 3 features
+    >>> features = np.random.rand(100, 3)
+    >>> # Fault classes are integers from 0 to 4
+    >>> fault_classes = np.random.randint(0, 5, size=(100, 1))
+    >>> data = {'features': features, 'fault_class': fault_classes}
+    ...
+    >>> # Create a dataset with a window size of 20
+    >>> dataset = FaultClassificationBatchDataset(
+    ...     data_dict=data,
+    ...     task_type='fault_classification',
+    ...     seq_len=20,
+    ...     label_len=10,
+    ...     pred_len=5  # This will be forced to 0
+    ... )
+    ...
+    >>> # Get the first sample from the dataset
+    >>> first_sample = dataset[0]
+    >>> input_features = first_sample['features']
+    >>> target_fault_class_sequence = first_sample['fault_class']
+    ...
+    >>> print(f"Input features shape: {input_features.shape}")
+    Input features shape: (20, 3)
+    >>> print(f"Target fault class sequence shape: {target_fault_class_sequence.shape}")
+    Target fault class sequence shape: (20, 1)
+    ...
+    >>> # In training, the target is the last value of the fault class sequence.
+    >>> # Corresponds to the fault class at the end of the 20-step feature window.
+    >>> final_target_fault_class = target_fault_class_sequence[-1]
+    >>> print(f"Final target fault class value: {final_target_fault_class}")
+    Final target fault class value: [4]
 
-    Yields:
-        A dictionary where keys correspond to those in `data_dict` and values
-        are the sequenced NumPy arrays for a given sample index.
+    Yields
+    ------
+    A dictionary where keys correspond to those in `data_dict` and values are
+    the sequenced NumPy arrays for a given sample index.
     """
 
     @override

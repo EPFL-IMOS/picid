@@ -15,30 +15,40 @@ logger = logging.getLogger(__name__)
 
 def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
     """
-
-
-
-
     Initializes datasets based on the provided configuration and data using hydra's `instantiate` function.
 
     This function takes a dataset configuration, a dictionary of data, and a dictionary
     of metadata, and creates a list of datasets. It ensures that the data provided is
     valid and consistent, and that all datasets created are of the same type.
 
-    Args:
-        dataset_cfg (omegaconf.DictConfig): The configuration for the dataset instantiation.
-        data_dict (dict): A dictionary where keys are data identifiers and values are either
-            lists or `omegaconf.listconfig.ListConfig` objects containing the data.
-            The special key "metadata" is allowed to be an `omegaconf.dictconfig.DictConfig`.
-        meta_data_dict (dict): A dictionary containing metadata to be passed to the dataset.
-    Returns:
-        list: A list of instantiated datasets.
-    Raises:
-        AssertionError: If the "metadata" key is not an `omegaconf.dictconfig.DictConfig`.
-        TypeError: If any value in `data_dict` is not a list or `omegaconf.listconfig.ListConfig`.
-        ValueError: If any list in `data_dict` is empty.
-        AssertionError: If all lists in `data_dict` do not have the same length.
-        AssertionError: If the instantiated datasets are not of the same type.
+    Parameters
+    ----------
+    dataset_cfg : omegaconf.DictConfig
+        The configuration for the dataset instantiation.
+    data_dict : dict
+        A dictionary where keys are data identifiers and values are either lists
+        or `omegaconf.listconfig.ListConfig` objects containing the data. The
+        special key "metadata" is allowed to be an `omegaconf.dictconfig.DictConfig`.
+    meta_data_dict : dict
+        A dictionary containing metadata to be passed to the dataset.
+
+    Returns
+    -------
+    list
+        A list of instantiated datasets.
+
+    Raises
+    ------
+    AssertionError
+        If the "metadata" key is not an `omegaconf.dictconfig.DictConfig`.
+    TypeError
+        If any value in `data_dict` is not a list or `omegaconf.listconfig.ListConfig`.
+    ValueError
+        If any list in `data_dict` is empty.
+    AssertionError
+        If all lists in `data_dict` do not have the same length.
+    AssertionError
+        If the instantiated datasets are not of the same type.
     """
     lenghts = []
     for key, val in data_dict.items():
@@ -130,12 +140,15 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
     while `HydraConcatDataset` handles the boilerplate of applying that logic to
     every unit in your dataset.
 
-    Args:
-        dataset_cfg (DictConfig): Hydra config describing the Child Dataset to instantiate
-            for each unit.
-        data_dict (dict[str, list[ndarray]]): The input data. Keys are modalities
-            (e.g., 'features'). Values are LISTS of arrays (one per unit).
-        meta_data_dict (dict): Metadata shared across all units (e.g., scalers, split info).
+    Parameters
+    ----------
+    dataset_cfg : DictConfig
+        Hydra config describing the Child Dataset to instantiate for each unit.
+    data_dict : dict[str, list[ndarray]]
+        The input data. Keys are modalities (e.g., 'features'). Values are LISTS
+        of arrays (one per unit).
+    meta_data_dict : dict
+        Metadata shared across all units (e.g., scalers, split info).
     """
 
     def __init__(
@@ -146,15 +159,19 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
         **kwargs,
     ):
         """
-        Args:
-            dataset_cfg: the dataset configuration.
-            tensor_dict: dictionary of tensors.
-            data_sict: dictionary of data.
-                {
-                "features":  list[ndarray],
-                "target":  list[ndarray],
-                "other_named_tensor": list[ndarray],
-        }
+        Parameters
+        ----------
+        dataset_cfg
+            The dataset configuration.
+        tensor_dict
+            Dictionary of tensors.
+        data_sict
+            Dictionary of data.
+            {
+            "features":  list[ndarray],
+            "target":  list[ndarray],
+            "other_named_tensor": list[ndarray],
+            }
         """
         self.meta_data_dict = meta_data_dict
         datasets = initialize_datasets(dataset_cfg, data_dict, meta_data_dict)
@@ -193,15 +210,19 @@ class NonVectorizedHydraConcatDataset(ConcatDataset):
         **kwargs,
     ):
         """
-        Args:
-            dataset_cfg: the dataset configuration.
-            tensor_dict: dictionary of tensors.
-            data_sict: dictionary of data.
-                {
-                "features":  list[ndarray],
-                "target":  list[ndarray],
-                "other_named_tensor": list[ndarray],
-        }
+        Parameters
+        ----------
+        dataset_cfg
+            The dataset configuration.
+        tensor_dict
+            Dictionary of tensors.
+        data_sict
+            Dictionary of data.
+            {
+            "features":  list[ndarray],
+            "target":  list[ndarray],
+            "other_named_tensor": list[ndarray],
+            }
         """
         self.meta_data_dict = meta_data_dict
         datasets = initialize_datasets(dataset_cfg, data_dict, meta_data_dict)

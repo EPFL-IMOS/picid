@@ -24,31 +24,44 @@ class FitPredictTaskDataset(BaseDataset):
     """
     Dataset for fit-predict tasks with multiple tasks, each represented by 3D arrays.
 
-    Args:
-        data_dict (dict[str, np.ndarray | list[np.ndarray]]): Dictionary containing 'X' and 'y' arrays or lists of arrays.
-            - 'X': 3D array or list of 3D arrays of context features, shape (n_tasks, n_samples, n_features).
-            - 'y': 3D array or list of 3D arrays of target values, shape (n_tasks, n_samples, n_targets).
-        meta_data_dict (dict[str, any]): Metadata associated with the dataset.
-        convert_units_to_tasks (bool, optional): If True, concatenates lists of arrays along the task dimension.
-            If False, assumes all arrays belong to the same task and squeezes the first dimension.
-        **kwargs: Additional keyword arguments passed to BaseDataset.
+    Parameters
+    ----------
+    data_dict : dict[str, np.ndarray | list[np.ndarray]]
+        Dictionary containing 'X' and 'y' arrays or lists of arrays.
+        - 'X': 3D array or list of 3D arrays of context features, shape
+          (n_tasks, n_samples, n_features).
+        - 'y': 3D array or list of 3D arrays of target values, shape
+          (n_tasks, n_samples, n_targets).
+    meta_data_dict : dict[str, any]
+        Metadata associated with the dataset.
+    convert_units_to_tasks : bool, optional
+        If True, concatenates lists of arrays along the task dimension. If False,
+        assumes all arrays belong to the same task and squeezes the first dimension.
+    **kwargs
+        Additional keyword arguments passed to BaseDataset.
 
-    Raises:
-        ValueError: If 'X' or 'y' is missing from data_dict.
-        AssertionError: If input arrays do not have the expected dimensions or if task/time step counts are inconsistent.
+    Raises
+    ------
+    ValueError
+        If 'X' or 'y' is missing from data_dict.
+    AssertionError
+        If input arrays do not have the expected dimensions or if task/time step
+        counts are inconsistent.
 
-    Example:
-        X = np.random.randn(5, 100, 10)  # 5 tasks, 100 samples, 10 features
-        y = np.random.randn(5, 100, 1)   # 5 tasks, 100 samples, 1 target
-        ds = FitPredictTaskDataset({'X': X, 'y': y}, meta_data_dict={})
+    Examples
+    --------
+    X = np.random.randn(5, 100, 10)  # 5 tasks, 100 samples, 10 features
+    y = np.random.randn(5, 100, 1)   # 5 tasks, 100 samples, 1 target
+    ds = FitPredictTaskDataset({'X': X, 'y': y}, meta_data_dict={})
 
-    Returns:
-        AttributeDict for each task containing:
-            - task_idx: Index of the task.
-            - task_num: Total number of tasks.
-            - task_desc: Description string.
-            - target: Target array for the task.
-            - context: Context array for the task.
+    Returns
+    -------
+    AttributeDict for each task containing:
+        - task_idx: Index of the task.
+        - task_num: Total number of tasks.
+        - task_desc: Description string.
+        - target: Target array for the task.
+        - context: Context array for the task.
     """
 
     def __init__(
