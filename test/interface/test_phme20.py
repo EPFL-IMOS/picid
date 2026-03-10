@@ -2,6 +2,7 @@ from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 
 from picid.interface import EasyInterface
+from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
@@ -29,12 +30,15 @@ def test_pydantic_easy_interface():
     callbacks = [EarlyStopping(monitor=None),
                  RichModelSummary()]
 
+    evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
+
     interface = EasyInterface()
     interface.train(datasource='phme20',
                     loggers=loggers,
                     callbacks=callbacks,
                     task_definition=task_definition,
                     model=model,
+                    evaluators=evaluators,
                     transforms=transforms)
 
 

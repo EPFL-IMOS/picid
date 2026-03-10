@@ -13,6 +13,7 @@ from omegaconf import OmegaConf, DictConfig
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
@@ -182,6 +183,7 @@ class EasyInterface:
                             task_definition: BaseTaskDefinition,
                             model: AbsModelConfig,
                             datasource: str | ProcessedDatasource,
+                            evaluators,
                             callbacks: dict | Callback | list[Callback] | None = None,
                             training_model: str | dict = None,
                             transforms: str | dict = None,
@@ -263,10 +265,22 @@ class EasyInterface:
                      node=callbacks_cfg)
             overrides.append('callbacks=callbacks_cfg')
 
-        cs.store(group="evaluator",
-                 name="evaluator_cfg",
-                 node=OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml'))
-        overrides.append('evaluator=evaluator_cfg')
+        if evaluators is None or isinstance(evaluators, dict):
+            if isinstance(evaluators, dict):
+                evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
+            else:
+                evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+
+            cs.store(group="evaluator",
+                     name="evaluator_cfg",
+                     node=evaluators_cfg)
+            overrides.append('evaluator=evaluator_cfg')
+
+        # evaluators
+        # cs.store(group="evaluator",
+        #          name="evaluator_cfg",
+        #          node=OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml'))
+        # overrides.append('evaluator=evaluator_cfg')
 
         cs.store(group="paths",
                  name="paths_cfg",
@@ -292,6 +306,7 @@ class EasyInterface:
               datasource: str | None | ProcessedDatasource = None,
               callbacks: dict | Callback | list[Callback] | None = None,
               loggers: list[Logger | BaseLogger] = None,
+              evaluators : dict[str, DefaultEvaluatorConfig] = None,
               transforms: list[DataTransform] = [],
               overrides: List[str] = None,
               enable_progress_bar: bool = True) -> None:
@@ -317,6 +332,7 @@ class EasyInterface:
         cfg = self.compose_config_file(datasource=datasource,
                                        task_definition=task_definition,
                                        training_model=model,
+                                       evaluators=evaluators,
                                        callbacks=callbacks,
                                        overrides=overrides,
                                        model=model)

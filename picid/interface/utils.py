@@ -65,7 +65,6 @@ def create_lightning_module(
     # as a consequence, the same applies for the scheduler
     # because we need the optimizer instance
 
-    # Instantiate optimizer (partially)
     optimizer_factory = hydra.utils.instantiate(
         cfg.optimization.optimizer, _partial_=True
     )
@@ -74,17 +73,12 @@ def create_lightning_module(
         hasattr(cfg.optimization, "scheduler")
         and cfg.optimization.scheduler is not None
     ):
-        # Instantiate scheduler (partially)
         scheduler_factory = hydra.utils.instantiate(
             cfg.optimization.scheduler,
             _partial_=True,
         )
-        # log.info(f"Scheduler: {cfg.optimization.scheduler._target_}")
     else:
         scheduler_factory = None
-
-    # log.info(f"Optimizer: {cfg.optimization.optimizer._target_}")
-    # Check the LightningModules to see the full initialization of optimizer/scheduler
 
     model = None
     if not cfg.model.get("metadata", False):
@@ -214,16 +208,6 @@ class InterfacePreProcessor:
         self.transforms = transforms
         self.memory = Memory(cache_path, verbose=20)
 
-        # assert mode in [
-        #     "per_unit",
-        #     "cross_unit",
-        # ], (
-        #     f"Unsupported mode: {mode}. Supported modes are 'per_unit'"
-        #     " and 'cross_unit'."
-        # )
-        #
-        # self.mode = mode
-
         self._is_preprocessed = False
         self.data: Optional[DatasetContainer] = None
         self.meta_data: dict = {}
@@ -331,7 +315,6 @@ class InterfacePreProcessor:
         self.data = apply_transforms(self.data, self.transforms, None)
 
         self._is_preprocessed = True
-        # logger.info("Data dictionary structure after transforms:")
 
         # self.data.meta_data_dict = self.get_meta_data_dict()
         # self.data.data_dict = self.get_processed_data_dict()

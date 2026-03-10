@@ -1,8 +1,8 @@
 from abc import ABC
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AbsModelConfig(BaseModel, ABC):
-    model_class : str
-    config_name : str
+    model_class : str = Field(frozen=True)
+    config_name : str = Field(frozen=True)
