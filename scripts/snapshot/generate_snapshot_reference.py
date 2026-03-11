@@ -44,6 +44,9 @@ def main():
     REF_DIR.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+    env["PYTHONPATH"] = str(
+        PROJECT_ROOT
+    )  # Ensure test.data importable (not stdlib test)
     env["HYDRA_FULL_ERROR"] = "1"
 
     root = str(PROJECT_ROOT).replace("\\", "/")

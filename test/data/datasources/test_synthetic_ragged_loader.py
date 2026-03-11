@@ -1,4 +1,11 @@
-"""Tests for SyntheticRaggedFromFileLoader: ragged data from pre-generated fixtures."""
+"""Tests for SyntheticRaggedFromFileLoader: ragged data from pre-generated fixtures.
+
+When the ragged fixture format has been modified:
+  uv run python scripts/snapshot/generate_snapshot_ragged_fixtures.py
+
+Then commit test/fixtures/snapshot/ragged_prognostics.pkl.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,11 +19,19 @@ except ImportError:
 
 from test.data.datasources.synthetic_ragged_loader import SyntheticRaggedFromFileLoader
 
-FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "snapshot" / "ragged_prognostics.pkl"
+FIXTURE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "fixtures"
+    / "snapshot"
+    / "ragged_prognostics.pkl"
+)
 
 
 @pytest.mark.skipif(ak is None, reason="awkward not installed")
-@pytest.mark.skipif(not FIXTURE_PATH.exists(), reason="Run scripts/snapshot/generate_snapshot_ragged_fixtures.py first")
+@pytest.mark.skipif(
+    not FIXTURE_PATH.exists(),
+    reason="Run scripts/snapshot/generate_snapshot_ragged_fixtures.py first",
+)
 class TestSyntheticRaggedFromFileLoader:
     """Test SyntheticRaggedFromFileLoader loads valid ragged output from fixtures."""
 
@@ -46,7 +61,9 @@ class TestSyntheticRaggedFromFileLoader:
             assert isinstance(feats, list), f"{split} features should be list"
             assert len(feats) >= 1, f"{split} should have at least one unit"
             for arr in feats:
-                assert isinstance(arr, ak.Array), f"{split} unit should be ak.Array, got {type(arr)}"
+                assert isinstance(
+                    arr, ak.Array
+                ), f"{split} unit should be ak.Array, got {type(arr)}"
 
     def test_variable_lengths_across_units(self):
         """Assert variable lengths across units (ragged structure)."""

@@ -99,7 +99,7 @@ packages = ["picid"]
 addopts = "--basetemp=test/.pytest_tmp"
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
-    "requires_snapshots: skip when pipeline snapshot fixtures are missing (run scripts/snapshot/generate_pipeline_snapshots.py)",
+    "requires_snapshots: skip when pipeline snapshot fixtures are missing; regenerate with: uv run python scripts/snapshot/generate_pipeline_snapshots.py",
     "slow: slow benchmarks (e.g. __getitem__ timing); skip with -m 'not slow'",
 ]
 

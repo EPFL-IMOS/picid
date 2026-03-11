@@ -1,9 +1,16 @@
-"""
-Real-data pipeline comparison tests.
+"""Real-data pipeline comparison tests.
 
 Compare current pipeline output to saved slices (loaded and transformed);
 assert preprocessing time within bounds. Skip when snapshots are missing (@pytest.mark.requires_snapshots).
+
+When the pipeline has been modified (transforms, datasource, preprocessing):
+  uv run python scripts/snapshot/generate_pipeline_snapshots.py
+
+Optional: --output-dir test/data/fixtures/pipeline_snapshots
+
+Then commit test/data/fixtures/pipeline_snapshots/.
 """
+
 from __future__ import annotations
 
 import os
@@ -16,7 +23,9 @@ from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.transforms.base.transform_manager import ConfigTransformManager
 
 # Snapshot fixtures root: test/data/fixtures/pipeline_snapshots
-SNAPSHOTS_ROOT = Path(__file__).resolve().parents[1] / "data" / "fixtures" / "pipeline_snapshots"
+SNAPSHOTS_ROOT = (
+    Path(__file__).resolve().parents[1] / "data" / "fixtures" / "pipeline_snapshots"
+)
 
 # Keys to extract per config (must match datasource output; phme20 uses "rul" not "target")
 CONFIG_KEYS = {
@@ -67,7 +76,9 @@ def test_loaded_slices_match_saved(config_name: str):
     data_dir = project_root / "datasets"
     ds_path, _ = CONFIGS[config_name]
     ds_cfg = OmegaConf.load(project_root / ds_path)
-    ds_cfg = OmegaConf.merge(ds_cfg, OmegaConf.create({"paths": {"data_dir": str(data_dir)}}))
+    ds_cfg = OmegaConf.merge(
+        ds_cfg, OmegaConf.create({"paths": {"data_dir": str(data_dir)}})
+    )
     datasource = instantiate(ds_cfg)
     datasource.load_data()
     datasource.split_data()
@@ -76,8 +87,14 @@ def test_loaded_slices_match_saved(config_name: str):
     loaded_dir = _snapshot_dir(config_name, "loaded")
     saved_path = _manifest_path(config_name, "loaded")
     keys = CONFIG_KEYS.get(config_name, ["features", "target"])
-    split_dict = container.to_split_dict() if hasattr(container, "to_split_dict") else {}
-    missing = [k for k in keys if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))]
+    split_dict = (
+        container.to_split_dict() if hasattr(container, "to_split_dict") else {}
+    )
+    missing = [
+        k
+        for k in keys
+        if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))
+    ]
     if missing:
         pytest.skip(
             f"Container missing keys {missing} for {config_name}. "
@@ -85,6 +102,7 @@ def test_loaded_slices_match_saved(config_name: str):
             "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
         )
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         current_manifest = container_to_slice_manifest(
@@ -97,7 +115,11 @@ def test_loaded_slices_match_saved(config_name: str):
             current_manifest,
             saved_path,
             loaded_dir,
-            current_split_dict=container.to_split_dict() if hasattr(container, "to_split_dict") else None,
+            current_split_dict=(
+                container.to_split_dict()
+                if hasattr(container, "to_split_dict")
+                else None
+            ),
             current_slices_dir=tmp_path,
         )
 
@@ -131,7 +153,9 @@ def test_transformed_slices_match_saved(config_name: str):
     data_dir = project_root / "datasets"
     ds_path, tf_path = CONFIGS[config_name]
     ds_cfg = OmegaConf.load(project_root / ds_path)
-    ds_cfg = OmegaConf.merge(ds_cfg, OmegaConf.create({"paths": {"data_dir": str(data_dir)}}))
+    ds_cfg = OmegaConf.merge(
+        ds_cfg, OmegaConf.create({"paths": {"data_dir": str(data_dir)}})
+    )
     tf_cfg = OmegaConf.load(project_root / tf_path)
     datasource = instantiate(ds_cfg)
     transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
@@ -146,8 +170,16 @@ def test_transformed_slices_match_saved(config_name: str):
     transformed_dir = _snapshot_dir(config_name, "transformed")
     saved_path = _manifest_path(config_name, "transformed")
     keys = CONFIG_KEYS.get(config_name, ["features", "target"])
-    split_dict = preprocessor.data.to_split_dict() if hasattr(preprocessor.data, "to_split_dict") else {}
-    missing = [k for k in keys if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))]
+    split_dict = (
+        preprocessor.data.to_split_dict()
+        if hasattr(preprocessor.data, "to_split_dict")
+        else {}
+    )
+    missing = [
+        k
+        for k in keys
+        if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))
+    ]
     if missing:
         pytest.skip(
             f"Pipeline output missing keys {missing} for {config_name}. "
@@ -155,6 +187,7 @@ def test_transformed_slices_match_saved(config_name: str):
             "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
         )
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         current_manifest = container_to_slice_manifest(
@@ -167,7 +200,11 @@ def test_transformed_slices_match_saved(config_name: str):
             current_manifest,
             saved_path,
             transformed_dir,
-            current_split_dict=preprocessor.data.to_split_dict() if hasattr(preprocessor.data, "to_split_dict") else None,
+            current_split_dict=(
+                preprocessor.data.to_split_dict()
+                if hasattr(preprocessor.data, "to_split_dict")
+                else None
+            ),
             current_slices_dir=tmp_path,
         )
     max_ratio = float(os.environ.get("PIPELINE_SNAPSHOT_MAX_TIME_RATIO", "2.0"))

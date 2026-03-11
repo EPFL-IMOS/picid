@@ -2,7 +2,13 @@
 
 Fails if pipeline behavior changes unintentionally (e.g. transform, evaluator).
 Metrics compared to 4 decimal places. Configs live in test/configs/.
+
+When the pipeline has been modified (transforms, evaluators, models, metrics):
+  uv run python scripts/snapshot/generate_snapshot_reference.py
+
+Then commit test/fixtures/snapshot/reference.json.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,6 +55,9 @@ def _run_experiment_to_dir(
     """Run experiment to out_dir, optionally capture metrics. Returns exit code."""
     env = os.environ.copy()
     env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+    env["PYTHONPATH"] = str(
+        PROJECT_ROOT
+    )  # Ensure test.data importable (not stdlib test)
     env["HYDRA_FULL_ERROR"] = "1"
     if metrics_path:
         env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_path)
@@ -69,7 +78,10 @@ def _run_experiment_to_dir(
     return subprocess.run(cmd, env=env, cwd=PROJECT_ROOT).returncode
 
 
-@pytest.mark.skipif(not REF_PATH.exists(), reason="Run scripts/snapshot/generate_snapshot_reference.py first")
+@pytest.mark.skipif(
+    not REF_PATH.exists(),
+    reason="Run scripts/snapshot/generate_snapshot_reference.py first",
+)
 @pytest.mark.parametrize("task_type,exp_base,model", EXPERIMENTS)
 def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     """Current pipeline output matches committed reference (4 decimals)."""
@@ -82,6 +94,9 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
         env = os.environ.copy()
         env["PIPELINE_REGRESSION_OUTPUT"] = out_path
         env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+        env["PYTHONPATH"] = str(
+            PROJECT_ROOT
+        )  # Ensure test.data importable (not stdlib test)
         env["HYDRA_FULL_ERROR"] = "1"
         root = str(PROJECT_ROOT).replace("\\", "/")
         searchpath = f"file://{root}/test/configs,file://{root}/configs"
@@ -107,9 +122,9 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
 
     for k in ref:
         assert k in current, f"Missing {k} in current"
-        assert current[k] == ref[k], (
-            f"{k}: current={current[k]} ref={ref[k]} (must match to 4 decimals)"
-        )
+        assert (
+            current[k] == ref[k]
+        ), f"{k}: current={current[k]} ref={ref[k]} (must match to 4 decimals)"
 
 
 def test_reproduce_from_run_matches_overrides():
@@ -129,10 +144,17 @@ def test_reproduce_from_run_matches_overrides():
 
         env = os.environ.copy()
         env["PROJECT_ROOT"] = str(PROJECT_ROOT)
+        env["PYTHONPATH"] = str(
+            PROJECT_ROOT
+        )  # Ensure test.data importable (not stdlib test)
         env["HYDRA_FULL_ERROR"] = "1"
         env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_b)
         rc = subprocess.run(
-            [sys.executable, "scripts/reproducibility/reproduce_from_run.py", str(run_dir)],
+            [
+                sys.executable,
+                "scripts/reproducibility/reproduce_from_run.py",
+                str(run_dir),
+            ],
             env=env,
             cwd=PROJECT_ROOT,
         )
@@ -143,6 +165,6 @@ def test_reproduce_from_run_matches_overrides():
         b = round_metrics(json.loads(metrics_b.read_text()))
         for k in a:
             assert k in b, f"Missing {k} in reproduce output"
-            assert a[k] == b[k], (
-                f"{k}: overrides={a[k]} reproduce={b[k]} (must match to {PRECISION} decimals)"
-            )
+            assert (
+                a[k] == b[k]
+            ), f"{k}: overrides={a[k]} reproduce={b[k]} (must match to {PRECISION} decimals)"
