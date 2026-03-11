@@ -84,6 +84,7 @@ def _run_experiment_to_dir(
     return subprocess.run(cmd, env=env, cwd=PROJECT_ROOT).returncode
 
 
+@pytest.mark.requires_snapshots
 @pytest.mark.skipif(
     not REF_PATH.exists(),
     reason="Run scripts/snapshot/generate_snapshot_reference.py first",
@@ -137,6 +138,7 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
             assert c == r, f"{k}: current={c} ref={r} (must match)"
 
 
+@pytest.mark.requires_snapshots
 def test_reproduce_from_run_matches_overrides():
     """Run via overrides and via reproduce_from_run produce matching metrics (5 epochs)."""
     import tempfile
