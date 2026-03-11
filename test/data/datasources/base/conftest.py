@@ -64,7 +64,7 @@ def in_memory_loader_part_of_multi():
 
 def _two_source_config():
     """Config for two sources without multisource splitter (each source splits itself)."""
-    train, val, test = 0.5, 0.25, 0.25
+    train, val, _ = 0.5, 0.25, 0.25
     splitter_cfg = {
         "train": train,
         "val": val,

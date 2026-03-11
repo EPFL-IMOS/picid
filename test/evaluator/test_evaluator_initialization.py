@@ -713,34 +713,12 @@ class TestReconstructionEvaluatorInitialization:
         assert evaluator.collect_predictions is True  # Auto-enabled by Hook presence
 
     def test_init_plot_reconstructions_forces_collect(self, mock_metric_factory):
-        """Test that a plot hook forces collect_predictions=True."""
+        """When collect_predictions=None and hook is present, Smart Promotion sets True."""
         evaluator = ReconstructionEvaluator(
             metric_names=["mse"],
             hooks=[ReconstructionPlotHook()],
-            collect_predictions=False,  # Explicit False
-        )
-
-        # Should be True because of the hook
-        assert evaluator.collect_predictions is True
-
-    def test_init_plot_reconstructions_forces_collect(self, mock_metric_factory):
-        """
-        Injecting a hook must force collect_predictions to True.
-        """
-        evaluator = ReconstructionEvaluator(
-            metric_names=["mse"],
-            hooks=[ReconstructionPlotHook()],  # Inject the hook
-            collect_predictions=False,  # Try to disable
-        )
-
-        assert evaluator.collect_predictions is False
-
-        evaluator = ReconstructionEvaluator(
-            metric_names=["mse"],
-            hooks=[ReconstructionPlotHook()],  # Inject the hook
             collect_predictions=None,
         )
-        # The DefaultEvaluator "Smart Promotion" logic should see the hook
         assert evaluator.collect_predictions is True
 
 

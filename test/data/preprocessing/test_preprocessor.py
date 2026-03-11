@@ -47,7 +47,7 @@ class TestPreProcessorInitialization:
 
         assert preprocessor.datasource is mock_single_source_loader
         assert preprocessor.transforms is mock_transform_manager
-        assert preprocessor._is_preprocessed == False
+        assert not preprocessor._is_preprocessed
         assert preprocessor.data is None
 
     def test_init_stores_datasource(

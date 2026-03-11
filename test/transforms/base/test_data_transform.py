@@ -264,8 +264,8 @@ class TestDataTransform:
             features={"train": [np.array([[1.0]])]},
             target={"val": [np.array([[1.0]])]},  # Different split
         )
-        # This should work, but if transform changes splits, it should error
-        # The actual error depends on implementation
+        assert dt.transform_name == "test"
+        assert container.features["train"] is not None
 
 
 class TestDataTransformAdvanced:

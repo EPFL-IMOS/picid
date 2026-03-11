@@ -312,18 +312,19 @@ class TestTimeSplitterGetSplits:
 
         # Train mask should be all ones
         train_start, train_end = splits["train"]
+        assert train_end <= n
         assert len(masks["train"]) == train_end - train_start
-        assert np.all(masks["train"] == True)
+        assert np.all(masks["train"])
 
         # Val mask should have lookback zeros then ones
         val_start, val_end = splits["val"]
         assert len(masks["val"]) == val_end - val_start
-        assert np.sum(masks["val"][:seq_len] == False) == seq_len
+        assert np.sum(~masks["val"][:seq_len]) == seq_len
 
         # Test mask should have lookback zeros then ones
         test_start, test_end = splits["test"]
         assert len(masks["test"]) == test_end - test_start
-        assert np.sum(masks["test"][:seq_len] == False) == seq_len
+        assert np.sum(~masks["test"][:seq_len]) == seq_len
 
     def test_get_splits_minimum_size_validation(self):
         """Test minimum split size validation.

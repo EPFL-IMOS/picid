@@ -219,6 +219,8 @@ def test_val_subset_ratio(tiny_sliding_dataset, caplog):
             subset_seed=42,
         )
         dl = dm.val_dataloader()
+        assert dl is not None
+        assert hasattr(dl, "__iter__")
     assert "Subset" in caplog.text or "subset" in caplog.text.lower()
 
 
@@ -238,6 +240,8 @@ def test_test_subset_ratio(tiny_sliding_dataset, caplog):
             subset_seed=42,
         )
         dl = dm.test_dataloader()
+        assert dl is not None
+        assert hasattr(dl, "__iter__")
     assert "Subset" in caplog.text or "subset" in caplog.text.lower()
 
 

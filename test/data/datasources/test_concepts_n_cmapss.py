@@ -27,8 +27,8 @@ def test_subsampling():
 
 def test_binarize_concept():
     """binarize_concept thresholds at -0.0015."""
-    assert binarize_concept(-0.002) == True
-    assert binarize_concept(0.0) == False
+    assert binarize_concept(-0.002) is True
+    assert binarize_concept(0.0) is False
 
 
 def test_scale_concept():

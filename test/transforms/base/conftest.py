@@ -132,7 +132,7 @@ class DummyTransformWithMetadata(DenseTransform, NoFitPerSegmentMixin):
     ) -> np.ndarray:
         key = list(data.keys())[0]
         multiplier = metadata.get("multiplier", 1.0)
-        mode = metadata.get("mode", "unknown")
+        _mode = metadata.get("mode", "unknown")
         return data[key] * multiplier
 
 

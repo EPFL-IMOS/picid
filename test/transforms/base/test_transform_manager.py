@@ -27,6 +27,8 @@ class TestConfigTransformManager:
 
     def test_manager_initialization_with_config(self):
         """Test manager initialization with config."""
+        from picid.transforms.base.transform_manager import ConfigTransformManager
+
         config = {
             "scale": {
                 "transform": {
@@ -35,8 +37,9 @@ class TestConfigTransformManager:
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }
-        # Note: This will fail if transform can't be instantiated, which is expected
-        # We'll test with actual transforms instead
+        manager = ConfigTransformManager(transforms_config=config)
+        assert len(manager) == 1
+        assert manager.has_transform("scale")
 
     def test_manager_lazy_instantiation(self):
         """Test lazy instantiation mode."""
@@ -47,6 +50,7 @@ class TestConfigTransformManager:
         # Should instantiate on first access
         transforms = manager.get_data_transforms()
         assert manager.is_instantiated
+        assert isinstance(transforms, dict)
 
     def test_manager_has_transform(self):
         """Test has_transform method."""
@@ -285,6 +289,8 @@ class TestConfigTransformManager:
             )
             # get_transform_names returns all config keys
             names = manager.get_transform_names()
+            assert "public" in names
+            assert "__private" in names
             # But instantiation should skip __ keys
             transforms = manager.get_data_transforms()
             transform_names = [t.transform_name for t in transforms.values()]

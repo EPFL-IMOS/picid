@@ -138,6 +138,9 @@ def test_subset_blocks_exactly_one_block_per_point():
     gaps = res["gaps"]
     block_lengths = res["block_lengths"]
 
+    assert len(intervals) >= 1
+    assert all(hi >= lo for lo, hi in intervals)
+
     # sizes and counts
     assert res["n_subset"] == len_ds - 1  # 5 points chosen
     assert len(block_lengths) == subset_blocks

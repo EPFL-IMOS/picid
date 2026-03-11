@@ -28,7 +28,7 @@ def test_railway_extract_mask(railway_kwargs, mock_csv_df_battery_railway):
     mask = loader.extract_mask(mock_csv_df_battery_railway)
     assert mask.dtype == bool
     assert np.sum(mask) == 1
-    assert mask[mock_csv_df_battery_railway.columns.get_loc("target_col")] == True
+    assert bool(mask[mock_csv_df_battery_railway.columns.get_loc("target_col")])
 
 
 def test_railway_read_data_returns_three_frames(

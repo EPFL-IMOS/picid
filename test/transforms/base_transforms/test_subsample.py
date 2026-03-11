@@ -271,7 +271,7 @@ class TestWindowedAggregationTransform:
         )
         metadata = {}
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as _w:
             warnings.simplefilter("always")
             result = transform.transform_data(data, metadata)
             # Should log warning or handle gracefully

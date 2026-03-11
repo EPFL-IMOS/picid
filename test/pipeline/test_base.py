@@ -525,6 +525,7 @@ class TestFitPredictWrapperLightningModule:
             evaluators=mock_evaluators,
         )
         loss = module.training_step(phm_fit_predict_batch, 0)
+        assert loss is not None
         assert not mock_evaluators["train"]._updates
 
     def test_automatic_optimization_false(

@@ -385,7 +385,7 @@ def multiunit_data_1d_units():
     - Different degradation rates per unit
     """
     batch_size = 15
-    n_units = 5
+    _n_units = 5
     rng = np.random.RandomState(888)
 
     # Create unit IDs with uneven distribution

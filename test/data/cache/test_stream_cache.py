@@ -45,6 +45,7 @@ class TestStreamCacheInitialization:
         cache = StreamCache(transform_fn=transform_fn, output_dir=str(output_dir))
 
         assert output_dir.exists()
+        assert cache.transform_fn is transform_fn
 
     def test_init_stores_transform_function(self, tmp_path):
         """Test that transform function is stored.
@@ -367,4 +368,5 @@ class TestStreamCacheEdgeCases:
 
         for name in names:
             result = cache.handle(name, np.array([1, 2, 3]))
+            assert result is not None
             assert (tmp_path / f"{name}.pkl").exists()
