@@ -12,6 +12,7 @@ Then commit test/fixtures/snapshot/reference.json.
 from __future__ import annotations
 
 import json
+import math
 import os
 import subprocess
 import sys
@@ -34,6 +35,11 @@ EXPERIMENTS = [
 ]
 
 PRECISION = 4
+
+# Allow small cross-platform variance for neural nets (patchtst, lstm, crossformer)
+# e.g. 0.2362 vs 0.2364 on Linux vs macOS due to BLAS/PyTorch differences
+FLOAT_ABS_TOL = 0.001
+FLOAT_REL_TOL = 0.005  # 0.5%
 
 
 def round_metrics(obj):
@@ -122,9 +128,13 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
 
     for k in ref:
         assert k in current, f"Missing {k} in current"
-        assert (
-            current[k] == ref[k]
-        ), f"{k}: current={current[k]} ref={ref[k]} (must match to 4 decimals)"
+        c, r = current[k], ref[k]
+        if isinstance(c, float) and isinstance(r, float):
+            assert math.isclose(
+                c, r, rel_tol=FLOAT_REL_TOL, abs_tol=FLOAT_ABS_TOL
+            ), f"{k}: current={c} ref={r} (must match within tolerance)"
+        else:
+            assert c == r, f"{k}: current={c} ref={r} (must match)"
 
 
 def test_reproduce_from_run_matches_overrides():
