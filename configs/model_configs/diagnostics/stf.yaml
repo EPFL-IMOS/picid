@@ -10,7 +10,8 @@ task_definition:
   requires_training: true
 
 model:
-  max_seq_len: ${sum:${task_definition.seq_len},${task_definition.pred_len}}
+  # task definition.pred_len is 0 for diagnostics, but the model needs the output to be > 0, so we set it to 1 here
+  max_seq_len: ${sum:${task_definition.seq_len},1}
   d_yc: 0
   d_yt: ${task_definition.num_classes}
   d_x: ${infer_data_dim:features,-1}

@@ -1250,7 +1250,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/cnn_1d",
-                // "task_definition.subset_ratio=0.1",
+                "task_definition.padding_left_flag=True",
                 // "+task_definition.subset_blocks=20",
                 "debug=default",
                 // "logger=wandb"
@@ -1362,7 +1362,7 @@
             "justMyCode": false,
             "args": [
                 "paths=rt_local",
-                "experiment=mzvav/diagnostics/tabpfn_fit_predict",
+                "experiment=mzvav/diagnostics/xgboost_fit_predict",
                 "debug=default"
             ],
             "env": {
@@ -1440,7 +1440,9 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "experiment=mzvav/diagnostics/stf",
+                "paths=rt_local",
+                "experiment=mzvav/diagnostics/crossformer",
+                "debug=default"
             ],
         },
         {

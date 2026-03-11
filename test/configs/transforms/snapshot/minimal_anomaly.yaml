@@ -9,8 +9,8 @@ scaler_features:
 __tabularize_x_transform: &__tabularize_x_transform
   _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
-  label_len: 0
-  pred_len: 1
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
   timestep_dimension: 1
   select_features:
     - features: history
@@ -18,8 +18,8 @@ __tabularize_x_transform: &__tabularize_x_transform
 __tabularize_y_transform: &__tabularize_y_transform
   _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
-  label_len: 0
-  pred_len: 1
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
   timestep_dimension: 1
   select_features:
     - anomaly_detection: present

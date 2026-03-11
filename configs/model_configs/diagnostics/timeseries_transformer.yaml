@@ -18,7 +18,7 @@ model:
 
   transformer_args:
     seq_len: ${task_definition.seq_len}
-    pred_len: ${task_definition.pred_len}
+    pred_len: 1 # task definition.pred_len is 0 for diagnostics, but the model needs the output to be > 0, so we set it to 1 here
     enc_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
     dec_context_in: ${diff:${model.d_x}, ${model.n_timefeatures}}
     embed_type: 5

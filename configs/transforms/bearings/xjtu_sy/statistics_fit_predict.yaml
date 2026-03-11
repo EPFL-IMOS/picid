@@ -31,8 +31,8 @@ tabularize_x_train:
   transform:
     _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
-    label_len: 0
-    pred_len: 1
+    label_len: ${task_definition.label_len}
+    pred_len: ${task_definition.pred_len}
     stride: ${task_definition.stride_train}
     padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
@@ -53,8 +53,8 @@ tabularize_x_val_test:
   transform:
     _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
-    label_len: 0
-    pred_len: 1
+    label_len: ${task_definition.label_len}
+    pred_len: ${task_definition.pred_len}
     stride: ${task_definition.stride}
     padding_left_flag: ${task_definition.padding_left_flag}
     timestep_dimension: 1
@@ -72,8 +72,8 @@ tabularize_y_train:
   transform:
     _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
-    label_len: 0
-    pred_len: 1
+    label_len: ${task_definition.label_len}
+    pred_len: ${task_definition.pred_len}
     stride: ${task_definition.stride_train}
     padding_left_flag: ${task_definition.padding_left_flag}
     subset_ratio: ${oc.select:task_definition.subset_ratio,null}
@@ -95,8 +95,8 @@ tabularize_y_val_test:
     _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
     seq_len: ${task_definition.seq_len}
     padding_left_flag: ${task_definition.padding_left_flag}
-    label_len: 0
-    pred_len: 1
+    label_len: ${task_definition.label_len}
+    pred_len: ${task_definition.pred_len}
     stride: ${task_definition.stride}
     timestep_dimension: 1
 

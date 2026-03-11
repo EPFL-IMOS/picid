@@ -104,7 +104,7 @@ class RULContextBatchDataset(ContextBatchDataset):
         subset_blocks: Optional[int] = None,
         **kwargs,
     ):
-        assert pred_len == 1, "pred_len must be 1 for RUL prediction."
+        assert pred_len == 0, "pred_len must be 0 for RUL prediction."
         # It is makes sense in the context of RUL as we want to predict the RUL at the end of the sequence x, seq_y is not used in this dataset
 
         self.meta_data_dict = kwargs["meta_data_dict"]
