@@ -216,7 +216,7 @@ def _concatenate_segments(
         elif isinstance(val, np.ndarray):
             lengths.append(val.shape[axis] if axis < val.ndim else None)
 
-    non_none = [l for l in lengths if l is not None]
+    non_none = [l for l in lengths if l is not None]  # noqa: E741
     if non_none and len(set(non_none)) != 1:
         raise ValueError(
             f"After concatenation, arrays disagree on axis={axis}. "

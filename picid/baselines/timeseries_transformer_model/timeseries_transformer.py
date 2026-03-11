@@ -168,7 +168,7 @@ class Model(nn.Module):
                         dropout=configs.dropout,
                         activation=configs.activation,
                     )
-                    for l in range(configs.e_layers)
+                    for l in range(configs.e_layers)  # noqa: E741
                 ],
                 norm_layer=torch.nn.LayerNorm(configs.d_model),
             )
@@ -204,7 +204,7 @@ class Model(nn.Module):
                     dropout=configs.dropout,
                     activation=configs.activation,
                 )
-                for l in range(configs.d_layers)
+                for l in range(configs.d_layers)  # noqa: E741
             ],
             norm_layer=torch.nn.LayerNorm(configs.d_model),
             projection=nn.Linear(configs.d_model, configs.c_out, bias=True),

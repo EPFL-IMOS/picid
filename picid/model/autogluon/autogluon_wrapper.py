@@ -43,7 +43,7 @@ class AutoGluonWrapper(AbstractFeedForwardWrapper):
         # dict_keys(['batch_idx', 'target', 'context'])
         batch = next(iter(kwargs["train_dataloader"]))
         # dict_keys(['features_seq_x', 'features_seq_y'])
-        context = batch["context"]
+        _context = batch["context"]
         # dict_keys(['target_seq_x', 'target_seq_y'])
         target = batch["target"]
 

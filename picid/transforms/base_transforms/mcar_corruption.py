@@ -148,7 +148,7 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
             min_p = self.block_params["min_size"]
             max_p = self.block_params["max_size"]
 
-            if type(min_p) == type(max_p) and min_p > max_p:
+            if isinstance(min_p, type(max_p)) and min_p > max_p:
                 raise ValueError(
                     "block_params['min_size'] cannot be greater than ['max_size']."
                 )

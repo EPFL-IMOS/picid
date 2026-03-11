@@ -284,7 +284,7 @@ class NasaRandomizedData:
         # - time is the array of DISCHARGE times
         return cycle_x, cycle_y, battery_n_cycle, time, current, initial_cycle_lenghts
 
-    def _to_padded_numpy(self, l, shape):
+    def _to_padded_numpy(self, l, shape):  # noqa: E741
         """Helper function to pad a list of arrays to a fixed shape."""
         padded_array = np.zeros(shape)
         initia_lenghts = []

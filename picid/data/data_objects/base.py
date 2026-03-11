@@ -147,7 +147,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
             if key not in self._instance_cls:
                 self._instance_cls[key] = type(value)
             else:
-                if self._instance_cls[key] != type(value):
+                if not isinstance(value, self._instance_cls[key]):
                     logger.debug(
                         f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}. Changing stored type."
                     )
