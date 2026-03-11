@@ -52,10 +52,10 @@ def get_sort_metric(
     2. Task type default
     3. Dataset category default
     4. Global default (DEFAULT_SORT_METRIC = "val_best_rerun/loss")
-    
+
     Note: The fallback_to_optimization parameter is kept for backward compatibility
     but is no longer used - we always return DEFAULT_SORT_METRIC if no match is found.
-    
+
     Parameters
     ----------
     dataset : str
@@ -68,7 +68,7 @@ def get_sort_metric(
         Dataset category (e.g., "prognostics", "diagnostics")
     fallback_to_optimization : bool
         If True, returns None to signal using optimization metric
-        
+
     Returns
     -------
     Optional[str]
@@ -78,74 +78,126 @@ def get_sort_metric(
     key = (dataset, model)
     if key in SORT_METRIC_OVERRIDES:
         out = SORT_METRIC_OVERRIDES[key]
-        logger.debug("get_sort_metric(%s, %s, task_type=%s, category=%s) -> override %s", dataset, model, task_type, dataset_category, out)
+        logger.debug(
+            "get_sort_metric(%s, %s, task_type=%s, category=%s) -> override %s",
+            dataset,
+            model,
+            task_type,
+            dataset_category,
+            out,
+        )
         return out
     # 2. Check task type default
     if task_type and task_type in SORT_METRIC_BY_TASK_TYPE:
         out = SORT_METRIC_BY_TASK_TYPE[task_type]
-        logger.debug("get_sort_metric(%s, %s, ...) -> task_type %s -> %s", dataset, model, task_type, out)
+        logger.debug(
+            "get_sort_metric(%s, %s, ...) -> task_type %s -> %s",
+            dataset,
+            model,
+            task_type,
+            out,
+        )
         return out
     # 3. Check dataset category default
     if dataset_category and dataset_category in SORT_METRIC_BY_DATASET_CATEGORY:
         out = SORT_METRIC_BY_DATASET_CATEGORY[dataset_category]
-        logger.debug("get_sort_metric(%s, %s, ...) -> category %s -> %s", dataset, model, dataset_category, out)
+        logger.debug(
+            "get_sort_metric(%s, %s, ...) -> category %s -> %s",
+            dataset,
+            model,
+            dataset_category,
+            out,
+        )
         return out
     # 4. Use global default (val_best_rerun/loss) when inference fails
-    logger.debug("get_sort_metric(%s, %s, ...) -> default %s", dataset, model, DEFAULT_SORT_METRIC)
+    logger.debug(
+        "get_sort_metric(%s, %s, ...) -> default %s",
+        dataset,
+        model,
+        DEFAULT_SORT_METRIC,
+    )
     return DEFAULT_SORT_METRIC
 
 
 def infer_task_type_from_dataset(dataset: str) -> Optional[str]:
     """
     Infer task type from dataset name (heuristic).
-    
+
     This is a simple heuristic - can be improved with actual dataset metadata.
-    
+
     Parameters
     ----------
     dataset : str
         Dataset name
-        
+
     Returns
     -------
     Optional[str]
         Inferred task type or None
     """
     dataset_lower = dataset.lower()
-    
+
     # Classification datasets (heuristic)
-    if any(keyword in dataset_lower for keyword in ["mzvav", "hsf15", "fault", "diagnostic"]):
+    if any(
+        keyword in dataset_lower
+        for keyword in ["mzvav", "hsf15", "fault", "diagnostic"]
+    ):
         return "classification"
-    
+
     # Regression/RUL datasets (heuristic)
-    if any(keyword in dataset_lower for keyword in ["nb14", "unibo", "pronostia", "xjtu", "cmapss", "rul", "unibo21"]):
+    if any(
+        keyword in dataset_lower
+        for keyword in [
+            "nb14",
+            "unibo",
+            "pronostia",
+            "xjtu",
+            "cmapss",
+            "rul",
+            "unibo21",
+        ]
+    ):
         return "regression"
-    
+
     return None
 
 
 def infer_dataset_category_from_name(dataset: str) -> Optional[str]:
     """
     Infer dataset category from dataset name (heuristic).
-    
+
     Parameters
     ----------
     dataset : str
         Dataset name
-        
+
     Returns
     -------
     Optional[str]
         "prognostics" or "diagnostics" or None
     """
     dataset_lower = dataset.lower()
-    
+
     # Diagnostics datasets (heuristic)
-    if any(keyword in dataset_lower for keyword in ["mzvav", "hsf15", "fault", "diagnostic"]):
+    if any(
+        keyword in dataset_lower
+        for keyword in ["mzvav", "hsf15", "fault", "diagnostic"]
+    ):
         return "diagnostics"
-    
+
     # Prognostics datasets (heuristic)
-    if any(keyword in dataset_lower for keyword in ["nb14", "unibo", "pronostia", "xjtu", "cmapss", "phme", "unibo21"]):
+    if any(
+        keyword in dataset_lower
+        for keyword in [
+            "nb14",
+            "unibo",
+            "pronostia",
+            "xjtu",
+            "cmapss",
+            "phme",
+            "unibo21",
+        ]
+    ):
         return "prognostics"
-    
+
     return None

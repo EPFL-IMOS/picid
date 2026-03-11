@@ -81,7 +81,9 @@ def write_report_html(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>""" + html.escape(title) + """</title>
+<title>"""
+        + html.escape(title)
+        + """</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 1rem 2rem; max-width: 1400px; }
   h1 { border-bottom: 2px solid #333; }
@@ -96,7 +98,9 @@ def write_report_html(
 </style>
 </head>
 <body>
-<h1>""" + html.escape(title) + """</h1>
+<h1>"""
+        + html.escape(title)
+        + """</h1>
 """
     )
 
@@ -106,7 +110,7 @@ def write_report_html(
 
     # 2. Summary table
     sections.append("<h2>2. Summary table (best metric by model/dataset)</h2>\n")
-    
+
     # Extract and display metric information
     if all_results is not None:
         # Collect metrics used for each model/dataset
@@ -117,7 +121,7 @@ def write_report_html(
                     combo_sort_metric = sort_metric.get((dataset, model), None)
                 else:
                     combo_sort_metric = sort_metric
-                
+
                 if combo_sort_metric is not None:
                     metrics_used.add(combo_sort_metric)
                 else:
@@ -125,15 +129,19 @@ def write_report_html(
                     opt_metric = opt_info.get("metric", "")
                     if opt_metric:
                         metrics_used.add(opt_metric)
-        
+
         if metrics_used:
             if len(metrics_used) == 1:
                 metric_display = list(metrics_used)[0]
-                sections.append(f"<p><strong>Metric used to select best results:</strong> {html.escape(metric_display)}</p>\n")
+                sections.append(
+                    f"<p><strong>Metric used to select best results:</strong> {html.escape(metric_display)}</p>\n"
+                )
             else:
                 metrics_list = ", ".join(sorted(metrics_used))
-                sections.append(f"<p><strong>Metric used to select best results:</strong> {html.escape(metrics_list)} (varies by model/dataset)</p>\n")
-    
+                sections.append(
+                    f"<p><strong>Metric used to select best results:</strong> {html.escape(metrics_list)} (varies by model/dataset)</p>\n"
+                )
+
     sections.append(_dataframe_to_html_table(summary_df))
 
     # 3. Global plots (e.g. best metric bars)
@@ -143,7 +151,9 @@ def write_report_html(
             path = os.path.join(output_dir, rel_path)
             if os.path.isfile(path):
                 sections.append(f'<p class="plot-caption">{html.escape(label)}</p>\n')
-                sections.append(f'<img src="{html.escape(rel_path)}" alt="{html.escape(label)}" />\n')
+                sections.append(
+                    f'<img src="{html.escape(rel_path)}" alt="{html.escape(label)}" />\n'
+                )
 
     # 4. HP impact (table + plot per model/dataset)
     sections.append("<h2>4. Hyperparameter impact</h2>\n")
@@ -151,20 +161,26 @@ def write_report_html(
         safe_label = f"{dataset} / {model}"
         sections.append(f'<div class="hp-section"><h3>{html.escape(safe_label)}</h3>\n')
         sections.append(
-            f'<p><strong>Dataset name:</strong> {html.escape(dataset)}, '
-            f'<strong>Model name:</strong> {html.escape(model)}, '
-            f'<strong>Metric used to select best results:</strong> {html.escape(metric_used)}</p>\n'
+            f"<p><strong>Dataset name:</strong> {html.escape(dataset)}, "
+            f"<strong>Model name:</strong> {html.escape(model)}, "
+            f"<strong>Metric used to select best results:</strong> {html.escape(metric_used)}</p>\n"
         )
         path = os.path.join(output_dir, plot_rel_path)
         if os.path.isfile(path):
-            sections.append(f'<img src="{html.escape(plot_rel_path)}" alt="{html.escape(safe_label)}" />\n')
+            sections.append(
+                f'<img src="{html.escape(plot_rel_path)}" alt="{html.escape(safe_label)}" />\n'
+            )
         sections.append(_dataframe_to_html_table(df))
         sections.append("</div>\n")
 
     sections.append("</body>\n</html>")
 
     os.makedirs(output_dir, exist_ok=True)
-    logger.info("Writing report to %s (%d HP impact sections)", report_path, len(hp_impact_entries))
+    logger.info(
+        "Writing report to %s (%d HP impact sections)",
+        report_path,
+        len(hp_impact_entries),
+    )
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("".join(sections))
 

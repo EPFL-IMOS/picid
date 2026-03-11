@@ -6,6 +6,7 @@ This module is responsible for the first step of the analysis pipeline:
 getting the raw data from Weights & Biases (or a local cache) and transforming
 it into a clean, flat pandas DataFrame ready for analysis.
 """
+
 import ast
 import logging
 import os
@@ -85,7 +86,9 @@ def load_runs_df(
         - List[str]: All column names generated from the config (after normalization).
         - List[str]: Column names that were dropped during cleaning.
     """
-    logger.info("Load: project=%s, user=%s, cache_dir=%s", project_name, user, csv_cache_dir)
+    logger.info(
+        "Load: project=%s, user=%s, cache_dir=%s", project_name, user, csv_cache_dir
+    )
     os.makedirs(csv_cache_dir, exist_ok=True)
     csv_path = f"{csv_cache_dir}/{project_name}.csv"
 
@@ -142,7 +145,11 @@ def load_runs_df(
     for column in cols_to_normalize:
         df, new_cols = _normalize_column(df, column)
         config_columns.extend(new_cols)
-    logger.debug("After normalize: shape=%s, config_columns count=%d", df.shape, len(config_columns))
+    logger.debug(
+        "After normalize: shape=%s, config_columns count=%d",
+        df.shape,
+        len(config_columns),
+    )
 
     # Drop columns that are mostly empty (>90% NaN) to reduce noise.
     nan_cols_to_drop = df.columns[df.isna().mean() > 0.9].tolist()
@@ -158,5 +165,10 @@ def load_runs_df(
 
     # Keep track of all columns that have been dropped.
     all_dropped_columns = nan_cols_to_drop + cols_to_drop_by_filter
-    logger.debug("Load complete: final shape=%s, config_columns=%d, dropped=%d", df.shape, len(config_columns), len(all_dropped_columns))
+    logger.debug(
+        "Load complete: final shape=%s, config_columns=%d, dropped=%d",
+        df.shape,
+        len(config_columns),
+        len(all_dropped_columns),
+    )
     return df, config_columns, all_dropped_columns

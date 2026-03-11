@@ -37,7 +37,7 @@ So for RUL, the model typically reads `batch.context.features_seq_x` as input an
 
 ## FitPredictDataset
 
-`FitPredictTaskDataset` is designed for Sklearn-like fit-predict tasks involving multiple tasks, each represented by 3D arrays of context features and targets. 
+`FitPredictTaskDataset` is designed for Sklearn-like fit-predict tasks involving multiple tasks, each represented by 3D arrays of context features and targets.
 Handles multi-task datasets with context (`X`) and target (`y`) arrays, each shaped as (n_tasks, n_samples, n_features/targets). For example, in multi-step forecasting, each task could correspond to predicting future values for a separate time horizon.
 
 ### Batch Contents

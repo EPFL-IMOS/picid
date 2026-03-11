@@ -37,8 +37,7 @@ EXPECTED_SEARCH_SPACE: Dict[str, Dict[str, Dict[str, List[Any]]]] = {
     #         "optimization.lr": [0.001, 0.0005],
     #     },
     # },
-
-    # "UNIBO21": 
+    # "UNIBO21":
     # {
     #     "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
     #         "task_definition.seq_len": [1, 10, 50, 100, 1000],
@@ -81,51 +80,50 @@ EXPECTED_SEARCH_SPACE: Dict[str, Dict[str, Dict[str, List[Any]]]] = {
     #         "optimization.lr": [0.001, 0.0005, 0.0001],
     #     }
     #     },
-
-        # "PHME20":
-        # {
-        # "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
-        #     "task_definition.subset_ratio": [0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        #     "dataset._overrides.train.dataset_cfg.subset_seed": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        #     "dataset._overrides.train.dataset_cfg.subset_ratio": [0.001, 0.0005, 0.0001],
-        # },
-        # "baselines.patchtst_model.PatchTST_Forecaster": {
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        # },
-        # "baselines.lstm_model.LSTM_Forecaster": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "model.wrappers.mlp_wrapper.MLPWrapper": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "baselines.tide_model.TiDE_Forecaster": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "baselines.crossformer_model.Crossformer_Forecaster": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # },
-        # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
-        #     "task_definition.seq_len": [1, 10, 50, 100],
-        #     "optimization.lr": [0.001, 0.0005, 0.0001],
-        # }
-        # },
+    # "PHME20":
+    # {
+    # "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": {
+    #     "task_definition.subset_ratio": [0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+    #     "dataset._overrides.train.dataset_cfg.subset_seed": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    #     "dataset._overrides.train.dataset_cfg.subset_ratio": [0.001, 0.0005, 0.0001],
+    # },
+    # "baselines.patchtst_model.PatchTST_Forecaster": {
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    # },
+    # "baselines.lstm_model.LSTM_Forecaster": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "model.wrappers.mlp_wrapper.MLPWrapper": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "baselines.tide_model.TiDE_Forecaster": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "baselines.crossformer_model.Crossformer_Forecaster": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # },
+    # "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": {
+    #     "task_definition.seq_len": [1, 10, 50, 100],
+    #     "optimization.lr": [0.001, 0.0005, 0.0001],
+    # }
+    # },
 }
 
 # Default (model-only) grid used for all datasets when no per-dataset entry exists.
@@ -195,7 +193,12 @@ def _legacy_default_search_space() -> Optional[Dict[str, Dict[str, List[Any]]]]:
     """Backward compat: config.EXPECTED_SEARCH_SPACE when DEFAULT_SEARCH_SPACE is not set."""
     try:
         from picid_report import config
-        return config.EXPECTED_SEARCH_SPACE if getattr(config, "EXPECTED_SEARCH_SPACE", None) else None
+
+        return (
+            config.EXPECTED_SEARCH_SPACE
+            if getattr(config, "EXPECTED_SEARCH_SPACE", None)
+            else None
+        )
     except Exception:
         return None
 
@@ -229,16 +232,34 @@ def get_search_space(
     # 1) Per-dataset
     if dataset in EXPECTED_SEARCH_SPACE and model in EXPECTED_SEARCH_SPACE[dataset]:
         out = EXPECTED_SEARCH_SPACE[dataset][model]
-        logger.debug("get_search_space(%s, %s) -> per-dataset, %s keys", dataset, model, list(out.keys()) if out else None)
+        logger.debug(
+            "get_search_space(%s, %s) -> per-dataset, %s keys",
+            dataset,
+            model,
+            list(out.keys()) if out else None,
+        )
         return out
     if not use_default:
-        logger.debug("get_search_space(%s, %s) -> None (data-first, use_default=False)", dataset, model)
+        logger.debug(
+            "get_search_space(%s, %s) -> None (data-first, use_default=False)",
+            dataset,
+            model,
+        )
         return None
     # 2) Default (model-only): explicit DEFAULT_SEARCH_SPACE or legacy config
-    default = DEFAULT_SEARCH_SPACE if DEFAULT_SEARCH_SPACE is not None else _legacy_default_search_space()
+    default = (
+        DEFAULT_SEARCH_SPACE
+        if DEFAULT_SEARCH_SPACE is not None
+        else _legacy_default_search_space()
+    )
     if default and model in default:
         out = default[model]
-        logger.debug("get_search_space(%s, %s) -> default (all datasets), %s keys", dataset, model, list(out.keys()) if out else None)
+        logger.debug(
+            "get_search_space(%s, %s) -> default (all datasets), %s keys",
+            dataset,
+            model,
+            list(out.keys()) if out else None,
+        )
         return out
     logger.debug("get_search_space(%s, %s) -> None (data-first)", dataset, model)
     return None
@@ -251,13 +272,13 @@ def get_model_grid_from_search_space(
 ) -> Optional[Dict[str, List[Any]]]:
     """
     Get the HP grid for (dataset, model) from a search space dict.
-    
+
     Accepts either structure so callers do not need to detect format:
     - New: {dataset: {model: {hp: [values]}}}
     - Legacy: {model: {hp: [values]}}
-    
+
     Returns None if not found or search_space is None/empty (triggers auto-discovery).
-    
+
     Parameters
     ----------
     dataset : str
@@ -266,7 +287,7 @@ def get_model_grid_from_search_space(
         Model name/identifier
     search_space : dict or None
         Either structure; can be from config.EXPECTED_SEARCH_SPACE or PipelineConfig.
-        
+
     Returns
     -------
     Optional[Dict[str, List[Any]]]

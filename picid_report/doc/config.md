@@ -178,10 +178,10 @@ cfg = PipelineConfig(
 
 Two shapes are supported by `get_model_grid_from_search_space()`:
 
-- **New (preferred):** `{dataset: {model: {hp_name: [values]}}}`  
+- **New (preferred):** `{dataset: {model: {hp_name: [values]}}}`
   Example: `EXPECTED_SEARCH_SPACE["UNIBO21"]["baselines.lstm_model.LSTM_Forecaster"]` → `{"task_definition.seq_len": [1, 10, 50, 100], ...}`
 
-- **Legacy:** `{model: {hp_name: [values]}}`  
+- **Legacy:** `{model: {hp_name: [values]}}`
   Example: `config.EXPECTED_SEARCH_SPACE["baselines.lstm_model.LSTM_Forecaster"]` → same value shape. No dataset key; same grid for every dataset.
 
 **Resolution in the pipeline:** For each (dataset, model), the code first calls `get_search_space(dataset, model)` (reads `configs.search_space.EXPECTED_SEARCH_SPACE`). If that returns a dict, that grid is used. Otherwise it calls `get_model_grid_from_search_space(dataset, model, _search_space)` where `_search_space` is the legacy dict or a PipelineConfig’s expected_search_space. If that returns `None`, the pipeline uses **auto-discovery** (varying HPs from data only).

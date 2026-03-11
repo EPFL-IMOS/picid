@@ -191,13 +191,13 @@ __init__(self) -> None
 
 ### Methods
 
-- **`accumulate(self, batch: Dict[str, Any], unit_id: Optional[np.ndarray] = None) -> None`**  
+- **`accumulate(self, batch: Dict[str, Any], unit_id: Optional[np.ndarray] = None) -> None`**
   Appends `batch["preds"]` and `batch["targets"]` to internal lists. If `batch.get("is_dual")` is true, also appends `batch["norm_preds"]` and `batch["norm_targets"]`. If `unit_id` is provided, appends it to `unit_ids`.
 
-- **`get_all(self) -> Dict[str, np.ndarray]`**  
+- **`get_all(self) -> Dict[str, np.ndarray]`**
   Concatenates all buffered lists along axis 0 and returns a dict. Returns `{}` if buffer is empty.
 
-- **`clear(self) -> None`**  
+- **`clear(self) -> None`**
   Clears all lists for a new epoch.
 
 ---
@@ -233,14 +233,14 @@ __init__(
 
 ### Methods
 
-- **`update(predictions, targets, norm_preds=None, norm_targets=None) -> None`**  
+- **`update(predictions, targets, norm_preds=None, norm_targets=None) -> None`**
   Updates all primary metrics with `predictions` and `targets`. If `is_dual` and `norm_preds`/`norm_targets` are provided, updates normalized metrics with them.
 
-- **`compute() -> Dict[str, float]`**  
-  For **classification**: returns `{name: metric.compute()}` (no suffix).  
+- **`compute() -> Dict[str, float]`**
+  For **classification**: returns `{name: metric.compute()}` (no suffix).
   For **regression/PHM**: primary metrics use `_denormalized` suffix when `is_dual`; otherwise `_normalized`. If dual, normalized metrics use `_normalized` suffix.
 
-- **`reset() -> None`**  
+- **`reset() -> None`**
   Resets all metric states.
 
 **Available metrics (via MetricFactory):**
@@ -264,10 +264,10 @@ Abstract base for all evaluator hooks.
 
 **Methods:**
 
-- **`on_update_end(self, batch: Dict[str, Any], evaluator: Any) -> None`**  
+- **`on_update_end(self, batch: Dict[str, Any], evaluator: Any) -> None`**
   Called after each batch is processed. Optional override for streaming or partial accumulation. Default implementation is no-op.
 
-- **`on_compute_end(self, results: Dict[str, float], evaluator: Any, mode: str, epoch: int, step: int) -> None`**  
+- **`on_compute_end(self, results: Dict[str, float], evaluator: Any, mode: str, epoch: int, step: int) -> None`**
   Abstract. Called after all metrics are computed. Primary entry point for saving and plotting.
 
 ### SavePredictionsHook
@@ -376,23 +376,23 @@ __init__(
 
 ### Methods
 
-- **`add_hook(self, hook: BaseEvalHook) -> None`**  
+- **`add_hook(self, hook: BaseEvalHook) -> None`**
   Registers a new hook. If `collect_predictions` was False, enables it automatically.
 
-- **`update(self, model_out: Dict[str, Any]) -> None`**  
+- **`update(self, model_out: Dict[str, Any]) -> None`**
   1. Validates via `_validate_input` (returns early if empty or invalid).
   2. Prepares batch via `_prepare_batch_data` (scaling, task branching).
   3. If `collect_predictions`, calls `buffer.accumulate(batch, model_out.get("unit_id"))`.
   4. Calls `metric_manager.update(...)` with preds, targets, and optional norm_preds/norm_targets.
   5. Calls `hook.on_update_end(batch, self)` for each hook.
 
-- **`compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`**  
+- **`compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]`**
   Computes metrics via `metric_manager.compute()`, runs `hook.on_compute_end(...)` for each hook, returns the result dict.
 
-- **`reset(self) -> None`**  
+- **`reset(self) -> None`**
   Clears buffer and resets metric manager.
 
-- **`log_plot(self, fig, title, mode, epoch, step) -> None`**  
+- **`log_plot(self, fig, title, mode, epoch, step) -> None`**
   If `remote_logger` is set, logs the figure as `plots/{mode}/{title}`.
 
 ### Internal methods
