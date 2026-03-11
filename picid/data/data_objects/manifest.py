@@ -6,7 +6,7 @@ optional scope (step_id, key, split), and a payload dict. Queryable by step_id, 
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 MANIFEST_SCHEMA_VERSION = "1.0"

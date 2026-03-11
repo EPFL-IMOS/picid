@@ -2,7 +2,6 @@
 
 from typing import Optional, Any
 
-import torch
 
 from picid.baselines.definitions import CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardWrapper
@@ -15,10 +14,8 @@ from autogluon.features.generators import (
     BulkFeatureGenerator,
 )
 
-import numpy as np
 import pandas as pd
 
-from einops import rearrange
 
 from picid.model.autogluon.multi_label_predictor import MultilabelTabularPredictor
 

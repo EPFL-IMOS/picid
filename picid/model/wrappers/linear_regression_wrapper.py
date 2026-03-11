@@ -1,10 +1,9 @@
 """Wrapper for the LinearRegression model."""
-from sklearn.linear_model import LogisticRegression
 
 from .base import AbstractFeedForwardWrapper
 
 from picid.model.methods.linear_regression_model import LinearRegressionModelBaseline
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):

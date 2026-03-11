@@ -46,13 +46,12 @@ def _preload_thread_env() -> None:
 _preload_thread_env()
 
 # shutil
-from typing import Any, Tuple, Union
+from typing import Any, Union
 import uuid
 
 import hydra
 import lightning as L
 import numpy as np
-import omegaconf
 import torch
 import awkward as ak
 import random

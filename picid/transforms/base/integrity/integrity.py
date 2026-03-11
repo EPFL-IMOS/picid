@@ -9,7 +9,7 @@ by using policy "fail" when the check is registered.
 from __future__ import annotations
 
 import warnings
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 IntegrityPolicy = str  # "fail" | "warn" | "allow"
 CHECK_FN = Callable[[], None]  # no-arg callable; may raise

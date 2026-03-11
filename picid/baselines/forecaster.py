@@ -7,7 +7,6 @@ from picid.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
-    FORECASTING_TASKS,
 )
 from picid.baselines.linear_model.linear_ar import LinearModel
 from picid.evaluator.base import AbstractEvaluator

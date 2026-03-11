@@ -9,8 +9,6 @@ import torch
 
 from tabpfn import TabPFNRegressor, TabPFNClassifier
 
-from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
-import torch
 from .base import AbstractFitPredictWrapper
 from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 

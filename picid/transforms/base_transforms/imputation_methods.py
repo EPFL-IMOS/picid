@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 from collections import defaultdict
 
 import numpy as np

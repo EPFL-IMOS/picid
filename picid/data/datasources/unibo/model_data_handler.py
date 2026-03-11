@@ -6,9 +6,6 @@ from sklearn.preprocessing import MinMaxScaler
 from .unibo_powertools_data import CapacityCols, CycleCols
 
 
-import logging
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 
 
 class ModelDataHandler:

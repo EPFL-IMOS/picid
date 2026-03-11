@@ -1,11 +1,10 @@
 """Wrapper for the TimePFN model."""
-from typing import override
 
 import torch
 from .base import AbstractFeedForwardWrapper
 
 from tabpfn import TabPFNRegressor, TabPFNClassifier
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import CLASSIFICATION_TASKS, FORECASTING_TASKS
 
 
 class TabPFNWrapper(AbstractFeedForwardWrapper):

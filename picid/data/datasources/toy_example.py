@@ -4,7 +4,6 @@ from typing import Any, Dict, List, override
 
 import awkward as ak
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
 # --- LIBRARY IMPORTS ---

@@ -3,7 +3,7 @@ import warnings
 
 import torch
 from einops import rearrange
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper

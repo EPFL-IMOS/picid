@@ -1,4 +1,3 @@
-import copy
 import logging
 import warnings
 from collections import defaultdict
@@ -10,7 +9,7 @@ from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.nb14.nasa_random_data import NasaRandomizedData
 from picid.data.datasources.nb14.prepare_rul_data import RulHandler
-from picid.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
+from picid.data.datasources.nb14.utils import table_to_ak_array
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)

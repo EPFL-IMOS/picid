@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override
+from typing import Dict, List, Optional, Tuple, override
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -122,7 +122,7 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         Finds the FPT for a single 1D signal vector.
         """
         if signal_vector.ndim != 1:
-            raise ValueError(f"Signal vector provided to _find_fpt must be 1D.")
+            raise ValueError("Signal vector provided to _find_fpt must be 1D.")
 
         if self.normal_period_end > len(signal_vector):
             logger.warning(

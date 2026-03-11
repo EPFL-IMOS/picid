@@ -22,7 +22,7 @@ from __future__ import annotations
 import inspect
 import logging
 from collections.abc import Mapping, Sequence
-from typing import Any, Dict, List, Optional, Tuple, Union, get_origin
+from typing import Any, Dict, List, Optional, Tuple, get_origin
 
 import omegaconf
 from hydra.utils import instantiate

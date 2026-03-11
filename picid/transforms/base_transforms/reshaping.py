@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from einops import parse_shape, rearrange
+from einops import rearrange
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override, Union
+from typing import Dict, Optional, Tuple, override
 import numpy as np
 import awkward as ak
 import os
@@ -14,7 +14,6 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 # Import your awkward utils
 from picid.utils.awkward_utils import (
     ak_flatten_variable_dims,
-    ak_find_var_dims,
     get_ak_shape,
 )
 
@@ -162,7 +161,7 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         feat_flat, targ_flat = None, None
 
         if is_scenario_1:
-            logger.debug(f"Running broadcast scenario: (N, var, F) + (N, 1)")
+            logger.debug("Running broadcast scenario: (N, var, F) + (N, 1)")
 
             feat_flat = ak.to_numpy(ak_flatten_variable_dims(feat_data, axis=1))
 

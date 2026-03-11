@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override, Union
+from typing import Dict, List, Optional, Tuple, override, Union
 import numpy as np
 
 from picid.transforms.base.base_transform import DenseTransform

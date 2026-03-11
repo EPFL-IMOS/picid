@@ -6,9 +6,8 @@ Registry: (DataKind, TransformCapability) -> TransformHandler.
 """
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, Callable, Dict, List, Protocol, Tuple
 
 import numpy as np
 import awkward as ak

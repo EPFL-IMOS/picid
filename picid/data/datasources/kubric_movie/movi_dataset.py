@@ -140,7 +140,7 @@ class MoviDataset(Dataset):
         try:
             samples = set([int(f) for f in samples_dir if len(f) <= 4])
         except Exception as e:
-            print(f"ERROR: Dataset directory contains non-digit samples IDs")
+            print("ERROR: Dataset directory contains non-digit samples IDs")
             raise e
 
         self.__samples_paths = [

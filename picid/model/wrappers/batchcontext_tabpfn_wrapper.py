@@ -5,7 +5,7 @@ from tabpfn import TabPFNRegressor
 
 
 from .base import AbstractFeedForwardWrapper
-from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):

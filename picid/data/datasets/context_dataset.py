@@ -13,7 +13,6 @@ from picid.data.datasets.collate_functions import (
 )
 from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
-import awkward as ak
 
 
 class ContextBatchDataset(BaseDataset):

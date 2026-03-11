@@ -3,7 +3,7 @@
 from .base import AbstractFeedForwardWrapper
 
 from picid.model.methods.ses_model import SESModelBaseline
-from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class SESModelWrapper(AbstractFeedForwardWrapper):

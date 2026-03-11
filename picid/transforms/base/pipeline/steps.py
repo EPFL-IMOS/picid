@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional
 
 import awkward as ak
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.data import NamedTransformInput
 from picid.data.data_objects.slice_info import SliceInfo
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,

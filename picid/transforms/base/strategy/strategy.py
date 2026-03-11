@@ -36,7 +36,7 @@ warnings (type change, unit-count change) live in MergeStep.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 

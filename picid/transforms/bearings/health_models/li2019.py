@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override
+from typing import Dict, List, Optional, override
 import numpy as np
 
 from picid.data.data_objects.data import NamedTransformInput
@@ -122,7 +122,7 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         """NumPy-based implementation of li_et_al_2019."""
 
         if signal_vector.ndim != 1:
-            raise ValueError(f"Signal vector provided to _find_fpt must be 1D.")
+            raise ValueError("Signal vector provided to _find_fpt must be 1D.")
 
         if self.normal_period.stop > len(signal_vector):
             logger.warning(

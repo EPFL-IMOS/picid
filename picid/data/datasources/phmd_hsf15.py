@@ -4,7 +4,6 @@ import numpy as np
 import awkward as ak
 
 from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from picid.utils.awkward_utils import ak_flatten_variable_dims
 
 logger = logging.getLogger(__name__)
 
