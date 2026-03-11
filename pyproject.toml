@@ -86,10 +86,6 @@ dev = [
     "holoviews>=1.21.0",
 ]
 
-[tool.setuptools]
-# If your package is at the top-level (./picid), this is fine:
-packages = ["picid"]
-
 # If your package lives under src/, replace with:
 # [tool.setuptools.packages.find]
 # where = ["src"]
