@@ -413,20 +413,22 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
     def _split_data(self, data: pd.DataFrame, samples_per_day: int):
         """Split data into train/val/test"""
 
-        cut_to_days = lambda x: (x // samples_per_day) * samples_per_day
-        N_samples = cut_to_days(len(data))
+        def _cut_to_days(x):
+            return (x // samples_per_day) * samples_per_day
+
+        N_samples = _cut_to_days(len(data))
 
         if self.data_split_strategy == "default":
-            N_test = cut_to_days(round(self.test_ratio * N_samples))
-            N_val = cut_to_days(round(self.val_ratio * N_samples))
-            N_train = cut_to_days(N_samples - N_test - N_val)
+            N_test = _cut_to_days(round(self.test_ratio * N_samples))
+            N_val = _cut_to_days(round(self.val_ratio * N_samples))
+            N_train = _cut_to_days(N_samples - N_test - N_val)
 
         elif self.data_split_strategy == "yearly":
             years = data.index.year.unique()
             N_train_val = len(data[data.index.year == years[0]])
-            N_train = cut_to_days(round(self.train_ratio * N_train_val))
-            N_val = cut_to_days(N_train_val - N_train)
-            N_test = cut_to_days(len(data) - N_train - N_val)
+            N_train = _cut_to_days(round(self.train_ratio * N_train_val))
+            N_val = _cut_to_days(N_train_val - N_train)
+            N_test = _cut_to_days(len(data) - N_train - N_val)
 
             if N_train <= 1e4:
                 raise ValueError("Too little training data")
