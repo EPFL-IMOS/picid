@@ -12,12 +12,17 @@ class ModelCheckpointWithConfig(ModelCheckpoint):
 
     This callback saves the config file only once when the first checkpoint is created.
 
-    Args:
-        config (Dict[str, Any]): A dictionary containing the configuration/hyperparameters.
-        config_filename (str): The name of the configuration file to be saved.
-                               Defaults to "hparams.json".
-        *args: Positional arguments to pass to the parent ModelCheckpoint.
-        **kwargs: Keyword arguments to pass to the parent ModelCheckpoint.
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        A dictionary containing the configuration/hyperparameters.
+    config_filename : str
+        The name of the configuration file to be saved.
+        Defaults to "hparams.json".
+    *args :
+        Positional arguments to pass to the parent ModelCheckpoint.
+    **kwargs :
+        Keyword arguments to pass to the parent ModelCheckpoint.
     """
     def __init__(
         self,

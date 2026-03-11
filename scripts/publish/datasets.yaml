@@ -1,0 +1,48 @@
+# Datasets supported for submission to the leaderboard.
+#
+# Each entry defines:
+#   experiment_key_pattern  Glob pattern matching experiment keys for this dataset.
+#   required_files          Files that must be present in the run dir for a valid submission.
+#   description             Short description of the dataset.
+#
+# Used by push_run_to_gdrive and build_submission_message to validate run dirs.
+
+phme20:
+  experiment_key_pattern: "phme20/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "PHME20 – prognostics and health management challenge dataset"
+
+pronostia:
+  experiment_key_pattern: "pronostia/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "PRONOSTIA – bearing degradation dataset (FEMTO)"
+
+unibo:
+  experiment_key_pattern: "unibo/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "Unibo – battery remaining useful life dataset"
+
+concepts_n_cmapss:
+  experiment_key_pattern: "concepts_n_cmapss*/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "N-CMAPSS – turbofan engine degradation dataset (NASA)"
+
+nb14:
+  experiment_key_pattern: "nb14/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "NB14 – satellite battery dataset"
+
+xjtu_sy:
+  experiment_key_pattern: "xjtu_sy/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "XJTU-SY – bearing accelerated life test dataset"
+
+airbus_helicopter:
+  experiment_key_pattern: "airbus_helicopter/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "Airbus helicopter – anomaly detection dataset"
+
+snapshot:
+  experiment_key_pattern: "snapshot/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md]
+  description: "Snapshot – synthetic regression/classification test dataset (CI fixture)"

@@ -144,13 +144,18 @@ class Forecaster(CustomEvaluatorLightningModule):
         """
         Cross-entropy loss for batched sequence classification with masking.
 
-        Args:
-            outputs: (B, T, C) unbounded logits
-            y_t: (B, T) integer class labels
-            mask: (B, T) binary mask (1 for valid, 0 for padded positions)
+        Parameters
+        ----------
+        outputs
+            (B, T, C) unbounded logits
+        y_t
+            (B, T) integer class labels
+        mask
+            (B, T) binary mask (1 for valid, 0 for padded positions)
 
-        Returns:
-            Scalar masked mean loss
+        Returns
+        -------
+        Scalar masked mean loss
         """
 
         b, t, c = outputs.shape

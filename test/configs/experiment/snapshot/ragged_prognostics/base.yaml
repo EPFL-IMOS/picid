@@ -1,0 +1,16 @@
+#@package _global_
+
+# Uses minimal_prognostics (2D features) because battery/unibo/combined expects
+# (n_cycles, cycle_len, n_features) with single ragged dim; synthetic loader
+# produces 2D (L, n_features) for compatibility.
+defaults:
+  - override /datasource: snapshot_ragged_prognostics
+  - override /evaluator: rul
+  - override /task_definition: snapshot/prognostics
+  - override /transforms: snapshot/minimal_prognostics
+  - override /logger: csv
+
+evaluator:
+  train: { save_predictions: false, apply_inverse_scaling: false }
+  val: { save_predictions: false, apply_inverse_scaling: false }
+  test: { save_predictions: false, apply_inverse_scaling: false }

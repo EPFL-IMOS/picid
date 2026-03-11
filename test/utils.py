@@ -21,6 +21,5 @@ class ProjectSearchPathPlugin(SearchPathPlugin):
 
     def register() -> None:
         """Hydra users should call this function before invoking @hydra.main"""
-        print("CWD:", Path.cwd())
         os.environ["PROJECT_ROOT"] = str(Path.cwd())
         Plugins.instance().register(ProjectSearchPathPlugin)

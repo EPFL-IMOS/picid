@@ -34,15 +34,21 @@ def check_for_nans(
 ) -> None:
     """
     Checks for NaN values in various raw data types (DataFrame, Series, ndarray, ak.Array).
-    
-    Args:
-        values: A list of data objects to check.
-        keys: A list of names corresponding to the data objects (for error messages).
-        raise_on_error: If True, raises ValueError when NaNs are found. 
-                        If False, issues a warning instead.
-    
-    Raises:
-        ValueError: If NaNs are found and raise_on_error is True.
+
+    Parameters
+    ----------
+    values
+        A list of data objects to check.
+    keys
+        A list of names corresponding to the data objects (for error messages).
+    raise_on_error
+        If True, raises ValueError when NaNs are found.
+        If False, issues a warning instead.
+
+    Raises
+    ------
+    ValueError
+        If NaNs are found and raise_on_error is True.
     """
     for value, key in zip(values, keys):
         has_nan = False

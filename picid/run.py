@@ -1,11 +1,17 @@
 """Main entry point for training and testing models."""
 
 import os
+import sys
 import time
 import yaml
 from pathlib import Path
 from collections.abc import Iterable
 import json
+
+# Ensure project root is importable (for pipeline regression loader in test.data)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 
 def _preload_thread_env() -> None:
@@ -287,11 +293,14 @@ def log_training_run_config(
     resolved_cfg = OmegaConf.create(cfg_container)
     OmegaConf.save(resolved_cfg, cfg.paths.output_dir + "/config_resolved.yaml")
 
-    cfg_container["hydra_cfg"] = OmegaConf.to_container(
-        # cannot resolve because not all interpolations are covered by us for now
-        HydraConfig.get(),
-        resolve=False,
-    )
+    try:
+        if HydraConfig.initialized():
+            cfg_container["hydra_cfg"] = OmegaConf.to_container(
+                HydraConfig.get(),
+                resolve=False,
+            )
+    except Exception:
+        pass  # e.g. when running from reproduce_from_run.py without Hydra context
 
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
@@ -816,12 +825,19 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     if cfg.trainer.max_epochs > 1:
         # Intention is to reload all deep-learning trained models from checkpoint
-        trainer.test(ckpt_path="best", datamodule=datamodule)
+        test_results = trainer.test(ckpt_path="best", datamodule=datamodule)
     else:
         # If max epochs is 1, there is no checkpoint to load from
         # So we just test the model as is
         log.info("Starting testing without training (used for pre-trained models)!")
-        trainer.test(model=model, datamodule=datamodule)
+        test_results = trainer.test(model=model, datamodule=datamodule)
+
+    # Pipeline regression: write test metrics for snapshot comparison
+    out_path = os.environ.get("PIPELINE_REGRESSION_OUTPUT")
+    if out_path and test_results:
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(test_results[0], f, indent=2)
 
     # We want to avoid running this for pfn models where there is no training
     # and thus no checkpoint and rerunning pfn model would take significant time.

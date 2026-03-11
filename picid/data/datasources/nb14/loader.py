@@ -129,8 +129,10 @@ class NB14Loader(AbstractDataSourceLoader):
     def get_data(self) -> dict | list[dict]:
         """Return data sources.
 
-        Returns:
-            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
+        Returns
+        -------
+        dict | list[dict]
+            Either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
 
         """
         assert self._is_loaded is True, "Data must be loaded before getting data."
@@ -293,15 +295,24 @@ class NB14Loader(AbstractDataSourceLoader):
         """
         Process one split (train/test/val).
 
-        Args:
-            x: np.ndarray of features (n_samples, ...)
-            y: np.ndarray of labels
-            battery_range: iterable of right indices per unit
-            names: iterable of unit names
-            valid_lengths: list of lists with valid cycle lengths (only for train)
-            flatten: whether to unpad and flatten cycles
+        Parameters
+        ----------
+        x
+            np.ndarray of features (n_samples, ...)
+        y
+            np.ndarray of labels
+        battery_range
+            iterable of right indices per unit
+        names
+            iterable of unit names
+        valid_lengths
+            list of lists with valid cycle lengths (only for train)
+        flatten
+            whether to unpad and flatten cycles
 
-        Returns:
+        Returns
+        -------
+        list
             list of dicts with keys: features, target, metadata
         """
         data_split = []

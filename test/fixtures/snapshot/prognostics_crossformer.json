@@ -1,0 +1,7 @@
+{
+  "test/loss": 0.6021227240562439,
+  "test/mae_normalized": 0.747060239315033,
+  "test/mse_normalized": 0.6021227240562439,
+  "test/rmse_normalized": 0.775965690612793,
+  "test/nasa_score_normalized": 0.07780393213033676
+}

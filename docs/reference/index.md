@@ -9,6 +9,7 @@ Detailed reference for datasources, datasets, transforms, evaluators, models, an
 - [Transforms](transforms.md) — Transform system overview and links to Quick start, User guide, Developer guide.
 - [Evaluators](evaluators.md) — Evaluator subsystem (classification, forecasting, multi-unit, reconstruction, hooks).
 - [Model types](model_types.md) — Fit-predict vs batchwise and current limitations.
-- [API](api.md) — API documentation for core modules.
+- [API](api/package_reference.md) — Package reference: browse all modules (data, transforms, model, evaluator, etc.) with full inputs/outputs.
+- [Scripts](scripts.md) — Scripts for setup, reproducibility, snapshot tests, publish, and experiment generator. Each subfolder has its own README.
 
 [← Back to documentation index](../index.md)

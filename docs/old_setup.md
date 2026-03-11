@@ -1,6 +1,6 @@
 # Legacy setup (RunAI / Guild)
 
-> **Note:** This page describes an older workflow using Guild and rclone for RunAI. For the current RunAI workflow (Docker, container scripts, `runai.sh`), see [RunAI](runai.md).
+> **Note:** This page describes an older workflow using Guild and rclone for RunAI. For the current RunAI workflow (Docker, container scripts, `runai.sh`), see [RunAI](guides/runai.md).
 
 ---
 

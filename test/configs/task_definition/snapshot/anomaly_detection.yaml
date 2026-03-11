@@ -1,0 +1,13 @@
+seq_len: 1
+label_len: 0
+pred_len: 1
+task_type: anomaly_detection
+stride: 1
+stride_train: 5
+num_classes: 2
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - ${task_definition.task_type}

@@ -59,25 +59,36 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the Li2019FPTCutTransform.
 
-        Args:
-            signal_key: The key in the `data` dict for the 1D/2D signal
-                array (e.g., 'kurtosis') used to find the FPT.
-            features_keys: A list of keys in the `data` dict for the
-                arrays to be sliced (e.g., ['features', 'target']).
-            normal_period_start: The start index of the "normal"
-                operation period.
-            normal_period_end: The end index of the "normal"
-                operation period.
-            sigma_interval: The number of standard deviations (sigma)
-                to use for the threshold.
-            scan_start_index: The index from which to start scanning
-                for the FPT.
-            dataset_name: Optional name of the dataset for logging.
-            unit_id_key: Optional key to find the unit ID in `data` or
-                `metadata` for logging.
-            fpt_indexes_strategy: Strategy ('min', 'max', 'mean') to
-                use if `signal_key` provides multiple signal columns.
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        signal_key : str
+            The key in the `data` dict for the 1D/2D signal
+            array (e.g., 'kurtosis') used to find the FPT.
+        features_keys : list
+            A list of keys in the `data` dict for the
+            arrays to be sliced (e.g., ['features', 'target']).
+        normal_period_start : int
+            The start index of the "normal"
+            operation period.
+        normal_period_end : int
+            The end index of the "normal"
+            operation period.
+        sigma_interval : float
+            The number of standard deviations (sigma)
+            to use for the threshold.
+        scan_start_index : int
+            The index from which to start scanning
+            for the FPT.
+        dataset_name : str
+            Optional name of the dataset for logging.
+        unit_id_key : str, optional
+            Optional key to find the unit ID in `data` or
+            `metadata` for logging.
+        fpt_indexes_strategy : str
+            Strategy ('min', 'max', 'mean') to
+            use if `signal_key` provides multiple signal columns.
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.signal_key = signal_key

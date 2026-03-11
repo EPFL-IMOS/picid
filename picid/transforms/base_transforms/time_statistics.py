@@ -71,12 +71,16 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the TimeStatsTransform.
 
-        Args:
-            stats_to_compute: A list of statistic names to compute.
-                Must be members of TimeStatsTransform.VALID_STATS.
-            apply_to_columns: If True (default), apply to columns (each column
-                is a signal). If False, apply to rows (each row is a signal).
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        stats_to_compute : list
+            A list of statistic names to compute.
+            Must be members of TimeStatsTransform.VALID_STATS.
+        apply_to_columns : bool
+            If True (default), apply to columns (each column
+            is a signal). If False, apply to rows (each row is a signal).
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.apply_to_columns = apply_to_columns
@@ -105,11 +109,16 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         Dispatcher function to compute a single named statistic
         on a given 1D time-domain signal.
 
-        Args:
-            signal: 1D time-domain signal.
-            stat_name: The name of the statistic to compute.
+        Parameters
+        ----------
+        signal : np.ndarray
+            1D time-domain signal.
+        stat_name : str
+            The name of the statistic to compute.
 
-        Returns:
+        Returns
+        -------
+        float
             The calculated scalar statistic.
         """
         if signal.size == 0:
@@ -207,11 +216,16 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Apply time-domain statistics computation to all signals in the input.
 
-        Args:
-            data: Dictionary containing 2D numpy arrays (n_rows, n_columns)
-            metadata: Dictionary containing auxiliary metadata (unused)
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing 2D numpy arrays (n_rows, n_columns)
+        metadata : dict
+            Dictionary containing auxiliary metadata (unused)
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             A 2D numpy array of shape (1, n_signals * n_stats) containing
             the concatenated scalar features.
         """

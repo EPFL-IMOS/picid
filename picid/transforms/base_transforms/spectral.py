@@ -59,15 +59,22 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the SpectralStatsTransform.
 
-        Args:
-            stats_to_compute: A list of statistic names to compute.
-                Must be members of SpectralStatsTransform.VALID_STATS.
-            fs: Sampling frequency in Hz, used for spectrum calculation.
-            apply_to_columns: If True (default), apply to columns (each column
-                is a signal). If False, apply to rows (each row is a signal).
-            pe_dim: Dimension (window size) for permutation entropy.
-            pe_tau: Tau (step size) for permutation entropy.
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        stats_to_compute : list
+            A list of statistic names to compute.
+            Must be members of SpectralStatsTransform.VALID_STATS.
+        fs : float
+            Sampling frequency in Hz, used for spectrum calculation.
+        apply_to_columns : bool
+            If True (default), apply to columns (each column
+            is a signal). If False, apply to rows (each row is a signal).
+        pe_dim : int
+            Dimension (window size) for permutation entropy.
+        pe_tau : int
+            Tau (step size) for permutation entropy.
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.fs = fs

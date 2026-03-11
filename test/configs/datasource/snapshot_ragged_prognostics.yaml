@@ -1,0 +1,4 @@
+_target_: test.data.datasources.synthetic_ragged_loader.SyntheticRaggedFromFileLoader
+data_path: ${paths.root_dir}/test/fixtures/snapshot/ragged_prognostics.pkl
+data_name: snapshot_ragged
+task_mode: rul

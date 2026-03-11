@@ -38,33 +38,42 @@ class AkwardJaggedAutoregressiveSequencer:
     - **Input (seq_x)**:  ``[t - seq_len : t]``
     - **Target (seq_y)**: ``[t + pred_offset : t + pred_offset + label_len + pred_len]``
 
-    Args:
-        features (ak.Array): Input data array.
-            - Shape (Ragged): ``(N_Units, var_Time, D_Features)``
-            - Shape (Dense):  ``(Time, D_Features)``
-        seq_len (int): Length of the encoder input window (History).
-        label_len (int): Length of the "label" or overlap portion prepended to the target.
-            Often used as the "Decoder Start Token" in Transformer architectures.
-        pred_len (int): Length of the prediction horizon (Future).
-        stride (int, optional): Step size between consecutive windows. Defaults to 1.
-        pred_offset (int, optional): Temporal gap between the end of the input sequence
-            and the start of the prediction. Defaults to 0 (continuous).
-        padding_left_flag (Union[bool, int], optional):
-            - ``False`` or ``0`` (Strict): A window is valid only if the unit is long enough
-              to provide a full ``seq_len`` history without padding.
-            - ``True`` or ``1`` (Padding - Default): Allows windows to start before index 0. Negative
-              indices are filled according to ``padding_mode``.
-        padding_mode (str, optional): Defines the padding strategy when ``padding_left_flag=True``.
-            - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
-              This effectively repeats the first time step.
-            - ``"zero"``: Fills padded indices with zeros.
-        warmup_steps (int, optional): Controls the start index of the first window.
-            - **If padding_left_flag=True**: Represents the **number of padded steps** to include in the first window.
-              - Default: ``seq_len - 1``. This maximizes padding such that the first window contains
-                only **1 real observation** at the end.
-              - Value ``0``: Starts at index 0 (no padding).
-            - **If padding_left_flag=False**: Represents the **index offset** for the start of the first sequence.
-              - Default: ``0``. This means the window starts at index 0 (capturing the first full valid sequence `0:seq_len`).
+    Parameters
+    ----------
+    features : ak.Array
+        Input data array.
+        - Shape (Ragged): ``(N_Units, var_Time, D_Features)``
+        - Shape (Dense):  ``(Time, D_Features)``
+    seq_len : int
+        Length of the encoder input window (History).
+    label_len : int
+        Length of the "label" or overlap portion prepended to the target.
+        Often used as the "Decoder Start Token" in Transformer architectures.
+    pred_len : int
+        Length of the prediction horizon (Future).
+    stride : int, optional
+        Step size between consecutive windows. Defaults to 1.
+    pred_offset : int, optional
+        Temporal gap between the end of the input sequence
+        and the start of the prediction. Defaults to 0 (continuous).
+    padding_left_flag : Union[bool, int], optional
+        - ``False`` or ``0`` (Strict): A window is valid only if the unit is long enough
+          to provide a full ``seq_len`` history without padding.
+        - ``True`` or ``1`` (Padding - Default): Allows windows to start before index 0. Negative
+          indices are filled according to ``padding_mode``.
+    padding_mode : str, optional
+        Defines the padding strategy when ``padding_left_flag=True``.
+        - ``"edge"`` (Default): Fills padded indices with the first available observation (Index 0).
+          This effectively repeats the first time step.
+        - ``"zero"``: Fills padded indices with zeros.
+    warmup_steps : int, optional
+        Controls the start index of the first window.
+        - **If padding_left_flag=True**: Represents the **number of padded steps** to include in the first window.
+          - Default: ``seq_len - 1``. This maximizes padding such that the first window contains
+            only **1 real observation** at the end.
+          - Value ``0``: Starts at index 0 (no padding).
+        - **If padding_left_flag=False**: Represents the **index offset** for the start of the first sequence.
+          - Default: ``0``. This means the window starts at index 0 (capturing the first full valid sequence `0:seq_len`).
 
     Examples:
     ---------
@@ -343,21 +352,25 @@ class AkwardJaggedAutoregressiveSequencer:
     ]:
         """Return a batch of input and target windows for sequencer indices.
 
-        Args:
-            batch_idx: Integer indices into the precomputed window index table returned
-                by ``get_index_array()``.
+        Parameters
+        ----------
+        batch_idx
+            Integer indices into the precomputed window index table returned
+            by ``get_index_array()``.
 
-        Returns:
-            A tuple ``(seq_x, seq_y)`` where:
+        Returns
+        -------
+        A tuple ``(seq_x, seq_y)`` where:
 
-            - ``seq_x`` has shape ``(batch, seq_len, num_features)`` and contains the
-              encoder/history window.
-            - ``seq_y`` has shape ``(batch, label_len + pred_len, num_features)`` and
-              contains the decoder overlap plus forecast horizon.
+        - ``seq_x`` has shape ``(batch, seq_len, num_features)`` and contains the
+          encoder/history window.
+        - ``seq_y`` has shape ``(batch, label_len + pred_len, num_features)`` and
+          contains the decoder overlap plus forecast horizon.
 
-        Notes:
-            When left padding is enabled, early windows may include padded history in
-            ``seq_x``. Padding uses the configured ``padding_mode``; ``seq_y`` always
-            contains real observations from the source segment.
+        Notes
+        -----
+        When left padding is enabled, early windows may include padded history in
+        ``seq_x``. Padding uses the configured ``padding_mode``; ``seq_y`` always
+        contains real observations from the source segment.
         """
         return self._get_window_for_index(batch_idx)

@@ -56,15 +56,21 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         """
         Initialize the AwkwardFeatureTargetPlotter.
 
-        Args:
-            saving_path: The root directory path to save images.
-            unit_key: The key in the `metadata` dict to find the
-                unit identifier (e.g., 'unit_id').
-            features_key: The key in the `data` dict for the features.
-                If None, only targets will be plotted.
-            target_key: The key in the `data` dict for the targets.
-                If None, only features will be plotted.
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        saving_path : str
+            The root directory path to save images.
+        unit_key : str
+            The key in the `metadata` dict to find the
+            unit identifier (e.g., 'unit_id').
+        features_key : str, optional
+            The key in the `data` dict for the features.
+            If None, only targets will be plotted.
+        target_key : str, optional
+            The key in the `data` dict for the targets.
+            If None, only features will be plotted.
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.saving_path = saving_path

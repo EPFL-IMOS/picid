@@ -200,16 +200,20 @@ def ak_flatten_variable_dims(
     This function is designed to handle the (N, var, F) -> (N*var_i, F)
     transformation you described.
 
-    Args:
-        arr: The input Awkward Array.
-        axis: The dimension(s) to flatten.
-            - If None (default): Automatically finds all variable (ragged)
-              dimensions using `ak_find_var_dims` and flattens them.
-            - If int: Flattens the specified axis.
-            - If List[int]: Flattens all specified axes.
+    Parameters
+    ----------
+    arr
+        The input Awkward Array.
+    axis
+        The dimension(s) to flatten.
+        - If None (default): Automatically finds all variable (ragged)
+          dimensions using `ak_find_var_dims` and flattens them.
+        - If int: Flattens the specified axis.
+        - If List[int]: Flattens all specified axes.
 
-    Returns:
-        A new Awkward Array with the specified dimensions flattened.
+    Returns
+    -------
+    A new Awkward Array with the specified dimensions flattened.
     """
 
     axes_to_flatten: List[int]

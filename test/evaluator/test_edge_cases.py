@@ -485,14 +485,12 @@ class TestManyUnitsScenario:
         unique_units = np.unique(multiunit_data_many_units["unit_id"])
         if evaluator.log_per_unit_metrics:
             for unit_id in unique_units[:5]:  # Check first 5 units
-                # FIX: Check for the normalized suffix which is active here
                 key = f"mse_normalized_{unit_id}"
                 if key in results:
                     assert results[key] >= 0.0
                     assert np.isfinite(results[key])
 
         # Verify all units have metrics
-        unique_units = np.unique(multiunit_data_many_units["unit_id"])
         for unit_id in unique_units:
             # FIX: Check unit_managers instead of deleted unit_metrics
             assert unit_id in evaluator.unit_managers

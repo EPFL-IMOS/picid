@@ -20,8 +20,10 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the transform.
 
-        Args:
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments
         """
         self.dim = dim
         assert dim in (
@@ -99,11 +101,16 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Concatenate all data arrays horizontally.
 
-        Args:
-            data: Dictionary containing numpy arrays to concatenate
-            metadata: Dictionary containing auxiliary metadata (unused in this transform)
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing numpy arrays to concatenate
+        metadata : dict
+            Dictionary containing auxiliary metadata (unused in this transform)
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Concatenated numpy array
         """
         if not data:
@@ -161,8 +168,10 @@ class RuggedToDenseTransform(NoFitPerSegmentMixin, RaggedTransform):
         """
         Initialize the transform.
 
-        Args:
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments
         """
         super().__init__(**kwargs)
 
@@ -189,9 +198,12 @@ class MultiDatasetRuggedToDenseTransform(NoFitConcatAlongAxisMixin, RaggedTransf
         """
         Initialize the transform.
 
-        Args:
-            axis: The axis along which to concatenate ragged arrays
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        axis : int
+            The axis along which to concatenate ragged arrays
+        **kwargs
+            Additional keyword arguments
         """
         RaggedTransform.__init__(self)
         NoFitConcatAlongAxisMixin.__init__(self, axis=axis, **kwargs)

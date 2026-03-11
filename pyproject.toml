@@ -1,3 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["picid"]
+
 [project]
 name = "TabPHM"
 version = "0.1.0"
@@ -55,7 +62,12 @@ dependencies = [
     "cloudpickle>=3.1.1",
     "fvcore>=0.1.5.post20221221",
     "tables>=3.10.2",
+    "questionary>=2.0.0",
 ]
+
+[project.scripts]
+picid-assemble = "picid.cli.assemble:main"
+picid-generate-web = "picid.cli.generate_web:main"
 
 [project.optional-dependencies]
 dev = [
@@ -87,7 +99,7 @@ packages = ["picid"]
 addopts = "--basetemp=test/.pytest_tmp"
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
-    "requires_snapshots: skip when pipeline snapshot fixtures are missing (run scripts/generate_pipeline_snapshots.py)",
+    "requires_snapshots: skip when pipeline snapshot fixtures are missing (run scripts/snapshot/generate_pipeline_snapshots.py)",
     "slow: slow benchmarks (e.g. __getitem__ timing); skip with -m 'not slow'",
 ]
 
@@ -168,8 +180,8 @@ phmd = { path = "./local_packages/phmd", editable = true }
 TabPFN = { path = "./local_packages/TabPFN", editable = true }
 tabdpt = { path = "./local_packages/TabDPT", editable = true }
 carte-ai = { path = "./local_packages/carte-ai", editable = true }
-rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
-# uni2ts = { path = "./local_packages/uni2ts", editable = true }
+# obsolete: rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
+# obsolete: uni2ts = { path = "./local_packages/uni2ts", editable = true }
 
 torch = [
     { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },

@@ -52,6 +52,10 @@ report_output/
 # Local packages / datasets (e.g. rul-datasets)
 local_packages/
 
-# Lock file (optional: remove this line if you want to commit uv.lock for reproducible installs)
-uv.lock
+# uv.lock is committed for reproducible installs across machines and time.
 lmetk_report_artifacts
+
+# Git worktrees (isolated feature branches)
+.worktrees/
+
+tasks/*

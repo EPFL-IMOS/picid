@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hydra Experiment Generator | TabPHM</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .command-box {
+      font-family: monospace;
+      padding: 1rem;
+      background: #1a1a1a;
+      color: #eee;
+      border-radius: 6px;
+      word-break: break-all;
+      margin-bottom: 0.5rem;
+    }
+    .copy-btn { margin-top: 0.5rem; }
+    select, input[type="number"] { min-width: 14rem; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Hydra Experiment Generator</h1>
+    <p>Select components to build a valid <code>picid/run.py</code> command. Copy and run it in your terminal from the project root.</p>
+
+    <form id="generator-form">
+      <label for="experiment">Experiment</label>
+      <select id="experiment" name="experiment" required></select>
+
+      <label for="paths">Paths</label>
+      <select id="paths" name="paths"></select>
+
+      <label for="debug">Debug (optional)</label>
+      <select id="debug" name="debug">
+        <option value="">— None —</option>
+      </select>
+
+      <label for="trainer_epochs">trainer.max_epochs (optional)</label>
+      <input type="number" id="trainer_epochs" name="trainer_epochs" placeholder="e.g. 100" min="1">
+
+      <h3>Generated command</h3>
+      <div class="command-box" id="command-output">uv run python picid/run.py</div>
+      <button type="button" id="copy-btn" class="copy-btn">Copy</button>
+    </form>
+
+    <details style="margin-top: 2rem;">
+      <summary>How to test the command</summary>
+      <ol>
+        <li>Copy the generated command above.</li>
+        <li>Open a terminal in the project root.</li>
+        <li>Run <code>uv sync</code> if you haven't already.</li>
+        <li>Paste and run. Example: <code>uv run python picid/run.py paths=rt_local debug=default experiment=phme20/prognostics/raw/xgboost_fit_predict</code></li>
+      </ol>
+    </details>
+
+    <details style="margin-top: 1rem;">
+      <summary>How to run and submit to the leaderboard</summary>
+      <ol>
+        <li>Copy and run the generated command. This produces a run dir under <code>artifacts/</code>.</li>
+        <li>Upload the run to Google Drive: <code>uv run python scripts/publish/push_run_to_gdrive.py &lt;run_dir&gt;</code></li>
+        <li>Register the Drive link and rebuild the docs site to see results on the leaderboard page.</li>
+      </ol>
+    </details>
+  </main>
+
+  <script>
+    const CONFIG_URL = './config_map.json';
+    let configMap = {};
+
+    async function loadConfig() {
+      const res = await fetch(CONFIG_URL);
+      if (!res.ok) throw new Error('Failed to load config_map.json');
+      configMap = await res.json();
+    }
+
+    function populateSelect(id, options, defaultVal) {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        if (opt === defaultVal) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+
+    function buildCommand() {
+      const exp = document.getElementById('experiment').value;
+      const paths = document.getElementById('paths').value;
+      const debug = document.getElementById('debug').value;
+      const epochs = document.getElementById('trainer_epochs').value;
+
+      const parts = ['uv run python picid/run.py'];
+      if (paths) parts.push(`paths=${paths}`);
+      parts.push(`experiment=${exp}`);
+      if (debug) parts.push(`debug=${debug}`);
+      if (epochs) parts.push(`trainer.max_epochs=${epochs}`);
+
+      return parts.join(' ');
+    }
+
+    function updateCommand() {
+      document.getElementById('command-output').textContent = buildCommand();
+    }
+
+    async function init() {
+      await loadConfig();
+
+      const expKeys = configMap.experiment_keys || [];
+      const pathsOpts = configMap.paths || ['default'];
+      const debugOpts = configMap.debug || [];
+
+      populateSelect('experiment', expKeys, expKeys[0] || '');
+      populateSelect('paths', pathsOpts, 'default');
+
+      const debugSel = document.getElementById('debug');
+      ['', ...debugOpts].forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt || '— None —';
+        debugSel.appendChild(o);
+      });
+
+      ['experiment', 'paths', 'debug'].forEach(id => {
+        document.getElementById(id).addEventListener('change', updateCommand);
+      });
+      document.getElementById('trainer_epochs').addEventListener('input', updateCommand);
+
+      updateCommand();
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(buildCommand()).then(() => {
+          const btn = document.getElementById('copy-btn');
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        });
+      });
+    }
+
+    init().catch(e => {
+      document.getElementById('command-output').textContent = 'Error loading config: ' + e.message;
+    });
+  </script>
+</body>
+</html>

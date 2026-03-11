@@ -7,13 +7,17 @@ def convert_outer_list_to_inner(
     """
     Transposes a list of dictionaries into a dictionary of lists.
 
-    Args:
-        data_list (list[dict[str, Any]]): A list of dictionaries where every dictionary
-                                          has the same keys.
+    Parameters
+    ----------
+    data_list : list[dict[str, Any]]
+        A list of dictionaries where every dictionary
+        has the same keys.
 
-    Returns:
-        dict[str, list[Any]]: A dictionary where keys match the input dicts, and values
-                              are lists of the corresponding values from the input.
+    Returns
+    -------
+    dict[str, list[Any]]
+        A dictionary where keys match the input dicts, and values
+        are lists of the corresponding values from the input.
     """
     if not data_list:
         return {}

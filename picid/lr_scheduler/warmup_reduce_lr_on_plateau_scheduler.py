@@ -34,13 +34,20 @@ class WarmupReduceLROnPlateauScheduler(LearningRateScheduler):
     r"""
     Warmup learning rate until `warmup_steps` and reduce learning rate on plateau after.
 
-    Args:
-        optimizer (Optimizer): wrapped optimizer.
-        init_lr (float): Initial learning rate.
-        peak_lr (float): Maximum learning rate.
-        warmup_steps (int): Warmup the learning rate linearly for the first N updates.
-        patience (int): Number of epochs with no improvement after which learning rate will be reduced.
-        factor (float): Factor by which the learning rate will be reduced. new_lr = lr * factor.
+    Parameters
+    ----------
+    optimizer : Optimizer
+        wrapped optimizer.
+    init_lr : float
+        Initial learning rate.
+    peak_lr : float
+        Maximum learning rate.
+    warmup_steps : int
+        Warmup the learning rate linearly for the first N updates.
+    patience : int
+        Number of epochs with no improvement after which learning rate will be reduced.
+    factor : float
+        Factor by which the learning rate will be reduced. new_lr = lr * factor.
     """
 
     def __init__(

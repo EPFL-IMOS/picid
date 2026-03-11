@@ -81,4 +81,4 @@ The pipeline and configs determine which behaviour is used for a given experimen
 - **Baselines (backbone implementations):** `picid.baselines` — e.g. LSTM, PatchTST, Crossformer, TiDE, SpacetimeFormer, timeseries transformer, forecaster orchestration.
 - **Task types:** `picid.baselines.definitions` — `REGRESSION_TASKS`, `CLASSIFICATION_TASKS`, `FORECASTING_TASKS`, `ALL_TASKS`; used by wrappers and evaluators.
 
-To add a new model type or wrapper, see [Adding a new model](how_to_add_a_new_model.md).
+To add a new model type or wrapper, see [Adding a new model](../guides/how_to_add_a_new_model.md).

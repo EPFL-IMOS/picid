@@ -2,12 +2,20 @@
 import picid  # noqa: F401
 import sys
 import os
+from pathlib import Path
+
 from test.utils import ProjectSearchPathPlugin
 import hydra
 from hydra.core.global_hydra import GlobalHydra
 import pytest
 
 from omegaconf import OmegaConf
+
+# Set PROJECT_ROOT before any Hydra/config usage; infer from test dir if unset
+_TEST_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = os.environ.get("PROJECT_ROOT", str(_TEST_DIR.parent))
+os.environ["PROJECT_ROOT"] = _PROJECT_ROOT
+sys.path.insert(0, _PROJECT_ROOT)
 
 N_FEATURES = 5
 BATCH_SIZE = 2
@@ -19,10 +27,6 @@ OmegaConf.register_new_resolver("infer_data_dim", lambda key, dim: N_FEATURES)
 def pytest_configure(config):
     """Called after command line options have been parsed."""
     ProjectSearchPathPlugin.register()
-
-
-print(os.environ["PROJECT_ROOT"])
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 def pytest_addoption(parser):

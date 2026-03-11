@@ -68,18 +68,27 @@ class PronostiaLoader(PHMDMultiSourceLoader):
         2.  Ragged Mode: Reshapes continuous data into fixed-size sequences,
             creating ragged Awkward Arrays suitable for sequence models.
 
-        Args:
-            df_unit (pd.DataFrame): The DataFrame for a single operational unit.
-            unit_name (str): The identifier for the unit (e.g., 'Bearing1_3').
-            features_col (list): A list of column names to be used as features.
-            target_col (str): The name of the RUL target column.
+        Parameters
+        ----------
+        df_unit : pd.DataFrame
+            The DataFrame for a single operational unit.
+        unit_name : str
+            The identifier for the unit (e.g., 'Bearing1_3').
+        features_col : list
+            A list of column names to be used as features.
+        target_col : str
+            The name of the RUL target column.
 
-        Returns:
-            dict: A dictionary containing the processed 'features', 'target', and 'metadata'.
+        Returns
+        -------
+        dict
+            A dictionary containing the processed 'features', 'target', and 'metadata'.
 
-        Raises:
-            ValueError: If data length is incompatible with the ragged processing mode,
-                        or if RUL values are inconsistent within a sequence in ragged mode.
+        Raises
+        ------
+        ValueError
+            If data length is incompatible with the ragged processing mode,
+            or if RUL values are inconsistent within a sequence in ragged mode.
         """
         # --- 1. Prepare Features and Target ---
 

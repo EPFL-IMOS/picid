@@ -20,19 +20,29 @@ class AbstractDataSourceLoader(ABC):
         """
         Initializes the object with configuration parameters.
 
-        Args:
-            data_name (str): Name of the dataset.
-            task_mode (str): Mode of the task (e.g., classification, regression).
-            debug_cache_dataset (bool, optional): If True, enables caching
-                of the dataset for debugging. Defaults to False.
-            debug_cache_path (str, optional): Path to store the cached dataset.
-                Required if debug_cache_dataset is True.
-            debug_subset_range (Any, optional): Range of subset for debugging purposes.
-                Defaults to None.
-            debug_subsample_rate (Any, optional): Subsample rate for debugging purposes.
-                Defaults to None.
-        Raises:
-            ValueError: If debug_cache_dataset is True but debug_cache_path is not set.
+        Parameters
+        ----------
+        data_name : str
+            Name of the dataset.
+        task_mode : str
+            Mode of the task (e.g., classification, regression).
+        debug_cache_dataset : bool, optional
+            If True, enables caching
+            of the dataset for debugging. Defaults to False.
+        debug_cache_path : str, optional
+            Path to store the cached dataset.
+            Required if debug_cache_dataset is True.
+        debug_subset_range : Any, optional
+            Range of subset for debugging purposes.
+            Defaults to None.
+        debug_subsample_rate : Any, optional
+            Subsample rate for debugging purposes.
+            Defaults to None.
+
+        Raises
+        ------
+        ValueError
+            If debug_cache_dataset is True but debug_cache_path is not set.
         """
 
         self._init_kwargs = kwargs
@@ -46,8 +56,11 @@ class AbstractDataSourceLoader(ABC):
     def get_split_mode(self):
         """
         Determines the data split mode based on the presence of a multisource data splitter.
-        Returns:
-            str: The split mode, either "per_unit" if no multisource data splitter is provided,
+
+        Returns
+        -------
+        str
+            The split mode, either "per_unit" if no multisource data splitter is provided,
             or "cross_unit" if a multisource data splitter is present.
         """
 
@@ -86,16 +99,25 @@ class AbstractDataSourceLoader(ABC):
         """
         Splits the provided data list into separate sources using the configured
         multisource data splitter.
-        Args:
-            data_lst (list[Dict]): A list of data dictionaries to be split by source.
-            source_names (list[str]): A list of source names corresponding to the data.
-        Returns:
-            Tuple[Dict, list[str]]:
-                - data_dict: A dictionary mapping source names to their respective split data.
-                - source_names_tree_view: A list of source names structured
-                    for tree view representation.
-        Raises:
-            AssertionError: If `self.multisource_data_splitter` is not an
-                instance of `BySourceSplitter`.
+
+        Parameters
+        ----------
+        data_lst : list[Dict]
+            A list of data dictionaries to be split by source.
+        source_names : list[str]
+            A list of source names corresponding to the data.
+
+        Returns
+        -------
+        Tuple[Dict, list[str]]
+            - data_dict: A dictionary mapping source names to their respective split data.
+            - source_names_tree_view: A list of source names structured
+                for tree view representation.
+
+        Raises
+        ------
+        AssertionError
+            If `self.multisource_data_splitter` is not an
+            instance of `BySourceSplitter`.
         """
         raise NotImplementedError("Subclasses must implement this method.")

@@ -23,10 +23,12 @@ class MSELoss(AbstractLoss):
     def __init__(self, reduction: str = 'mean') -> None:
         """
         Initialize MSE loss.
-        
-        Args:
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.mse_loss = nn.MSELoss(reduction=reduction)
@@ -38,12 +40,17 @@ class MSELoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute MSE loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -67,10 +74,12 @@ class MAELoss(AbstractLoss):
     def __init__(self, reduction: str = 'mean') -> None:
         """
         Initialize MAE loss.
-        
-        Args:
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.mae_loss = nn.L1Loss(reduction=reduction)
@@ -82,12 +91,17 @@ class MAELoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute MAE loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -111,11 +125,14 @@ class HuberLoss(AbstractLoss):
     def __init__(self, delta: float = 1.0, reduction: str = 'mean') -> None:
         """
         Initialize Huber loss.
-        
-        Args:
-            delta: Threshold for switching between MSE and MAE behavior
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        delta :
+            Threshold for switching between MSE and MAE behavior
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.huber_loss = nn.HuberLoss(delta=delta, reduction=reduction)
@@ -127,12 +144,17 @@ class HuberLoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute Huber loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -156,11 +178,14 @@ class QuantileLoss(AbstractLoss):
     def __init__(self, quantile: float = 0.5, reduction: str = 'mean') -> None:
         """
         Initialize Quantile loss.
-        
-        Args:
-            quantile: Target quantile (between 0 and 1)
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        quantile :
+            Target quantile (between 0 and 1)
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.quantile = quantile
@@ -176,12 +201,17 @@ class QuantileLoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute Quantile loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -214,11 +244,14 @@ class MAPELoss(AbstractLoss):
     def __init__(self, epsilon: float = 1e-8, reduction: str = 'mean') -> None:
         """
         Initialize MAPE loss.
-        
-        Args:
-            epsilon: Small value to avoid division by zero
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        epsilon :
+            Small value to avoid division by zero
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.epsilon = epsilon
@@ -231,12 +264,17 @@ class MAPELoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute MAPE loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -272,11 +310,14 @@ class SMAPELoss(AbstractLoss):
     def __init__(self, epsilon: float = 1e-8, reduction: str = 'mean') -> None:
         """
         Initialize SMAPE loss.
-        
-        Args:
-            epsilon: Small value to avoid division by zero
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        epsilon :
+            Small value to avoid division by zero
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.epsilon = epsilon
@@ -289,12 +330,17 @@ class SMAPELoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute SMAPE loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -326,10 +372,12 @@ class WeightedMSELoss(AbstractLoss):
     def __init__(self, reduction: str = 'mean') -> None:
         """
         Initialize Weighted MSE loss.
-        
-        Args:
-            reduction: Specifies the reduction to apply to the output.
-                      Options: 'mean', 'sum', 'none'
+
+        Parameters
+        ----------
+        reduction :
+            Specifies the reduction to apply to the output.
+            Options: 'mean', 'sum', 'none'
         """
         super().__init__()
         self.reduction = reduction
@@ -341,12 +389,17 @@ class WeightedMSELoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute weighted MSE loss between predictions and targets.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' and optionally 'weights' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' and optionally 'weights' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key
         """
         predictions = model_out['predictions']
@@ -383,11 +436,14 @@ class CombinedLoss(AbstractLoss):
     ) -> None:
         """
         Initialize Combined loss.
-        
-        Args:
-            losses: Dictionary mapping loss names to loss instances
-            weights: Optional dictionary mapping loss names to weights.
-                    If None, all losses are weighted equally.
+
+        Parameters
+        ----------
+        losses :
+            Dictionary mapping loss names to loss instances
+        weights :
+            Optional dictionary mapping loss names to weights.
+            If None, all losses are weighted equally.
         """
         super().__init__()
         self.losses = losses
@@ -404,12 +460,17 @@ class CombinedLoss(AbstractLoss):
     ) -> Dict[str, torch.Tensor]:
         """
         Compute combined loss from multiple loss functions.
-        
-        Args:
-            model_out: Dictionary containing 'predictions' tensor
-            batch: Dictionary containing 'targets' tensor
-            
-        Returns:
+
+        Parameters
+        ----------
+        model_out :
+            Dictionary containing 'predictions' tensor
+        batch :
+            Dictionary containing 'targets' tensor
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
             Dictionary with original model output plus 'loss' key and individual losses
         """
         total_loss = 0.0

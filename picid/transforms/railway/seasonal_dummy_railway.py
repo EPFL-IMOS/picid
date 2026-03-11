@@ -16,10 +16,14 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the seasonal dummy transform.
 
-        Args:
-            shift: Number of time steps to shift the target (e.g., 168 for weekly)
-            seq_len: Sequence length that defines the seasonal period
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        shift : int
+            Number of time steps to shift the target (e.g., 168 for weekly)
+        seq_len : int
+            Sequence length that defines the seasonal period
+        **kwargs
+            Additional keyword arguments
         """
         self._init_kwargs = kwargs
         self.shift = shift
@@ -37,10 +41,14 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
         Transform data by adding shifted target values and seasonal statistics.
         All seasonal history management happens here.
 
-        Args:
-            data_segment: The main data segment (dict)
+        Parameters
+        ----------
+        data_segment : dict
+            The main data segment (dict)
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Concatenated data with shifted targets and seasonal statistics
         """
         data_segment = data
@@ -181,9 +189,12 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Update the seasonal history with new values from the current data segment.
 
-        Args:
-            shifted_target: The shifted target values
-            mode: The transformation mode ('train', 'val', 'test')
+        Parameters
+        ----------
+        shifted_target : np.ndarray
+            The shifted target values
+        mode : str
+            The transformation mode ('train', 'val', 'test')
         """
         # Determine which values to add to history
         if mode == "train":

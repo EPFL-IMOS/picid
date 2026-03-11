@@ -181,9 +181,11 @@ metadata:
 | `fit_on_key` | No** | When `apply_to` is a list and `fit_on` is set, which key to use for fitting. |
 | `transform_on_keys` | No | Restrict which splits are transformed; default is all splits. |
 | `multi_source_fit` | No | If `true`, fit across all units in the fit split (concatenate then fit). Default `false`. |
-| `validate_output` | No | If `false`, skip built-in structural validation after the transform. Default `true`. |
+| `validate_output` | No | If `false`, skip built-in structural validation after the transform. Validation is performed by the pipeline's IntegrityCheckAfterStep when enabled. Default `true`. |
 | `include_slice_info_in_metadata` | No | If `true`, the pipeline adds the container's slice (split, unit_ids, cycle_ids, bounds, index_map) to the `metadata` dict passed to `transform_data` and `fit_data` under the key `"slice_info"`. Use when the transform needs to know which slice of the dataset it is processing. The container must have `slice_info` set. See [Data objects — SliceInfo](../reference/dataobject.md). Default `false`. |
-| `integrity_checks` | No | Optional list of `(name, check_fn, policy)` for pipeline IntegrityCheckStep; set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
+| `integrity_checks_before` | No | Optional list of `(name, check_fn, policy)` run before fit/transform on apply_to chunks. Check fn receives `Dict[str, List[NamedTransformInput]]`. Set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
+| `integrity_checks_after` | No | Optional list of `(name, check_fn, policy)` run after merge on assign_to slice. Check fn receives `Dict[str, Any]`. Set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
+| `integrity_checks` | No | *(Deprecated)* Legacy single list; maps to `integrity_checks_before`. Use `integrity_checks_before` / `integrity_checks_after` instead. |
 
 \* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.  
 \** Required when `apply_to` is a list and `fit_on` is set.

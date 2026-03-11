@@ -15,8 +15,10 @@ class ReshapeTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the transform.
 
-        Args:
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments
         """
         super().__init__(**kwargs)
         self.pattern = pattern
@@ -25,11 +27,16 @@ class ReshapeTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Concatenate all data arrays horizontally.
 
-        Args:
-            data: Dictionary containing numpy arrays to concatenate
-            metadata: Dictionary containing auxiliary metadata (unused in this transform)
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing numpy arrays to concatenate
+        metadata : dict
+            Dictionary containing auxiliary metadata (unused in this transform)
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Concatenated numpy array
         """
 

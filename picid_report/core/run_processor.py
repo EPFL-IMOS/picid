@@ -87,7 +87,6 @@ def load_runs_df(
         - List[str]: Column names that were dropped during cleaning.
     """
     logger.info("Load: project=%s, user=%s, cache_dir=%s", project_name, user, csv_cache_dir)
-    api = wandb.Api()
     os.makedirs(csv_cache_dir, exist_ok=True)
     csv_path = f"{csv_cache_dir}/{project_name}.csv"
 
@@ -100,6 +99,8 @@ def load_runs_df(
         logger.info(f"Loaded {len(runs_df)} runs from cached file: {csv_path}")
     except FileNotFoundError:
         # If cache is not found, fetch fresh data from the wandb API.
+        # Only create API client when needed (avoids auth failure in CI when cache exists).
+        api = wandb.Api()
         logger.info(f"Fetching runs from wandb project: {user}/{project_name}...")
         runs = api.runs(f"{user}/{project_name}")
         summary_list, config_list, name_list = [], [], []

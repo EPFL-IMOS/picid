@@ -22,8 +22,10 @@ class RegularizeRaggedDataTransform(NoFitPerSegmentMixin, RaggedTransform):
         This transform regularizes ragged arrays to have uniform length.
         It is use
 
-        Args:
-            **kwargs: Additional keyword arguments
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments
         """
         super().__init__(**kwargs)
 
@@ -46,10 +48,13 @@ class ExpandScalarToReferenceFeatureSize(
         """
         Initialize the transform.
 
-        Args:
-            scalar_key: The key in the input data that holds the scalar value
-                        (or N-D array) to be expanded.
-            **kwargs: Additional keyword arguments passed to the parent class.
+        Parameters
+        ----------
+        scalar_key : str
+            The key in the input data that holds the scalar value
+            (or N-D array) to be expanded.
+        **kwargs
+            Additional keyword arguments passed to the parent class.
         """
         self.scalar_key = scalar_key
         super().__init__(**kwargs)
@@ -65,6 +70,8 @@ class ExpandScalarToReferenceFeatureSize(
 
         The output is guaranteed to be at least 2-dimensional.
 
+        Examples
+        --------
         Example 1 (Scalar):
         - data[self.scalar_key] = 5
         - data[reference_key] = np.array([[1, 2], [3, 4], [5, 6]])  (shape (3, 2))

@@ -69,10 +69,15 @@ class TestTimeFeaturesFunction:
         assert len(df) == 4
         assert not (df == 0).all().any()
 
-    def test_time_features_non_series_raises(self):
-        dates = np.array(["2023-01-01", "2023-01-02"], dtype="datetime64")
-        with pytest.raises(ValueError, match="dates should be a pandas Series"):
-            time_features(dates)
+    def test_time_features_numpy_array_accepted(self):
+        """Numpy datetime array is converted to Series; use varied dates to avoid zero-column."""
+        dates = np.array(
+            pd.to_datetime(["2023-01-15", "2023-02-15", "2023-03-15"]), dtype="datetime64[ns]"
+        )
+        df = time_features(dates, use_features=["month", "day"], normalize=True)
+        assert isinstance(df, pd.DataFrame)
+        assert list(df.columns) == ["month", "day"]
+        assert len(df) == 3
 
     def test_time_features_normalize_false(self):
         dates = pd.Series(pd.date_range("2023-01-01", periods=2, freq="D"))

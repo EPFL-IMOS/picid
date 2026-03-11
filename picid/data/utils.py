@@ -8,12 +8,16 @@ def to_torch_tensor(data, device=None):
     Convert input data (list, numpy array, or tensor) to a torch.Tensor
     with float32 if floating type, long if integer type.
 
-    Args:
-        data: list, numpy.ndarray, or torch.Tensor
-        device (torch.device or str, optional): target device ('cpu', 'cuda', etc.)
+    Parameters
+    ----------
+    data
+        list, numpy.ndarray, or torch.Tensor
+    device : torch.device or str, optional
+        target device ('cpu', 'cuda', etc.)
 
-    Returns:
-        torch.Tensor
+    Returns
+    -------
+    torch.Tensor
     """
     if torch.is_tensor(data):
         # If already a tensor, just cast

@@ -22,12 +22,18 @@ class MetricManager:
         is_dual: bool = False,
     ):
         """
-        Args:
-            metric_names: List of metrics to track (e.g., ['mse', 'mae']).
-            task_type: 'regression' or 'classification'.
-            paths: Required for AbstractFileSystemMetrics (e.g., Railway metrics).
-            num_classes: Required for classification metrics.
-            is_dual: If True, tracks both raw and normalized metrics.
+        Parameters
+        ----------
+        metric_names :
+            List of metrics to track (e.g., ['mse', 'mae']).
+        task_type :
+            'regression' or 'classification'.
+        paths :
+            Required for AbstractFileSystemMetrics (e.g., Railway metrics).
+        num_classes :
+            Required for classification metrics.
+        is_dual :
+            If True, tracks both raw and normalized metrics.
         """
         if not metric_names or len(metric_names) == 0:
             raise ValueError("metric_names cannot be empty")

@@ -1,0 +1,14 @@
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+rename_target_to_fault_classification:
+  transform:
+    _target_: picid.transforms.base_transforms.identity.IdentityPassThrough
+  metadata:
+    apply_to: target
+    assign_to:
+      target: fault_classification

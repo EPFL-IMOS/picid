@@ -1,15 +1,235 @@
 """Utility functions for the TopoBenchMark library."""
 
+import json
+import shutil
+import subprocess
 import warnings
 from collections.abc import Callable
 from importlib.util import find_spec
+from pathlib import Path
 from typing import Any
 
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from picid.utils import pylogger, rich_utils
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+
+
+def _get_hydra_overrides() -> list[str]:
+    """Return Hydra command-line overrides if Hydra is initialized."""
+    try:
+        from hydra.core.hydra_config import HydraConfig
+
+        if HydraConfig.initialized():
+            return list(HydraConfig.get().overrides.task)
+    except Exception:
+        pass
+    return []
+
+
+def _write_reproduce_guide(cfg: DictConfig) -> None:
+    """Write REPRODUCE.md to output_dir with env setup, run command, and debug config."""
+    if "paths" not in cfg or "output_dir" not in cfg.paths:
+        return
+    out_dir = Path(cfg.paths.output_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    root_raw = cfg.paths.get("root_dir", ".")
+    root = Path(str(root_raw)).expanduser().resolve()
+    if not root or str(root) == ".":
+        root = Path.cwd()
+
+    # Portable paths for reproducibility across machines
+    try:
+        out_dir_rel = out_dir.relative_to(root)
+        output_dir_portable = f"${{PROJECT_ROOT}}/{out_dir_rel}"
+    except ValueError:
+        output_dir_portable = str(out_dir)
+
+    overrides = _get_hydra_overrides()
+    run_args = " ".join(overrides) if overrides else "<add your overrides>"
+    experiment = cfg.get("experiment_group", "debug")
+    exp_choice = getattr(
+        getattr(getattr(cfg, "hydra", None), "runtime", None),
+        "choices",
+        None,
+    )
+    experiment_key = ""
+    if exp_choice and hasattr(exp_choice, "experiment"):
+        experiment_key = str(exp_choice.experiment)
+    elif overrides:
+        for o in overrides:
+            if o.startswith("experiment="):
+                experiment_key = o.split("=", 1)[1]
+                break
+
+    # Build debug config for VS Code / Cursor (portable via ${workspaceFolder})
+    debug_config = {
+        "name": f"Reproduce: {experiment_key or experiment}",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/picid/run.py",
+        "console": "integratedTerminal",
+        "args": overrides if overrides else ["experiment=null"],
+        "cwd": "${workspaceFolder}",
+        "env": {"PROJECT_ROOT": "${workspaceFolder}", "HYDRA_FULL_ERROR": "1"},
+    }
+    if "debug=default" not in run_args and "debug=" not in run_args:
+        debug_config["args"] = list(debug_config["args"]) + ["debug=default"]
+
+    run_dir_arg = output_dir_portable.replace("${PROJECT_ROOT}", "${workspaceFolder}")
+    debug_config_from_run = {
+        "name": f"Reproduce from config: {experiment_key or experiment}",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/scripts/reproducibility/reproduce_from_run.py",
+        "console": "integratedTerminal",
+        "args": [run_dir_arg],
+        "cwd": "${workspaceFolder}",
+        "env": {"PROJECT_ROOT": "${workspaceFolder}", "HYDRA_FULL_ERROR": "1"},
+    }
+
+    git_info = _get_git_info(root)
+    lines = [
+        "# How to Reproduce This Experiment",
+        "",
+        f"**Output directory:** `{output_dir_portable}`",
+    ]
+    if git_info.get("git_commit"):
+        lines.append(f"**Git commit:** `{git_info['git_commit']}` (see run_metadata.yaml)")
+        lines.append("")
+    lines.extend([
+        "## 1. Environment setup",
+        "",
+        "```bash",
+        "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+        "cd $PROJECT_ROOT",
+        "# Install dependencies (use uv.lock from this run dir for exact versions):",
+        f"# cp {output_dir_portable}/uv.lock . && uv sync",
+        "uv sync",
+        "# Download datasets if needed (e.g. PHME20):",
+        "# ./scripts/datasets_setup.sh",
+        "```",
+        "",
+        "## 2. Run the model",
+        "",
+        "**Option A – from repo configs** (uses current configs + overrides):",
+        "",
+        "```bash",
+        "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+        "cd $PROJECT_ROOT",
+        f"uv run python picid/run.py {run_args}",
+        "```",
+        "",
+        "**Option B – from this run's config** (exact config from logs, for version comparison):",
+        "",
+        "```bash",
+        "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+        "cd $PROJECT_ROOT",
+        f"uv run python scripts/reproducibility/reproduce_from_run.py {output_dir_portable}",
+        "```",
+        "",
+        "## 3. Debug configuration (VS Code / Cursor)",
+        "",
+        "Add to `.vscode/launch.json` under `configurations`:",
+        "",
+        "**Option A (from repo):**",
+        "",
+        "```json",
+        json.dumps(debug_config, indent=2),
+        "```",
+        "",
+        "**Option B (from run config):**",
+        "",
+        "```json",
+        json.dumps(debug_config_from_run, indent=2),
+        "```",
+        "",
+        "## Files in this run",
+        "",
+        "- `run_metadata.yaml` – git commit, branch, dirty flag",
+        "- `config_resolved.yaml` – full resolved config",
+        "- `uv.lock` – exact dependency versions",
+        "- `checkpoints/` – model checkpoints",
+        "- `logs/` – training logs",
+        "",
+    ])
+    dest = out_dir / "REPRODUCE.md"
+    try:
+        dest.write_text("\n".join(lines), encoding="utf-8")
+        log.debug(f"Saved reproducibility guide: {dest}")
+    except OSError as e:
+        log.warning(f"Could not write REPRODUCE.md: {e}")
+
+
+def _get_git_info(root: Path) -> dict[str, str | bool]:
+    """Return git commit, branch, and dirty flag for reproducibility."""
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=root,
+            timeout=5,
+        )
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=root,
+            timeout=5,
+        )
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            cwd=root,
+            timeout=5,
+        )
+        return {
+            "git_commit": commit.stdout.strip() if commit.returncode == 0 else "",
+            "git_branch": branch.stdout.strip() if branch.returncode == 0 else "",
+            "git_dirty": bool(status.stdout.strip()) if status.returncode == 0 else False,
+        }
+    except Exception:
+        return {"git_commit": "", "git_branch": "", "git_dirty": False}
+
+
+def _save_git_info_to_run(cfg: DictConfig) -> None:
+    """Save git commit/branch/dirty to run_metadata.yaml for reproducibility."""
+    if "paths" not in cfg or "output_dir" not in cfg.paths:
+        return
+    root_raw = cfg.paths.get("root_dir", ".")
+    root = Path(str(root_raw)).expanduser().resolve()
+    if not root or str(root) == ".":
+        root = Path.cwd()
+    out_dir = Path(cfg.paths.output_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    info = _get_git_info(root)
+    dest = out_dir / "run_metadata.yaml"
+    try:
+        OmegaConf.save(OmegaConf.create(info), dest)
+        log.debug(f"Saved git info for reproducibility: {dest}")
+    except OSError as e:
+        log.warning(f"Could not write run_metadata.yaml: {e}")
+
+
+def _save_uv_lock_to_run(cfg: DictConfig) -> None:
+    """Copy uv.lock to run output dir for reproducibility. Run can be reproduced with logs present."""
+    if "paths" not in cfg or "output_dir" not in cfg.paths:
+        return
+    root = Path(cfg.paths.get("root_dir", ".")).expanduser().resolve()
+    uv_lock = root / "uv.lock"
+    out_dir = Path(cfg.paths.output_dir).expanduser().resolve()
+    if not uv_lock.exists():
+        return
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / "uv.lock"
+    try:
+        shutil.copy2(uv_lock, dest)
+        log.debug(f"Saved uv.lock to run dir for reproducibility: {dest}")
+    except OSError as e:
+        log.warning(f"Could not copy uv.lock to run dir: {e}")
 
 
 def extras(cfg: DictConfig) -> None:
@@ -90,6 +310,9 @@ def task_wrapper(task_func: Callable) -> Callable:
         failed = False
 
         try:
+            _save_uv_lock_to_run(cfg)
+            _save_git_info_to_run(cfg)
+            _write_reproduce_guide(cfg)
             metric_dict, object_dict = task_func(cfg=cfg)
 
         # things to do if exception occurs

@@ -40,24 +40,37 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initialize the Ahmad2019FPTCutTransform.
 
-        Args:
-            signal_key: Key for the 1D/2D signal array to find the FPT.
-            features_keys: List of keys for arrays to be sliced.
-            normal_period_end: End index of the "normal" operation period.
-            window_size: Size of the sliding window for regression.
-            gain_threshold: Threshold to trigger FPT. If None,
-                `auto_fpt_strategy` is used.
-            regression_stride: The step size for the regression window.
-            auto_fpt_strategy: Strategy if `gain_threshold` is None.
-                - "max_ratio": FPT is the index of the max ratio.
-                - "robust_threshold": FPT is the *first* index to cross
-                  the minimum ratio of the top 'k' ratios.
-            auto_fpt_top_k: The 'k' value for "robust_threshold" strategy.
-            dataset_name: Optional name of the dataset for logging.
-            unit_id_key: Optional key to find the unit ID for logging.
-            fpt_indexes_strategy: Strategy ('min', 'max', 'mean') to
-                use if `signal_key` provides multiple signal columns.
-            **kwargs: Additional arguments for BaseTransform.
+        Parameters
+        ----------
+        signal_key : str
+            Key for the 1D/2D signal array to find the FPT.
+        features_keys : list
+            List of keys for arrays to be sliced.
+        normal_period_end : int
+            End index of the "normal" operation period.
+        window_size : int
+            Size of the sliding window for regression.
+        gain_threshold : float, optional
+            Threshold to trigger FPT. If None,
+            `auto_fpt_strategy` is used.
+        regression_stride : int
+            The step size for the regression window.
+        auto_fpt_strategy : str
+            Strategy if `gain_threshold` is None.
+            - "max_ratio": FPT is the index of the max ratio.
+            - "robust_threshold": FPT is the *first* index to cross
+              the minimum ratio of the top 'k' ratios.
+        auto_fpt_top_k : int
+            The 'k' value for "robust_threshold" strategy.
+        dataset_name : str
+            Optional name of the dataset for logging.
+        unit_id_key : str, optional
+            Optional key to find the unit ID for logging.
+        fpt_indexes_strategy : str
+            Strategy ('min', 'max', 'mean') to
+            use if `signal_key` provides multiple signal columns.
+        **kwargs
+            Additional arguments for BaseTransform.
         """
         super().__init__(**kwargs)
         self.signal_key = signal_key

@@ -7,15 +7,23 @@ def flatten_cycles(x, y, valid_lengths=None):
     Transform (B, L, C) into (sum(valid_lengths), C) by flattening cycles.
     Keeps track of cycle_indices.
 
-    Args:
-        x: np.ndarray, shape (B, L, C)
-        y: np.ndarray, shape (B, 1)  # per-cycle labels
-        valid_lengths: list/array of ints, number of valid timesteps per cycle
+    Parameters
+    ----------
+    x
+        np.ndarray, shape (B, L, C)
+    y
+        np.ndarray, shape (B, 1)  # per-cycle labels
+    valid_lengths
+        list/array of ints, number of valid timesteps per cycle
 
-    Returns:
-        flattened_x: (sum(valid_lengths), C)
-        flattened_y: (sum(valid_lengths), 1)
-        cycle_indices: list of (start, end) indices per cycle
+    Returns
+    -------
+    flattened_x
+        (sum(valid_lengths), C)
+    flattened_y
+        (sum(valid_lengths), 1)
+    cycle_indices
+        list of (start, end) indices per cycle
     """
     B, L, C = x.shape
     flattened_x, flattened_y, cycle_indices = [], [], []

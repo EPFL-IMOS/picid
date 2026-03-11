@@ -32,14 +32,22 @@ class TransformerLRScheduler(LearningRateScheduler):
     r"""
     Transformer Learning Rate Scheduler proposed in "Attention Is All You Need"
 
-    Args:
-        optimizer (Optimizer): Optimizer.
-        init_lr (float): Initial learning rate.
-        peak_lr (float): Maximum learning rate.
-        final_lr (float): Final learning rate.
-        final_lr_scale (float): Final learning rate scale
-        warmup_steps (int): Warmup the learning rate linearly for the first N updates
-        decay_steps (int): Steps in decay stages
+    Parameters
+    ----------
+    optimizer : Optimizer
+        Optimizer.
+    init_lr : float
+        Initial learning rate.
+    peak_lr : float
+        Maximum learning rate.
+    final_lr : float
+        Final learning rate.
+    final_lr_scale : float
+        Final learning rate scale
+    warmup_steps : int
+        Warmup the learning rate linearly for the first N updates
+    decay_steps : int
+        Steps in decay stages
     """
 
     def __init__(

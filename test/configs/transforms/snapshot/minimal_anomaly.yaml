@@ -1,0 +1,69 @@
+# Minimal anomaly_detection for pipeline regression - our npz has anomaly_detection directly
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+__tabularize_x_transform: &__tabularize_x_transform
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: 0
+  pred_len: 1
+  timestep_dimension: 1
+  select_features:
+    - features: history
+
+__tabularize_y_transform: &__tabularize_y_transform
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: 0
+  pred_len: 1
+  timestep_dimension: 1
+  select_features:
+    - anomaly_detection: present
+
+tabularize_x_train:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride_train}
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+    transform_on_keys: ["train"]
+
+tabularize_y_train:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride_train}
+  metadata:
+    apply_to: ["anomaly_detection"]
+    assign_to: anomaly_detection
+    transform_on_keys: ["train"]
+
+tabularize_x_val_test:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride}
+  metadata:
+    apply_to: ["features"]
+    assign_to: features
+    transform_on_keys: ["val", "test"]
+
+tabularize_y_val_test:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride}
+  metadata:
+    apply_to: ["anomaly_detection"]
+    assign_to: anomaly_detection
+    transform_on_keys: ["val", "test"]
+
+concatenate_units_and_ragged2numpy:
+  transform:
+    _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    axis: 1
+  metadata:
+    apply_to: ["features", "anomaly_detection"]
+    assign_to: ["features", "anomaly_detection"]

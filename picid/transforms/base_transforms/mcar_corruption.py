@@ -24,31 +24,38 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
     arrays of shape ``(Time, Channels)``. It handles channel-specific corruption
     ratios, allowing for heterogeneous sensor reliability simulations.
 
-    Attributes:
-        ratios (List[float]): A list of target missingness ratios (between 0.0 and 1.0)
-            for each channel. If the input data has more channels than elements in
-            this list, the remaining channels are assumed to have a ratio of 0.0
-            (i.e., they remain pristine).
-        mode (str): The mechanism used to generate missing values.
-            - ``"point"``: Simulates independent random failures (e.g., packet loss).
-              Each point is dropped independently with probability proportional to the ratio.
-            - ``"block"``: Simulates sensor outages or reboots. Missingness occurs
-              in contiguous chunks of time.
-        block_params (Optional[Dict[str, Union[int, float]]]): Configuration for block sizes
-            when ``mode="block"``. Must contain keys:
-            - ``"min_size"`` (int | float): Minimum duration of an outage block.
-              If float (0.0 to 1.0), it represents a proportion of the total signal length.
-              If int, it represents an absolute number of time steps.
-            - ``"max_size"`` (int | float): Maximum duration of an outage block.
-              If float, it represents a proportion. If int, it represents absolute steps.
-            Defaults to ``{"min_size": 5, "max_size": 20}`` if not provided.
-        seed (int): Seed for the NumPy random number generator to ensure
-            deterministic reproducibility of the corruption patterns.
-        apply_to (Optional[List[str]]): A list of keys in the input dictionary
-            (e.g., ``["features"]``) to which the corruption should be applied.
-            If ``None``, the transform is applied to all keys in the input data.
+    Attributes
+    ----------
+    ratios : List[float]
+        A list of target missingness ratios (between 0.0 and 1.0) for each
+        channel. If the input data has more channels than elements in this
+        list, the remaining channels are assumed to have a ratio of 0.0
+        (i.e., they remain pristine).
+    mode : str
+        The mechanism used to generate missing values.
+        - ``"point"``: Simulates independent random failures (e.g., packet loss).
+          Each point is dropped independently with probability proportional to
+          the ratio.
+        - ``"block"``: Simulates sensor outages or reboots. Missingness occurs
+          in contiguous chunks of time.
+    block_params : Optional[Dict[str, Union[int, float]]]
+        Configuration for block sizes when ``mode="block"``. Must contain keys:
+        - ``"min_size"`` (int | float): Minimum duration of an outage block.
+          If float (0.0 to 1.0), it represents a proportion of the total
+          signal length. If int, it represents an absolute number of time steps.
+        - ``"max_size"`` (int | float): Maximum duration of an outage block.
+          If float, it represents a proportion. If int, it represents absolute
+          steps. Defaults to ``{"min_size": 5, "max_size": 20}`` if not provided.
+    seed : int
+        Seed for the NumPy random number generator to ensure deterministic
+        reproducibility of the corruption patterns.
+    apply_to : Optional[List[str]]
+        A list of keys in the input dictionary (e.g., ``["features"]``) to
+        which the corruption should be applied. If ``None``, the transform is
+        applied to all keys in the input data.
 
-    Examples:
+    Examples
+    --------
         >>> import numpy as np
         >>> # Setup: 1 Batch, 100 Time steps, 2 Channels
         >>> data = {"features": np.ones((1, 100, 2))}
@@ -82,24 +89,34 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Initializes the MCARCorruptorTransform with specific corruption parameters.
 
-        Args:
-            ratios: A list of floats defining the target missingness ratio for each
-                channel (e.g., ``[0.1, 0.5]``).
-            mode: The corruption mode, either ``"point"`` or ``"block"``.
-                Defaults to ``"block"``.
-            block_params: A dictionary defining ``"min_size"`` and ``"max_size"``
-                for block outages. Values can be integers (absolute length) or
-                floats (proportion of signal length). Required only if ``mode="block"``.
-                Defaults to ``None``.
-            seed: Random seed for reproducibility. Defaults to 42.
-            apply_to: List of dictionary keys to transform. If ``None``, all keys
-                are transformed. Defaults to ``None``.
-            **kwargs: Additional keyword arguments passed to the parent class.
+        Parameters
+        ----------
+        ratios : list
+            A list of floats defining the target missingness ratio for each
+            channel (e.g., ``[0.1, 0.5]``).
+        mode : str
+            The corruption mode, either ``"point"`` or ``"block"``.
+            Defaults to ``"block"``.
+        block_params : dict, optional
+            A dictionary defining ``"min_size"`` and ``"max_size"``
+            for block outages. Values can be integers (absolute length) or
+            floats (proportion of signal length). Required only if ``mode="block"``.
+            Defaults to ``None``.
+        seed : int
+            Random seed for reproducibility. Defaults to 42.
+        apply_to : list, optional
+            List of dictionary keys to transform. If ``None``, all keys
+            are transformed. Defaults to ``None``.
+        **kwargs
+            Additional keyword arguments passed to the parent class.
 
-        Raises:
-            ValueError: If ``mode`` is not one of ``"point"`` or ``"block"``.
-            ValueError: If ``mode="block"`` and ``block_params`` is invalid or
-                malformed.
+        Raises
+        ------
+        ValueError
+            If ``mode`` is not one of ``"point"`` or ``"block"``.
+        ValueError
+            If ``mode="block"`` and ``block_params`` is invalid or
+            malformed.
         """
         super().__init__(**kwargs)
         self.ratios = ratios
@@ -145,16 +162,23 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         This handles the logic for proportional sizing (float inputs) vs
         absolute sizing (integer inputs).
 
-        Args:
-            size_param: The parameter value, either an int (absolute size) or
-                float (proportion of total_length).
-            total_length: The length of the time series cycle.
+        Parameters
+        ----------
+        size_param : int or float
+            The parameter value, either an int (absolute size) or
+            float (proportion of total_length).
+        total_length : int
+            The length of the time series cycle.
 
-        Returns:
-            int: The resolved block size in time steps.
+        Returns
+        -------
+        int
+            The resolved block size in time steps.
 
-        Raises:
-            ValueError: If a float parameter is not between 0.0 and 1.0.
+        Raises
+        ------
+        ValueError
+            If a float parameter is not between 0.0 and 1.0.
         """
         if isinstance(size_param, float):
             if not 0.0 <= size_param <= 1.0:
@@ -172,17 +196,24 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         supports NaNs, and iterates through channels/batches to apply the specific
         corruption pattern.
 
-        Args:
-            X: The input data array. Expected shapes are ``(Time, Channels)`` or
-               ``(Batch, Time, Channels)``.
+        Parameters
+        ----------
+        X : np.ndarray
+            The input data array. Expected shapes are ``(Time, Channels)`` or
+            ``(Batch, Time, Channels)``.
 
-        Returns:
-            np.ndarray: The corrupted array with the same shape as input ``X``,
+        Returns
+        -------
+        np.ndarray
+            The corrupted array with the same shape as input ``X``,
             containing ``NaN`` values where data was dropped.
 
-        Raises:
-            ValueError: If the input array dimensions are not 2D or 3D.
-            ValueError: If a configured ratio exceeds 1.0.
+        Raises
+        ------
+        ValueError
+            If the input array dimensions are not 2D or 3D.
+        ValueError
+            If a configured ratio exceeds 1.0.
         """
 
         # Standardize input to (Batch, Time, Channels) for uniform processing logic
@@ -314,14 +345,19 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         """
         Executes the transformation on the provided data dictionary.
 
-        Args:
-            data: A dictionary where keys are signal names (e.g., ``'features'``) and
-                values are input arrays.
-            metadata: A metadata dictionary (unused by this specific transform but
-                required by the interface).
+        Parameters
+        ----------
+        data : dict
+            A dictionary where keys are signal names (e.g., ``'features'``) and
+            values are input arrays.
+        metadata : dict
+            A metadata dictionary (unused by this specific transform but
+            required by the interface).
 
-        Returns:
-            Dict[str, np.ndarray]: A new dictionary containing the corrupted arrays.
+        Returns
+        -------
+        dict
+            A new dictionary containing the corrupted arrays.
             Keys not present in ``apply_to`` are returned unmodified.
         """
         output_data = {}

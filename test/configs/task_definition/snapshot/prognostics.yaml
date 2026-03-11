@@ -1,0 +1,18 @@
+seq_len: 10
+label_len: 0
+pred_len: 1
+task_type: rul
+padding_left_flag: true
+stride: 1
+stride_train: 1
+subset_ratio: 1.0
+subset_seed: ${seed}
+
+model:
+  data_requirements:
+    input_tensors:
+      - features
+      - rul
+
+target_metric: val/loss
+target_metric_mode: min

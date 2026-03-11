@@ -314,9 +314,12 @@ class MASEMetric(AbstractMetric):
 
     def __init__(self, training_series: np.ndarray = None, seasonality: int = 1):
         """
-        Args:
-            training_series: Array of historical values used for scaling (T, F) or (T,) shape.
-            seasonality: Periodicity used for the naive forecast (default=1 for non-seasonal data).
+        Parameters
+        ----------
+        training_series :
+            Array of historical values used for scaling (T, F) or (T,) shape.
+        seasonality :
+            Periodicity used for the naive forecast (default=1 for non-seasonal data).
         """
         super().__init__("mase")
         self.training_series = training_series

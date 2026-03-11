@@ -43,15 +43,24 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         """
         Initializes the wrapper and the underlying statistical backbone.
 
-        Args:
-            task_type: The specific task name (e.g., 'rul_regression', 'fault_classification').
-            seq_len: The length of the input time series.
-            model_type: The type of baseline to use ('linear', 'polynomial', 'exponential').
-            input_channels: Number of input channels (required).
-            num_targets: Output dimension for regression (optional, default 1).
-            num_classes: Number of classes for classification (required for classification).
-            output_dim: Deprecated. Use num_targets for regression.
-            poly_degree: Polynomial degree for polynomial model (default 2).
+        Parameters
+        ----------
+        task_type :
+            The specific task name (e.g., 'rul_regression', 'fault_classification').
+        seq_len :
+            The length of the input time series.
+        model_type :
+            The type of baseline to use ('linear', 'polynomial', 'exponential').
+        input_channels :
+            Number of input channels (required).
+        num_targets :
+            Output dimension for regression (optional, default 1).
+        num_classes :
+            Number of classes for classification (required for classification).
+        output_dim :
+            Deprecated. Use num_targets for regression.
+        poly_degree :
+            Polynomial degree for polynomial model (default 2).
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -128,15 +137,19 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         """
         Performs the forward pass and reshapes outputs to match framework expectations.
 
-        Args:
-            batch (Dict[str, torch.Tensor]): A dictionary containing:
-                - 'features': Tensor of shape (Batch, Seq_Len, Channels).
-                - '{task_type}': Target tensor.
+        Parameters
+        ----------
+        batch : Dict[str, torch.Tensor]
+            A dictionary containing:
+            - 'features': Tensor of shape (Batch, Seq_Len, Channels).
+            - '{task_type}': Target tensor.
 
-        Returns:
-            Dict[str, torch.Tensor]: A dictionary with 'predictions' and 'targets'.
-                - Regression Predictions: (Batch, 1, num_targets)
-                - Classification Predictions: (Batch, 1, num_classes)
+        Returns
+        -------
+        Dict[str, torch.Tensor]
+            A dictionary with 'predictions' and 'targets'.
+            - Regression Predictions: (Batch, 1, num_targets)
+            - Classification Predictions: (Batch, 1, num_classes)
         """
         # (batch_size, seq_len, in_channels) -> (batch_size, in_channels, seq_len)
         batch_x = batch["features"].permute(0, 2, 1)

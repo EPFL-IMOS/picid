@@ -287,25 +287,36 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     | ``"spectral"`` | **Causal** | **Periodic/Rhythmic signals** (e.g., vibration). | **+** Restores underlying waveform.<br>**-** Computationally heavier; assumes periodicity. |
     | ``"copy_past"``| **Causal** | **Repetitive/Cyclic signals** (e.g. engine cycles). | **+** Iteratively copies immediate history.<br>**-** Requires history; safe with clamping. |
 
-    *\* Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
+    * Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
 
-    Attributes:
-        strategy (Union[str, List[str]]): The imputation strategy to use.
-            Can be a single string (applied to all channels) or a list of strings
-            (one per channel). Must be one of:
-            - ``"mean"``: Replaces NaNs with the global mean.
-            - ``"locf"``: Last Observation Carried Forward.
-            - ``"linear"``: Linear interpolation.
-            - ``"zero"``: Replaces NaNs with 0.0.
-            - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by the channel's std dev.
-            - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of sinusoids based on history.
-            - ``"copy_past"``: Blockwise Past Copy. Iteratively copies the immediately preceding history segment into the gap.
-        apply_to (Optional[List[str]]): A list of keys in the input dictionary to transform.
-        spectral_window_len (int): Window size (history) used for spectral analysis (default: 64).
-        spectral_top_k (int): Number of dominant frequencies to use for extrapolation (default: 3).
-        spectral_match_variance (bool): If True, the spectral imputation will attempt to match the noise variance of the historical signal. Defaults to False.
-        fitted_means (Dict[str, np.ndarray]): Stores computed means (for ``"mean"``).
-        fitted_stds (Dict[str, np.ndarray]): Stores computed std devs (for ``"stochastic"``).
+    Attributes
+    ----------
+    strategy : Union[str, List[str]]
+        The imputation strategy to use. Can be a single string (applied to all
+        channels) or a list of strings (one per channel). Must be one of:
+        - ``"mean"``: Replaces NaNs with the global mean.
+        - ``"locf"``: Last Observation Carried Forward.
+        - ``"linear"``: Linear interpolation.
+        - ``"zero"``: Replaces NaNs with 0.0.
+        - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by
+          the channel's std dev.
+        - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of
+          sinusoids based on history.
+        - ``"copy_past"``: Blockwise Past Copy. Iteratively copies the
+          immediately preceding history segment into the gap.
+    apply_to : Optional[List[str]]
+        A list of keys in the input dictionary to transform.
+    spectral_window_len : int
+        Window size (history) used for spectral analysis (default: 64).
+    spectral_top_k : int
+        Number of dominant frequencies to use for extrapolation (default: 3).
+    spectral_match_variance : bool
+        If True, the spectral imputation will attempt to match the noise
+        variance of the historical signal. Defaults to False.
+    fitted_means : Dict[str, np.ndarray]
+        Stores computed means (for ``"mean"``).
+    fitted_stds : Dict[str, np.ndarray]
+        Stores computed std devs (for ``"stochastic"``).
     """
 
     VALID_STRATEGIES = {
@@ -330,17 +341,25 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         """
         Initializes the ImputationTransform with a specific strategy.
 
-        Args:
-            strategy: The name of the imputation strategy or a list of strategies per channel.
-                Defaults to ``"linear"``.
-            apply_to: List of dictionary keys to transform. If ``None``, all keys
-                are transformed. Defaults to ``None``.
-            spectral_window_len: Number of past time steps to analyze for "spectral" imputation.
-            spectral_top_k: Number of frequency components to synthesize for "spectral" imputation.
-            **kwargs: Additional keyword arguments passed to the parent class.
+        Parameters
+        ----------
+        strategy : str or list
+            The name of the imputation strategy or a list of strategies per channel.
+            Defaults to ``"linear"``.
+        apply_to : list, optional
+            List of dictionary keys to transform. If ``None``, all keys
+            are transformed. Defaults to ``None``.
+        spectral_window_len : int
+            Number of past time steps to analyze for "spectral" imputation.
+        spectral_top_k : int
+            Number of frequency components to synthesize for "spectral" imputation.
+        **kwargs
+            Additional keyword arguments passed to the parent class.
 
-        Raises:
-            ValueError: If ``strategy`` is not one of the valid options.
+        Raises
+        ------
+        ValueError
+            If ``strategy`` is not one of the valid options.
         """
         super().__init__(**kwargs)
 
@@ -380,12 +399,17 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         - ``"mean"``: Computes global mean per channel.
         - ``"stochastic"``: Computes global standard deviation per channel.
 
-        Args:
-            data: A dictionary containing input arrays.
-            metadata: Metadata dictionary (unused).
+        Parameters
+        ----------
+        data : dict
+            A dictionary containing input arrays.
+        metadata : dict
+            Metadata dictionary (unused).
 
-        Returns:
-            self: Returns the instance itself.
+        Returns
+        -------
+        self
+            Returns the instance itself.
         """
         keys_to_process = self.apply_to if self.apply_to is not None else data.keys()
 
@@ -609,12 +633,17 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         """
         Executes the imputation on the provided data dictionary.
 
-        Args:
-            data: Dictionary of input arrays (e.g., ``{'features': ...}``).
-            metadata: Metadata dictionary (unused).
+        Parameters
+        ----------
+        data : dict
+            Dictionary of input arrays (e.g., ``{'features': ...}``).
+        metadata : dict
+            Metadata dictionary (unused).
 
-        Returns:
-            Dict[str, np.ndarray]: Dictionary with imputed arrays.
+        Returns
+        -------
+        dict
+            Dictionary with imputed arrays.
         """
         output_data = {}
         keys_to_process = self.apply_to if self.apply_to is not None else data.keys()

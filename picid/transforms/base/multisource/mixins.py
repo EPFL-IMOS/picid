@@ -9,14 +9,13 @@ of a single NamedTransformInput. These mixins implement that contract by:
 - Dispatching to the right handler (get_handler) which prepares chunks and
   calls the underlying fit_data / transform_data.
 
-Compositions:
-- FitByConcatenationMixin: fit on all segments concatenated (via handler).
-- NoFitMixin: no fitting; raises if fit is requested.
-- PerSegmentTransformMixin: transform each segment independently.
-- ConcatenateBeforeTransformMixin: concatenate along self.axis, then transform once.
-- ConcatFitAndPerSegmentTransformMixin = FitByConcatenation + PerSegment.
-- NoFitPerSegmentMixin = NoFit + PerSegment.
-- NoFitConcatAlongAxisMixin = NoFit + Concatenate (requires axis in __init__).
+Layering:
+- Layer 1: Interfaces (MultiSourceFitInterface, MultiSourceTransformInterface)
+- Layer 2: Dispatcher (internal _BaseDispatcher)
+- Layer 3: Atomic fit strategies (FitByConcatenationMixin, NoFitMixin)
+- Layer 4: Atomic transform strategies (PerSegmentTransformMixin, ConcatenateBeforeTransformMixin)
+- Layer 5: Compound mixins (ConcatFitAndPerSegmentTransformMixin, NoFitPerSegmentMixin,
+  NoFitConcatAlongAxisMixin) — public API for transforms.
 
 InverseTransformMixin is optional and provides inverse_transform_data / inverse_transform_multi_source.
 """
@@ -42,8 +41,13 @@ from picid.transforms.base.multisource.utils import (
 )
 
 
+# -----------------------------------------------------------------------------
+# Layer 1: Interfaces
+# -----------------------------------------------------------------------------
+
+
 class MultiSourceFitInterface(ABC):
-    """Abstract contract: every multi-source mixin must implement fit_multi_source and transform_multi_source."""
+    """Abstract contract: fit strategies must implement fit_multi_source."""
 
     @abstractmethod
     def fit_multi_source(
@@ -54,12 +58,19 @@ class MultiSourceFitInterface(ABC):
 
 
 class MultiSourceTransformInterface(ABC):
+    """Abstract contract: transform strategies must implement transform_multi_source."""
+
     @abstractmethod
     def transform_multi_source(
         self,
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[List[Any], Dict[str, Any]]: ...
+
+
+# -----------------------------------------------------------------------------
+# Layer 2: Dispatcher (internal)
+# -----------------------------------------------------------------------------
 
 
 class _BaseDispatcher(MultiSourceTransformInterface, ABC):
@@ -71,13 +82,25 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
     The handler (from get_handler) does the actual chunk preparation and call.
     """
 
-    def _dispatch_fit(
+    def _prepare_dispatch(
         self,
         data_segments: List[NamedTransformInput],
-        fit_func: Callable,
-        metadata: Dict[str, Any],
-    ) -> None:
-        apply_to_keys = _normalize_keys(metadata["apply_to_keys"])
+        metadata: Optional[Dict[str, Any]],
+    ) -> Tuple[Any, Dict[str, Any], str, str]:
+        """
+        Shared setup for fit and transform dispatch.
+
+        Returns
+        -------
+        handler, metadata_copy, data_kind, capability
+        """
+        metadata = metadata or {}
+        apply_to_keys = metadata.get("apply_to_keys")
+        if not apply_to_keys:
+            raise ValueError(
+                "metadata must contain 'apply_to_keys' (list of keys to transform)."
+            )
+        apply_to_keys = _normalize_keys(apply_to_keys)
         _assert_uniform_data_types(data_segments)
 
         data_kind = infer_data_kind(
@@ -93,31 +116,33 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
                 f"data_kind={data_kind!r} with capability={capability!r}."
             )
 
-        handler.fit_prepare(data_segments, apply_to_keys, metadata, fit_func)
+        return handler, metadata, data_kind, capability
+
+    def _dispatch_fit(
+        self,
+        data_segments: List[NamedTransformInput],
+        fit_func: Callable,
+        metadata: Optional[Dict[str, Any]],
+    ) -> None:
+        handler, metadata_copy, _, _ = self._prepare_dispatch(
+            data_segments, metadata
+        )
+        apply_to_keys = _normalize_keys(metadata_copy["apply_to_keys"])
+        handler.fit_prepare(data_segments, apply_to_keys, metadata_copy, fit_func)
 
     def _dispatch_transform(
         self,
         data_segments: List[NamedTransformInput],
         transform_func: Callable,
-        metadata: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]],
     ) -> Tuple[List[Any], Dict[str, Any]]:
-        apply_to_keys = _normalize_keys(metadata["apply_to_keys"])
-        _assert_uniform_data_types(data_segments)
-
-        data_kind = infer_data_kind(
-            data_segments, apply_to_keys, find_singular_ragged_dim
+        handler, metadata_copy, data_kind, capability = self._prepare_dispatch(
+            data_segments, metadata
         )
-        capability = get_capability(self)
 
         try:
-            handler = get_handler(data_kind, capability)
             out, log = handler.transform_apply(
-                data_segments, transform_func, metadata, self.__class__.__name__
-            )
-        except KeyError:
-            raise ValueError(
-                f"{self.__class__.__name__} does not support "
-                f"data_kind={data_kind!r} with capability={capability!r}."
+                data_segments, transform_func, metadata_copy, self.__class__.__name__
             )
         except Exception:
             _log_transform_error(self, data_segments, metadata, data_kind, capability)
@@ -127,7 +152,12 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
         return out, log
 
 
-class FitByConcatenationMixin(_BaseDispatcher):
+# -----------------------------------------------------------------------------
+# Layer 3: Atomic fit strategies
+# -----------------------------------------------------------------------------
+
+
+class FitByConcatenationMixin(MultiSourceFitInterface, _BaseDispatcher):
     """Fit on all segments concatenated into one (handler chooses how to merge)."""
 
     def fit_multi_source(
@@ -135,10 +165,11 @@ class FitByConcatenationMixin(_BaseDispatcher):
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self._dispatch_fit(data_segments, self.fit_data, copy.deepcopy(metadata))
+        metadata_copy = copy.deepcopy(metadata) if metadata is not None else {}
+        self._dispatch_fit(data_segments, self.fit_data, metadata_copy)
 
 
-class NoFitMixin(_BaseDispatcher):
+class NoFitMixin(MultiSourceFitInterface, _BaseDispatcher):
     """No fitting step; fit_multi_source raises NotImplementedError."""
 
     def fit_multi_source(
@@ -153,6 +184,11 @@ class NoFitMixin(_BaseDispatcher):
         )
 
 
+# -----------------------------------------------------------------------------
+# Layer 4: Atomic transform strategies
+# -----------------------------------------------------------------------------
+
+
 class PerSegmentTransformMixin(_BaseDispatcher):
     """Apply transform to each segment independently (one transform_data call per segment)."""
 
@@ -162,20 +198,32 @@ class PerSegmentTransformMixin(_BaseDispatcher):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[List[Any], Dict[str, Any]]:
         _assert_uniform_key_count(data_segments)
+        metadata_copy = copy.deepcopy(metadata) if metadata is not None else {}
         return self._dispatch_transform(
-            data_segments, self.transform_data, copy.deepcopy(metadata)
+            data_segments, self.transform_data, metadata_copy
         )
 
 
 class ConcatenateBeforeTransformMixin(_BaseDispatcher):
-    """Concatenate all segments along self.axis (e.g. units), then run transform_data once."""
+    """
+    Concatenate all segments along self.axis (e.g. units), then run transform_data once.
+
+    Requires self.axis to be set before transform_multi_source.
+    Typically used via NoFitConcatAlongAxisMixin, which sets axis in __init__.
+    """
 
     def transform_multi_source(
         self,
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Tuple[List[Any], Dict[str, Any]]:
-        if not hasattr(self, "axis") or self.axis is None:
+        if not hasattr(self, "axis"):
+            raise AttributeError(
+                f"{self.__class__.__name__} inherits from "
+                "ConcatenateBeforeTransformMixin and must set self.axis "
+                "before calling transform_multi_source."
+            )
+        if self.axis is None:
             raise AttributeError(
                 f"{self.__class__.__name__} inherits from "
                 "ConcatenateBeforeTransformMixin and must set self.axis "
@@ -183,26 +231,53 @@ class ConcatenateBeforeTransformMixin(_BaseDispatcher):
             )
 
         _assert_uniform_key_count(data_segments)
-        metadata_copy = copy.deepcopy(metadata)
-        apply_to_keys = _normalize_keys(metadata_copy["apply_to_keys"])
+        metadata_copy = copy.deepcopy(metadata) if metadata is not None else {}
+        apply_to_keys = metadata_copy.get("apply_to_keys")
+        if not apply_to_keys:
+            raise ValueError(
+                "metadata must contain 'apply_to_keys' (list of keys to transform)."
+            )
+        apply_to_keys = _normalize_keys(apply_to_keys)
 
         merged = _concatenate_segments(data_segments, apply_to_keys, self.axis)
 
         return self._dispatch_transform([merged], self.transform_data, metadata_copy)
 
 
+# -----------------------------------------------------------------------------
+# Layer 5: Compound mixins (public API for transforms)
+# -----------------------------------------------------------------------------
+
+
 class ConcatFitAndPerSegmentTransformMixin(
     FitByConcatenationMixin, PerSegmentTransformMixin
 ):
-    """Fit on concatenated segments; transform per segment. Common for fittable per-unit transforms."""
+    """
+    Fit on concatenated segments; transform per segment.
+
+    Composes FitByConcatenationMixin + PerSegmentTransformMixin.
+    Common for fittable per-unit transforms (e.g. scalers).
+    """
 
 
 class NoFitPerSegmentMixin(NoFitMixin, PerSegmentTransformMixin):
-    """No fit; transform each segment independently. Use for stateless transforms."""
+    """
+    No fit; transform each segment independently.
+
+    Composes NoFitMixin + PerSegmentTransformMixin.
+    Use for stateless transforms.
+    """
 
 
 class NoFitConcatAlongAxisMixin(NoFitMixin, ConcatenateBeforeTransformMixin):
-    """No fit; concatenate along axis then transform once. Subclass must set self.axis."""
+    """
+    No fit; concatenate along axis then transform once.
+
+    Composes NoFitMixin + ConcatenateBeforeTransformMixin.
+    Requires self.axis to be set before transform_multi_source.
+    This mixin's __init__(axis, **kwargs) sets self.axis; subclasses must call it
+    (e.g. via super().__init__(axis=axis, **kwargs)).
+    """
 
     def __init__(self, axis: int, **kwargs):
         self.axis = axis
@@ -246,7 +321,8 @@ class InverseTransformMixin(ABC):
         data_segments: List[NamedTransformInput],
         metadata: Optional[Dict[str, Any]] = None,
     ) -> List[Any]:
+        metadata_copy = copy.deepcopy(metadata) if metadata is not None else {}
         return [
-            self.inverse_transform_data(seg, metadata=copy.deepcopy(metadata))
+            self.inverse_transform_data(seg, metadata=metadata_copy)
             for seg in data_segments
         ]

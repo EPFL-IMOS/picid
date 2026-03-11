@@ -32,11 +32,16 @@ class ReduceLROnPlateauScheduler(LearningRateScheduler):
     a factor of 2-10 once learning stagnates. This scheduler reads a metrics quantity and if no improvement is seen
     for a ‘patience’ number of epochs, the learning rate is reduced.
 
-    Args:
-        optimizer (Optimizer): Optimizer.
-        lr (float): Initial learning rate.
-        patience (int): Number of epochs with no improvement after which learning rate will be reduced.
-        factor (float): Factor by which the learning rate will be reduced. new_lr = lr * factor.
+    Parameters
+    ----------
+    optimizer : Optimizer
+        Optimizer.
+    lr : float
+        Initial learning rate.
+    patience : int
+        Number of epochs with no improvement after which learning rate will be reduced.
+    factor : float
+        Factor by which the learning rate will be reduced. new_lr = lr * factor.
     """
 
     def __init__(

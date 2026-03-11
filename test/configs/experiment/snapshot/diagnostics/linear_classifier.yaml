@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - snapshot/diagnostics/base
+  - /model_configs/diagnostics/linear_classifier
