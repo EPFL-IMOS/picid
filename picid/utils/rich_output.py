@@ -54,8 +54,6 @@ def display_targets(cfg):
     Console().print(table)
 
 
-
-
 def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:
     """
     Analyzes a list of awkward arrays and formats the stats in a compact,
@@ -139,7 +137,9 @@ def describe_data_type(obj, calculate_stat=False) -> str:
         else:
             # Fallback for other list types
             descr = type(first).__name__
-            return f"list<{descr}> x {len(obj)} [{describe_data_type(first, False)}, ...]"
+            return (
+                f"list<{descr}> x {len(obj)} [{describe_data_type(first, False)}, ...]"
+            )
 
     else:
         return str(type(obj).__name__)
@@ -154,7 +154,6 @@ def to_descriptive_dict(d, calculate_stat=True):
 
 
 def descriptive_dict_differences_str(old, new, mode="added"):
-
     assert mode in ("added", "removed", "changed"), "Invalid mode"
 
     """Print the differences in a flat, non-nested dictionary based on the specified mode."""
@@ -177,7 +176,6 @@ def descriptive_dict_differences_str(old, new, mode="added"):
 
 # Plot the data_dict structure with tensor dimensions
 def print_data_dict_structure(data_dict, calculate_stat=True):
-
     def add_to_tree(tree, d):
         if isinstance(d, dict) or isinstance(d, BaseDataObject):
             for k, v in d.items():
@@ -287,7 +285,9 @@ def build_transform_error_renderables(
     flags: dict,
     metadata: dict,
     first_segment_keys: list | None,
-    first_segment_rows: list[tuple[str, str, str]],  # (key, type_name, describe_data_type)
+    first_segment_rows: list[
+        tuple[str, str, str]
+    ],  # (key, type_name, describe_data_type)
     case_analysis_line: str,
 ) -> list:
     """Build list of Rich renderables for transform_multi_source error diagnostics."""
@@ -313,8 +313,6 @@ def build_transform_error_renderables(
         for row in first_segment_rows:
             seg_table.add_row(*row)
         out.append(seg_table)
-    out.append(
-        Panel(case_analysis_line, title="Case analysis", border_style="blue")
-    )
+    out.append(Panel(case_analysis_line, title="Case analysis", border_style="blue"))
     out.append(Rule(style="red"))
     return out

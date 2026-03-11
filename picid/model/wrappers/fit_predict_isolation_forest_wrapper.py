@@ -22,7 +22,6 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
         random_state: Optional[int] = 42,
         **kwargs,
     ):
-
         # --- Task Validation ---
         self.supported_tasks = CLASSIFICATION_TASKS
         self.task_type = task_type

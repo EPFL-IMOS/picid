@@ -219,12 +219,15 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     def __repr__(self) -> str:
         summary = self._repr_summary()
-        multi = f", is_multi_unit={self.is_multi_unit}" if hasattr(self, "is_multi_unit") else ""
+        multi = (
+            f", is_multi_unit={self.is_multi_unit}"
+            if hasattr(self, "is_multi_unit")
+            else ""
+        )
         return f"{self.__class__.__name__}({summary}{multi})"
 
 
 class SplitDatasetContainer(DatasetContainer, Generic[T]):
-
     def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any):
         """
         Default is_multi_unit=True because most PHM datasources produce multiple units per split.

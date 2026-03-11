@@ -17,6 +17,7 @@ Changes from the original
 * All other logic — apply_to / assign_to processing, fit_on_split resolution,
   transform_data signature validation, Hydra instantiation — is unchanged.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Helpers (unchanged from original)
 # ---------------------------------------------------------------------------
+
 
 def is_sequence(obj):
     """Return True for list/tuple/array-like, but False for str/bytes."""
@@ -77,6 +79,7 @@ def _matches(sig_params, expected_params):
 # DataTransform
 # ---------------------------------------------------------------------------
 
+
 class DataTransform:
     """
     Facade that configures a transform and delegates to TransformStrategy.
@@ -110,7 +113,8 @@ class DataTransform:
             if is_sequence(apply_to):
                 logger.info(
                     "Implicit assign_to for transform '%s': %s",
-                    self.transform_name, apply_to,
+                    self.transform_name,
+                    apply_to,
                 )
             elif isinstance(apply_to, Mapping):
                 raise ValueError(
@@ -204,8 +208,7 @@ class DataTransform:
                 )
             # Single apply_to key: use it as fit_on_key.
             self.fit_on_key = (
-                self.apply_to[0] if isinstance(self.apply_to, list)
-                else self.apply_to
+                self.apply_to[0] if isinstance(self.apply_to, list) else self.apply_to
             )
 
         self.multi_source_fit = metadata.get("multi_source_fit", False)
@@ -274,10 +277,14 @@ class DataTransform:
                 allowed_str = " or ".join(
                     _format_signature(p) for p in allowed_param_sets
                 )
-                got_str = "(" + ", ".join(
-                    f"{n}: {getattr(p.annotation, '__name__', str(p.annotation))}"
-                    for n, p in sig_params
-                ) + ")"
+                got_str = (
+                    "("
+                    + ", ".join(
+                        f"{n}: {getattr(p.annotation, '__name__', str(p.annotation))}"
+                        for n, p in sig_params
+                    )
+                    + ")"
+                )
                 raise TypeError(
                     f"Transform '{transform_name}': transform_data signature "
                     f"must be {allowed_str}, got {got_str}."

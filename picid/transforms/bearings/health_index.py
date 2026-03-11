@@ -81,9 +81,7 @@ def diff_at_step_n(vector, n):
     return v_i_plus_n - v_i
 
 
-class HealthIndexTransform(
-    NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
-):
+class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     """
     Calculates a Health Index (HI) based on a runtime channel and a
     predefined total life for a *specific unit* in a dataset.

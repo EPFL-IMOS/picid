@@ -1,4 +1,5 @@
 """Data kind and transform capability for registry-based dispatching."""
+
 from picid.transforms.base.data_kind.data_kind import (
     CAPABILITY_BOTH,
     CAPABILITY_DENSE,

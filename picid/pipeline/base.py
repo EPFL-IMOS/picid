@@ -73,9 +73,7 @@ class CustomEvaluatorInterface(ABC):
 
 
 class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
-
     def __init__(self, evaluators: dict[str, AbstractEvaluator]) -> None:
-
         super().__init__()
 
         self.evaluators = evaluators
@@ -487,7 +485,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return f"{self.__class__.__name__}(backbone={self.backbone})"
 
     def __batch_to_fit_predict(self, batch):
-
         X = batch["context"]
         y = batch["target"]
         assert (
@@ -677,7 +674,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
 
 class ConstantLossLightningModule(BackboneWrapperLightningModule):
-
     def __init__(
         self,
         backbone,
@@ -711,7 +707,6 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
 
 class TrainingLightningModule(BackboneWrapperLightningModule):
-
     def __init__(
         self,
         backbone,

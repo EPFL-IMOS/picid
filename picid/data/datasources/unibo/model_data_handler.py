@@ -6,8 +6,6 @@ from sklearn.preprocessing import MinMaxScaler
 from .unibo_powertools_data import CapacityCols, CycleCols
 
 
-
-
 class ModelDataHandler:
     """
     This class is the data processor for the UNIBO dataset.

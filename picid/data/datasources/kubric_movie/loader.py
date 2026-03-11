@@ -108,7 +108,6 @@ class MOViLoader(AbstractDataSourceLoader):
                 data_i = loader.__getitem__(i)
                 keys_to_pop = []
                 for key in data_i.keys():
-
                     item = data_i[key]
 
                     # Check if the item is a PyTorch Tensor

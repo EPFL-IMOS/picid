@@ -15,16 +15,12 @@ def ak_bc(arr):
     return ak.Array(arr[np.newaxis, np.newaxis, :])
 
 
-class N_CMAPSSDescriptorsScaler(
-    NoFitPerSegmentMixin, RaggedOrDenseTransform
-):
+class N_CMAPSSDescriptorsScaler(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     def __init__(self, scaling="standard"):
-
         super().__init__()
         self.scaling = scaling
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         descriptors = data.descriptors
 
         scaling = self.scaling
@@ -66,14 +62,11 @@ class N_CMAPSSDescriptorsScaler(
         return descriptors
 
 
-class N_CMAPSSFeaturesScaler(
-    NoFitPerSegmentMixin, RaggedOrDenseTransform
-):
+class N_CMAPSSFeaturesScaler(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         features = data.features
 
         scaling = self.scaling

@@ -124,9 +124,7 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
         fit_func: Callable,
         metadata: Optional[Dict[str, Any]],
     ) -> None:
-        handler, metadata_copy, _, _ = self._prepare_dispatch(
-            data_segments, metadata
-        )
+        handler, metadata_copy, _, _ = self._prepare_dispatch(data_segments, metadata)
         apply_to_keys = _normalize_keys(metadata_copy["apply_to_keys"])
         handler.fit_prepare(data_segments, apply_to_keys, metadata_copy, fit_func)
 

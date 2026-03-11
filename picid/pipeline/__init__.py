@@ -1,4 +1,5 @@
 """Pipeline orchestration: Lightning modules and training flow."""
+
 from picid.pipeline.base import (
     BackboneWrapperLightningModule,
     ConstantLossLightningModule,

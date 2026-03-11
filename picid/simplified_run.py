@@ -29,7 +29,6 @@ def estimate_loader_lengths_REMOVE_THIS(datamodule):
 
 # Example usage: mirrors graphbench pattern
 if __name__ == "__main__":
-
     exp = Experiment(
         [
             "paths=rt_local",

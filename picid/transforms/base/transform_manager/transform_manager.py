@@ -6,6 +6,7 @@ indexes them by name, and provides forward/inverse application over a
 SplitDatasetContainer. Used by the run pipeline and by dry_run to resolve
 transform lists without executing heavy compute.
 """
+
 import logging
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Union

@@ -10,6 +10,7 @@ Used by the multisource mixins (mixins.py) and the handler layer (handlers/):
 Data kind (ragged vs dense) and capability (transform supports ragged/dense/both)
 drive handler selection in get_handler(); see data_kind and handlers packages.
 """
+
 from __future__ import annotations
 
 import logging
@@ -30,7 +31,10 @@ from picid.utils.awkward_utils import (
     find_singular_ragged_dim as find_singular_ragged_dim_from_arrays,
     get_ak_shape,
 )
-from picid.utils.rich_output import build_transform_error_renderables, describe_data_type
+from picid.utils.rich_output import (
+    build_transform_error_renderables,
+    describe_data_type,
+)
 from rich.console import Console
 from sortedcontainers import SortedDict
 
@@ -65,9 +69,7 @@ def _normalize_keys(apply_to_keys) -> List[str]:
 def _assert_uniform_data_types(data_segments: List[NamedTransformInput]) -> None:
     """Require all segments to have the same get_instance_cls() (e.g. all ak.Array or all np.ndarray)."""
     data_types = {
-        v
-        for chunk in data_segments
-        for v in chunk.get_instance_cls().values()
+        v for chunk in data_segments for v in chunk.get_instance_cls().values()
     }
     if len(data_types) != 1:
         raise ValueError(
@@ -121,14 +123,18 @@ def _log_transform_error(
     supports_ragged = flags["transform_supports_ragged"]
     supports_dense = flags["transform_supports_dense"]
     if not data_is_ragged and supports_dense:
-        case_analysis_line = "Dense data + dense-capable transform → data passed directly."
+        case_analysis_line = (
+            "Dense data + dense-capable transform → data passed directly."
+        )
     elif data_is_ragged and not supports_ragged:
         case_analysis_line = (
             "Ragged data + dense-only transform → "
             "processed block-by-block, converted to numpy, reassembled."
         )
     elif data_is_ragged and supports_ragged:
-        case_analysis_line = "Ragged data + ragged-capable transform → data passed directly."
+        case_analysis_line = (
+            "Ragged data + ragged-capable transform → data passed directly."
+        )
     else:
         case_analysis_line = "Unknown combination; check the handler registry."
 

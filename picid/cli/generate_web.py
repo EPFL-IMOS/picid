@@ -3,6 +3,7 @@
 Uses config_discovery (same as picid-assemble) so the web generator stays
 in sync with the config tree. Run before mkdocs build.
 """
+
 from __future__ import annotations
 
 import json

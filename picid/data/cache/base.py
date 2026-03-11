@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseCache(ABC):
     """Abstract base class for all cache backends."""
 
@@ -15,4 +16,3 @@ class BaseCache(ABC):
     def handle(self, name: str, build_fn, config: dict = None):
         """Load if valid, otherwise build and save."""
         pass
-

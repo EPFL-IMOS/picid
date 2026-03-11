@@ -232,7 +232,6 @@ class BaseDataModule(LightningDataModule):
         subset_ratio=None,
         split_name=None,
     ):
-
         loader_args = dict(
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
@@ -413,7 +412,6 @@ class BaseDataModule(LightningDataModule):
         return loader
 
     def profiled_loader(self, dl):
-
         from torch.profiler import (
             ProfilerActivity,
             profile,
@@ -423,7 +421,6 @@ class BaseDataModule(LightningDataModule):
         )
 
         def profiled_loader():
-
             sched = schedule(
                 wait=self.profiler_cfg.wait,
                 warmup=self.profiler_cfg.warmup,

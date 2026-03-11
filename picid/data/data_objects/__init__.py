@@ -2,6 +2,7 @@
 
 Re-exports the main public API for mkdocstrings and direct imports.
 """
+
 from picid.data.data_objects.base import (
     BaseDataObject,
     BaseDataObjectWithMetadata,

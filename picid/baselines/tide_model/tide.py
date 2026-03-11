@@ -28,7 +28,6 @@ class ResBlock(nn.Module):
         # self.ln = RMSNorm(output_dim, bias=bias)
 
     def forward(self, x):
-
         out = self.fc1(x)
         out = self.relu(out)
         out = self.fc2(out)

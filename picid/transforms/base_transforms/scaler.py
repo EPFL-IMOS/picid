@@ -15,9 +15,7 @@ from picid.transforms.utils import _convert_to_numpy
 logger = logging.getLogger(__name__)
 
 
-class ConstantScaler(
-    NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
-):
+class ConstantScaler(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     def __init__(self, factor=1.0):
         super().__init__()
         self.factor = factor

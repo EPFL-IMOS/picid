@@ -30,9 +30,7 @@ def scale_concept(x):
 
 
 class AGTF30KDataSource(SingleSourceLoader):
-
     def __init__(self, **kwargs):
-
         super().__init__(**kwargs)
 
     def _load_data(self):

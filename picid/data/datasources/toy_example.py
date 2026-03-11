@@ -179,7 +179,6 @@ class ToyRaggedLoader(AbstractDataSourceLoader):
 
         desc = f"Processing {split_name}"
         for idx, raw_signal in enumerate(tqdm(raw_data_list, desc=desc)):
-
             # --- 1. HANDLING RAGGEDNESS ---
             # Raw signal shape: (N_samples,) -> e.g., (6000,) or (4500,)
             # We want to reshape this into (Time, Freq, Channels)
@@ -276,7 +275,8 @@ if __name__ == "__main__":
     # 1. Instantiate
     # In Hydra, this would be: dataset_source = hydra.utils.instantiate(cfg.datasource)
     loader = ToyRaggedLoader(
-        data_dir="./dummy_path", task_mode="anomaly_detection"  # Ignored by this toy class
+        data_dir="./dummy_path",
+        task_mode="anomaly_detection",  # Ignored by this toy class
     )
 
     # 2. Load

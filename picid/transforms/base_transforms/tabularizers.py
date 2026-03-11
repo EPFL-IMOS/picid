@@ -64,7 +64,6 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         warmup_steps: int = None,
         **kwargs,
     ):
-
         # Call the BaseTransform constructor.
         # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
         # so just pass any generic kwargs along.
@@ -164,7 +163,6 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         split = metadata["mode"]
 
         for key, selection in self.select_features.items():
-
             data = data_segment[key]
 
             if N_samples is not None:
@@ -173,7 +171,6 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
                 ), f"Inconsistent number of features across segments: {N_samples} != {data.shape[0]}"
 
             def collect_sequences(collect_idx):
-
                 sequencer_params = dict(
                     seq_len=self.seq_len,
                     label_len=self.label_len,
@@ -268,7 +265,7 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         """
         Current model of the naming convention:
         naming scheme p = present
-        
+
                                         t
                                         |
                     --------------------------
@@ -287,7 +284,6 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
             "history" in self.select_features.values()
             or "present" in self.select_features.values()
         ):
-
             for key, selection in self.select_features.items():
                 if selection in ["history", "present"]:
                     feature_data[key] = repeat(

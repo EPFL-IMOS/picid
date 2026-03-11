@@ -2,7 +2,6 @@ import torch.nn as nn
 from einops import rearrange
 
 
-
 class DSW_embedding(nn.Module):
     def __init__(self, seg_len, d_model):
         super(DSW_embedding, self).__init__()

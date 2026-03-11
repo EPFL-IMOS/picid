@@ -5,6 +5,7 @@ Checks per transform: apply_to keys available (in initial data or produced by ea
 transforms via assign_to), handler available for (data_kind, capability) when segment
 can be built. No tensor computation or fit/transform execution.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -63,7 +64,11 @@ def _get_first_segment(
     try:
         unit_data = {}
         for k in apply_to_keys:
-            if k not in container or not isinstance(container[k], Mapping) or split not in container[k]:
+            if (
+                k not in container
+                or not isinstance(container[k], Mapping)
+                or split not in container[k]
+            ):
                 return None
             val = container[k][split]
             unit_data[k] = val[0] if isinstance(val, list) and len(val) > 0 else val
@@ -111,7 +116,9 @@ def dry_run_transforms(
         apply_to = getattr(dt, "apply_to", None)
         if apply_to is None:
             issues.append("missing apply_to")
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             continue
         apply_to_list = _normalize_keys(apply_to)
         assign_to_list = _normalize_keys(getattr(dt, "assign_to", None))
@@ -124,7 +131,9 @@ def dry_run_transforms(
             issues.append(
                 f"apply_to key(s) {missing!r} not available (not in initial data nor produced by earlier transform assign_to)"
             )
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             continue
 
         # Keys that are produced by earlier transforms (not in initial container)
@@ -134,7 +143,9 @@ def dry_run_transforms(
             issues.append(
                 f"apply_to key(s) {keys_from_earlier!r} produced by earlier transform(s); handler check skipped (no data in container)"
             )
-            results.append(DryRunResult(transform_name=name, success=True, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=True, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 
@@ -143,14 +154,18 @@ def dry_run_transforms(
             if not isinstance(container.get(k), Mapping):
                 issues.append(f"data[{k!r}] is not a split mapping")
         if issues:
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 
         segment = _get_first_segment(container, apply_to_list)
         if segment is None:
             issues.append("could not build segment for data_kind (missing split/unit?)")
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 
@@ -162,7 +177,9 @@ def dry_run_transforms(
             )
         except Exception as e:
             issues.append(f"infer_data_kind failed: {e}")
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 
@@ -170,15 +187,21 @@ def dry_run_transforms(
             capability = get_capability(dt.transform_instance)
         except Exception as e:
             issues.append(f"get_capability failed: {e}")
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 
         try:
             get_handler(data_kind, capability)
         except KeyError:
-            issues.append(f"no handler for (data_kind={data_kind!r}, capability={capability!r})")
-            results.append(DryRunResult(transform_name=name, success=False, issues=issues))
+            issues.append(
+                f"no handler for (data_kind={data_kind!r}, capability={capability!r})"
+            )
+            results.append(
+                DryRunResult(transform_name=name, success=False, issues=issues)
+            )
             available_keys.update(assign_to_list)
             continue
 

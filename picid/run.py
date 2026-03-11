@@ -172,7 +172,6 @@ OmegaConf.register_new_resolver(
 
 
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
-
     def get_key(lengths, key):
         if key not in lengths:
             raise KeyError(
@@ -191,7 +190,6 @@ def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
 def register_data_dim_resolver(
     data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
 ) -> None:
-
     def infer_data_dim(obj: Union[np.array, ak.Array, torch.Tensor], dim: int) -> int:
         if isinstance(obj, list):
             dims = {infer_data_dim(o, dim) for o in obj}
@@ -286,7 +284,6 @@ def log_training_run_config(
     model: L.LightningModule,
     logger: list[Logger],
 ):
-
     # This is needed because wandb otherwise only tracks part of the config
     cfg_container = OmegaConf.to_container(cfg, resolve=True)
     resolved_cfg = OmegaConf.create(cfg_container)
@@ -303,7 +300,6 @@ def log_training_run_config(
 
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
-
             exp_name = get_hydra_override("experiment")
             cfg_container["exp_name"] = exp_name
             lgr.experiment.config.update(cfg_container)
@@ -419,7 +415,6 @@ def rerun_best_model_checkpoint(
     loss: Any,
     logger: list[Logger],
 ) -> None:
-
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
             lgr.experiment.log({}, commit=True)
@@ -508,7 +503,6 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         A tuple with metrics and dict with all instantiated objects.
     """
     if cfg.get("num_threads", None) is not None:
-
         log.warning(f"Setting number of threads for all libraries to {cfg.num_threads}")
         verify_thread_limits(cfg.num_threads)
         parallel_backend("loky", n_jobs=cfg.num_threads)
@@ -569,7 +563,9 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     split_mode = dataset_source.get_split_mode()
     log.info("Datasource split mode: %s", split_mode)
 
-    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
+    preprocessor = PreProcessor(
+        datasource=dataset_source, transforms=transforms_manager
+    )
 
     # Get cache dirs and flags
     data_cache_path = (
@@ -710,26 +706,23 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     evaluators = {}
     for s in ["train", "val", "test"]:
-
         inverse_transform_required = cfg.evaluator[s].get(
             "apply_inverse_scaling", False
         )
-        inverse_transform_key = cfg.evaluator[s].get(
-            "inverse_transform_key", None
-        )
+        inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
         inverse_transform_which = cfg.evaluator[s].get(
             "inverse_transform_which", "last"
         )
-        inverse_transform_name = cfg.evaluator[s].get(
-            "inverse_transform_name", None
-        )
+        inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
 
         inverse_transform = None
         if inverse_transform_required:
             # Prefer key-based lookup: discover inverter from registry
             if inverse_transform_key is not None:
-                inverse_transform, chosen_name = transforms_manager.get_inverter_for_key_with_name(
-                    inverse_transform_key, which=inverse_transform_which
+                inverse_transform, chosen_name = (
+                    transforms_manager.get_inverter_for_key_with_name(
+                        inverse_transform_key, which=inverse_transform_which
+                    )
                 )
                 if inverse_transform is None:
                     raise ValueError(

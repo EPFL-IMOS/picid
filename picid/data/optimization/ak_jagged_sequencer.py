@@ -248,7 +248,6 @@ class AkwardJaggedAutoregressiveSequencer:
     def _get_window_for_index(
         self, batch_idx: List[int]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         idx_sel = self._indices[batch_idx]
         b_dim = idx_sel.shape[0]
 

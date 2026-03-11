@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
-
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs
         self.shift = kwargs["shift"]
@@ -37,7 +36,6 @@ class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
     def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
-
         # assert self.shift in [24, 168, 100], "dummy shift must be 24 for the timepfn, and 168 for the tabpfn for railway and 100 for the battery!"
 
         # Features of the target shifted

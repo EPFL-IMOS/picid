@@ -17,7 +17,7 @@ from picid.utils.utils import (
     task_wrapper,
 )
 
-from picid.utils.rich_output import (display_targets, print_data_dict_structure)
+from picid.utils.rich_output import display_targets, print_data_dict_structure
 
 __all__ = [
     "RankedLogger",
@@ -30,5 +30,5 @@ __all__ = [
     "print_config_tree",
     "task_wrapper",
     "display_targets",
-    "print_data_dict_structure"
+    "print_data_dict_structure",
 ]

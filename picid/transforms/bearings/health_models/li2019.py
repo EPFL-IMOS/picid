@@ -203,7 +203,6 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
                 and self.dataset_name in TEST_RULS
                 and unit_id in TEST_RULS[self.dataset_name]
             ):
-
                 predefined_rul = (
                     signal_vector.shape[0] - TEST_RULS[self.dataset_name][unit_id]
                 )

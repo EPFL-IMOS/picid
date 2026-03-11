@@ -42,7 +42,6 @@ def flatten_RUL(df):
 
 
 class N_CMAPSSDataSource(SingleSourceLoader):
-
     def __init__(
         self,
         path: str,
@@ -60,7 +59,6 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         group_by_unit: bool = False,
         **kwargs: Any,
     ):
-
         assert RUL in (
             "linear",
             "flat",
@@ -101,7 +99,6 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         if not os.path.exists(filename):
             raise FileNotFoundError(f"File not found: {filename}")
         with h5py.File(filename, "r") as hdf:
-
             if "train" in self.mode or "val" in self.mode:
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W

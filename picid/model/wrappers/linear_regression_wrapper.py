@@ -19,7 +19,9 @@ class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
         self.supported_types = self.regression_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for LinearRegressionModelWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for LinearRegressionModelWrapper."
+            )
 
         self.task_type = task_type
         backbone = LinearRegressionModelBaseline(**kwargs)

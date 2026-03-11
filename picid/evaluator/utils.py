@@ -1,5 +1,7 @@
 def RSE(pred, true):
-    return (((true - pred) ** 2).sum() ** 0.5) / (((true - true.mean()) ** 2).sum() ** 0.5)
+    return (((true - pred) ** 2).sum() ** 0.5) / (
+        ((true - true.mean()) ** 2).sum() ** 0.5
+    )
 
 
 def CORR(pred, true):
@@ -36,6 +38,7 @@ def metric(pred, true):
     mspe = MSPE(pred, true)
 
     return mae, mse, rmse, mape, mspe
+
 
 # import numpy as np
 

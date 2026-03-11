@@ -112,7 +112,6 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         )
 
     def _init_phmd_dataset(self, task_names):
-
         ds = datasets.Dataset(self.data_name, cache_dir=self.cache_dir)
 
         tasks_fold_dict = {}
@@ -146,7 +145,6 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         return "_".join(filename_parts) + ".pkl"
 
     def _load_data(self):
-
         tasks_fold_dict = None
         if tasks_fold_dict is None:
             tasks_fold_dict = self._init_phmd_dataset(
@@ -170,7 +168,6 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
         for split in ["train", "val", "test"]:
             df = main_fold[split]
             for unit_name in np.unique(df[unit_col]):
-
                 # We change the masking from this because
                 # it looks like in some data frames, df[unit_col] is not of shape
                 # (n, ) but (n, 1), creating a 2d mask without failing, which
@@ -186,7 +183,7 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
                 m = pd.Series((unit_col_data == unit_name), index=df.index)
                 assert m.dtype == bool and m.ndim == 1 and len(m) == len(df)
                 assert not df.columns.duplicated().any(), "Duplicate columns found"
-                
+
                 df_unit = df.loc[m]
 
                 # 4) Prove selection itself did not create NaNs
@@ -210,7 +207,6 @@ class PHMDMultiSourceLoader(AbstractDataSourceLoader, ABC):
                 metadata_unit_id = unit_data.get("metadata", {}).get("unit_id", None)
 
                 if metadata_unit_name is not None and metadata_unit_name != {}:
-
                     assert (
                         metadata_unit_id != {}
                     ), f"Metadata unit id is empty for unit name {metadata_unit_name}"
