@@ -47,4 +47,3 @@ for seed in "${SEEDS[@]}"; do
 
   run_and_log "${command_to_run[*]}" "$run_name" "$DEBUG_SKIP"
 done
-

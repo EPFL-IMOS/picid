@@ -33,4 +33,3 @@ command_to_run=(
 )
 
 run_and_log "${command_to_run[*]}" "$run_name" "$DEBUG_SKIP"
-
