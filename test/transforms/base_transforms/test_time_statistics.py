@@ -910,14 +910,20 @@ class TestTimeStatsTransformPHMScenarios:
         transform = TimeStatsTransform(stats_to_compute=["mean"])
         trend = degradation_trend_exponential["trend"]
 
-        # Apply transform to verify it processes the trend
+        # Apply transform to verify it processes the trend (returns np.ndarray, not dict)
         out = transform.transform_data({"features": trend}, {})
-        assert "features" in out
-        assert out["features"].shape == trend.shape
+        assert isinstance(out, np.ndarray), "TimeStatsTransform returns ndarray"
+        assert out.shape == (1,), "1 signal × 1 stat (mean) → shape (1,)"
+        assert np.isfinite(out[0]), "Transform output should be finite"
 
         # The trend fixture already represents RMS values over time
         initial_rms = trend[0, 0]
         final_rms = trend[-1, 0]
+
+        # Mean of degradation trend should lie between initial and final RMS
+        assert (
+            initial_rms <= out[0] <= final_rms
+        ), f"Mean {out[0]:.3f} should be between initial {initial_rms:.3f} and final {final_rms:.3f}"
 
         # Verify degradation pattern
         assert (
