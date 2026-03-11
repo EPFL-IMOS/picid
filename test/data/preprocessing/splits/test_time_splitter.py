@@ -24,7 +24,6 @@ Test Coverage Strategy:
 """
 import numpy as np
 import pytest
-import warnings
 
 from picid.data.preprocessing.splits.time_splitter import TimeSplitter, ValueWarning
 

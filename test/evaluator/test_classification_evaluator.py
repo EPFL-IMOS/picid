@@ -1,11 +1,9 @@
 import pytest
 import numpy as np
-import torch
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Adjust imports to match your project structure
 from picid.evaluator.classification import ClassificationEvaluator
-from picid.evaluator.default import DefaultEvaluator
 from picid.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
 from picid.metrics.metric_factory import MetricFactory
 from picid.metrics.metrics import (

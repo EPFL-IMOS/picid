@@ -7,11 +7,9 @@ Validates: Guard conditions, _format_xarray branches, dimension conflict resolut
 
 import numpy as np
 import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from picid.evaluator.hooks.save_predictions import SavePredictionsHook
-from picid.evaluator.buffer import PredictionBuffer
 
 
 # =============================================================================

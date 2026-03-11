@@ -14,7 +14,6 @@ _mock_pynvml = MagicMock()
 _mock_pynvml.nvmlInit = MagicMock()
 sys.modules["pynvml"] = _mock_pynvml
 
-import os
 import tempfile
 
 import pytest

@@ -4,13 +4,10 @@ Test suite for picid_report.configs.
 Validates search space and sort metric configuration functions.
 """
 
-import pytest
 
 from picid_report.configs import (
     get_search_space,
     get_sort_metric,
-    SORT_METRIC_BY_TASK_TYPE,
-    SORT_METRIC_BY_DATASET_CATEGORY,
     SORT_METRIC_OVERRIDES,
     EXPECTED_SEARCH_SPACE,
 )

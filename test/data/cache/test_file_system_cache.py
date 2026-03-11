@@ -21,11 +21,8 @@ Test Coverage Strategy:
 """
 import numpy as np
 import pytest
-import tempfile
 import json
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 from picid.data.cache.offline import FileSystemCache
 
@@ -303,7 +300,6 @@ class TestFileSystemCacheData:
     
     def test_save_and_load_boundary_stage(self, tmp_path):
         """Save and load with stage='boundary' and cache_key (Phase 5.1)."""
-        import joblib
         cache = FileSystemCache()
         cache_dir = str(tmp_path)
         cache_key = "boundary_xyz"

@@ -26,12 +26,10 @@ Test Coverage Strategy:
 4. **Regression Tests**: Direct RUL prediction from features
 5. **LSTM_Forecaster Tests**: Integration with training pipeline
 """
-import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 from typing import Dict, Any
-from unittest.mock import Mock, MagicMock, patch
 
 from picid.baselines.lstm_model.lstm_model import (
     LSTM_Encoder,

@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import pandas as pd
 import awkward as ak
 from unittest.mock import MagicMock
 
@@ -10,11 +9,9 @@ from picid.data.datasources.nb14.loader import (
     NB14Loader,
     NasaRandomizedData,
     RulHandler,
-    UNIT_NAMES_TO_ID,
 )
 
 # We also need to mock scipy.io
-import scipy.io
 
 # =========================================================================
 # === Part 1: Test the RulHandler (Pure Logic) ===

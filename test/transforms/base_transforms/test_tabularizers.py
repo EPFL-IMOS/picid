@@ -5,7 +5,6 @@ to ensure complete coverage of picid.transforms.base_transforms.tabularizers.
 """
 import numpy as np
 import pytest
-import torch
 from omegaconf import OmegaConf
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base_transforms.tabularizers import TimeseriesTabularizer

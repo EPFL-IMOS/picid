@@ -24,12 +24,10 @@ Test Coverage Strategy:
 3. **Attention Layer Tests**: Cross-dimensional attention mechanisms
 4. **Edge Cases**: Different segment sizes, various decoder embeddings
 """
-import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 from typing import Dict, Any
-from unittest.mock import Mock, MagicMock, patch
 
 from picid.baselines.crossformer_model.crossformer_model import Crossformer_Forecaster
 from picid.baselines.crossformer_model.cross_former import Crossformer

@@ -6,7 +6,6 @@ Validates: Guard conditions, mode/epoch filtering, subsampling, 1D/2D unit IDs.
 """
 
 import numpy as np
-import pytest
 from unittest.mock import MagicMock, patch
 
 from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook

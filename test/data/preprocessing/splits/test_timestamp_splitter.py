@@ -21,7 +21,6 @@ Test Coverage Strategy:
 import numpy as np
 import pandas as pd
 import pytest
-from datetime import datetime
 
 from picid.data.preprocessing.splits.database_splitter import TimeStampSplitter
 

@@ -5,7 +5,6 @@ from picid.cli.assemble import main, run_assemble
 
 def test_assemble_imports():
     """run_assemble is importable and callable."""
-    from picid.cli.assemble import run_assemble
 
     assert callable(run_assemble)
 

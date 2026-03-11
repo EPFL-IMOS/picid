@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-import torch
 
 from picid.data.datasets.base import BaseVectorizedConcatDataset
 from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset

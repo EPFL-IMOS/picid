@@ -1,6 +1,5 @@
 """Tests for Phase 2.1: DataKind, TransformCapability, infer_data_kind, get_capability."""
 import numpy as np
-import pytest
 import awkward as ak
 
 from picid.transforms.base.data_kind import (

@@ -4,12 +4,10 @@ Test suite for picid_report.core.run_processor.
 Covers _filter_columns, _normalize_column, and load_runs_df with mocks (no real wandb or disk).
 """
 
-import ast
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
 import pandas as pd
-import pytest
 
 from picid_report.core import run_processor
 

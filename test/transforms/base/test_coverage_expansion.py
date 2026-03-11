@@ -7,17 +7,15 @@ Targets missing lines reported by coverage in:
 """
 from __future__ import annotations
 
-import copy
 import numpy as np
 import pytest
 import awkward as ak
 from typing import Any, Dict
-from collections.abc import Mapping
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 from sortedcontainers import SortedDict
 
 from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
-from picid.transforms.base.base_transform import BaseTransform, DenseTransform, RaggedTransform
+from picid.transforms.base.base_transform import DenseTransform, RaggedTransform
 from picid.transforms.base.strategy import TransformStrategy
 from picid.transforms.base.data_transform import DataTransform
 from collections import OrderedDict
@@ -27,10 +25,8 @@ from picid.transforms.base.transform_manager import (
 )
 from picid.transforms.base.multisource import (
     tolist,
-    find_singular_ragged_dim,
     ConcatFitAndPerSegmentTransformMixin,
     NoFitPerSegmentMixin,
-    NoFitConcatAlongAxisMixin,
     InverseTransformMixin,
 )
 

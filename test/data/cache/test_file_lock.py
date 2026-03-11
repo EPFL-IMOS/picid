@@ -15,12 +15,7 @@ Test Coverage Strategy:
 3. **Idempotent Release**: Safe repeated release calls
 4. **Platform Support**: Unix-specific behavior testing
 """
-import pytest
-import os
-import tempfile
 import time
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 from picid.data.cache.file_lock import FileLock, LOCK_FILE
 
@@ -270,6 +265,6 @@ class TestFileLockEdgeCases:
             nested_path.parent.mkdir(parents=True, exist_ok=True)
             lock.acquire()
             lock.release()
-        except (FileNotFoundError, PermissionError) as e:
+        except (FileNotFoundError, PermissionError):
             # Expected if directories don't exist
             pass

@@ -1,8 +1,6 @@
 """Pytest configuration and fixtures for cache tests."""
 import numpy as np
 import pytest
-import tempfile
-from pathlib import Path
 
 
 @pytest.fixture

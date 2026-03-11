@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import awkward as ak
 from lightning_fabric.utilities.data import AttributeDict
-from torch.utils.data import DataLoader
 
 # Adjust imports based on your actual structure
 from picid.data.datasets.context_dataset import ContextBatchDataset

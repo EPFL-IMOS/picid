@@ -8,7 +8,6 @@ n=1 std 0.0, and MultiIndex flattening. Each test references the function under 
 
 from collections import defaultdict
 import pandas as pd
-import pytest
 
 from picid_report.report import reporting
 

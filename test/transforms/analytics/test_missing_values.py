@@ -4,7 +4,6 @@ import os
 import tempfile
 import numpy as np
 import awkward as ak
-import pytest
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.analytics.missing_values import MissingValuesStatsLogger

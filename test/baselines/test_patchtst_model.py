@@ -1,5 +1,4 @@
 import numpy as np
-from omegaconf import OmegaConf
 import pytest
 import hydra
 from hydra.core.global_hydra import GlobalHydra
@@ -9,7 +8,6 @@ from picid.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
 from picid.baselines.patchtst_model.thuml_patchtst_model import PatchTST_Forecaster
 from test.conftest import BATCH_SIZE
 from test.utils import ProjectSearchPathPlugin
-from collections.abc import Mapping
 from typing import Any
 from picid.evaluator.base import AbstractEvaluator
 

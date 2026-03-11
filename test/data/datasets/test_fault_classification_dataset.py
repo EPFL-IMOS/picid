@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-import torch
 
 from picid.data.datasets.fault_classification_dataset import FaultClassificationBatchDataset
 

@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 import torch
 import awkward as ak
-from torch.utils.data import DataLoader
 from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 from picid.utils.awkward_utils import ak_regularize_regular_axes
 

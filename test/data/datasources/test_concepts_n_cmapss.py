@@ -6,7 +6,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import patch
 
 from picid.data.datasources.concepts_n_cmapss import (
     subsampling,

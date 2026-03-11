@@ -12,7 +12,6 @@ from picid.data.data_objects.base import (
     BaseDataObject,
     BaseDataObjectWithMetadata,
 )
-from picid.data.data_objects.data import DatasetContainer
 from picid.data.data_objects.manifest import ManifestEntry, MetadataManifest
 
 

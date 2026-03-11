@@ -1,5 +1,4 @@
 """Tests for picid.utils.logging_utils."""
-import pytest
 from unittest.mock import patch, MagicMock
 
 from picid.utils.logging_utils import get_hydra_override, log_hyperparameters

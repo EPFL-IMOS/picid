@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 import pandas as pd
 import awkward as ak
-from unittest.mock import MagicMock
 
 # --- Import the classes you need to test ---
 # (You will need to adjust these import paths to match your library structure)

@@ -9,9 +9,7 @@ docs (config persistence for reproducibility).
 import os
 import json
 import pytest
-from unittest.mock import MagicMock, patch
 
-from lightning.pytorch.callbacks import ModelCheckpoint
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
 
 

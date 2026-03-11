@@ -3,14 +3,12 @@
 This file consolidates all tests for ConfigTransformManager from multiple test files.
 All dummy transforms and fixtures are imported from conftest.
 """
-import numpy as np
 import pytest
 
 from picid.transforms.base.transform_manager import ConfigTransformManager
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (
-    DummyStatelessTransform,
     DummyInverseTransform,
 )
 
@@ -27,7 +25,6 @@ class TestConfigTransformManager:
     
     def test_manager_initialization_with_config(self):
         """Test manager initialization with config."""
-        from picid.transforms.base.transform_manager import ConfigTransformManager
         config = {
             "scale": {
                 "transform": {

@@ -18,10 +18,7 @@ Test Coverage Strategy:
 5. **Caching Integration**: Cache handling for speed
 6. **Error Handling**: Transform failures
 """
-import numpy as np
 import pytest
-from unittest.mock import MagicMock, Mock, patch
-from dataclasses import dataclass
 
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.preprocessing.base import PreProcessorInterface

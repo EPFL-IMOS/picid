@@ -14,10 +14,7 @@ Test Coverage Strategy:
 2. **Print Formatting**: Human-readable output
 3. **Edge Cases**: Empty models, complex architectures
 """
-import pytest
-import torch
 import torch.nn as nn
-from unittest.mock import patch, MagicMock
 
 from picid.utils.examine_model import (
     get_model_summary,

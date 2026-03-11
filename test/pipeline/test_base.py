@@ -20,7 +20,6 @@ from picid.pipeline.base import (
     ConstantLossLightningModule,
     TrainingLightningModule,
 )
-from picid.evaluator.base import AbstractEvaluator
 
 
 # -----------------------------------------------------------------------------

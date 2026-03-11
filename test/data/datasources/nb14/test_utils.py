@@ -1,6 +1,5 @@
 """Tests for nb14.utils (flatten_cycles, table_to_ak_array) — no I/O."""
 import numpy as np
-import pytest
 import awkward as ak
 
 from picid.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array

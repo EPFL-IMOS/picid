@@ -1,5 +1,4 @@
 """Tests for picid.utils.utils (main utils module)."""
-from pathlib import Path
 
 import pytest
 from omegaconf import OmegaConf

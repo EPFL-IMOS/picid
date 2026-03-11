@@ -5,7 +5,6 @@ Covers format_mean_std_count and flatten_aggregated_columns.
 """
 
 import pandas as pd
-import pytest
 
 from picid_report import utils
 

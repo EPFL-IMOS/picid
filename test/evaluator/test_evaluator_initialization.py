@@ -11,9 +11,7 @@ Goal: Catch initialization bugs before they cause runtime errors.
 """
 
 import pytest
-import numpy as np
 from unittest.mock import MagicMock
-from pathlib import Path
 
 from picid.evaluator.default import DefaultEvaluator
 from picid.evaluator.classification import ClassificationEvaluator

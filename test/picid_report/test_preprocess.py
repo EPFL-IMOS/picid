@@ -5,7 +5,6 @@ Covers clean_and_rename_models.
 """
 
 import pandas as pd
-import pytest
 
 from picid_report import config
 from picid_report.core import preprocess

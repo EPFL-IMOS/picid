@@ -91,7 +91,6 @@ class TestAssertListOfNdarray:
         
         Validates: Requirement ASS-1.4 - ListConfig limitation
         """
-        from omegaconf import ListConfig
         from omegaconf.errors import UnsupportedValueType
         
         # OmegaConf cannot hold numpy arrays

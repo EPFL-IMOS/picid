@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
-from unittest.mock import patch, MagicMock
 
 from picid.data.datasources.agtf30k import (
     subsampling,

@@ -4,7 +4,6 @@ Tests for picid_report.config.
 Covers PipelineConfig and from_default().
 """
 
-import pytest
 
 from picid_report import config
 from picid_report.config import PipelineConfig

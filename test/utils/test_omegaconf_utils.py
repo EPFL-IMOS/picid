@@ -1,6 +1,5 @@
 """Tests for picid.utils.omegaconf_utils."""
 import pytest
-from pathlib import Path
 
 from picid.utils.omegaconf_utils import find_config_file
 

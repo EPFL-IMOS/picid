@@ -17,12 +17,7 @@ Test Coverage Strategy:
 4. **Cache Key Computation**: Combined config + library hashing
 5. **Edge Cases**: Empty configs, nested structures, special types
 """
-import numpy as np
 import pytest
-import tempfile
-import json
-import os
-from pathlib import Path
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
 from picid.utils.hash_utils import (

@@ -17,7 +17,7 @@ Test Coverage Strategy:
 """
 import pytest
 from unittest.mock import patch, MagicMock
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 from picid.utils.instantiators import (
     instantiate_callbacks,

@@ -16,7 +16,6 @@ PHM Context:
 import pytest
 import torch
 import numpy as np
-from unittest.mock import MagicMock, patch
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from picid.evaluator.scaling_wrapper import (
