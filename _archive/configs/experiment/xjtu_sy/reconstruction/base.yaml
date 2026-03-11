@@ -11,14 +11,14 @@ callbacks:
 
   model_checkpoint:
     monitor: val/loss
-    mode: min  
+    mode: min
 
 evaluator:
   train:
     inverse_transform_name: scaler_target
     apply_inverse_scaling: False
   val:
-    inverse_transform_name: scaler_target 
+    inverse_transform_name: scaler_target
     apply_inverse_scaling: False
   test:
     inverse_transform_name: scaler_target

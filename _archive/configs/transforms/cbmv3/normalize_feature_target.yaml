@@ -25,4 +25,3 @@ plot_features:
 
   metadata:
     apply_to: ["features", "rul", "unit_id"]
-

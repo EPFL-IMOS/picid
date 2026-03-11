@@ -15,7 +15,7 @@ datamodule:
   test_batch_size: 1024
 
 # it has to go to model_configs when I know how to infere input_channels with ${infere_dim: features, -1}
-model: 
+model:
   input_channels: 2
   latent_dim: 32
   dropout_prob: 0.2

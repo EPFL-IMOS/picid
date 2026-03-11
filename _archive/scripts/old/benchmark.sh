@@ -3,7 +3,7 @@
 # python picid/run.py experiment=nb1/prognostics/tabpfn_fit_predict debug=stf
 # python picid/run.py experiment=nb1/prognostics/tabpfn_batch_context debug=stf
 
-# NB14 
+# NB14
 # python picid/run.py experiment=nb14/prognostics/stf debug=stf
 # python picid/run.py experiment=nb14/prognostics/tabpfn_batch_context debug=stf
 
@@ -28,7 +28,7 @@ python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics
 python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics/tabpfn_fit_predict
 python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics/tide
 python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics/timeseries_transformer
-python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics/xgboost_fit_predict 
+python picid/run.py paths=rt_local experiment=concepts_n_cmapss_ds02/prognostics/xgboost_fit_predict
 
 # XJTU-SY
 
@@ -53,7 +53,7 @@ python picid/run.py paths=rt_local experiment=railway_traction/forecasting/tabpf
 # python picid/run.py experiment=nb1/prognostics/stf debug=stf
 # python picid/run.py experiment=nb1/prognostics/tabpfn_fit_predict debug=stf
 # python picid/run.py experiment=nb1/prognostics/tabpfn_batch_context debug=stf
-# # NB14 
+# # NB14
 # python picid/run.py experiment=nb14/prognostics/stf debug=stf
 # python picid/run.py experiment=nb14/prognostics/tabpfn_batch_context debug=stf
 # # ETTH

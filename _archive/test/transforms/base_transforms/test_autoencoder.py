@@ -25,7 +25,6 @@ def transform_fixture():
     with patch.object(
         BaseAutoencoderTransform, "__init__", lambda *args, **kwargs: None
     ):
-
         # 2. Instantiate our transform
         transform = AutoencoderTransform(
             folder_name="dummy/path", key="features", batch_size=2
@@ -70,15 +69,15 @@ def transform_fixture():
 # --- Tests for Helper Methods ---
 def test_validate_input_raises_missing_features(transform_fixture):
     """Test that _validate_input_data raises error when features key is missing.
-    
+
     **Assumption**: AutoencoderTransform._validate_input_data should validate that the
     required "features" key is present in the input data. If the features key is missing,
     it should raise an AssertionError with a descriptive message, preventing downstream
     errors and providing clear feedback about what's wrong.
-    
+
     **Action**: Create input data containing only "target" key (missing "features" key).
     Call _validate_input_data on this incomplete data.
-    
+
     **Expected Result**: The method should raise an AssertionError with a message containing
     "Features key is not in data". This validates that input validation works correctly,
     which is essential for catching configuration errors early and preventing runtime failures

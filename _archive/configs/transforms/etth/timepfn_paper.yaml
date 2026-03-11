@@ -1,8 +1,8 @@
 # These transforms adapted from the TimePFN paper
 scaler:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -10,10 +10,8 @@ scaler:
 time_features_transform:
   transform:
       _target_: picid.transforms.base_transforms.timefeatures.TimePFNTimeFeaturesTransform
-      freq: h 
+      freq: h
 
   metadata:
-    apply_to: timestamps    
+    apply_to: timestamps
     assign_to: time_features
-
-

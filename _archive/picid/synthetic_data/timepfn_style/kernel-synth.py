@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# The kernel-synth method is available at: we took this snippet from there. 
+# The kernel-synth method is available at: we took this snippet from there.
 # https://github.com/amazon-science/chronos-forecasting
 
 import argparse
@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+
 # from gluonts.dataset.arrow import ArrowWriter
 from joblib import Parallel, delayed
 from sklearn.gaussian_process import GaussianProcessRegressor

@@ -4,13 +4,13 @@ defaults:
   - override /datasource: unibo21_bosello
   - override /evaluator: reconstruction
   - override /task_definition: reconstruction/autoencoder
-  
+
 evaluator:
   train:
     inverse_transform_name: scaler_target
     apply_inverse_scaling: False
   val:
-    inverse_transform_name: scaler_target 
+    inverse_transform_name: scaler_target
     apply_inverse_scaling: False
   test:
     inverse_transform_name: scaler_target

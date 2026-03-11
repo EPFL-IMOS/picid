@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class RULTaskUpToFirstZero(RaggedOrDenseTransform, NoFitPerSegmentMixin):
-
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Transforms the input data by truncating all arrays up to and including the first occurrence of zero in the 'target' array.

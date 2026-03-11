@@ -13,10 +13,10 @@ FAILED_LOG_FILE="scripts/checks/failed_runs.log"
 # Function to run a command and check for failure
 run_command() {
     local cmd="$1"
-    
+
     # Run the command and capture the output and error
     { eval "$cmd" 2>&1 | tee -a "$LOG_FILE"; } 2>> "$ERROR_LOG_FILE"
-    
+
     # Check if the command failed
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         echo "Command failed: $cmd" >> "$FAILED_LOG_FILE"
@@ -51,14 +51,12 @@ commands=(
 for cmd_template in "${commands[@]}"; do
     for model in "${MODELS[@]}"; do
         echo "Testing model: $model"
-        
+
         # 3. Use 'eval' to substitute the $model variable into the command template.
         # This creates the final command string to be executed.
         eval "final_cmd=\"$cmd_template\""
-        
+
         # 4. Run the fully-formed command.
         run_command "$final_cmd"
     done
 done
-
-
