@@ -25,7 +25,6 @@ def mock_dataset():
 
     # train: one "unit" with 10 steps, 20 cols (CycleCols etc.)
     train_cyc = [np.random.randn(10, 20).astype(np.float64)]
-    train_cap = np.zeros((1, 20), dtype=object)
     mock = MagicMock()
     mock.get_charge_data.return_value = (
         {"train": train_cyc, "val": [], "test": []},

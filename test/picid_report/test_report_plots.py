@@ -101,8 +101,8 @@ class TestPlotBestMetricBars:
         ax = fig.axes[0]
         assert len(ax.patches) == 3
         tick_labels = [t.get_text() for t in ax.get_xticklabels()]
-        assert any("M1" in l and "D1" in l for l in tick_labels)
-        assert any("M2" in l for l in tick_labels)
+        assert any("M1" in label and "D1" in label for label in tick_labels)
+        assert any("M2" in label for label in tick_labels)
 
     def test_metric_without_slash_uses_whole_as_metric_name(self):
         """Metric string without '/' uses entire string as metric_name, prefix empty."""

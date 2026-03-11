@@ -111,6 +111,7 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
         transform_library_part_path=library_dir,
         cache_preprocessed=True,
     )
+    assert result1 is not None
     d1 = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
 
     # Second run: should hit cache
@@ -125,6 +126,7 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
         transform_library_part_path=library_dir,
         cache_preprocessed=True,
     )
+    assert result2 is not None
     d2 = preprocessor2.get_processed_data_dict(return_splits_on_first_level=True)
 
     _assert_split_dict_structure(d1)

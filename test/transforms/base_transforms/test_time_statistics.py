@@ -910,6 +910,11 @@ class TestTimeStatsTransformPHMScenarios:
         transform = TimeStatsTransform(stats_to_compute=["mean"])
         trend = degradation_trend_exponential["trend"]
 
+        # Apply transform to verify it processes the trend
+        out = transform.transform_data({"features": trend}, {})
+        assert "features" in out
+        assert out["features"].shape == trend.shape
+
         # The trend fixture already represents RMS values over time
         initial_rms = trend[0, 0]
         final_rms = trend[-1, 0]

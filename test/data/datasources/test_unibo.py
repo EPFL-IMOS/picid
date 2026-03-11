@@ -289,7 +289,7 @@ def test_model_handler_get_discharge_whole_cycle_future(mocker):
     time_val = [np.array([[0]])]
     time_test = [np.array([[0]])]
 
-    # Patch the helper method
+    # Patch the helper method (assert_called at end verifies patch was used)
     mock_get_soh = mocker.patch.object(
         ModelDataHandler,
         "_ModelDataHandler__get_whole_cycle_soh_x_y",
@@ -417,6 +417,8 @@ def test_model_handler_get_discharge_whole_cycle_future(mocker):
     assert np.all(train_range == np.array([1, 2]))
     assert np.all(val_range == np.array([1]))
     assert np.all(test_range == np.array([1]))
+
+    mock_get_soh.assert_called()
 
 
 # =========================================================================

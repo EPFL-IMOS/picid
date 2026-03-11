@@ -171,12 +171,11 @@ class TestTimeStampSplitterGetSplits:
 
         # Test should start after test_start date
         test_start_idx = splits["test"][0]
-        # The date at test_start_idx should be >= test_start
         test_start_date = dates.iloc[test_start_idx]
         expected_test_start = pd.Timestamp(timestamp_data["test_start"])
 
-        # May have lookback offset
         assert test_start_idx >= 0
+        assert test_start_date >= expected_test_start
 
     def test_get_splits_mask_generation(self, timestamp_data):
         """Test mask generation for effective samples.
