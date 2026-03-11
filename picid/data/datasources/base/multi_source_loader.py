@@ -30,17 +30,29 @@ class MultiSourceLoader(AbstractDataSourceLoader):
 
     Attributes
     ----------
-        data_source_dict (dict): Mapping of source names to instantiated data source objects.
-        source_params (list): List of parameter dicts for each source.
-        source_names (list): List of source names.
-        multisource_data_splitter (Optional[BySourceSplitter]): Instance for multisource splitting.
-    Methods:
-        __repr__(): Returns a string representation of the loader.
-        get_data(): Loads and returns data from all sources, applying splitting logic as configured.
-        get_meta_data(): Returns metadata about the loaded data sources.
-        get_data_name(): Returns the list of source data names.
-        get_multisource_data_splitter(): Returns the multisource data splitter instance.
-        split_data(data_lst, source_names): Applies the multisource data splitter to the data.
+    data_source_dict : dict
+        Mapping of source names to instantiated data source objects.
+    source_params : list
+        List of parameter dicts for each source.
+    source_names : list
+        List of source names.
+    multisource_data_splitter : Optional[BySourceSplitter]
+        Instance for multisource splitting.
+
+    Methods
+    -------
+    __repr__
+        Returns a string representation of the loader.
+    get_data
+        Loads and returns data from all sources, applying splitting logic as configured.
+    get_meta_data
+        Returns metadata about the loaded data sources.
+    get_data_name
+        Returns the list of source data names.
+    get_multisource_data_splitter
+        Returns the multisource data splitter instance.
+    split_data
+        Applies the multisource data splitter to the data.
     """
 
     def __init__(

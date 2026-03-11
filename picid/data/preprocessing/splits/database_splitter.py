@@ -19,16 +19,26 @@ class TimeStampSplitter(TimeSeriesSplitter):
         **kwargs,
     ):
         """
-        Parameters:
-            test_start (str): Timestamp when the test split starts.
-            test_end (Optional[str]): Optional end of the test period. If None, goes to end of data.
-            train_ratio (float): Proportion of pre-test data for training.
-            val_ratio (float): Proportion of pre-test data for validation.
-            seq_len (int): Length of input sequence for forecasting.
-            label_len (int): Not used in splitting, passed for consistency.
-            pred_len (int): Prediction length (used in sanity checks).
-            frequency (str): Frequency for aligning split ends, e.g., 'D' for day.
-            apply_lookback (bool): Whether to shift val/test start index back by seq_len.
+        Parameters
+        ----------
+        test_start : str
+            Timestamp when the test split starts.
+        test_end : Optional[str]
+            Optional end of the test period. If None, goes to end of data.
+        train_ratio : float
+            Proportion of pre-test data for training.
+        val_ratio : float
+            Proportion of pre-test data for validation.
+        seq_len : int
+            Length of input sequence for forecasting.
+        label_len : int
+            Not used in splitting, passed for consistency.
+        pred_len : int
+            Prediction length (used in sanity checks).
+        frequency : str
+            Frequency for aligning split ends, e.g., 'D' for day.
+        apply_lookback : bool
+            Whether to shift val/test start index back by seq_len.
         """
         self.test_start = pd.Timestamp(test_start)
         self.test_end = pd.Timestamp(test_end) if test_end else None

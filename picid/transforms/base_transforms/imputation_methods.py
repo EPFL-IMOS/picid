@@ -289,23 +289,34 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
 
     * Note: "mean" imputation relies on global statistics computed during ``fit``. If these statistics are computed on the test set itself, it technically uses future information.*
 
-    Attributes:
-        strategy (Union[str, List[str]]): The imputation strategy to use.
-            Can be a single string (applied to all channels) or a list of strings
-            (one per channel). Must be one of:
-            - ``"mean"``: Replaces NaNs with the global mean.
-            - ``"locf"``: Last Observation Carried Forward.
-            - ``"linear"``: Linear interpolation.
-            - ``"zero"``: Replaces NaNs with 0.0.
-            - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by the channel's std dev.
-            - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of sinusoids based on history.
-            - ``"copy_past"``: Blockwise Past Copy. Iteratively copies the immediately preceding history segment into the gap.
-        apply_to (Optional[List[str]]): A list of keys in the input dictionary to transform.
-        spectral_window_len (int): Window size (history) used for spectral analysis (default: 64).
-        spectral_top_k (int): Number of dominant frequencies to use for extrapolation (default: 3).
-        spectral_match_variance (bool): If True, the spectral imputation will attempt to match the noise variance of the historical signal. Defaults to False.
-        fitted_means (Dict[str, np.ndarray]): Stores computed means (for ``"mean"``).
-        fitted_stds (Dict[str, np.ndarray]): Stores computed std devs (for ``"stochastic"``).
+    Attributes
+    ----------
+    strategy : Union[str, List[str]]
+        The imputation strategy to use. Can be a single string (applied to all
+        channels) or a list of strings (one per channel). Must be one of:
+        - ``"mean"``: Replaces NaNs with the global mean.
+        - ``"locf"``: Last Observation Carried Forward.
+        - ``"linear"``: Linear interpolation.
+        - ``"zero"``: Replaces NaNs with 0.0.
+        - ``"stochastic"``: Stochastic LOCF. Adds random Gaussian noise scaled by
+          the channel's std dev.
+        - ``"spectral"``: Causal Spectral Extrapolation. Models signal as sum of
+          sinusoids based on history.
+        - ``"copy_past"``: Blockwise Past Copy. Iteratively copies the
+          immediately preceding history segment into the gap.
+    apply_to : Optional[List[str]]
+        A list of keys in the input dictionary to transform.
+    spectral_window_len : int
+        Window size (history) used for spectral analysis (default: 64).
+    spectral_top_k : int
+        Number of dominant frequencies to use for extrapolation (default: 3).
+    spectral_match_variance : bool
+        If True, the spectral imputation will attempt to match the noise
+        variance of the historical signal. Defaults to False.
+    fitted_means : Dict[str, np.ndarray]
+        Stores computed means (for ``"mean"``).
+    fitted_stds : Dict[str, np.ndarray]
+        Stores computed std devs (for ``"stochastic"``).
     """
 
     VALID_STRATEGIES = {

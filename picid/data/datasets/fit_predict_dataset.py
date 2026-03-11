@@ -35,8 +35,9 @@ class FitPredictTaskDataset(BaseDataset):
     meta_data_dict : dict[str, any]
         Metadata associated with the dataset.
     convert_units_to_tasks : bool, optional
-        If True, concatenates lists of arrays along the task dimension. If False,
-        assumes all arrays belong to the same task and squeezes the first dimension.
+        If True, concatenates lists of arrays along the task dimension.
+        If False, assumes all arrays belong to the same task and squeezes the
+        first dimension.
     **kwargs
         Additional keyword arguments passed to BaseDataset.
 
@@ -45,8 +46,8 @@ class FitPredictTaskDataset(BaseDataset):
     ValueError
         If 'X' or 'y' is missing from data_dict.
     AssertionError
-        If input arrays do not have the expected dimensions or if task/time step
-        counts are inconsistent.
+        If input arrays do not have the expected dimensions or if task/time
+        step counts are inconsistent.
 
     Examples
     --------
@@ -56,7 +57,8 @@ class FitPredictTaskDataset(BaseDataset):
 
     Returns
     -------
-    AttributeDict for each task containing:
+    AttributeDict
+        For each task containing:
         - task_idx: Index of the task.
         - task_num: Total number of tasks.
         - task_desc: Description string.

@@ -24,29 +24,35 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
     arrays of shape ``(Time, Channels)``. It handles channel-specific corruption
     ratios, allowing for heterogeneous sensor reliability simulations.
 
-    Attributes:
-        ratios (List[float]): A list of target missingness ratios (between 0.0 and 1.0)
-            for each channel. If the input data has more channels than elements in
-            this list, the remaining channels are assumed to have a ratio of 0.0
-            (i.e., they remain pristine).
-        mode (str): The mechanism used to generate missing values.
-            - ``"point"``: Simulates independent random failures (e.g., packet loss).
-              Each point is dropped independently with probability proportional to the ratio.
-            - ``"block"``: Simulates sensor outages or reboots. Missingness occurs
-              in contiguous chunks of time.
-        block_params (Optional[Dict[str, Union[int, float]]]): Configuration for block sizes
-            when ``mode="block"``. Must contain keys:
-            - ``"min_size"`` (int | float): Minimum duration of an outage block.
-              If float (0.0 to 1.0), it represents a proportion of the total signal length.
-              If int, it represents an absolute number of time steps.
-            - ``"max_size"`` (int | float): Maximum duration of an outage block.
-              If float, it represents a proportion. If int, it represents absolute steps.
-            Defaults to ``{"min_size": 5, "max_size": 20}`` if not provided.
-        seed (int): Seed for the NumPy random number generator to ensure
-            deterministic reproducibility of the corruption patterns.
-        apply_to (Optional[List[str]]): A list of keys in the input dictionary
-            (e.g., ``["features"]``) to which the corruption should be applied.
-            If ``None``, the transform is applied to all keys in the input data.
+    Attributes
+    ----------
+    ratios : List[float]
+        A list of target missingness ratios (between 0.0 and 1.0) for each
+        channel. If the input data has more channels than elements in this
+        list, the remaining channels are assumed to have a ratio of 0.0
+        (i.e., they remain pristine).
+    mode : str
+        The mechanism used to generate missing values.
+        - ``"point"``: Simulates independent random failures (e.g., packet loss).
+          Each point is dropped independently with probability proportional to
+          the ratio.
+        - ``"block"``: Simulates sensor outages or reboots. Missingness occurs
+          in contiguous chunks of time.
+    block_params : Optional[Dict[str, Union[int, float]]]
+        Configuration for block sizes when ``mode="block"``. Must contain keys:
+        - ``"min_size"`` (int | float): Minimum duration of an outage block.
+          If float (0.0 to 1.0), it represents a proportion of the total
+          signal length. If int, it represents an absolute number of time steps.
+        - ``"max_size"`` (int | float): Maximum duration of an outage block.
+          If float, it represents a proportion. If int, it represents absolute
+          steps. Defaults to ``{"min_size": 5, "max_size": 20}`` if not provided.
+    seed : int
+        Seed for the NumPy random number generator to ensure deterministic
+        reproducibility of the corruption patterns.
+    apply_to : Optional[List[str]]
+        A list of keys in the input dictionary (e.g., ``["features"]``) to
+        which the corruption should be applied. If ``None``, the transform is
+        applied to all keys in the input data.
 
     Examples
     --------

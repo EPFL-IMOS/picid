@@ -20,17 +20,21 @@ class FileLock:
     using the filesystem. It's useful for coordinating access to shared resources
     across multiple processes.
 
-    Attributes:
-        path (str): The filesystem path where the lock file will be created.
-        handle (file object): File handle used to maintain the lock. None if not acquired.
+    Attributes
+    ----------
+    path : str
+        The filesystem path where the lock file will be created.
+    handle : file object
+        File handle used to maintain the lock. None if not acquired.
 
-    Example:
-        >>> lock = FileLock("/tmp/my_lock.lock")
-        >>> lock.acquire()
-        Lock acquired.
-        >>> # Perform critical operations here
-        >>> lock.release()
-        Lock released.
+    Examples
+    --------
+    >>> lock = FileLock("/tmp/my_lock.lock")
+    >>> lock.acquire()
+    Lock acquired.
+    >>> # Perform critical operations here
+    >>> lock.release()
+    Lock released.
     """
 
     def __init__(self, path=LOCK_FILE):

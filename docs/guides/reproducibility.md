@@ -58,21 +58,3 @@ To run with different dependency sets (e.g. CPU vs CUDA):
    ```
 
 See `tutorials/workflow/uv_lock_switching.py` (runnable script).
-
----
-
-## Workflow orchestration (for agents)
-
-When orchestrating non-trivial tasks:
-
-| Trigger | Action |
-|---------|--------|
-| Non-trivial task (3+ steps) | Enter plan mode first |
-| Something goes wrong | STOP and re-plan |
-| Before marking complete | Run verification; prove it works |
-| Bug report or failing test | Fix autonomously |
-| User correction | Update `tasks/lessons.md` |
-
-Core principles: plan first, verify before done, self-improvement from corrections.
-
-See `.cursor/skills/workflow-orchestration/SKILL.md` for full workflow.

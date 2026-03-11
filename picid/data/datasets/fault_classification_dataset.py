@@ -35,9 +35,9 @@ class FaultClassificationBatchDataset(RULContextBatchDataset):
         by the underlying sequencer. It defines the starting point of the
         target sequence relative to the input sequence.
     pred_len : int
-        The prediction horizon. **Note: This argument is ignored and internally
-        overridden to 0** to make the target window align perfectly with the
-        input window.
+        The prediction horizon. **Note: This argument is ignored and
+        internally overridden to 0** to make the target window align
+        perfectly with the input window.
     stride : int, optional
         The step size the sliding window takes across the data between
         generating consecutive sequences. Defaults to 1.
@@ -80,8 +80,9 @@ class FaultClassificationBatchDataset(RULContextBatchDataset):
 
     Yields
     ------
-    A dictionary where keys correspond to those in `data_dict` and values are
-    the sequenced NumPy arrays for a given sample index.
+    dict
+        A dictionary where keys correspond to those in `data_dict` and values
+        are the sequenced NumPy arrays for a given sample index.
     """
 
     @override
