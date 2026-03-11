@@ -1,8 +1,7 @@
 """Concrete metric implementations."""
 
 import numpy as np
-from .base import AbstractFileSystemMetric, AbstractMetric
-import pandas as pd
+from .base import AbstractMetric
 
 
 # This class calculates the mean percentage error using the requested API.

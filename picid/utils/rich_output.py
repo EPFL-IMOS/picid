@@ -54,11 +54,6 @@ def display_targets(cfg):
     Console().print(table)
 
 
-import numpy as np
-import torch
-import pandas as pd
-import awkward as ak
-from typing import List, Union
 
 
 def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:

@@ -2,7 +2,7 @@ import logging
 import os
 import numpy as np
 import awkward as ak
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from collections import defaultdict
 
 from picid.data.data_objects.data import NamedTransformInput

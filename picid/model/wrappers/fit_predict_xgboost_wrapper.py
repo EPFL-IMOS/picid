@@ -4,7 +4,6 @@ import joblib
 import torch
 
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
-from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 
 from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFitPredictWrapper

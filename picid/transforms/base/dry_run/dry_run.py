@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 

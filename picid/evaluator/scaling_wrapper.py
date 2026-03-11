@@ -3,7 +3,7 @@
 from einops import rearrange
 import torch
 import numpy as np
-from typing import Optional, Any, Tuple
+from typing import Optional, Tuple
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.multisource import InverseTransformMixin

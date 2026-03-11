@@ -2,7 +2,6 @@ import warnings
 from typing import override, Dict, Any
 import logging
 
-import numpy as np
 import pandas as pd
 import awkward as ak
 

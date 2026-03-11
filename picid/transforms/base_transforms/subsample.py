@@ -5,7 +5,7 @@ import numpy as np
 
 # Assuming this import path is correct for your project
 from picid.data.data_objects.data import NamedTransformInput
-from picid.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.utils.decorators import check_transform_output_consistency
 

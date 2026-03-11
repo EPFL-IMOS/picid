@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import logging
-import plotly.graph_objects as go
 import scipy.io
 from pathlib import Path
 from phmd.download import download

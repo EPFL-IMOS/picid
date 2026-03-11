@@ -9,7 +9,6 @@ from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 import logging
-import itertools
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -475,9 +474,9 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         self.predict_after_training = predict_after_training
         self.debug = debug
         if self.debug:
-            logger.warning(f"---------------------------------------------------")
-            logger.warning(f"Debug mode is ON. Using only small subsets of data.")
-            logger.warning(f"---------------------------------------------------")
+            logger.warning("---------------------------------------------------")
+            logger.warning("Debug mode is ON. Using only small subsets of data.")
+            logger.warning("---------------------------------------------------")
 
         # This line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt

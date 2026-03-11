@@ -11,7 +11,6 @@ import hydra
 log = logging.getLogger(__name__)
 import lightning as L
 from hydra import (
-    initialize as hydra_initialize,
     initialize_config_dir as hydra_init_config_dir,
     compose as hydra_compose,
 )

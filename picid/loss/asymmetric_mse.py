@@ -4,7 +4,6 @@ Asymmetric MSE Loss implementation with Debugging.
 
 from typing import Dict
 import torch
-import torch.nn as nn
 
 from .base import AbstractLoss
 
@@ -94,7 +93,7 @@ class AsymmetricMSELoss(AbstractLoss):
                 # For now, printing every step to diagnose your "identical loss" issue.
                 if ratio == 0.0:
                     print(
-                        f"[AsymLoss] Rate: 0.00% (Pure MSE behavior - Model is underestimating safely)"
+                        "[AsymLoss] Rate: 0.00% (Pure MSE behavior - Model is underestimating safely)"
                     )
                 else:
                     print(f"[AsymLoss] Rate: {ratio:.2%} (Penalty Active)")

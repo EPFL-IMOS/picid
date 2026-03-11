@@ -4,7 +4,7 @@ from einops import rearrange
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
-from picid.baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from picid.baselines.definitions import FORECASTING_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardWrapper
 
 

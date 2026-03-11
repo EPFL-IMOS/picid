@@ -50,9 +50,8 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
-from numpy import ndarray
 
 from picid.data.cache.offline import FileSystemCache
 from picid.data.data_objects.data import DatasetContainer

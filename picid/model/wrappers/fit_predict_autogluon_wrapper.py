@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import override
 
 import joblib
-from autogluon.tabular import TabularPredictor
 
 from .base import AbstractFitPredictWrapper
 from ..autogluon.autogluon_wrapper import AutoGluonWrapper

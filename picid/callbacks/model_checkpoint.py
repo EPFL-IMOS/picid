@@ -1,6 +1,5 @@
 import os
 import json
-from typing import Dict, Any
 
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint

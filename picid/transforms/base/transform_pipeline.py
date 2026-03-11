@@ -56,7 +56,7 @@ from __future__ import annotations
 
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from picid.transforms.base.data_transform import DataTransform
 from picid.data.data_objects.data import SplitDatasetContainer

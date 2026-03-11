@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import awkward as ak
 from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
-from picid.data.datasources.nb14.utils import table_to_ak_array
 
 logger = logging.getLogger(__name__)
 

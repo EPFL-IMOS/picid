@@ -9,7 +9,6 @@ from typing import Any, Dict, Generic, List, Optional, TypeVar
 import awkward as ak
 import numpy as np
 import pandas as pd
-from torch import Type
 
 from picid.data.data_objects.base import BaseDataObjectWithMetadata
 from picid.data.data_objects.manifest import MetadataManifest

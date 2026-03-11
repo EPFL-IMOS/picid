@@ -3,11 +3,10 @@
 
 import os.path
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
-from fontTools.subset import subset
 from omegaconf import ListConfig
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
 from torch.utils.data import (
@@ -362,14 +361,14 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
     def _apply_availability_constraints(self, data: pd.DataFrame) -> pd.DataFrame:
         """Apply availability constraints to features"""
 
-        print(f" Applying availability constraints...")
+        print(" Applying availability constraints...")
 
         # id_index: latest 4 values not available
         if "id_index" in data.columns and "id_index" not in self.target_cols:
             data["id_index"] = data["id_index"].shift(self.lags_id_index, fill_value=0)
             print(f"   id_index: shifted by {self.lags_id_index} timesteps")
         else:
-            print(f"   id_index: not shifted because it's in target columns")
+            print("   id_index: not shifted because it's in target columns")
 
         if (
             "afrr_neg_activated" in data.columns
@@ -382,7 +381,7 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
                 f"   afrr_neg_activated: lags_afrr_neg_activated by {self.lags_afrr_neg_activated} timesteps"
             )
         else:
-            print(f"   afrr_neg_activated: not shifted because it's in target columns")
+            print("   afrr_neg_activated: not shifted because it's in target columns")
 
         if (
             "afrr_pos_activated" in data.columns
@@ -395,21 +394,21 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
                 f"   afrr_pos_activated: afrr_pos_activated by {self.lags_afrr_pos_activated} timesteps"
             )
         else:
-            print(f"   afrr_pos_activated: not shifted because it's in target columns")
+            print("   afrr_pos_activated: not shifted because it's in target columns")
 
         if "TNG_POS" in data.columns and "TNG_POS" not in self.target_cols:
             data["TNG_POS"] = data["TNG_POS"].shift(self.lags_tng_pos, fill_value=0)
             print(f"   TNG_POS: shifted by {self.lags_tng_pos} timesteps")
         else:
-            print(f"   TNG_POS: not shifted because it's in target columns")
+            print("   TNG_POS: not shifted because it's in target columns")
 
         if "TNG_NEG" in data.columns and "TNG_NEG" not in self.target_cols:
             data["TNG_NEG"] = data["TNG_NEG"].shift(self.lags_tng_neg, fill_value=0)
             print(f"   TNG_NEG: shifted by {self.lags_tng_neg} timesteps")
         else:
-            print(f"   TNG_NEG: not shifted because it's in target columns")
+            print("   TNG_NEG: not shifted because it's in target columns")
 
-        print(f" Availability constraints applied")
+        print(" Availability constraints applied")
         return data
 
     def _split_data(self, data: pd.DataFrame, samples_per_day: int):
@@ -449,7 +448,7 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
             test_section = range(N_train + N_val + idx_start, N_train + N_val + idx_end)
             self.test = data.iloc[test_section, :]
 
-        print(f"   Data split completed:")
+        print("   Data split completed:")
         print(f"   Train: {len(self.train):,} samples")
         print(f"   Validation: {len(self.val):,} samples")
         print(f"   Test: {len(self.test):,} samples")
@@ -594,7 +593,7 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
         self.context_past_mask = np.array(self.context_past_mask)
         self.context_future_mask = np.array(self.context_future_mask)
 
-        print(f"  Feature categories:")
+        print("  Feature categories:")
         print(f"   Past features: {sum(self.context_past_mask)} features")
         print(f"   Future features: {sum(self.context_future_mask)} features")
         print(f"   Targets: {sum(self.target_cols_mask)} features")
@@ -683,7 +682,7 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
             test=to_ds(self.test_scaled, self.step_test, self.test),
         )
 
-        print(f"  Datasets created successfully")
+        print("  Datasets created successfully")
 
     def inverse_scale_targets(self, X):
         """Inverse scale target predictions"""
@@ -804,16 +803,16 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
         print("ENHANCED ENERGY TRADING DATA MODULE SUMMARY")
         print("=" * 60)
 
-        print(f"\n  Dataset Information:")
+        print("\n  Dataset Information:")
         print(f"   Total samples: {len(self.data):,}")
         print(f"   Features: {feature_info['total_features']}")
         print(f"   Targets: {len(feature_info['target_features'])}")
 
-        print(f"\n  Target Features:")
+        print("\n  Target Features:")
         for target in feature_info["target_features"]:
             print(f"   - {target}")
 
-        print(f"\n  Feature Categories:")
+        print("\n  Feature Categories:")
         print(
             f"   Past only ({len(feature_info['past_only_features'])}): {feature_info['past_only_features']}"
         )
@@ -824,18 +823,18 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
             f"   Future 6h ({len(feature_info['future_6h_features'])}): {feature_info['future_6h_features']}"
         )
 
-        print(f"\n  Availability Constraints:")
+        print("\n  Availability Constraints:")
         print(
             f"   id_index: {feature_info['lags_applied']['id_index']} timesteps delay"
         )
         print(f"   Targets: {feature_info['lags_applied']['targets']} timesteps delay")
 
-        print(f"\n  Data Splits:")
+        print("\n  Data Splits:")
         print(f"   Train: {len(self.train):,} samples ({self.train_ratio:.1%})")
         print(f"   Validation: {len(self.val):,} samples ({self.val_ratio:.1%})")
         print(f"   Test: {len(self.test):,} samples ({self.test_ratio:.1%})")
 
-        print(f"\n  Model Parameters:")
+        print("\n  Model Parameters:")
         print(f"   Input length (ts_in): {self.ts_in}")
         print(f"   Output length (ts_out): {self.ts_out}")
         print(f"   Batch size: {self.batch_size}")

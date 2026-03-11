@@ -1,12 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from picid.baselines.shared_layers.Transformer_EncDec import (
     Decoder,
     DecoderLayer,
     Encoder,
     EncoderLayer,
-    ConvLayer,
 )
 from picid.baselines.shared_layers.SelfAttention_Family import (
     FullAttention,
@@ -20,7 +18,6 @@ from picid.baselines.shared_layers.Embed_DLinear import (
     ContextEmbedding,
     ContextEmbedding_wo_context,
 )
-import numpy as np
 
 
 class Model(nn.Module):

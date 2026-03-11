@@ -109,7 +109,7 @@ class Crossformer_Forecaster(TransformerForecaster):
 
         if self.decoder_embedding == "DSW":
             not_supported = CLASSIFICATION_TASKS + REGRESSION_TASKS
-            assert not self.task_type in [
+            assert self.task_type not in [
                 "rul",
                 "ahrul",
                 "soc",

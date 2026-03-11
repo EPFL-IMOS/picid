@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import awkward as ak
 
-from pandas.core.generic import NDFrame
 
 from picid.data.data_objects.utils import (
     check_for_nans,
@@ -134,7 +133,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
                         f"numpy (ndarray), or awkward (Array), got {elem_type.__name__}"
                     )
 
-                if not key in self._instance_cls:
+                if key not in self._instance_cls:
                     self._instance_cls[key] = elem_type
                 else:
                     if self._instance_cls[key] != elem_type:
@@ -147,7 +146,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
                 logger.debug("Received an empty list; type cannot be validated.")
 
         elif isinstance(value, allowed_single_types):
-            if not key in self._instance_cls:
+            if key not in self._instance_cls:
                 self._instance_cls[key] = type(value)
             else:
                 if self._instance_cls[key] != type(value):
