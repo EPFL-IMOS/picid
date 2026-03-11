@@ -5,11 +5,7 @@ Uses conftest phmd mock; exercises init and, where possible, load_data with mock
 
 from __future__ import annotations
 
-import numpy as np
-from unittest.mock import patch
-
 # phmd is mocked in conftest; import loaders that depend on it
-from picid.data.datasources.phmd_battery import PHMDBatteryLoader
 from picid.data.datasources.phmd_cbmv3 import CBMv3Loader
 from picid.data.datasources.phmd_hsf15 import HSF15Loader
 from picid.data.datasources.phmd_pronostia import (
@@ -30,13 +26,6 @@ def _minimal_phmd_kwargs(cache_dir="/tmp/phmd_cache"):
         "task_mode": "rul",
         "cache_dir": cache_dir,
     }
-
-
-def test_phmd_battery_loader_init():
-    """PHMDBatteryLoader initializes with minimal kwargs."""
-    loader = PHMDBatteryLoader(**_minimal_phmd_kwargs())
-    assert loader.data_name == "NB14"
-    assert loader.task_mode == "rul"
 
 
 def test_phmd_cbmv3_loader_init():
@@ -81,26 +70,3 @@ def test_phmd_xjtu_sy_loader_init():
     """XJTU_SYLoader initializes."""
     loader = XJTU_SYLoader(**_minimal_phmd_kwargs())
     assert loader.data_name == "NB14"
-
-
-def test_phmd_battery_load_data_mocked():
-    """PHMDBatteryLoader.load_data with mocked _load_data; get_data_name returns data_dict['metadata']."""
-    loader = PHMDBatteryLoader(**_minimal_phmd_kwargs())
-    # PHMD get_data_name() returns self.data_dict["metadata"]
-    fake_data = {
-        "features": {
-            "train": [np.zeros((10, 2))],
-            "val": [np.zeros((5, 2))],
-            "test": [np.zeros((5, 2))],
-        },
-        "target": {
-            "train": [np.zeros((10, 1))],
-            "val": [np.zeros((5, 1))],
-            "test": [np.zeros((5, 1))],
-        },
-        "metadata": ["NB14"],
-    }
-    with patch.object(loader, "_load_data", return_value=fake_data):
-        loader.load_data()
-    assert loader._is_loaded
-    assert loader.get_data_name() == ["NB14"]

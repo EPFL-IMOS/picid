@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from picid.data.datasources.phmd_battery import PHMDBatteryLoader
 from picid.data.datasources.phmd_cbmv3 import CBMv3Loader
 from picid.data.datasources.phmd_hsf15 import HSF15Loader
 from picid.data.datasources.phmd_xjtu_sy import XJTU_SYLoader, merge_data_folds_on_key
@@ -22,100 +21,6 @@ def _phmd_kwargs():
         "task_mode": "rul",
         "cache_dir": "/tmp/phmd",
     }
-
-
-# ----- PHMDBatteryLoader -----
-
-
-def test_phmd_battery_get_features_columns():
-    """_get_features_columns returns meta_data['features'] or NB1 override."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"features": ["v", "i", "t"]}
-    assert loader._get_features_columns() == ["v", "i", "t"]
-
-
-def test_phmd_battery_get_features_columns_nb1():
-    """_get_features_columns returns fixed list when data_name == NB1."""
-    loader = PHMDBatteryLoader(
-        fold=0, data_name="NB1", task_mode="rul", cache_dir="/tmp"
-    )
-    loader.meta_data = {"features": ["other"]}
-    assert loader._get_features_columns() == [
-        "mode",
-        "voltage",
-        "current",
-        "temperature",
-    ]
-
-
-def test_phmd_battery_get_target_column():
-    """_get_target_column returns task_mode."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    assert loader._get_target_column() == "rul"
-
-
-def test_phmd_battery_get_unit_column_single():
-    """_get_unit_column returns identifier[0], or 'unit' if identifier was 'test_name'."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["unit_id"]}
-    assert loader._get_unit_column() == "unit_id"
-
-
-def test_phmd_battery_get_unit_column_test_name():
-    """_get_unit_column maps test_name to unit."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["test_name"]}
-    assert loader._get_unit_column() == "unit"
-
-
-def test_phmd_battery_get_unit_column_asserts_single():
-    """_get_unit_column asserts len(identifier) == 1."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["a", "b"]}
-    with pytest.raises(AssertionError, match="only one"):
-        loader._get_unit_column()
-
-
-def test_phmd_battery_preprocess_fold_test_name_rename():
-    """_preprocess_fold renames test_name to unit when identifier is test_name."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["test_name"]}
-    main_fold = {
-        "train": pd.DataFrame({"test_name": [1, 2], "x": [0.1, 0.2]}),
-        "val": pd.DataFrame({"test_name": [3], "x": [0.3]}),
-        "test": pd.DataFrame({"test_name": [4], "x": [0.4]}),
-    }
-    out = loader._preprocess_fold(main_fold, {})
-    assert "unit" in out["train"].columns
-    assert "test_name" not in out["train"].columns
-
-
-def test_phmd_battery_process_unit_basic():
-    """_process_unit returns dict with features, target, metadata (no NaN/inf)."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, 2.0], "f2": [3.0, 4.0], "target": [0.5, 0.6]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert "features" in out
-    assert out["features"].shape[0] == 2
-    assert "target" in out
-    assert "metadata" in out
-    assert out["metadata"]["unit_id"] == "u1"
-
-
-def test_phmd_battery_process_unit_with_nan():
-    """_process_unit drops NaN rows and logs."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, np.nan], "f2": [3.0, 4.0], "target": [0.5, 0.6]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert len(out["features"]) == 1
-
-
-def test_phmd_battery_process_unit_with_inf():
-    """_process_unit replaces inf in target and drops corresponding rows."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, 2.0], "f2": [3.0, 4.0], "target": [0.5, np.inf]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert len(out["features"]) == 1
 
 
 # ----- CBMv3Loader -----
