@@ -72,6 +72,7 @@ picid-generate-web = "picid.cli.generate_web:main"
 [project.optional-dependencies]
 dev = [
     "nox>=2025.11.12",
+    "pre-commit",
     "pytest",
     "pytest-cov",
     "coverage",
