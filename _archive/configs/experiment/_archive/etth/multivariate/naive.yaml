@@ -8,12 +8,12 @@ defaults:
   - override /task_definition: forecasting/etth_timepfn
   - override /transforms: etth/timepfn_paper
 
-  
+
 evaluator:
-  train: 
+  train:
     task_mode: multivariate
     target_dim_position: null #${oc.select:datasource.target_dim_position}
-    
+
   val:
     task_mode: multivariate
     target_dim_position: null #${oc.select:datasource.target_dim_position}
@@ -22,7 +22,7 @@ evaluator:
     task_mode: multivariate
     target_dim_position: null #${oc.select:datasource.target_dim_position}
 
-datasource: 
+datasource:
   task_mode: multivariate
   mode_mode: other
 

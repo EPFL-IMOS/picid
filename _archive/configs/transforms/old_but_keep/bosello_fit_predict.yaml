@@ -19,7 +19,7 @@ concatenate_y:
     assign_to: y
 
 # Introduce the task dimension to X, y. We
-reshape_X: 
+reshape_X:
   transform:
     _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
@@ -27,10 +27,10 @@ reshape_X:
     apply_to: ['X']
     assign_to: X
 
-reshape_y: 
+reshape_y:
   transform:
     _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a b -> 1 a b"
   metadata:
-    apply_to: ['y'] 
+    apply_to: ['y']
     assign_to: y

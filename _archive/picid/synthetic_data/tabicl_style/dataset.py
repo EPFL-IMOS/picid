@@ -40,7 +40,9 @@ from .prior_config import DEFAULT_FIXED_HP, DEFAULT_SAMPLED_HP
 
 
 warnings.filterwarnings(
-    "ignore", message=".*The PyTorch API of nested tensors is in prototype stage.*", category=UserWarning
+    "ignore",
+    message=".*The PyTorch API of nested tensors is in prototype stage.*",
+    category=UserWarning,
 )
 
 
@@ -117,7 +119,9 @@ class Prior:
         self.replay_small = replay_small
 
     @staticmethod
-    def validate_train_size_range(min_train_size: Union[int, float], max_train_size: Union[int, float]) -> None:
+    def validate_train_size_range(
+        min_train_size: Union[int, float], max_train_size: Union[int, float]
+    ) -> None:
         """
         Checks if the training size range is valid.
 
@@ -137,20 +141,31 @@ class Prior:
             If training size types are mismatched or invalid
         """
         # Check for numeric types only
-        if not isinstance(min_train_size, (int, float)) or not isinstance(max_train_size, (int, float)):
+        if not isinstance(min_train_size, (int, float)) or not isinstance(
+            max_train_size, (int, float)
+        ):
             raise TypeError("Training sizes must be int or float")
 
         # Check for valid ranges based on type
         if isinstance(min_train_size, int) and isinstance(max_train_size, int):
-            assert 0 < min_train_size < max_train_size, "0 < min_train_size < max_train_size"
+            assert (
+                0 < min_train_size < max_train_size
+            ), "0 < min_train_size < max_train_size"
         elif isinstance(min_train_size, float) and isinstance(max_train_size, float):
-            assert 0 < min_train_size < max_train_size < 1, "0 < min_train_size < max_train_size < 1"
+            assert (
+                0 < min_train_size < max_train_size < 1
+            ), "0 < min_train_size < max_train_size < 1"
         else:
-            raise ValueError("Both training sizes must be of the same type (int or float)")
+            raise ValueError(
+                "Both training sizes must be of the same type (int or float)"
+            )
 
     @staticmethod
     def sample_seq_len(
-        min_seq_len: Optional[int], max_seq_len: int, log: bool = False, replay_small: bool = False
+        min_seq_len: Optional[int],
+        max_seq_len: int,
+        log: bool = False,
+        replay_small: bool = False,
     ) -> int:
         """
         Selects a random sequence length within the specified range.
@@ -199,7 +214,11 @@ class Prior:
             return seq_len
 
     @staticmethod
-    def sample_train_size(min_train_size: Union[int, float], max_train_size: Union[int, float], seq_len: int) -> int:
+    def sample_train_size(
+        min_train_size: Union[int, float],
+        max_train_size: Union[int, float],
+        seq_len: int,
+    ) -> int:
         """
         Selects a random training size within the specified range.
 
@@ -317,7 +336,12 @@ class Prior:
             unique_mask = [len(torch.unique(xi[:, j])) > 1 for j in range(di)]
             di_new = sum(unique_mask)
             # Create new tensor with only informative features, padding the rest
-            xi_new = F.pad(xi[:, unique_mask], pad=(0, num_features - di_new), mode="constant", value=0)
+            xi_new = F.pad(
+                xi[:, unique_mask],
+                pad=(0, num_features - di_new),
+                mode="constant",
+                value=0,
+            )
             return xi_new, torch.tensor(di_new, device=xi.device)
 
         # Process each dataset in the batch independently
@@ -327,7 +351,13 @@ class Prior:
         return X_new, d_new
 
     @staticmethod
-    def sanity_check(X: Tensor, y: Tensor, train_size: int, n_attempts: int = 10, min_classes: int = 2) -> bool:
+    def sanity_check(
+        X: Tensor,
+        y: Tensor,
+        train_size: int,
+        n_attempts: int = 10,
+        min_classes: int = 2,
+    ) -> bool:
         """
         Verifies that both train and test sets contain all classes.
 
@@ -368,7 +398,10 @@ class Prior:
             # and at least min_classes different classes must be present
             unique_tr = torch.unique(yi[:train_size])
             unique_te = torch.unique(yi[train_size:])
-            return set(unique_tr.tolist()) == set(unique_te.tolist()) and len(unique_tr) >= min_classes
+            return (
+                set(unique_tr.tolist()) == set(unique_te.tolist())
+                and len(unique_tr) >= min_classes
+            )
 
         # Check each dataset in the batch
         for i, (xi, yi) in enumerate(zip(X, y)):
@@ -557,7 +590,9 @@ class SCMPrior(Prior):
 
             # Add batch dim for single dataset to be compatible with delete_unique_features and sanity_check
             X, y = X.unsqueeze(0), y.unsqueeze(0)
-            d = torch.tensor([params["num_features"]], device=self.device, dtype=torch.long)
+            d = torch.tensor(
+                [params["num_features"]], device=self.device, dtype=torch.long
+            )
 
             # Only keep valid datasets with sufficient features and balanced classes
             X, d = self.delete_unique_features(X, d)
@@ -565,7 +600,9 @@ class SCMPrior(Prior):
                 return X.squeeze(0), y.squeeze(0), d.squeeze(0)
 
     @torch.no_grad()
-    def get_batch(self, batch_size: Optional[int] = None) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def get_batch(
+        self, batch_size: Optional[int] = None
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Generates a batch of datasets by first creating a parameter list and then processing it.
 
@@ -609,9 +646,14 @@ class SCMPrior(Prior):
         # Determine global seq_len/train_size if not per-group
         if not self.seq_len_per_gp:
             global_seq_len = self.sample_seq_len(
-                self.min_seq_len, self.max_seq_len, log=self.log_seq_len, replay_small=self.replay_small
+                self.min_seq_len,
+                self.max_seq_len,
+                log=self.log_seq_len,
+                replay_small=self.replay_small,
             )
-            global_train_size = self.sample_train_size(self.min_train_size, self.max_train_size, global_seq_len)
+            global_train_size = self.sample_train_size(
+                self.min_train_size, self.max_train_size, global_seq_len
+            )
 
         # Generate parameters for each group
         for gp_idx in range(num_gps):
@@ -624,11 +666,18 @@ class SCMPrior(Prior):
             # If per-group, sample seq_len and train_size for this group. Otherwise, use global ones
             if self.seq_len_per_gp:
                 gp_seq_len = self.sample_seq_len(
-                    self.min_seq_len, self.max_seq_len, log=self.log_seq_len, replay_small=self.replay_small
+                    self.min_seq_len,
+                    self.max_seq_len,
+                    log=self.log_seq_len,
+                    replay_small=self.replay_small,
                 )
-                gp_train_size = self.sample_train_size(self.min_train_size, self.max_train_size, gp_seq_len)
+                gp_train_size = self.sample_train_size(
+                    self.min_train_size, self.max_train_size, gp_seq_len
+                )
                 # Adjust max features based on seq_len for this group
-                gp_max_features = self.adjust_max_features(gp_seq_len, self.max_features)
+                gp_max_features = self.adjust_max_features(
+                    gp_seq_len, self.max_features
+                )
             else:
                 gp_seq_len = global_seq_len
                 gp_train_size = global_train_size
@@ -640,14 +689,20 @@ class SCMPrior(Prior):
             # Generate parameters for each subgroup
             for subgp_idx in range(num_subgps_in_gp):
                 # Determine actual size for this subgroup
-                actual_subgp_size = min(size_per_subgp, actual_gp_size - subgp_idx * size_per_subgp)
+                actual_subgp_size = min(
+                    size_per_subgp, actual_gp_size - subgp_idx * size_per_subgp
+                )
                 if actual_subgp_size <= 0:
                     break
 
                 # Subgroups share prior type, number of features, and sampled HPs
                 subgp_prior_type = self.get_prior()
-                subgp_num_features = round(np.random.uniform(self.min_features, gp_max_features))
-                subgp_sampled_hp = {k: v() if callable(v) else v for k, v in group_sampled_hp.items()}
+                subgp_num_features = round(
+                    np.random.uniform(self.min_features, gp_max_features)
+                )
+                subgp_sampled_hp = {
+                    k: v() if callable(v) else v for k, v in group_sampled_hp.items()
+                }
 
                 # Generate parameters for each dataset in this subgroup
                 for ds_idx in range(actual_subgp_size):
@@ -664,7 +719,9 @@ class SCMPrior(Prior):
                         "train_size": gp_train_size,
                         # If per-gp setting, use adjusted max features for this group because we use nested tensors
                         # If not per-gp setting, use global max features to fix size for concatenation
-                        "max_features": gp_max_features if self.seq_len_per_gp else self.max_features,
+                        "max_features": gp_max_features
+                        if self.seq_len_per_gp
+                        else self.max_features,
                         **subgp_sampled_hp,  # sampled HPs for this group
                         "prior_type": subgp_prior_type,
                         "num_features": subgp_num_features,
@@ -681,9 +738,14 @@ class SCMPrior(Prior):
         # rather than generating them on-the-fly.
         if self.n_jobs > 1 and self.device == "cpu":
             with joblib.parallel_config(
-                n_jobs=self.n_jobs, backend="loky", inner_max_num_threads=self.num_threads_per_generate
+                n_jobs=self.n_jobs,
+                backend="loky",
+                inner_max_num_threads=self.num_threads_per_generate,
             ):
-                results = joblib.Parallel()(joblib.delayed(self.generate_dataset)(params) for params in param_list)
+                results = joblib.Parallel()(
+                    joblib.delayed(self.generate_dataset)(params)
+                    for params in param_list
+                )
         else:
             results = [self.generate_dataset(params) for params in param_list]
 
@@ -700,10 +762,18 @@ class SCMPrior(Prior):
             y = torch.stack(y_list).to(self.device)  # (B, T)
 
         # Metadata (always regular tensors)
-        d = torch.stack(d_list).to(self.device)  # Actual number of features after filtering out constant ones
-        seq_lens = torch.tensor([params["seq_len"] for params in param_list], device=self.device, dtype=torch.long)
+        d = torch.stack(d_list).to(
+            self.device
+        )  # Actual number of features after filtering out constant ones
+        seq_lens = torch.tensor(
+            [params["seq_len"] for params in param_list],
+            device=self.device,
+            dtype=torch.long,
+        )
         train_sizes = torch.tensor(
-            [params["train_size"] for params in param_list], device=self.device, dtype=torch.long
+            [params["train_size"] for params in param_list],
+            device=self.device,
+            dtype=torch.long,
         )
 
         return X, y, d, seq_lens, train_sizes
@@ -721,7 +791,9 @@ class SCMPrior(Prior):
             The selected prior type name
         """
         if self.prior_type == "mix_scm":
-            return np.random.choice(["mlp_scm", "tree_scm"], p=self.fixed_hp.get("mix_probas", [0.7, 0.3]))
+            return np.random.choice(
+                ["mlp_scm", "tree_scm"], p=self.fixed_hp.get("mix_probas", [0.7, 0.3])
+            )
         else:
             return self.prior_type
 
@@ -792,7 +864,9 @@ class DummyPrior(Prior):
         self.device = device
 
     @torch.no_grad()
-    def get_batch(self, batch_size: Optional[int] = None) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def get_batch(
+        self, batch_size: Optional[int] = None
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Generates a batch of random datasets for testing purposes.
 
@@ -825,8 +899,12 @@ class DummyPrior(Prior):
         """
 
         batch_size = batch_size or self.batch_size
-        seq_len = self.sample_seq_len(self.min_seq_len, self.max_seq_len, log=self.log_seq_len)
-        train_size = self.sample_train_size(self.min_train_size, self.max_train_size, seq_len)
+        seq_len = self.sample_seq_len(
+            self.min_seq_len, self.max_seq_len, log=self.log_seq_len
+        )
+        train_size = self.sample_train_size(
+            self.min_train_size, self.max_train_size, seq_len
+        )
 
         X = torch.randn(batch_size, seq_len, self.max_features, device=self.device)
 
@@ -993,7 +1071,9 @@ class PriorDataset(IterableDataset):
         self.device = device
         self.prior_type = prior_type
 
-    def get_batch(self, batch_size: Optional[int] = None) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def get_batch(
+        self, batch_size: Optional[int] = None
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Generate a new batch of datasets.
 

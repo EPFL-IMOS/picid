@@ -37,7 +37,7 @@ DATASET_SEQ_MAP["nb14"]="64 128" # Example with multiple lengths
 for dataset in "${!DATASET_SEQ_MAP[@]}"; do
   for batch_size in "${BATCH_SIZES[@]}"; do
     for seq in ${DATASET_SEQ_MAP[$dataset]}; do
-      
+
       # Determine which array of architecture NAMES to use
       declare -n arch_name_list="ARCHS_FOR_SEQ_LEN_${seq}"
 
@@ -117,7 +117,7 @@ done
 # for dataset in "${!DATASET_SEQ_MAP[@]}"; do
 #   for batch_size in "${BATCH_SIZES[@]}"; do
 #     for seq in ${DATASET_SEQ_MAP[$dataset]}; do
-      
+
 #       # FIX 2: Create a temporary variable to hold the correct array name.
 #       declare -n arch_list="ARCHS_${seq}" # nameref to the correct array
 
@@ -130,9 +130,9 @@ done
 
 #         # 2. Replace the placeholder with the actual number
 #         final_arch_string="${arch//__INPUT_CHANNELS__/$in_channels}"
-        
 
-        
+
+
 #         echo "--- Running $dataset with seq_len=$seq ---"
 #         python picid/run.py \
 #           experiment=${dataset}/reconstruction/residual_autoencoder \

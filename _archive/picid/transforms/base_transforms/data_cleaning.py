@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class FillTransform(NoFitPerSegmentMixin, DenseTransform):
-
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs
 
@@ -22,7 +21,6 @@ class FillTransform(NoFitPerSegmentMixin, DenseTransform):
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
     def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
-
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
