@@ -102,6 +102,21 @@ markers = [
 [tool.pylint."messages control"]
 disable = ["logging-fstring-interpolation"]
 
+[tool.ruff]
+src = ["picid"]
+exclude = ["local_packages", "scripts"]
+
+[tool.mypy]
+packages = ["picid"]
+exclude = ["picid/data/datasources/picasso/"]
+# This is the "magic" setting: it ignores errors from libraries that don't have types
+ignore_missing_imports = true
+follow_imports = "silent"
+# Don't check the body of functions that don't have type hints
+check_untyped_defs = false
+# If a function doesn't have a return type, Mypy stays quiet
+disallow_untyped_defs = false
+
 [tool.coverage.run]
 # Only measure coverage for your own code
 source = ["picid"]
