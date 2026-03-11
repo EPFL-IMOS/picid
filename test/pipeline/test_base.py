@@ -116,7 +116,9 @@ class TestToNumpy:
 class TestProcessOutputs:
     """Validates process_outputs converts predictions/targets and optionally adds batch_idx/unit_id."""
 
-    def test_predictions_and_targets_converted(self, mock_evaluators, phm_model_out_tensors):
+    def test_predictions_and_targets_converted(
+        self, mock_evaluators, phm_model_out_tensors
+    ):
         """Doc: pipeline/base.py - process_outputs converts predictions and targets to numpy."""
         module = ConcreteEvaluatorLightningModule(evaluators=mock_evaluators)
         batch = {}
@@ -180,7 +182,9 @@ class TestCustomEvaluatorLightningModuleSteps:
         module.training_step(phm_batch_rul, 0, _evaluate=False)
         assert not mock_evaluators["train"]._updates
 
-    def test_validation_step_updates_val_evaluator(self, mock_evaluators, phm_batch_rul):
+    def test_validation_step_updates_val_evaluator(
+        self, mock_evaluators, phm_batch_rul
+    ):
         """Doc: pipeline/base.py - validation_step updates val evaluator."""
         module = ConcreteEvaluatorLightningModule(evaluators=mock_evaluators)
         module.validation_step(phm_batch_rul, 0)
@@ -239,7 +243,9 @@ class TestCustomEvaluatorLightningModuleSteps:
 class TestBackboneWrapperLightningModule:
     """Validates backbone forward, model_step, and step delegation."""
 
-    def test_forward_returns_backbone_output(self, mock_evaluators, mock_backbone, phm_batch_rul):
+    def test_forward_returns_backbone_output(
+        self, mock_evaluators, mock_backbone, phm_batch_rul
+    ):
         """Doc: pipeline/base.py - forward(batch) returns backbone(batch)."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
@@ -252,7 +258,9 @@ class TestBackboneWrapperLightningModule:
         assert "predictions" in out
         assert "targets" in out
 
-    def test_model_step_sets_model_state_and_returns_forward(self, mock_evaluators, mock_backbone, phm_batch_rul):
+    def test_model_step_sets_model_state_and_returns_forward(
+        self, mock_evaluators, mock_backbone, phm_batch_rul
+    ):
         """Doc: pipeline/base.py - model_step sets batch['model_state'] and returns forward(batch)."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
@@ -276,7 +284,9 @@ class TestBackboneWrapperLightningModule:
         )
         module.setup("fit")
 
-    def test_validation_step_calls_model_step_val(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+    def test_validation_step_calls_model_step_val(
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
+    ):
         """BackboneWrapperLightningModule._validation_step calls model_step with stage=val (lines 396-397)."""
         module = TrainingLightningModule(
             backbone=mock_backbone,
@@ -288,7 +298,9 @@ class TestBackboneWrapperLightningModule:
         module.validation_step(phm_batch_rul, 0)
         assert phm_batch_rul["model_state"] == "val"
 
-    def test_test_step_calls_model_step_test(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+    def test_test_step_calls_model_step_test(
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
+    ):
         """BackboneWrapperLightningModule._test_step calls model_step with stage=test (lines 409-410, 422-423)."""
         module = TrainingLightningModule(
             backbone=mock_backbone,
@@ -300,7 +312,9 @@ class TestBackboneWrapperLightningModule:
         module.test_step(phm_batch_rul, 0)
         assert phm_batch_rul["model_state"] == "test"
 
-    def test_repr_includes_backbone_and_loss(self, mock_evaluators, mock_backbone, mock_loss):
+    def test_repr_includes_backbone_and_loss(
+        self, mock_evaluators, mock_backbone, mock_loss
+    ):
         """Doc: pipeline/base.py - __repr__ includes backbone and loss."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
@@ -322,7 +336,9 @@ class TestBackboneWrapperLightningModule:
 class TestFitPredictWrapperLightningModule:
     """Validates fit-predict batch handling, get_task_info, model_step_fit/predict branches."""
 
-    def test_init_debug_logs_warning(self, mock_evaluators, mock_fit_predict_backbone, caplog):
+    def test_init_debug_logs_warning(
+        self, mock_evaluators, mock_fit_predict_backbone, caplog
+    ):
         """Doc: pipeline/base.py - when debug=True, logger.warning is called."""
         with patch("picid.pipeline.base.logger") as mock_logger:
             FitPredictWrapperLightningModule(
@@ -341,7 +357,9 @@ class TestFitPredictWrapperLightningModule:
         r = repr(module)
         assert "FitPredictWrapperLightningModule" in r
 
-    def test_get_task_info_uses_task_desc_when_present(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_get_task_info_uses_task_desc_when_present(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """Doc: pipeline/base.py - get_task_info returns task_desc from batch or default."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -350,7 +368,9 @@ class TestFitPredictWrapperLightningModule:
         info = module.get_task_info(phm_fit_predict_batch)
         assert "Task 1 of 3" in info
 
-    def test_get_task_info_default_when_no_task_desc(self, mock_evaluators, mock_fit_predict_backbone):
+    def test_get_task_info_default_when_no_task_desc(
+        self, mock_evaluators, mock_fit_predict_backbone
+    ):
         """When task_desc missing, uses Task {task_idx+1} of {task_num}."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -360,19 +380,25 @@ class TestFitPredictWrapperLightningModule:
         info = module.get_task_info(batch)
         assert "Task 3 of 5" in info
 
-    def test_batch_to_fit_predict_valid_batch(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_batch_to_fit_predict_valid_batch(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """Doc: datasets.md - context (1, n_samples, n_features), target (1, n_samples, n_targets); squeeze to 2D."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
             evaluators=mock_evaluators,
         )
-        X, y = module._FitPredictWrapperLightningModule__batch_to_fit_predict(phm_fit_predict_batch)
+        X, y = module._FitPredictWrapperLightningModule__batch_to_fit_predict(
+            phm_fit_predict_batch
+        )
         assert X.ndim == 2
         assert y.ndim == 2
         assert X.shape[0] == 50
         assert y.shape[0] == 50
 
-    def test_batch_to_fit_predict_asserts_batch_size_one(self, mock_evaluators, mock_fit_predict_backbone):
+    def test_batch_to_fit_predict_asserts_batch_size_one(
+        self, mock_evaluators, mock_fit_predict_backbone
+    ):
         """Doc: pipeline/base.py - __batch_to_fit_predict requires context/target shape[0]==1."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -382,7 +408,9 @@ class TestFitPredictWrapperLightningModule:
         with pytest.raises(AssertionError, match="Expected batch size of 1"):
             module._FitPredictWrapperLightningModule__batch_to_fit_predict(batch)
 
-    def test_model_step_fit_single_target_no_predict_after(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_model_step_fit_single_target_no_predict_after(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """Doc: pipeline/base.py - model_step_fit with allows_multi_target, single target, predict_after_training=False."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -396,7 +424,9 @@ class TestFitPredictWrapperLightningModule:
         assert out["targets"].ndim == 3
         assert out["predictions"].shape[0] == 50 and out["targets"].shape[0] == 50
 
-    def test_model_step_predict_returns_predictions_and_targets(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_model_step_predict_returns_predictions_and_targets(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """Doc: pipeline/base.py - model_step_predict loads model, predicts, returns dict with predictions, targets, loss."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -409,7 +439,10 @@ class TestFitPredictWrapperLightningModule:
         assert out["loss"].item() == 1
 
     def test_model_step_predict_multi_target_loads_per_target(
-        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch_multi_target
+        self,
+        mock_evaluators,
+        mock_fit_predict_backbone,
+        phm_fit_predict_batch_multi_target,
     ):
         """model_step_predict with allows_multi_target=False and n_targets>1 loads each target model (lines 591-596)."""
         module = FitPredictWrapperLightningModule(
@@ -419,9 +452,14 @@ class TestFitPredictWrapperLightningModule:
         module.model_step_fit(phm_fit_predict_batch_multi_target)
         out = module.model_step_predict(phm_fit_predict_batch_multi_target)
         assert out["predictions"].ndim == 3
-        assert "0_0" in mock_fit_predict_backbone._models and "0_1" in mock_fit_predict_backbone._models
+        assert (
+            "0_0" in mock_fit_predict_backbone._models
+            and "0_1" in mock_fit_predict_backbone._models
+        )
 
-    def test_validation_step_calls_model_step_predict(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_validation_step_calls_model_step_predict(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """FitPredictWrapperLightningModule._validation_step calls model_step_predict (lines 653-654)."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -431,7 +469,9 @@ class TestFitPredictWrapperLightningModule:
         module.validation_step(phm_fit_predict_batch, 0)
         assert mock_evaluators["val"]._updates
 
-    def test_test_step_calls_model_step_predict(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_test_step_calls_model_step_predict(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """FitPredictWrapperLightningModule._test_step calls model_step_predict (lines 666-667)."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -456,7 +496,10 @@ class TestFitPredictWrapperLightningModule:
         assert out["predictions"].ndim == 3
 
     def test_model_step_fit_multi_target_virtual_tasks(
-        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch_multi_target
+        self,
+        mock_evaluators,
+        mock_fit_predict_backbone,
+        phm_fit_predict_batch_multi_target,
     ):
         """Doc: pipeline/base.py - when allows_multi_target=False and n_targets>1, fit per target and serialize_model(task_idx_targetidx)."""
         module = FitPredictWrapperLightningModule(
@@ -468,9 +511,14 @@ class TestFitPredictWrapperLightningModule:
         assert "loss" in out
         assert out["predictions"].ndim == 3
         assert out["targets"].shape[-1] == 2
-        assert "0_0" in mock_fit_predict_backbone._models and "0_1" in mock_fit_predict_backbone._models
+        assert (
+            "0_0" in mock_fit_predict_backbone._models
+            and "0_1" in mock_fit_predict_backbone._models
+        )
 
-    def test_training_step_calls_super_with_evaluate_false(self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch):
+    def test_training_step_calls_super_with_evaluate_false(
+        self, mock_evaluators, mock_fit_predict_backbone, phm_fit_predict_batch
+    ):
         """Doc: pipeline/base.py - FitPredictWrapperLightningModule.training_step overrides with _evaluate=False."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -479,7 +527,9 @@ class TestFitPredictWrapperLightningModule:
         loss = module.training_step(phm_fit_predict_batch, 0)
         assert not mock_evaluators["train"]._updates
 
-    def test_automatic_optimization_false(self, mock_evaluators, mock_fit_predict_backbone):
+    def test_automatic_optimization_false(
+        self, mock_evaluators, mock_fit_predict_backbone
+    ):
         """Doc: pipeline/base.py - automatic_optimization is False for fit-predict."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -487,7 +537,9 @@ class TestFitPredictWrapperLightningModule:
         )
         assert module.automatic_optimization is False
 
-    def test_configure_optimizers_returns_none(self, mock_evaluators, mock_fit_predict_backbone):
+    def test_configure_optimizers_returns_none(
+        self, mock_evaluators, mock_fit_predict_backbone
+    ):
         """Doc: pipeline/base.py - configure_optimizers() returns None."""
         module = FitPredictWrapperLightningModule(
             backbone=mock_fit_predict_backbone,
@@ -512,7 +564,9 @@ class TestFitPredictWrapperLightningModule:
 class TestConstantLossLightningModule:
     """Validates model_step overwrites loss with constant and configure_optimizers returns None."""
 
-    def test_model_step_returns_constant_loss(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+    def test_model_step_returns_constant_loss(
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
+    ):
         """Doc: pipeline/base.py - ConstantLossLightningModule.model_step sets loss to tensor([1])."""
         module = ConstantLossLightningModule(
             backbone=mock_backbone,
@@ -524,7 +578,9 @@ class TestConstantLossLightningModule:
         out = module.model_step(phm_batch_rul, stage="train")
         assert out["loss"].item() == 1
 
-    def test_automatic_optimization_false(self, mock_evaluators, mock_backbone, mock_loss):
+    def test_automatic_optimization_false(
+        self, mock_evaluators, mock_backbone, mock_loss
+    ):
         """Doc: pipeline/base.py - automatic_optimization is False."""
         module = ConstantLossLightningModule(
             backbone=mock_backbone,
@@ -535,7 +591,9 @@ class TestConstantLossLightningModule:
         )
         assert module.automatic_optimization is False
 
-    def test_configure_optimizers_returns_none(self, mock_evaluators, mock_backbone, mock_loss):
+    def test_configure_optimizers_returns_none(
+        self, mock_evaluators, mock_backbone, mock_loss
+    ):
         """Doc: pipeline/base.py - configure_optimizers() returns None."""
         module = ConstantLossLightningModule(
             backbone=mock_backbone,
@@ -555,7 +613,9 @@ class TestConstantLossLightningModule:
 class TestTrainingLightningModule:
     """Validates model_step applies loss and configure_optimizers with/without scheduler."""
 
-    def test_model_step_returns_loss_from_loss_module(self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul):
+    def test_model_step_returns_loss_from_loss_module(
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
+    ):
         """Doc: pipeline/base.py - model_step(batch, stage) = loss(forward(batch), batch)."""
         module = TrainingLightningModule(
             backbone=mock_backbone,
@@ -568,7 +628,9 @@ class TestTrainingLightningModule:
         assert "loss" in out
         assert out["loss"].requires_grad or not out["loss"].requires_grad
 
-    def test_configure_optimizers_without_scheduler(self, mock_evaluators, mock_backbone, mock_loss):
+    def test_configure_optimizers_without_scheduler(
+        self, mock_evaluators, mock_backbone, mock_loss
+    ):
         """Doc: pipeline/base.py - configure_optimizers with scheduler_factory=None returns only optimizer."""
         module = TrainingLightningModule(
             backbone=mock_backbone,
@@ -581,10 +643,14 @@ class TestTrainingLightningModule:
         assert "optimizer" in cfg
         assert "lr_scheduler" not in cfg
 
-    def test_configure_optimizers_with_scheduler(self, mock_evaluators, mock_backbone, mock_loss):
+    def test_configure_optimizers_with_scheduler(
+        self, mock_evaluators, mock_backbone, mock_loss
+    ):
         """Doc: pipeline/base.py - configure_optimizers with scheduler_factory returns optimizer and lr_scheduler."""
+
         def scheduler_factory(optimizer):
             return torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
+
         module = TrainingLightningModule(
             backbone=mock_backbone,
             loss=mock_loss,

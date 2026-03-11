@@ -54,7 +54,7 @@ def test_init_success_dense(dense_data_dict):
         label_len=0,
         pred_len=5,
         stride=1,
-        padding_left_flag=False
+        padding_left_flag=False,
     )
     # len(ds) for dense data with padding_left_flag=False:
     #   required_len = seq_len + pred_len + pred_offset = 2 + 5 + 0 = 7
@@ -106,7 +106,7 @@ def test_getitem_structure_and_values(dense_data_dict):
         pred_len=1,
         stride=1,
         suffixes=["_X", "_Y"],
-        padding_left_flag=False
+        padding_left_flag=False,
     )
 
     # Fetch index 0 (Scalar).
@@ -134,7 +134,12 @@ def test_ragged_input_handling(ragged_data_dict):
     """
     print(ragged_data_dict)
     ds = SlidingWindowBatchDataset(
-        data_dict=ragged_data_dict, seq_len=2, label_len=0, pred_len=1, stride=1, padding_left_flag=False
+        data_dict=ragged_data_dict,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,
     )
 
     assert len(ds) == 21

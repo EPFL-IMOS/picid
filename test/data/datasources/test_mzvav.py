@@ -1,6 +1,7 @@
 """
 Tests for MZVAVLoader with mocked I/O (read_data).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -78,20 +79,30 @@ def test_mzvav_split_data_no_op(mzvav_kwargs):
 def test_mzvav_read_data_with_real_csv(tmp_path, mzvav_kwargs):
     """read_data runs with a minimal CSV that has required dates and no NaN after ffill (coverage)."""
     dates = [
-        "2/12/2008 00:00", "2/12/2008 01:00",
-        "5/7/2008 00:00", "5/7/2008 01:00",
-        "8/28/2007 00:00", "8/29/2007 00:00", "8/30/2007 00:00",
-        "5/6/2008 00:00", "8/31/2007 00:00", "5/15/2008 00:00",
-        "9/1/2007 00:00", "9/2/2007 00:00",
-        "9/5/2007 00:00", "9/6/2007 00:00",
+        "2/12/2008 00:00",
+        "2/12/2008 01:00",
+        "5/7/2008 00:00",
+        "5/7/2008 01:00",
+        "8/28/2007 00:00",
+        "8/29/2007 00:00",
+        "8/30/2007 00:00",
+        "5/6/2008 00:00",
+        "8/31/2007 00:00",
+        "5/15/2008 00:00",
+        "9/1/2007 00:00",
+        "9/2/2007 00:00",
+        "9/5/2007 00:00",
+        "9/6/2007 00:00",
         "5/8/2008 00:00",
     ]
     csv_path = tmp_path / "mzvav.csv"
-    df = pd.DataFrame({
-        "date": dates,
-        "feat": np.ones(len(dates)),
-        "fault": np.zeros(len(dates)),
-    })
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "feat": np.ones(len(dates)),
+            "fault": np.zeros(len(dates)),
+        }
+    )
     df["date"] = pd.to_datetime(df["date"], format="%m/%d/%Y %H:%M")
     df = df.set_index("date")
     df.to_csv(csv_path, date_format="%m/%d/%Y %H:%M")

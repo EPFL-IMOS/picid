@@ -14,6 +14,7 @@ Coverage target: 100% functional coverage of orchestration logic (strategy, mult
 data_transform, base_transform) and critical secondary paths. Do not proceed to Phase 2
 until all tests pass and coverage target is met.
 """
+
 from __future__ import annotations
 
 import copy
@@ -65,7 +66,9 @@ class TestPostprocessCharacterization:
         # Mixed: one Mapping, one non-Mapping -> not "all Mapping", not "all non-Mapping" -> ValueError
         data = [{"features": np.array([1.0])}, 42]
         metadata = {"assign_to_map": ["features"]}
-        with pytest.raises(ValueError, match="not recognised|not recognized|not handled"):
+        with pytest.raises(
+            ValueError, match="not recognised|not recognized|not handled"
+        ):
             postprocess_transformed_data(data, metadata)
 
     def test_postprocess_single_array_shape_and_dtype_preserved(self):
@@ -167,17 +170,22 @@ class TestMultisourceFitCharacterization:
 
     def test_fit_multi_source_ragged_ragged_supporting_concatenates_ak(self):
         """Ragged data + ragged-supporting transform: fit receives single ak array."""
+
         class FitCaptureRagged(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
             def __init__(self):
                 super().__init__()
                 self.fitted = False
                 self.fitted_data = None
 
-            def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> None:
+            def fit_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> None:
                 self.fitted_data = data
                 self.fitted = True
 
-            def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> ak.Array:
+            def transform_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> ak.Array:
                 return data[list(data.keys())[0]] * 2
 
         # RaggedTransform marker so path is ragged-supporting
@@ -288,7 +296,9 @@ class TestMetadataPropagation:
         captured = {}
 
         class CaptureMetaTransform(NoFitPerSegmentMixin, DenseTransform):
-            def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
+            def transform_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> np.ndarray:
                 captured["metadata"] = copy.deepcopy(metadata)
                 return data[list(data.keys())[0]] * 2
 
@@ -304,7 +314,9 @@ class TestMetadataPropagation:
         )
         meta = captured["metadata"]
         assert "mode" in meta
-        assert meta["apply_to_keys"] == ["features"] or meta["apply_to_keys"] == "features"
+        assert (
+            meta["apply_to_keys"] == ["features"] or meta["apply_to_keys"] == "features"
+        )
         assert "assign_to_map" in meta
 
     def test_metadata_in_fit_data(self):
@@ -316,11 +328,15 @@ class TestMetadataPropagation:
                 super().__init__()
                 self.fitted = False
 
-            def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> None:
+            def fit_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> None:
                 captured["fit_metadata"] = copy.deepcopy(metadata)
                 self.fitted = True
 
-            def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
+            def transform_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> np.ndarray:
                 return data[list(data.keys())[0]]
 
         strategy = TransformStrategy()
@@ -398,7 +414,9 @@ class TestNoFitConcatAlongAxisMixinCharacterization:
             out = out["features"]
         assert isinstance(out, np.ndarray)
         # Concat [[1,2],[3,4]] -> [1,2,3,4], then *2 -> [2,4,6,8]
-        np.testing.assert_array_almost_equal(out.flatten(), np.array([2.0, 4.0, 6.0, 8.0]))
+        np.testing.assert_array_almost_equal(
+            out.flatten(), np.array([2.0, 4.0, 6.0, 8.0])
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -406,16 +424,24 @@ class TestNoFitConcatAlongAxisMixinCharacterization:
 # -----------------------------------------------------------------------------
 
 
-class DummyInverseTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
+class DummyInverseTransform(
+    NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
+):
     """Dummy transform with inverse for Phase 1 characterization."""
 
-    def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
+    def transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> np.ndarray:
         return data[list(data.keys())[0]] * 2
 
-    def inverse_transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> np.ndarray:
+    def inverse_transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> np.ndarray:
         return data[list(data.keys())[0]] / 2
 
-    def inverse_transform(self, data: NamedTransformInput, metadata: Optional[Dict] = None) -> Any:
+    def inverse_transform(
+        self, data: NamedTransformInput, metadata: Optional[Dict] = None
+    ) -> Any:
         key = list(data.keys())[0]
         return data[key] / 2
 

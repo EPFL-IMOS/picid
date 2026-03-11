@@ -1,10 +1,13 @@
 """Tests for FaultClassificationBatchDataset (picid.data.datasets.fault_classification_dataset)."""
+
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from picid.data.datasets.fault_classification_dataset import FaultClassificationBatchDataset
+from picid.data.datasets.fault_classification_dataset import (
+    FaultClassificationBatchDataset,
+)
 
 
 @pytest.fixture

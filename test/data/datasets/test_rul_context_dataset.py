@@ -2,6 +2,7 @@
 Tests for RULContextBatchDataset with real synthetic data.
 Covers pred_len assertion, get_unit_id, extract_unit_id/extract_unit_name, __getitem__ structure.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -25,7 +26,11 @@ def rul_dense_data():
 def meta_with_unit_ids():
     return {
         "unit_ids": {"train": [10, 20, 30], "val": [10, 20, 30], "test": [10, 20, 30]},
-        "unit_names": {"train": ["u0", "u1", "u2"], "val": ["u0", "u1", "u2"], "test": ["u0", "u1", "u2"]},
+        "unit_names": {
+            "train": ["u0", "u1", "u2"],
+            "val": ["u0", "u1", "u2"],
+            "test": ["u0", "u1", "u2"],
+        },
         "current_data_split": "train",
     }
 
@@ -146,6 +151,7 @@ def test_rul_context_get_collate_fn(rul_dense_data):
     )
     fn = ds.get_collate_fn()
     from picid.data.datasets.collate_functions import collate_key_value_batch
+
     assert fn is collate_key_value_batch
 
 

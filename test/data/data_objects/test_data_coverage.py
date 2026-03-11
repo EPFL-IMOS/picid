@@ -1,6 +1,7 @@
 """
 Coverage-focused tests for picid.data.data_objects.data (DatasetContainer, get_sanitized_data, etc.).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -157,8 +158,6 @@ def test_split_container_validate_inconsistent_unit_counts_raises():
     }
     with pytest.raises(ValueError, match="Inconsistent number of units"):
         c.validate()
-
-
 
 
 def test_dataset_container_copy_manifest_none():

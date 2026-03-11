@@ -20,7 +20,9 @@ from picid.evaluator.buffer import PredictionBuffer
 # =============================================================================
 
 
-def transform_nominal_health(preds: np.ndarray, targets: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def transform_nominal_health(
+    preds: np.ndarray, targets: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Gold Standard: Nominal (healthy) PHM data transform.
 
@@ -33,7 +35,9 @@ def transform_nominal_health(preds: np.ndarray, targets: np.ndarray) -> tuple[np
     return preds.copy(), targets.copy()
 
 
-def transform_fault_signature(preds: np.ndarray, targets: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def transform_fault_signature(
+    preds: np.ndarray, targets: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Gold Standard: Fault/degradation signature transform.
 

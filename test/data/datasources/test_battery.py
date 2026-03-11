@@ -1,6 +1,7 @@
 """
 Tests for BatteryLoader with mocked I/O (pd.read_csv).
 """
+
 from __future__ import annotations
 
 import numpy as np

@@ -336,55 +336,63 @@ def mock_df_partial_valid_metric(base_config_columns):
     data = []
     # Config seq_len=10: all three seeds with valid test/mse
     for seed in (72, 88, 101):
-        data.append({
+        data.append(
+            {
+                MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+                DATASET_COL: "DS1",
+                MODEL_SEED_COL: seed,
+                "run_name": f"run_10_{seed}",
+                OPT_METRIC_COL: "test/mse",
+                OPT_MODE_COL: "min",
+                "task_definition.seq_len": 10,
+                "optimization.lr": 0.001,
+                "test/mse": 0.4,
+                "val/mse": 0.42,
+            }
+        )
+    # Config seq_len=20: seeds 72 (valid), 88 (NaN), 101 (valid)
+    data.append(
+        {
             MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
             DATASET_COL: "DS1",
-            MODEL_SEED_COL: seed,
-            "run_name": f"run_10_{seed}",
+            MODEL_SEED_COL: 72,
+            "run_name": "run_20_72",
             OPT_METRIC_COL: "test/mse",
             OPT_MODE_COL: "min",
-            "task_definition.seq_len": 10,
+            "task_definition.seq_len": 20,
             "optimization.lr": 0.001,
-            "test/mse": 0.4,
-            "val/mse": 0.42,
-        })
-    # Config seq_len=20: seeds 72 (valid), 88 (NaN), 101 (valid)
-    data.append({
-        MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
-        DATASET_COL: "DS1",
-        MODEL_SEED_COL: 72,
-        "run_name": "run_20_72",
-        OPT_METRIC_COL: "test/mse",
-        OPT_MODE_COL: "min",
-        "task_definition.seq_len": 20,
-        "optimization.lr": 0.001,
-        "test/mse": 0.5,
-        "val/mse": 0.52,
-    })
-    data.append({
-        MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
-        DATASET_COL: "DS1",
-        MODEL_SEED_COL: 88,
-        "run_name": "run_20_88",
-        OPT_METRIC_COL: "test/mse",
-        OPT_MODE_COL: "min",
-        "task_definition.seq_len": 20,
-        "optimization.lr": 0.001,
-        "test/mse": np.nan,
-        "val/mse": np.nan,
-    })
-    data.append({
-        MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
-        DATASET_COL: "DS1",
-        MODEL_SEED_COL: 101,
-        "run_name": "run_20_101",
-        OPT_METRIC_COL: "test/mse",
-        OPT_MODE_COL: "min",
-        "task_definition.seq_len": 20,
-        "optimization.lr": 0.001,
-        "test/mse": 0.51,
-        "val/mse": 0.53,
-    })
+            "test/mse": 0.5,
+            "val/mse": 0.52,
+        }
+    )
+    data.append(
+        {
+            MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+            DATASET_COL: "DS1",
+            MODEL_SEED_COL: 88,
+            "run_name": "run_20_88",
+            OPT_METRIC_COL: "test/mse",
+            OPT_MODE_COL: "min",
+            "task_definition.seq_len": 20,
+            "optimization.lr": 0.001,
+            "test/mse": np.nan,
+            "val/mse": np.nan,
+        }
+    )
+    data.append(
+        {
+            MODEL_COL: "baselines.lstm_model.LSTM_Forecaster",
+            DATASET_COL: "DS1",
+            MODEL_SEED_COL: 101,
+            "run_name": "run_20_101",
+            OPT_METRIC_COL: "test/mse",
+            OPT_MODE_COL: "min",
+            "task_definition.seq_len": 20,
+            "optimization.lr": 0.001,
+            "test/mse": 0.51,
+            "val/mse": 0.53,
+        }
+    )
     return pd.DataFrame(data)
 
 

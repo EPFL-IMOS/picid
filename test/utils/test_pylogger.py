@@ -27,7 +27,10 @@ class TestRankedLogger:
         with patch.object(logger, "isEnabledFor", return_value=True):
             with patch("picid.utils.pylogger.rank_zero_only") as m:
                 m.rank = 0
-                with patch("picid.utils.pylogger.rank_prefixed_message", side_effect=lambda msg, rank: msg):
+                with patch(
+                    "picid.utils.pylogger.rank_prefixed_message",
+                    side_effect=lambda msg, rank: msg,
+                ):
                     with patch.object(logger.logger, "log") as mock_log:
                         logger.log(20, "msg")
                         mock_log.assert_called_once()

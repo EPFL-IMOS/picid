@@ -5,6 +5,7 @@ Provides synthetic but representative data (numpy, torch, small arrays) for
 high-fidelity pipeline testing without mocks. Use these fixtures for
 data integrity, shape consistency, and collation tests.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -15,6 +16,7 @@ import torch
 try:
     import awkward as ak
     from picid.utils.awkward_utils import ak_regularize_regular_axes
+
     HAS_AWKWARD = True
 except ImportError:
     HAS_AWKWARD = False
@@ -23,6 +25,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Seeds & reproducibility
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fixed_seed():
@@ -38,6 +41,7 @@ def fixed_seed():
 # ---------------------------------------------------------------------------
 # Synthetic data: dense time series (representative of RUL/forecasting)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_features_float32(fixed_seed):
@@ -76,13 +80,16 @@ def synthetic_data_dict_fault_classification(synthetic_features_float32):
     """Data dict for fault_classification: features + fault_class (int-like float)."""
     T = synthetic_features_float32.shape[0]
     n_classes = 5
-    fault_class = np.random.randint(0, n_classes, size=(T, 1), dtype=np.int32).astype(np.float32)
+    fault_class = np.random.randint(0, n_classes, size=(T, 1), dtype=np.int32).astype(
+        np.float32
+    )
     return {"features": synthetic_features_float32, "fault_classification": fault_class}
 
 
 # ---------------------------------------------------------------------------
 # Multi-unit data (lists of arrays) for HydraConcatDataset-style tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_multi_unit_rul(synthetic_data_dict_rul):
@@ -92,14 +99,15 @@ def synthetic_multi_unit_rul(synthetic_data_dict_rul):
     n_units = 3
     # Same length per unit for simplicity
     T_unit = feats.shape[0] // n_units
-    features_list = [feats[i * T_unit:(i + 1) * T_unit] for i in range(n_units)]
-    rul_list = [rul[i * T_unit:(i + 1) * T_unit] for i in range(n_units)]
+    features_list = [feats[i * T_unit : (i + 1) * T_unit] for i in range(n_units)]
+    rul_list = [rul[i * T_unit : (i + 1) * T_unit] for i in range(n_units)]
     return {"features": features_list, "rul": rul_list}
 
 
 # ---------------------------------------------------------------------------
 # FitPredict 3D arrays (n_tasks, n_samples, n_features)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_fit_predict_3d(fixed_seed):
@@ -114,6 +122,7 @@ def synthetic_fit_predict_3d(fixed_seed):
 # ---------------------------------------------------------------------------
 # Value-range fixtures (normalized [0,1] vs [0,255])
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_image_like_uint8(fixed_seed):
@@ -130,6 +139,7 @@ def synthetic_normalized_float32(fixed_seed):
 # ---------------------------------------------------------------------------
 # Ragged / awkward (optional)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def synthetic_ragged_two_units():

@@ -53,7 +53,7 @@ class TestWriteReportHtml:
         all_results = _make_all_results()
         summary_df = reporting.create_summary_table(all_results)
         stats_df = reporting.get_experiment_stats_df(all_results)
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             hp_impact_entries = []
             global_plots = []
@@ -77,9 +77,11 @@ class TestWriteReportHtml:
         Expected: HTML shows "Metric used to select best results: test/accuracy".
         """
         all_results = _make_all_results()
-        summary_df = reporting.create_summary_table(all_results, sort_metric="test/accuracy")
+        summary_df = reporting.create_summary_table(
+            all_results, sort_metric="test/accuracy"
+        )
         stats_df = reporting.get_experiment_stats_df(all_results)
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             hp_impact_entries = []
             global_plots = []
@@ -112,11 +114,14 @@ class TestWriteReportHtml:
             "optimized_on": {"metric": "test/accuracy", "strategy": "max"},
             "metrics": {"accuracy": {"test": {"mean": 0.9, "std": 0.02, "count": 3}}},
         }
-        
+
         summary_df = reporting.create_summary_table(all_results)
         stats_df = reporting.get_experiment_stats_df(all_results)
-        sort_metric_dict = {("DS1", "ModelA"): "test/mse", ("DS2", "ModelB"): "test/accuracy"}
-        
+        sort_metric_dict = {
+            ("DS1", "ModelA"): "test/mse",
+            ("DS2", "ModelB"): "test/accuracy",
+        }
+
         with tempfile.TemporaryDirectory() as tmpdir:
             hp_impact_entries = []
             global_plots = []
@@ -142,21 +147,26 @@ class TestWriteReportHtml:
         Expected: HTML shows "Dataset name: ..., Model name: ..., Metric used to select best results: ...".
         """
         import pandas as pd
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-        })
+
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df_sorted)
         summary_df = reporting.create_summary_table(all_results)
         stats_df = reporting.get_experiment_stats_df(all_results)
-        
+
         # Create hp_impact_entries with metric_used
         hp_df = pd.DataFrame({"x": [1]})
-        hp_impact_entries = [("DS1", "ModelA", hp_df, "plots/test.png", "test/accuracy")]
-        
+        hp_impact_entries = [
+            ("DS1", "ModelA", hp_df, "plots/test.png", "test/accuracy")
+        ]
+
         with tempfile.TemporaryDirectory() as tmpdir:
             global_plots = []
             path = report_html.write_report_html(
@@ -186,7 +196,7 @@ class TestWriteReportHtml:
         all_results = _make_all_results()
         summary_df = reporting.create_summary_table(all_results)
         stats_df = reporting.get_experiment_stats_df(all_results)
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             hp_impact_entries = []
             global_plots = []

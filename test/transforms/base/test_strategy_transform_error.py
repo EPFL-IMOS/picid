@@ -1,4 +1,5 @@
 """Tests that transform pipeline failures are wrapped in TransformError with context."""
+
 import pytest
 
 from picid.exceptions import TransformError

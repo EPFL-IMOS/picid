@@ -1,6 +1,7 @@
 """
 Tests for RailwayLoader with mocked I/O (pd.read_csv).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -30,7 +31,9 @@ def test_railway_extract_mask(railway_kwargs, mock_csv_df_battery_railway):
     assert mask[mock_csv_df_battery_railway.columns.get_loc("target_col")] == True
 
 
-def test_railway_read_data_returns_three_frames(railway_kwargs, mock_csv_df_battery_railway):
+def test_railway_read_data_returns_three_frames(
+    railway_kwargs, mock_csv_df_battery_railway
+):
     """read_data returns (df, df_target, df_stamp)."""
     with patch("pandas.read_csv", return_value=mock_csv_df_battery_railway.copy()):
         loader = RailwayLoader(**railway_kwargs)

@@ -269,5 +269,7 @@ class TestFindSingularRaggedDim:
     def test_find_singular_ragged_dim_multiple_ragged_dims_raises(self):
         """More than one variable-length dim raises ValueError."""
         arr_two_var = ak.Array([[[1.0], [2.0, 3.0]], [[4.0]]])
-        with pytest.raises(ValueError, match="Expected at most one variable-length dimension"):
+        with pytest.raises(
+            ValueError, match="Expected at most one variable-length dimension"
+        ):
             find_singular_ragged_dim(arr_two_var)

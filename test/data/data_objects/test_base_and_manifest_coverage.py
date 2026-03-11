@@ -2,6 +2,7 @@
 Coverage-focused tests for picid.data.data_objects.base and manifest.
 No changes to picid/data allowed; tests only.
 """
+
 from __future__ import annotations
 
 import numpy as np

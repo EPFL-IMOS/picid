@@ -1,4 +1,5 @@
 """Tests for Phase 3: pipeline steps and lifecycle hooks."""
+
 import pytest
 
 from picid.transforms.base.pipeline import (
@@ -110,7 +111,11 @@ class TestCopyStep:
             CopyStep().run(ctx)
         msg = str(exc_info.value)
         # Print full error in debug (run with: pytest -s ...)
-        print("\n--- ValueError (transform_on_keys empty intersection) ---\n" + msg + "\n---")
+        print(
+            "\n--- ValueError (transform_on_keys empty intersection) ---\n"
+            + msg
+            + "\n---"
+        )
         assert "no splits" in msg and "transform_on_keys" in msg
         assert "train" in msg and "val" in msg
         assert "valid" in msg and "test" in msg
@@ -216,7 +221,9 @@ class TestStrategyViaPipeline:
         from picid.transforms.base.strategy import TransformStrategy
 
         strategy = TransformStrategy()
-        transform = DummyFittableTransform()  # has ConcatFitAndPerSegmentTransformMixin -> requires_fit=True
+        transform = (
+            DummyFittableTransform()
+        )  # has ConcatFitAndPerSegmentTransformMixin -> requires_fit=True
         container = create_dummy_single_unit_container()
         with pytest.raises(TransformError) as exc_info:
             strategy.apply(

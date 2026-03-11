@@ -1,4 +1,5 @@
 """File-based synthetic ragged loader for pipeline snapshot tests. Reads pre-generated fixtures."""
+
 from __future__ import annotations
 
 import pickle

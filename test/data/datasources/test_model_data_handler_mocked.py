@@ -1,6 +1,7 @@
 """
 Tests for unibo.model_data_handler with mocked dataset (no real data loading).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -28,11 +29,19 @@ def mock_dataset():
     mock = MagicMock()
     mock.get_charge_data.return_value = (
         {"train": train_cyc, "val": [], "test": []},
-        {"train": np.zeros((1, 20)), "val": np.zeros((0, 20)), "test": np.zeros((0, 20))},
+        {
+            "train": np.zeros((1, 20)),
+            "val": np.zeros((0, 20)),
+            "test": np.zeros((0, 20)),
+        },
     )
     mock.get_discharge_data.return_value = (
         {"train": train_cyc, "val": [], "test": []},
-        {"train": np.zeros((1, 20)), "val": np.zeros((0, 20)), "test": np.zeros((0, 20))},
+        {
+            "train": np.zeros((1, 20)),
+            "val": np.zeros((0, 20)),
+            "test": np.zeros((0, 20)),
+        },
     )
     return mock
 
@@ -117,7 +126,9 @@ def test_model_data_handler_get_discharge_whole_cycle_soc(mock_dataset_train_tes
     assert train_x.shape[0] == 1 and test_x.shape[0] == 1
 
 
-def test_model_data_handler_get_discharge_whole_cycle_multiple_output_soh(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_whole_cycle_multiple_output_soh(
+    mock_dataset_train_test_val,
+):
     """get_discharge_whole_cycle(multiple_output=True, soh=True) repeats SOH per timestep."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -153,7 +164,9 @@ def test_model_data_handler_get_discharge_single_step_soc(mock_dataset_train_tes
     assert train_x.ndim == 2 and train_y.ndim == 2
 
 
-def test_model_data_handler_get_discharge_multiple_step_soc(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_multiple_step_soc(
+    mock_dataset_train_test_val,
+):
     """get_discharge_multiple_step(steps=3, soh=False) produces 3D sliding windows."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -166,7 +179,9 @@ def test_model_data_handler_get_discharge_multiple_step_soc(mock_dataset_train_t
     assert train_x.ndim == 3 and train_x.shape[1] == 3
 
 
-def test_model_data_handler_get_discharge_multiple_step_soh(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_multiple_step_soh(
+    mock_dataset_train_test_val,
+):
     """get_discharge_multiple_step(steps=2, soh=True) uses SOH branch."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -180,7 +195,9 @@ def test_model_data_handler_get_discharge_multiple_step_soh(mock_dataset_train_t
     assert train_y.ndim in (2, 3)  # SOH: one value per window or repeated
 
 
-def test_model_data_handler_get_discharge_multiple_step_multiple_output(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_multiple_step_multiple_output(
+    mock_dataset_train_test_val,
+):
     """get_discharge_multiple_step(multiple_output=True) covers multiple_output branch."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -193,7 +210,9 @@ def test_model_data_handler_get_discharge_multiple_step_multiple_output(mock_dat
     assert train_x.ndim == 3 and train_y.ndim == 3
 
 
-def test_model_data_handler_get_discharge_grouped_multiple_steps(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_grouped_multiple_steps(
+    mock_dataset_train_test_val,
+):
     """get_discharge_grouped_multiple_steps calls whole_cycle then __whole_cycle_to_multiple_step."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -206,7 +225,9 @@ def test_model_data_handler_get_discharge_grouped_multiple_steps(mock_dataset_tr
     assert train_x.ndim >= 3 and train_y.ndim >= 3  # 4D when multiple_output + grouped
 
 
-def test_model_data_handler_get_discharge_whole_cycle_future(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_whole_cycle_future(
+    mock_dataset_train_test_val,
+):
     """get_discharge_whole_cycle_future returns 18-tuple; train/test present."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -222,7 +243,9 @@ def test_model_data_handler_get_discharge_whole_cycle_future(mock_dataset_train_
     assert out[1] is not None and out[5] is not None  # train y, test y
 
 
-def test_model_data_handler_get_discharge_whole_cycle_future_with_val(mock_dataset_train_test_val):
+def test_model_data_handler_get_discharge_whole_cycle_future_with_val(
+    mock_dataset_train_test_val,
+):
     """get_discharge_whole_cycle_future with val_names includes validation in output."""
     handler = ModelDataHandler(
         dataset=mock_dataset_train_test_val,
@@ -253,11 +276,15 @@ def test_model_data_handler_keep_only_capacity(mock_dataset_train_test_val):
     )
     assert out_multi.shape == (2, 5)  # y[:, :, 0] drops last dim
     out_grouped = handler.keep_only_capacity(
-        np.random.randn(2, 3, 4, 2), is_multiple_output=True, is_grouped_multiple_step=True
+        np.random.randn(2, 3, 4, 2),
+        is_multiple_output=True,
+        is_grouped_multiple_step=True,
     )
     assert out_grouped.shape == (2, 3, 4)  # y[:, :, :, 0] drops last dim
     out_grouped_single = handler.keep_only_capacity(
-        np.random.randn(2, 3, 2), is_multiple_output=False, is_grouped_multiple_step=True
+        np.random.randn(2, 3, 2),
+        is_multiple_output=False,
+        is_grouped_multiple_step=True,
     )
     assert out_grouped_single.shape == (2, 3)  # y[:, :, 0] drops last dim
 
@@ -278,6 +305,8 @@ def test_model_data_handler_keep_only_time(mock_dataset_train_test_val):
     )
     assert out_multi.shape == (2, 5)  # y[:, :, 1] drops last dim
     out_grouped = handler.keep_only_time(
-        np.random.randn(2, 3, 4, 2), is_multiple_output=True, is_grouped_multiple_step=True
+        np.random.randn(2, 3, 4, 2),
+        is_multiple_output=True,
+        is_grouped_multiple_step=True,
     )
     assert out_grouped.shape == (2, 3, 4)  # y[:, :, :, 1] drops last dim

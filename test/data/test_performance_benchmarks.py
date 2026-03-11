@@ -4,6 +4,7 @@ Phase 3: Bottleneck detection — __getitem__ timing.
 Basic timing benchmarks to ensure data loading is not excessively slow.
 Uses pytest with optional benchmark; marks as slow so CI can skip by default.
 """
+
 from __future__ import annotations
 
 import time
@@ -51,4 +52,6 @@ def test_getitem_batch_latency(medium_sliding_dataset):
         _ = ds[indices]
     elapsed = time.perf_counter() - start
     per_batch = elapsed / 10
-    assert per_batch < 1.0, f"Batch __getitem__ too slow: {per_batch*1000:.0f} ms per batch"
+    assert (
+        per_batch < 1.0
+    ), f"Batch __getitem__ too slow: {per_batch*1000:.0f} ms per batch"

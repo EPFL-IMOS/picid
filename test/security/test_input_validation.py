@@ -2,6 +2,7 @@
 
 Covers NaN/Inf rejection and documents future path-validation requirements.
 """
+
 from __future__ import annotations
 
 import pytest

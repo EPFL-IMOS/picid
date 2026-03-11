@@ -35,11 +35,13 @@ class TestFlattenAggregatedColumns:
     def test_multiindex_flattened(self):
         df = pd.DataFrame(
             [[1.0, 0.1, 2]],
-            columns=pd.MultiIndex.from_tuples([
-                ("val/loss", "mean"),
-                ("val/loss", "std"),
-                ("val/loss", "count"),
-            ]),
+            columns=pd.MultiIndex.from_tuples(
+                [
+                    ("val/loss", "mean"),
+                    ("val/loss", "std"),
+                    ("val/loss", "count"),
+                ]
+            ),
         )
         out = utils.flatten_aggregated_columns(df)
         assert list(out.columns) == ["val/loss_mean", "val/loss_std", "val/loss_count"]

@@ -87,7 +87,9 @@ class TestPipelineTimerLogAverages:
         assert "AvgTime/train_batch_mean" in metrics
         assert "AvgTime/train_batch_std" in metrics
         # Mean should be over [0.3, 0.4, 0.5]
-        np.testing.assert_almost_equal(metrics["AvgTime/train_batch_mean"], np.mean([0.3, 0.4, 0.5]))
+        np.testing.assert_almost_equal(
+            metrics["AvgTime/train_batch_mean"], np.mean([0.3, 0.4, 0.5])
+        )
 
     def test_log_averages_test_stage_no_skip(self):
         """Doc: timer_callback.py - for test stages, mean over all sums, std=0."""

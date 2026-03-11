@@ -1,4 +1,5 @@
 """Tests for Phase 5.2: structural dry run (dry_run_transforms)."""
+
 from unittest.mock import patch
 
 from picid.transforms.base.dry_run import (
@@ -22,7 +23,9 @@ class TestDryRunResult:
         assert "t1" in str(r)
 
     def test_str_fail_with_issues(self):
-        r = DryRunResult(transform_name="t1", success=False, issues=["key x not in data"])
+        r = DryRunResult(
+            transform_name="t1", success=False, issues=["key x not in data"]
+        )
         assert "FAIL" in str(r)
         assert "key x not in data" in str(r)
 
@@ -105,7 +108,9 @@ class TestDryRunTransforms:
         """Transform with no apply_to gets failure (lines 113-115)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }
@@ -126,7 +131,9 @@ class TestDryRunTransforms:
         """When assign_to is empty but apply_to has keys, assign_to = apply_to (line 119)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": ["features"]},
             }
         }
@@ -140,7 +147,9 @@ class TestDryRunTransforms:
         """When container key is not a Mapping, add issue and fail (lines 144-148)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }
@@ -156,7 +165,9 @@ class TestDryRunTransforms:
         """When infer_data_kind raises, append failure (lines 163-167)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }
@@ -175,7 +186,9 @@ class TestDryRunTransforms:
         """When get_capability raises, append failure (lines 171-175)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }
@@ -194,7 +207,9 @@ class TestDryRunTransforms:
         """When get_handler raises KeyError, append failure (lines 179-183)."""
         config = {
             "scale": {
-                "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
                 "metadata": {"apply_to": "features", "assign_to": "features"},
             }
         }

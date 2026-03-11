@@ -4,6 +4,7 @@ Comprehensive tests for the preprocessing caching mechanism (Stage 1, boundary, 
 Tests write cache to disk, load it back, and assert data and behaviour are correct.
 Target: close to 100% coverage of cache-related paths in PreProcessor.pipeline() and FileSystemCache.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -29,7 +30,9 @@ from test.transforms.base.conftest import DummyStatelessTransform
 class _PicklableDatasource:
     """Minimal datasource that returns a SplitDatasetContainer and is picklable."""
 
-    def __init__(self, seed: int = 0, n_units: int = 2, n_samples: int = 20, n_features: int = 3):
+    def __init__(
+        self, seed: int = 0, n_units: int = 2, n_samples: int = 20, n_features: int = 3
+    ):
         self._seed = seed
         self._n_units = n_units
         self._n_samples = n_samples
@@ -57,14 +60,32 @@ class _PicklableDatasource:
             rng = np.random.default_rng(self._seed)
             self._container = SplitDatasetContainer(
                 features={
-                    "train": [rng.standard_normal((self._n_samples, self._n_features)) for _ in range(self._n_units)],
-                    "val": [rng.standard_normal((self._n_samples // 2, self._n_features)) for _ in range(self._n_units)],
-                    "test": [rng.standard_normal((self._n_samples // 2, self._n_features)) for _ in range(self._n_units)],
+                    "train": [
+                        rng.standard_normal((self._n_samples, self._n_features))
+                        for _ in range(self._n_units)
+                    ],
+                    "val": [
+                        rng.standard_normal((self._n_samples // 2, self._n_features))
+                        for _ in range(self._n_units)
+                    ],
+                    "test": [
+                        rng.standard_normal((self._n_samples // 2, self._n_features))
+                        for _ in range(self._n_units)
+                    ],
                 },
                 target={
-                    "train": [rng.standard_normal((self._n_samples, 1)) for _ in range(self._n_units)],
-                    "val": [rng.standard_normal((self._n_samples // 2, 1)) for _ in range(self._n_units)],
-                    "test": [rng.standard_normal((self._n_samples // 2, 1)) for _ in range(self._n_units)],
+                    "train": [
+                        rng.standard_normal((self._n_samples, 1))
+                        for _ in range(self._n_units)
+                    ],
+                    "val": [
+                        rng.standard_normal((self._n_samples // 2, 1))
+                        for _ in range(self._n_units)
+                    ],
+                    "test": [
+                        rng.standard_normal((self._n_samples // 2, 1))
+                        for _ in range(self._n_units)
+                    ],
                 },
             )
         return self._container
@@ -76,26 +97,40 @@ class _PicklableDatasource:
 
 _TRANSFORM_CONFIG_NO_CACHE_POINT = {
     "t1": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
         "metadata": {"apply_to": "features", "assign_to": "features"},
     },
     "t2": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
         "metadata": {"apply_to": "features", "assign_to": "features"},
     },
 }
 
 _TRANSFORM_CONFIG_WITH_CACHE_POINT = {
     "t1": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
         "metadata": {"apply_to": "features", "assign_to": "features"},
     },
     "heavy": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
-        "metadata": {"apply_to": "features", "assign_to": "features", "cache_point": True},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {
+            "apply_to": "features",
+            "assign_to": "features",
+            "cache_point": True,
+        },
     },
     "light": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
         "metadata": {"apply_to": "features", "assign_to": "features"},
     },
 }
@@ -105,8 +140,14 @@ _TRANSFORM_CONFIG_LIGHT_CHANGED = {
     "t1": _TRANSFORM_CONFIG_WITH_CACHE_POINT["t1"],
     "heavy": _TRANSFORM_CONFIG_WITH_CACHE_POINT["heavy"],
     "light": {
-        "transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"},
-        "metadata": {"apply_to": "features", "assign_to": "features", "extra_param": "changed"},
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {
+            "apply_to": "features",
+            "assign_to": "features",
+            "extra_param": "changed",
+        },
     },
 }
 
@@ -150,7 +191,9 @@ def manager_light_changed():
     return ConfigTransformManager(transforms_config=_TRANSFORM_CONFIG_LIGHT_CHANGED)
 
 
-def _assert_containers_equal(c1: SplitDatasetContainer, c2: SplitDatasetContainer) -> None:
+def _assert_containers_equal(
+    c1: SplitDatasetContainer, c2: SplitDatasetContainer
+) -> None:
     """Assert two SplitDatasetContainers have the same keys and array values."""
     assert set(c1.keys()) == set(c2.keys())
     for key in c1.keys():
@@ -187,13 +230,18 @@ class TestPipelinePreprocessedCache:
         cache = FileSystemCache()
         datasource_config = ensure_serializable(datasource._init_kwargs)
         transforms_config = ensure_serializable(manager_no_cache_point.config)
-        preprocessed_config = {"datasource": datasource_config, "transforms": transforms_config}
+        preprocessed_config = {
+            "datasource": datasource_config,
+            "transforms": transforms_config,
+        }
         expected_hash = compute_cache_key(
             config=preprocessed_config,
             library_dir=[library_dir, library_dir],
             extensions=[".py"],
         )
-        meta = cache.load_metadata(cache_dir, stage="preprocessed", cache_key=expected_hash)
+        meta = cache.load_metadata(
+            cache_dir, stage="preprocessed", cache_key=expected_hash
+        )
         assert meta is not None
         stored_config, stored_hash = meta
         assert stored_hash == expected_hash
@@ -226,7 +274,9 @@ class TestPipelinePreprocessedCache:
         )
         _assert_containers_equal(result1, result2)
 
-    def test_cache_disabled_no_preprocessed_write(self, tmp_path, datasource, manager_no_cache_point):
+    def test_cache_disabled_no_preprocessed_write(
+        self, tmp_path, datasource, manager_no_cache_point
+    ):
         """With cache paths None and cache_preprocessed False, pipeline runs but does not use cache."""
         preprocessor = PreProcessor(
             datasource=datasource,
@@ -315,7 +365,9 @@ class TestPipelineBoundaryCache:
         assert "heavy" in boundary_names
         boundary_config = {
             "datasource": ensure_serializable(datasource._init_kwargs),
-            "transforms": manager_with_cache_point.get_config_up_to_and_including("heavy"),
+            "transforms": manager_with_cache_point.get_config_up_to_and_including(
+                "heavy"
+            ),
         }
         boundary_key = compute_cache_key(
             config=boundary_config,
@@ -354,7 +406,12 @@ class TestPipelineBoundaryCache:
         _assert_containers_equal(r1, r2)
 
     def test_light_config_changed_restores_from_boundary_runs_only_light(
-        self, cache_dir, library_dir, datasource, manager_with_cache_point, manager_light_changed
+        self,
+        cache_dir,
+        library_dir,
+        datasource,
+        manager_with_cache_point,
+        manager_light_changed,
     ):
         # Run 1: full pipeline with cache_point → boundary + preprocessed written
         preprocessor1 = PreProcessor(
@@ -407,9 +464,9 @@ class TestPipelineBoundaryCache:
         boundary_dir = Path(cache_dir) / "boundary"
         # Pipeline may create boundary subdirs when probing load_metadata; we must not have written data.pkl
         for subdir in boundary_dir.iterdir() if boundary_dir.exists() else []:
-            assert not (subdir / "data.pkl").exists(), (
-                "save_boundary_caches=False should not write boundary data"
-            )
+            assert not (
+                subdir / "data.pkl"
+            ).exists(), "save_boundary_caches=False should not write boundary data"
 
 
 # -----------------------------------------------------------------------------
@@ -420,16 +477,16 @@ class TestPipelineBoundaryCache:
 class TestPreProcessorWithTransformPipelineNoCache:
     """PreProcessor accepts TransformPipeline and runs pipeline without cache."""
 
-    def test_pipeline_with_transform_pipeline_returns_container(
-        self, datasource
-    ):
-        pipeline = TransformPipeline([
-            DataTransform(
-                "t1",
-                DummyStatelessTransform(),
-                {"apply_to": "features", "assign_to": "features"},
-            ),
-        ])
+    def test_pipeline_with_transform_pipeline_returns_container(self, datasource):
+        pipeline = TransformPipeline(
+            [
+                DataTransform(
+                    "t1",
+                    DummyStatelessTransform(),
+                    {"apply_to": "features", "assign_to": "features"},
+                ),
+            ]
+        )
         preprocessor = PreProcessor(
             datasource=datasource,
             transforms=pipeline,
@@ -437,7 +494,11 @@ class TestPreProcessorWithTransformPipelineNoCache:
         result = preprocessor.pipeline()
         assert result is not None
         assert hasattr(result, "features") and hasattr(result, "target")
-        assert "train" in result.features and "val" in result.features and "test" in result.features
+        assert (
+            "train" in result.features
+            and "val" in result.features
+            and "test" in result.features
+        )
 
 
 class TestPreProcessorWithTransformPipelineWithCache:
@@ -446,13 +507,15 @@ class TestPreProcessorWithTransformPipelineWithCache:
     def test_two_runs_with_cache_preprocessed_second_hits_cache(
         self, cache_dir, library_dir, datasource
     ):
-        pipeline = TransformPipeline([
-            DataTransform(
-                "t1",
-                DummyStatelessTransform(),
-                {"apply_to": "features", "assign_to": "features"},
-            ),
-        ])
+        pipeline = TransformPipeline(
+            [
+                DataTransform(
+                    "t1",
+                    DummyStatelessTransform(),
+                    {"apply_to": "features", "assign_to": "features"},
+                ),
+            ]
+        )
         preprocessor = PreProcessor(
             datasource=datasource,
             transforms=pipeline,

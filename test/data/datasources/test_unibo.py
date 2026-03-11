@@ -461,7 +461,9 @@ def test_unibo_loader_anomaly_detection_process_split_returns_binary_target():
         arr = np.asarray(target.to_numpy()).ravel()
     else:
         arr = np.asarray(ak.ravel(target)).ravel()
-    assert np.isin(arr, [0.0, 1.0]).all(), f"Expected only 0 and 1, got {np.unique(arr)}"
+    assert np.isin(
+        arr, [0.0, 1.0]
+    ).all(), f"Expected only 0 and 1, got {np.unique(arr)}"
     assert 0.0 in arr and 1.0 in arr, "Expected both labels present"
 
 

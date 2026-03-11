@@ -14,22 +14,29 @@ class TestCleanAndRenameModels:
     """clean_and_rename_models: strip common prefix and append model type."""
 
     def test_strips_common_prefix(self):
-        df = pd.DataFrame({
-            "model._target_": [
-                "picid.baselines.patchtst_model.PatchTST_Forecaster",
-                "picid.baselines.lstm_model.LSTM_Forecaster",
-            ],
-        })
+        df = pd.DataFrame(
+            {
+                "model._target_": [
+                    "picid.baselines.patchtst_model.PatchTST_Forecaster",
+                    "picid.baselines.lstm_model.LSTM_Forecaster",
+                ],
+            }
+        )
         out = preprocess.clean_and_rename_models(df, model_target_col="model._target_")
         # common prefix up to last dot before final segment
         assert out["model._target_"].iloc[0] == "patchtst_model.PatchTST_Forecaster"
         assert out["model._target_"].iloc[1] == "lstm_model.LSTM_Forecaster"
 
     def test_appends_model_type_when_present(self):
-        df = pd.DataFrame({
-            "model._target_": ["pkg.StatisticalBaselineWrapper", "pkg.StatisticalBaselineWrapper"],
-            "model.model_type": ["linear", "exponential"],
-        })
+        df = pd.DataFrame(
+            {
+                "model._target_": [
+                    "pkg.StatisticalBaselineWrapper",
+                    "pkg.StatisticalBaselineWrapper",
+                ],
+                "model.model_type": ["linear", "exponential"],
+            }
+        )
         out = preprocess.clean_and_rename_models(
             df, model_target_col="model._target_", model_type_col="model.model_type"
         )
@@ -53,11 +60,16 @@ class TestCleanAndRenameModels:
 
     def test_uses_config_defaults_when_cols_not_passed(self):
         """When model_target_col is None, uses config.COLUMN_CONFIG['model_target']."""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: [
-                "picid.baselines.patchtst_model.PatchTST_Forecaster",
-                "picid.baselines.lstm_model.LSTM_Forecaster",
-            ],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: [
+                    "picid.baselines.patchtst_model.PatchTST_Forecaster",
+                    "picid.baselines.lstm_model.LSTM_Forecaster",
+                ],
+            }
+        )
         out = preprocess.clean_and_rename_models(df)
-        assert out[config.COLUMN_CONFIG["model_target"]].iloc[0] == "patchtst_model.PatchTST_Forecaster"
+        assert (
+            out[config.COLUMN_CONFIG["model_target"]].iloc[0]
+            == "patchtst_model.PatchTST_Forecaster"
+        )

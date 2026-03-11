@@ -18,11 +18,17 @@ def test_triangular_causal_mask_upper_triangular():
 
     # triu(..., diagonal=1) → upper triangle excluding diagonal
     # Expected: diagonal and below = False, above = True
-    expected = torch.tensor([[[
-        [False, True, True],
-        [False, False, True],
-        [False, False, False],
-    ]]])
+    expected = torch.tensor(
+        [
+            [
+                [
+                    [False, True, True],
+                    [False, False, True],
+                    [False, False, False],
+                ]
+            ]
+        ]
+    )
     assert torch.equal(mask.mask[0], expected[0])
 
 
