@@ -20,10 +20,9 @@ task_mode: multivariate #multivariate # Here it atually not for the task mode bu
 #   train: 5 # int or float. In case of float it is a percentage of the dataset
 #   val: 3 # int or float. In case of float it is a percentage of the dataset
 #   test: 2 # int or float, or None. In case of float it is a percentage of the datasource. None means len(dataset) - (train + val)
-  
+
 #   # There values will be read from the model parameters similarly to how we deal with data_path.
 #   seq_len: ${oc.select:task_definition.seq_len,null}     # 96   # 384  # window size
 #   label_len: ${oc.select:task_definition.label_len,null} # 48 # 96  # overlap size
 #   pred_len:  ${oc.select:task_definition.pred_len,null}  #96  # prediction size
 #   apply_lookback: True
-

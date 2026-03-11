@@ -3,7 +3,7 @@
 defaults:
   - pronostia/prognostics/base
   - /model_configs/prognostics/stf
-  
+
   #- override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: bearings/pronostia/raw
 
@@ -12,4 +12,3 @@ defaults:
 
 trainer:
   devices: [1]
-

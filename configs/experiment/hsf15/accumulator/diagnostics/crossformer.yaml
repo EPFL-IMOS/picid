@@ -6,6 +6,3 @@ defaults:
   - /model_configs/diagnostics/crossformer
   - override /transforms: hsf15/default
   - override /dataset: diagnostics/fault_classification_multiunit_dataset
-
-
-

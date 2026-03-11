@@ -3,5 +3,3 @@ defaults:
 
 # Additional params needed for wrapper to run:
 model_type: exponential
-
-

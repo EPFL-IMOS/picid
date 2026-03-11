@@ -7,6 +7,6 @@ label_len: ${task_definition.label_len} # overlap size
 pred_len: ${task_definition.pred_len} # prediction size
 
 # Model parameters
-input_channels: null 
+input_channels: null
 num_targets: null
 hidden_dim: 64

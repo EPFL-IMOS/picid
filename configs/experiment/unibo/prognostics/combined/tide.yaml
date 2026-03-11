@@ -3,5 +3,5 @@
 defaults:
   - unibo/prognostics/base
   - /model_configs/prognostics/tide
-  
+
   - override /transforms: battery/unibo/combined

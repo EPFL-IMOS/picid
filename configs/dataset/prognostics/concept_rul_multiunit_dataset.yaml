@@ -5,4 +5,3 @@ dataset_cfg:
   _target_: picid.data.datasets.concept_rul_dataset.ConceptRULDataset
   window_size: ${task_definition.seq_len}
   stride: 1
-  

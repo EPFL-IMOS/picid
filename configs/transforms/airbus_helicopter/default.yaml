@@ -14,7 +14,7 @@ ragged_regular_ragged_target:
   metadata:
     apply_to: target
     assign_to: anomaly_detection
-# Output shape is (N,1,1) 
+# Output shape is (N,1,1)
 
 # Reduce target dim
 reshape_target:
@@ -23,7 +23,7 @@ reshape_target:
     pattern: "a 1 1 -> a 1"
   metadata:
     apply_to: anomaly_detection
-# Output shape is (N,1) 
+# Output shape is (N,1)
 
 
 # Create time-domain and spectral-domain features
@@ -39,16 +39,16 @@ time_domain_features:
         "abs_avg", # Defined as a wrapper for root_mean_square in the source
         #"peak_to_peak_value",
         #"standard_deviation",
-        
+
         #"skewness",
         # "kurtosis",
-        
+
         #"variance",
         #"peak_factor",
         #"change_coefficient", # Note: This is mean / std
         #"clearance_factor",
         #"abs_energy",
-        
+
         #"hankel_svd",
       ]
 
@@ -115,4 +115,3 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
-

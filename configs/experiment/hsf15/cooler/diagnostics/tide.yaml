@@ -4,5 +4,5 @@ defaults:
   - hsf15/base
   - hsf15/cooler/base
   - /model_configs/diagnostics/tide
-  
+
   - override /transforms: hsf15/default

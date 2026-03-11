@@ -1,16 +1,16 @@
 
 scaler_features:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
 
 scaler_target:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: target
     fit_on: train
@@ -20,15 +20,15 @@ time_features_transform:
     _target_: picid.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
     use_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: False
-  
+
   metadata:
     apply_to: timestamps
     assign_to: time_features
 
 scaler_timefeatures:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: time_features
     fit_on: train
@@ -36,7 +36,7 @@ scaler_timefeatures:
 concatenate_features:
   transform:
     _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
-  
+
   metadata:
     apply_to: ['features','time_features']
     assign_to: 'features'
