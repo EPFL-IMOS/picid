@@ -5,6 +5,7 @@ Uses mock datasource + ConfigTransformManager, runs pipeline (with optional cach
 asserts output shape and get_processed_data_dict / get_meta_data_dict.
 Run.py contract: datasource → get_split_mode() → PreProcessor → pipeline() → assert shapes.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -143,11 +144,15 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
 def picklable_datasource_with_split_mode():
     """Datasource that has get_split_mode() for run.py-style tests."""
     ds = _PicklableDatasource(seed=10, n_units=1, n_samples=12, n_features=2)
-    ds._init_kwargs = getattr(ds, "_init_kwargs", {})  # already set on _PicklableDatasource
+    ds._init_kwargs = getattr(
+        ds, "_init_kwargs", {}
+    )  # already set on _PicklableDatasource
     return ds
 
 
-def test_run_contract_get_split_mode_then_pipeline(picklable_datasource_with_split_mode):
+def test_run_contract_get_split_mode_then_pipeline(
+    picklable_datasource_with_split_mode,
+):
     """run.py contract: datasource.get_split_mode() for logging; PreProcessor(datasource=..., transforms=...), pipeline(), then assert data_dict and meta_data."""
     datasource = picklable_datasource_with_split_mode
     if hasattr(datasource, "get_split_mode"):
@@ -176,7 +181,9 @@ def test_run_contract_with_real_loader():
     """
     from test.data.datasources.base.conftest import InMemorySingleSourceLoader
 
-    loader = InMemorySingleSourceLoader(n_samples=80, n_features=3, data_name="run_contract")
+    loader = InMemorySingleSourceLoader(
+        n_samples=80, n_features=3, data_name="run_contract"
+    )
     loader.load_data()
     loader.split_data()
     assert loader.get_split_mode() == "per_unit"

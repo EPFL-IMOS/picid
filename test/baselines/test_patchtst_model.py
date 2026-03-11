@@ -160,7 +160,6 @@ def test_initialize_model(hydra_model):
 def test_compute_loss_calls_forecasting_loss(
     hydra_model, test_batch_reg_class, monkeypatch
 ):
-
     test_batch = test_batch_reg_class
     called = {}
 
@@ -207,7 +206,6 @@ def test_compute_loss_calls_forecasting_loss(
     indirect=True,
 )
 def test_step_train_mode(hydra_model, test_batch_reg_class, monkeypatch):
-
     test_batch = test_batch_reg_class
     fake_out = torch.randn_like(test_batch[-1])  # (x_c, y_c, x_t, y_t)
 

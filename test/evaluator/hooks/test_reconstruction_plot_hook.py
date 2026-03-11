@@ -30,7 +30,9 @@ def test_reconstruction_plot_hook_returns_early_when_plot_reconstructions_false(
     evaluator.plot_reconstructions = False
     evaluator.remote_logger = MagicMock()
     evaluator.buffer = PredictionBuffer()
-    evaluator.buffer.accumulate({"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))})
+    evaluator.buffer.accumulate(
+        {"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))}
+    )
 
     with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
@@ -50,7 +52,9 @@ def test_reconstruction_plot_hook_returns_early_when_no_remote_logger():
     evaluator.plot_reconstructions = True
     evaluator.remote_logger = None
     evaluator.buffer = PredictionBuffer()
-    evaluator.buffer.accumulate({"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))})
+    evaluator.buffer.accumulate(
+        {"preds": np.ones((2, 10, 1)), "targets": np.ones((2, 10, 1))}
+    )
 
     with patch("picid.evaluator.hooks.reconstruction_plot.plt") as mock_plt:
         hook.on_compute_end({}, evaluator, "val", 0, 0)

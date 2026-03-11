@@ -6,20 +6,20 @@ defaults:
   #   data_name: ETTh1
   #   data_folder: ETT-small
   #   data_path: ${paths.data_dir}/${dataset.loader.load_arguments.data_folder}/${dataset.loader.load_arguments.data_name}.csv
-    
+
   #   flag: train
-  #   size: null 
-    
+  #   size: null
+
   #   features_mode: S
   #   target_name: OT
   #   scale: True
   #   # timeenc: 0 # Disable for now till we got a model that need it
-  #   freq: h 
+  #   freq: h
 
   #   timestamp_name: date
   #   time_features: ["month", "day", "weekday", "hour"]
   #   normalize_time_features: False
-      
+
   # data_splitter:
   #   _target_: picid.data.preprocessing.SimpleSplitter
   #   train: 8640 # int or float. In case of float it is a percentage of the dataset
@@ -31,7 +31,7 @@ defaults:
   #   label_len: 96  # overlap size
   #   pred_len: 96   # prediction size
 
-    
+
   # scaler:
   #   features:
   #     _target_: sklearn.preprocessing.StandardScaler

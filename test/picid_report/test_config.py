@@ -4,7 +4,6 @@ Tests for picid_report.config.
 Covers PipelineConfig and from_default().
 """
 
-
 from picid_report import config
 from picid_report.config import PipelineConfig
 
@@ -42,7 +41,9 @@ class TestPipelineConfig:
         pc = PipelineConfig(
             column_config=dict(config.COLUMN_CONFIG),
             expected_search_space={"M1": {"lr": [0.01, 0.001]}},
-            column_filters_to_ignore_for_hp_search=list(config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH),
+            column_filters_to_ignore_for_hp_search=list(
+                config.COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH
+            ),
             special_columns=list(config.SPECIAL_COLUMNS),
             columns_to_normalize=list(config.COLUMNS_TO_NORMALIZE),
             column_filters_to_drop=list(config.COLUMN_FILTERS_TO_DROP),

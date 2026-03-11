@@ -70,7 +70,9 @@ def test_missing_values_apply_to_subset():
 def test_missing_values_key_not_in_segment_skipped():
     """Keys in apply_to but not in segment are skipped gracefully."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        logger = MissingValuesStatsLogger(saving_path=tmpdir, apply_to=["features", "missing_key"])
+        logger = MissingValuesStatsLogger(
+            saving_path=tmpdir, apply_to=["features", "missing_key"]
+        )
         seg = NamedTransformInput(features=np.array([[1.0, 2.0]]), metadata={})
         out_segments, _ = logger.transform_multi_source([seg], metadata={})
         assert len(out_segments) == 1
@@ -81,8 +83,12 @@ def test_missing_values_global_summary():
     """Global summary aggregates across all units."""
     with tempfile.TemporaryDirectory() as tmpdir:
         logger = MissingValuesStatsLogger(saving_path=tmpdir)
-        seg1 = NamedTransformInput(features=np.array([[1.0, np.nan]]), metadata={"unit_id": "A"})
-        seg2 = NamedTransformInput(features=np.array([[np.nan, 4.0]]), metadata={"unit_id": "B"})
+        seg1 = NamedTransformInput(
+            features=np.array([[1.0, np.nan]]), metadata={"unit_id": "A"}
+        )
+        seg2 = NamedTransformInput(
+            features=np.array([[np.nan, 4.0]]), metadata={"unit_id": "B"}
+        )
         out_segments, _ = logger.transform_multi_source([seg1, seg2], metadata={})
         assert len(out_segments) == 2
         # Total: 2 NaNs, 4 elements -> 50% global

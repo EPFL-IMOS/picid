@@ -4,6 +4,7 @@ Phase 3: Memory leak detection — stable memory over multiple epochs.
 Asserts that iterating over the dataset/dataloader for several epochs
 does not grow memory unbounded. Uses wrapper so dataset receives list indices.
 """
+
 from __future__ import annotations
 
 import gc
@@ -18,8 +19,10 @@ from picid.data.datasets.collate_functions import collate_key_value_batch
 class _ListIndexWrapper(Dataset):
     def __init__(self, ds):
         self.ds = ds
+
     def __len__(self):
         return len(self.ds)
+
     def __getitem__(self, idx):
         return self.ds[[idx]]
 

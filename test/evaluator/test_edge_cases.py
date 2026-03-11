@@ -35,7 +35,6 @@ def data_empty_batch():
 
 
 class TestEmptyDataHandling:
-
     def test_empty_batch_default_evaluator(self, data_empty_batch, mocker):
         """
         Test DefaultEvaluator raises ValueError when computing on empty data.

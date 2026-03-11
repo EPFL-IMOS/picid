@@ -1,6 +1,7 @@
 """
 Tests for concepts_n_cmapss: module-level functions and N_CMAPSSDataSource (mocked I/O).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -46,11 +47,13 @@ def test_flatten_RUL_no_hs_change():
 
 def test_flatten_RUL_with_hs_change():
     """flatten_RUL updates RUL for cycles before first hs change."""
-    df = pd.DataFrame({
-        "cycle": [1, 2, 3, 4],
-        "hs": [1, 1, 0, 0],
-        "RUL": [100, 100, 50, 25],
-    })
+    df = pd.DataFrame(
+        {
+            "cycle": [1, 2, 3, 4],
+            "hs": [1, 1, 0, 0],
+            "RUL": [100, 100, 50, 25],
+        }
+    )
     out = flatten_RUL(df)
     # First row where hs.diff() == -1 is cycle 3 (index 2); RUL at that row is 50.
     # Cycles 1,2 should get RUL 50.
@@ -72,13 +75,16 @@ def test_n_cmapss_init_requires_linear_or_flat():
 
 def test_n_cmapss_init_requires_fc_or_units():
     """N_CMAPSSDataSource raises if both or neither of fc/units specified."""
+
     class LoadArgsBothNone:
         mode = "train"
         n_DS = 1
         concepts = ["LPT"]
+
         @staticmethod
         def get(k, d=None):
             return None
+
     with pytest.raises(ValueError, match="Specify exactly one"):
         N_CMAPSSDataSource(
             path="/tmp",
@@ -90,10 +96,12 @@ def test_n_cmapss_init_requires_fc_or_units():
 
 def _make_load_args():
     """LoadArgs-like object: mode, n_DS, concepts, get(units)=None, get(fc)=1."""
+
     class LoadArgs:
         mode = "train"
         n_DS = 1
         concepts = ["LPT"]
+
         @staticmethod
         def get(k, d=None):
             if k == "units":
@@ -101,6 +109,7 @@ def _make_load_args():
             if k == "fc":
                 return 1
             return d
+
     return LoadArgs()
 
 
@@ -154,20 +163,27 @@ def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
     n_rows = 50
     # Minimal N-CMAPSS-like structure
     A_var = ["unit", "cycle", "Fc", "hs"]
-    A = np.column_stack([
-        np.ones(n_rows, dtype=int),           # unit
-        np.arange(1, n_rows + 1, dtype=int),  # cycle
-        np.ones(n_rows, dtype=int) * 2,        # Fc
-        np.zeros(n_rows, dtype=int),           # hs (healthy)
-    ])
+    A = np.column_stack(
+        [
+            np.ones(n_rows, dtype=int),  # unit
+            np.arange(1, n_rows + 1, dtype=int),  # cycle
+            np.ones(n_rows, dtype=int) * 2,  # Fc
+            np.zeros(n_rows, dtype=int),  # hs (healthy)
+        ]
+    )
     W_var = ["alt", "Mach", "TRA", "T2"]
     W = np.ones((n_rows, 4)) * 0.5
     T_var = [
-        "fan_eff_mod", "fan_flow_mod",
-        "LPC_eff_mod", "LPC_flow_mod",
-        "HPC_eff_mod", "HPC_flow_mod",
-        "LPT_eff_mod", "LPT_flow_mod",
-        "HPT_eff_mod", "HPT_flow_mod",
+        "fan_eff_mod",
+        "fan_flow_mod",
+        "LPC_eff_mod",
+        "LPC_flow_mod",
+        "HPC_eff_mod",
+        "HPC_flow_mod",
+        "LPT_eff_mod",
+        "LPT_flow_mod",
+        "HPT_eff_mod",
+        "HPT_flow_mod",
     ]
     T = np.ones((n_rows, 10)) * -0.02  # Slightly degraded
     X_s_var = [f"s{i}" for i in range(5)]

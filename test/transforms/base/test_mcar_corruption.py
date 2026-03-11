@@ -52,7 +52,6 @@ def sample_data_2d():
 
 
 class TestMCARCorruptor:
-
     def test_init_validation(self):
         """Test strict initialization validation."""
         # Valid

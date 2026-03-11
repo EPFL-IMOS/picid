@@ -4,7 +4,6 @@ Test suite for picid_report.configs.
 Validates search space and sort metric configuration functions.
 """
 
-
 from picid_report.configs import (
     get_search_space,
     get_sort_metric,
@@ -65,9 +64,7 @@ class TestGetSearchSpace:
         """
         original = EXPECTED_SEARCH_SPACE.copy()
         try:
-            EXPECTED_SEARCH_SPACE["test_dataset"] = {
-                "test_model": {"lr": [0.001]}
-            }
+            EXPECTED_SEARCH_SPACE["test_dataset"] = {"test_model": {"lr": [0.001]}}
             result = get_search_space("test_dataset", "nonexistent_model")
             assert result is None
         finally:

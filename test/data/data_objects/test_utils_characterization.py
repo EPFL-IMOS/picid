@@ -5,6 +5,7 @@ This module imports from picid.data.data_objects.utils; tests use real arrays
 (numpy, pandas, awkward) and assert concrete expected outcomes.
 Run: pytest test/data/data_objects/test_utils_characterization.py -v
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -20,6 +21,7 @@ from picid.data.data_objects.utils import (
 
 try:
     import awkward as ak
+
     HAS_AWKWARD = True
 except ImportError:
     HAS_AWKWARD = False

@@ -5,6 +5,7 @@ Covers: standalone single (load → split → get_data → SplitDatasetContainer
 multi without multisource splitter, multi with BySourceSplitter, and edge cases
 (metadata normalization, ragged/empty splits).
 """
+
 import pytest
 
 from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
@@ -51,6 +52,7 @@ def test_single_source_loader_get_data_before_split_raises(in_memory_loader):
 
 def test_single_source_loader_metadata_normalized_to_train_val_test():
     """Metadata not in {train, val, test} is normalized to train/val/test."""
+
     class LoaderWithMetadata(InMemorySingleSourceLoader):
         def _load_data(self):
             d = super()._load_data()
@@ -198,6 +200,7 @@ def test_multi_source_loader_get_multisource_data_splitter(
 
     loader_yes = MultiSourceLoader(**two_sources_config_with_by_source_splitter)
     from picid.data.preprocessing.splits import BySourceSplitter
+
     assert isinstance(loader_yes.get_multisource_data_splitter(), BySourceSplitter)
 
 

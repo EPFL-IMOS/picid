@@ -32,7 +32,9 @@ class TestModelCheckpointWithConfigInit:
         cb = ModelCheckpointWithConfig(config_filename="experiment_config.json")
         assert cb.config_filename == "experiment_config.json"
 
-    def test_save_checkpoint_asserts_config_set(self, temp_checkpoint_dir, mock_trainer_global_zero):
+    def test_save_checkpoint_asserts_config_set(
+        self, temp_checkpoint_dir, mock_trainer_global_zero
+    ):
         """Doc: model_checkpoint.py - assert self.config is not None before writing."""
         cb = ModelCheckpointWithConfig(dirpath=temp_checkpoint_dir)
         assert cb.config is None

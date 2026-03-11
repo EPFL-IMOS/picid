@@ -49,9 +49,7 @@ def test_save_predictions_hook_returns_early_when_buffer_empty():
     evaluator.buffer = MagicMock()
     evaluator.buffer.get_all.return_value = {}
 
-    with patch(
-        "picid.evaluator.hooks.save_predictions.xr.Dataset"
-    ) as mock_xr:
+    with patch("picid.evaluator.hooks.save_predictions.xr.Dataset") as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
 
@@ -70,9 +68,7 @@ def test_save_predictions_hook_returns_early_when_preds_none():
     evaluator.buffer = MagicMock()
     evaluator.buffer.get_all.return_value = {"targets": np.ones((2, 1, 1))}
 
-    with patch(
-        "picid.evaluator.hooks.save_predictions.xr.Dataset"
-    ) as mock_xr:
+    with patch("picid.evaluator.hooks.save_predictions.xr.Dataset") as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
 
@@ -118,9 +114,7 @@ def test_save_predictions_hook_returns_early_when_eval_details_missing():
         "targets": np.ones((2, 1, 1)),
     }
 
-    with patch(
-        "picid.evaluator.hooks.save_predictions.xr.Dataset"
-    ) as mock_xr:
+    with patch("picid.evaluator.hooks.save_predictions.xr.Dataset") as mock_xr:
         hook.on_compute_end({}, evaluator, "val", 0, 0)
         mock_xr.assert_not_called()
 

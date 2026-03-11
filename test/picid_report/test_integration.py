@@ -66,16 +66,21 @@ class TestPipelineIntegration:
         }
         # New structure: {dataset: {model: {hp: [values]}}}
         # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
-        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
-            "DS1": {
-                "baselines.tide_model.TiDE_Forecaster": grid,
-            }
-        }):
+        with patch(
+            "picid_report.configs.search_space.EXPECTED_SEARCH_SPACE",
+            {
+                "DS1": {
+                    "baselines.tide_model.TiDE_Forecaster": grid,
+                }
+            },
+        ):
             results = analysis.analyze_results(
                 mock_df_partial_sweep,
                 **default_analysis_kwargs,
             )
-        tbl = results["DS1"]["baselines.tide_model.TiDE_Forecaster"]["sorted_aggregated_results"]
+        tbl = results["DS1"]["baselines.tide_model.TiDE_Forecaster"][
+            "sorted_aggregated_results"
+        ]
         assert len(tbl) == 4
         reporting.display_hp_impact(results, precision=4)
 

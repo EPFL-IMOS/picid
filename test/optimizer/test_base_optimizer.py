@@ -94,6 +94,8 @@ class TestAbstractOptimizerInterface:
         opt = ConcreteOptimizer(lr=0.01)
         result = opt.configure_optimizer(phm_model_parameters)
         optimizer = result["optimizer"]
-        opt_params = {id(p) for group in optimizer.param_groups for p in group["params"]}
+        opt_params = {
+            id(p) for group in optimizer.param_groups for p in group["params"]
+        }
         input_ids = {id(p) for p in phm_model_parameters}
         assert opt_params == input_ids

@@ -434,7 +434,6 @@ def test_save_predictions_to_file_orchestration(
     with patch(
         "picid.evaluator.hooks.save_predictions.Path", return_value=mock_path_obj
     ):
-
         evaluator.paths = MagicMock(eval_details="/mock/base")
         evaluator.update(
             {"predictions": np.array([[[1]]]), "targets": np.array([[[1]]])}

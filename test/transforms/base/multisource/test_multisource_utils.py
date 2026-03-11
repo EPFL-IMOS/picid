@@ -1,4 +1,5 @@
 """Tests for picid.transforms.base.multisource.utils."""
+
 import numpy as np
 from unittest.mock import MagicMock
 

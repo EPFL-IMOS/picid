@@ -62,7 +62,12 @@ def test_dense_sequencer_numpy_init(numpy_dense_data):
     Verifies DenseArraySequencer accepts Numpy arrays and initializes the driver.
     """
     seq = DenseArraySequencer(
-        array=numpy_dense_data, seq_len=2, label_len=0, pred_len=1, stride=1, padding_left_flag=False
+        array=numpy_dense_data,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,
     )
 
     # Length check: 10 steps total. Req = 2+1 = 3.
@@ -81,7 +86,12 @@ def test_dense_sequencer_torch_init(torch_dense_data):
     Verifies DenseArraySequencer accepts Torch tensors.
     """
     seq = DenseArraySequencer(
-        array=torch_dense_data, seq_len=2, label_len=0, pred_len=1, stride=1, padding_left_flag=False
+        array=torch_dense_data,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,
     )
 
     # Logic should be identical to numpy path
@@ -149,7 +159,12 @@ def test_ragged_sequencer_standard_jagged(jagged_ak_data):
     Verifies RaggedArraySequencer handles standard jagged awkward arrays.
     """
     seq = RaggedArraySequencer(
-        array=jagged_ak_data, seq_len=2, label_len=0, pred_len=1, stride=1, padding_left_flag=False
+        array=jagged_ak_data,
+        seq_len=2,
+        label_len=0,
+        pred_len=1,
+        stride=1,
+        padding_left_flag=False,
     )
 
     # Unit 0 (Len 5, Req 3) -> 3 windows

@@ -54,20 +54,26 @@ class TestPlotBestMetricBars:
 
     def test_no_matching_metric_returns_none(self):
         """When metric name is not in best_performance.metrics, returns None."""
-        all_results = _make_all_results(metrics_data={"mse": {"test": {"mean": 0.5, "std": 0.1, "count": 3}}})
+        all_results = _make_all_results(
+            metrics_data={"mse": {"test": {"mean": 0.5, "std": 0.1, "count": 3}}}
+        )
         fig = plots.plot_best_metric_bars(all_results, metric="test/accuracy")
         assert fig is None
 
     def test_prefix_missing_returns_none(self):
         """When prefix (e.g. test) is not in metrics[metric_name], skip that model; if all skipped, None."""
-        all_results = _make_all_results(metrics_data={"mse": {"val": {"mean": 0.52, "std": 0.08, "count": 3}}})
+        all_results = _make_all_results(
+            metrics_data={"mse": {"val": {"mean": 0.52, "std": 0.08, "count": 3}}}
+        )
         fig = plots.plot_best_metric_bars(all_results, metric="test/mse")
         assert fig is None
 
     def test_nan_mean_skipped(self):
         """When mean is NaN, that model/dataset is skipped."""
         all_results = _make_all_results(
-            metrics_data={"mse": {"test": {"mean": float("nan"), "std": 0.0, "count": 1}}}
+            metrics_data={
+                "mse": {"test": {"mean": float("nan"), "std": 0.0, "count": 1}}
+            }
         )
         fig = plots.plot_best_metric_bars(all_results, metric="test/mse")
         assert fig is None
@@ -122,7 +128,9 @@ class TestPlotBestMetricBars:
         all_results = _make_all_results(
             metrics_data={"mse": {"test": {"mean": 0.5, "std": 0.1, "count": 3}}}
         )
-        fig = plots.plot_best_metric_bars(all_results, metric="test/mse", figsize=(10, 4))
+        fig = plots.plot_best_metric_bars(
+            all_results, metric="test/mse", figsize=(10, 4)
+        )
         assert fig is not None
         assert fig.get_size_inches()[0] == 10
         assert fig.get_size_inches()[1] == 4
@@ -136,62 +144,92 @@ class TestPlotHpImpact:
 
     def test_dataset_missing_returns_none(self):
         """When dataset is not in all_results, returns None."""
-        all_results = _make_all_results(sorted_aggregated=pd.DataFrame({"test/mse_mean": [0.5]}))
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="Other", metric="test/mse")
+        all_results = _make_all_results(
+            sorted_aggregated=pd.DataFrame({"test/mse_mean": [0.5]})
+        )
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="Other", metric="test/mse"
+        )
         assert fig is None
 
     def test_model_missing_returns_none(self):
         """When model is not in all_results[dataset], returns None."""
-        all_results = _make_all_results(sorted_aggregated=pd.DataFrame({"test/mse_mean": [0.5]}))
-        fig = plots.plot_hp_impact(all_results, model="Other", dataset="DS1", metric="test/mse")
+        all_results = _make_all_results(
+            sorted_aggregated=pd.DataFrame({"test/mse_mean": [0.5]})
+        )
+        fig = plots.plot_hp_impact(
+            all_results, model="Other", dataset="DS1", metric="test/mse"
+        )
         assert fig is None
 
     def test_no_sorted_aggregated_returns_none(self):
         """When sorted_aggregated_results is missing or empty, returns None."""
         all_results = _make_all_results(sorted_aggregated=None)
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="DS1", metric="test/mse"
+        )
         assert fig is None
 
         all_results = _make_all_results(sorted_aggregated=pd.DataFrame())
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="DS1", metric="test/mse"
+        )
         assert fig is None
 
     def test_metric_mean_column_missing_returns_none(self):
         """When metric_mean column is not in flattened aggregated df, returns None."""
         all_results = _make_all_results(
-            sorted_aggregated=pd.DataFrame({"other_mean": [0.5], "other_std": [0.0], "other_count": [1]})
+            sorted_aggregated=pd.DataFrame(
+                {"other_mean": [0.5], "other_std": [0.0], "other_count": [1]}
+            )
         )
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="DS1", metric="test/mse"
+        )
         assert fig is None
 
     def test_happy_path_returns_figure_with_bars_in_rank_order(self):
         """Flattened sorted_aggregated_results with metric_mean produces horizontal bars in config order (rank)."""
         # sorted_aggregated_results is already sorted by best first (rank 1, 2, ...)
-        df = pd.DataFrame({
-            "test/mse_mean": [0.40, 0.45, 0.50],
-            "test/mse_std": [0.02, 0.03, 0.01],
-            "test/mse_count": [3, 3, 3],
-        })
+        df = pd.DataFrame(
+            {
+                "test/mse_mean": [0.40, 0.45, 0.50],
+                "test/mse_std": [0.02, 0.03, 0.01],
+                "test/mse_count": [3, 3, 3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df)
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="DS1", metric="test/mse"
+        )
         assert fig is not None
         ax = fig.axes[0]
         # Bar chart: y labels are config indices 0, 1, 2 (rank order)
         assert len(ax.patches) == 3
         assert ax.get_xlabel() == "test/mse"
-        assert "HP impact" in ax.get_title() and "ModelA" in ax.get_title() and "DS1" in ax.get_title()
+        assert (
+            "HP impact" in ax.get_title()
+            and "ModelA" in ax.get_title()
+            and "DS1" in ax.get_title()
+        )
 
     def test_max_configs_truncates(self):
         """When more than max_configs rows, only first max_configs are plotted."""
         n = 60
-        df = pd.DataFrame({
-            "test/mse_mean": [0.4 + i * 0.01 for i in range(n)],
-            "test/mse_std": [0.0] * n,
-            "test/mse_count": [3] * n,
-        })
+        df = pd.DataFrame(
+            {
+                "test/mse_mean": [0.4 + i * 0.01 for i in range(n)],
+                "test/mse_std": [0.0] * n,
+                "test/mse_count": [3] * n,
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df)
         fig = plots.plot_hp_impact(
-            all_results, model="ModelA", dataset="DS1", metric="test/mse", max_configs=50
+            all_results,
+            model="ModelA",
+            dataset="DS1",
+            metric="test/mse",
+            max_configs=50,
         )
         assert fig is not None
         ax = fig.axes[0]
@@ -199,29 +237,39 @@ class TestPlotHpImpact:
 
     def test_hp_impact_save_path_creates_file(self, tmp_path):
         """When save_path is set, figure is saved."""
-        df = pd.DataFrame({
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.0],
-            "test/mse_count": [3],
-        })
+        df = pd.DataFrame(
+            {
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.0],
+                "test/mse_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df)
         out = tmp_path / "hp_impact.png"
         plots.plot_hp_impact(
-            all_results, model="ModelA", dataset="DS1", metric="test/mse", save_path=str(out)
+            all_results,
+            model="ModelA",
+            dataset="DS1",
+            metric="test/mse",
+            save_path=str(out),
         )
         assert out.is_file()
 
     def test_hp_impact_with_multiindex_flattened(self):
         """sorted_aggregated_results may have MultiIndex columns; flatten_aggregated_columns is used."""
         # Simulate aggregated columns that flatten to test/mse_mean, etc.
-        df = pd.DataFrame({
-            ("test/mse", "mean"): [0.44, 0.48],
-            ("test/mse", "std"): [0.02, 0.01],
-            ("test/mse", "count"): [3, 3],
-        })
+        df = pd.DataFrame(
+            {
+                ("test/mse", "mean"): [0.44, 0.48],
+                ("test/mse", "std"): [0.02, 0.01],
+                ("test/mse", "count"): [3, 3],
+            }
+        )
         df.columns = [f"test/mse_{s}" for s in ["mean", "std", "count"]]
         all_results = _make_all_results(sorted_aggregated=df)
-        fig = plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
+        fig = plots.plot_hp_impact(
+            all_results, model="ModelA", dataset="DS1", metric="test/mse"
+        )
         assert fig is not None
         assert len(fig.axes[0].patches) == 2
 
@@ -237,21 +285,37 @@ class TestPlotsMatplotlibRequired:
         all_results = _make_all_results(
             metrics_data={"mse": {"test": {"mean": 0.5, "std": 0.1, "count": 3}}}
         )
-        with patch.object(plots, "_ensure_matplotlib", side_effect=ImportError("matplotlib not installed")):
+        with patch.object(
+            plots,
+            "_ensure_matplotlib",
+            side_effect=ImportError("matplotlib not installed"),
+        ):
             with pytest.raises(ImportError) as exc_info:
                 plots.plot_best_metric_bars(all_results, metric="test/mse")
-            assert "matplotlib" in str(exc_info.value).lower() or "not installed" in str(exc_info.value)
+            assert "matplotlib" in str(
+                exc_info.value
+            ).lower() or "not installed" in str(exc_info.value)
 
     def test_plot_hp_impact_raises_when_matplotlib_unavailable(self):
         """plot_hp_impact raises ImportError when _ensure_matplotlib fails."""
         all_results = _make_all_results(
-            sorted_aggregated=pd.DataFrame({
-                "test/mse_mean": [0.5],
-                "test/mse_std": [0.0],
-                "test/mse_count": [3],
-            })
+            sorted_aggregated=pd.DataFrame(
+                {
+                    "test/mse_mean": [0.5],
+                    "test/mse_std": [0.0],
+                    "test/mse_count": [3],
+                }
+            )
         )
-        with patch.object(plots, "_ensure_matplotlib", side_effect=ImportError("matplotlib not installed")):
+        with patch.object(
+            plots,
+            "_ensure_matplotlib",
+            side_effect=ImportError("matplotlib not installed"),
+        ):
             with pytest.raises(ImportError) as exc_info:
-                plots.plot_hp_impact(all_results, model="ModelA", dataset="DS1", metric="test/mse")
-            assert "matplotlib" in str(exc_info.value).lower() or "not installed" in str(exc_info.value)
+                plots.plot_hp_impact(
+                    all_results, model="ModelA", dataset="DS1", metric="test/mse"
+                )
+            assert "matplotlib" in str(
+                exc_info.value
+            ).lower() or "not installed" in str(exc_info.value)

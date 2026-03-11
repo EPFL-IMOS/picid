@@ -52,10 +52,23 @@ def test_list_experiment_groups_returns_groups():
 
 def test_get_task_type_from_experiment():
     """get_task_type_from_experiment extracts task type from full experiment key."""
-    assert get_task_type_from_experiment("unibo/prognostics/raw/cnn_1d") == "prognostics"
-    assert get_task_type_from_experiment("unibo/prognostics/combined/cnn_1d") == "prognostics"
-    assert get_task_type_from_experiment("concepts_n_cmapss_ds02/prognostics/ablation/missing_values/cnn_1d") == "prognostics"
-    assert get_task_type_from_experiment("unibo/anomaly_detection/foo") == "anomaly_detection"
+    assert (
+        get_task_type_from_experiment("unibo/prognostics/raw/cnn_1d") == "prognostics"
+    )
+    assert (
+        get_task_type_from_experiment("unibo/prognostics/combined/cnn_1d")
+        == "prognostics"
+    )
+    assert (
+        get_task_type_from_experiment(
+            "concepts_n_cmapss_ds02/prognostics/ablation/missing_values/cnn_1d"
+        )
+        == "prognostics"
+    )
+    assert (
+        get_task_type_from_experiment("unibo/anomaly_detection/foo")
+        == "anomaly_detection"
+    )
     assert get_task_type_from_experiment("group/task") == "task"
     assert get_task_type_from_experiment("only_one") is None
     assert get_task_type_from_experiment("") is None

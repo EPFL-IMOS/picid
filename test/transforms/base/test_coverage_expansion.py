@@ -5,6 +5,7 @@ Targets missing lines reported by coverage in:
 - base_transform.py, data_transform.py, strategy.py
 - transform_manager.py, multisource.py
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -45,9 +46,12 @@ from test.transforms.base.conftest import (
 class TestBaseTransformCoverage:
     def test_default_fit_data_body_executed(self):
         """Ensure BaseTransform.fit_data default implementation (pass) is executed."""
+
         # Use a subclass that does not override fit_data
         class OnlyTransformData(NoFitPerSegmentMixin, DenseTransform):
-            def transform_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
+            def transform_data(
+                self, data: NamedTransformInput, metadata: Dict[str, Any]
+            ) -> Any:
                 return data
 
         t = OnlyTransformData()
@@ -57,8 +61,10 @@ class TestBaseTransformCoverage:
 
     def test_base_transform_fit_data_pass_line(self):
         """Cover line 40: BaseTransform.fit_data body (pass) via subclass that does not override it."""
+
         class NoFitOverride(NoFitPerSegmentMixin, DenseTransform):
-            def transform_data(self, data, metadata): return data[list(data.keys())[0]]
+            def transform_data(self, data, metadata):
+                return data[list(data.keys())[0]]
 
         t = NoFitOverride()
         data = NamedTransformInput(features=np.array([1.0]))
@@ -66,6 +72,7 @@ class TestBaseTransformCoverage:
 
     def test_base_transform_abstract_transform_data_body(self):
         """Line 33: BaseTransform.transform_data abstract body (pass) executed via super().transform_data."""
+
         class CallsSuperTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 return super().transform_data(data, metadata)  # hits BaseTransform pass
@@ -83,6 +90,7 @@ class TestDataTransformCoverage:
     def test_implicit_assign_to_logs_when_apply_to_is_sequence(self, caplog):
         """Line 52: assign_to None and apply_to list triggers logger.info."""
         import logging
+
         caplog.set_level(logging.INFO)
         metadata = {
             "apply_to": ["features", "target"],
@@ -91,14 +99,24 @@ class TestDataTransformCoverage:
         transform = DummyFittableTransform()
         with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
             DataTransform("t", transform, metadata)
-        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
+        assert any(
+            "implicit" in (r.getMessage() or getattr(r, "message", "")).lower()
+            for r in caplog.records
+        )
 
     def test_process_assign_to_implicit_sequence_triggers_logger(self, caplog):
         """Line 52: _process_assign_to(None, sequence) triggers logger.info."""
-        dt = DataTransform("t", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
+        dt = DataTransform(
+            "t",
+            DummyStatelessTransform(),
+            {"apply_to": "features", "assign_to": "features"},
+        )
         with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
             dt._process_assign_to(assign_to=None, apply_to=["features", "target"])
-        assert any("implicit" in (r.getMessage() or getattr(r, "message", "")).lower() for r in caplog.records)
+        assert any(
+            "implicit" in (r.getMessage() or getattr(r, "message", "")).lower()
+            for r in caplog.records
+        )
 
     def test_assign_to_required_when_apply_to_is_mapping(self):
         """Line 92: apply_to as Mapping without assign_to raises ValueError.
@@ -107,14 +125,24 @@ class TestDataTransformCoverage:
         We test the branch by calling _process_assign_to directly.
         """
         from picid.transforms.base.data_transform import DataTransform
-        dt = DataTransform("t", DummyFittableTransform(), {"apply_to": "features", "assign_to": "features"})
+
+        dt = DataTransform(
+            "t",
+            DummyFittableTransform(),
+            {"apply_to": "features", "assign_to": "features"},
+        )
         with pytest.raises(ValueError, match="assign_to|ambiguity"):
             dt._process_assign_to(assign_to=None, apply_to={"feat": "features"})
 
     def test_forward_type_change_logs_warning(self):
         """Line 348: type change between original and transformed triggers warning path."""
-        dt = DataTransform("t", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
+        dt = DataTransform(
+            "t",
+            DummyStatelessTransform(),
+            {"apply_to": "features", "assign_to": "features"},
+        )
         container = create_dummy_single_unit_container()
+
         class MockStrategy:
             def apply(self, **kwargs):
                 data = kwargs["data"]
@@ -131,13 +159,20 @@ class TestDataTransformCoverage:
 
     def test_forward_source_count_change_logs_warning(self):
         """Line 360: list length change triggers warning path."""
-        dt = DataTransform("t", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
+        dt = DataTransform(
+            "t",
+            DummyStatelessTransform(),
+            {"apply_to": "features", "assign_to": "features"},
+        )
         container = create_dummy_split_container(n_units=2)
+
         class MockStrategy:
             def apply(self, **kwargs):
                 data = kwargs["data"]
                 result = data.copy(deep=False)
-                result["features"]._data["train"] = [np.array([[1.0]])]  # 1 unit (original had 2)
+                result["features"]._data["train"] = [
+                    np.array([[1.0]])
+                ]  # 1 unit (original had 2)
                 result["features"]._data["val"] = data["features"]["val"]
                 result["features"]._data["test"] = data["features"]["test"]
                 return result, {}
@@ -148,7 +183,11 @@ class TestDataTransformCoverage:
 
     def test_initialization_with_dictconfig_transform(self):
         """Line 183: DictConfig path is exercised by ConfigTransformManager; here we only assert instance."""
-        dt = DataTransform("dictconfig_transform", DummyStatelessTransform(), {"apply_to": "features", "assign_to": "features"})
+        dt = DataTransform(
+            "dictconfig_transform",
+            DummyStatelessTransform(),
+            {"apply_to": "features", "assign_to": "features"},
+        )
         assert dt.transform_instance is not None
         assert hasattr(dt.transform_instance, "transform_data")
 
@@ -167,7 +206,9 @@ class TestStrategyCoverage:
             is_multi_unit=False,
         )
         inner = container["features"]
-        inner.get_instance_cls = lambda: ak.Array  # so "is not ak.Array" is False -> take else (shallow)
+        inner.get_instance_cls = (
+            lambda: ak.Array
+        )  # so "is not ak.Array" is False -> take else (shallow)
         result, _ = strategy.apply(
             transform_instance=transform,
             data=container,
@@ -179,10 +220,15 @@ class TestStrategyCoverage:
 
     def test_apply_apply_key_not_mapping_raises_type_error(self):
         """Line 117: data[apply_key] not a Mapping raises TypeError."""
+
         class NotMapping:
             """get_instance_cls and copy so copy loop passes; copy returns valid dict for result."""
-            def get_instance_cls(self): return {}
-            def copy(self, deep=True): return {"train": [np.array([[1.0]])], "val": [np.array([[1.0]])]}
+
+            def get_instance_cls(self):
+                return {}
+
+            def copy(self, deep=True):
+                return {"train": [np.array([[1.0]])], "val": [np.array([[1.0]])]}
 
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
@@ -191,7 +237,10 @@ class TestStrategyCoverage:
             is_multi_unit=False,
         )
         container._data["features"] = NotMapping()
-        with pytest.raises(TypeError, match="expected a mapping|Unexpected structure|split-keyed mapping"):
+        with pytest.raises(
+            TypeError,
+            match="expected a mapping|Unexpected structure|split-keyed mapping",
+        ):
             strategy.apply(
                 transform_instance=transform,
                 data=container,
@@ -207,13 +256,18 @@ class TestStrategyCoverage:
 class TestTransformManagerCoverage:
     def test_ensure_dict_config_with_plain_dict(self):
         """_ensure_dict_config with dict: line 44."""
-        manager = ConfigTransformManager(transforms_config={"a": {"transform": {}, "metadata": {}}}, lazy_instantiation=True)
+        manager = ConfigTransformManager(
+            transforms_config={"a": {"transform": {}, "metadata": {}}},
+            lazy_instantiation=True,
+        )
         assert manager.config is not None
 
     def test_ensure_dict_config_with_dictconfig(self):
         """_ensure_dict_config with DictConfig returns as-is: line 46."""
         config = OmegaConf.create({"t": {"transform": {}, "metadata": {}}})
-        manager = ConfigTransformManager(transforms_config=config, lazy_instantiation=True)
+        manager = ConfigTransformManager(
+            transforms_config=config, lazy_instantiation=True
+        )
         assert manager.config is not None
 
     def test_initialization_empty_config_no_instantiation_loop(self):
@@ -223,7 +277,14 @@ class TestTransformManagerCoverage:
 
     def test_add_transforms_after_instantiation_raises(self):
         """Line 124: add_transforms_config after instantiation."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.get_data_transforms()
         with pytest.raises(RuntimeError, match="after instantiation"):
@@ -231,7 +292,14 @@ class TestTransformManagerCoverage:
 
     def test_update_transforms_after_instantiation_raises(self):
         """Line 139: update_transforms_config after instantiation."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.get_data_transforms()
         with pytest.raises(RuntimeError, match="after instantiation"):
@@ -239,7 +307,14 @@ class TestTransformManagerCoverage:
 
     def test_remove_transform_after_instantiation_raises(self):
         """Line 148: remove_transform after instantiation."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.get_data_transforms()
         with pytest.raises(RuntimeError, match="after instantiation"):
@@ -247,13 +322,23 @@ class TestTransformManagerCoverage:
 
     def test_add_transforms_config_name_conflict_raises(self):
         """Line 160: add_transforms_config with conflicting name."""
-        manager = ConfigTransformManager(transforms_config={"t1": {"transform": {}, "metadata": {}}}, lazy_instantiation=True)
+        manager = ConfigTransformManager(
+            transforms_config={"t1": {"transform": {}, "metadata": {}}},
+            lazy_instantiation=True,
+        )
         with pytest.raises(KeyError, match="already exist"):
             manager.add_transforms_config({"t1": {"transform": {}, "metadata": {}}})
 
     def test_get_data_transform_missing_raises(self):
         """Lines 201-207: get_data_transform with missing name."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         with pytest.raises(KeyError, match="not found"):
             manager.get_data_transform("nonexistent")
@@ -261,8 +346,18 @@ class TestTransformManagerCoverage:
     def test_get_transforms_by_apply_to(self):
         """Lines 217-218: filter by apply_to."""
         config = {
-            "t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}},
-            "t2": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "target", "assign_to": "target"}},
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+            "t2": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            },
         }
         manager = ConfigTransformManager(transforms_config=config)
         by_apply = manager.get_transforms_by_apply_to("features")
@@ -272,8 +367,22 @@ class TestTransformManagerCoverage:
     def test_get_transforms_by_fit_on(self):
         """Lines 230-231: filter by fit_on."""
         config = {
-            "t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features", "fit_on": "train"}},
-            "t2": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}},
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {
+                    "apply_to": "features",
+                    "assign_to": "features",
+                    "fit_on": "train",
+                },
+            },
+            "t2": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
         }
         manager = ConfigTransformManager(transforms_config=config)
         by_fit = manager.get_transforms_by_fit_on("train")
@@ -288,7 +397,14 @@ class TestTransformManagerCoverage:
 
     def test_force_reinstantiate(self):
         """Lines 300, 304, 308: force_reinstantiate and aliases."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.force_reinstantiate()
         assert manager.is_instantiated
@@ -300,14 +416,25 @@ class TestTransformManagerCoverage:
     def test_create_transform_manager_from_config_path(self, tmp_path):
         """Lines 341-342: create from config_path."""
         cfg = tmp_path / "transforms.yaml"
-        cfg.write_text("t1:\n  transform:\n    _target_: test.transforms.base.conftest.DummyStatelessTransform\n  metadata:\n    apply_to: features\n    assign_to: features\n")
+        cfg.write_text(
+            "t1:\n  transform:\n    _target_: test.transforms.base.conftest.DummyStatelessTransform\n  metadata:\n    apply_to: features\n    assign_to: features\n"
+        )
         mgr = create_transform_manager_from_config(config_path=str(cfg))
         assert mgr is not None
         assert mgr.has_transform("t1")
 
     def test_create_transform_manager_from_config_dict(self):
         """Lines 343-344: create from config_dict."""
-        mgr = create_transform_manager_from_config(config_dict={"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}})
+        mgr = create_transform_manager_from_config(
+            config_dict={
+                "t1": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                }
+            }
+        )
         assert mgr is not None
         assert mgr.has_transform("t1")
 
@@ -328,11 +455,21 @@ class TestTransformManagerCoverage:
                 manager.get_data_transforms()
             except RuntimeError:
                 pass
-        assert any("missing" in r.message.lower() or "transform" in r.message for r in caplog.records)
+        assert any(
+            "missing" in r.message.lower() or "transform" in r.message
+            for r in caplog.records
+        )
 
     def test_manager_instantiate_all_early_return_on_second_call(self):
         """Line 51: _instantiate_all returns early when _is_instantiated is True."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.get_data_transforms()
         assert manager._is_instantiated
@@ -341,7 +478,14 @@ class TestTransformManagerCoverage:
 
     def test_manager_get_data_transform_key_error_path(self):
         """Line 202: KeyError when name not in _data_transforms."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         manager.get_data_transforms()
         with pytest.raises(KeyError, match="not found"):
@@ -350,8 +494,18 @@ class TestTransformManagerCoverage:
     def test_manager_get_transforms_by_apply_to_returns_filtered(self):
         """Lines 217-218: get_transforms_by_apply_to builds OrderedDict from get_data_transforms."""
         config = {
-            "t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}},
-            "t2": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "target", "assign_to": "target"}},
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+            "t2": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "target", "assign_to": "target"},
+            },
         }
         manager = ConfigTransformManager(transforms_config=config)
         by_apply = manager.get_transforms_by_apply_to("features")
@@ -368,7 +522,14 @@ class TestTransformManagerCoverage:
 
     def test_prepare_transforms_returns_list(self):
         """Line 202/217-218: prepare_transforms returns list of DataTransform; get_transforms_by_apply_to return."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         transforms_list = manager.prepare_transforms()
         assert isinstance(transforms_list, list)
@@ -377,33 +538,79 @@ class TestTransformManagerCoverage:
     def test_add_transforms_config_not_lazy_instantiates(self):
         """Line 124: add_transforms_config when not lazy calls _instantiate_all()."""
         manager = ConfigTransformManager(transforms_config={}, lazy_instantiation=False)
-        manager.add_transforms_config({
-            "t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}},
-        })
+        manager.add_transforms_config(
+            {
+                "t1": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                },
+            }
+        )
         assert len(manager.get_data_transforms()) == 1
 
     def test_update_transforms_config_when_not_instantiated(self):
         """Lines 144-148: update_transforms_config when not instantiated replaces config."""
         manager = ConfigTransformManager(
-            transforms_config={"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}},
+            transforms_config={
+                "t1": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                }
+            },
             lazy_instantiation=True,
         )
-        manager.update_transforms_config({"t2": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}})
+        manager.update_transforms_config(
+            {
+                "t2": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                }
+            }
+        )
         assert list(manager.get_transform_names()) == ["t2"]
 
     def test_update_transforms_config_after_clear_cache_covers_instantiate_branch(self):
         """Lines 148-149: update_transforms_config after clear_cache with lazy=False runs _instantiate_all()."""
         manager = ConfigTransformManager(
-            transforms_config={"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}},
+            transforms_config={
+                "t1": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                }
+            },
             lazy_instantiation=False,
         )
         manager.clear_cache()
-        manager.update_transforms_config({"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}})
+        manager.update_transforms_config(
+            {
+                "t1": {
+                    "transform": {
+                        "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                    },
+                    "metadata": {"apply_to": "features", "assign_to": "features"},
+                }
+            }
+        )
         assert len(manager.get_data_transforms()) == 1
 
     def test_get_data_transform_success_and_missing(self):
         """Lines 204, 207: get_data_transform success return and KeyError path."""
-        config = {"t1": {"transform": {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}, "metadata": {"apply_to": "features", "assign_to": "features"}}}
+        config = {
+            "t1": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            }
+        }
         manager = ConfigTransformManager(transforms_config=config)
         dt = manager.get_data_transform("t1")
         assert dt is not None
@@ -419,13 +626,19 @@ class TestTransformManagerCoverage:
 
     def test_get_transform_config_missing_raises(self):
         """Line 172: get_transform_config when name not in config raises KeyError."""
-        manager = ConfigTransformManager(transforms_config={"t1": {"transform": {}, "metadata": {}}}, lazy_instantiation=True)
+        manager = ConfigTransformManager(
+            transforms_config={"t1": {"transform": {}, "metadata": {}}},
+            lazy_instantiation=True,
+        )
         with pytest.raises(KeyError, match="not found"):
             manager.get_transform_config("nonexistent")
 
     def test_get_transforms_config_returns_config(self):
         """Line 160: get_transforms_config() returns self.config."""
-        manager = ConfigTransformManager(transforms_config={"t1": {"transform": {}, "metadata": {}}}, lazy_instantiation=True)
+        manager = ConfigTransformManager(
+            transforms_config={"t1": {"transform": {}, "metadata": {}}},
+            lazy_instantiation=True,
+        )
         cfg = manager.get_transforms_config()
         assert cfg is not None
         assert "t1" in cfg
@@ -456,13 +669,19 @@ class TestMultisourceCoverage:
 
     def test_fit_unsupported_data_type_raises(self):
         """Line 309: fit when transform does not support data type."""
-        class RaggedOnlyTransform(ConcatFitAndPerSegmentTransformMixin, RaggedTransform):
+
+        class RaggedOnlyTransform(
+            ConcatFitAndPerSegmentTransformMixin, RaggedTransform
+        ):
             def fit_data(self, data, metadata): ...
-            def transform_data(self, data, metadata): return data[list(data.keys())[0]]
+            def transform_data(self, data, metadata):
+                return data[list(data.keys())[0]]
 
         t = RaggedOnlyTransform()
         segments = [NamedTransformInput(features=np.array([[1.0]]))]
-        with pytest.raises(ValueError, match=r"does not support .*data_kind|capability"):
+        with pytest.raises(
+            ValueError, match=r"does not support .*data_kind|capability"
+        ):
             t.fit_multi_source(segments, metadata={"apply_to_keys": ["features"]})
 
     @pytest.mark.skip(
@@ -470,8 +689,10 @@ class TestMultisourceCoverage:
     )
     def test_transform_unsupported_data_type_raises(self):
         """Line 533: transform_multi_source when data type not supported hits else and raises ValueError."""
+
         class RaggedOnlyTransform(NoFitPerSegmentMixin, RaggedTransform):
-            def transform_data(self, data, metadata): return data[list(data.keys())[0]]
+            def transform_data(self, data, metadata):
+                return data[list(data.keys())[0]]
 
         t = RaggedOnlyTransform()
         segments = [NamedTransformInput(features=np.array([[1.0, 2.0]]))]
@@ -490,13 +711,20 @@ class TestMultisourceCoverage:
     def test_concatenate_units_fit_multi_source_raises(self):
         """Line 695: NoFitConcatAlongAxisMixin.fit_multi_source raises NotImplementedError."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
-        with pytest.raises(NotImplementedError, match="does not support fitting|fit_multi_source"):
-            t.fit_multi_source([NamedTransformInput(features=np.array([[1.0]]))], metadata={"apply_to_keys": ["features"]})
+        with pytest.raises(
+            NotImplementedError, match="does not support fitting|fit_multi_source"
+        ):
+            t.fit_multi_source(
+                [NamedTransformInput(features=np.array([[1.0]]))],
+                metadata={"apply_to_keys": ["features"]},
+            )
 
     def test_concatenate_units_transform_with_ak_array(self):
         """Lines 742-753: NoFitConcatAlongAxisMixin with ak.Array."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
         segs = [
             NamedTransformInput(features=ak.Array([[1.0], [2.0]])),
@@ -511,13 +739,19 @@ class TestMultisourceCoverage:
     def test_concatenate_units_transform_multi_key_length_check(self):
         """Lines 771-786: multiple apply_to_keys length consistency."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         class MultiKeyConcat(ConcatenateUnitsTransform):
             def transform_data(self, data, metadata):
                 return {"features": data["features"] * 2, "target": data["target"] * 2}
+
         t = MultiKeyConcat(axis=0)
         segs = [
-            NamedTransformInput(features=np.array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])),
-            NamedTransformInput(features=np.array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])),
+            NamedTransformInput(
+                features=np.array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])
+            ),
+            NamedTransformInput(
+                features=np.array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])
+            ),
         ]
         metadata = {"apply_to_keys": ["features", "target"]}
         out, _ = t.transform_multi_source(segs, metadata=metadata)
@@ -525,14 +759,18 @@ class TestMultisourceCoverage:
 
     def test_inverse_transform_mixin_init_requires_inverse_transform_or_data(self):
         """InverseTransformMixin requires inverse_transform or inverse_transform_data."""
+
         # Class with neither inverse method should raise at init
         class NoInverse(InverseTransformMixin, DenseTransform):
-            def transform_data(self, data, metadata): return data
+            def transform_data(self, data, metadata):
+                return data
+
         with pytest.raises(TypeError, match="inverse_transform"):
             NoInverse()
 
     def test_transform_multi_source_ragged_to_dense_exception_logging(self):
         """Lines 533-598: exception in transform_function_to_data_segments is logged and re-raised."""
+
         class RaisingTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
                 raise RuntimeError("test error in transform")
@@ -566,7 +804,10 @@ class TestMultisourceCoverage:
     def test_transform_ragged_but_regular_returns_base_data_object(self):
         """Lines 402-403: ragged_but_regular path when transform returns BaseDataObjectWithMetadata."""
         from picid.data.data_objects.base import BaseDataObjectWithMetadata
-        regular_ak = ak.from_numpy(np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]))
+
+        regular_ak = ak.from_numpy(
+            np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+        )
 
         class ReturnNamedInput(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
@@ -578,7 +819,9 @@ class TestMultisourceCoverage:
         metadata = {"apply_to_keys": ["features"], "assign_to_map": ["features"]}
         result, _ = t.transform_multi_source(segments, metadata=metadata)
         assert len(result) == 1
-        assert hasattr(result[0], "keys") or isinstance(result[0], (dict, BaseDataObjectWithMetadata))
+        assert hasattr(result[0], "keys") or isinstance(
+            result[0], (dict, BaseDataObjectWithMetadata)
+        )
 
     def test_transform_multi_source_different_key_lengths_raises(self):
         """Line 661: transform_multi_source with segments having different key counts raises."""
@@ -588,24 +831,32 @@ class TestMultisourceCoverage:
             NamedTransformInput(features=np.array([[2.0]]), target=np.array([[0.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(ValueError, match="different numbers of keys|lengths of the data segments"):
+        with pytest.raises(
+            ValueError, match="different numbers of keys|lengths of the data segments"
+        ):
             transform.transform_multi_source(segments, metadata=metadata)
 
     def test_concatenate_units_key_not_in_segment_raises(self):
         """Lines 661, 711: lengths check and key-not-in-segment assert."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
         segs = [
             NamedTransformInput(features=np.array([[1.0]]), target=np.array([[0.0]])),
-            NamedTransformInput(features=np.array([[2.0]])),  # missing "target" -> different key count
+            NamedTransformInput(
+                features=np.array([[2.0]])
+            ),  # missing "target" -> different key count
         ]
         metadata = {"apply_to_keys": ["features", "target"]}
-        with pytest.raises(ValueError, match="different numbers of keys|lengths of the data segments"):
+        with pytest.raises(
+            ValueError, match="different numbers of keys|lengths of the data segments"
+        ):
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_concatenate_units_ak_two_segments_success(self):
         """NoFitConcatAlongAxisMixin: two ak.Array segments concatenate successfully."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
         seg1 = NamedTransformInput(features=ak.Array([[1.0], [2.0]]))
         seg2 = NamedTransformInput(features=ak.Array([[3.0], [4.0]]))
@@ -618,39 +869,61 @@ class TestMultisourceCoverage:
     def test_concatenate_units_multi_key_ak_and_numpy_length_checks(self):
         """Multi-key concatenate: both keys same type to satisfy uniform data type; length checks."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         class MultiKeyConcat(ConcatenateUnitsTransform):
             def transform_data(self, data, metadata):
                 return {"features": data["features"] * 2, "target": data["target"] * 2}
+
         t = MultiKeyConcat(axis=0)
         # Use same type for all keys (np) so _assert_uniform_data_types passes
         segs = [
-            NamedTransformInput(features=np.array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])),
-            NamedTransformInput(features=np.array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])),
+            NamedTransformInput(
+                features=np.array([[1.0], [2.0]]), target=np.array([[0.0], [0.0]])
+            ),
+            NamedTransformInput(
+                features=np.array([[3.0], [4.0]]), target=np.array([[0.0], [0.0]])
+            ),
         ]
-        metadata = {"apply_to_keys": ["features", "target"], "assign_to_map": ["features", "target"]}
+        metadata = {
+            "apply_to_keys": ["features", "target"],
+            "assign_to_map": ["features", "target"],
+        }
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
 
     def test_concatenate_units_inconsistent_lengths_raises(self):
         """Line 786: two keys with different lengths after concat raises ValueError."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         class BadConcat(ConcatenateUnitsTransform):
             def transform_data(self, data, metadata):
-                return {"features": np.array([[1.0], [2.0]]), "target": np.array([[1.0], [2.0], [3.0], [4.0]])}
+                return {
+                    "features": np.array([[1.0], [2.0]]),
+                    "target": np.array([[1.0], [2.0], [3.0], [4.0]]),
+                }
+
         t = BadConcat(axis=0)
         segs = [
-            NamedTransformInput(features=np.array([[1.0]]), target=np.array([[1.0], [2.0]])),
-            NamedTransformInput(features=np.array([[2.0]]), target=np.array([[3.0], [4.0]])),
+            NamedTransformInput(
+                features=np.array([[1.0]]), target=np.array([[1.0], [2.0]])
+            ),
+            NamedTransformInput(
+                features=np.array([[2.0]]), target=np.array([[3.0], [4.0]])
+            ),
         ]
         metadata = {"apply_to_keys": ["features", "target"]}
-        with pytest.raises(ValueError, match="After concatenation|lengths of the concatenated"):
+        with pytest.raises(
+            ValueError, match="After concatenation|lengths of the concatenated"
+        ):
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_ragged_to_dense_exception_after_index_depth_set(self):
         """Lines 567-568, 575-584: exception in ragged-to-dense loop triggers case analysis with index_depth."""
+
         class RaiseOnSecondCoord(NoFitPerSegmentMixin, DenseTransform):
             def __init__(self):
                 self._count = 0
+
             def transform_data(self, data, metadata):
                 self._count += 1
                 if self._count >= 2:
@@ -666,9 +939,12 @@ class TestMultisourceCoverage:
 
     def test_ragged_to_dense_reassembly_regular_output_hits_from_regular(self):
         """Line 515: reassembly with len(var_dims)==0 after regularize uses ak.from_regular."""
+
         class SameShapeTransform(NoFitPerSegmentMixin, DenseTransform):
             def transform_data(self, data, metadata):
-                return np.array([[1.0, 2.0]])  # same shape (1,2) per segment -> regular output
+                return np.array(
+                    [[1.0, 2.0]]
+                )  # same shape (1,2) per segment -> regular output
 
         t = SameShapeTransform()
         ragged = ak.Array([[1.0, 2.0], [3.0], [4.0, 5.0]])
@@ -681,29 +957,37 @@ class TestMultisourceCoverage:
     def test_concatenate_units_different_data_types_raises(self):
         """Line 727: NoFitConcatAlongAxisMixin when data types differ across segments."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
         segs = [
             NamedTransformInput(features=np.array([[1.0], [2.0]])),
             NamedTransformInput(features=ak.Array([[3.0], [4.0]])),
         ]
         metadata = {"apply_to_keys": ["features"]}
-        with pytest.raises(ValueError, match="data type mismatch|not the same across all data segments"):
+        with pytest.raises(
+            ValueError, match="data type mismatch|not the same across all data segments"
+        ):
             t.transform_multi_source(segs, metadata=metadata)
 
     def test_concatenate_units_unsupported_type_raises(self):
         """Line 781: NoFitConcatAlongAxisMixin when key type is not ak.Array or np.ndarray."""
         from test.transforms.base.conftest import ConcatenateUnitsTransform
+
         t = ConcatenateUnitsTransform(axis=0)
+
         # Segment that reports type as list so we hit the else branch
         class ListTypeSegment:
             def get_instance_cls(self):
                 return {"features": list}
+
             def keys(self):
                 return ["features"]
+
             def __getitem__(self, k):
                 if k == "features":
                     return [1.0, 2.0]
                 raise KeyError(k)
+
         segs = [ListTypeSegment(), ListTypeSegment()]
         metadata = {"apply_to_keys": ["features"]}
         with pytest.raises(ValueError, match="unsupported data type|is not supported"):

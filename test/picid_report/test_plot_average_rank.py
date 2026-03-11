@@ -60,7 +60,10 @@ class TestShortenModelName:
         assert pa._shorten_model_name("ModelA") == "ModelA"
 
     def test_suffix_preserved(self):
-        assert pa._shorten_model_name("a.b.StatisticalBaselineWrapper (linear)") == "StatisticalBaselineWrapper (linear)"
+        assert (
+            pa._shorten_model_name("a.b.StatisticalBaselineWrapper (linear)")
+            == "StatisticalBaselineWrapper (linear)"
+        )
 
     def test_empty_returns_empty(self):
         assert pa._shorten_model_name("") == ""
@@ -80,7 +83,9 @@ class TestFormatMetricsLabel:
         assert pa._format_metrics_label(["accuracy"]) == "accuracy"
 
     def test_multiple_with_counts_sorted_by_count_desc(self):
-        out = pa._format_metrics_label(["loss", "loss", "loss", "mae_normalized", "mae_normalized"])
+        out = pa._format_metrics_label(
+            ["loss", "loss", "loss", "mae_normalized", "mae_normalized"]
+        )
         assert "loss (3)" in out
         assert "mae_normalized (2)" in out
         assert out.startswith("loss (3)")  # higher count first
@@ -145,8 +150,12 @@ class TestComputeAverageRanks:
 
     def test_two_datasets_average_rank(self):
         records = [
-            ("D1", "M1", 0.1), ("D1", "M2", 0.2), ("D1", "M3", 0.3),
-            ("D2", "M2", 0.1), ("D2", "M1", 0.2), ("D2", "M3", 0.3),
+            ("D1", "M1", 0.1),
+            ("D1", "M2", 0.2),
+            ("D1", "M3", 0.3),
+            ("D2", "M2", 0.1),
+            ("D2", "M1", 0.2),
+            ("D2", "M3", 0.3),
         ]
         df = pa.compute_average_ranks(records, rank_mode="min")
         assert len(df) == 3
@@ -246,7 +255,9 @@ class TestInferTaskType:
         assert pa.infer_task_type(tmp_path / "s.csv") == "regression"
 
     def test_classification_preferred_when_both(self, tmp_path):
-        content = "Dataset,DS1,DS1\nMetric,test/accuracy,test/mse\nModel,,\nM1,0.9,0.5\n"
+        content = (
+            "Dataset,DS1,DS1\nMetric,test/accuracy,test/mse\nModel,,\nM1,0.9,0.5\n"
+        )
         (tmp_path / "s.csv").write_text(content)
         assert pa.infer_task_type(tmp_path / "s.csv") == "classification"
 
@@ -264,8 +275,12 @@ class TestPickMetricAndCollectRecordsWithFallback:
     def test_returns_none_when_no_match(self, tmp_path):
         content = "Dataset,DS1\nMetric,custom/only\nModel,\nM1,1.0\n"
         (tmp_path / "s.csv").write_text(content)
-        logical = [("mae_normalized", ["test/mae_normalized", "test/mae_normalized_mean"])]
-        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(tmp_path / "s.csv", logical)
+        logical = [
+            ("mae_normalized", ["test/mae_normalized", "test/mae_normalized_mean"])
+        ]
+        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(
+            tmp_path / "s.csv", logical
+        )
         assert chosen is None
         assert recs == []
 
@@ -279,27 +294,29 @@ class TestPickMetricAndCollectRecordsWithFallback:
         )
         (tmp_path / "s.csv").write_text(content)
         logical = [
-            ("mae_normalized", ["test_best_rerun/mae_normalized", "test/mae_normalized"]),
+            (
+                "mae_normalized",
+                ["test_best_rerun/mae_normalized", "test/mae_normalized"],
+            ),
             ("loss", ["test_best_rerun/loss", "test/loss"]),
         ]
-        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(tmp_path / "s.csv", logical)
+        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(
+            tmp_path / "s.csv", logical
+        )
         assert chosen == "mae_normalized"
         assert len(recs) == 2
         assert recs[0][1] == "M1" and recs[0][2] == 0.25
         assert recs[1][1] == "M2" and recs[1][2] == 0.31
 
     def test_dataset_key_in_records_uses_path(self, tmp_path):
-        content = (
-            "Dataset,DS1\n"
-            "Metric,test/mae_normalized\n"
-            "Model,\n"
-            "M1,0.5\n"
-        )
+        content = "Dataset,DS1\n" "Metric,test/mae_normalized\n" "Model,\n" "M1,0.5\n"
         sub = tmp_path / "run_phme20" / "tables"
         sub.mkdir(parents=True)
         (sub / "summary.csv").write_text(content)
         logical = [("mae_normalized", ["test/mae_normalized"])]
-        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(sub / "summary.csv", logical)
+        chosen, recs = pa.pick_metric_and_collect_records_with_fallback(
+            sub / "summary.csv", logical
+        )
         assert chosen == "mae_normalized"
         assert len(recs) == 1
         assert recs[0][0] == "run_phme20::DS1"  # _dataset_key applied
@@ -359,12 +376,14 @@ class TestPlotAverageRankFigure:
         assert fig is None
 
     def test_returns_figure_with_bars(self):
-        df = pd.DataFrame({
-            "model_full": ["M1", "M2"],
-            "model_short": ["M1", "M2"],
-            "average_rank": [1.0, 2.0],
-            "n_datasets": [1, 1],
-        })
+        df = pd.DataFrame(
+            {
+                "model_full": ["M1", "M2"],
+                "model_short": ["M1", "M2"],
+                "average_rank": [1.0, 2.0],
+                "n_datasets": [1, 1],
+            }
+        )
         fig = pa.plot_average_rank(df, save_path=None, title="Test")
         assert fig is not None
         ax = fig.axes[0]
@@ -373,22 +392,26 @@ class TestPlotAverageRankFigure:
         assert ax.get_title() == "Test"
 
     def test_custom_ylabel(self):
-        df = pd.DataFrame({
-            "model_full": ["M1"],
-            "model_short": ["M1"],
-            "average_rank": [1.0],
-            "n_datasets": [1],
-        })
+        df = pd.DataFrame(
+            {
+                "model_full": ["M1"],
+                "model_short": ["M1"],
+                "average_rank": [1.0],
+                "n_datasets": [1],
+            }
+        )
         fig = pa.plot_average_rank(df, save_path=None, ylabel="Rank")
         assert fig.axes[0].get_ylabel() == "Rank"
 
     def test_save_path_creates_file(self, tmp_path):
-        df = pd.DataFrame({
-            "model_full": ["M1"],
-            "model_short": ["M1"],
-            "average_rank": [1.0],
-            "n_datasets": [1],
-        })
+        df = pd.DataFrame(
+            {
+                "model_full": ["M1"],
+                "model_short": ["M1"],
+                "average_rank": [1.0],
+                "n_datasets": [1],
+            }
+        )
         out = tmp_path / "rank.png"
         pa.plot_average_rank(df, save_path=out, title="Test")
         assert out.is_file()

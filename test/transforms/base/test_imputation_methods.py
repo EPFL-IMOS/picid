@@ -45,7 +45,6 @@ def sample_data_3d():
 
 
 class TestImputationTransform:
-
     def test_init_validation(self):
         ImputationTransform(strategy="mean")
         with pytest.raises(ValueError, match="Invalid strategy"):
@@ -523,7 +522,9 @@ def test_impute_spectral_dynamic_window():
     data = {"features": x}
 
     t = ImputationTransform(
-        strategy="spectral", spectral_window_len=20, spectral_top_k=1  # Requesting 20
+        strategy="spectral",
+        spectral_window_len=20,
+        spectral_top_k=1,  # Requesting 20
     )
 
     # Should not crash. Should use available 10 points.

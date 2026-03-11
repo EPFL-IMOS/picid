@@ -6,6 +6,7 @@ Uses real/synthetic data (numpy, pandas) to validate:
 - Value ranges (e.g. normalized [0,1])
 - Length consistency and NaN checks
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -19,6 +20,7 @@ from picid.data.data_objects.utils import check_for_nans, check_length_consisten
 # ---------------------------------------------------------------------------
 # NamedTransformInput.get_sanitized_data
 # ---------------------------------------------------------------------------
+
 
 def test_get_sanitized_data_preserves_shape_and_keys(synthetic_normalized_float32):
     """After sanitization, keys and array shapes are preserved."""
@@ -51,27 +53,41 @@ def test_get_sanitized_data_length_mismatch_raises():
 # Value range assertions (normalized [0,1] vs [0,255])
 # ---------------------------------------------------------------------------
 
+
 def test_value_range_normalized_float32(synthetic_normalized_float32):
     """Synthetic normalized data stays in [0,1] and is float32."""
     assert synthetic_normalized_float32.dtype == np.float32
-    assert synthetic_normalized_float32.min() >= 0.0 and synthetic_normalized_float32.max() <= 1.0
+    assert (
+        synthetic_normalized_float32.min() >= 0.0
+        and synthetic_normalized_float32.max() <= 1.0
+    )
 
 
 def test_value_range_uint8_image_like(synthetic_image_like_uint8):
     """Synthetic image-like data is uint8 in [0,255]."""
     assert synthetic_image_like_uint8.dtype == np.uint8
-    assert synthetic_image_like_uint8.min() >= 0 and synthetic_image_like_uint8.max() <= 255
+    assert (
+        synthetic_image_like_uint8.min() >= 0
+        and synthetic_image_like_uint8.max() <= 255
+    )
 
 
 # ---------------------------------------------------------------------------
 # SplitDatasetContainer validation
 # ---------------------------------------------------------------------------
 
+
 def test_split_container_validate_consistent_units():
     """validate() passes when all feature lists have same number of units per split."""
     c = SplitDatasetContainer(
-        features={"train": [np.zeros((10, 2)), np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
-        target={"train": [np.zeros((10, 1)), np.zeros((10, 1))], "val": [np.zeros((5, 1))]},
+        features={
+            "train": [np.zeros((10, 2)), np.zeros((10, 2))],
+            "val": [np.zeros((5, 2))],
+        },
+        target={
+            "train": [np.zeros((10, 1)), np.zeros((10, 1))],
+            "val": [np.zeros((5, 1))],
+        },
     )
     c.validate()
 
@@ -94,6 +110,7 @@ def test_split_container_validate_inconsistent_units_raises():
 # ---------------------------------------------------------------------------
 # Utils: check_for_nans / check_length_consistency (real assertions)
 # ---------------------------------------------------------------------------
+
 
 def test_check_for_nans_dataframe_numeric_only():
     """DataFrame with NaN in numeric column raises."""

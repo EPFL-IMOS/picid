@@ -2,6 +2,7 @@
 Tests for ConceptRULDataset with real synthetic data (attribute-accessible data_dict via Box).
 Covers __len__, __getitem__ (beginning-of-sequence padding, mid-sequence, unit switch), get_collate_fn, init validation.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -49,7 +50,12 @@ def test_concept_rul_len(concept_rul_dataset):
 def test_concept_rul_getitem_structure(concept_rul_dataset):
     """__getitem__ returns AttributeDict with features, rul, concepts, health_states."""
     out = concept_rul_dataset[5]
-    assert "features" in out and "rul" in out and "concepts" in out and "health_states" in out
+    assert (
+        "features" in out
+        and "rul" in out
+        and "concepts" in out
+        and "health_states" in out
+    )
     assert torch.is_tensor(out["features"])
     assert torch.is_tensor(out["rul"])
     assert out["features"].ndim >= 1
@@ -84,19 +90,22 @@ def test_concept_rul_getitem_rul_value_matches_index(concept_rul_dataset):
 def test_concept_rul_get_collate_fn(concept_rul_dataset):
     """get_collate_fn returns default_collate."""
     from torch.utils.data._utils.collate import default_collate
+
     assert concept_rul_dataset.get_collate_fn() is default_collate
 
 
 def test_concept_rul_init_requires_ndarray():
     """Init raises if any value in data_dict is not ndarray."""
-    data = Box({
-        "features": np.zeros((20, 2)),
-        "rul": np.zeros(20),
-        "timestamps": np.zeros(20),
-        "health_states": np.zeros(20),
-        "concepts": np.zeros((20, 1)),
-        "unit": np.zeros(20),
-    })
+    data = Box(
+        {
+            "features": np.zeros((20, 2)),
+            "rul": np.zeros(20),
+            "timestamps": np.zeros(20),
+            "health_states": np.zeros(20),
+            "concepts": np.zeros((20, 1)),
+            "unit": np.zeros(20),
+        }
+    )
     data["rul"] = [1, 2, 3]
     with pytest.raises(AssertionError, match="must be numpy arrays"):
         ConceptRULDataset(data_dict=data, window_size=5, stride=1)

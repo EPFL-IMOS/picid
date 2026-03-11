@@ -1,4 +1,5 @@
 """Tests for picid.transforms.base.pipeline.checks."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -19,8 +20,10 @@ from picid.transforms.base.pipeline.checks import (
 class TestRunScopedChecks:
     def test_no_arg_check_deprecation_warning(self):
         """No-arg check triggers DeprecationWarning (lines 51-58)."""
+
         def no_arg_fn():
             pass
+
         checks = [("noarg", no_arg_fn, "fail")]
         with pytest.warns(DeprecationWarning, match="no-arg signature"):
             _run_scoped_checks(checks, {"x": 1})
@@ -29,8 +32,10 @@ class TestRunScopedChecks:
     def test_with_arg_check_runs(self):
         """Check with 1-arg runs and gets data_slice (line 60)."""
         seen = []
+
         def one_arg_fn(data):
             seen.append(data)
+
         checks = [("with_arg", one_arg_fn, "fail")]
         data = {"split": "train"}
         ran = _run_scoped_checks(checks, data)
@@ -39,40 +44,50 @@ class TestRunScopedChecks:
 
     def test_policy_fail_raises_runtime_error(self):
         """policy 'fail' raises RuntimeError with message (lines 63-77)."""
+
         def failing_fn(_):
             raise ValueError("check failed")
+
         checks = [("fail_check", failing_fn, "fail")]
         with pytest.raises(RuntimeError, match="Integrity check.*failed"):
             _run_scoped_checks(checks, None)
 
     def test_policy_fail_includes_step_id_in_message(self):
         """RuntimeError includes step_id when provided (lines 67-68)."""
+
         def failing_fn(_):
             raise ValueError("err")
+
         checks = [("c", failing_fn, "fail")]
         with pytest.raises(RuntimeError, match="transform.*foo"):
             _run_scoped_checks(checks, None, step_id="foo")
 
     def test_policy_fail_includes_split_in_message(self):
         """RuntimeError includes split when provided (line 70)."""
+
         def failing_fn(_):
             raise ValueError("err")
+
         checks = [("c", failing_fn, "fail")]
         with pytest.raises(RuntimeError, match="split.*train"):
             _run_scoped_checks(checks, None, split="train")
 
     def test_policy_fail_includes_stage_in_message(self):
         """RuntimeError includes stage when provided (line 66)."""
+
         def failing_fn(_):
             raise ValueError("err")
+
         checks = [("c", failing_fn, "fail")]
         with pytest.raises(RuntimeError, match="before-transform"):
             _run_scoped_checks(checks, None, stage="before-transform")
 
     def test_policy_warn_logs_and_continues(self, caplog):
         """policy 'warn' logs and appends name to ran, does not raise (lines 78-82)."""
+
         def failing_fn(_):
             raise ValueError("warn check")
+
         checks = [("warn_check", failing_fn, "warn")]
         ran = _run_scoped_checks(checks, None)
         assert ran == ["warn_check"]

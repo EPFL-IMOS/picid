@@ -48,6 +48,7 @@ class TestGetMetricValue:
 
     def test_returns_value_when_found(self):
         import torch as _torch
+
         val = get_metric_value({"m1": _torch.tensor(0.5)}, "m1")
         assert val == 0.5
 
@@ -58,10 +59,12 @@ class TestTaskWrapper:
         def task(cfg):
             return {"m": 1}, {"o": 2}
 
-        cfg = OmegaConf.create({
-            "paths": {"output_dir": "/tmp"},
-            "debug": {"raise_inner_exception": False},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"output_dir": "/tmp"},
+                "debug": {"raise_inner_exception": False},
+            }
+        )
         with patch("picid.utils.utils.find_spec", return_value=None):
             m, o = task(cfg)
         assert m == {"m": 1}
@@ -69,14 +72,17 @@ class TestTaskWrapper:
 
     def test_task_wrapper_logs_output_dir_on_exception(self):
         """Test that task_wrapper logs output dir in finally block even when task raises."""
+
         @task_wrapper
         def task(cfg):
             raise ValueError("task failed")
 
-        cfg = OmegaConf.create({
-            "paths": {"output_dir": "/tmp/out"},
-            "debug": {"raise_inner_exception": True},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"output_dir": "/tmp/out"},
+                "debug": {"raise_inner_exception": True},
+            }
+        )
         with patch("picid.utils.utils.find_spec", return_value=None):
             with patch("picid.utils.utils.log") as mock_log:
                 with pytest.raises(ValueError, match="task failed"):
@@ -85,28 +91,34 @@ class TestTaskWrapper:
 
     def test_task_wrapper_raises_when_raise_inner_exception_true(self):
         """Test raise_inner_exception=True branch: exception is re-raised."""
+
         @task_wrapper
         def task(cfg):
             raise RuntimeError("inner")
 
-        cfg = OmegaConf.create({
-            "paths": {"output_dir": "/tmp"},
-            "debug": {"raise_inner_exception": True},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"output_dir": "/tmp"},
+                "debug": {"raise_inner_exception": True},
+            }
+        )
         with patch("picid.utils.utils.find_spec", return_value=None):
             with pytest.raises(RuntimeError, match="inner"):
                 task(cfg)
 
     def test_task_wrapper_closes_wandb_when_installed(self):
         """Test that task_wrapper calls wandb.finish when wandb is installed and run exists."""
+
         @task_wrapper
         def task(cfg):
             return {"m": 1}, {"o": 2}
 
-        cfg = OmegaConf.create({
-            "paths": {"output_dir": "/tmp"},
-            "debug": {"raise_inner_exception": False},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"output_dir": "/tmp"},
+                "debug": {"raise_inner_exception": False},
+            }
+        )
         mock_wandb = MagicMock()
         mock_wandb.run = MagicMock()  # truthy so wandb.finish branch runs
         with patch("picid.utils.utils.find_spec", return_value=MagicMock()):
@@ -123,9 +135,11 @@ class TestSaveUvLockToRun:
         uv_lock = root / "uv.lock"
         uv_lock.write_text("lock content")
         out_dir = tmp_path / "run_output"
-        cfg = OmegaConf.create({
-            "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
+            }
+        )
         _save_uv_lock_to_run(cfg)
         assert (out_dir / "uv.lock").read_text() == "lock content"
 
@@ -136,9 +150,11 @@ class TestSaveUvLockToRun:
     def test_skips_when_uv_lock_missing(self, tmp_path):
         out_dir = tmp_path / "run"
         out_dir.mkdir()
-        cfg = OmegaConf.create({
-            "paths": {"root_dir": str(tmp_path), "output_dir": str(out_dir)},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"root_dir": str(tmp_path), "output_dir": str(out_dir)},
+            }
+        )
         _save_uv_lock_to_run(cfg)
         assert not (out_dir / "uv.lock").exists()
 
@@ -149,9 +165,11 @@ class TestWriteReproduceGuide:
         root = tmp_path / "project"
         root.mkdir()
         out_dir = tmp_path / "run_output"
-        cfg = OmegaConf.create({
-            "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
-        })
+        cfg = OmegaConf.create(
+            {
+                "paths": {"root_dir": str(root), "output_dir": str(out_dir)},
+            }
+        )
         _write_reproduce_guide(cfg)
         dest = out_dir / "REPRODUCE.md"
         assert dest.exists()

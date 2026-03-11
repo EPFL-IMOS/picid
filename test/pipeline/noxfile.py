@@ -1,4 +1,5 @@
 """Nox sessions for pipeline snapshot tests."""
+
 from pathlib import Path
 
 import nox

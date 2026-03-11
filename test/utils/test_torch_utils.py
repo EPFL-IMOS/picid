@@ -1,4 +1,5 @@
 """Tests for picid.utils.torch_utils."""
+
 from unittest.mock import patch
 import torch
 from torch import nn
@@ -17,7 +18,10 @@ class _ModelWithFC(nn.Module):
 
 class TestCorrectStateDictKeys:
     def test_removes_backbone_prefix(self):
-        state = {"backbone.fc.weight": torch.randn(2, 2), "backbone.fc.bias": torch.randn(2)}
+        state = {
+            "backbone.fc.weight": torch.randn(2, 2),
+            "backbone.fc.bias": torch.randn(2),
+        }
         result = correct_state_dict_keys(state)
         assert "fc.weight" in result
         assert "fc.bias" in result
@@ -39,7 +43,12 @@ class TestLoadModelFromCheckpoint:
             config_path,
         )
         torch.save(
-            {"state_dict": {"backbone.fc.weight": torch.randn(2, 2), "backbone.fc.bias": torch.randn(2)}},
+            {
+                "state_dict": {
+                    "backbone.fc.weight": torch.randn(2, 2),
+                    "backbone.fc.bias": torch.randn(2),
+                }
+            },
             ckpt_path,
         )
         with patch("picid.utils.torch_utils.find_config_file") as m:

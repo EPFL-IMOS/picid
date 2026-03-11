@@ -1,4 +1,5 @@
 """Tests for picid.utils.logging_utils."""
+
 from unittest.mock import patch, MagicMock
 
 from picid.utils.logging_utils import get_hydra_override, log_hyperparameters
@@ -27,10 +28,19 @@ class TestLogHyperparameters:
     def test_skips_when_no_logger(self):
         trainer = MagicMock()
         trainer.logger = None
-        obj = {"cfg": {"a": 1}, "model/params/total": 0, "model/params/trainable": 0, "trainer": trainer}
+        obj = {
+            "cfg": {"a": 1},
+            "model/params/total": 0,
+            "model/params/trainable": 0,
+            "trainer": trainer,
+        }
         from lightning_utilities.core.rank_zero import rank_zero_only
+
         with patch.object(rank_zero_only, "rank", 0):
-            with patch("picid.utils.logging_utils.OmegaConf.to_container", return_value={"a": 1}):
+            with patch(
+                "picid.utils.logging_utils.OmegaConf.to_container",
+                return_value={"a": 1},
+            ):
                 log_hyperparameters(obj)
 
     def test_logs_when_logger_present(self):
@@ -43,8 +53,14 @@ class TestLogHyperparameters:
             "trainer": trainer,
         }
         from lightning_utilities.core.rank_zero import rank_zero_only
+
         with patch.object(rank_zero_only, "rank", 0):
-            with patch("picid.utils.logging_utils.get_hydra_override", return_value="exp1"):
-                with patch("picid.utils.logging_utils.OmegaConf.to_container", return_value={"a": 1}):
+            with patch(
+                "picid.utils.logging_utils.get_hydra_override", return_value="exp1"
+            ):
+                with patch(
+                    "picid.utils.logging_utils.OmegaConf.to_container",
+                    return_value={"a": 1},
+                ):
                     log_hyperparameters(obj)
         mock_logger.log_hyperparams.assert_called_once()

@@ -80,7 +80,9 @@ class TestValidateSeeds:
         df = pd.DataFrame({"g": [1, 1], "seed": [1, 2]})
         mock_gb = MagicMock()
         mock_gb.filter.side_effect = TypeError("mock")
-        with patch("picid_report.core.validators.pd.DataFrame.groupby", return_value=mock_gb):
+        with patch(
+            "picid_report.core.validators.pd.DataFrame.groupby", return_value=mock_gb
+        ):
             out = validators.validate_seeds(df, ["g"], "seed", {1, 2})
         assert len(out) == 2
         assert mock_gb.filter.called
@@ -139,9 +141,7 @@ class TestLogModification:
 
     def test_log_modification_no_context_only_cols_dropped(self):
         """Branch: context None; only cols_dropped > 0. (log_modification 73->75 false branch)"""
-        validators.log_modification(
-            "Drop cols", "test", (2, 5), (2, 2), context=None
-        )
+        validators.log_modification("Drop cols", "test", (2, 5), (2, 2), context=None)
 
 
 class TestCheckHiddenVariations:
@@ -168,11 +168,11 @@ class TestCheckHiddenVariations:
     def test_additional_ignored_cols(self):
         """Branch: additional_ignored_cols set -> column in ignored. (check_hidden_variations)"""
         df = pd.DataFrame({"g": [1, 1], "tag": ["a", "b"], "ignore_me": [1, 2]})
-        validators.check_hidden_variations(
-            df, ["g"], [], ["ignore_me"]
-        )
+        validators.check_hidden_variations(df, ["g"], [], ["ignore_me"])
 
     def test_apply_exception_pass(self):
         """Branch: grouped[col].apply(...) raises -> pass. (check_hidden_variations)"""
-        df = pd.DataFrame({"g": [1, 1], "bad": [{"a": 1}, {"b": 2}]})  # dict not comparable in nunique
+        df = pd.DataFrame(
+            {"g": [1, 1], "bad": [{"a": 1}, {"b": 2}]}
+        )  # dict not comparable in nunique
         validators.check_hidden_variations(df, ["g"], [], None)

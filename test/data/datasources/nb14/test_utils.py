@@ -1,4 +1,5 @@
 """Tests for nb14.utils (flatten_cycles, table_to_ak_array) — no I/O."""
+
 import numpy as np
 import awkward as ak
 

@@ -5,6 +5,7 @@ Tests empty directories (via empty arrays/lists), missing keys, and
 invalid data shapes. Asserts the system raises descriptive errors or
 handles them without crashing.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -77,14 +78,16 @@ def test_fit_predict_missing_key():
 
 def test_hydra_initialize_empty_list_raises():
     """initialize_datasets with empty list raises ValueError."""
-    cfg = DictConfig({
-        "_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset",
-        "task_type": "rul",
-        "seq_len": 2,
-        "label_len": 0,
-        "pred_len": 1,
-        "stride": 1,
-    })
+    cfg = DictConfig(
+        {
+            "_target_": "picid.data.datasets.rul_context_dataset.RULContextBatchDataset",
+            "task_type": "rul",
+            "seq_len": 2,
+            "label_len": 0,
+            "pred_len": 1,
+            "stride": 1,
+        }
+    )
     with pytest.raises(ValueError, match="empty"):
         initialize_datasets(cfg, {"features": [], "rul": []}, {})
 
