@@ -11,8 +11,8 @@ scaler_target:
 
 scaler_features:
   transform:
-    _target_:  picid.transforms.base_transforms.scaler.StandardScalerSklearn  
-    
+    _target_:  picid.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -21,7 +21,7 @@ scaler_features:
 spectral:
   transform:
     _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
-    stats_to_compute: ["mean", 
+    stats_to_compute: ["mean",
         "maximum",
         "minimum",
         "root_mean_square",
@@ -38,13 +38,13 @@ spectral:
         "spectral_entropy",
         "shannon_entropy",
         "permutation_entropy",]
-    
+
   metadata:
     apply_to: 'features'
     assign_to: 'features'
 
 
-    
+
 sequence2statistics:
   transform:
     _target_: picid.transforms.battery.sequence2statistics.Sequence2Statistics
@@ -59,4 +59,3 @@ ragged2regularragged:
 
   metadata:
     apply_to: 'features'
-

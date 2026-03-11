@@ -4,4 +4,3 @@ defaults:
   - unibo/prognostics/base
   - /model_configs/prognostics/stf
   - override /transforms: battery/unibo/ablation_missing_values_combined
-

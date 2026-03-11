@@ -1,7 +1,7 @@
 scaler_features:
   transform:
-    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn  
-    
+    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -9,7 +9,7 @@ scaler_features:
 scaler_target:
   transform:
     _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
+
   metadata:
     apply_to: target
     fit_on: train
@@ -95,7 +95,7 @@ concatenate_features:
 take_last_target:
   transform:
     _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
-    step: 1 
+    step: 1
     window_size: full
     aggregation: last
     dim: 0
@@ -114,7 +114,7 @@ reshape_target_second_time:
   transform:
     _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
     pattern: "a 1 1 -> a 1"
-  
+
   metadata:
     apply_to: rul
 
@@ -125,7 +125,7 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
-  
+
 # plot_features_final:
 #   transform:
 #     unit_key: unit_id

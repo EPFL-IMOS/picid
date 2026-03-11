@@ -3,7 +3,7 @@
 defaults:
   - pronostia/prognostics/base
   - /model_configs/prognostics/cnn_1d
-  
+
   - override /dataset: prognostics/rul_multiunit_dataset
   - override /transforms: bearings/pronostia/spectral
 

@@ -5,5 +5,3 @@ defaults:
   - hsf15/cooler/base
   - /model_configs/diagnostics/tabpfn_fit_predict
   - override /transforms: hsf15/statistics_fit_predict
-  
-  

@@ -1,31 +1,31 @@
 
 scaler_features:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
-    
+
   metadata:
     apply_to: features
     fit_on: train
 
 scaler_target:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: target
     fit_on: train
 
 seasonal_leak:
-  # Note that shift is infered from the seq_len of the model. 
-  # Dummy shift supports only 168, otherwise the 
-  # shift breaks the week symmetry. 
+  # Note that shift is infered from the seq_len of the model.
+  # Dummy shift supports only 168, otherwise the
+  # shift breaks the week symmetry.
   transform:
-    _target_: picid.transforms.railway.seasonal_dummy_railway.SeasonalDummyTransform 
-    # we have to ensure that context from target 
+    _target_: picid.transforms.railway.seasonal_dummy_railway.SeasonalDummyTransform
+    # we have to ensure that context from target
     # do not have any future information!
-    shift: ${oc.select:task_definition.seq_len} 
-  
+    shift: ${oc.select:task_definition.seq_len}
+
   metadata:
     apply_to: ['features', 'target']
     assign_to: features
@@ -35,15 +35,15 @@ time_features_transform:
     _target_: picid.transforms.railway.timefeatures_railway.RailwayTimeFeaturesTransform
     use_features: ["year", "month", "day", "weekday", "hour"]
     normalize_time_features: False
-  
+
   metadata:
     apply_to: timestamps
     assign_to: time_features
 
 scaler_timefeatures:
   transform:
-    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn 
-  
+    _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
+
   metadata:
     apply_to: time_features
     fit_on: train
@@ -52,7 +52,7 @@ concatenate_features:
   # Concatenate time-features to the feature set
   transform:
     _target_: picid.transforms.base_transforms.concatenate.ConcatenateTransform
-  
+
   metadata:
     apply_to: ['features', 'time_features']
     assign_to: features
