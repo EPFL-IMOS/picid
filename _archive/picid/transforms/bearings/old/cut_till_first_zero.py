@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Dict
 
 import numpy as np
 from picid.data.data_objects.data import NamedTransformInput

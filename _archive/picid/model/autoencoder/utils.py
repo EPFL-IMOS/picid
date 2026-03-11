@@ -2,8 +2,6 @@ import numpy as np
 from typing import List, Tuple
 
 
-import numpy as np
-from typing import Tuple, List
 
 
 def get_autoencoder_summary_and_tags(
