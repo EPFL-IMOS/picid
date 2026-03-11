@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -90,7 +90,7 @@ class AutocorrFeatureDropTransform(NoFitPerSegmentMixin, DenseTransform):
         self.features_to_keep = [i for i in range(n_features) if i not in features_to_drop]
         self.is_fitted = True
         
-        logger.info(f"Correlation analysis complete:")
+        logger.info("Correlation analysis complete:")
         logger.info(f"  - Total features: {n_features}")
         logger.info(f"  - Features to drop: {len(self.features_to_drop)} {self.features_to_drop}")
         logger.info(f"  - Features to keep: {len(self.features_to_keep)}")

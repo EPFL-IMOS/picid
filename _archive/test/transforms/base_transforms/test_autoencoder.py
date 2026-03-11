@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import awkward as ak
 import torch
-from unittest.mock import patch, MagicMock, create_autospec
+from unittest.mock import patch, MagicMock
 from omegaconf import OmegaConf
 from numpy.testing import assert_array_equal
 
