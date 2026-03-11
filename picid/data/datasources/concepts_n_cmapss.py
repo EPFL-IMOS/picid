@@ -103,7 +103,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
                 # Development set
                 W = np.array(hdf.get("W_dev"))  # W
                 X_s = np.array(hdf.get("X_s_dev"))  # X_s
-                X_v = np.array(hdf.get("X_v_dev"))  # X_v
+                _X_v = np.array(hdf.get("X_v_dev"))  # X_v
                 T = np.array(hdf.get("T_dev"))  # T
                 Y = np.array(hdf.get("Y_dev"))  # RUL
                 A = np.array(hdf.get("A_dev"))  # Auxiliary
@@ -112,7 +112,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
                 # Test set
                 W = np.array(hdf.get("W_test"))  # W
                 X_s = np.array(hdf.get("X_s_test"))  # X_s
-                X_v = np.array(hdf.get("X_v_test"))  # X_v
+                _X_v = np.array(hdf.get("X_v_test"))  # X_v
                 T = np.array(hdf.get("T_test"))  # T
                 Y = np.array(hdf.get("Y_test"))  # RUL
                 A = np.array(hdf.get("A_test"))  # Auxiliary

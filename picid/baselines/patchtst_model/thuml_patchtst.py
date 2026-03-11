@@ -79,7 +79,7 @@ class Model(nn.Module):
                     dropout=configs.dropout,
                     activation=configs.activation,
                 )
-                for l in range(configs.e_layers)
+                for l in range(configs.e_layers)  # noqa: E741
             ],
             norm_layer=nn.Sequential(
                 Transpose(1, 2), nn.BatchNorm1d(configs.d_model), Transpose(1, 2)

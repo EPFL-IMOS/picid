@@ -205,7 +205,7 @@ class Embedding(nn.Module):
             y = torch.zeros_like(y)
 
         # for use_given, need to be computed before variable emb
-        y_dropped = (y == y_original).squeeze(-1)
+        _y_dropped = (y == y_original).squeeze(-1)
         if self.variable_emb is not None:
             y = self.variable_emb(y)
 

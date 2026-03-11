@@ -114,7 +114,7 @@ class NB14Loader(AbstractDataSourceLoader):
 
         # Instantiate multisource_data_splitter if is not none
         assert (
-            kwargs.get("multisource_data_splitter") == None
+            kwargs.get("multisource_data_splitter") is None
         ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
         self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
 

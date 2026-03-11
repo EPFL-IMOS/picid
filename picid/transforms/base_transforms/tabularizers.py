@@ -160,7 +160,7 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         data_segment = data
         N_samples = None
         feature_data = {}
-        split = metadata["mode"]
+        _split = metadata["mode"]
 
         for key, selection in self.select_features.items():
             data = data_segment[key]

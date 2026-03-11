@@ -135,7 +135,7 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
             # pos_indices = pos_indices[non_zero_mask[pos_indices]]  # Only non-zero values
 
             # Get historical values for this seasonal position
-            history = self.seasonal_history[seasonal_pos]
+            _history = self.seasonal_history[seasonal_pos]
 
             # For each occurrence of this seasonal position
             seen_idxs = []

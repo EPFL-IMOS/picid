@@ -9,7 +9,7 @@ def magnitude_max_pooling_1d(input_tensor, pool_size, stride):
     out_length = (L - pool_size) // stride + 1
 
     # Initialize the output tensor
-    output_tensor = torch.zeros((B, N, out_length))
+    _output_tensor = torch.zeros((B, N, out_length))
 
     # Unfold the input tensor to create sliding windows
     windows = input_tensor.unfold(2, pool_size, stride)

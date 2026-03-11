@@ -183,7 +183,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         # Instantiate multisource_data_splitter if is not none
         assert (
-            kwargs.get("multisource_data_splitter") == None
+            kwargs.get("multisource_data_splitter") is None
         ), "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
         self.multisource_data_splitter = "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
 

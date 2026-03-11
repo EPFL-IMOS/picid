@@ -82,7 +82,7 @@ class MultilabelTabularPredictor:
             label = self.labels[i]
             predictor = self.get_predictor(label)
             if not self.consider_labels_correlation:
-                labels_to_drop = [l for l in self.labels if l != label]
+                labels_to_drop = [l for l in self.labels if l != label]  # noqa: E741
             else:
                 labels_to_drop = [
                     self.labels[j] for j in range(i + 1, len(self.labels))

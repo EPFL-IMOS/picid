@@ -25,7 +25,7 @@ class RailwayLoader(SingleSourceLoader):
         self.mask = self.extract_mask(df)
 
         assert (
-            all(self.mask) == False
+            all(self.mask) == False  # noqa: E712
         ), "For the datasets that potentially can have context, avoid placing the target in features, as it should be done with the preprocessing as an transformation."
 
         return {
