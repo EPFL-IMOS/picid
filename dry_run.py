@@ -94,14 +94,26 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
     split_mode = dataset_source.get_split_mode()
     print(f"  split mode: {split_mode!r}")
 
-    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
+    preprocessor = PreProcessor(
+        datasource=dataset_source, transforms=transforms_manager
+    )
 
-    data_cache_path = cfg.paths.cache_path if (cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms) else None
-    data_library = Path(cfg.paths.root_dir) / "picid/data/datasources" if data_cache_path else None
-    transform_library = Path(cfg.paths.root_dir) / "picid/transforms" if data_cache_path else None
+    data_cache_path = (
+        cfg.paths.cache_path
+        if (cfg.cache.use_cache_after_loading or cfg.cache.use_cache_after_transfroms)
+        else None
+    )
+    data_library = (
+        Path(cfg.paths.root_dir) / "picid/data/datasources" if data_cache_path else None
+    )
+    transform_library = (
+        Path(cfg.paths.root_dir) / "picid/transforms" if data_cache_path else None
+    )
     cache_preprocessed = cfg.cache.use_cache_after_transfroms
 
-    print(f"  cache: data_cache_path={data_cache_path!s}, cache_preprocessed={cache_preprocessed}")
+    print(
+        f"  cache: data_cache_path={data_cache_path!s}, cache_preprocessed={cache_preprocessed}"
+    )
     preprocessor.pipeline(
         data_cache_path=data_cache_path,
         data_library_part_path=data_library,
@@ -115,8 +127,10 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
         print("  preprocessor.data is None")
         return
     split_dict = data.to_split_dict() if hasattr(data, "to_split_dict") else {}
-    for split, keys in (split_dict.items() if isinstance(split_dict, dict) else []):
-        print(f"  split {split!r}: keys {list(keys.keys()) if isinstance(keys, dict) else keys}")
+    for split, keys in split_dict.items() if isinstance(split_dict, dict) else []:
+        print(
+            f"  split {split!r}: keys {list(keys.keys()) if isinstance(keys, dict) else keys}"
+        )
         if isinstance(keys, dict):
             for k, v in keys.items():
                 if hasattr(v, "shape"):
@@ -124,7 +138,9 @@ def run_load_and_transforms(cfg: DictConfig) -> None:
                 elif isinstance(v, list) and len(v) and hasattr(v[0], "shape"):
                     print(f"    {k}: list of {len(v)} arrays, first shape={v[0].shape}")
                 else:
-                    print(f"    {k}: type={type(v).__name__} len={len(v) if hasattr(v, '__len__') else '?'}")
+                    print(
+                        f"    {k}: type={type(v).__name__} len={len(v) if hasattr(v, '__len__') else '?'}"
+                    )
 
     print("\n  --- MetadataManifest ---")
     _print_manifest(data)
@@ -139,6 +155,7 @@ def main(cfg: DictConfig) -> None:
     print("Pseudo-run: load + transforms only (no training)")
     try:
         from hydra.core.global_hydra import HydraConfig
+
         overrides = HydraConfig.get().runtime.choices
         print("Config choices (e.g. experiment, datasource):", dict(overrides))
     except Exception:
