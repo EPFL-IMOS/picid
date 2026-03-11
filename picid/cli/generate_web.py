@@ -30,6 +30,9 @@ def main(output_dir: Path | None = None) -> None:
             keys = list_experiments_for_group_task(group.name, task_type)
             experiment_keys.extend(keys)
 
+    # Exclude base configs (not runnable experiments)
+    experiment_keys = [k for k in experiment_keys if not k.endswith("/base")]
+
     config_map = {
         "experiment_keys": sorted(set(experiment_keys)),
         "paths": list_paths_configs() or ["default"],
