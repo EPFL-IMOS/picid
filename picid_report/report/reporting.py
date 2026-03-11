@@ -582,7 +582,7 @@ def write_tables_tex(
     parts.append("% --- Summary table (best metrics by model/dataset) ---\n")
     if sort_metric is not None:
         if isinstance(sort_metric, dict):
-            parts.append(f"% Metric used to select best results: varies by model/dataset\n")
+            parts.append("% Metric used to select best results: varies by model/dataset\n")
         else:
             parts.append(f"% Metric used to select best results: {sort_metric}\n")
     if not summary_df.empty:

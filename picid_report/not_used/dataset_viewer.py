@@ -5,7 +5,6 @@ from pathlib import Path
 
 import awkward as ak
 import holoviews as hv
-import hvplot.pandas
 import hydra
 import numpy as np
 import omegaconf

@@ -177,7 +177,7 @@ def generate_one_reproduce_script(
         "LOG_DIR=\"./logs\"",
         "mkdir -p \"$LOG_DIR\"",
         "SCRIPT_DIR=\"$( cd \"$( dirname \"${BASH_SOURCE[0]}\" )\" &> /dev/null && pwd )\"",
-        f"# Source logging from project scripts (relative to scripts/reproduce -> scripts/base)",
+        "# Source logging from project scripts (relative to scripts/reproduce -> scripts/base)",
         f"source \"$SCRIPT_DIR/{script_dir_relative}\"",
         "",
         "export HYDRA_FULL_ERROR=1",
