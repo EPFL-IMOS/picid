@@ -62,7 +62,6 @@ def test_loaded_slices_match_saved(config_name: str):
 
     from test.data.fixtures.pipeline_snapshots.slice_utils import (
         container_to_slice_manifest,
-        load_manifest,
         compare_to_saved_slices,
     )
 
@@ -140,7 +139,6 @@ def test_transformed_slices_match_saved(config_name: str):
         container_to_slice_manifest,
         compare_to_saved_slices,
         assert_preprocessing_time_within_bounds,
-        load_manifest,
     )
 
     CONFIGS = {

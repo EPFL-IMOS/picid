@@ -6,14 +6,12 @@ All dummy transforms and fixtures are imported from conftest.
 import numpy as np
 import pytest
 import awkward as ak
-from typing import Any, Dict, List
+from typing import Dict
 from sortedcontainers import SortedDict
 
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
-    NoFitConcatAlongAxisMixin,
-    NoFitPerSegmentMixin,
     find_singular_ragged_dim,
     tolist,
 )
@@ -69,7 +67,6 @@ class TestMultisourceUtils:
     
     def test_tolist_sorted_dict(self):
         """Test tolist with SortedDict."""
-        from sortedcontainers import SortedDict
         sd = SortedDict({"a": 1, "b": 2})
         result = tolist(sd)
         assert isinstance(result, list)

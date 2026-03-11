@@ -8,7 +8,6 @@ rank computation (average rank across datasets and per-dataset), and filename/la
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from picid_report.scripts import plot_average_rank as pa
 

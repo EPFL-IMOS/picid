@@ -9,9 +9,7 @@ so that collection does not pull in awkward/pyarrow before plugins are ready.
 
 import numpy as np
 import pytest
-from typing import Dict, Any, List
-from unittest.mock import MagicMock, Mock
-from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 
 # =============================================================================

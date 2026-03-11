@@ -19,7 +19,7 @@ and UniBo battery degradation datasets.
 import numpy as np
 import pytest
 import awkward as ak
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Tuple, Optional
 from dataclasses import dataclass
 from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
 

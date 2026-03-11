@@ -8,12 +8,10 @@ graceful degradation.
 
 import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch
 from picid.evaluator.classification import ClassificationEvaluator
 from picid.evaluator.default import DefaultEvaluator
 from picid.evaluator.multiunit import MultiUnitEvaluator
 from picid.metrics.metric_factory import MetricFactory
-from picid.transforms.base.multisource import InverseTransformMixin
 from picid.metrics.metrics import MSEMetric
 
 # =========================================================================

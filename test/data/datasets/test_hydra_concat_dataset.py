@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig
 
 from picid.data.datasets.hydra_concat_dataset import (
     initialize_datasets,
     HydraConcatDataset,
 )
-from picid.data.datasets.rul_context_dataset import RULContextBatchDataset
 
 
 @pytest.fixture

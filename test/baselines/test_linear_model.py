@@ -24,12 +24,9 @@ Test Coverage Strategy:
 2. **Linear_Forecaster Tests**: Integration with Forecaster, loss computation
 3. **Edge Cases**: Empty sequences, single timestep, large prediction horizons
 """
-import numpy as np
 import pytest
 import torch
-import torch.nn as nn
 from typing import Dict, Any
-from unittest.mock import Mock, MagicMock
 
 from picid.baselines.linear_model.linear_ar import LinearModel
 from picid.baselines.linear_model.linear_model import Linear_Forecaster

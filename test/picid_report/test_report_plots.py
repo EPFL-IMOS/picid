@@ -6,7 +6,6 @@ metric/prefix handling, empty/missing data, sorted (ranked) HP config order, and
 """
 
 from collections import defaultdict
-from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd

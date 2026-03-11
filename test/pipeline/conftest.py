@@ -6,10 +6,8 @@ per docs/dataobject.md, docs/datasets.md (RUL/ConceptRUL/FitPredict batch shapes
 """
 
 import pytest
-import numpy as np
 import torch
-from typing import Dict, Any
-from unittest.mock import MagicMock
+from typing import Dict
 
 from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFitPredictWrapper

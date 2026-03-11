@@ -1,10 +1,8 @@
 """Tests for Phase 4.2: slice-awareness (SliceInfo, container, context)."""
-import pytest
 
 from picid.data.data_objects.slice_info import SliceInfo
-from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.data_objects.manifest import MetadataManifest
-from picid.transforms.base.pipeline import TransformContext, RecordManifestStep
+from picid.transforms.base.pipeline import TransformContext
 
 from test.transforms.base.conftest import (
     create_dummy_single_unit_container,

@@ -8,7 +8,6 @@ from picid.transforms.base_transforms.concatenate import (
     RuggedToDenseTransform,
     MultiDatasetRuggedToDenseTransform,
 )
-from picid.utils.awkward_utils import ak_find_var_dims
 
 
 class TestConcatenateTransform:

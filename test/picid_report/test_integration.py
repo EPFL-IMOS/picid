@@ -7,7 +7,6 @@ Does not modify picid_report or touch picid_report/not_used.
 """
 
 from unittest.mock import patch
-import pytest
 
 from picid_report import config
 from picid_report.core import analysis

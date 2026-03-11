@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import pandas as pd
 from picid.transforms.base_transforms.mcar_corruption import MCARCorruptorTransform
 
 # --- Fixtures ---

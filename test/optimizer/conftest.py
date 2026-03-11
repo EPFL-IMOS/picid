@@ -5,7 +5,6 @@ aligned with docs/dataobject.md and docs/datasets.md (RUL/forecasting pipelines)
 """
 
 import pytest
-import torch
 import torch.nn as nn
 
 

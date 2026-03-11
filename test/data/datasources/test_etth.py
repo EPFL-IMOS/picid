@@ -3,9 +3,8 @@ Tests for ETThLoader with mocked I/O (pd.read_csv).
 """
 from __future__ import annotations
 
-import pandas as pd
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from picid.data.datasources.ETTh import ETThLoader
 

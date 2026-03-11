@@ -5,7 +5,6 @@ Uses conftest phmd mock; exercises init and, where possible, load_data with mock
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from unittest.mock import patch
 
 # phmd is mocked in conftest; import loaders that depend on it

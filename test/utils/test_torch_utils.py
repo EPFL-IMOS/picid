@@ -1,6 +1,4 @@
 """Tests for picid.utils.torch_utils."""
-import pytest
-from pathlib import Path
 from unittest.mock import patch
 import torch
 from torch import nn

@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from unittest.mock import MagicMock, patch
-from pathlib import Path
 
 from picid.evaluator.reconstruction import ReconstructionEvaluator
 from picid.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook

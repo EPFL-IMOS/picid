@@ -17,9 +17,7 @@ health assessments in Prognostics and Health Management (PHM) systems.
 Coverage Target: 100%
 """
 
-import pytest
 import torch
-import numpy as np
 from numpy.testing import assert_almost_equal
 
 from picid.evaluator.utils import (

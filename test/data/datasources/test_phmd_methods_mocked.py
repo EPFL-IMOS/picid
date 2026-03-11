@@ -7,7 +7,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-import awkward as ak
 
 from picid.data.datasources.phmd_battery import PHMDBatteryLoader
 from picid.data.datasources.phmd_cbmv3 import CBMv3Loader

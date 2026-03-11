@@ -6,7 +6,6 @@ Validates: Guard conditions, plot creation, data integrity, PHM shape (N, T, C).
 """
 
 import numpy as np
-import pytest
 from unittest.mock import MagicMock, patch
 
 from picid.evaluator.hooks.reconstruction_plot import ReconstructionPlotHook

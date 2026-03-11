@@ -41,7 +41,6 @@ Physical Validation:
 """
 import numpy as np
 import pytest
-from typing import Dict, Tuple
 
 from picid.transforms.bearings.health_index import (
     HealthIndexTransform,

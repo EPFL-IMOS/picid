@@ -1,7 +1,5 @@
 """Tests for picid.utils.config_diff."""
-from pathlib import Path
 
-import pytest
 
 from picid.utils.config_diff import diff_configs
 

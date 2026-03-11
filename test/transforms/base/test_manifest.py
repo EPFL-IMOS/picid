@@ -6,7 +6,6 @@ from picid.data.data_objects.manifest import (
     ManifestEntry,
     MetadataManifest,
 )
-from picid.data.data_objects.data import SplitDatasetContainer
 from picid.transforms.base.pipeline import RecordManifestStep, TransformContext
 
 from test.transforms.base.conftest import (

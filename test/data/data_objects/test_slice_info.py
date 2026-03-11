@@ -1,5 +1,4 @@
 """Tests for picid.data.data_objects.slice_info (SliceInfo) to reach full coverage."""
-import pytest
 
 from picid.data.data_objects.slice_info import SliceInfo
 

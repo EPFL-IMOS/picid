@@ -5,8 +5,6 @@ Validates FLOPs/throughput/GPU/timing hooks and helpers. Aligns with PHM
 pipeline efficiency logging (docs: runai.md, pipeline training).
 """
 
-import pytest
-import numpy as np
 import torch
 from unittest.mock import MagicMock, patch
 

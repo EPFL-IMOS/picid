@@ -6,7 +6,6 @@ to ensure complete coverage of picid.transforms.base_transforms.timefeatures.
 import numpy as np
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
 
 from picid.transforms.base_transforms.timefeatures import (
     TimeFeature,

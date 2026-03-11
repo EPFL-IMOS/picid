@@ -5,9 +5,7 @@ to use a tmp_path so we can verify output without the real configs tree.
 """
 
 import json
-from pathlib import Path
 
-import pytest
 
 from scripts.experiment_generator.generate_config_map import main
 

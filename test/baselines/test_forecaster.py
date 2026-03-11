@@ -22,21 +22,13 @@ Test Coverage Strategy:
 5. **RevIN Tests**: Test normalization and denormalization paths
 6. **Optimizer Configuration Tests**: Validate optimizer and scheduler setup
 """
-import numpy as np
 import pytest
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict, Any
-from unittest.mock import Mock, MagicMock, patch
+from typing import Dict, Any
+from unittest.mock import MagicMock
 
 from picid.baselines.forecaster import Forecaster, TransformerForecaster
-from picid.baselines.definitions import (
-    ALL_TASKS,
-    CLASSIFICATION_TASKS,
-    REGRESSION_TASKS,
-    FORECASTING_TASKS,
-    STATE_FORECASTING_TASKS,
-)
 from picid.evaluator.base import AbstractEvaluator
 
 

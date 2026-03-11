@@ -21,7 +21,7 @@ import pandas as pd
 import torch
 import awkward as ak
 from omegaconf import OmegaConf
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from picid.utils.rich_output import (
     describe_data_type,

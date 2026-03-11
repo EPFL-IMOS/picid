@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from picid.evaluator.forecasting import ForecastingEvaluator
 from picid.metrics.metric_factory import MetricFactory
 

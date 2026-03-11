@@ -21,7 +21,6 @@ Test Coverage Strategy:
 """
 import numpy as np
 import pytest
-from unittest.mock import MagicMock
 
 from picid.data.preprocessing.splits.by_source_splitter import (
     BySourceSplitter,

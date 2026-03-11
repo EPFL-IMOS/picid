@@ -7,7 +7,6 @@ Validates HTML report generation with metric information display.
 from collections import defaultdict
 import os
 import tempfile
-import pytest
 
 from picid_report.report import report_html, reporting
 

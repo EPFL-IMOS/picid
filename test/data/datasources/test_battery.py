@@ -4,7 +4,6 @@ Tests for BatteryLoader with mocked I/O (pd.read_csv).
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 from unittest.mock import patch
 

@@ -5,7 +5,6 @@ Validates timing hooks and _log_averages. Aligns with PHM pipeline
 benchmarking (docs: runai.md, pipeline training/validation/test stages).
 """
 
-import pytest
 import numpy as np
 from unittest.mock import MagicMock
 

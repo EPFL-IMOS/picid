@@ -6,7 +6,7 @@ from multiple test files. All dummy transforms and fixtures are imported from co
 import numpy as np
 import pytest
 import awkward as ak
-from typing import Any, Dict, List
+from typing import Dict
 
 from picid.exceptions import TransformError
 from picid.transforms.base.base_transform import DenseTransform
