@@ -34,7 +34,7 @@ jobs:
       # persist-credentials: false -> Prevents GitHub from overriding SSH with HTTPS
       # submodules: false -> We handle them manually below
       - uses: actions/checkout@v4
-        with: 
+        with:
           persist-credentials: false
           submodules: false
 

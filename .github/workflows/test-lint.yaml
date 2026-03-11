@@ -1,0 +1,54 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, github-actions-test ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Setup SSH for your private submodules (e.g., TabPFN)
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
+
+      # 2. Checkout the repo
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # Fetches phmd, TabPFN, etc. automatically
+
+      # 3. Setup uv with Caching
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # 4. Install the environment
+      # uv sync installs picid + local submodules + dev dependencies
+      - name: Install Dependencies
+        run: uv sync --all-extras
+
+      # 5. Run Ruff (Style & Syntax)
+      # It will only check 'picid' based on your pyproject.toml settings
+      - name: Ruff Check
+        run: uv run ruff check picid
+
+      # 6. Run Mypy (Type Logic)
+      - name: Mypy Type Check
+        # We point it specifically at picid to avoid submodule errors
+        run: uv run mypy picid
+        # Set to true if you don't want to block PRs while fixing existing errors
+        continue-on-error: true
