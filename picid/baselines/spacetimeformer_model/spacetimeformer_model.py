@@ -102,7 +102,6 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
-
         if task_type in STATE_FORECASTING_TASKS:
             # currently we populate d_x as zero vector for state forecasting
             # this would need to be changes if we want to include timefeatures
@@ -134,7 +133,6 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
             start_token_len = 0
 
         self.torchmetrics_version = torchmetrics.__version__
-            
 
         if start_token_len < 0:
             timetable_emb_enc_type = timetable_emb_type
@@ -242,7 +240,6 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         return kwargs
 
     def step(self, batch: Tuple[torch.Tensor], train: bool) -> dict[str, torch.Tensor]:
-
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )

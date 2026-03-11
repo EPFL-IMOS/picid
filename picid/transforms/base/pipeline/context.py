@@ -12,6 +12,7 @@ Relationship to the rest of the pipeline:
   for observability and validation; steps use it as the single source of truth
   for data, assign_to keys, and chunk builders.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

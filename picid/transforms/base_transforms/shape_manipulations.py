@@ -39,9 +39,7 @@ class RegularizeRaggedDataTransform(NoFitPerSegmentMixin, RaggedTransform):
         return ak.to_regular(data[keys[0]])
 
 
-class ExpandScalarToReferenceFeatureSize(
-    NoFitPerSegmentMixin, DenseTransform
-):
+class ExpandScalarToReferenceFeatureSize(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, scalar_key: str, **kwargs):
         """
         Initialize the transform.

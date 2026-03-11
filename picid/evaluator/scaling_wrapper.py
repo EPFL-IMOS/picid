@@ -173,7 +173,6 @@ class MultivariateTimeseriesScalingWrapper:
         pred_shape = predictions.shape
 
         if len(pred_shape) == 3:
-
             assert (
                 pred_shape[0] == 1 or self.task_mode
             ), f"Expected batch size of 1 for 3D predictions, got {pred_shape[0]}"

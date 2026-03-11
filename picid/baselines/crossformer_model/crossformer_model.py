@@ -142,7 +142,6 @@ class Crossformer_Forecaster(TransformerForecaster):
         # enc = torch.concat((enc_x, enc_y), dim=2)
 
         if self.decoder_embedding == "DSW":
-
             if self.d_x_mask is not None:
                 x_t[:, :, self.mask_tt] = 0
 
@@ -154,7 +153,6 @@ class Crossformer_Forecaster(TransformerForecaster):
             outputs = self.crossformer(x_seq=batch_x, y_seq=batch_y)
             forecast_out = outputs[..., -self.out_data_dim :]
         elif self.decoder_embedding == "random":
-
             if self.task_type in REGRESSION_TASKS + CLASSIFICATION_TASKS:
                 x_seq = x_t
                 outputs = self.crossformer(x_seq=x_seq)
@@ -198,7 +196,6 @@ class Crossformer_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch

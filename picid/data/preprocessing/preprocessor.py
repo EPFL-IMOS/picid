@@ -46,6 +46,7 @@ Behaviour is identical to the previous implementation; the logic is decomposed
 into named methods for testability and the concrete transform manager type is
 no longer hardcoded.
 """
+
 from __future__ import annotations
 
 import logging
@@ -90,6 +91,7 @@ AnyTransformSequence = Union[ConfigTransformManager, TransformPipeline]
 # ---------------------------------------------------------------------------
 # PreProcessor
 # ---------------------------------------------------------------------------
+
 
 class PreProcessor(PreProcessorInterface):
     """
@@ -155,9 +157,7 @@ class PreProcessor(PreProcessorInterface):
         Otherwise returns the DatasetContainer directly.
         """
         if not self._is_preprocessed or self.data is None:
-            raise RuntimeError(
-                "Data has not been preprocessed. Run pipeline() first."
-            )
+            raise RuntimeError("Data has not been preprocessed. Run pipeline() first.")
         if return_splits_on_first_level:
             return self.data.to_split_dict()
         return self.data
@@ -297,8 +297,7 @@ class PreProcessor(PreProcessorInterface):
                     raise
                 except Exception as e:
                     raise TransformError(
-                        f"Transform {transform_name!r} failed. "
-                        f"Original error: {e}",
+                        f"Transform {transform_name!r} failed. " f"Original error: {e}",
                         step_id=transform_name,
                         cause=e,
                     ) from e
@@ -318,22 +317,30 @@ class PreProcessor(PreProcessorInterface):
                 )
                 log_str = self._extract_log_string(transform_log)
 
-                summary.append({
-                    "transform_name": transform_name,
-                    "time": f"{elapsed:.4f}",
-                    "status": "Success",
-                    "details": log_str,
-                    "changes": str(descriptive_dict_differences_str(
-                        pre_descr, post_descr, mode="changed"
-                    )),
-                    "added": str(descriptive_dict_differences_str(
-                        pre_descr, post_descr, mode="added"
-                    )),
-                    "removed": str(descriptive_dict_differences_str(
-                        pre_descr, post_descr, mode="removed"
-                    )),
-                    "inputs": str(pre_descr),
-                })
+                summary.append(
+                    {
+                        "transform_name": transform_name,
+                        "time": f"{elapsed:.4f}",
+                        "status": "Success",
+                        "details": log_str,
+                        "changes": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="changed"
+                            )
+                        ),
+                        "added": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="added"
+                            )
+                        ),
+                        "removed": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="removed"
+                            )
+                        ),
+                        "inputs": str(pre_descr),
+                    }
+                )
         finally:
             print_transforms_summary(summary)
 

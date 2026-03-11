@@ -46,7 +46,6 @@ class ConceptClassesBuilder(ConcatFitAndPerSegmentTransformMixin, DenseTransform
             self.lookup.set(class_key)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         concepts = data["concepts"].copy()
 
         if not np.isin(concepts, [0, 1]).all():

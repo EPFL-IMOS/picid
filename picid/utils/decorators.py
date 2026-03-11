@@ -20,7 +20,6 @@ def inject_transform_context_to_strategy_apply(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-
         # 1. Identify Context from Arguments (Expecting 'transform_instance' and 'apply_to_keys' in kwargs)
         transform_instance = kwargs.get("transform_instance")
         apply_to_keys = kwargs.get("apply_to_keys")
@@ -88,9 +87,7 @@ def check_transform_output_consistency(transform_func):
 
         # We only check if the output is a mapping (dict-like) AND we have an explicit key to check
         if expected_key is not None and isinstance(raw_output, Mapping):
-
             if expected_key not in raw_output:
-
                 # --- Construct the detailed error message ---
                 error_msg = (
                     f"\n\n🛑 OUTPUT KEY MISSING IN TRANSFORM {self.__class__.__name__} 🛑\n"

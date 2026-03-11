@@ -19,7 +19,6 @@ class ConceptRULDataset(BaseDataset):
         stride: int,
         **kwargs,
     ):
-
         for k, v in data_dict.items():
             assert isinstance(v, (np.ndarray)), (
                 f"All entries in data_dict must be numpy arrays "
@@ -72,9 +71,7 @@ class ConceptRULDataset(BaseDataset):
                     .repeat(counter, 1)
                 )
                 x = self.X[
-                    i * self.stride
-                    - (self.window_size - counter)
-                    + 1 : i * self.stride
+                    i * self.stride - (self.window_size - counter) + 1 : i * self.stride
                     + 1,
                     :,
                 ].T

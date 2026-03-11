@@ -99,8 +99,8 @@ def initialize_datasets(dataset_cfg, data_dict, meta_data_dict):
         datasets.append(dataset)
 
     for ds in datasets:
-        assert type(ds) is type(
-            datasets[0]
+        assert (
+            type(ds) is type(datasets[0])
         ), f"All datasets must be of the same type. Found {type(ds)} and {type(datasets[0])}."
 
     return datasets

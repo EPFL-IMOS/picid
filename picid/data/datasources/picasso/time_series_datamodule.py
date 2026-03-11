@@ -206,7 +206,6 @@ class EnhancedCSVLongTermForecastingModule(pl.LightningDataModule):
         neg_days: list = None,
         exp_type: str = "regression",
     ):
-
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size

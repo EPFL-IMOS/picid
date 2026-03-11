@@ -14,20 +14,18 @@ import torch
 class AbstractLoss(ABC):
     """
     Abstract base class for loss functions.
-    
+
     This class defines the standard interface for implementing custom loss functions
     for transformer models. Subclasses must implement the forward method to provide
     specific loss computation logic.
     """
-    
+
     def __init__(self) -> None:
         """Initialize the abstract loss function."""
         super().__init__()
-    
+
     def __call__(
-        self, 
-        model_out: Dict[str, torch.Tensor], 
-        batch: Dict[str, torch.Tensor]
+        self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
         Compute loss based on model output and batch data.
@@ -48,12 +46,10 @@ class AbstractLoss(ABC):
             Dictionary containing the model output with computed loss
         """
         return self.forward(model_out, batch)
-    
+
     @abstractmethod
     def forward(
-        self, 
-        model_out: Dict[str, torch.Tensor], 
-        batch: Dict[str, torch.Tensor]
+        self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass for loss computation.

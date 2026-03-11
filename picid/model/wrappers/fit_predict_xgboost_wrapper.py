@@ -21,7 +21,6 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         num_classes: Optional[int] = None,
         **kwargs,
     ):
-
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS

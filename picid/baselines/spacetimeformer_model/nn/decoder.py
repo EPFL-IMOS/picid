@@ -49,7 +49,7 @@ class DecoderLayer(nn.Module):
             sequence (the encoder input) and K (K < N) variables in the target sequence
             (the decoder input), then this implementation of Local Cross Attn
             assumes that the first K variables in the context correspond to the
-            first K in the target. This means that if the context sequence is shape 
+            first K in the target. This means that if the context sequence is shape
             (batch, length, N), then context[:, :, :K] gets you the context of the
             K target variables (target[..., i] is the same variable
             as context[..., i]). If this isn't true the model will still train but

@@ -61,7 +61,6 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         multisource_data_splitter: Optional[dict] = None,
         **kwargs,
     ):
-
         kwargs.update(multisource_data_splitter=multisource_data_splitter)
         super().__init__(**kwargs)
 
@@ -170,7 +169,6 @@ class MultiSourceLoader(AbstractDataSourceLoader):
             data_lst.append(datasource.get_data())
 
         if self.multisource_data_splitter:
-
             instance_clss = {
                 v for chunk in data_lst for v in chunk.get_instance_cls().values()
             }

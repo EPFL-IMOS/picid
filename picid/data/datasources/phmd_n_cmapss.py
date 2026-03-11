@@ -23,7 +23,6 @@ class PHMDNCMAPSSLoader(PHMDMultiSourceLoader):
         return main_fold
 
     def _process_unit(self, df_unit, unit_name, features_col, target_col):
-
         df_features = df_unit[features_col].copy().reset_index(drop=True)
         df_target = df_unit[target_col].copy().reset_index(drop=True)
 

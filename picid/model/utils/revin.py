@@ -1,5 +1,5 @@
 """
-Reversible Instance Normalization from 
+Reversible Instance Normalization from
 https://github.com/ts-kim/RevIN
 """
 

@@ -10,6 +10,7 @@ Default checks: before = no NaNs + length consistency; after = structure +
 split preservation. Built by build_default_before_checks / build_default_after_checks
 and attached to TransformContext by TransformStrategy.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -76,9 +77,7 @@ def _run_scoped_checks(
                 )
                 raise RuntimeError(msg) from exc
             elif policy == "warn":
-                logger.warning(
-                    "Integrity check '%s' failed (warn only): %s", name, exc
-                )
+                logger.warning("Integrity check '%s' failed (warn only): %s", name, exc)
                 ran.append(name)
     return ran
 
@@ -88,6 +87,7 @@ def _default_before_check_nans(
 ) -> None:
     """Default before-check: no NaN values in any chunk of this split."""
     from picid.data.data_objects.utils import check_for_nans
+
     for split, chunks in split_chunks.items():
         for chunk in chunks:
             check_for_nans(
@@ -100,6 +100,7 @@ def _default_before_check_lengths(
 ) -> None:
     """Default before-check: consistent array lengths within each chunk."""
     from picid.data.data_objects.utils import check_length_consistency
+
     for split, chunks in split_chunks.items():
         for chunk in chunks:
             check_length_consistency(
@@ -112,6 +113,7 @@ def _default_after_check_structure(
 ) -> None:
     """Default after-check: every assign_to key maps to a split-keyed dict."""
     from collections.abc import Mapping
+
     for key, split_data in assign_to_slice.items():
         if not isinstance(split_data, Mapping):
             raise TypeError(
@@ -126,6 +128,7 @@ def _default_after_check_splits(
 ) -> None:
     """Default after-check: split set is unchanged after transformation."""
     from collections.abc import Mapping
+
     for key, split_data in assign_to_slice.items():
         if isinstance(split_data, Mapping):
             result_splits = frozenset(split_data.keys())

@@ -1,4 +1,5 @@
 """Project-wide exception types."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,8 +11,8 @@ def build_transform_error(context: Any, e: BaseException) -> TransformError:
     step_id = getattr(context, "step_id", None) or (
         getattr(ti, "__class__", None) and getattr(ti.__class__, "__name__", None)
     )
-    transform_class = (
-        getattr(ti, "__class__", None) and getattr(ti.__class__, "__name__", None)
+    transform_class = getattr(ti, "__class__", None) and getattr(
+        ti.__class__, "__name__", None
     )
     apply_to = getattr(context, "apply_to_keys", None)
     msg = (
@@ -57,7 +58,11 @@ class TransformError(Exception):
             lines.append(f"  Transform class: {self.transform_class}")
         if self.apply_to_keys:
             lines.append(f"  Apply-to keys: {self.apply_to_keys}")
-        if self.step_id is not None or self.transform_class is not None or self.apply_to_keys:
+        if (
+            self.step_id is not None
+            or self.transform_class is not None
+            or self.apply_to_keys
+        ):
             lines.append("")
         if self.cause is not None:
             lines.append("Original error:")

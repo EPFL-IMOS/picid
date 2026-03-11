@@ -274,7 +274,6 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
 
             # --- 2. Save Original Target Plot (if it exists) ---
             if orig_targ_data is not None:
-
                 try:
                     self._save_original_target_plot(orig_targ_data, unit_id_str)
                 except Exception as e:

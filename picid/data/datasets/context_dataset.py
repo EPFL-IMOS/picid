@@ -14,7 +14,6 @@ from picid.data.datasets.collate_functions import (
 from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
 
 
-
 class ContextBatchDataset(BaseDataset):
     def __init__(
         self,
@@ -32,7 +31,6 @@ class ContextBatchDataset(BaseDataset):
         subset_blocks: Optional[int] = None,
         **kwargs,
     ):
-
         # Make sure that the data_dict contains the required keys
         if task_type in REGRESSION_TASKS:
             required_keys = ["features", task_type]  # "time_features", "target"
@@ -92,7 +90,6 @@ class ContextBatchDataset(BaseDataset):
         return len(self.target_dataset)
 
     def __getitem__(self, batch_idx: Union[int, List[int]]):
-
         d = AttributeDict(
             {
                 "batch_idx": batch_idx,

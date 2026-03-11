@@ -25,7 +25,6 @@ class DefaultOptimizer(AbstractOptimizer):
     """
 
     def __init__(self, optimizer_id, parameters, scheduler=None) -> None:
-
         raise DeprecationWarning(
             "DefaultOptimizer is deprecated and will be removed in future versions."
         )

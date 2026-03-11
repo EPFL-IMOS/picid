@@ -6,6 +6,7 @@ transform_data (and optional fit_data). Subclasses combine with multisource
 mixins (e.g. ConcatFitAndPerSegmentTransformMixin) and optionally with RaggedTransform /
 DenseTransform / RaggedOrDenseTransform to declare capability for handler dispatch.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple
 
@@ -23,7 +24,11 @@ class BaseTransform(ABC):
         self.exclude_keys = exclude_keys if exclude_keys is not None else []
         self._init_kwargs = kwargs
         # Set requires_fit from fit-policy mixin (avoids pipeline needing to know mixin types)
-        from picid.transforms.base.multisource import FitByConcatenationMixin, NoFitMixin
+        from picid.transforms.base.multisource import (
+            FitByConcatenationMixin,
+            NoFitMixin,
+        )
+
         if issubclass(type(self), FitByConcatenationMixin):
             self.requires_fit = True
         elif issubclass(type(self), NoFitMixin):

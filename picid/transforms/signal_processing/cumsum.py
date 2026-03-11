@@ -8,7 +8,6 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 
 class CumSumTransform(NoFitPerSegmentMixin, RaggedTransform):
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

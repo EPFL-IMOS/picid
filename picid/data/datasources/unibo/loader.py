@@ -162,11 +162,18 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         self.data_dict = None
         self.meta_data = {}
 
-        self.rul_anomaly_threshold = kwargs.get("rul_anomaly_threshold", rul_anomaly_threshold)
-        self.rul_anomaly_fraction = kwargs.get("rul_anomaly_fraction", rul_anomaly_fraction)
+        self.rul_anomaly_threshold = kwargs.get(
+            "rul_anomaly_threshold", rul_anomaly_threshold
+        )
+        self.rul_anomaly_fraction = kwargs.get(
+            "rul_anomaly_fraction", rul_anomaly_fraction
+        )
 
         if self.task_mode == "anomaly_detection":
-            if self.rul_anomaly_threshold is not None and self.rul_anomaly_fraction is not None:
+            if (
+                self.rul_anomaly_threshold is not None
+                and self.rul_anomaly_fraction is not None
+            ):
                 raise ValueError(
                     "For task_mode='anomaly_detection', set exactly one of "
                     "rul_anomaly_threshold (absolute) or rul_anomaly_fraction (relative)."
@@ -314,7 +321,9 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             initial_cycle_lenghts_validation,
             initial_cycle_lenghts_test,
         ) = dataset_handler.get_discharge_whole_cycle_future(
-            train_names, test_names, val_names  # Pass all three
+            train_names,
+            test_names,
+            val_names,  # Pass all three
         )
 
         # 3. --- Organize Data for Looping ---

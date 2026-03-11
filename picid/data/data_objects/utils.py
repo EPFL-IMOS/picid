@@ -5,7 +5,6 @@ import pandas as pd
 import awkward as ak
 
 
-
 def get_length(value: Any) -> Optional[int]:
     """Helper to safely get the length of different array-like types."""
     if hasattr(value, "shape") and hasattr(value.shape, "__len__") and value.shape:
@@ -74,7 +73,7 @@ def check_for_nans(
         # 4. Handle awkward arrays (numeric only; non-numeric e.g. string raises in np.isnan)
         elif isinstance(value, ak.Array):
             try:
-                # Optimized check: ak.any(np.isnan()) is significantly faster 
+                # Optimized check: ak.any(np.isnan()) is significantly faster
                 # than converting to numpy or flattening for standard ragged arrays.
                 # It operates directly on the structure.
                 has_nan = bool(ak.any(np.isnan(value)))
@@ -89,8 +88,6 @@ def check_for_nans(
                 raise ValueError(message)
             else:
                 warnings.warn(message)
-
-
 
 
 def convert_to_numpy(

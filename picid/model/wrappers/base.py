@@ -75,7 +75,6 @@ class AbstractFitPredictWrapper(ABC):
         if callable(backbone) and not (
             hasattr(backbone, "fit") and hasattr(backbone, "predict")
         ):
-
             assert (
                 reinit_on_fit
             ), "When providing a callable backbone, reinit_on_fit must be True."
@@ -142,7 +141,6 @@ class AbstractFitPredictWrapper(ABC):
             from torch.profiler import record_function
 
             if not self.profile_started_flag:
-
                 self._setup_profiler(self.profile_fit_cfg)
                 self.profile_started_flag = True
             with record_function("dataloader_iteration"):

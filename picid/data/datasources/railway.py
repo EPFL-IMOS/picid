@@ -11,7 +11,6 @@ warnings.filterwarnings("ignore")
 
 class RailwayLoader(SingleSourceLoader):
     def __init__(self, data_path, timestamp_name, target_name, **kwargs):
-
         self.data_path = data_path
         self.timestamp_name = timestamp_name
         self.target_name = target_name

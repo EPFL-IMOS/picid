@@ -6,6 +6,7 @@ Checks can be injected into the pipeline via IntegrityCheckStep (optional).
 NaN check remains available as a built-in check; mandatory-by-default is achieved
 by using policy "fail" when the check is registered.
 """
+
 from __future__ import annotations
 
 import warnings

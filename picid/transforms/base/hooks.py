@@ -7,6 +7,7 @@ steps, and emission logic. Register defaults via register_defaults().
 on_transform_error hooks run in registration order: enrich first (so context.error
 becomes a TransformError), then log (so table and log use the enriched error).
 """
+
 from __future__ import annotations
 
 import logging

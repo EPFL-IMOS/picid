@@ -1,11 +1,11 @@
-
-
 import joblib
 
 from pathlib import Path
 from picid.data.cache.base import BaseCache
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class StreamCache(BaseCache):
     """

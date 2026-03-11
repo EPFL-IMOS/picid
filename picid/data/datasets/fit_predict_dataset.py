@@ -125,7 +125,6 @@ class FitPredictTaskDataset(BaseDataset):
                 isinstance(x, ndarray) for x in input_data
             ):
                 if self.convert_units_to_tasks:
-
                     # Assert that all arrays have matching dimensions for dim 2 and 3
                     first_shape = input_data[0].shape
                     for arr in input_data:

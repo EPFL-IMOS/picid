@@ -4,6 +4,7 @@ Pipeline runners for PreProcessor: direct (no cache) and caching (three-tier).
 DirectPipelineRunner and CachingPipelineRunner are used by PreProcessor.pipeline()
 and are separated here for testability and clearer layout.
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Pipeline runners
 # ---------------------------------------------------------------------------
+
 
 class DirectPipelineRunner:
     """
@@ -147,9 +149,7 @@ class CachingPipelineRunner:
             )
             pp.transforms = saved["transforms"]
             pp.meta_data = saved["meta_data"]
-            logger.info(
-                "Loaded data from preprocessed cache. Pipeline complete."
-            )
+            logger.info("Loaded data from preprocessed cache. Pipeline complete.")
             return pp.data
         return None
 
@@ -211,9 +211,7 @@ class CachingPipelineRunner:
             names_after = pp.transforms.get_transform_names_after(boundary_name)
             if names_after:
                 all_dt = pp.transforms.get_transforms()
-                tail = OrderedDict(
-                    (n, all_dt[n]) for n in names_after if n in all_dt
-                )
+                tail = OrderedDict((n, all_dt[n]) for n in names_after if n in all_dt)
                 pp.data = pp.apply_transforms(pp.data, tail)
 
             logger.info(
@@ -235,6 +233,7 @@ class CachingPipelineRunner:
         cache_point_names = pp.transforms.get_cache_point_names()
 
         if cache_point_names and self._save_boundaries:
+
             def _boundary_callback(data: DatasetContainer, transform_name: str):
                 if transform_name not in cache_point_names:
                     return
@@ -253,9 +252,7 @@ class CachingPipelineRunner:
                     library_dir=self._combined_paths,
                     extensions=[".py"],
                 )
-                logger.info(
-                    "Saved boundary cache after transform %r.", transform_name
-                )
+                logger.info("Saved boundary cache after transform %r.", transform_name)
 
             pp.data = pp.apply_transforms(
                 pp.data,

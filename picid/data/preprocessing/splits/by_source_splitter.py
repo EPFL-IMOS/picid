@@ -20,7 +20,6 @@ class BySourceSplitter:
         sources_val: List[str] = None,
         sources_test: List[str] = None,
     ):
-
         self.sources_train = sources_train if sources_train is not None else []
         self.sources_val = sources_val if sources_val is not None else []
         self.sources_test = sources_test if sources_test is not None else []

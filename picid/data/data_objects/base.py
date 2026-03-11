@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class ToNumpyMixin:
-
     def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
         """
         Converts the data for a given key to a NumPy array on demand.
@@ -35,7 +34,6 @@ class ToNumpyMixin:
 
 
 class ToDataFrameMixin:
-
     def to_dataframe(self, key: str) -> pd.DataFrame:
         """
         Returns a pandas.DataFrame representation of the data for a given key.
@@ -228,7 +226,9 @@ class BaseDataObjectWithMetadata(
     original format.
     """
 
-    def __init__(self, metadata: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
+    def __init__(
+        self, metadata: Optional[Dict[str, Any]] = None, **kwargs: Any
+    ) -> None:
         """
         Initializes the chunk, handling metadata and column extraction robustly.
         """

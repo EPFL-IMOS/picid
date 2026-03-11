@@ -251,7 +251,6 @@ class LSTM_Forecaster(Forecaster):
         return {"force": 0.0}
 
     def forward_model_pass(self, x_c, y_c, x_t, y_t, force=None):
-
         if self.mask_y_c:
             y_c = torch.zeros_like(y_c)
 

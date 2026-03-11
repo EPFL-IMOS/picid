@@ -26,7 +26,6 @@ class MZVAVLoader(SingleSourceLoader):
         group_by_days=False,
         **kwargs,
     ):
-
         self.data_path = data_path
         self.timestamp_name = timestamp_name
         self.target_name = target_name

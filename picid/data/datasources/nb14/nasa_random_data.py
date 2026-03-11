@@ -56,8 +56,8 @@ class NasaRandomizedData:
             ) = self._get_data(validation_names)
 
         logger.info(
-            """Train x: %s, train y soh: %s | Test x: %s, test y soh: %s | 
-                            battery n cycle train: %s, battery n cycle test: %s, 
+            """Train x: %s, train y soh: %s | Test x: %s, test y soh: %s |
+                            battery n cycle train: %s, battery n cycle test: %s,
                             time train: %s, time test: %s |
                             raw current train: %s, raw current test: %s |
                             """
@@ -76,8 +76,8 @@ class NasaRandomizedData:
         )
         if validation_names is not None:
             logger.info(
-                """Validation x: %s, validation y soh: %s | 
-                                battery n cycle validation: %s, 
+                """Validation x: %s, validation y soh: %s |
+                                battery n cycle validation: %s,
                                 time validation: %s ,
                                 raw current validation: %s |
                                 """
@@ -169,7 +169,6 @@ class NasaRandomizedData:
 
             # --- 2. Process each identified cycle ---
             for x in set(cycle["cycle"]):
-
                 # =============================================================
                 # === THIS IS THE KEY DIFFERENCE FROM UNIBO ===
                 # We are ONLY interested in DISCHARGE ("D") cycles.

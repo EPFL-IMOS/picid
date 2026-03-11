@@ -7,9 +7,7 @@ from einops import rearrange
 
 class LinearModel(nn.Module):
     def __init__(
-        self, context_points: int, 
-        shared_weights: bool = False, 
-        d_yt: int = 7
+        self, context_points: int, shared_weights: bool = False, d_yt: int = 7
     ):
         super().__init__()
 

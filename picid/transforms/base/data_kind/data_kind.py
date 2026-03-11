@@ -7,6 +7,7 @@ Provides:
 - infer_data_kind(): infer DataKind from segments and apply_to_keys
 - get_capability(): infer TransformCapability from transform instance (marker classes)
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable, List, Optional, Union

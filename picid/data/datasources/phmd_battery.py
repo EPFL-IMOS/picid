@@ -11,7 +11,6 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
     """This class instantiates each of the soure"""
 
     def __init__(self, **kwargs):
-
         data_name = kwargs["data_name"]
         task_mode = kwargs["task_mode"]
 
@@ -41,7 +40,6 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
         return unit_col
 
     def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
-
         fold = main_fold
 
         # Make the ahRul dataset to have rul values as well
@@ -95,7 +93,6 @@ class PHMDBatteryLoader(PHMDMultiSourceLoader):
 
     # Helper function to process a single unit
     def _process_unit(self, df_unit, unit_name, features_col, target_col):
-
         df_features = df_unit.reset_index(drop=True)
         df_target = df_unit[target_col].copy().reset_index(drop=True)
 

@@ -33,6 +33,7 @@ When validate_output=True (the default):
 These replace DataTransform._validate_forward_output entirely. Soft diagnostic
 warnings (type change, unit-count change) live in MergeStep.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -87,30 +88,28 @@ def postprocess_transformed_data(
     Raises ValueError if the format is not recognised.
     """
     assign_to_map = metadata.get("assign_to_map")
-    assert is_sequence(assign_to_map), (
-        f"Expected assign_to_map to be a list, got {type(assign_to_map)}"
-    )
+    assert is_sequence(
+        assign_to_map
+    ), f"Expected assign_to_map to be a list, got {type(assign_to_map)}"
 
     # Case 1: single non-mapping output
     if len(data) == 1 and not isinstance(data[0], Mapping):
-        assert len(assign_to_map) == 1, (
-            "Expected single assign_to_map key for single output."
-        )
+        assert (
+            len(assign_to_map) == 1
+        ), "Expected single assign_to_map key for single output."
         return [SimpleReturnObject(**{assign_to_map[0]: data[0]})]
 
     # Case 2: multiple raw arrays
     if isinstance(data, Sequence) and all(
         not isinstance(chunk, Mapping) for chunk in data
     ):
-        assert len(assign_to_map) == 1, (
-            "Expected single assign_to_map key for multiple outputs."
-        )
+        assert (
+            len(assign_to_map) == 1
+        ), "Expected single assign_to_map key for multiple outputs."
         return [SimpleReturnObject(**{assign_to_map[0]: chunk}) for chunk in data]
 
     # Case 3: list of dict-like objects
-    if isinstance(data, Sequence) and all(
-        isinstance(chunk, Mapping) for chunk in data
-    ):
+    if isinstance(data, Sequence) and all(isinstance(chunk, Mapping) for chunk in data):
         return [NamedDictReturnObject(**chunk) for chunk in data]
 
     raise ValueError(
@@ -146,7 +145,6 @@ class TransformStrategy:
         validate_output: bool = True,
         include_slice_info_in_metadata: bool = False,
     ) -> Tuple[SplitDatasetContainer, Dict[str, Any]]:
-
         # --- Normalise key lists ---
         if isinstance(apply_to_keys, str):
             apply_to_keys = [apply_to_keys]
@@ -260,11 +258,13 @@ class TransformStrategy:
         num_units = len(first_val)
 
         return [
-            NamedTransformInput(**{
-                key: data_to_prepare[key][split][i]
-                for key in keys
-                if split in data_to_prepare[key]
-            })
+            NamedTransformInput(
+                **{
+                    key: data_to_prepare[key][split][i]
+                    for key in keys
+                    if split in data_to_prepare[key]
+                }
+            )
             for i in range(num_units)
         ]
 
@@ -287,6 +287,5 @@ class TransformStrategy:
                     base_data[assign_to_key][split] = result
             else:
                 base_data[assign_to_key] = {
-                    split: split_results.get(split)
-                    for split in available_splits
+                    split: split_results.get(split) for split in available_splits
                 }

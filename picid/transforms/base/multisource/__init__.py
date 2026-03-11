@@ -5,6 +5,7 @@ Re-exports mixins (mixins.py) and utilities (utils.py). Use the mixins to
 implement fit_multi_source / transform_multi_source; the pipeline calls these
 when data is multi-unit. See mixins.py module docstring for composition guide.
 """
+
 from picid.transforms.base.multisource.mixins import (
     ConcatenateBeforeTransformMixin,
     ConcatFitAndPerSegmentTransformMixin,
