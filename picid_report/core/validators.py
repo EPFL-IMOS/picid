@@ -141,15 +141,24 @@ def validate_seeds(
     try:
         valid_subset = temp_df.groupby(group_cols).filter(has_required_seeds)
     except TypeError:
-        logger.warning("[Validator] Warning: Groupby filter failed. Skipping seed validation.")
+        logger.warning(
+            "[Validator] Warning: Groupby filter failed. Skipping seed validation."
+        )
         return df
 
     filtered_df = df.loc[valid_subset.index].copy()
 
     if filtered_df.empty and not df.empty and allow_fallback:
         ctx_suffix = f" ({context})" if context else ""
-        logger.warning("  [Validator] NOTE: Strict filter on '%s' removed all rows.%s", seed_col, ctx_suffix)
-        logger.warning("  [Validator] Fallback triggered: Ignoring seed filter for this (dataset, model).%s", ctx_suffix)
+        logger.warning(
+            "  [Validator] NOTE: Strict filter on '%s' removed all rows.%s",
+            seed_col,
+            ctx_suffix,
+        )
+        logger.warning(
+            "  [Validator] Fallback triggered: Ignoring seed filter for this (dataset, model).%s",
+            ctx_suffix,
+        )
         return df
 
     log_modification(

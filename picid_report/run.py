@@ -67,7 +67,9 @@ def run_pipeline(
     required_data_seeds: Optional[Set[int]] = None,
     required_model_seeds: Optional[Set[int]] = None,
     additional_ignored_cols: Optional[list] = None,
-    preprocess_df: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,  # None => use clean_and_rename_models
+    preprocess_df: Optional[
+        Callable[[pd.DataFrame], pd.DataFrame]
+    ] = None,  # None => use clean_and_rename_models
     pipeline_config: Optional[PipelineConfig] = None,
     show_performance_tables: bool = False,
     show_plots: bool = True,
@@ -137,8 +139,16 @@ def run_pipeline(
     """
     metric_prefixes = metric_prefixes or DEFAULT_METRIC_PREFIXES
     reporting_metrics = reporting_metrics or DEFAULT_REPORTING_METRICS
-    required_data_seeds = required_data_seeds if required_data_seeds is not None else DEFAULT_REQUIRED_DATA_SEEDS
-    required_model_seeds = required_model_seeds if required_model_seeds is not None else DEFAULT_REQUIRED_MODEL_SEEDS
+    required_data_seeds = (
+        required_data_seeds
+        if required_data_seeds is not None
+        else DEFAULT_REQUIRED_DATA_SEEDS
+    )
+    required_model_seeds = (
+        required_model_seeds
+        if required_model_seeds is not None
+        else DEFAULT_REQUIRED_MODEL_SEEDS
+    )
     additional_ignored_cols = additional_ignored_cols or DEFAULT_ADDITIONAL_IGNORED_COLS
 
     # 1. Load
@@ -149,11 +159,21 @@ def run_pipeline(
         csv_cache_dir=csv_cache_dir,
         pipeline_config=pipeline_config,
     )
-    logger.info("[Stage 1/6] Load: %d rows, %d config columns, %d columns dropped", len(df), len(config_columns), len(dropped_columns))
+    logger.info(
+        "[Stage 1/6] Load: %d rows, %d config columns, %d columns dropped",
+        len(df),
+        len(config_columns),
+        len(dropped_columns),
+    )
 
     # 2. Preprocessing: by default clean model names (strip prefix, add linear/exponential)
-    logger.info("[Stage 2/6] Preprocess: %s", "custom" if preprocess_df is not None else "clean_and_rename_models")
-    apply_preprocess = preprocess_df if preprocess_df is not None else clean_and_rename_models
+    logger.info(
+        "[Stage 2/6] Preprocess: %s",
+        "custom" if preprocess_df is not None else "clean_and_rename_models",
+    )
+    apply_preprocess = (
+        preprocess_df if preprocess_df is not None else clean_and_rename_models
+    )
     df = apply_preprocess(df)
 
     # 3. Validate
@@ -170,18 +190,24 @@ def run_pipeline(
     else:
         # Try to create resolver using get_sort_metric from configs
         try:
-            from picid_report.configs import get_sort_metric, infer_task_type_from_dataset, infer_dataset_category_from_name
-            
-            def resolver(dataset: str, model: str, task_type=None, dataset_category=None):
+            from picid_report.configs import (
+                get_sort_metric,
+                infer_task_type_from_dataset,
+                infer_dataset_category_from_name,
+            )
+
+            def resolver(
+                dataset: str, model: str, task_type=None, dataset_category=None
+            ):
                 """Resolve sort metric for a dataset/model combination."""
                 # Infer task type if not provided
                 if task_type is None:
                     task_type = infer_task_type_from_dataset(dataset)
-                
+
                 # Infer dataset category if not provided
                 if dataset_category is None:
                     dataset_category = infer_dataset_category_from_name(dataset)
-                
+
                 # Call get_sort_metric with inferred values
                 result = get_sort_metric(
                     dataset=dataset,
@@ -192,18 +218,26 @@ def run_pipeline(
                 )
                 logger.debug(
                     "Sort metric resolver: dataset=%s, model=%s, task_type=%s, category=%s -> %s",
-                    dataset, model, task_type, dataset_category, result,
+                    dataset,
+                    model,
+                    task_type,
+                    dataset_category,
+                    result,
                 )
                 return result
-            
+
             sort_metric_resolver = resolver
             logger.info("Created sort_metric_resolver from configs")
         except ImportError as e:
             # Configs not available, use None (will use optimization metric)
-            logger.warning(f"Configs not available, cannot create sort_metric_resolver: {e}")
+            logger.warning(
+                f"Configs not available, cannot create sort_metric_resolver: {e}"
+            )
             sort_metric_resolver = None
 
-    logger.info("[Stage 4/6] Analyze: per (dataset, model) aggregation and grid resolution")
+    logger.info(
+        "[Stage 4/6] Analyze: per (dataset, model) aggregation and grid resolution"
+    )
     all_results = analyze_results(
         df=df,
         config_columns=config_columns,
@@ -218,7 +252,11 @@ def run_pipeline(
         use_legacy_search_space_fallback=use_legacy_search_space_fallback,
     )
     n_entries = sum(len(m) for m in all_results.values()) if all_results else 0
-    logger.info("[Stage 4/6] Analyze: %d dataset(s) -> %d (dataset, model) result entries", len(all_results), n_entries)
+    logger.info(
+        "[Stage 4/6] Analyze: %d dataset(s) -> %d (dataset, model) result entries",
+        len(all_results),
+        n_entries,
+    )
 
     # 5. Reporting — tables (display and optionally save)
     # Extract sort_metric from all_results if not explicitly provided
@@ -236,22 +274,30 @@ def run_pipeline(
         # Use dict if we have any resolved metrics, otherwise None
         sort_metric = sort_metric_dict if sort_metric_dict else None
         if sort_metric_dict:
-            logger.info(f"Using sort_metric dict with {len(sort_metric_dict)} entries: {sort_metric_dict}")
+            logger.info(
+                f"Using sort_metric dict with {len(sort_metric_dict)} entries: {sort_metric_dict}"
+            )
         else:
-            logger.warning("No sort_metric_used found in results, will use optimization metric for all")
-    
+            logger.warning(
+                "No sort_metric_used found in results, will use optimization metric for all"
+            )
+
     logger.info("[Stage 5/6] Report: building summary table and stats")
     if not quiet:
         display_experiment_stats(all_results)
         if show_performance_tables:
             display_performance_tables(all_results, precision=precision)
         display_hp_impact(all_results, precision=precision, sort_metric=sort_metric)
-    summary_df = create_summary_table(all_results, precision=precision, sort_metric=sort_metric)
+    summary_df = create_summary_table(
+        all_results, precision=precision, sort_metric=sort_metric
+    )
     stats_df = get_experiment_stats_df(all_results)
 
     # 6. Save outputs and/or build plots
     if output_dir:
-        logger.info("[Stage 6/6] Save: writing tables, plots, and report to %s", output_dir)
+        logger.info(
+            "[Stage 6/6] Save: writing tables, plots, and report to %s", output_dir
+        )
         _save_outputs(
             output_dir=output_dir,
             all_results=all_results,
@@ -266,7 +312,12 @@ def run_pipeline(
         )
     elif show_plots:
         logger.info("[Stage 6/6] Plots only (no output_dir): in-memory plots")
-        _run_plots(all_results, metric=plot_metric, precision=precision, sort_metric=sort_metric)
+        _run_plots(
+            all_results,
+            metric=plot_metric,
+            precision=precision,
+            sort_metric=sort_metric,
+        )
     else:
         logger.info("[Stage 6/6] No output_dir and no plots: nothing to save")
 
@@ -299,18 +350,36 @@ def _save_outputs(
     os.makedirs(plots_dir, exist_ok=True)
 
     # Summary table
-    export_summary_table(all_results, os.path.join(tables_dir, "summary.csv"), format="csv", precision=precision, sort_metric=sort_metric)
+    export_summary_table(
+        all_results,
+        os.path.join(tables_dir, "summary.csv"),
+        format="csv",
+        precision=precision,
+        sort_metric=sort_metric,
+    )
     if export_laTeX:
-        export_summary_table(all_results, os.path.join(tables_dir, "summary.tex"), format="latex", precision=precision, sort_metric=sort_metric)
+        export_summary_table(
+            all_results,
+            os.path.join(tables_dir, "summary.tex"),
+            format="latex",
+            precision=precision,
+            sort_metric=sort_metric,
+        )
 
     # Experiment stats
-    export_experiment_stats(all_results, os.path.join(tables_dir, "experiment_stats.csv"))
+    export_experiment_stats(
+        all_results, os.path.join(tables_dir, "experiment_stats.csv")
+    )
 
     # Diagnostics log: per (dataset, model) explanation of counts and failures for debugging
     log_path = os.path.join(output_dir, "log.txt")
     with open(log_path, "w") as f:
-        f.write("Report pipeline diagnostics — per dataset/model: optimization metric, seeds, and failure counts.\n")
-        f.write("Use this to understand why 'Configs Failed (not full seed set)' or 'Configs Failed (missing/invalid metric)' appear.\n")
+        f.write(
+            "Report pipeline diagnostics — per dataset/model: optimization metric, seeds, and failure counts.\n"
+        )
+        f.write(
+            "Use this to understand why 'Configs Failed (not full seed set)' or 'Configs Failed (missing/invalid metric)' appear.\n"
+        )
         for dataset, models in sorted(all_results.items()):
             for model, res in sorted(models.items()):
                 lines = res.get("diagnostics_log", [])
@@ -331,7 +400,9 @@ def _save_outputs(
 
     # HP impact tables (CSV per model/dataset) and collect entries for report
     hp_impact_dir = os.path.join(tables_dir, "hp_impact")
-    export_hp_impact_tables(all_results, hp_impact_dir, precision=precision, sort_metric=sort_metric)
+    export_hp_impact_tables(
+        all_results, hp_impact_dir, precision=precision, sort_metric=sort_metric
+    )
 
     global_plots: List[Tuple[str, str]] = []
     hp_impact_entries: List[Tuple[str, str, pd.DataFrame, str, str]] = []
@@ -339,27 +410,43 @@ def _save_outputs(
     if show_plots:
         # Bar chart of best metric
         bars_path = os.path.join(plots_dir, "best_metric_bars.png")
-        fig_bars = plot_best_metric_bars(all_results, metric=plot_metric, save_path=bars_path)
+        fig_bars = plot_best_metric_bars(
+            all_results, metric=plot_metric, save_path=bars_path
+        )
         if fig_bars is not None:
             try:
                 import matplotlib.pyplot as plt
+
                 plt.close(fig_bars)
             except Exception:
                 pass
-            global_plots.append((f"Best {plot_metric} by model/dataset", "plots/best_metric_bars.png"))
+            global_plots.append(
+                (f"Best {plot_metric} by model/dataset", "plots/best_metric_bars.png")
+            )
 
         # HP impact plot per model/dataset
-        for dataset, model, hp_df, metric_used in iter_hp_impact_tables(all_results, precision, sort_metric):
+        for dataset, model, hp_df, metric_used in iter_hp_impact_tables(
+            all_results, precision, sort_metric
+        ):
             base = _safe_basename(dataset, model)
             plot_path = os.path.join(plots_dir, f"hp_impact_{base}.png")
-            fig_hp = plot_hp_impact(all_results, model=model, dataset=dataset, metric=plot_metric, save_path=plot_path)
+            fig_hp = plot_hp_impact(
+                all_results,
+                model=model,
+                dataset=dataset,
+                metric=plot_metric,
+                save_path=plot_path,
+            )
             if fig_hp is not None:
                 try:
                     import matplotlib.pyplot as plt
+
                     plt.close(fig_hp)
                 except Exception:
                     pass
-            hp_impact_entries.append((dataset, model, hp_df, f"plots/hp_impact_{base}.png", metric_used))
+            hp_impact_entries.append(
+                (dataset, model, hp_df, f"plots/hp_impact_{base}.png", metric_used)
+            )
 
     # Single HTML report for visualization
     report_path = write_report_html(
@@ -387,15 +474,21 @@ def _run_plots(
     if fig_bars is not None:
         try:
             import matplotlib.pyplot as plt
+
             plt.close(fig_bars)
         except Exception:
             pass
 
-    for dataset, model, _, _ in iter_hp_impact_tables(all_results, precision, sort_metric):
-        fig_hp = plot_hp_impact(all_results, model=model, dataset=dataset, metric=metric)
+    for dataset, model, _, _ in iter_hp_impact_tables(
+        all_results, precision, sort_metric
+    ):
+        fig_hp = plot_hp_impact(
+            all_results, model=model, dataset=dataset, metric=metric
+        )
         if fig_hp is not None:
             try:
                 import matplotlib.pyplot as plt
+
                 plt.close(fig_hp)
             except Exception:
                 pass
@@ -405,20 +498,54 @@ def _run_plots(
 def main() -> None:
     """Entry point when run as a script. Parses minimal CLI and runs the pipeline."""
     import argparse
+
     parser = argparse.ArgumentParser(
         description="Run picid_report pipeline. Use --output-dir to save tables, plots, and an HTML report."
     )
-    parser.add_argument("--debug", "-d", action="store_true", help="Enable DEBUG logging (resolver details, shapes, etc.)")
-    parser.add_argument("--project", default=DEFAULT_PROJECT_NAME, help="W&B project name")
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable DEBUG logging (resolver details, shapes, etc.)",
+    )
+    parser.add_argument(
+        "--project", default=DEFAULT_PROJECT_NAME, help="W&B project name"
+    )
     parser.add_argument("--user", default=DEFAULT_USER, help="W&B user/entity")
     parser.add_argument("--cache-dir", default="csv_files", help="CSV cache directory")
-    parser.add_argument("--output-dir", "-o", default=None, help="Save all tables and plots here; generate report.html")
-    parser.add_argument("--report-name", default=None, help="Report HTML filename (e.g. my_project.html); default report.html")
-    parser.add_argument("--export-latex", action="store_true", help="Also save summary table as LaTeX (when using -o)")
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=None,
+        help="Save all tables and plots here; generate report.html",
+    )
+    parser.add_argument(
+        "--report-name",
+        default=None,
+        help="Report HTML filename (e.g. my_project.html); default report.html",
+    )
+    parser.add_argument(
+        "--export-latex",
+        action="store_true",
+        help="Also save summary table as LaTeX (when using -o)",
+    )
     parser.add_argument("--no-plots", action="store_true", help="Skip building plots")
-    parser.add_argument("--performance-tables", action="store_true", help="Show per-metric performance tables")
-    parser.add_argument("--quiet", "-q", action="store_true", help="Do not print tables to terminal; only write report and files")
-    parser.add_argument("--data-first", action="store_true", help="Do not fall back to config.EXPECTED_SEARCH_SPACE when search_space.py has no entry; use data-first mode")
+    parser.add_argument(
+        "--performance-tables",
+        action="store_true",
+        help="Show per-metric performance tables",
+    )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Do not print tables to terminal; only write report and files",
+    )
+    parser.add_argument(
+        "--data-first",
+        action="store_true",
+        help="Do not fall back to config.EXPECTED_SEARCH_SPACE when search_space.py has no entry; use data-first mode",
+    )
     args = parser.parse_args()
 
     configure_logging(debug=args.debug)

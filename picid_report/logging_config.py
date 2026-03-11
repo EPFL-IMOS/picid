@@ -47,9 +47,7 @@ def configure_logging(
     log.handlers.clear()
     handler = logging.StreamHandler(stream)
     handler.setLevel(logging.DEBUG if debug else logging.INFO)
-    handler.setFormatter(
-        logging.Formatter(FORMAT_DEBUG if debug else FORMAT_INFO)
-    )
+    handler.setFormatter(logging.Formatter(FORMAT_DEBUG if debug else FORMAT_INFO))
     log.addHandler(handler)
     # Prevent propagation to root so we control output in one place.
     log.propagate = False

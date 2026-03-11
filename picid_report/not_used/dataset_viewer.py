@@ -49,7 +49,9 @@ def load_dataset_from_cfg(cfg: OmegaConf) -> dict:
     dataset_source = instantiate(cfg.datasource)
 
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
-    preprocessor = PreProcessor(datasource=dataset_source, transforms=transforms_manager)
+    preprocessor = PreProcessor(
+        datasource=dataset_source, transforms=transforms_manager
+    )
 
     # Get cache dirs and flags
     data_cache_path = (
@@ -94,7 +96,6 @@ pn.extension("hvplot")
 
 
 class TimeSeriesViewer(pn.viewable.Viewer):
-
     train_val_test_selector = param.Selector(
         objects=["train", "val", "test"], default="train"
     )
@@ -332,7 +333,6 @@ def parse_directory_for_model_checkpoints(directory: Path):
 
 
 class DatasetViewer(pn.viewable.Viewer):
-
     # Model Params
     model = param.Parameter()
     model_selector = param.Selector(objects=[], default=None)
@@ -373,7 +373,6 @@ class DatasetViewer(pn.viewable.Viewer):
         self.timeseries_viewer = TimeSeriesViewer()
 
     def load_config(self, exp_alias: str) -> OmegaConf:
-
         def load_cfg(overrides):
             with initialize(version_base="1.2", config_path="../configs"):
                 cfg = compose(config_name="run.yaml", overrides=overrides)

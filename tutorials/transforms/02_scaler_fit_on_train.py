@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tutorial: MinMaxScalerSklearn fit on train, transform per segment."""
+
 import numpy as np
 import sys
 from pathlib import Path
@@ -23,10 +24,14 @@ def main():
 
     # Val and test chunks
     val_chunks = [
-        NamedTransformInput(features=np.array([[2.0, 3.0], [4.0, 5.0]], dtype=np.float32)),
+        NamedTransformInput(
+            features=np.array([[2.0, 3.0], [4.0, 5.0]], dtype=np.float32)
+        ),
     ]
     test_chunks = [
-        NamedTransformInput(features=np.array([[0.5, 1.0], [9.0, 10.0]], dtype=np.float32)),
+        NamedTransformInput(
+            features=np.array([[0.5, 1.0], [9.0, 10.0]], dtype=np.float32)
+        ),
     ]
 
     scaler = MinMaxScalerSklearn()
@@ -36,7 +41,9 @@ def main():
 
     for chunk in train_chunks:
         out = scaler.transform_data(chunk, metadata)
-        assert out.shape == chunk["features"].shape, f"Shape mismatch: {out.shape} vs {chunk['features'].shape}"
+        assert (
+            out.shape == chunk["features"].shape
+        ), f"Shape mismatch: {out.shape} vs {chunk['features'].shape}"
 
     for chunk in val_chunks:
         out = scaler.transform_data(chunk, metadata)

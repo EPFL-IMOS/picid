@@ -10,13 +10,16 @@ Run from project root:
 
 If no args: uses two example configs from a recent run (if available).
 """
+
 from __future__ import annotations
 
 import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent))
+PROJECT_ROOT = Path(
+    os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent)
+)
 
 # Try to use picid.utils.config_diff if it exists
 try:
@@ -35,6 +38,7 @@ except ImportError:
 
     def diff_configs(path_a: str, path_b: str) -> dict:
         from omegaconf import OmegaConf
+
         a = OmegaConf.load(path_a)
         b = OmegaConf.load(path_b)
         fa = _flatten(OmegaConf.to_container(a, resolve=True))
@@ -42,7 +46,9 @@ except ImportError:
         return {
             "only_in_first": [k for k in fa if k not in fb],
             "only_in_second": [k for k in fb if k not in fa],
-            "different_values": [(k, fa[k], fb[k]) for k in fa if k in fb and fa[k] != fb[k]],
+            "different_values": [
+                (k, fa[k], fb[k]) for k in fa if k in fb and fa[k] != fb[k]
+            ],
         }
 
 
@@ -58,8 +64,12 @@ def main():
         artifacts = PROJECT_ROOT / "artifacts"
         configs = list(artifacts.rglob("config_resolved.yaml"))[:2]
         if len(configs) < 2:
-            print("\nUsage: uv run python tutorials/workflow/compare_configs.py <config_a.yaml> <config_b.yaml>")
-            print("Or:    uv run python scripts/reproducibility/compare_configs.py <config_a.yaml> <config_b.yaml>")
+            print(
+                "\nUsage: uv run python tutorials/workflow/compare_configs.py <config_a.yaml> <config_b.yaml>"
+            )
+            print(
+                "Or:    uv run python scripts/reproducibility/compare_configs.py <config_a.yaml> <config_b.yaml>"
+            )
             print("Or run an experiment first to generate configs.")
             sys.exit(1)
         path_a, path_b = str(configs[0]), str(configs[1])
@@ -74,7 +84,11 @@ def main():
         print(f"  + {k} (only in second)")
     for k, v1, v2 in result["different_values"]:
         print(f"  ~ {k}: {v1!r} -> {v2!r}")
-    if not (result["only_in_first"] or result["only_in_second"] or result["different_values"]):
+    if not (
+        result["only_in_first"]
+        or result["only_in_second"]
+        or result["different_values"]
+    ):
         print("  (none - configs are identical)")
     print("\nDone.")
 

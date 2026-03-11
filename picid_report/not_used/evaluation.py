@@ -73,7 +73,6 @@ def process_run_long(run, cfg, experiment_aliases, errors, categories):
 
 
 class WandBEvaluation:
-
     def __init__(
         self,
         entity: str,
@@ -85,7 +84,6 @@ class WandBEvaluation:
         errors: list = [],
         categories: list = [],
     ):
-
         self.entity = entity
         self.project = project
         self.tags = tags if tags is not None else []
@@ -105,7 +103,6 @@ class WandBEvaluation:
         return self
 
     def load_runs(self, dataframe_format="long"):
-
         assert dataframe_format in [
             "wide",
             "long",
@@ -154,12 +151,10 @@ class WandBEvaluation:
         return self
 
     def to_latex(self):
-
-
         if not hasattr(self, "rdf"):
             raise RuntimeError("No runs loaded. Call load_runs() first.")
 
         # Convert the DataFrame to LaTeX format
         latex_code = self.rdf.to_latex(escape=False, index=True)
-        
+
         return latex_code

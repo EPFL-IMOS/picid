@@ -100,7 +100,7 @@ uv sync
 uv pip install -e ".[dev]"
 ```
 
-# Remove env and all dependencies 
+# Remove env and all dependencies
 
 ```bash
 # Deactivate if you're in the .venv

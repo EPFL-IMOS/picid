@@ -30,7 +30,7 @@ Here's a simple transform configuration that scales features:
 scale_features:
   transform:
     _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
-  
+
   metadata:
     apply_to: features
     fit_on: train
@@ -98,13 +98,13 @@ for transform in transforms.values():
 
 ## Common Questions
 
-**Q: Do I need to fit transforms?**  
+**Q: Do I need to fit transforms?**
 A: Only if the transform requires it (e.g., scalers). Stateless transforms (like reshaping) don't need fitting.
 
-**Q: Can I apply multiple transforms?**  
+**Q: Can I apply multiple transforms?**
 A: Yes! Transforms are applied in the order they appear in your configuration.
 
-**Q: What data formats are supported?**  
+**Q: What data formats are supported?**
 A: Dense NumPy arrays and ragged Awkward arrays are both supported.
 
 ---
