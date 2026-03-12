@@ -1,12 +1,24 @@
-"""Pipeline snapshot: compare current run to reference metrics.
+"""Pipeline snapshot tests using synthetic data only.
 
-Fails if pipeline behavior changes unintentionally (e.g. transform, evaluator).
-Metrics compared to 4 decimal places. Configs live in test/configs/.
+Compares current run to reference metrics. Fails if pipeline behavior changes
+unintentionally (e.g. transform, evaluator). Uses only pre-generated synthetic
+fixtures (prognostics.npz, diagnostics.npz, ragged_prognostics.pkl)—no downloads,
+no real data. Metrics compared to 4 decimal places. Configs in test/configs/.
+
+Fixture generators (run when needed, then commit output):
+  - test/scripts/snapshot/generate_snapshot_fixtures.py  → prognostics.npz, diagnostics.npz, etc.
+  - test/scripts/snapshot/generate_snapshot_ragged_fixtures.py → ragged_prognostics.pkl
+  - test/scripts/snapshot/generate_snapshot_reference.py → reference.json
 
 When the pipeline has been modified (transforms, evaluators, models, metrics):
-  uv run python scripts/snapshot/generate_snapshot_reference.py
+  uv run python test/scripts/snapshot/generate_snapshot_reference.py
 
-Then commit test/fixtures/snapshot/reference.json.
+Then commit test/fixtures/snapshot/reference/reference.json.
+
+Related snapshot test files:
+  - test_pipeline_synthetic_snapshots_diagnostics.py
+  - test_pipeline_synthetic_snapshots_prognostics_ragged.py
+  - test_pipeline_synthetic_snapshots_anomaly.py
 """
 
 from __future__ import annotations
@@ -21,17 +33,17 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-REF_PATH = PROJECT_ROOT / "test" / "fixtures" / "snapshot" / "reference.json"
+REF_PATH = (
+    PROJECT_ROOT / "test" / "fixtures" / "snapshot" / "reference" / "reference.json"
+)
 
-# Must match EXPERIMENTS in scripts/snapshot/generate_snapshot_reference.py
+# Must match EXPERIMENTS in test/scripts/snapshot/generate_snapshot_reference.py
 EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "linear_regression"),
     ("prognostics", "snapshot/prognostics", "exponential_regression"),
     ("prognostics", "snapshot/prognostics", "lstm"),
     ("prognostics", "snapshot/prognostics", "patchtst"),
     ("prognostics", "snapshot/prognostics", "crossformer"),
-    ("diagnostics", "snapshot/diagnostics", "linear_classifier"),
-    ("prognostics_ragged", "snapshot/ragged_prognostics", "linear_regression"),
 ]
 
 PRECISION = 4
@@ -87,7 +99,7 @@ def _run_experiment_to_dir(
 @pytest.mark.requires_snapshots
 @pytest.mark.skipif(
     not REF_PATH.exists(),
-    reason="Run scripts/snapshot/generate_snapshot_reference.py first",
+    reason="Run test/scripts/snapshot/generate_snapshot_reference.py first",
 )
 @pytest.mark.parametrize("task_type,exp_base,model", EXPERIMENTS)
 def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):

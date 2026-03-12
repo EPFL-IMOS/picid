@@ -1,12 +1,17 @@
-"""Real-data pipeline comparison tests.
+"""Pipeline snapshot tests using phme20 real data only.
 
-Compare current pipeline output to saved slices (loaded and transformed);
-assert preprocessing time within bounds. Skip when snapshots are missing (@pytest.mark.requires_snapshots).
+Compares current pipeline output to saved slices (loaded and transformed);
+asserts preprocessing time within bounds. Uses only phme20—no synthetic data.
+Skip when snapshots are missing (@pytest.mark.requires_snapshots).
+
+Fixture generator: test/scripts/snapshot/generate_pipeline_snapshots.py
+  Output: test/data/fixtures/pipeline_snapshots/phme20/{loaded,transformed}/
 
 When the pipeline has been modified (transforms, datasource, preprocessing):
-  uv run python scripts/snapshot/generate_pipeline_snapshots.py
+  uv run python test/scripts/snapshot/generate_pipeline_snapshots.py
 
 Optional: --output-dir test/data/fixtures/pipeline_snapshots
+Optional: --data-dir "$(pwd)/datasets" (when datasets not in default location)
 
 Then commit test/data/fixtures/pipeline_snapshots/.
 """
@@ -54,7 +59,7 @@ def test_loaded_slices_match_saved(config_name: str):
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
-            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py"
+            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py"
         )
     # Import here so slice_utils is only needed when snapshots exist
     from omegaconf import OmegaConf
@@ -98,7 +103,7 @@ def test_loaded_slices_match_saved(config_name: str):
         pytest.skip(
             f"Container missing keys {missing} for {config_name}. "
             "Data may be unavailable (e.g. PHMD not cached). "
-            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
+            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
         )
     import tempfile
 
@@ -130,7 +135,7 @@ def test_transformed_slices_match_saved(config_name: str):
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
-            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py"
+            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py"
         )
     from omegaconf import OmegaConf
     from hydra.utils import instantiate
@@ -182,7 +187,7 @@ def test_transformed_slices_match_saved(config_name: str):
         pytest.skip(
             f"Pipeline output missing keys {missing} for {config_name}. "
             "Data may be unavailable (e.g. PHMD not cached). "
-            "Run: uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
+            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
         )
     import tempfile
 

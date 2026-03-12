@@ -13,7 +13,10 @@ def pipeline_snapshot(session):
     session.chdir(_PROJECT_ROOT)
     session.run(
         "pytest",
-        "test/pipeline/test_snapshot.py",
+        "test/pipeline/test_pipeline_synthetic_snapshots_prognostics.py",
+        "test/pipeline/test_pipeline_synthetic_snapshots_diagnostics.py",
+        "test/pipeline/test_pipeline_synthetic_snapshots_prognostics_ragged.py",
+        "test/pipeline/test_pipeline_synthetic_snapshots_anomaly.py",
         "-v",
         *session.posargs,
     )
