@@ -1,0 +1,13 @@
+#@package _global_
+
+defaults:
+  - override /datasource: snapshot_anomaly
+  - override /evaluator: classification
+  - override /task_definition: snapshot/anomaly_detection
+  - override /transforms: snapshot/minimal_anomaly_fit_predict
+  - override /logger: csv
+
+evaluator:
+  train: { save_predictions: false, apply_inverse_scaling: false }
+  val: { save_predictions: false, apply_inverse_scaling: false }
+  test: { save_predictions: false, apply_inverse_scaling: false }
