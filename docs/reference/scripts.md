@@ -65,49 +65,7 @@ uv run python scripts/reproducibility/reproduce_from_run.py <run_output_dir>
 
 ## Snapshot tests
 
-Scripts in `scripts/snapshot/` support the pipeline snapshot test suite. See [scripts/snapshot/README.txt](https://github.com/epfl-imos/TabPHM/blob/main/scripts/snapshot/README.txt) for details.
-
-### snapshot/generate_snapshot_fixtures.py
-
-**What it does:** Creates synthetic `.npz` data files for prognostics, diagnostics, anomaly detection, and forecasting. Uses seed 42. Output: `test/fixtures/snapshot/*.npz`.
-
-**How to use:** `uv run python scripts/snapshot/generate_snapshot_fixtures.py`
-
-**When to use:** Initial snapshot setup, or when changing expected data format.
-
----
-
-### snapshot/generate_snapshot_ragged_fixtures.py
-
-**What it does:** Creates synthetic ragged `.pkl` data for `prognostics_ragged` snapshot tests. Output: `test/fixtures/snapshot/ragged_prognostics.pkl`.
-
-**How to use:** `uv run python scripts/snapshot/generate_snapshot_ragged_fixtures.py`
-
-**When to use:** Initial ragged snapshot setup, or when fixtures are missing.
-
----
-
-### snapshot/generate_pipeline_snapshots.py
-
-**What it does:** Generates real-data pipeline snapshots for phme20 (loaded + transformed slices). Used by `test_pipeline_real_data.py`. Requires datasets.
-
-**How to use:**
-```bash
-uv run python scripts/snapshot/generate_pipeline_snapshots.py
-uv run python scripts/snapshot/generate_pipeline_snapshots.py --data-dir "$(pwd)/datasets"
-```
-
-**When to use:** Setting up real-data pipeline tests, after changing phme20 or transforms.
-
----
-
-### snapshot/generate_snapshot_reference.py
-
-**What it does:** Runs each snapshot experiment (linear_regression, lstm, patchtst, crossformer, etc.) and captures test metrics. Writes `test/fixtures/snapshot/reference.json`. The test suite compares current runs against this reference.
-
-**How to use:** `uv run python scripts/snapshot/generate_snapshot_reference.py`
-
-**When to use:** After pipeline changes you intend to keep. Commit the new `reference.json` only when the new behavior is correct.
+Snapshot scripts live in `test/scripts/snapshot/` and support the pipeline snapshot test suite. See [Snapshot Test Scripts](../testing/SNAPSHOT_SCRIPTS.md) for full documentation, usage, and test dependencies.
 
 ---
 

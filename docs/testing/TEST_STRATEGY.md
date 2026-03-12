@@ -10,11 +10,11 @@ Tests ensure correctness, performance, and security of the PHM/forecasting frame
 |------|----------|-------------|-----|
 | Unit | `test/` (mirrors `picid/`) | `pytest test/ -m "not slow"` | Yes |
 | Integration | `test/data/`, `test/evaluator/` | Same | Yes |
-| Pipeline snapshot | `test/pipeline/test_snapshot.py` | `nox -f test/pipeline/noxfile.py -s pipeline_snapshot` | Optional |
+| Pipeline snapshot | `test/pipeline/test_pipeline_synthetic_snapshots.py` | `nox -f test/pipeline/noxfile.py -s pipeline_snapshot` | Optional |
 | Slow/Perf | `test/data/test_performance_benchmarks.py` | `pytest -m slow` | No (nightly) |
 | Security | `test/security/` | `pytest test/security/` | Yes |
 
-**Pipeline snapshot:** Runs full pipeline on file-based synthetic data (prognostics, diagnostics, anomaly_detection, forecasting). Configs in `test/configs/`, fixtures in `test/fixtures/snapshot/`. No downloads. Compares test metrics to committed reference at 4-decimal precision; fails if pipeline behavior changes unintentionally. Regenerate reference with `scripts/snapshot/generate_snapshot_reference.py`.
+**Pipeline snapshot:** Runs full pipeline on file-based synthetic data (prognostics, diagnostics, anomaly_detection, forecasting). Configs in `test/configs/`, fixtures in `test/fixtures/snapshot/`. No downloads. Compares test metrics to committed reference at 4-decimal precision; fails if pipeline behavior changes unintentionally. Regenerate reference with `test/scripts/snapshot/generate_snapshot_reference.py`.
 
 ## Coverage
 
