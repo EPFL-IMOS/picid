@@ -21,7 +21,7 @@ def test_pydantic_easy_interface():
 
     model = LSTMConfig(n_layers=8)
 
-    task_definition = Prognostic(task_type='rul')
+    task_definition = Prognostic(task_type='rul', seq_len=0, pred_len=0)
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 

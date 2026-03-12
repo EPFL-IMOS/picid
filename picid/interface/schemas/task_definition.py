@@ -6,9 +6,9 @@ from pydantic_core.core_schema import SerializerFunctionWrapHandler
 
 
 class BaseTaskDefinition(BaseModel, ABC):
-    seq_len: int = Field(16, ge=1)  # window size
+    seq_len: int = Field(16, ge=0)  # window size
     label_len: int = Field(0, ge=0)  # overlap size
-    pred_len: int = Field(1, ge=1)  # prediction size
+    pred_len: int = Field(1, ge=0)  # prediction size
 
     stride: int = Field(1, ge=1)
     stride_train: int = Field(1, ge=1)

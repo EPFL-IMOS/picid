@@ -228,7 +228,6 @@ TabPFN = { git = "https://github.com/EPFL-IMOS/TabPFN-IMOS.git", branch='collab_
 tabdpt = { git = "https://github.com/layer6ai-labs/TabDPT" }
 carte-ai = { git = "https://github.com/soda-inria/carte"}
 rul-datasets = { git = "https://github.com/tilman151/rul-datasets" }
-chronosx = { git = "https://github.com/amazon-science/chronos-forecasting.git", rev = "chronosx" }
 
 torch = [
 #    { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },

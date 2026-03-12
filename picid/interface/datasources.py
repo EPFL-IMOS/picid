@@ -115,12 +115,12 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         return self.data_dict
 
     @classmethod
-    def load_from_csv(cls, csv: DataFrame, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_csv(cls, source: DataFrame, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a CSV DataFrame.
 
                 Args:
-                    csv (DataFrame): The source pandas DataFrame.
+                    source (DataFrame): The source pandas DataFrame.
                     target_column (int | str): The column identifier for the target.
                     data_splitter (Callable, optional): Custom split logic.
                     **kwargs: Extra arguments for the class constructor.
@@ -129,15 +129,15 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     CustomSingleSourceLoader: An instance configured for CSV loading.
         """
 
-        return cls(csv, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
+        return cls(source, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
 
     @classmethod
-    def load_from_numpy(cls, numpy: np.ndarray, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_numpy(cls, source: np.ndarray, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a NumPy array.
 
                 Args:
-                    numpy (np.ndarray): The source NumPy array.
+                    source (np.ndarray): The source NumPy array.
                     target_column (int | str): The index of the target column.
                     data_splitter (Callable, optional): Custom split logic.
                     **kwargs: Extra arguments for the class constructor.
@@ -146,7 +146,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     CustomSingleSourceLoader: An instance configured for NumPy loading.
         """
 
-        return cls(numpy, target_column, data_splitter=data_splitter, loading_type='numpy', task_mode=task_mode, **kwargs)
+        return cls(source, target_column, data_splitter=data_splitter, loading_type='numpy', task_mode=task_mode, **kwargs)
 
 
 class CustomMultiSourceLoader(MultiSourceLoader):
