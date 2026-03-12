@@ -26,7 +26,7 @@ def minimal_rul_dataset_cfg():
             "task_type": "rul",
             "seq_len": 5,
             "label_len": 0,
-            "pred_len": 1,
+            "pred_len": 0,
             "stride": 1,
             "meta_data_dict": {},
         }

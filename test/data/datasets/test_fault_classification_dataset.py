@@ -38,7 +38,7 @@ def test_fault_classification_init_and_len(fault_class_data):
         task_type="fault_classification",
         seq_len=10,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
@@ -52,7 +52,7 @@ def test_fault_classification_getitem_structure(fault_class_data):
         task_type="fault_classification",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
@@ -72,7 +72,7 @@ def test_fault_classification_get_unit_id(fault_class_data, meta_with_unit_ids):
         task_type="fault_classification",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         get_unit_id=True,
         meta_data_dict=meta_with_unit_ids,
@@ -90,7 +90,7 @@ def test_fault_classification_get_collate_fn(fault_class_data):
         task_type="fault_classification",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
