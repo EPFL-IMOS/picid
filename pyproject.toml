@@ -103,7 +103,7 @@ exclude = ['__repr__$']
 
 [tool.pytest.ini_options]
 # All test temp dirs (plot_dir, eval_details, etc.) go under test/ and are cleaned after runs
-addopts = "--basetemp=test/.pytest_tmp"
+addopts = "--basetemp=test/.pytest_tmp --log-cli-level=INFO -s"
 norecursedirs = ["_archive"]
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
