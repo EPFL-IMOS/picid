@@ -1,7 +1,10 @@
 """Tests for SyntheticRaggedFromFileLoader: ragged data from pre-generated fixtures.
 
+Fixture generator: test/scripts/snapshot/generate_snapshot_ragged_fixtures.py
+  Output: test/fixtures/snapshot/data/ragged_prognostics.pkl
+
 When the ragged fixture format has been modified:
-  uv run python scripts/snapshot/generate_snapshot_ragged_fixtures.py
+  uv run python test/scripts/snapshot/generate_snapshot_ragged_fixtures.py
 
 Then commit test/fixtures/snapshot/ragged_prognostics.pkl.
 """
@@ -23,6 +26,7 @@ FIXTURE_PATH = (
     Path(__file__).resolve().parents[2]
     / "fixtures"
     / "snapshot"
+    / "data"
     / "ragged_prognostics.pkl"
 )
 
@@ -30,7 +34,7 @@ FIXTURE_PATH = (
 @pytest.mark.skipif(ak is None, reason="awkward not installed")
 @pytest.mark.skipif(
     not FIXTURE_PATH.exists(),
-    reason="Run scripts/snapshot/generate_snapshot_ragged_fixtures.py first",
+    reason="Run test/scripts/snapshot/generate_snapshot_ragged_fixtures.py first",
 )
 class TestSyntheticRaggedFromFileLoader:
     """Test SyntheticRaggedFromFileLoader loads valid ragged output from fixtures."""
