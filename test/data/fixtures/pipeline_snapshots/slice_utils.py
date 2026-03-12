@@ -5,7 +5,7 @@ Phase 0: Helpers for pipeline snapshot generation and comparison.
 - compare_to_saved_slices: assert current manifest + numeric slices match saved.
 - assert_preprocessing_time_within_bounds: fail if current time exceeds baseline * max_time_ratio.
 
-Regenerate snapshots: uv run python scripts/snapshot/generate_pipeline_snapshots.py
+Regenerate snapshots: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py
 """
 
 from __future__ import annotations

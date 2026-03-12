@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Generate synthetic ragged data fixtures for pipeline snapshot tests. Run once, commit output."""
+"""Generate synthetic ragged data fixtures for pipeline snapshot tests.
+
+Output: test/fixtures/snapshot/data/ragged_prognostics.pkl
+
+Supports:
+  - test/data/datasources/test_synthetic_ragged_loader.py (SyntheticRaggedFromFileLoader)
+  - test/pipeline/test_pipeline_synthetic_snapshots.py (prognostics_ragged experiment)
+
+Run once, commit output. Uses seed 42 for reproducibility.
+
+Usage: uv run python test/scripts/snapshot/generate_snapshot_ragged_fixtures.py
+"""
 from __future__ import annotations
 
 import pickle
@@ -7,8 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-FIXTURES_DIR = _PROJECT_ROOT / "test" / "fixtures" / "snapshot"
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+FIXTURES_DIR = _PROJECT_ROOT / "test" / "fixtures" / "snapshot" / "data"
 SEED = 42
 N_UNITS = 3
 

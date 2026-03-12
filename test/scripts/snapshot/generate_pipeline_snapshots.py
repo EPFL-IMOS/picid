@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""
-Generate pipeline snapshots for phme20 (real-data tests).
+"""Generate pipeline snapshots for phme20 (real-data tests).
 
-Saves slices after load and after transforms; records preprocessing_time_seconds
-for the transformed stage. Run from project root; requires data and configs.
+Output: {output_dir}/phme20/{loaded|transformed}/slices_manifest.json and *.npy
+  Default output_dir: test/data/fixtures/pipeline_snapshots
+
+Supports: test/pipeline/test_pipeline_phme20_snapshots.py
+  - test_loaded_slices_match_saved
+  - test_transformed_slices_match_saved
+
+Uses only phme20 real data. Saves slices after load and after transforms;
+records preprocessing_time_seconds for the transformed stage. Requires datasets.
 
 Usage:
-  uv run python scripts/snapshot/generate_pipeline_snapshots.py
-  uv run python scripts/snapshot/generate_pipeline_snapshots.py --output-dir test/data/fixtures/pipeline_snapshots
-
-Output:
-  {output_dir}/phme20/{loaded|transformed}/slices_manifest.json
-  {output_dir}/phme20/{loaded|transformed}/*.npy
+  uv run python test/scripts/snapshot/generate_pipeline_snapshots.py
+  uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --output-dir test/data/fixtures/pipeline_snapshots
+  uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir "$(pwd)/datasets"
 """
 from __future__ import annotations
 
@@ -20,8 +23,8 @@ import sys
 import time
 from pathlib import Path
 
-# Add project root (scripts/snapshot/ -> project root)
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Add project root (test/scripts/snapshot/ -> project root)
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -128,7 +131,9 @@ def run_one(
         (transformed_dir / "slices_manifest.json").write_text(
             json.dumps(manifest_transformed, indent=2)
         )
-        print(f"  {name}: loaded + transformed ok (transform_time={transform_time:.2f}s)")
+        print(
+            f"  {name}: loaded + transformed ok (transform_time={transform_time:.2f}s)"
+        )
         return True
     except Exception as e:
         print(f"  {name}: failed - {e}")
@@ -136,12 +141,30 @@ def run_one(
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Generate pipeline snapshots for real-data tests.")
-    ap.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "test/data/fixtures/pipeline_snapshots")
-    default_data_dir = PROJECT_ROOT / "datasets" if (PROJECT_ROOT / "datasets").exists() else None
-    ap.add_argument("--data-dir", type=Path, default=default_data_dir, help="Override paths.data_dir for configs")
+    ap = argparse.ArgumentParser(
+        description="Generate pipeline snapshots for real-data tests."
+    )
+    ap.add_argument(
+        "--output-dir",
+        type=Path,
+        default=PROJECT_ROOT / "test/data/fixtures/pipeline_snapshots",
+    )
+    default_data_dir = (
+        PROJECT_ROOT / "datasets" if (PROJECT_ROOT / "datasets").exists() else None
+    )
+    ap.add_argument(
+        "--data-dir",
+        type=Path,
+        default=default_data_dir,
+        help="Override paths.data_dir for configs",
+    )
     ap.add_argument("--max-rows", type=int, default=100)
-    ap.add_argument("--config", choices=list(CONFIGS.keys()), default=None, help="Run only this config")
+    ap.add_argument(
+        "--config",
+        choices=list(CONFIGS.keys()),
+        default=None,
+        help="Run only this config",
+    )
     args = ap.parse_args()
 
     if getattr(args, "config", None):
