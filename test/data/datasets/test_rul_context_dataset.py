@@ -37,7 +37,7 @@ def meta_with_unit_ids():
 
 def test_rul_context_pred_len_must_be_one(rul_dense_data):
     """pred_len != 1 raises AssertionError."""
-    with pytest.raises(AssertionError, match="pred_len must be 1"):
+    with pytest.raises(AssertionError, match="pred_len must be 0"):
         RULContextBatchDataset(
             data_dict=rul_dense_data,
             task_type="rul",
@@ -56,11 +56,29 @@ def test_rul_context_init_success_with_pred_len_one(rul_dense_data):
         task_type="rul",
         seq_len=10,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
     assert len(ds) > 0
+
+
+def test_rul_context_len_matches_expected_window_count(rul_dense_data):
+    """len(ds) matches strict sliding-window count for dense data."""
+    ds = RULContextBatchDataset(
+        data_dict=rul_dense_data,
+        task_type="rul",
+        seq_len=10,
+        label_len=0,
+        pred_len=0,
+        stride=1,
+        padding_left_flag=False,
+        meta_data_dict={},
+    )
+
+    # T=60, required_len=seq_len+pred_len=10, min_start=0, max_start=51
+    # Number of starts in range(0, 51, 1) is 51.
+    assert len(ds) == 51
 
 
 def test_rul_context_getitem_structure(rul_dense_data):
@@ -70,7 +88,7 @@ def test_rul_context_getitem_structure(rul_dense_data):
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
@@ -90,7 +108,7 @@ def test_rul_context_rul_last_value_matches(rul_dense_data):
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
         padding_left_flag=False,
@@ -109,7 +127,7 @@ def test_rul_context_get_unit_id_includes_unit_id(rul_dense_data, meta_with_unit
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         get_unit_id=True,
         meta_data_dict=meta,
@@ -129,7 +147,7 @@ def test_rul_context_extract_unit_id_and_name(rul_dense_data, meta_with_unit_ids
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         get_unit_id=True,
         meta_data_dict=meta,
@@ -145,7 +163,7 @@ def test_rul_context_get_collate_fn(rul_dense_data):
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
@@ -162,7 +180,7 @@ def test_rul_context_collate_integration(rul_dense_data):
         task_type="rul",
         seq_len=5,
         label_len=0,
-        pred_len=1,
+        pred_len=0,
         stride=1,
         meta_data_dict={},
     )
