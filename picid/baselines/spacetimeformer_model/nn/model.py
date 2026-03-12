@@ -121,7 +121,7 @@ class Spacetimeformer(nn.Module):
 
         if not self.decoder_only:
             if inverted_encoder:
-                self.enc_embedding = IEmbedding(
+                self.enc_embedding = Embedding(
                     c_in=max_seq_len, d_model=d_model, dropout=dropout_emb
                 )
             else:
