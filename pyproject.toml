@@ -91,6 +91,12 @@ dev = [
 # [tool.setuptools.packages.find]
 # where = ["src"]
 
+[tool.numpydoc_validation]
+# Relax strict checks: Examples, See Also, extended summary not required
+checks = ["all", "EX01", "SA01", "ES01"]
+# __repr__ methods need not have Returns/Examples
+exclude = ['__repr__$']
+
 [tool.pytest.ini_options]
 # All test temp dirs (plot_dir, eval_details, etc.) go under test/ and are cleaned after runs
 addopts = "--basetemp=test/.pytest_tmp"

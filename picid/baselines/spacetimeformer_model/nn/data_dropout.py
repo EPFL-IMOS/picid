@@ -32,8 +32,34 @@ from torch.distributions.binomial import Binomial
 
 
 def create_subsequence_mask(o, r=0.15, lm=3, stateful=True, sync=False):
-    # mask random subsequences of the input
-    # (borrowed from IBM codeflare)
+    """
+    Create a boolean mask over random subsequences of the input tensor.
+
+    Masks contiguous subsequences rather than individual elements, encouraging
+    the model to learn from partial sequences. Uses Geometric/Binomial
+    distributions (borrowed from IBM CodeFlare). When stateful=True, alternates
+    between masked and unmasked runs with geometrically distributed lengths.
+
+    Parameters
+    ----------
+    o : torch.Tensor
+        Input tensor of shape (mask_dims, mask_len) or (n_masks, mask_dims, mask_len).
+        Will be expanded to 3D if 2D.
+    r : float, optional
+        Target fraction of elements to mask (default 0.15).
+    lm : int, optional
+        Mean length of masked/unmasked runs when stateful (default 3).
+    stateful : bool, optional
+        If True, use Geometric distribution for structured runs; else Bernoulli
+        per element (default True).
+    sync : bool or str, optional
+        If True or "random", apply the same mask across all dimensions (default False).
+
+    Returns
+    -------
+    torch.Tensor
+        Boolean mask of same shape as input (after 3D expansion). True = keep, False = mask.
+    """
     if r <= 0:
         return torch.zeros_like(o).bool()
     device = o.device
@@ -82,7 +108,30 @@ def create_subsequence_mask(o, r=0.15, lm=3, stateful=True, sync=False):
 
 
 class ReconstructionDropout(nn.Module):
-    """Reconstruction Dropout class."""
+    """
+    Dropout applied to encoder input for reconstruction regularization.
+
+    Combines three masking strategies during training: (1) full timestep dropout,
+    (2) element-wise standard dropout, and (3) subsequence masking via
+    create_subsequence_mask. Optionally skips all dropout with probability
+    skip_all_drop so the model sees unmasked inputs during training, improving
+    test-time behavior when no dropout is applied.
+
+    Used by Spacetimeformer's encoder embedding (see model.py recon_mask_* args).
+
+    Parameters
+    ----------
+    drop_full_timesteps : float, optional
+        Probability of dropping entire timesteps (default 0.0).
+    drop_standard : float, optional
+        Element-wise dropout probability (default 0.0).
+    drop_seq : float, optional
+        Subsequence mask rate passed to create_subsequence_mask (default 0.0).
+    drop_max_seq_len : int, optional
+        Mean run length for subsequence masking (default 5).
+    skip_all_drop : float, optional
+        Probability of applying no dropout; 1.0 = always apply (default 1.0).
+    """
 
     def __init__(
         self,
@@ -92,6 +141,22 @@ class ReconstructionDropout(nn.Module):
         drop_max_seq_len=5,
         skip_all_drop=1.0,
     ):
+        """
+        Initialize ReconstructionDropout.
+
+        Parameters
+        ----------
+        drop_full_timesteps : float, optional
+            Probability of dropping entire timesteps (default 0.0).
+        drop_standard : float, optional
+            Element-wise dropout probability (default 0.0).
+        drop_seq : float, optional
+            Subsequence mask rate passed to create_subsequence_mask (default 0.0).
+        drop_max_seq_len : int, optional
+            Mean run length for subsequence masking (default 5).
+        skip_all_drop : float, optional
+            Probability of applying no dropout; 1.0 = always apply (default 1.0).
+        """
         super().__init__()
         self.drop_full_timesteps = drop_full_timesteps
         self.drop_standard = drop_standard
@@ -100,6 +165,19 @@ class ReconstructionDropout(nn.Module):
         self.skip_all_drop = skip_all_drop
 
     def forward(self, y):
+        """
+        Apply dropout mask to input during training.
+
+        Parameters
+        ----------
+        y : torch.Tensor
+            Input of shape (batch_size, length, dim).
+
+        Returns
+        -------
+        torch.Tensor
+            Masked input (same shape); unchanged if eval mode or skip_all_drop=1.0.
+        """
         bs, length, dim = y.shape
         dev = y.device
 
@@ -140,17 +218,56 @@ class ReconstructionDropout(nn.Module):
         else:
             return y
 
-    def __repr__(self):
+    def __repr__(self):  # numpydoc ignore=RT01
+        """Return string representation of dropout configuration."""
         return f"Timesteps {self.drop_full_timesteps}, Standard {self.drop_standard}, Seq (max len = {self.drop_max_seq_len}) {self.drop_seq}, Skip All Drop {self.skip_all_drop}"
 
 
 class RandomMask(nn.Module):
+    """
+    Replace input values with a constant at random positions during training.
+
+    Applies Bernoulli dropout per timestep (broadcast across features) and
+    replaces masked positions with change_to_val. No-op when change_to_val is
+    None or in eval mode.
+
+    Parameters
+    ----------
+    prob : float
+        Probability of keeping each timestep; 1 - prob = mask rate.
+    change_to_val : float or None
+        Value to use for masked positions. If None, forward is identity.
+    """
+
     def __init__(self, prob, change_to_val):
+        """
+        Initialize RandomMask.
+
+        Parameters
+        ----------
+        prob : float
+            Probability of keeping each timestep; 1 - prob = mask rate.
+        change_to_val : float or None
+            Value to use for masked positions. If None, forward is identity.
+        """
         super().__init__()
         self.prob = prob
         self.change_to_val = change_to_val
 
     def forward(self, y):
+        """
+        Replace random timesteps with change_to_val during training.
+
+        Parameters
+        ----------
+        y : torch.Tensor
+            Input of shape (batch_size, length, dim).
+
+        Returns
+        -------
+        torch.Tensor
+            Masked input; unchanged if eval mode or change_to_val is None.
+        """
         bs, length, dy = y.shape
         if not self.training or self.change_to_val is None:
             return y
@@ -160,5 +277,6 @@ class RandomMask(nn.Module):
         masked_y = (y * mask) + (self.change_to_val * (1.0 - mask))
         return masked_y
 
-    def __repr__(self):
-        return f"RandomMask(prob = {self.prob}, val = {self.change_to_val}"
+    def __repr__(self):  # numpydoc ignore=RT01
+        """Return string representation of mask configuration."""
+        return f"RandomMask(prob = {self.prob}, val = {self.change_to_val})"
