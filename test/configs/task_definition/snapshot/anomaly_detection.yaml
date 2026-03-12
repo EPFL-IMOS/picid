@@ -1,9 +1,10 @@
-seq_len: 1
+seq_len: 10  # Match diagnostics; patchtst requires seq_len >= patch_len
 label_len: 0
-pred_len: 1
+pred_len: 0  # FaultClassificationBatchDataset (extends RUL) requires pred_len=0
 task_type: anomaly_detection
+padding_left_flag: true
 stride: 1
-stride_train: 5
+stride_train: 1
 num_classes: 2
 
 model:
@@ -11,3 +12,6 @@ model:
     input_tensors:
       - features
       - ${task_definition.task_type}
+
+target_metric: val/f1
+target_metric_mode: max
