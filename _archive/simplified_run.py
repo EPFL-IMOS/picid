@@ -1,6 +1,9 @@
 """Minimal GraphBench-like entry point that hides Hydra details."""
 
-from picid.run import *
+from picid.run import (
+    register_data_dim_resolver,
+    register_infer_dataloader_length_resolver,
+)
 
 from picid.simplified_run_objects import (
     Experiment,
