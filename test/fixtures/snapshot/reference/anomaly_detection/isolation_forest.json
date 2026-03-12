@@ -1,0 +1,8 @@
+{
+  "test/loss": 1.0,
+  "test/f1": 0.4000000059604645,
+  "test/accuracy": 0.4000000059604645,
+  "test/precision": 0.4166666865348816,
+  "test/recall": 0.4166666865348816,
+  "test/auroc": 0.5
+}
