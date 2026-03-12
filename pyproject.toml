@@ -106,7 +106,7 @@ disable = ["logging-fstring-interpolation"]
 
 [tool.ruff]
 src = ["picid"]
-exclude = ["local_packages", "scripts", "_archive"]
+exclude = ["local_packages", "scripts", "_archive", "**/*.ipynb"]
 
 [tool.ruff.lint.per-file-ignores]
 # E402: module-level import not at top (needed for env setup, lazy imports, etc.)

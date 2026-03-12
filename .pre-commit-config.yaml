@@ -20,9 +20,10 @@ repos:
     rev: v0.8.4
     hooks:
       - id: ruff-format
+        exclude: ^(local_packages|_archive)/|\.ipynb$
       - id: ruff
         args: [--fix]
-        exclude: ^(local_packages|_archive)/
+        exclude: ^(local_packages|_archive)/|\.ipynb$
 
   - repo: https://github.com/numpy/numpydoc
     rev: v1.8.0
