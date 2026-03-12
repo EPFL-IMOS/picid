@@ -1,3 +1,28 @@
+"""
+Data dropout and masking utilities for Spacetimeformer encoder embedding.
+
+This module provides dropout strategies applied to the input sequence before
+embedding, used to regularize reconstruction during training. It includes
+ReconstructionDropout (combining full-timestep, element-wise, and subsequence
+masking), RandomMask (replacing values with a constant), and the low-level
+create_subsequence_mask helper.
+
+See Also
+--------
+ReconstructionDropout : Main dropout combining multiple masking strategies.
+RandomMask : Replaces masked values with a constant.
+create_subsequence_mask : Low-level helper for subsequence masking.
+
+Examples
+--------
+>>> from picid.baselines.spacetimeformer_model.nn.data_dropout import (
+...     ReconstructionDropout,
+...     RandomMask,
+... )
+>>> dropout = ReconstructionDropout(drop_standard=0.1)
+>>> masked = RandomMask(prob=0.1, change_to_val=0.0)
+"""
+
 import random
 
 import torch
@@ -35,8 +60,8 @@ def create_subsequence_mask(o, r=0.15, lm=3, stateful=True, sync=False):
         for i in range(10):
             _dist_a = (Geometric(probs=proba_a).sample([max_len]) + 1).long()
             _dist_b = (Geometric(probs=proba_b).sample([max_len]) + 1).long()
-            dist_a = _dist_a if i == 0 else torch.cat((dist_a, _dist_a), dim=0)
-            dist_b = _dist_b if i == 0 else torch.cat((dist_b, _dist_b), dim=0)
+            dist_a = _dist_a if i == 0 else torch.cat((dist_a, _dist_a), dim=0)  # noqa
+            dist_b = _dist_b if i == 0 else torch.cat((dist_b, _dist_b), dim=0)  # noqa
             add = torch.add(dist_a, dist_b)
             if torch.gt(torch.sum(add), numels):
                 break
@@ -57,6 +82,8 @@ def create_subsequence_mask(o, r=0.15, lm=3, stateful=True, sync=False):
 
 
 class ReconstructionDropout(nn.Module):
+    """Reconstruction Dropout class."""
+
     def __init__(
         self,
         drop_full_timesteps=0.0,
