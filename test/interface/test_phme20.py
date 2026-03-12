@@ -19,13 +19,11 @@ def test_pydantic_easy_interface():
 
     transforms = [scaler, scaler_target]
 
-    model = LSTMConfig(n_layers=4)
+    model = LSTMConfig(n_layers=8)
 
     task_definition = Prognostic(task_type='rul')
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
-
-    # TODO: implement evaluators
 
     callbacks = [EarlyStopping(monitor=None),
                  RichModelSummary()]

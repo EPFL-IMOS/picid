@@ -8,11 +8,13 @@ import numpy as np
 from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
 from lightning import Callback, LightningDataModule, Trainer
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf, DictConfig, open_dict
+from torch import nn
 
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
+from picid.interface.model_wrapper import CustomModelWrapper
 from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
@@ -181,11 +183,10 @@ class EasyInterface:
     def compose_config_file(self,
                             *,
                             task_definition: BaseTaskDefinition,
-                            model: AbsModelConfig,
+                            model: AbsModelConfig | CustomModelWrapper,
                             datasource: str | ProcessedDatasource,
                             evaluators,
                             callbacks: dict | Callback | list[Callback] | None = None,
-                            training_model: str | dict = None,
                             transforms: str | dict = None,
                             overrides: List[str] = None
                             ) -> DictConfig:
@@ -206,19 +207,21 @@ class EasyInterface:
                 DictConfig: A unified configuration object ready for Hydra instantiation.
         """
 
-        model_config_path = (project_config.config_path /
-                             'model' /
-                             (model.config_name + '.yaml'))
-        model_cfg = OmegaConf.load(model_config_path)
-        model_cfg.update(model.model_dump(by_alias=True))
+        training_model_cfg = None
+        model_cfg = None
 
-        task_definition_cfg = task_definition.model_dump(by_alias=True)
+        if not isinstance(model, CustomModelWrapper):
+            model_config_path = (project_config.config_path /
+                                 'model' /
+                                 (model.config_name + '.yaml'))
+            model_cfg = OmegaConf.load(model_config_path)
+            model_cfg.update(model.model_dump(by_alias=True))
 
-        training_model_path = (project_config.config_path /
-                               'model_configs'/
-                               task_definition.config_name /
-                               (model.config_name + '.yaml'))
-        training_model_cfg = OmegaConf.load(training_model_path)
+            training_model_path = (project_config.config_path /
+                                   'model_configs'/
+                                   task_definition.config_name /
+                                   (model.config_name + '.yaml'))
+            training_model_cfg = OmegaConf.load(training_model_path)
 
         overrides = overrides if overrides is not None else []
         #  TO CHECK POSSIBLE, but almost certain, ERRORS AND INCOMPATIBILITIES
@@ -239,7 +242,22 @@ class EasyInterface:
             raise ValueError('datasource must be a string (see available_datasources attribute) or '
                              'a ProcessedDatasource (using the process_datasource function).')
 
-        if training_model is not None:
+        if model_cfg is not None:
+            for i, d in enumerate(training_model_cfg.defaults):
+                if 'override /model' in d.keys():
+                    del training_model_cfg.defaults[i]
+                    break
+
+            cs.store(group="model", name="model_cfg",
+                     node=model_cfg)
+            overrides.append('model=model_cfg')
+
+        cs.store(group="task_definition",
+                 name="task_definition_cfg",
+                 node=task_definition.model_dump(by_alias=True))
+        overrides.append('task_definition=task_definition_cfg')
+
+        if training_model_cfg is not None:
             cs.store(group="model_configs", name="training_model_cfg",
                      node=training_model_cfg, package="_global_")
             overrides.append('+model_configs=training_model_cfg')
@@ -248,11 +266,6 @@ class EasyInterface:
             cs.store(group="transforms", name="transforms_cfg",
                      node=transforms)
             overrides.append('+transforms=transforms_cfg')
-
-        cs.store(group="task_definition",
-                 name="task_definition_cfg",
-                 node=task_definition_cfg)
-        overrides.append('task_definition=task_definition_cfg')
 
         if callbacks is None or isinstance(callbacks, dict):
             if isinstance(callbacks, dict):
@@ -276,12 +289,6 @@ class EasyInterface:
                      node=evaluators_cfg)
             overrides.append('evaluator=evaluator_cfg')
 
-        # evaluators
-        # cs.store(group="evaluator",
-        #          name="evaluator_cfg",
-        #          node=OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml'))
-        # overrides.append('evaluator=evaluator_cfg')
-
         cs.store(group="paths",
                  name="paths_cfg",
                  node=project_config.model_dump())
@@ -302,13 +309,14 @@ class EasyInterface:
               output_dir: object = None,
               *,
               task_definition: BaseTaskDefinition,
-              model: AbsModelConfig,
+              model: AbsModelConfig | CustomModelWrapper,
               datasource: str | None | ProcessedDatasource = None,
               callbacks: dict | Callback | list[Callback] | None = None,
               loggers: list[Logger | BaseLogger] = None,
               evaluators : dict[str, DefaultEvaluatorConfig] = None,
               transforms: list[DataTransform] = [],
               overrides: List[str] = None,
+              custom_backbone: nn.Module = None,
               enable_progress_bar: bool = True) -> None:
         """
             The main entry point for running an experiment. It handles data loading,
@@ -331,7 +339,6 @@ class EasyInterface:
 
         cfg = self.compose_config_file(datasource=datasource,
                                        task_definition=task_definition,
-                                       training_model=model,
                                        evaluators=evaluators,
                                        callbacks=callbacks,
                                        overrides=overrides,
@@ -426,13 +433,15 @@ class EasyInterface:
             elif isinstance(l, BaseLogger):
                 d = l.model_dump(by_alias=True)
                 d['save_dir'] = project_config.save_dir
-                # logger = cfg.get("logger", None)
                 l = hydra.utils.instantiate(d)
                 log_functions.append(l)
 
-        # logger: list[Logger] = list(hydra.utils.instantiate(logger).values()) if logger is not None else []
+        if 'config_name' in cfg.model:
+            with open_dict(cfg):
+                del cfg.model['config_name']
 
         model = create_lightning_module(
+            backbone=model if isinstance(model, CustomModelWrapper) else None,
             cfg=cfg,
             datamodule=datamodule,
             evaluators=evaluators,

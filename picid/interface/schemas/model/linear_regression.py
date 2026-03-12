@@ -8,8 +8,8 @@ from .base import AbsModelConfig
 class LinearRegressionConfig(AbsModelConfig):
     config_name : str = Field('linear_regression', frozen=True)
 
-    lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper',
+    # lightning_model: bool = Field(True, frozen=True)
+    model_class : str = Field('picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper',
                                  frozen=True, serialization_alias='_target_')
 
     pred_len: int = Field(ge=1)
