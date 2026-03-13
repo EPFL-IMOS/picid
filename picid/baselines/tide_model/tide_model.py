@@ -14,6 +14,13 @@ from .tide import Model as TiDE
 
 
 class TiDE_Forecaster(TransformerForecaster):
+    """
+    Forecaster wrapper for TiDE (Time-series Dense Encoder).
+
+    Supports regression, classification, state forecasting, and long-term
+    forecasting. Maps batch (x_c, y_c, x_t, y_t) to TiDE model inputs.
+    """
+
     def __init__(
         self,
         optimizer_factory: Callable[..., torch.optim.Optimizer],
@@ -46,6 +53,64 @@ class TiDE_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
+        """
+        Initialize TiDE forecaster.
+
+        Parameters
+        ----------
+        optimizer_factory : Callable
+            Factory for optimizer instantiation.
+        scheduler_factory : Callable
+            Factory for learning rate scheduler.
+        d_x : int
+            Exogenous input dimension.
+        d_yc : int
+            Context target dimension.
+        d_yt : int
+            Forecast target dimension.
+        ts_in : int
+            Input sequence length.
+        ts_out : int
+            Output (prediction) length.
+        task_type : str
+            One of classification, regression, state_forecasting, long_term_forecast.
+        dropout : float, optional
+            Dropout probability.
+        e_layers : int, optional
+            Number of encoder layers.
+        d_layers : int, optional
+            Number of decoder layers.
+        d_ff : int, optional
+            Feed-forward hidden dimension.
+        freq : str, optional
+            Time frequency for feature encoding ('h', 't', 's', etc.).
+        use_x_dim : bool, optional
+            Use d_x as feature_dim instead of freq-based mapping.
+        include_x_t : bool, optional
+            Include exogenous features in encoder.
+        loss : str, optional
+            Loss function name.
+        linear_window : int, optional
+            Linear window size.
+        d_model : int, optional
+            Model hidden dimension.
+        use_revin : bool, optional
+            Use RevIN normalization.
+        use_seasonal_decomp : bool, optional
+            Use seasonal decomposition.
+        linear_shared_weights : bool, optional
+            Share linear layer weights.
+        time_emb_dim : int, optional
+            Time embedding (feature_encode_dim) dimension.
+        transformer_args : dict, optional
+            Extra transformer arguments.
+        d_x_mask : list of int, optional
+            Mask for exogenous dimensions.
+        mask_y_c : bool, optional
+            Mask context targets.
+        **kwargs
+            Passed to TransformerForecaster (e.g. evaluators).
+        """
         super().__init__(
             optimizer_factory=optimizer_factory,
             scheduler_factory=scheduler_factory,
@@ -135,6 +200,30 @@ class TiDE_Forecaster(TransformerForecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
+        """
+        Run a forward pass through the TiDE model.
+
+        Parameters
+        ----------
+        x_c : torch.Tensor or None
+            Context exogenous features; None for regression/state_forecasting.
+        y_c : torch.Tensor or None
+            Context targets; None for regression/state_forecasting.
+        x_t : torch.Tensor
+            Target exogenous features; shape (batch, ts_in, d_x).
+        y_t : torch.Tensor
+            Target values; shape (batch, ts_out, d_yt).
+        output_attn : bool, optional
+            Unused (TiDE has no attention).
+        target_mask : torch.Tensor or None, optional
+            Optional mask for target features.
+
+        Returns
+        -------
+        tuple of torch.Tensor
+            Single-element tuple (outputs,) with shape (batch, pred_len, c_out)
+            or (batch, 1, num_class) for classification.
+        """
         # set data to [batch, length, dim] format
         if y_c is not None:
             if len(y_c.shape) == 2:
@@ -198,6 +287,21 @@ class TiDE_Forecaster(TransformerForecaster):
         return (outputs,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
+        """
+        Run one training or evaluation step.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t).
+        train : bool
+            If True, training mode; else evaluation.
+
+        Returns
+        -------
+        dict
+            Stats with keys: predictions, targets, mask, forecast_loss, loss.
+        """
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
@@ -229,6 +333,23 @@ class TiDE_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
+        """
+        Compute forecasting loss for a batch.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t).
+        time_mask : torch.Tensor or None, optional
+            Optional mask over time steps.
+        forward_kwargs : dict, optional
+            Kwargs passed to forward (e.g. target_mask).
+
+        Returns
+        -------
+        dict
+            Keys: forecast_loss, forecast_out, forecast_mask.
+        """
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch

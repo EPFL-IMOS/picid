@@ -350,6 +350,8 @@ class Embedding(nn.Module):
         return val_time_emb, space_emb, var_idx_true, mask
 
 
+# TODO: rows 353-366 are potentially dead code. Reason: Commented-out IEmbedding class never executed.
+# Additional Note: Remove if confirmed unused.
 # class IEmbedding(nn.Module):
 #     def __init__(self, c_in, d_model, dropout=0.1):
 #         super().__init__()

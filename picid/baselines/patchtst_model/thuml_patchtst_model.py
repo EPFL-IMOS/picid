@@ -14,6 +14,13 @@ from .thuml_patchtst import Model as PatchTST
 
 
 class PatchTST_Forecaster(TransformerForecaster):
+    """PatchTST forecaster for time-series forecasting, regression, and classification.
+
+    Wraps the PatchTST model (thuml_patchtst.Model) with training logic,
+    loss computation, and step handling. Supports long-term forecasting,
+    regression, and classification task types.
+    """
+
     def __init__(
         self,
         optimizer_factory: Callable[..., torch.optim.Optimizer],
@@ -49,6 +56,69 @@ class PatchTST_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
+        """Initialize PatchTST forecaster.
+
+        Parameters
+        ----------
+        optimizer_factory : callable
+            Factory returning a torch optimizer.
+        scheduler_factory : callable
+            Factory returning a learning rate scheduler.
+        d_x : int
+            Dimension of exogenous input features.
+        d_yc : int
+            Dimension of context target variables.
+        d_yt : int
+            Dimension of target variables (output).
+        ts_in : int
+            Input sequence length.
+        ts_out : int
+            Output sequence length (prediction horizon).
+        task_type : str
+            One of long_term_forecast, regression, classification, etc.
+        dropout : float, optional
+            Dropout probability. Default is 0.1.
+        patch_len : int, optional
+            Patch length for PatchTST embedding. Default is 16.
+        stride : int, optional
+            Stride for PatchTST embedding. Default is 8.
+        e_layers : int, optional
+            Number of encoder layers. Default is 3.
+        d_layers : int, optional
+            Number of decoder layers. Default is 3.
+        d_ff : int, optional
+            Feed-forward dimension. Default is 64.
+        n_heads : int, optional
+            Number of attention heads. Default is 4.
+        activation : str, optional
+            Activation function name. Default is "gelu".
+        factor : int, optional
+            Attention factor. Default is 3.
+        use_x_dim : bool, optional
+            Whether to use exogenous features. Default is False.
+        include_x_t : bool, optional
+            Whether to include future exogenous in input. Default is True.
+        loss : str, optional
+            Loss function name. Default is "mse".
+        linear_window : int, optional
+            Linear window size. Default is 0.
+        d_model : int, optional
+            Model dimension. Default is 64.
+        use_revin : bool, optional
+            Whether to use RevIN normalization. Default is False.
+        use_seasonal_decomp : bool, optional
+            Whether to use seasonal decomposition. Default is False.
+        linear_shared_weights : bool, optional
+            Whether to share linear weights. Default is False.
+        transformer_args : dict, optional
+            Extra transformer arguments. Default is None.
+        d_x_mask : list of int, optional
+            Mask for exogenous dimensions. Default is None.
+        mask_y_c : bool, optional
+            Whether to mask context targets. Default is False.
+        **kwargs
+            Passed to parent (e.g. evaluators).
+        """
         super().__init__(
             optimizer_factory=optimizer_factory,
             scheduler_factory=scheduler_factory,
@@ -145,6 +215,29 @@ class PatchTST_Forecaster(TransformerForecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
+        """Run a single forward pass through the PatchTST model.
+
+        Parameters
+        ----------
+        x_c : torch.Tensor or None
+            Context exogenous input [B, L, d_x]. None for regression/classification.
+        y_c : torch.Tensor or None
+            Context target input [B, L, d_yc]. None for regression/classification.
+        x_t : torch.Tensor or None
+            Target exogenous input [B, L, d_x]. For regression/classification, used as encoder input.
+        y_t : torch.Tensor
+            Target values [B, L, d_yt].
+        output_attn : bool, optional
+            Whether to output attention weights. Default is False.
+        target_mask : torch.Tensor or None, optional
+            Feature mask for loss. Default is None.
+
+        Returns
+        -------
+        tuple of torch.Tensor
+            Single-element tuple (outputs,) where outputs has shape [B, L, D]
+            for forecasting or [B, 1, D] for regression/classification.
+        """
         # set data to [batch, length, dim] format
         if y_c is not None:
             if len(y_c.shape) == 2:
@@ -200,6 +293,20 @@ class PatchTST_Forecaster(TransformerForecaster):
         return (outputs,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
+        """Execute one training or evaluation step.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t) batch tensors.
+        train : bool
+            If True, run in training mode; else evaluation mode.
+
+        Returns
+        -------
+        dict
+            Stats with keys: predictions, targets, mask, forecast_loss, loss.
+        """
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
@@ -231,6 +338,22 @@ class PatchTST_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
+        """Compute forecast loss from a batch.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t) batch tensors.
+        time_mask : torch.Tensor or None, optional
+            Mask over time steps for loss. Default is None.
+        forward_kwargs : dict, optional
+            Extra kwargs passed to forward (e.g. target_mask). Default is {}.
+
+        Returns
+        -------
+        dict
+            Keys: forecast_loss, forecast_out, forecast_mask.
+        """
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch
