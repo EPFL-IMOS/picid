@@ -1,2 +1,0 @@
-_target_: picid.loss.asymmetric_mse.AsymmetricMSELoss
-overestimate_penalty: 10.0
