@@ -1,7 +1,6 @@
 # Concepts
 
-Understand how the framework works: from raw data to predictions.
-
-- [From data to prediction](from_data_to_prediction.md) — How one PHM run works: datasource → data objects → datasets → transforms → model → evaluator → pipeline.
-
-[← Back to documentation index](../index.md)
+- [PHM Glossary](phm-glossary.md)
+- [System Architecture](system-architecture.md)
+- [End-to-End Flow](end-to-end-flow.md)
+- [Legacy: From Data to Prediction](from_data_to_prediction.md)
