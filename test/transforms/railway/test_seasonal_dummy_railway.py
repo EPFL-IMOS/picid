@@ -7,7 +7,6 @@ from picid.transforms.railway.seasonal_dummy_railway import SeasonalDummyTransfo
 
 
 class TestSeasonalDummyTransform:
-
     def test_apply_basic(self):
         """Apply transform with minimal valid data."""
         # Use enough samples so each seasonal pos has multiple values (avoids scalar .extend)
@@ -45,7 +44,10 @@ class TestSeasonalDummyTransform:
 
     def test_reset_history(self):
         t = SeasonalDummyTransform(shift=2, seq_len=4)
-        data = {"features": np.arange(8).reshape(-1, 1).astype(float), "target": np.arange(8).reshape(-1, 1).astype(float)}
+        data = {
+            "features": np.arange(8).reshape(-1, 1).astype(float),
+            "target": np.arange(8).reshape(-1, 1).astype(float),
+        }
         t.transform_data(data, metadata={"mode": "train"})
         t.reset_history()
         summary = t.get_seasonal_history_summary()
@@ -54,7 +56,10 @@ class TestSeasonalDummyTransform:
 
     def test_get_seasonal_history_summary(self):
         t = SeasonalDummyTransform(shift=2, seq_len=4)
-        data = {"features": np.arange(10).reshape(-1, 1).astype(float), "target": np.arange(10).reshape(-1, 1).astype(float)}
+        data = {
+            "features": np.arange(10).reshape(-1, 1).astype(float),
+            "target": np.arange(10).reshape(-1, 1).astype(float),
+        }
         t.transform_data(data, metadata={"mode": "train"})
         summary = t.get_seasonal_history_summary()
         assert isinstance(summary, dict)

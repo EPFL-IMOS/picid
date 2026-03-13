@@ -3,7 +3,7 @@
 from einops import rearrange
 import torch
 import numpy as np
-from typing import Optional, Any, Tuple
+from typing import Optional, Tuple
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.multisource import InverseTransformMixin
@@ -173,7 +173,6 @@ class MultivariateTimeseriesScalingWrapper:
         pred_shape = predictions.shape
 
         if len(pred_shape) == 3:
-
             assert (
                 pred_shape[0] == 1 or self.task_mode
             ), f"Expected batch size of 1 for 3D predictions, got {pred_shape[0]}"

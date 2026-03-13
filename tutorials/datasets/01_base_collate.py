@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tutorial: BaseDataset and collate_fn for simple tabular data."""
+
 import sys
 from pathlib import Path
 
@@ -19,7 +20,9 @@ class SimpleTabularDataset(BaseDataset):
         super().__init__(data_dict)
         self.features = np.asarray(data_dict["features"])
         self.target = np.asarray(data_dict["target"])
-        assert len(self.features) == len(self.target), "features and target must have same length"
+        assert len(self.features) == len(
+            self.target
+        ), "features and target must have same length"
 
     def __len__(self):
         return len(self.features)

@@ -6,26 +6,26 @@ get_simple_feature_statistics:
     target_name: ${datasource.task_mode}  # Use the task_mode from the dataset config
     cycles_identifier: rul
     battery_mode_state: mode
-  
+
   metadata:
     apply_to: ['features', 'metadata']
     assign_to: features
-    
+
 # Transfrom which takes a column from the features and assigns it to target
 assign_updated_taget_from_features:
   transform:
     _target_:  picid.transforms.battery.nb1_transforms.UpdateTarget  # Your wrapper class
     target_name: ${datasource.task_mode}
     apply_to_key: features
-    
+
   metadata:
     apply_to: ['features', 'metadata']
     assign_to: target
-    
-    
+
+
 filter_features:
   transform:
-    _target_:  picid.transforms.battery.nb1_transforms.FilterDataFrameColumns  
+    _target_:  picid.transforms.battery.nb1_transforms.FilterDataFrameColumns
     columns_to_keep: null #['voltage_mean', 'voltage_var', 'current_mean','current_var', 'temperature_mean', 'temperature_var'] # 'mode',
     apply_to_key: features
 
@@ -35,8 +35,8 @@ filter_features:
 
 scaler_features:
   transform:
-    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn  
-    
+    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
   metadata:
     apply_to: features
     fit_on: train
@@ -44,8 +44,8 @@ scaler_features:
 
 AssignNaiveTimefeatures:
   transform:
-    _target_:  picid.transforms.battery.nb1_transforms.AssignNaiveTimefeatures  
-    
+    _target_:  picid.transforms.battery.nb1_transforms.AssignNaiveTimefeatures
+
   metadata:
     apply_to: features
     assign_to: time_features
@@ -53,7 +53,7 @@ AssignNaiveTimefeatures:
 scaler_target:
   transform:
     _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
+
   metadata:
     apply_to: target
     fit_on: train

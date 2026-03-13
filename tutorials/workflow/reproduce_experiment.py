@@ -10,6 +10,7 @@ Run from project root:
 
 Requires: PROJECT_ROOT env var, datasets (or use snapshot experiment).
 """
+
 from __future__ import annotations
 
 import os
@@ -17,7 +18,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent))
+PROJECT_ROOT = Path(
+    os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent)
+)
 
 print("=" * 60)
 print("Tutorial: Run and Reproduce Experiments")
@@ -68,5 +71,7 @@ if repro_dir:
 
 print("\n3. Check REPRODUCE.md in the run dir for manual instructions.")
 print("   - Option A: uv run python picid/run.py <overrides>")
-print("   - Option B: uv run python scripts/reproducibility/reproduce_from_run.py <run_dir>")
+print(
+    "   - Option B: uv run python scripts/reproducibility/reproduce_from_run.py <run_dir>"
+)
 print("\nDone.")

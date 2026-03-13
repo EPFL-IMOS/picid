@@ -4,6 +4,7 @@ Characterization tests for DatasetContainer and SplitDatasetContainer (Phase 0).
 Covers: single vs multi-unit normalization, optional manifest/slice_info,
 validate(), to_split_dict(), group_by_split(), get_instance_cls().
 """
+
 import numpy as np
 import pytest
 
@@ -195,7 +196,9 @@ def test_dataset_container_optional_manifest_slice_info():
     assert c.slice_info is slice_info
 
 
-def test_split_container_copy_preserves_manifest_slice_info(single_unit_split_container):
+def test_split_container_copy_preserves_manifest_slice_info(
+    single_unit_split_container,
+):
     """copy(deep=True) preserves manifest and slice_info."""
     from picid.data.data_objects.manifest import MetadataManifest
     from picid.data.data_objects.slice_info import SliceInfo

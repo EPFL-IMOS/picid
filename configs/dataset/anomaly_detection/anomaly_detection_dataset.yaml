@@ -4,4 +4,3 @@ label_len: ${task_definition.label_len}
 pred_len: ${task_definition.pred_len}
 stride: ${task_definition.stride}
 task_type: ${task_definition.task_type}
-

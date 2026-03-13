@@ -6,10 +6,8 @@ per docs/dataobject.md, docs/datasets.md (RUL/ConceptRUL/FitPredict batch shapes
 """
 
 import pytest
-import numpy as np
 import torch
-from typing import Dict, Any
-from unittest.mock import MagicMock
+from typing import Dict
 
 from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFitPredictWrapper
@@ -100,7 +98,9 @@ class MockEvaluator(AbstractEvaluator):
     def update(self, model_out: dict) -> None:
         self._updates.append(model_out)
 
-    def compute(self, mode: str, epoch: int = None, step: int = None) -> Dict[str, float]:
+    def compute(
+        self, mode: str, epoch: int = None, step: int = None
+    ) -> Dict[str, float]:
         self._compute_count += 1
         return {"mock_metric": 1.0}
 
@@ -138,7 +138,9 @@ class MockBackbone(torch.nn.Module):
         x_flat = x.reshape(B, -1)
         dim = x_flat.shape[1]
         if dim < self._max_features:
-            pad = torch.zeros(B, self._max_features - dim, device=x.device, dtype=x.dtype)
+            pad = torch.zeros(
+                B, self._max_features - dim, device=x.device, dtype=x.dtype
+            )
             x_flat = torch.cat([x_flat, pad], dim=1)
         else:
             x_flat = x_flat[:, : self._max_features]

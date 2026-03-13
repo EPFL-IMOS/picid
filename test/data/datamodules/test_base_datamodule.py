@@ -4,6 +4,7 @@ Phase 1: BaseDataModule — dataloader creation, batch sizes, subset.
 Uses real datasets (e.g. SlidingWindowBatchDataset) to assert train/val/test
 dataloaders and batch size handling (integer and "full").
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -150,8 +151,10 @@ def test_shuffle_train_false_warning(tiny_sliding_dataset, caplog):
 
 def test_wrong_dataset_type_raises(tiny_sliding_dataset):
     """Passing a non-BaseDataset/ConcatDataset type raises TypeError."""
+
     class NotADataset:
         pass
+
     with pytest.raises(TypeError, match="BaseDataset|BaseConcatDataset"):
         BaseDataModule(
             dataset_train=NotADataset(),
@@ -168,6 +171,7 @@ def test_wrong_dataset_type_raises(tiny_sliding_dataset):
 def test_subset_range_applied(tiny_sliding_dataset):
     """subset_range creates Subset for train/val/test when start < len."""
     from torch.utils.data import Subset
+
     dm = BaseDataModule(
         dataset_train=tiny_sliding_dataset,
         dataset_val=tiny_sliding_dataset,
@@ -215,6 +219,8 @@ def test_val_subset_ratio(tiny_sliding_dataset, caplog):
             subset_seed=42,
         )
         dl = dm.val_dataloader()
+        assert dl is not None
+        assert hasattr(dl, "__iter__")
     assert "Subset" in caplog.text or "subset" in caplog.text.lower()
 
 
@@ -234,6 +240,8 @@ def test_test_subset_ratio(tiny_sliding_dataset, caplog):
             subset_seed=42,
         )
         dl = dm.test_dataloader()
+        assert dl is not None
+        assert hasattr(dl, "__iter__")
     assert "Subset" in caplog.text or "subset" in caplog.text.lower()
 
 
@@ -286,7 +294,7 @@ def test_drop_last_when_remainder_one():
         label_len=0,
         pred_len=2,
         stride=2,
-        padding_left_flag=False
+        padding_left_flag=False,
     )
     n = len(ds)
     batch_size = 4
@@ -407,18 +415,20 @@ def test_profiled_loader_path(tiny_sliding_dataset):
         test_batch_size=2,
         num_workers=0,
         use_batch_sampler=True,
-        profiler_cfg=type("Cfg", (), {
-            "wait": 0,
-            "warmup": 0,
-            "active": 100,
-            "repeat": 0,
-            "activities": ["CPU"],
-            "trace_path": "/tmp/trace.json",
-        })(),
+        profiler_cfg=type(
+            "Cfg",
+            (),
+            {
+                "wait": 0,
+                "warmup": 0,
+                "active": 100,
+                "repeat": 0,
+                "activities": ["CPU"],
+                "trace_path": "/tmp/trace.json",
+            },
+        )(),
     )
     dl = dm.train_dataloader()
     # Consume one batch to exercise profiled generator (schedule stays active, no exit)
     batch = next(iter(dl))
     assert isinstance(batch, dict)
-
-

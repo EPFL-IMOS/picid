@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 import pandas as pd
 import awkward as ak
-from unittest.mock import MagicMock
 
 # --- Import the classes you need to test ---
 # (You will need to adjust these import paths to match your library structure)
@@ -290,7 +289,7 @@ def test_model_handler_get_discharge_whole_cycle_future(mocker):
     time_val = [np.array([[0]])]
     time_test = [np.array([[0]])]
 
-    # Patch the helper method
+    # Patch the helper method (assert_called at end verifies patch was used)
     mock_get_soh = mocker.patch.object(
         ModelDataHandler,
         "_ModelDataHandler__get_whole_cycle_soh_x_y",
@@ -419,6 +418,8 @@ def test_model_handler_get_discharge_whole_cycle_future(mocker):
     assert np.all(val_range == np.array([1]))
     assert np.all(test_range == np.array([1]))
 
+    mock_get_soh.assert_called()
+
 
 # =========================================================================
 # === Part 4: UNIBO21Loader anomaly_detection task_mode ===
@@ -462,7 +463,9 @@ def test_unibo_loader_anomaly_detection_process_split_returns_binary_target():
         arr = np.asarray(target.to_numpy()).ravel()
     else:
         arr = np.asarray(ak.ravel(target)).ravel()
-    assert np.isin(arr, [0.0, 1.0]).all(), f"Expected only 0 and 1, got {np.unique(arr)}"
+    assert np.isin(
+        arr, [0.0, 1.0]
+    ).all(), f"Expected only 0 and 1, got {np.unique(arr)}"
     assert 0.0 in arr and 1.0 in arr, "Expected both labels present"
 
 

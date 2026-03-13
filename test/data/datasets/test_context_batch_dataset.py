@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import awkward as ak
 from lightning_fabric.utilities.data import AttributeDict
-from torch.utils.data import DataLoader
 
 # Adjust imports based on your actual structure
 from picid.data.datasets.context_dataset import ContextBatchDataset
@@ -199,9 +198,7 @@ def test_subset_seed_is_reproducible_and_seed_sensitive():
         subset_seed=100,
     )
 
-    assert np.array_equal(
-        ds_a.context_dataset._seq_idx, ds_b.context_dataset._seq_idx
-    )
+    assert np.array_equal(ds_a.context_dataset._seq_idx, ds_b.context_dataset._seq_idx)
     # Different seed should almost surely differ (len small but deterministic)
     assert not np.array_equal(
         ds_a.context_dataset._seq_idx, ds_c.context_dataset._seq_idx

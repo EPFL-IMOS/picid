@@ -4,6 +4,7 @@ Slice-awareness — coordinate selections and bounds attached to the container.
 Enables downstream transforms to query "what slice am I operating on?" and
 "what coordinate system is this input under?" without changing existing APIs.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

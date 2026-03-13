@@ -1,4 +1,5 @@
 """Tests for picid.lr_scheduler.lr_scheduler base class."""
+
 import pytest
 import torch
 from torch import nn
@@ -61,7 +62,10 @@ class TestWarmupLRScheduler:
         model = nn.Linear(2, 2)
         optimizer = SGD(model.parameters(), lr=0.5)
         WarmupLRScheduler(
-            optimizer, init_lr=0.01, peak_lr=0.1, warmup_steps=3,
+            optimizer,
+            init_lr=0.01,
+            peak_lr=0.1,
+            warmup_steps=3,
             apply_init_lr_to_scheduler=False,
         )
         assert optimizer.param_groups[0]["lr"] == 0.5

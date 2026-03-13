@@ -1031,6 +1031,15 @@ wheels = [
 ]
 
 [[package]]
+name = "cfgv"
+version = "3.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4e/b5/721b8799b04bf9afe054a3899c6cf4e880fcf8563cc71c15610242490a0c/cfgv-3.5.0.tar.gz", hash = "sha256:d5b1034354820651caa73ede66a6294d6e95c1b00acc5e9b098e917404669132", size = 7334, upload-time = "2025-11-19T20:55:51.612Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/3c/33bac158f8ab7f89b2e59426d5fe2e4f63f7ed25df84c036890172b412b5/cfgv-3.5.0-py2.py3-none-any.whl", hash = "sha256:a8dc6b26ad22ff227d2634a65cb388215ce6cc96bbcc5cfde7641ae87e8dacc0", size = 7445, upload-time = "2025-11-19T20:55:50.744Z" },
+]
+
+[[package]]
 name = "cftime"
 version = "1.6.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2538,6 +2547,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/58/75/0c4712e3f3a21c910778b8f9f4622601a823cefcae24181467674a0352f9/hyperopt-0.2.7.tar.gz", hash = "sha256:1bf89ae58050bbd32c7307199046117feee245c2fd9ab6255c7308522b7ca149", size = 1308240, upload-time = "2021-11-17T10:05:51.386Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/cd/5b3334d39276067f54618ce0d0b48ed69d91352fbf137468c7095170d0e5/hyperopt-0.2.7-py2.py3-none-any.whl", hash = "sha256:f3046d91fe4167dbf104365016596856b2524a609d22f047a066fc1ac796427c", size = 1583421, upload-time = "2021-11-17T10:05:44.265Z" },
+]
+
+[[package]]
+name = "identify"
+version = "2.6.17"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/84/376a3b96e5a8d33a7aa2c5b3b31a4b3c364117184bf0b17418055f6ace66/identify-2.6.17.tar.gz", hash = "sha256:f816b0b596b204c9fdf076ded172322f2723cf958d02f9c3587504834c8ff04d", size = 99579, upload-time = "2026-03-01T20:04:12.702Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/66/71c1227dff78aaeb942fed29dd5651f2aec166cc7c9aeea3e8b26a539b7d/identify-2.6.17-py2.py3-none-any.whl", hash = "sha256:be5f8412d5ed4b20f2bd41a65f920990bdccaa6a4a18a08f1eefdcd0bdd885f0", size = 99382, upload-time = "2026-03-01T20:04:11.439Z" },
 ]
 
 [[package]]
@@ -4063,6 +4081,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nodeenv"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
+]
+
+[[package]]
 name = "notebook"
 version = "7.5.3"
 source = { registry = "https://pypi.org/simple" }
@@ -4871,6 +4898,129 @@ requires-dist = [
 ]
 
 [[package]]
+name = "picid"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "autogluon" },
+    { name = "awkward" },
+    { name = "carte-ai" },
+    { name = "cloudpickle" },
+    { name = "einops" },
+    { name = "faiss-cpu" },
+    { name = "fvcore" },
+    { name = "h5netcdf" },
+    { name = "h5py" },
+    { name = "huggingface-hub" },
+    { name = "hvplot" },
+    { name = "hydra-colorlog" },
+    { name = "hydra-core" },
+    { name = "jupyter" },
+    { name = "lightning" },
+    { name = "netcdf4", version = "1.7.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'ARM64' and sys_platform == 'win32'" },
+    { name = "netcdf4", version = "1.7.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'ARM64' or sys_platform != 'win32'" },
+    { name = "numba" },
+    { name = "numpy" },
+    { name = "omegaconf" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "performer-pytorch" },
+    { name = "phmd" },
+    { name = "positional-encodings" },
+    { name = "progpy" },
+    { name = "pyarrow" },
+    { name = "pyrootutils" },
+    { name = "python-box" },
+    { name = "questionary" },
+    { name = "rich" },
+    { name = "rul-datasets" },
+    { name = "scikit-learn" },
+    { name = "sortedcontainers" },
+    { name = "tabdpt" },
+    { name = "tables" },
+    { name = "tabpfn" },
+    { name = "torchinfo" },
+    { name = "torchsummary" },
+    { name = "wandb" },
+    { name = "xarray" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "coverage" },
+    { name = "holoviews" },
+    { name = "jupyter" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+    { name = "mypy" },
+    { name = "nox" },
+    { name = "panel" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-mock" },
+    { name = "viztracer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "autogluon", specifier = ">=1.3.1" },
+    { name = "awkward", specifier = ">=2.8.7" },
+    { name = "carte-ai", editable = "local_packages/carte-ai" },
+    { name = "cloudpickle", specifier = ">=3.1.1" },
+    { name = "coverage", marker = "extra == 'dev'" },
+    { name = "einops", specifier = ">=0.7.0" },
+    { name = "faiss-cpu", specifier = "==1.11.0" },
+    { name = "fvcore", specifier = ">=0.1.5.post20221221" },
+    { name = "h5netcdf", specifier = ">=1.1.0" },
+    { name = "h5py", specifier = ">=3.14.0" },
+    { name = "holoviews", marker = "extra == 'dev'", specifier = ">=1.21.0" },
+    { name = "huggingface-hub", specifier = ">=0.35.3" },
+    { name = "hvplot", specifier = ">=0.12.1" },
+    { name = "hydra-colorlog", specifier = ">=1.2.0" },
+    { name = "hydra-core", specifier = ">=1.3.2" },
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "jupyter", marker = "extra == 'dev'" },
+    { name = "lightning", specifier = ">=2.5.2" },
+    { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.6.20" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.30.0" },
+    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "netcdf4", specifier = ">=1.6.5" },
+    { name = "nox", marker = "extra == 'dev'", specifier = ">=2025.11.12" },
+    { name = "numba", specifier = ">=0.62.1" },
+    { name = "numpy", specifier = "<=2.3.0" },
+    { name = "omegaconf", specifier = ">=2.3.0" },
+    { name = "openpyxl", specifier = ">=3.1.2" },
+    { name = "pandas", specifier = ">=2.1.1" },
+    { name = "panel", marker = "extra == 'dev'", specifier = ">=1.8.1" },
+    { name = "performer-pytorch", specifier = ">=1.1.4" },
+    { name = "phmd", editable = "local_packages/phmd" },
+    { name = "positional-encodings", specifier = ">=6.0.3" },
+    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "progpy", specifier = ">=1.7.1" },
+    { name = "pyarrow", specifier = ">=20.0.0" },
+    { name = "pyrootutils", specifier = ">=1.0.4" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "pytest-mock", marker = "extra == 'dev'" },
+    { name = "python-box", specifier = ">=7.3.2" },
+    { name = "questionary", specifier = ">=2.0.0" },
+    { name = "rich", specifier = ">=14.0.0" },
+    { name = "rul-datasets" },
+    { name = "scikit-learn", specifier = ">=1.3.2" },
+    { name = "sortedcontainers", specifier = ">=2.4.0" },
+    { name = "tabdpt", editable = "local_packages/TabDPT" },
+    { name = "tables", specifier = ">=3.10.2" },
+    { name = "tabpfn", editable = "local_packages/TabPFN" },
+    { name = "torchinfo", specifier = ">=1.7.1" },
+    { name = "torchsummary", specifier = ">=1.5.1" },
+    { name = "viztracer", marker = "extra == 'dev'", specifier = ">=1.0.4" },
+    { name = "wandb", specifier = "==0.22.0" },
+    { name = "xarray", specifier = ">=2025.10.1" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "pillow"
 version = "11.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5035,6 +5185,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b3/03/ed31e77f260971ed633c13815107b08edf999c7d1ec769d6313765ec89cb/posthog-6.9.3.tar.gz", hash = "sha256:7d201774ea9eba156f1de46d34313e30b2384d523900fe8e425accc92486cc34", size = 126554, upload-time = "2025-11-11T17:56:58.191Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/4b/e4759803793843ce2258ddef3b3a744bdf0318c77c3ac10560683a2eee60/posthog-6.9.3-py3-none-any.whl", hash = "sha256:c71e9cb7ac4ef13eb604f04c3161edd10b1d08a32499edd54437ba5eab591c58", size = 144740, upload-time = "2025-11-11T17:56:56.986Z" },
+]
+
+[[package]]
+name = "pre-commit"
+version = "4.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cfgv" },
+    { name = "identify" },
+    { name = "nodeenv" },
+    { name = "pyyaml" },
+    { name = "virtualenv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/40/f1/6d86a29246dfd2e9b6237f0b5823717f60cad94d47ddc26afa916d21f525/pre_commit-4.5.1.tar.gz", hash = "sha256:eb545fcff725875197837263e977ea257a402056661f09dae08e4b149b030a61", size = 198232, upload-time = "2025-12-16T21:14:33.552Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/19/fd3ef348460c80af7bb4669ea7926651d1f95c23ff2df18b9d24bab4f3fa/pre_commit-4.5.1-py2.py3-none-any.whl", hash = "sha256:3b3afd891e97337708c1674210f8eba659b52a38ea5f822ff142d10786221f77", size = 226437, upload-time = "2025-12-16T21:14:32.409Z" },
 ]
 
 [[package]]
@@ -6965,127 +7131,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/3f/a9/e58c01c98d5e892a3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e2/ae/9576dc4366e0f480ed62d5a058c0a22cf82f52ca83cb7e660fbbc2cecd70/tabpfn_common_utils-0.2.16-py3-none-any.whl", hash = "sha256:fa0d884315b240b8d6ea81813c1aacd05e9d084797818114547a8c574e4f0529", size = 37102, upload-time = "2026-02-13T10:46:17.144Z" },
 ]
-
-[[package]]
-name = "tabphm"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "autogluon" },
-    { name = "awkward" },
-    { name = "carte-ai" },
-    { name = "cloudpickle" },
-    { name = "einops" },
-    { name = "faiss-cpu" },
-    { name = "fvcore" },
-    { name = "h5netcdf" },
-    { name = "h5py" },
-    { name = "huggingface-hub" },
-    { name = "hvplot" },
-    { name = "hydra-colorlog" },
-    { name = "hydra-core" },
-    { name = "jupyter" },
-    { name = "lightning" },
-    { name = "netcdf4", version = "1.7.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'ARM64' and sys_platform == 'win32'" },
-    { name = "netcdf4", version = "1.7.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'ARM64' or sys_platform != 'win32'" },
-    { name = "numba" },
-    { name = "numpy" },
-    { name = "omegaconf" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "performer-pytorch" },
-    { name = "phmd" },
-    { name = "positional-encodings" },
-    { name = "progpy" },
-    { name = "pyarrow" },
-    { name = "pyrootutils" },
-    { name = "python-box" },
-    { name = "questionary" },
-    { name = "rich" },
-    { name = "rul-datasets" },
-    { name = "scikit-learn" },
-    { name = "sortedcontainers" },
-    { name = "tabdpt" },
-    { name = "tables" },
-    { name = "tabpfn" },
-    { name = "torchinfo" },
-    { name = "torchsummary" },
-    { name = "wandb" },
-    { name = "xarray" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "coverage" },
-    { name = "holoviews" },
-    { name = "jupyter" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings", extra = ["python"] },
-    { name = "mypy" },
-    { name = "nox" },
-    { name = "panel" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-mock" },
-    { name = "viztracer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "autogluon", specifier = ">=1.3.1" },
-    { name = "awkward", specifier = ">=2.8.7" },
-    { name = "carte-ai", editable = "local_packages/carte-ai" },
-    { name = "cloudpickle", specifier = ">=3.1.1" },
-    { name = "coverage", marker = "extra == 'dev'" },
-    { name = "einops", specifier = ">=0.7.0" },
-    { name = "faiss-cpu", specifier = "==1.11.0" },
-    { name = "fvcore", specifier = ">=0.1.5.post20221221" },
-    { name = "h5netcdf", specifier = ">=1.1.0" },
-    { name = "h5py", specifier = ">=3.14.0" },
-    { name = "holoviews", marker = "extra == 'dev'", specifier = ">=1.21.0" },
-    { name = "huggingface-hub", specifier = ">=0.35.3" },
-    { name = "hvplot", specifier = ">=0.12.1" },
-    { name = "hydra-colorlog", specifier = ">=1.2.0" },
-    { name = "hydra-core", specifier = ">=1.3.2" },
-    { name = "jupyter", specifier = ">=1.1.1" },
-    { name = "jupyter", marker = "extra == 'dev'" },
-    { name = "lightning", specifier = ">=2.5.2" },
-    { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.6.20" },
-    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.30.0" },
-    { name = "mypy", marker = "extra == 'dev'" },
-    { name = "netcdf4", specifier = ">=1.6.5" },
-    { name = "nox", marker = "extra == 'dev'", specifier = ">=2025.11.12" },
-    { name = "numba", specifier = ">=0.62.1" },
-    { name = "numpy", specifier = "<=2.3.0" },
-    { name = "omegaconf", specifier = ">=2.3.0" },
-    { name = "openpyxl", specifier = ">=3.1.2" },
-    { name = "pandas", specifier = ">=2.1.1" },
-    { name = "panel", marker = "extra == 'dev'", specifier = ">=1.8.1" },
-    { name = "performer-pytorch", specifier = ">=1.1.4" },
-    { name = "phmd", editable = "local_packages/phmd" },
-    { name = "positional-encodings", specifier = ">=6.0.3" },
-    { name = "progpy", specifier = ">=1.7.1" },
-    { name = "pyarrow", specifier = ">=20.0.0" },
-    { name = "pyrootutils", specifier = ">=1.0.4" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "pytest-mock", marker = "extra == 'dev'" },
-    { name = "python-box", specifier = ">=7.3.2" },
-    { name = "questionary", specifier = ">=2.0.0" },
-    { name = "rich", specifier = ">=14.0.0" },
-    { name = "rul-datasets" },
-    { name = "scikit-learn", specifier = ">=1.3.2" },
-    { name = "sortedcontainers", specifier = ">=2.4.0" },
-    { name = "tabdpt", editable = "local_packages/TabDPT" },
-    { name = "tables", specifier = ">=3.10.2" },
-    { name = "tabpfn", editable = "local_packages/TabPFN" },
-    { name = "torchinfo", specifier = ">=1.7.1" },
-    { name = "torchsummary", specifier = ">=1.5.1" },
-    { name = "viztracer", marker = "extra == 'dev'", specifier = ">=1.0.4" },
-    { name = "wandb", specifier = "==0.22.0" },
-    { name = "xarray", specifier = ">=2025.10.1" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "tabulate"

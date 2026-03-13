@@ -1,10 +1,8 @@
 import torch
 import pytest
-import logging
 from picid.model.wrappers.statistical_models_wrapper import StatisticalBaselineWrapper
 
 # We assume definitions are available, but we will use hardcoded valid strings as requested
-from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 # -------------------------------------------------------------------------
 # Existing Logic Tests (Preserved)

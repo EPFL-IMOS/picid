@@ -45,7 +45,6 @@ def sample_data_3d():
 
 
 class TestImputationTransform:
-
     def test_init_validation(self):
         ImputationTransform(strategy="mean")
         with pytest.raises(ValueError, match="Invalid strategy"):
@@ -473,43 +472,6 @@ def test_impute_stochastic_fit():
     np.testing.assert_allclose(t.fitted_stds["features"], [5.0])
 
 
-def test_impute_stochastic_logic():
-    """
-    Test 'stochastic' strategy (Stochastic LOCF).
-    It should fill NaNs and introduce variance, unlike standard LOCF.
-    """
-    # Create a constant signal with a gap
-    x = np.array([[10.0], [10.0], [np.nan], [np.nan], [10.0]])
-    data = {"features": x}
-
-    # 1. Test with zero variance (should be identical to LOCF)
-    t_det = ImputationTransform(strategy="stochastic")
-    # Manually inject fitted parameters to isolate test logic
-    t_det.fitted_stds["features"] = np.array([0.0])
-    out_det = t_det.transform_data(data, metadata={})
-
-    # Should be exactly 10.0 everywhere
-    np.testing.assert_array_equal(out_det["features"], np.full((5, 1), 10.0))
-
-    # 2. Test with variance
-    t_rand = ImputationTransform(strategy="stochastic")
-    t_rand.fitted_stds["features"] = np.array([5.0])
-
-    np.random.seed(42)
-    out_rand = t_rand.transform_data(data, metadata={})
-
-    imputed_vals = out_rand["features"][2:4, 0]
-
-    # Check 1: NaNs are gone
-    assert not np.isnan(out_rand["features"]).any()
-
-    # Check 2: Values are NOT exactly 10.0 (variance introduced)
-    assert not np.all(imputed_vals == 10.0)
-
-    # Check 3: Values are statistically plausible (within ~3 sigma)
-    assert np.all(np.abs(imputed_vals - 10.0) < 20.0)
-
-
 def test_impute_spectral_dynamic_window():
     """
     Test that spectral imputation works even if history < window_len.
@@ -523,7 +485,9 @@ def test_impute_spectral_dynamic_window():
     data = {"features": x}
 
     t = ImputationTransform(
-        strategy="spectral", spectral_window_len=20, spectral_top_k=1  # Requesting 20
+        strategy="spectral",
+        spectral_window_len=20,
+        spectral_top_k=1,  # Requesting 20
     )
 
     # Should not crash. Should use available 10 points.

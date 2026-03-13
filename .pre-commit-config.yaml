@@ -1,0 +1,32 @@
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: fix-byte-order-marker
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-added-large-files
+        args: [--maxkb=5120]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff-format
+        exclude: ^(local_packages|_archive)/|\.ipynb$
+      - id: ruff
+        args: [--fix]
+        exclude: ^(local_packages|_archive)/|\.ipynb$
+
+  - repo: https://github.com/numpy/numpydoc
+    rev: v1.8.0
+    hooks:
+      - id: numpydoc-validation
+        exclude: ^(local_packages|_archive|test/|tutorials/|picid/data/datasources/picasso)/

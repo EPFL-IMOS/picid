@@ -1,11 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-import torch
-from unittest.mock import MagicMock
 
 # --- Import all classes ---
-from picid.metrics.base import AbstractMetric
 from picid.metrics.metric_factory import MetricFactory
 from picid.metrics.metrics import (
     MAEMetric,

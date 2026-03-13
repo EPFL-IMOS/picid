@@ -18,6 +18,7 @@ returns it. Data flow in short:
 Chunk builders are provided by the strategy and produce List[NamedTransformInput]
 per split; they hold references to underlying arrays (no copy of array data).
 """
+
 from __future__ import annotations
 
 import datetime
@@ -28,7 +29,7 @@ from typing import Any, Dict, List, Optional
 
 import awkward as ak
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects.data import NamedTransformInput
 from picid.data.data_objects.slice_info import SliceInfo
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
@@ -236,9 +237,7 @@ class FitStep:
         if build is not None:
             fit_chunks = build()
         elif context.strategy is not None:
-            logger.debug(
-                "FitStep: build_fit_chunks not registered. Building inline."
-            )
+            logger.debug("FitStep: build_fit_chunks not registered. Building inline.")
             fit_data = {context.fit_on_key: context.data[context.fit_on_key]}
             fit_chunks = context.strategy._prepare_chunks_for_split(
                 fit_data, context.fit_on_split
@@ -284,12 +283,11 @@ class TransformStep:
             elif context.strategy is not None:
                 logger.debug(
                     "TransformStep: build_transform_chunks not registered. "
-                    "Building inline for split '%s'.", split
+                    "Building inline for split '%s'.",
+                    split,
                 )
                 target_data = {key: context.data[key] for key in context.apply_to_keys}
-                chunks = context.strategy._prepare_chunks_for_split(
-                    target_data, split
-                )
+                chunks = context.strategy._prepare_chunks_for_split(target_data, split)
             else:
                 continue
 
@@ -299,13 +297,14 @@ class TransformStep:
                 "assign_to_keys": context.assign_to_keys,
                 "assign_to_map": context.assign_to_keys_map,
             }
-            if context.include_slice_info_in_metadata and context.slice_info is not None:
+            if (
+                context.include_slice_info_in_metadata
+                and context.slice_info is not None
+            ):
                 metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
 
-            transformed_chunks, log = (
-                context.transform_instance.transform_multi_source(
-                    chunks, metadata=metadata
-                )
+            transformed_chunks, log = context.transform_instance.transform_multi_source(
+                chunks, metadata=metadata
             )
             context.log[split] = log
             context._raw_transformed_by_split[split] = (transformed_chunks, metadata)
@@ -331,9 +330,10 @@ class PostprocessStep:
         ):
             return context
 
-        for split, (transformed_chunks, metadata) in (
-            context._raw_transformed_by_split.items()
-        ):
+        for split, (
+            transformed_chunks,
+            metadata,
+        ) in context._raw_transformed_by_split.items():
             postprocessed = context.postprocess_fn(transformed_chunks, metadata)
             for assign_to_key, assign_to_map in zip(
                 context.assign_to_keys, context.assign_to_keys_map
@@ -386,24 +386,30 @@ class MergeStep:
                 continue
             for split in context.available_splits:
                 before = context.data[assign_to_key].get(split)
-                after_list = context.transformed_results_for_new_key[
-                    assign_to_key
-                ].get(split)
+                after_list = context.transformed_results_for_new_key[assign_to_key].get(
+                    split
+                )
                 if before is None or after_list is None:
                     continue
                 if not isinstance(after_list, type(before)):
                     logger.warning(
                         "Transform '%s': type of '%s/%s' changed from %s to %s.",
-                        transform_name, assign_to_key, split,
-                        type(before).__name__, type(after_list).__name__,
+                        transform_name,
+                        assign_to_key,
+                        split,
+                        type(before).__name__,
+                        type(after_list).__name__,
                     )
                 if isinstance(before, list) and isinstance(after_list, list):
                     if len(before) != len(after_list):
                         logger.warning(
                             "Transform '%s': unit count of '%s/%s' changed "
                             "from %d to %d.",
-                            transform_name, assign_to_key, split,
-                            len(before), len(after_list),
+                            transform_name,
+                            assign_to_key,
+                            split,
+                            len(before),
+                            len(after_list),
                         )
 
 
@@ -446,6 +452,7 @@ def _get_producer_version() -> str:
     """Return picid package version for manifest entries; fallback '0.0.0' on failure."""
     try:
         import importlib.metadata
+
         return importlib.metadata.version("picid")
     except Exception:
         return "0.0.0"
@@ -472,7 +479,8 @@ class RecordManifestStep:
             "transform_name": step_id,
             "transform_class": (
                 type(context.transform_instance).__name__
-                if context.transform_instance else None
+                if context.transform_instance
+                else None
             ),
             "apply_to_keys": context.apply_to_keys,
             "assign_to_keys": context.assign_to_keys,
@@ -504,17 +512,18 @@ class RecordManifestStep:
                 "split": context.slice_info.split,
                 "n_units": (
                     len(context.slice_info.unit_ids)
-                    if context.slice_info.unit_ids else None
+                    if context.slice_info.unit_ids
+                    else None
                 ),
                 "n_cycles": (
                     len(context.slice_info.cycle_ids)
-                    if context.slice_info.cycle_ids else None
+                    if context.slice_info.cycle_ids
+                    else None
                 ),
             }
 
         split_str = (
-            ",".join(context.available_splits)
-            if context.available_splits else None
+            ",".join(context.available_splits) if context.available_splits else None
         )
         entry = ManifestEntry(
             schema_version=MANIFEST_SCHEMA_VERSION,

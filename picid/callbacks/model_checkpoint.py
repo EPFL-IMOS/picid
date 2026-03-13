@@ -1,9 +1,9 @@
 import os
 import json
-from typing import Dict, Any
 
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
+
 
 class ModelCheckpointWithConfig(ModelCheckpoint):
     """
@@ -24,12 +24,8 @@ class ModelCheckpointWithConfig(ModelCheckpoint):
     **kwargs :
         Keyword arguments to pass to the parent ModelCheckpoint.
     """
-    def __init__(
-        self,
-        config_filename: str = "hparams.json",
-        *args,
-        **kwargs
-    ):
+
+    def __init__(self, config_filename: str = "hparams.json", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = None
         self.config_filename = config_filename
@@ -46,7 +42,7 @@ class ModelCheckpointWithConfig(ModelCheckpoint):
 
             assert self.config is not None, "Config is not set."
             if not os.path.exists(config_path):
-                with open(config_path, 'w') as f:
+                with open(config_path, "w") as f:
                     json.dump(self.config, f, indent=4)
                 if self.verbose:
                     trainer.print(f"Configuration saved to {config_path}")

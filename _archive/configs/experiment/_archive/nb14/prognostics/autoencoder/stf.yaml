@@ -13,6 +13,6 @@ transforms:
 
     metadata:
       apply_to: ['features', 'target']
-      assign_to: 
+      assign_to:
         features: features
         target: target

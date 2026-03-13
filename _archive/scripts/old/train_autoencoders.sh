@@ -94,7 +94,7 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
         for lr in "${LEARNING_RATES[@]}"; do
             for step_size in "${STEP_SIZES[@]}"; do
                 for seq in ${DATASET_SEQ_MAP[$dataset]}; do
-                
+
                     declare -n arch_list="ARCHS_FOR_SEQ_LEN_${seq}"
                     for arch_name in "${arch_list[@]}"; do
                         declare -n current_model_params="$arch_name"
@@ -140,7 +140,7 @@ for dataset in "${!DATASET_SEQ_MAP[@]}"; do
                             # Decrement the counter because a slot just opened up.
                             ((job_counter--))
                         fi
-                        
+
                     done
                 done
             done

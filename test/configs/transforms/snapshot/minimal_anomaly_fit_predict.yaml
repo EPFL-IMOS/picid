@@ -1,0 +1,24 @@
+# Snapshot anomaly for Isolation Forest fit_predict pipeline.
+# Produces 3D (1, n_samples, n_features) for FitPredictTaskDataset.
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+add_task_dim_features:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: features
+    assign_to: features
+
+add_task_dim_anomaly:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: anomaly_detection
+    assign_to: anomaly_detection

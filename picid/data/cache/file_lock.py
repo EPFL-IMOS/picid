@@ -77,7 +77,7 @@ class FileLock:
             Safe to call even if lock was never acquired (checks if handle exists).
         """
         if self.handle:
-            if SYSTEM_PLATFORM == 'win32':
+            if SYSTEM_PLATFORM == "win32":
                 msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 100)
             else:
                 fcntl.flock(self.handle, fcntl.LOCK_UN)

@@ -1,8 +1,6 @@
 import numpy as np
-import xarray as xr
 from unittest.mock import MagicMock, patch
 from numpy.testing import assert_array_equal
-from typing import Any, Dict
 from pathlib import Path
 import pytest
 
@@ -11,7 +9,6 @@ from picid.evaluator.default import DefaultEvaluator
 from picid.evaluator.hooks.save_predictions import (
     SavePredictionsHook,
 )  # ADDED: For testing decoupled logic
-from picid.metrics.base import AbstractMetric
 from picid.transforms.base.multisource import InverseTransformMixin
 from picid.metrics.metrics import MSEMetric, RMSEMetric
 from picid.metrics.metric_factory import MetricFactory
@@ -437,7 +434,6 @@ def test_save_predictions_to_file_orchestration(
     with patch(
         "picid.evaluator.hooks.save_predictions.Path", return_value=mock_path_obj
     ):
-
         evaluator.paths = MagicMock(eval_details="/mock/base")
         evaluator.update(
             {"predictions": np.array([[[1]]]), "targets": np.array([[[1]]])}

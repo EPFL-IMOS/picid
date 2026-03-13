@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 packages = ["picid"]
 
 [project]
-name = "TabPHM"
+name = "picid"
 version = "0.1.0"
 description = "Prognostics, Health Management (PHM) and Forecasting Benchmark Arena — a unified, config-driven framework for PHM and forecasting experiments from data loading to evaluation."
 readme = "README.md"
@@ -72,6 +72,7 @@ picid-generate-web = "picid.cli.generate_web:main"
 [project.optional-dependencies]
 dev = [
     "nox>=2025.11.12",
+    "pre-commit",
     "pytest",
     "pytest-cov",
     "coverage",
@@ -86,10 +87,6 @@ dev = [
     "holoviews>=1.21.0",
 ]
 
-[tool.setuptools]
-# If your package is at the top-level (./picid), this is fine:
-packages = ["picid"]
-
 # If your package lives under src/, replace with:
 # [tool.setuptools.packages.find]
 # where = ["src"]
@@ -97,19 +94,52 @@ packages = ["picid"]
 [tool.pytest.ini_options]
 # All test temp dirs (plot_dir, eval_details, etc.) go under test/ and are cleaned after runs
 addopts = "--basetemp=test/.pytest_tmp"
+norecursedirs = ["_archive"]
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
-    "requires_snapshots: skip when pipeline snapshot fixtures are missing (run scripts/snapshot/generate_pipeline_snapshots.py)",
+    "requires_snapshots: skip when pipeline snapshot fixtures are missing; regenerate with: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py",
     "slow: slow benchmarks (e.g. __getitem__ timing); skip with -m 'not slow'",
 ]
 
 [tool.pylint."messages control"]
 disable = ["logging-fstring-interpolation"]
 
+[tool.ruff]
+src = ["picid"]
+exclude = ["local_packages", "scripts", "_archive", "**/*.ipynb"]
+
+[tool.ruff.lint.per-file-ignores]
+# E402: module-level import not at top (needed for env setup, lazy imports, etc.)
+"picid/__init__.py" = ["E402"]
+"picid/baselines/spacetimeformer_model/nn/attn.py" = ["E402"]
+"picid/data/cache/file_lock.py" = ["E402"]
+"picid/data/preprocessing/splits/time_splitter.py" = ["E402"]
+"picid/model/wrappers/tabpfn_wrapper.py" = ["E402"]
+"picid/run.py" = ["E402"]
+"picid/simplified_run_objects.py" = ["E402"]
+# Test files: conftests need late imports; some tests need class before imports
+"test/**/conftest.py" = ["E402"]
+"test/data/data_objects/test_property_based_utils.py" = ["E402"]
+"test/data/datasources/base/test_phmd_loader_characterization.py" = ["E402"]
+"test/baselines/test_timeseries_transformer_model.py" = ["E402"]
+
+[tool.mypy]
+packages = ["picid"]
+exclude = ["picid/data/datasources/picasso/", "_archive"]
+# This is the "magic" setting: it ignores errors from libraries that don't have types
+ignore_missing_imports = true
+follow_imports = "silent"
+# Don't check the body of functions that don't have type hints
+check_untyped_defs = false
+# If a function doesn't have a return type, Mypy stays quiet
+disallow_untyped_defs = false
+
 [tool.coverage.run]
 # Only measure coverage for your own code
 source = ["picid"]
 omit = [
+    "_archive/*",
+    "*/_archive/*",
     "local_packages/*",
     "*/local_packages/*",
     "picid/data/datasources/picasso/time_series_datamodule.py",
@@ -130,17 +160,19 @@ omit = [
     "picid/data/datasources/phmd_pubd16.py",
     "picid/data/datasources/phmd_n_cmapss.py",
     "picid/data/datasources/phmd_xjtu_sy.py",
-    "picid/data/datasources/phmd_battery.py",
     "picid/data/datasources/phmd_cbmv3.py",
     "picid/data/datasources/phmd_pronostia.py",
     "picid/data/datasources/phmd_hsf15.py",
     "picid/data/datasources/agtf30k.py",
     "picid/data/datasources/nb14/loader.py",
+    "scripts/*",
 ]
 
 [tool.coverage.report]
 # Exclude local_packages from reports
 omit = [
+    "_archive/*",
+    "*/_archive/*",
     "local_packages/*",
     "*/local_packages/*",
     "picid/data/datasources/picasso/time_series_datamodule.py",
@@ -161,7 +193,6 @@ omit = [
     "picid/data/datasources/phmd_pubd16.py",
     "picid/data/datasources/phmd_n_cmapss.py",
     "picid/data/datasources/phmd_xjtu_sy.py",
-    "picid/data/datasources/phmd_battery.py",
     "picid/data/datasources/phmd_cbmv3.py",
     "picid/data/datasources/phmd_pronostia.py",
     "picid/data/datasources/phmd_hsf15.py",

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tutorial: FitPredictIsolationForestWrapper fit and predict basics."""
+
 import sys
 from pathlib import Path
 

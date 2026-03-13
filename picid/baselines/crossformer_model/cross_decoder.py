@@ -1,8 +1,6 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from einops import rearrange, repeat
-from .cross_attn import FullAttention, AttentionLayer, TwoStageAttentionLayer
+from einops import rearrange
+from .cross_attn import AttentionLayer, TwoStageAttentionLayer
 
 
 class DecoderLayer(nn.Module):

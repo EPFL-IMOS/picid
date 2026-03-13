@@ -5,7 +5,7 @@ from tabpfn import TabPFNRegressor
 
 
 from .base import AbstractFeedForwardWrapper
-from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
@@ -21,7 +21,9 @@ class BatchContextTabPFNWrapper(AbstractFeedForwardWrapper):
         self.supported_types = self.regression_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for BatchContextTabPFNWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for BatchContextTabPFNWrapper."
+            )
 
         self.task_type = task_type
 

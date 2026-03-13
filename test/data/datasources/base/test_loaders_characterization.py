@@ -5,17 +5,14 @@ Covers: standalone single (load → split → get_data → SplitDatasetContainer
 multi without multisource splitter, multi with BySourceSplitter, and edge cases
 (metadata normalization, ragged/empty splits).
 """
+
 import pytest
 
 from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 
 from test.data.datasources.base.conftest import (
     InMemorySingleSourceLoader,
-    two_sources_config_no_multisource_splitter,
-    two_sources_config_with_by_source_splitter,
 )
 
 
@@ -55,6 +52,7 @@ def test_single_source_loader_get_data_before_split_raises(in_memory_loader):
 
 def test_single_source_loader_metadata_normalized_to_train_val_test():
     """Metadata not in {train, val, test} is normalized to train/val/test."""
+
     class LoaderWithMetadata(InMemorySingleSourceLoader):
         def _load_data(self):
             d = super()._load_data()
@@ -202,6 +200,7 @@ def test_multi_source_loader_get_multisource_data_splitter(
 
     loader_yes = MultiSourceLoader(**two_sources_config_with_by_source_splitter)
     from picid.data.preprocessing.splits import BySourceSplitter
+
     assert isinstance(loader_yes.get_multisource_data_splitter(), BySourceSplitter)
 
 
@@ -230,7 +229,6 @@ def test_multi_source_loader_split_data_raises_when_source_not_loaded(
 
 def test_multi_source_loader_warns_when_source_fails_to_load():
     """load_data logs warning when a source does not set _is_loaded (coverage)."""
-    from test.data.datasources.base.conftest import FailingSingleSourceLoader
     from omegaconf import OmegaConf
 
     ok_source = {

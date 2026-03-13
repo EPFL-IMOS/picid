@@ -4,11 +4,11 @@ Transform handler protocol and registry for dispatch (data_kind × capability).
 Handlers encapsulate fit/transform logic that was in multisource mixins.
 Registry: (DataKind, TransformCapability) -> TransformHandler.
 """
+
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, Callable, Dict, List, Protocol, Tuple
 
 import numpy as np
 import awkward as ak
@@ -55,21 +55,25 @@ class TransformHandler(Protocol):
 
 def _postprocess():
     from picid.transforms.base.strategy import postprocess_transformed_data
+
     return postprocess_transformed_data
 
 
 def _find_singular_ragged_dim():
     from picid.transforms.base.multisource import find_singular_ragged_dim
+
     return find_singular_ragged_dim
 
 
 def _tolist():
     from picid.transforms.base.multisource import tolist
+
     return tolist
 
 
 def _ragged_index_tuples():
     from picid.utils.awkward_utils import ragged_index_tuples
+
     return ragged_index_tuples
 
 
@@ -79,6 +83,7 @@ def _ak_utils():
         ak_regularize_regular_axes,
         get_ak_shape,
     )
+
     return ak_find_var_dims, ak_regularize_regular_axes, get_ak_shape
 
 
@@ -99,9 +104,7 @@ class DenseDenseHandler:
     ) -> None:
         train = {}
         for key in apply_to_keys:
-            train[key] = np.concatenate(
-                [chunk[key] for chunk in data_segments], axis=0
-            )
+            train[key] = np.concatenate([chunk[key] for chunk in data_segments], axis=0)
         fit_func(train, metadata=metadata)
 
     def transform_apply(
@@ -125,7 +128,9 @@ class DenseDenseHandler:
                         val = segment_dict[key]
                         if hasattr(val, "to_numpy"):
                             segment_dict[key] = val.to_numpy()
-            seg_input = NamedTransformInput(**segment_dict) if segment_dict else data_segment
+            seg_input = (
+                NamedTransformInput(**segment_dict) if segment_dict else data_segment
+            )
             out_segment = transform_func(seg_input, metadata=metadata)
             if converted_to_numpy:
                 if isinstance(out_segment, BaseDataObjectWithMetadata):
@@ -154,7 +159,9 @@ class RaggedDenseHandler:
     ) -> None:
         find_singular_ragged_dim = _find_singular_ragged_dim()
         var_dim = set(find_singular_ragged_dim(ds) for ds in data_segments)
-        assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+        assert (
+            len(var_dim) == 1
+        ), f"Expected exactly one variable-length dimension, found {var_dim}"
         var_dim = var_dim.pop()
         train = {}
         for key in apply_to_keys:
@@ -202,18 +209,29 @@ class RaggedDenseHandler:
             use_tqdm = len(multi_index) > 100
             try:
                 from tqdm import tqdm as _tqdm
-                iterator = _tqdm(multi_index, desc=f"{transform_name}: transforming ragged segments") if use_tqdm else multi_index
+
+                iterator = (
+                    _tqdm(
+                        multi_index,
+                        desc=f"{transform_name}: transforming ragged segments",
+                    )
+                    if use_tqdm
+                    else multi_index
+                )
             except ImportError:
                 iterator = multi_index
 
             for coord in iterator:
                 subsegment = {
-                    k: data_segment[k][coord].to_numpy()
-                    for k in data_segment.keys()
+                    k: data_segment[k][coord].to_numpy() for k in data_segment.keys()
                 }
-                out_subsegment = [transform_func(NamedTransformInput(**subsegment), metadata=metadata)]
+                out_subsegment = [
+                    transform_func(NamedTransformInput(**subsegment), metadata=metadata)
+                ]
                 out_subsegment = postprocess(out_subsegment, metadata)
-                assert len(out_subsegment) == 1, "Expected single output from transform."
+                assert (
+                    len(out_subsegment) == 1
+                ), "Expected single output from transform."
                 for k, block in out_subsegment[0].items():
                     d = out_segment.setdefault(k, SortedDict())
                     for i in coord[:-1]:
@@ -224,7 +242,9 @@ class RaggedDenseHandler:
                 try:
                     if index_depth == 1:
                         subarrays = [np.asarray(arr) for arr in v.values()]
-                        lengths = np.fromiter((len(a) for a in subarrays), dtype=np.int64)
+                        lengths = np.fromiter(
+                            (len(a) for a in subarrays), dtype=np.int64
+                        )
                         offsets = np.concatenate([[0], np.cumsum(lengths)])
                         if len(subarrays) == 0:
                             aka = ak.Array([])
@@ -274,7 +294,9 @@ class RaggedRaggedHandler:
     ) -> None:
         find_singular_ragged_dim = _find_singular_ragged_dim()
         var_dim = set(find_singular_ragged_dim(ds) for ds in data_segments)
-        assert len(var_dim) == 1, f"Expected exactly one variable-length dimension, found {var_dim}"
+        assert (
+            len(var_dim) == 1
+        ), f"Expected exactly one variable-length dimension, found {var_dim}"
         var_dim = var_dim.pop()
         train = {}
         for key in apply_to_keys:
@@ -301,6 +323,7 @@ class RaggedRaggedHandler:
 
 _TRANSFORM_HANDLER_REGISTRY: Dict[Tuple[str, str], TransformHandler] = {}
 
+
 def _build_registry() -> Dict[Tuple[str, str], TransformHandler]:
     dense_dense = DenseDenseHandler()
     ragged_dense = RaggedDenseHandler()
@@ -323,5 +346,7 @@ def get_handler(data_kind: str, capability: str) -> TransformHandler:
         _TRANSFORM_HANDLER_REGISTRY.update(_build_registry())
     key = (data_kind, capability)
     if key not in _TRANSFORM_HANDLER_REGISTRY:
-        raise KeyError(f"No handler registered for (data_kind={data_kind!r}, capability={capability!r})")
+        raise KeyError(
+            f"No handler registered for (data_kind={data_kind!r}, capability={capability!r})"
+        )
     return _TRANSFORM_HANDLER_REGISTRY[key]

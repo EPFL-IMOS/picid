@@ -5,7 +5,6 @@ from typing import Any
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
-import torch
 from picid.utils import pylogger
 
 

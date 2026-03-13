@@ -1,5 +1,4 @@
 """Tests for picid.data.cache.base (BaseCache) via a concrete implementation."""
-import pytest
 
 from picid.data.cache.base import BaseCache
 

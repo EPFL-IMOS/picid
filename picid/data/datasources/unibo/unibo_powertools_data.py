@@ -75,7 +75,6 @@ class UniboPowertoolsData:
         base_path=None,
         force_download=False,
     ):
-
         self.test_types = test_types if test_types is not None else []
         self.chunksize = chunk_size
         self.lines = lines if lines is not None else []

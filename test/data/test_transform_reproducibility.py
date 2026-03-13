@@ -5,6 +5,7 @@ Asserts that dataset output is deterministic given fixed seed and same index.
 When random augmentations are applied in the pipeline (e.g. via transform Mixins),
 reproducibility should hold for a fixed seed.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -64,6 +65,7 @@ def test_context_dataset_deterministic_same_index(seeded_data):
 
 def test_reproducibility_after_reseed(seeded_data):
     """Resetting seed and re-creating dataset yields same __getitem__ result."""
+
     def make_and_get():
         np.random.seed(123)
         data = {"f": np.random.randn(40, 3).astype(np.float32)}

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform

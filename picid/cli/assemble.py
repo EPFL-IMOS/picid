@@ -69,7 +69,9 @@ def run_assemble() -> None:
         "How do you want to assemble your experiment?",
         choices=[
             questionary.Choice("Task first (task → experiment)", value="task"),
-            questionary.Choice("Dataset first (group → task → experiment)", value="dataset"),
+            questionary.Choice(
+                "Dataset first (group → task → experiment)", value="dataset"
+            ),
             questionary.Choice("Model first (model → experiment)", value="model"),
         ],
     ).ask()
@@ -135,7 +137,9 @@ def _funnel_dataset_first(tier: str) -> None:
         return
 
     group_choices = [questionary.Choice(g.name, value=g) for g in groups]
-    selected_group = questionary.select("Select dataset group", choices=group_choices).ask()
+    selected_group = questionary.select(
+        "Select dataset group", choices=group_choices
+    ).ask()
     if selected_group is None:
         return
 
@@ -145,9 +149,7 @@ def _funnel_dataset_first(tier: str) -> None:
         _no_data(f"experiment dir for group {group.name}")
         return
 
-    task_types = sorted(
-        d.name for d in exp_root.iterdir() if d.is_dir()
-    )
+    task_types = sorted(d.name for d in exp_root.iterdir() if d.is_dir())
     if not task_types:
         _no_data(f"task types under group {group.name}")
         return
@@ -313,13 +315,17 @@ def _preview_config(experiment_key: str) -> None:
             "datasource": cfg.get("datasource"),
         }
         yaml_str = OmegaConf.to_yaml(subset)
-        console.print("[bold]Config preview (task_definition, model, datasource):[/bold]")
+        console.print(
+            "[bold]Config preview (task_definition, model, datasource):[/bold]"
+        )
         console.print(yaml_str)
     finally:
         GlobalHydra.instance().clear()
 
 
-def _show_final_command(experiment_key: str, tier: str = "Easy: Use defaults only") -> None:
+def _show_final_command(
+    experiment_key: str, tier: str = "Easy: Use defaults only"
+) -> None:
     """Print the run command for the selected experiment."""
     _preview_config(experiment_key)
     overrides = _parameter_injection_phase(experiment_key, tier)

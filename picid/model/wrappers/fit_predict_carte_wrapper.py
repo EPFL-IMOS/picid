@@ -44,7 +44,9 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         self.supported_types = self.regression_tasks + self.classification_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for FitPredictCarteWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for FitPredictCarteWrapper."
+            )
 
         self.task_type = task_type
 

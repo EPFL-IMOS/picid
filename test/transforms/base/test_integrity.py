@@ -1,10 +1,14 @@
 """Tests for Phase 4.3: integrity guards (IntegrityPolicy, run_check, IntegrityCheckStep)."""
+
 import pytest
 
 from picid.transforms.base.integrity import run_check, run_checks
 from picid.transforms.base.pipeline import TransformContext, IntegrityCheckStep
 
-from test.transforms.base.conftest import create_dummy_single_unit_container, DummyStatelessTransform
+from test.transforms.base.conftest import (
+    create_dummy_single_unit_container,
+    DummyStatelessTransform,
+)
 
 
 class TestRunCheck:
@@ -48,11 +52,13 @@ class TestRunChecks:
             seen.append("c")
 
         with pytest.raises(ValueError, match="b"):
-            run_checks([
-                ("a", a, "allow"),
-                ("b", b, "fail"),
-                ("c", c, "allow"),
-            ])
+            run_checks(
+                [
+                    ("a", a, "allow"),
+                    ("b", b, "fail"),
+                    ("c", c, "allow"),
+                ]
+            )
         assert seen == ["a"]
         assert "c" not in seen
 
@@ -69,11 +75,13 @@ class TestRunChecks:
             seen.append("c")
 
         with pytest.warns(UserWarning):
-            run_checks([
-                ("a", a, "allow"),
-                ("b", b, "warn"),
-                ("c", c, "allow"),
-            ])
+            run_checks(
+                [
+                    ("a", a, "allow"),
+                    ("b", b, "warn"),
+                    ("c", c, "allow"),
+                ]
+            )
         assert seen == ["a", "c"]
 
 

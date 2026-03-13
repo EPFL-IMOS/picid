@@ -6,7 +6,6 @@ The first row of each CSV is the best config (sorted by sort metric); HP columns
 e.g. task_definition.seq_len, optimization.lr are read from that row.
 """
 
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 

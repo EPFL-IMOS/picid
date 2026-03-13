@@ -57,7 +57,9 @@ def clean_and_rename_models(
         prefix = os.path.commonprefix(list(unique_models))
         if prefix and "." in prefix:
             prefix = prefix.rsplit(".", 1)[0] + "."
-            df[target_col] = df[target_col].astype(str).str.replace(prefix, "", regex=False)
+            df[target_col] = (
+                df[target_col].astype(str).str.replace(prefix, "", regex=False)
+            )
 
     if type_col in df.columns:
         mask = df[type_col].notna()
@@ -68,7 +70,11 @@ def clean_and_rename_models(
                 + df.loc[mask, type_col].astype(str)
                 + ")"
             )
-            logger.debug("Preprocess: appended (linear)/(exponential) for %d rows", mask.sum())
+            logger.debug(
+                "Preprocess: appended (linear)/(exponential) for %d rows", mask.sum()
+            )
 
-    logger.info("Preprocess: cleaned model names for %d unique models", len(unique_models))
+    logger.info(
+        "Preprocess: cleaned model names for %d unique models", len(unique_models)
+    )
     return df

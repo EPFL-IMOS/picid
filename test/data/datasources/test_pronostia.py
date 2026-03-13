@@ -1,16 +1,15 @@
 """
 Tests for PronostiaLoader (PHMD) with mocked phmd dataset and _process_unit logic.
 """
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import patch, MagicMock
 
 from picid.data.datasources.phmd_pronostia import (
     PronostiaLoader,
-    UNIT_NAMES_TO_ID,
     SAMPLE_RANGE_SIZE,
 )
 
@@ -35,15 +34,19 @@ def pronostia_kwargs():
 def small_unit_df():
     """Single unit DataFrame as passed to _process_unit."""
     n = 20
-    return pd.DataFrame({
-        "unit": ["1_3"] * n,
-        "f1": np.random.randn(n).astype(np.float32),
-        "f2": np.random.randn(n).astype(np.float32),
-        "RUL": np.arange(n - 1, -1, -1, dtype=np.float32),
-    })
+    return pd.DataFrame(
+        {
+            "unit": ["1_3"] * n,
+            "f1": np.random.randn(n).astype(np.float32),
+            "f2": np.random.randn(n).astype(np.float32),
+            "RUL": np.arange(n - 1, -1, -1, dtype=np.float32),
+        }
+    )
 
 
-def test_pronostia_process_unit_standard_mode_returns_dict(pronostia_kwargs, small_unit_df):
+def test_pronostia_process_unit_standard_mode_returns_dict(
+    pronostia_kwargs, small_unit_df
+):
     """_process_unit with use_ragged=False returns features, target, unit_id, metadata."""
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "rul"
@@ -64,7 +67,9 @@ def test_pronostia_process_unit_standard_mode_returns_dict(pronostia_kwargs, sma
     assert len(out["target"]) == 20
 
 
-def test_pronostia_process_unit_raises_for_non_rul_task(pronostia_kwargs, small_unit_df):
+def test_pronostia_process_unit_raises_for_non_rul_task(
+    pronostia_kwargs, small_unit_df
+):
     """_process_unit raises ValueError when task_mode is not 'rul'."""
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "classification"
@@ -78,7 +83,9 @@ def test_pronostia_process_unit_raises_for_non_rul_task(pronostia_kwargs, small_
         )
 
 
-def test_pronostia_process_unit_ragged_mode_requires_divisible_length(pronostia_kwargs, small_unit_df):
+def test_pronostia_process_unit_ragged_mode_requires_divisible_length(
+    pronostia_kwargs, small_unit_df
+):
     """_process_unit with use_ragged=True raises when length not divisible by SAMPLE_RANGE_SIZE."""
     pronostia_kwargs["use_ragged"] = True
     loader = PronostiaLoader(**pronostia_kwargs)
@@ -96,12 +103,16 @@ def test_pronostia_process_unit_ragged_mode_requires_divisible_length(pronostia_
 def test_pronostia_process_unit_ragged_mode_success(pronostia_kwargs):
     """_process_unit with use_ragged=True and divisible length returns awkward-style structure."""
     n = SAMPLE_RANGE_SIZE * 2
-    df = pd.DataFrame({
-        "unit": ["1_3"] * n,
-        "f1": np.random.randn(n).astype(np.float32),
-        "f2": np.random.randn(n).astype(np.float32),
-        "RUL": np.repeat(np.array([100.0, 50.0], dtype=np.float32), SAMPLE_RANGE_SIZE),
-    })
+    df = pd.DataFrame(
+        {
+            "unit": ["1_3"] * n,
+            "f1": np.random.randn(n).astype(np.float32),
+            "f2": np.random.randn(n).astype(np.float32),
+            "RUL": np.repeat(
+                np.array([100.0, 50.0], dtype=np.float32), SAMPLE_RANGE_SIZE
+            ),
+        }
+    )
     pronostia_kwargs["use_ragged"] = True
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "rul"

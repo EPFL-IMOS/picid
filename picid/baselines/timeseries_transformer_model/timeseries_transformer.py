@@ -1,12 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from picid.baselines.shared_layers.Transformer_EncDec import (
     Decoder,
     DecoderLayer,
     Encoder,
     EncoderLayer,
-    ConvLayer,
 )
 from picid.baselines.shared_layers.SelfAttention_Family import (
     FullAttention,
@@ -20,7 +18,6 @@ from picid.baselines.shared_layers.Embed_DLinear import (
     ContextEmbedding,
     ContextEmbedding_wo_context,
 )
-import numpy as np
 
 
 class Model(nn.Module):
@@ -171,7 +168,7 @@ class Model(nn.Module):
                         dropout=configs.dropout,
                         activation=configs.activation,
                     )
-                    for l in range(configs.e_layers)
+                    for l in range(configs.e_layers)  # noqa: E741
                 ],
                 norm_layer=torch.nn.LayerNorm(configs.d_model),
             )
@@ -207,7 +204,7 @@ class Model(nn.Module):
                     dropout=configs.dropout,
                     activation=configs.activation,
                 )
-                for l in range(configs.d_layers)
+                for l in range(configs.d_layers)  # noqa: E741
             ],
             norm_layer=torch.nn.LayerNorm(configs.d_model),
             projection=nn.Linear(configs.d_model, configs.c_out, bias=True),

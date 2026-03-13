@@ -1,11 +1,11 @@
 """Tests that slice_info is passed in metadata to transforms only when opted in."""
+
 import numpy as np
-import pytest
 
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.data_objects.slice_info import SliceInfo
 from picid.transforms.base.data_transform import DataTransform
-from picid.transforms.base.base_transform import BaseTransform, DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.data.data_objects.data import NamedTransformInput
 
@@ -19,9 +19,7 @@ class MetadataRecordingTransform(NoFitPerSegmentMixin, DenseTransform):
         super().__init__()
         self.last_metadata = None
 
-    def transform_data(
-        self, data: NamedTransformInput, metadata: dict
-    ) -> np.ndarray:
+    def transform_data(self, data: NamedTransformInput, metadata: dict) -> np.ndarray:
         self.last_metadata = metadata
         key = list(data.keys())[0]
         return data[key] * 2

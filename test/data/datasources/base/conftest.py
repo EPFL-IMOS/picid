@@ -1,4 +1,5 @@
 """Fixtures for loader characterization tests: in-memory SingleSourceLoader and configs."""
+
 import numpy as np
 import pytest
 from omegaconf import OmegaConf
@@ -63,7 +64,7 @@ def in_memory_loader_part_of_multi():
 
 def _two_source_config():
     """Config for two sources without multisource splitter (each source splits itself)."""
-    train, val, test = 0.5, 0.25, 0.25
+    train, val, _ = 0.5, 0.25, 0.25
     splitter_cfg = {
         "train": train,
         "val": val,
@@ -78,7 +79,10 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_a",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {
+            "_target_": "picid.data.preprocessing.splits.TimeSplitter",
+            **splitter_cfg,
+        },
     }
     source_b = {
         "_target_": "test.data.datasources.base.conftest.InMemorySingleSourceLoader",
@@ -86,7 +90,10 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_b",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {
+            "_target_": "picid.data.preprocessing.splits.TimeSplitter",
+            **splitter_cfg,
+        },
     }
     return {
         "data_name": "multi_test",

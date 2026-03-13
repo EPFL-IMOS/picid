@@ -8,14 +8,14 @@ autoencoder:
 
   metadata:
     apply_to: ['features', 'target']
-    assign_to: 
+    assign_to:
       features: features
       target: target
-  
+
 scaler_target:
   transform:
     _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
-  
+
   metadata:
     apply_to: target
     fit_on: train
@@ -28,7 +28,7 @@ scaler_target:
 
 #   metadata:
 #     apply_to: 'features'
-  
+
 # ragged2regularragged:
 #   transform:
 #     _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform

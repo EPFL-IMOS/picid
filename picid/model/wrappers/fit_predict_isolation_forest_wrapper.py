@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Optional, override
 import joblib
 import torch
-import numpy as np
 
 from sklearn.ensemble import IsolationForest
 
@@ -23,7 +22,6 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
         random_state: Optional[int] = 42,
         **kwargs,
     ):
-
         # --- Task Validation ---
         self.supported_tasks = CLASSIFICATION_TASKS
         self.task_type = task_type

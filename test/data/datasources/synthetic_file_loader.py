@@ -1,4 +1,5 @@
 """File-based synthetic loader for pipeline snapshot tests. Reads pre-generated npz files."""
+
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +35,12 @@ class SyntheticFromFileLoader(SingleSourceLoader):
                 pred_len=1,
                 create_splits_for=create_splits,
             )
-        super().__init__(data_splitter=data_splitter, data_name=data_name, task_mode=task_mode, **kwargs)
+        super().__init__(
+            data_splitter=data_splitter,
+            data_name=data_name,
+            task_mode=task_mode,
+            **kwargs,
+        )
         self._data_path = Path(data_path)
 
     def _load_data(self) -> dict:

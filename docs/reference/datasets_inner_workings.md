@@ -84,10 +84,10 @@ The output batch structure is optimized for RUL regression:
 {
     'batch_idx': [indices],
     # The RUL value at the very end of the window. Shape: (Batch, 1)
-    'rul': target['rul_seq_x'][:, -1, :],   
-    
+    'rul': target['rul_seq_x'][:, -1, :],
+
     # The history window of sensor readings. Shape: (Batch, seq_len, Channels)
-    'features': context['features_seq_x']   
+    'features': context['features_seq_x']
 }
 ```
 ### The Role of `pred_len=0`
@@ -121,7 +121,7 @@ Ragged vs Dense is about **regularity of lengths along the time axis** — not a
 - The sequencer treats each unit **independently**, enforcing:
   - Windows cannot cross unit boundaries,
   - Padding only occurs when explicitly enabled,
-  - Each unit must individually satisfy the required length:  
+  - Each unit must individually satisfy the required length:
     `seq_len + pred_offset + pred_len`.
 
 ### Summary
@@ -220,7 +220,7 @@ In strict mode (`padding_left_flag=False`), the sequencer drops any unit shorter
 * **Start Constraint:** $\text{start\_index} \ge 0$
 * **End Constraint:** $\text{start\_index} + \text{Required Length} \le \text{Unit Length}$
 
-> 
+>
 
 **Example:**
 * Unit Length: 5 `[A, B, C, D, E]`
@@ -236,7 +236,7 @@ This is controlled by `warmup_steps`: the index where the *first prediction* sho
 * **Start Constraint:** $\text{start\_index} = \text{warmup\_steps} - \text{seq\_len} - \text{pred\_offset}$
 * **Effect:** If `start_index` is negative (e.g., -2), the system will zero-pad the first 2 steps of the input.
 
-> 
+>
 
 ---
 
@@ -374,7 +374,7 @@ If you provide `features` and `targets`, they must yield the **exact same number
 if self._length is None:
     self._length = len(driver)
 elif len(driver) != self._length:
-    # CRITICAL ERROR: Mismatch. 
+    # CRITICAL ERROR: Mismatch.
     # Example: Features has 100 steps, Targets has 99 steps.
     # This raises ValueError to prevent training on misaligned labels.
     raise ValueError(...)
@@ -441,7 +441,7 @@ The function iterates through the batch of dictionaries and separates values int
 ```python
 # Example Behavior
 batch = [
-    {"a": Tensor([1, 2])}, 
+    {"a": Tensor([1, 2])},
     {"a": Tensor([3, 4])}
 ]
 # Output:
@@ -494,15 +494,15 @@ The returned object is a nested dictionary structure containing the sliced tenso
 ```python
 {
     # The indices requested for this batch
-    "batch_idx": [0, 1, ...], 
-    
+    "batch_idx": [0, 1, ...],
+
     "context": {
         # Data fetched from the 'context' dataset (e.g., Sensor readings)
         # Shape: (Batch, Seq_Len, Features)
         "features_seq_x": Tensor(...), # Input History
         "features_seq_y": Tensor(...)  # Input Future (usually unused/empty)
     },
-    
+
     "target": {
         # Data fetched from the 'target' dataset (e.g., RUL or Forecast Targets)
         # Shape: (Batch, Seq_Len, 1) or (Batch, Pred_Len, 1)
@@ -525,7 +525,7 @@ This modular design ensures that no single class becomes a "God Object." Instead
 1.  **The Engine (`AkwardJaggedAutoregressiveSequencer`)**:
     * **Responsibility:** Pure mathematics and index logic.
     * **Solves:** *"Where does a valid window start in this jagged array?"* It handles the complexity of strict windowing, padding, and vectorized index calculation.
-    * 
+    *
 
 [Image of layered software architecture diagram]
 

@@ -47,7 +47,7 @@ test_pipeline:
   script:
     # 7. Activate env again (each script block runs in a fresh shell usually)
     - source .venv/bin/activate
-    
+
     # 8. Run Pytest with Coverage
     - pytest --cov --cov-report=xml:coverage.xml --cov-report=term test/
 
@@ -58,4 +58,3 @@ test_pipeline:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-        

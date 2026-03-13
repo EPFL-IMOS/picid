@@ -13,10 +13,8 @@ PHM Context:
 - Manages paths for saving evaluation results
 """
 
-import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch
-from abc import ABC
+from unittest.mock import MagicMock
 
 from picid.evaluator.base import AbstractEvaluator
 from picid.evaluator.scaling_wrapper import (

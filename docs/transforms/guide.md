@@ -38,7 +38,7 @@ transform_name:
   transform:
     _target_: picid.transforms.base_transforms.scaler.StandardScalerSklearn
     # Additional parameters for the transform class
-  
+
   metadata:
     apply_to: features
     fit_on: train
@@ -187,7 +187,7 @@ metadata:
 | `integrity_checks_after` | No | Optional list of `(name, check_fn, policy)` run after merge on assign_to slice. Check fn receives `Dict[str, Any]`. Set programmatically (not from YAML). See [Developer Guide: Validation and integrity](developer_guide.md#validation-and-integrity). |
 | `integrity_checks` | No | *(Deprecated)* Legacy single list; maps to `integrity_checks_before`. Use `integrity_checks_before` / `integrity_checks_after` instead. |
 
-\* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.  
+\* Transforms that learn from data (e.g. scalers) set `requires_fit=True`; the pipeline will raise if `fit_on` is missing.
 \** Required when `apply_to` is a list and `fit_on` is set.
 
 ### Slice info in transforms

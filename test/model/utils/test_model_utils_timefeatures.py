@@ -9,9 +9,7 @@ from picid.model.utils.timefeatures import (
     HourOfDay,
     DayOfWeek,
     DayOfMonth,
-    DayOfYear,
     MonthOfYear,
-    WeekOfYear,
     time_features_from_frequency_str,
     time_features,
 )

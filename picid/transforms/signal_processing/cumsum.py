@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, override
+from typing import Dict, override
 import numpy as np
 import awkward as ak
 
@@ -8,7 +8,6 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 
 class CumSumTransform(NoFitPerSegmentMixin, RaggedTransform):
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 

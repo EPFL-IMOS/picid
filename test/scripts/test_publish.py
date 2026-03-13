@@ -91,7 +91,7 @@ class TestPushRunToGdrive:
         assert "my_run_2026-03-07" in link
 
     def test_dry_run_zips_key_files(self, tmp_path):
-        from scripts.publish.push_run_to_gdrive import push_run_to_gdrive, zip_run_dir
+        from scripts.publish.push_run_to_gdrive import zip_run_dir
 
         run_dir = tmp_path / "my_run"
         run_dir.mkdir()

@@ -2,6 +2,7 @@
 Coverage-focused tests for picid.data.data_objects.base and manifest.
 No changes to picid/data allowed; tests only.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -12,7 +13,6 @@ from picid.data.data_objects.base import (
     BaseDataObject,
     BaseDataObjectWithMetadata,
 )
-from picid.data.data_objects.data import DatasetContainer
 from picid.data.data_objects.manifest import ManifestEntry, MetadataManifest
 
 

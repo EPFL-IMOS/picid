@@ -11,10 +11,12 @@ def test_cumsum_transform_apply_regular_3d():
     transform = CumSumTransform()
 
     # Regular 3D: (units=2, time=4, features=3)
-    x = np.array([
-        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]],
-        [[0.5, 0.5, 0.5], [1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]],
-    ])
+    x = np.array(
+        [
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]],
+            [[0.5, 0.5, 0.5], [1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]],
+        ]
+    )
     data = NamedTransformInput(features=ak.Array(x))
     metadata = {}
 
@@ -47,10 +49,12 @@ def test_cumsum_transform_ragged_input():
     transform = CumSumTransform()
 
     # 2 units: first has 3 time steps, second has 2
-    ragged = ak.Array([
-        [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
-        [[7.0, 8.0], [9.0, 10.0]],
-    ])
+    ragged = ak.Array(
+        [
+            [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+            [[7.0, 8.0], [9.0, 10.0]],
+        ]
+    )
     data = NamedTransformInput(features=ragged)
     metadata = {}
 

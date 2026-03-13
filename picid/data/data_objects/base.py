@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import awkward as ak
 
-from pandas.core.generic import NDFrame
 
 from picid.data.data_objects.utils import (
     check_for_nans,
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class ToNumpyMixin:
-
     def to_numpy(self, key: str, ensure_2d: bool = True) -> np.ndarray:
         """
         Converts the data for a given key to a NumPy array on demand.
@@ -36,7 +34,6 @@ class ToNumpyMixin:
 
 
 class ToDataFrameMixin:
-
     def to_dataframe(self, key: str) -> pd.DataFrame:
         """
         Returns a pandas.DataFrame representation of the data for a given key.
@@ -134,7 +131,7 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
                         f"numpy (ndarray), or awkward (Array), got {elem_type.__name__}"
                     )
 
-                if not key in self._instance_cls:
+                if key not in self._instance_cls:
                     self._instance_cls[key] = elem_type
                 else:
                     if self._instance_cls[key] != elem_type:
@@ -147,10 +144,10 @@ class BaseDataObject(Generic[T], MutableMapping[str, T]):
                 logger.debug("Received an empty list; type cannot be validated.")
 
         elif isinstance(value, allowed_single_types):
-            if not key in self._instance_cls:
+            if key not in self._instance_cls:
                 self._instance_cls[key] = type(value)
             else:
-                if self._instance_cls[key] != type(value):
+                if not isinstance(value, self._instance_cls[key]):
                     logger.debug(
                         f"Expected type {self._instance_cls[key].__name__}, got {type(value).__name__}. Changing stored type."
                     )
@@ -229,7 +226,9 @@ class BaseDataObjectWithMetadata(
     original format.
     """
 
-    def __init__(self, metadata: Optional[Dict[str, Any]] = None, **kwargs: Any) -> None:
+    def __init__(
+        self, metadata: Optional[Dict[str, Any]] = None, **kwargs: Any
+    ) -> None:
         """
         Initializes the chunk, handling metadata and column extraction robustly.
         """

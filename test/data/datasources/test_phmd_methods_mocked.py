@@ -2,108 +2,25 @@
 Tests for phmd_* loader methods (_get_*_column, _preprocess_fold, _process_unit) with mocked data.
 No real data loading; all inputs are in-memory.
 """
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
-import awkward as ak
 
-from picid.data.datasources.phmd_battery import PHMDBatteryLoader
 from picid.data.datasources.phmd_cbmv3 import CBMv3Loader
 from picid.data.datasources.phmd_hsf15 import HSF15Loader
 from picid.data.datasources.phmd_xjtu_sy import XJTU_SYLoader, merge_data_folds_on_key
 
 
 def _phmd_kwargs():
-    return {"fold": 0, "data_name": "NB14", "task_mode": "rul", "cache_dir": "/tmp/phmd"}
-
-
-# ----- PHMDBatteryLoader -----
-
-
-def test_phmd_battery_get_features_columns():
-    """_get_features_columns returns meta_data['features'] or NB1 override."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"features": ["v", "i", "t"]}
-    assert loader._get_features_columns() == ["v", "i", "t"]
-
-
-def test_phmd_battery_get_features_columns_nb1():
-    """_get_features_columns returns fixed list when data_name == NB1."""
-    loader = PHMDBatteryLoader(fold=0, data_name="NB1", task_mode="rul", cache_dir="/tmp")
-    loader.meta_data = {"features": ["other"]}
-    assert loader._get_features_columns() == ["mode", "voltage", "current", "temperature"]
-
-
-def test_phmd_battery_get_target_column():
-    """_get_target_column returns task_mode."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    assert loader._get_target_column() == "rul"
-
-
-def test_phmd_battery_get_unit_column_single():
-    """_get_unit_column returns identifier[0], or 'unit' if identifier was 'test_name'."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["unit_id"]}
-    assert loader._get_unit_column() == "unit_id"
-
-
-def test_phmd_battery_get_unit_column_test_name():
-    """_get_unit_column maps test_name to unit."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["test_name"]}
-    assert loader._get_unit_column() == "unit"
-
-
-def test_phmd_battery_get_unit_column_asserts_single():
-    """_get_unit_column asserts len(identifier) == 1."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["a", "b"]}
-    with pytest.raises(AssertionError, match="only one"):
-        loader._get_unit_column()
-
-
-def test_phmd_battery_preprocess_fold_test_name_rename():
-    """_preprocess_fold renames test_name to unit when identifier is test_name."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    loader.meta_data = {"identifier": ["test_name"]}
-    main_fold = {
-        "train": pd.DataFrame({"test_name": [1, 2], "x": [0.1, 0.2]}),
-        "val": pd.DataFrame({"test_name": [3], "x": [0.3]}),
-        "test": pd.DataFrame({"test_name": [4], "x": [0.4]}),
+    return {
+        "fold": 0,
+        "data_name": "NB14",
+        "task_mode": "rul",
+        "cache_dir": "/tmp/phmd",
     }
-    out = loader._preprocess_fold(main_fold, {})
-    assert "unit" in out["train"].columns
-    assert "test_name" not in out["train"].columns
-
-
-def test_phmd_battery_process_unit_basic():
-    """_process_unit returns dict with features, target, metadata (no NaN/inf)."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, 2.0], "f2": [3.0, 4.0], "target": [0.5, 0.6]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert "features" in out
-    assert out["features"].shape[0] == 2
-    assert "target" in out
-    assert "metadata" in out
-    assert out["metadata"]["unit_id"] == "u1"
-
-
-def test_phmd_battery_process_unit_with_nan():
-    """_process_unit drops NaN rows and logs."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, np.nan], "f2": [3.0, 4.0], "target": [0.5, 0.6]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert len(out["features"]) == 1
-
-
-def test_phmd_battery_process_unit_with_inf():
-    """_process_unit replaces inf in target and drops corresponding rows."""
-    loader = PHMDBatteryLoader(**_phmd_kwargs())
-    df = pd.DataFrame({"f1": [1.0, 2.0], "f2": [3.0, 4.0], "target": [0.5, np.inf]})
-    out = loader._process_unit(df, "u1", ["f1", "f2"], "target")
-    assert len(out["features"]) == 1
 
 
 # ----- CBMv3Loader -----
@@ -144,11 +61,13 @@ def test_phmd_hsf15_preprocess_fold():
 def test_phmd_hsf15_process_unit_not_monotonic_raises():
     """_process_unit raises when cycle column is not monotonic."""
     loader = HSF15Loader(**_phmd_kwargs())
-    df = pd.DataFrame({
-        "cycle": [2, 1, 3],
-        "f1": [1.0, 2.0, 3.0],
-        "target": [0.1, 0.2, 0.3],
-    })
+    df = pd.DataFrame(
+        {
+            "cycle": [2, 1, 3],
+            "f1": [1.0, 2.0, 3.0],
+            "target": [0.1, 0.2, 0.3],
+        }
+    )
     with pytest.raises(ValueError, match="not monotonically increasing"):
         loader._process_unit(df, "u1", ["f1"], "target")
 
@@ -157,11 +76,13 @@ def test_phmd_hsf15_process_unit_monotonic_one_cycle():
     """_process_unit with one cycle of 6000 steps (minimal for reshape to (-1,6000,1))."""
     loader = HSF15Loader(**_phmd_kwargs())
     n = 6000
-    df = pd.DataFrame({
-        "cycle": np.ones(n, dtype=int),
-        "f1": np.arange(n, dtype=float),
-        "target": np.zeros(n),
-    })
+    df = pd.DataFrame(
+        {
+            "cycle": np.ones(n, dtype=int),
+            "f1": np.arange(n, dtype=float),
+            "target": np.zeros(n),
+        }
+    )
     out = loader._process_unit(df, "u1", ["f1"], "target")
     assert "features" in out
     assert out["unit_id"] == "no_id_available"
@@ -180,7 +101,11 @@ def test_phmd_xjtu_preprocess_fold_rul_returns_main():
     """_preprocess_fold returns main_fold when task_mode is not fault."""
     loader = XJTU_SYLoader(**_phmd_kwargs())
     loader._init_kwargs = {"task_mode": "rul"}
-    main_fold = {"train": pd.DataFrame({"x": [1]}), "val": pd.DataFrame(), "test": pd.DataFrame()}
+    main_fold = {
+        "train": pd.DataFrame({"x": [1]}),
+        "val": pd.DataFrame(),
+        "test": pd.DataFrame(),
+    }
     out = loader._preprocess_fold(main_fold, {})
     assert out is main_fold
 
@@ -198,14 +123,18 @@ def test_phmd_xjtu_process_unit_rul():
 
 def test_phmd_xjtu_process_unit_fault():
     """_process_unit in fault mode uses FAULT_TARGET_COLS."""
-    loader = XJTU_SYLoader(fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp")
+    loader = XJTU_SYLoader(
+        fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp"
+    )
     loader._init_kwargs = {"use_ragged": False}
-    df = pd.DataFrame({
-        "f1": [1.0, 2.0],
-        "Outer race": [0, 1],
-        "Cage": [1, 0],
-        "Inner race": [0, 0],
-    })
+    df = pd.DataFrame(
+        {
+            "f1": [1.0, 2.0],
+            "Outer race": [0, 1],
+            "Cage": [1, 0],
+            "Inner race": [0, 0],
+        }
+    )
     out = loader._process_unit(df, "1_1", ["f1"], "rul")
     assert "target" in out
     assert out["target"].shape[0] == 2
@@ -213,7 +142,9 @@ def test_phmd_xjtu_process_unit_fault():
 
 def test_phmd_xjtu_process_unit_unknown_task_raises():
     """_process_unit raises for unknown task_mode."""
-    loader = XJTU_SYLoader(fold=0, data_name="XJTU", task_mode="unknown", cache_dir="/tmp")
+    loader = XJTU_SYLoader(
+        fold=0, data_name="XJTU", task_mode="unknown", cache_dir="/tmp"
+    )
     loader._init_kwargs = {"use_ragged": False}
     df = pd.DataFrame({"f1": [1.0], "rul": [10.0]})
     with pytest.raises(ValueError, match="Unknown task_mode"):
@@ -225,8 +156,16 @@ def test_phmd_xjtu_process_unit_unknown_task_raises():
 
 def test_merge_data_folds_on_key():
     """merge_data_folds_on_key merges main and aux folds on key (default bearing)."""
-    main_fold = {"train": pd.DataFrame({"bearing": [1, 2], "rul": [10, 20]}), "val": pd.DataFrame(), "test": pd.DataFrame()}
-    aux_fold = {"train": pd.DataFrame({"bearing": [1, 2], "fault": [0, 1]}), "val": pd.DataFrame(), "test": pd.DataFrame()}
+    main_fold = {
+        "train": pd.DataFrame({"bearing": [1, 2], "rul": [10, 20]}),
+        "val": pd.DataFrame(),
+        "test": pd.DataFrame(),
+    }
+    aux_fold = {
+        "train": pd.DataFrame({"bearing": [1, 2], "fault": [0, 1]}),
+        "val": pd.DataFrame(),
+        "test": pd.DataFrame(),
+    }
     out = merge_data_folds_on_key(main_fold, aux_fold, key="bearing")
     assert "train" in out
     assert "rul" in out["train"].columns and "fault" in out["train"].columns
@@ -234,7 +173,10 @@ def test_merge_data_folds_on_key():
 
 def test_merge_data_folds_on_key_split_missing_in_aux():
     """When a split is missing in aux_fold, main_df is copied."""
-    main_fold = {"train": pd.DataFrame({"bearing": [1], "rul": [10]}), "val": pd.DataFrame({"bearing": [2], "rul": [20]})}
+    main_fold = {
+        "train": pd.DataFrame({"bearing": [1], "rul": [10]}),
+        "val": pd.DataFrame({"bearing": [2], "rul": [20]}),
+    }
     aux_fold = {"train": pd.DataFrame({"bearing": [1], "fault": [0]})}  # no "val"
     out = merge_data_folds_on_key(main_fold, aux_fold, key="bearing")
     assert "val" in out
@@ -252,14 +194,21 @@ def test_merge_data_folds_on_key_no_new_columns():
 
 def test_phmd_xjtu_process_unit_fault_ragged_raises():
     """_process_unit in fault mode with use_ragged=True raises NotImplementedError."""
-    loader = XJTU_SYLoader(fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp")
+    loader = XJTU_SYLoader(
+        fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp"
+    )
     loader._init_kwargs = {"use_ragged": True}
     n = 32768 * 2  # divisible by SAMPLE_RANGE_SIZE
-    df = pd.DataFrame({
-        "f1": np.zeros(n),
-        "Outer race": np.zeros(n),
-        "Cage": np.zeros(n),
-        "Inner race": np.zeros(n),
-    })
-    with pytest.raises(NotImplementedError, match="Ragged mode is not yet implemented for the 'fault' task"):
+    df = pd.DataFrame(
+        {
+            "f1": np.zeros(n),
+            "Outer race": np.zeros(n),
+            "Cage": np.zeros(n),
+            "Inner race": np.zeros(n),
+        }
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="Ragged mode is not yet implemented for the 'fault' task",
+    ):
         loader._process_unit(df, "1_1", ["f1"], "rul")

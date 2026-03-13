@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn.utils import weight_norm
 import math
 
 
@@ -164,7 +162,6 @@ class ContextEmbedding(nn.Module):
         self.d_x_embedding_router = d_x_embedding_router
 
     def forward(self, x, x_mark):
-
         _, _, D_C = x_mark.shape
         # time_features_mask = torch.tensor([0]*(D_C-4)+[1]*4)
         time_features_mask = self.d_x_embedding_router
@@ -211,7 +208,6 @@ class ContextEmbedding_wo_context(nn.Module):
         self.d_x_embedding_router = d_x_embedding_router
 
     def forward(self, x, x_mark):
-
         _, _, D_C = x_mark.shape
         # time_features_mask = torch.tensor([0]*(D_C-4)+[1]*4)
         time_features_mask = self.d_x_embedding_router

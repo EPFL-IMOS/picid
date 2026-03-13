@@ -59,7 +59,7 @@ def WindowTime(
 
     if window_offset:
         # shift
-        b, l, _, dim = x.shape
+        b, l, _, dim = x.shape  # noqa: E741
         window_len = l // 2
         shift_by = window_len // window_offset
         x = torch.roll(x, -shift_by, dims=1)
@@ -86,7 +86,7 @@ def ReverseWindowTime(
 
     if window_offset:
         # shift
-        b, l, _, dim = x.shape
+        b, l, _, dim = x.shape  # noqa: E741
         window_len = l // 2
         shift_by = window_len // window_offset
         x = torch.roll(x, shift_by, dims=1)
@@ -106,14 +106,14 @@ def ReverseLocalize(inp: torch.Tensor, variables: int) -> torch.Tensor:
 
 def ShiftBeforeWindow(inp: torch.Tensor, windows: int, offset: int = 2):
     # SWIN Transformer style window offsets
-    b, l, v, d = inp.shape
+    b, l, v, d = inp.shape  # noqa: E741
     window_len = l // windows
     shift_by = window_len // offset
     return torch.roll(inp, -shift_by, dims=1)
 
 
 def ReverseShiftBeforeWindow(inp: torch.Tensor, windows: int, offset: int = 2):
-    b, l, v, d = inp.shape
+    b, l, v, d = inp.shape  # noqa: E741
     window_len = l // windows
     shift_by = window_len // offset
     return torch.roll(inp, shift_by, dims=1)

@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List
 
+
 def get_mode_change_right_indices(x: np.ndarray) -> List[int]:
     """
     Identifies the right-exclusive boundaries (i.e., start of new regimes)
@@ -27,4 +28,3 @@ def get_mode_change_right_indices(x: np.ndarray) -> List[int]:
     # Add final end index (exclusive)
     right_boundaries.append(len(x))
     return right_boundaries
-

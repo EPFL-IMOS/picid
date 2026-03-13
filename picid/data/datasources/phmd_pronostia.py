@@ -44,7 +44,6 @@ SAMPLE_RANGE_SIZE = 2560
 
 
 class PronostiaLoader(PHMDMultiSourceLoader):
-
     def _get_features_columns(self):
         return self.meta_data["features"]
 

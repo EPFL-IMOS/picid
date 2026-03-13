@@ -105,17 +105,17 @@ def _instantiate_all(self) -> None:
 def __init__(self, transform_name: str, transform: dict, metadata: dict):
     # 1. Process apply_to (string/list/mapping → list)
     self.apply_to, self.apply_to_map = self._process_apply_to(apply_to)
-    
+
     # 2. Process assign_to (defaults to apply_to if None)
     self.assign_to, self.assign_to_map = self._process_assign_to(assign_to, apply_to)
-    
+
     # 3. Process fit_on configuration
     self.fit_on_split = metadata.get("fit_on", None)
     self.fit_on_key = metadata.get("fit_on_key", None)
-    
+
     # 4. Instantiate transform instance
     self.transform_instance = instantiate(transform)
-    
+
     # 5. Validate transform signature matches metadata
     self._validate_signature()
 ```
@@ -157,7 +157,7 @@ def apply(self, transform_instance, data, apply_to_keys, ...):
     # 1. Efficient hybrid copy
     transformed_data = data.copy(deep=False)
     # Deep copy only keys that will be modified
-    
+
     # 2. Fit transformer (if needed)
     if fit_on_split and fit_on_key:
         fit_chunks = self._prepare_chunks_for_split(...)
@@ -165,7 +165,7 @@ def apply(self, transform_instance, data, apply_to_keys, ...):
             transform_instance.fit_multi_source(fit_chunks, metadata)
         else:
             transform_instance.fit_data(fit_chunks[0], metadata)
-    
+
     # 3. Transform all splits
     for split in available_splits:
         chunks_to_transform = self._prepare_chunks_for_split(...)
@@ -173,13 +173,13 @@ def apply(self, transform_instance, data, apply_to_keys, ...):
             transformed_chunks = transform_instance.transform_multi_source(...)
         else:
             transformed_chunks = [transform_instance.transform_data(...)]
-        
+
         # 4. Post-process outputs
         transformed_chunks = postprocess_transformed_data(...)
-        
+
         # 5. Merge results
         self._merge_transformed_data(...)
-    
+
     return transformed_data, transform_log
 ```
 
@@ -191,14 +191,14 @@ For multi-unit data, chunks are prepared by extracting each unit:
 def _prepare_chunks_for_split(self, data_to_prepare, split, is_multi_unit):
     chunks = []
     num_units = len(data_to_prepare[keys[0]][split])
-    
+
     for i in range(num_units):
         unit_data = {
             key: data_to_prepare[key][split][i]
             for key in keys
         }
         chunks.append(NamedTransformInput(**unit_data))
-    
+
     return chunks
 ```
 
@@ -259,7 +259,7 @@ class BaseTransform(ABC):
     ) -> Any:
         """Transform a single data segment."""
         pass
-    
+
     def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
         """Fit the transform on data. Default: no-op."""
         pass
@@ -339,18 +339,18 @@ Example: `ConcatFitAndPerSegmentTransformMixin` = `FitByConcatenationMixin` + `P
 def fit_function_to_data_segments(self, data_segments, fit_func, metadata):
     # Determine data type (dense vs ragged)
     data_is_ragged = data_types.pop() is ak.Array
-    
+
     if not data_is_ragged and transform_supports_dense:
         # Concatenate all sources along axis=0
         train = {key: np.concatenate([chunk[key] for chunk in data_segments], axis=0)}
         fit_func(train, metadata)
-    
+
     elif data_is_ragged and not transform_supports_ragged:
         # Find variable dimension, concatenate, convert to numpy
         var_dim = find_singular_ragged_dim(data_segments[0])
         train = {key: ak.concatenate([...], axis=var_dim-1).to_numpy()}
         fit_func(train, metadata)
-    
+
     elif data_is_ragged and transform_supports_ragged:
         # Concatenate ragged arrays directly
         train = {key: ak.concatenate([chunk[key] for chunk in data_segments], axis=var_dim-1)}
@@ -364,7 +364,7 @@ def transform_function_to_data_segments(self, data_segments, transform_func, met
     if not data_is_ragged and transform_supports_dense:
         # Direct transformation
         out = [transform_func(segment, metadata) for segment in data_segments]
-    
+
     elif data_is_ragged and not transform_supports_ragged:
         # Process each ragged segment individually
         # Convert to numpy, transform, reassemble
@@ -376,7 +376,7 @@ def transform_function_to_data_segments(self, data_segments, transform_func, met
                 transformed = transform_func(subsegment, metadata)
                 # Reassemble into ragged structure
             out.append(reassembled_segment)
-    
+
     elif data_is_ragged and transform_supports_ragged:
         # Direct transformation on ragged arrays
         out = [transform_func(segment, metadata) for segment in data_segments]
@@ -393,7 +393,7 @@ def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
     """Find the single variable-length dimension."""
     var_dims = [ak_find_var_dims(arr) for arr in nti.values()]
     unique_var_dims = set([x for row in var_dims for x in row])
-    
+
     if len(unique_var_dims) == 0:
         return None  # Regular array
     elif len(unique_var_dims) == 1:
@@ -461,14 +461,14 @@ class MyTransform(DenseTransform):
 def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
     """
     Transform a single data segment.
-    
+
     Parameters
     ----------
     data : NamedTransformInput
         Dictionary-like object with data keys
     metadata : dict
         Contains 'mode', 'apply_to_keys', 'assign_to_keys', etc.
-    
+
     Returns
     -------
     Any
@@ -477,10 +477,10 @@ def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
     # Extract data
     key = list(data.keys())[0]  # Or use metadata['apply_to_keys']
     values = data[key]
-    
+
     # Apply transformation
     transformed = your_transformation_logic(values)
-    
+
     # Return (will be wrapped in SimpleReturnObject automatically)
     return transformed
 ```
@@ -492,7 +492,7 @@ def fit_data(self, data: NamedTransformInput, metadata: dict) -> None:
     """Fit the transform on data."""
     key = list(data.keys())[0]
     values = data[key]
-    
+
     # Learn parameters
     self.mean_ = np.mean(values, axis=0)
     self.std_ = np.std(values, axis=0)
@@ -508,11 +508,11 @@ class MyTransform(
     ConcatFitAndPerSegmentTransformMixin
 ):
     """Transform with multi-source fitting support."""
-    
+
     def fit_data(self, data: NamedTransformInput, metadata: dict):
         # fit_data will be called with concatenated data
         pass
-    
+
     def transform_data(self, data: NamedTransformInput, metadata: dict):
         # transform_data will be called per-segment
         pass
@@ -524,11 +524,11 @@ class MyTransform(
 def transform_data(self, data: NamedTransformInput, metadata: dict) -> dict:
     """Transform multiple keys."""
     apply_to_keys = metadata['apply_to_keys']
-    
+
     result = {}
     for key in apply_to_keys:
         result[key] = your_transformation(data[key])
-    
+
     # Return dict to match assign_to mapping
     return result
 ```
@@ -550,38 +550,38 @@ class CustomScaler(
     InverseTransformMixin
 ):
     """Custom scaler that scales to [-1, 1] range."""
-    
+
     def __init__(self):
         super().__init__()
         self.min_ = None
         self.max_ = None
-    
+
     def fit_data(self, data: NamedTransformInput, metadata: dict) -> None:
         """Fit on concatenated training data."""
         key = list(data.keys())[0]
         values = data[key]
-        
+
         self.min_ = np.min(values, axis=0)
         self.max_ = np.max(values, axis=0)
-    
+
     def transform_data(
         self, data: NamedTransformInput, metadata: dict
     ) -> np.ndarray:
         """Transform a single data segment."""
         key = list(data.keys())[0]
         values = data[key]
-        
+
         # Scale to [-1, 1]
         scaled = 2 * (values - self.min_) / (self.max_ - self.min_) - 1
         return scaled
-    
+
     def inverse_transform(
         self, data: NamedTransformInput, metadata: dict
     ) -> np.ndarray:
         """Inverse transform (required by InverseTransformMixin)."""
         key = list(data.keys())[0]
         values = data[key]
-        
+
         # Reverse scaling
         original = (values + 1) / 2 * (self.max_ - self.min_) + self.min_
         return original

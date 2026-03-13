@@ -1,7 +1,6 @@
 import logging
 from typing import Any, List, Optional
 
-import torch
 from einops import rearrange
 
 from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS

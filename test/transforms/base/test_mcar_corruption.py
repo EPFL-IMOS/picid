@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import pandas as pd
 from picid.transforms.base_transforms.mcar_corruption import MCARCorruptorTransform
 
 # --- Fixtures ---
@@ -53,7 +52,6 @@ def sample_data_2d():
 
 
 class TestMCARCorruptor:
-
     def test_init_validation(self):
         """Test strict initialization validation."""
         # Valid

@@ -1,4 +1,5 @@
 """Tests for Phase 2.2: Transform handler protocol and registry."""
+
 import numpy as np
 import pytest
 import awkward as ak
@@ -9,11 +10,7 @@ from picid.transforms.base.data_kind import (
     DATA_KIND_RAGGED_REGULAR,
     CAPABILITY_DENSE,
     CAPABILITY_RAGGED,
-    CAPABILITY_BOTH,
-    get_capability,
-    infer_data_kind,
 )
-from picid.transforms.base.multisource import find_singular_ragged_dim
 from picid.transforms.base.handlers import (
     get_handler,
     DenseDenseHandler,
@@ -60,7 +57,9 @@ class TestDenseDenseHandler:
         ]
         handler = DenseDenseHandler()
         handler.fit_prepare(
-            segments, ["features"], {"apply_to_keys": ["features"]},
+            segments,
+            ["features"],
+            {"apply_to_keys": ["features"]},
             lambda train, metadata: t.fit_data(NamedTransformInput(**train), metadata),
         )
         assert t.fitted
@@ -71,7 +70,10 @@ class TestDenseDenseHandler:
         segments = [NamedTransformInput(features=np.array([[1.0, 2.0], [3.0, 4.0]]))]
         handler = DenseDenseHandler()
         out, log = handler.transform_apply(
-            segments, t.transform_data, {"apply_to_keys": ["features"], "assign_to_map": ["features"]}, t.__class__.__name__,
+            segments,
+            t.transform_data,
+            {"apply_to_keys": ["features"], "assign_to_map": ["features"]},
+            t.__class__.__name__,
         )
         assert log["mode"] == "dense"
         assert len(out) == 1
@@ -85,7 +87,10 @@ class TestRaggedRaggedHandler:
         segments = [NamedTransformInput(features=ak.Array([[1.0, 2.0], [3.0]]))]
         handler = RaggedRaggedHandler()
         out, log = handler.transform_apply(
-            segments, t.transform_data, {"apply_to_keys": ["features"]}, t.__class__.__name__,
+            segments,
+            t.transform_data,
+            {"apply_to_keys": ["features"]},
+            t.__class__.__name__,
         )
         assert log["mode"] == "ragged"
         assert len(out) == 1

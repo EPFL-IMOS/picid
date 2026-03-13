@@ -1,5 +1,4 @@
 import logging
-from typing import Dict
 
 import numpy as np
 
@@ -9,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class PHME20Loader(PHMDMultiSourceLoader):
-
     def _get_features_columns(self):
         return self.meta_data["features"]
 
@@ -23,7 +21,6 @@ class PHME20Loader(PHMDMultiSourceLoader):
         return main_fold
 
     def _process_unit(self, df_unit, unit_name, features_col, target_col):
-
         df_features = df_unit[features_col].copy().reset_index(drop=True)
         df_target = df_unit[target_col].copy().reset_index(drop=True)
 

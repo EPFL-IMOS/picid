@@ -1,5 +1,4 @@
 from typing import Any, Dict
-import numpy as np
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 import logging

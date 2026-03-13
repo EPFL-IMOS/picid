@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class RailwayDummyTransform(NoFitPerSegmentMixin, DenseTransform):
-
     def __init__(self, **kwargs):
         self._init_kwargs = kwargs
         self.shift = kwargs["shift"]
@@ -24,16 +23,18 @@ class RailwayDummyTransform(NoFitPerSegmentMixin, DenseTransform):
         return f"{self.__class__.__name__}(freq={self.freq!r}, {args})"
 
     def transform_data(self, data_segment: Any, auxiliary_data: Dict, mode: str) -> Any:
-
         # Your original working logic: Convert input to DataFrame and extract 'date' values.
         # This assumes the 'data_segment' can be directly converted to a DataFrame
         # and has a 'date' column, or can be implicitly handled by pd.to_datetime.
 
-        assert self.shift in [
-            24,
-            168,
-            100,
-        ], "dummy shift must be 24 for the timepfn, and 168 for the tabpfn for railway and 100 for the battery!"
+        assert (
+            self.shift
+            in [
+                24,
+                168,
+                100,
+            ]
+        ), "dummy shift must be 24 for the timepfn, and 168 for the tabpfn for railway and 100 for the battery!"
 
         dummy_leak = np.concatenate(
             [np.zeros((self.shift, 1)), auxiliary_data["target"][: -self.shift]]

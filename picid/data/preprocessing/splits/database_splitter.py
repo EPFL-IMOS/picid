@@ -75,7 +75,7 @@ class TimeStampSplitter(TimeSeriesSplitter):
         if not isinstance(dates.iloc[0], pd.Timestamp):
             try:
                 dates = pd.to_datetime(dates)
-            except:
+            except Exception:
                 raise ValueError("`dates` must be a pandas Series of timestamps.")
 
         if len(dates) != len(data):

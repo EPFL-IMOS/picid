@@ -11,7 +11,6 @@ import functools
 import pytest
 import torch
 
-from picid.optimizer.base import AbstractOptimizer
 from picid.optimizer import default as default_module
 
 # Use the module-level dicts so we can test configure_optimizer logic

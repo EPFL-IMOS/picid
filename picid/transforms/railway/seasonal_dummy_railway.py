@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
-
     def __init__(self, shift: int, seq_len: int = 168, **kwargs):
         """
         Initialize the seasonal dummy transform.
@@ -136,7 +135,7 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
             # pos_indices = pos_indices[non_zero_mask[pos_indices]]  # Only non-zero values
 
             # Get historical values for this seasonal position
-            history = self.seasonal_history[seasonal_pos]
+            _history = self.seasonal_history[seasonal_pos]
 
             # For each occurrence of this seasonal position
             seen_idxs = []
@@ -176,7 +175,6 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
 
         # Check if there are any NaNs in seasonal_mean or seasonal_std, fill with 0 and log a warning
         if np.isnan(seasonal_mean).any() or np.isnan(seasonal_std).any():
-
             logger.warning(
                 f"NaNs detected in seasonal statistics. Filling NaNs with 0. Num. NaNs {np.isnan(seasonal_mean).sum()} for seasonal_mean"
             )

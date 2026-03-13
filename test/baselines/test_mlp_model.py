@@ -118,7 +118,10 @@ def test_wrapper_init_regression_legacy_args():
     """
     task = "rul"
     wrapper = MLPWrapper(
-        task_type=task, seq_len=10, input_channels=2, output_dim=5  # Legacy kwarg
+        task_type=task,
+        seq_len=10,
+        input_channels=2,
+        output_dim=5,  # Legacy kwarg
     )
     assert wrapper.backbone.output_dim == 5
 

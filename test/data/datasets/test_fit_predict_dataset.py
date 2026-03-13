@@ -3,6 +3,7 @@ Phase 1: FitPredictTaskDataset — shape, dtype, and pipeline consistency.
 
 Uses synthetic 3D arrays (n_tasks, n_samples, n_features) for real assertions.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -24,7 +25,10 @@ def fit_predict_data_dict(synthetic_fit_predict_3d):
 def test_fit_predict_init_and_length(fit_predict_data_dict, task_type):
     """Dataset initializes and __len__ equals n_tasks."""
     target_key = "target" if task_type == "forecasting" else task_type
-    data = {"features": fit_predict_data_dict["features"], target_key: fit_predict_data_dict[target_key]}
+    data = {
+        "features": fit_predict_data_dict["features"],
+        target_key: fit_predict_data_dict[target_key],
+    }
     ds = FitPredictTaskDataset(
         data_dict=data,
         task_type=task_type,
@@ -51,7 +55,11 @@ def test_fit_predict_getitem_shape_and_dtype(fit_predict_data_dict):
     n_samples = fit_predict_data_dict["features"].shape[1]
     n_features = fit_predict_data_dict["features"].shape[2]
     assert item["context"].shape == (1, n_samples, n_features)
-    assert item["target"].shape == (1, n_samples, fit_predict_data_dict["target"].shape[2])
+    assert item["target"].shape == (
+        1,
+        n_samples,
+        fit_predict_data_dict["target"].shape[2],
+    )
 
 
 def test_fit_predict_task_idx_and_desc(fit_predict_data_dict):
@@ -151,10 +159,19 @@ def test_fit_predict_classification_task_types():
     """All classification task types initialize and return correct keys."""
     X = np.random.randn(2, 20, 4).astype(np.float32)
     y_cls = np.random.randint(0, 3, size=(2, 20, 1)).astype(np.float32)
-    for task_type in ["classification", "health_states", "concepts", "fault_classification"]:
-        key = "fault_classification" if task_type == "fault_classification" else task_type
+    for task_type in [
+        "classification",
+        "health_states",
+        "concepts",
+        "fault_classification",
+    ]:
+        key = (
+            "fault_classification" if task_type == "fault_classification" else task_type
+        )
         data = {"features": X, key: y_cls}
-        ds = FitPredictTaskDataset(data_dict=data, task_type=task_type, meta_data_dict={})
+        ds = FitPredictTaskDataset(
+            data_dict=data, task_type=task_type, meta_data_dict={}
+        )
         assert len(ds) == 2
         item = ds[[0]]
         assert "context" in item and "target" in item

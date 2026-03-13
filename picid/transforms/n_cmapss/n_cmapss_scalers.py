@@ -1,8 +1,7 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import awkward as ak
 import numpy as np
-from numpy import ndarray
 
 
 from picid.data.data_objects.data import NamedTransformInput
@@ -10,23 +9,18 @@ from picid.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
-from picid.transforms.utils import _convert_from_numpy, _convert_to_numpy
 
 
 def ak_bc(arr):
     return ak.Array(arr[np.newaxis, np.newaxis, :])
 
 
-class N_CMAPSSDescriptorsScaler(
-    NoFitPerSegmentMixin, RaggedOrDenseTransform
-):
+class N_CMAPSSDescriptorsScaler(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     def __init__(self, scaling="standard"):
-
         super().__init__()
         self.scaling = scaling
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         descriptors = data.descriptors
 
         scaling = self.scaling
@@ -68,14 +62,11 @@ class N_CMAPSSDescriptorsScaler(
         return descriptors
 
 
-class N_CMAPSSFeaturesScaler(
-    NoFitPerSegmentMixin, RaggedOrDenseTransform
-):
+class N_CMAPSSFeaturesScaler(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     def __init__(self, scaling="standard"):
         self.scaling = scaling
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         features = data.features
 
         scaling = self.scaling

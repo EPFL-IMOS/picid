@@ -1,4 +1,4 @@
 _target_: test.data.datasources.synthetic_file_loader.SyntheticFromFileLoader
-data_path: ${paths.root_dir}/test/fixtures/snapshot/forecasting.npz
+data_path: ${paths.root_dir}/test/fixtures/snapshot/data/forecasting.npz
 task_mode: forecasting
 data_name: snapshot_forecasting

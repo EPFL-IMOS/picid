@@ -1,9 +1,9 @@
 """
 Tests for base datasource interfaces (AbstractDataSourceLoader contract).
 """
+
 from __future__ import annotations
 
-import pytest
 
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.data_objects.data import SplitDatasetContainer

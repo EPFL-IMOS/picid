@@ -98,7 +98,6 @@ class Cycles2Statistics(NoFitPerSegmentMixin, DenseTransform):
         data_segment: Any,
         metadata: Dict,
     ):
-
         pass
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:

@@ -9,8 +9,6 @@ import torch
 
 from tabpfn import TabPFNRegressor, TabPFNClassifier
 
-from tabpfn.model.loading import load_fitted_tabpfn_model, save_fitted_tabpfn_model
-import torch
 from .base import AbstractFitPredictWrapper
 from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
@@ -34,7 +32,6 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
         full_outputs_path: str = None,
         **kwargs,
     ):
-
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS

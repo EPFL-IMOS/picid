@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import numpy as np
 from picid.evaluator.default import DefaultEvaluator
 from picid.metrics.manager import MetricManager

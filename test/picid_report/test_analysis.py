@@ -65,7 +65,12 @@ class TestGetSearchGridDf:
         assert len(result) == 4
         assert list(result.columns) == ["task_definition.seq_len", "optimization.lr"]
         assert sorted(result["task_definition.seq_len"].tolist()) == [1, 1, 10, 10]
-        assert sorted(result["optimization.lr"].tolist()) == [0.0001, 0.0001, 0.001, 0.001]
+        assert sorted(result["optimization.lr"].tolist()) == [
+            0.0001,
+            0.0001,
+            0.001,
+            0.001,
+        ]
 
 
 # --- get_unique_values (analysis.get_unique_values) ---
@@ -281,9 +286,7 @@ class TestGetVaryingHyperparameters:
         Expected: lr not in result.
         """
         df = pd.DataFrame({"lr": [0.001, 0.001], "seq_len": [10, 20]})
-        result = analysis.get_varying_hyperparameters(
-            df, ["lr", "seq_len"], []
-        )
+        result = analysis.get_varying_hyperparameters(df, ["lr", "seq_len"], [])
         assert "lr" not in result
         assert "seq_len" in result
         assert sorted(result["seq_len"]) == [10, 20]
@@ -295,9 +298,7 @@ class TestGetVaryingHyperparameters:
         Expected: seed not in result.
         """
         df = pd.DataFrame({"seed": [1, 2], "lr": [0.01, 0.001]})
-        result = analysis.get_varying_hyperparameters(
-            df, ["seed", "lr"], ["seed"]
-        )
+        result = analysis.get_varying_hyperparameters(df, ["seed", "lr"], ["seed"])
         assert "seed" not in result
         assert "lr" in result
 
@@ -329,13 +330,15 @@ class TestGetVaryingHyperparameters:
 
     def test_aggregation_col_with_list_applies_tuple(self):
         """Branch: aggregation_col has list/ndarray -> apply tuple. (aggregate_and_find_best)"""
-        df = pd.DataFrame({
-            "Model": ["M", "M"],
-            "lr": [0.001, 0.001],
-            "tags": [[1, 2], [1, 2]],
-            "test/mse": [0.4, 0.5],
-            "run_name": ["r1", "r2"],
-        })
+        df = pd.DataFrame(
+            {
+                "Model": ["M", "M"],
+                "lr": [0.001, 0.001],
+                "tags": [[1, 2], [1, 2]],
+                "test/mse": [0.4, 0.5],
+                "run_name": ["r1", "r2"],
+            }
+        )
         sorted_df, _ = analysis.aggregate_and_find_best(
             df, ["Model", "lr", "tags"], ["test/mse"], "test/mse", "min"
         )
@@ -347,7 +350,9 @@ class TestGetVaryingHyperparameters:
         a, b = analysis.aggregate_and_find_best(df, ["Model", "lr"], [], "x", "min")
         assert a.empty and b.empty
 
-    def test_optimization_col_mean_missing_valid_means_empty_returns_agg_and_empty_best(self):
+    def test_optimization_col_mean_missing_valid_means_empty_returns_agg_and_empty_best(
+        self,
+    ):
         """Branch: valid_means empty -> return aggregated_df, empty DataFrame. (aggregate_and_find_best)"""
         # agg_dict has run_name only (no numeric perf col) if we pass perf col not in df
         df = pd.DataFrame({"Model": ["M"], "lr": [0.001], "run_name": ["r1"]})
@@ -374,7 +379,7 @@ class TestAggregateAndFindBest:
                 "Model": ["M", "M"],
                 "lr": [0.001, 0.001],
                 "test/mse": [0.4, 0.6],
- "run_name": ["r1", "r2"],
+                "run_name": ["r1", "r2"],
             }
         )
         agg_cols = ["Model", "lr"]
@@ -471,11 +476,14 @@ class TestAnalyzeResultsSchemaFirst:
         """
         # New structure: {dataset: {model: {hp: [values]}}}
         # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
-        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
-            "DS1": {
-                "baselines.tide_model.TiDE_Forecaster": expected_grid,
-            }
-        }):
+        with patch(
+            "picid_report.configs.search_space.EXPECTED_SEARCH_SPACE",
+            {
+                "DS1": {
+                    "baselines.tide_model.TiDE_Forecaster": expected_grid,
+                }
+            },
+        ):
             results = analysis.analyze_results(
                 mock_df_partial_sweep,
                 **default_analysis_kwargs,
@@ -508,11 +516,14 @@ class TestAnalyzeResultsSchemaFirst:
         }
         # New structure: {dataset: {model: {hp: [values]}}}
         # Patch search_space.EXPECTED_SEARCH_SPACE: get_search_space() reads that, not config.
-        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
-            "DS1": {
-                "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": grid,
-            }
-        }):
+        with patch(
+            "picid_report.configs.search_space.EXPECTED_SEARCH_SPACE",
+            {
+                "DS1": {
+                    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": grid,
+                }
+            },
+        ):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "DS1" in results
         model_key = "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)"
@@ -563,7 +574,9 @@ class TestAnalyzeResultsModelWrapperSplitting:
     Function: analyze_results (subsetting by dataset and model).
     """
 
-    def test_two_wrappers_separate_entries(self, mock_df_two_model_wrappers, default_analysis_kwargs):
+    def test_two_wrappers_separate_entries(
+        self, mock_df_two_model_wrappers, default_analysis_kwargs
+    ):
         """
         Model wrapper splitting: each model_target gets its own result entry.
         Methodology: DataFrame with (linear) and (exponential) wrapper runs.
@@ -614,7 +627,9 @@ class TestSeedsInfoStringIntegrity:
         model_seeds_str = seeds_info["model"]
         assert "np.int64" not in model_seeds_str
         assert "numpy" not in model_seeds_str
-        assert "1" in model_seeds_str and "2" in model_seeds_str and "3" in model_seeds_str
+        assert (
+            "1" in model_seeds_str and "2" in model_seeds_str and "3" in model_seeds_str
+        )
 
 
 # --- Edge: n=1 (std 0.0), zero metric match, MultiIndex flattening ---
@@ -669,7 +684,9 @@ class TestAnalyzeResultsEdgeCases:
         assert "baselines.lstm_model.LSTM_Forecaster" in results["DS1"]
         res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
         assert "sorted_aggregated_results" in res
-        assert not res["sorted_aggregated_results"].empty or True  # may be empty if no varying HPs
+        assert (
+            not res["sorted_aggregated_results"].empty or True
+        )  # may be empty if no varying HPs
 
     def test_multiindex_flattening_in_sorted_aggregated(
         self, mock_df_multi_seed_runs, default_analysis_kwargs
@@ -684,7 +701,9 @@ class TestAnalyzeResultsEdgeCases:
                 mock_df_multi_seed_runs,
                 **default_analysis_kwargs,
             )
-        tbl = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]["sorted_aggregated_results"]
+        tbl = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"][
+            "sorted_aggregated_results"
+        ]
         for c in tbl.columns:
             assert isinstance(c, str), f"Column should be string, got {type(c)}: {c}"
         assert "test/mse_mean" in tbl.columns
@@ -704,95 +723,125 @@ class TestAnalyzeResultsAdditionalBranches:
     def test_subset_empty_skips_model_dataset(self, default_analysis_kwargs):
         """Branch: subset.empty after filtering by dataset/model -> continue. (analyze_results line 256)"""
         # Two datasets D1, D2; two models M1, M2. Only (D1,M1) and (D2,M2) have rows; (D1,M2) and (D2,M1) empty
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M1", "M2"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D1", "D2"],
-            "seed": [1, 1],
-            "run_name": ["r1", "r2"],
-            "test/mse": [0.5, 0.6],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M1", "M2"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D1", "D2"],
+                "seed": [1, 1],
+                "run_name": ["r1", "r2"],
+                "test/mse": [0.5, 0.6],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "D1" in results and "D2" in results
         assert "M1" in results["D1"] and "M2" in results["D2"]
 
-    def test_get_optimized_metric_exception_fallback_to_test_mse(self, default_analysis_kwargs):
+    def test_get_optimized_metric_exception_fallback_to_test_mse(
+        self, default_analysis_kwargs
+    ):
         """Branch: get_optimized_metric raises -> except, cur_optimization_col = test/mse. (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/mse": [0.5],  # have so we can aggregate
-        })
-        with patch("picid_report.core.analysis.get_optimized_metric", side_effect=ValueError("no metric")):
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/mse": [0.5],  # have so we can aggregate
+            }
+        )
+        with patch(
+            "picid_report.core.analysis.get_optimized_metric",
+            side_effect=ValueError("no metric"),
+        ):
             with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
                 results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert "D" in results and "M" in results["D"]
-        assert results["D"]["M"]["best_performance"]["optimized_on"]["metric"] == "test/mse"
+        assert (
+            results["D"]["M"]["best_performance"]["optimized_on"]["metric"]
+            == "test/mse"
+        )
 
     def test_optimization_mode_from_target_metric_mode(self, default_analysis_kwargs):
         """Branch: cur_optimization_mode from target_metric_mode column. (analyze_results)"""
         tmm = config.COLUMN_CONFIG["target_metric_mode"]
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/mse": [0.5],
-            tmm: ["max"],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/mse": [0.5],
+                tmm: ["max"],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df, **{**default_analysis_kwargs, "optimization_mode": None}
             )
-        assert results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "max"
+        assert (
+            results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "max"
+        )
 
-    def test_optimization_mode_from_es_mode_when_target_mode_empty(self, default_analysis_kwargs):
+    def test_optimization_mode_from_es_mode_when_target_mode_empty(
+        self, default_analysis_kwargs
+    ):
         """Branch: cur_optimization_mode from optimization_mode column when target_metric_mode empty. (analyze_results)"""
         es_mode = config.COLUMN_CONFIG["optimization_mode"]
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/mse": [0.5],
-            es_mode: ["max"],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/mse": [0.5],
+                es_mode: ["max"],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df, **{**default_analysis_kwargs, "optimization_mode": None}
             )
-        assert results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "max"
+        assert (
+            results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "max"
+        )
 
     def test_optimization_mode_default_min(self, default_analysis_kwargs):
         """Branch: cur_optimization_mode None from both cols -> min. (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/mse": [0.5],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/mse": [0.5],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df, **{**default_analysis_kwargs, "optimization_mode": None}
             )
-        assert results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "min"
+        assert (
+            results["D"]["M"]["best_performance"]["optimized_on"]["strategy"] == "min"
+        )
 
-    def test_required_model_seeds_filters_subset_empty_continues(self, default_analysis_kwargs):
+    def test_required_model_seeds_filters_subset_empty_continues(
+        self, default_analysis_kwargs
+    ):
         """Branch: validate_seeds with allow_fallback=False removes all rows -> subset.empty -> continue. (analyze_results)"""
         # Use required_data_seeds (allow_fallback=False) so when filter removes all we don't fall back
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "task_definition.seq_len": [10],
-            "optimization.lr": [0.001],
-            "test/mse": [0.5],
-            config.DEFAULT_DATA_SEED_COL: [1],  # only data seed 1
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "task_definition.seq_len": [10],
+                "optimization.lr": [0.001],
+                "test/mse": [0.5],
+                config.DEFAULT_DATA_SEED_COL: [1],  # only data seed 1
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df,
@@ -801,32 +850,47 @@ class TestAnalyzeResultsAdditionalBranches:
         # Group has only data_seed 1; required {1,2} so filtered out (no fallback for data seeds)
         assert "M" not in results.get("D", {})
 
-    def test_model_not_in_expected_search_space_uses_data_first(self, mock_df_multi_seed_runs, default_analysis_kwargs):
+    def test_model_not_in_expected_search_space_uses_data_first(
+        self, mock_df_multi_seed_runs, default_analysis_kwargs
+    ):
         """Branch: EXPECTED_SEARCH_SPACE.get(model) None -> model_grid None, data-first sort. (analyze_results)
         Uses new dataset/model structure but model not found, so falls back to data-first."""
         # New structure: {dataset: {model: {hp: [values]}}}
         # Model "OtherModel" not in "DS1", so should fall back to data-first
-        with patch("picid_report.configs.search_space.EXPECTED_SEARCH_SPACE", {
-            "DS1": {"OtherModel": {"lr": [0.01]}}  # Different model, so current model uses data-first
-        }):
-            results = analysis.analyze_results(mock_df_multi_seed_runs, **default_analysis_kwargs)
+        with patch(
+            "picid_report.configs.search_space.EXPECTED_SEARCH_SPACE",
+            {
+                "DS1": {
+                    "OtherModel": {"lr": [0.01]}
+                }  # Different model, so current model uses data-first
+            },
+        ):
+            results = analysis.analyze_results(
+                mock_df_multi_seed_runs, **default_analysis_kwargs
+            )
         assert "DS1" in results
         assert "baselines.lstm_model.LSTM_Forecaster" in results["DS1"]
 
     def test_max_mode_scales_mean_std_100(self, default_analysis_kwargs):
         """Branch: col_full == cur_optimization_col and mode == max -> mean, std * 100. (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/f1": [0.5],
-            "test/mse": [0.1],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/f1": [0.5],
+                "test/mse": [0.1],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df,
-                **{**default_analysis_kwargs, "optimization_col": "test/f1", "optimization_mode": "max"},
+                **{
+                    **default_analysis_kwargs,
+                    "optimization_col": "test/f1",
+                    "optimization_mode": "max",
+                },
             )
         metrics = results["D"]["M"]["best_performance"]["metrics"]
         assert "f1" in metrics
@@ -836,13 +900,15 @@ class TestAnalyzeResultsAdditionalBranches:
 
     def test_seeds_info_question_when_col_missing(self, default_analysis_kwargs):
         """Branch: get_formatted_seeds returns "?" when column not in subset. (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "run_name": ["r1"],
-            "test/mse": [0.5],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "run_name": ["r1"],
+                "test/mse": [0.5],
+            }
+        )
         # data_seed_col is datasource.parameters.data_seed - not in df
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
@@ -850,27 +916,33 @@ class TestAnalyzeResultsAdditionalBranches:
 
     def test_seeds_info_question_on_value_error(self, default_analysis_kwargs):
         """Branch: get_formatted_seeds except (ValueError, TypeError) -> "?". (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": ["not_an_int"],
-            "run_name": ["r1"],
-            "test/mse": [0.5],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": ["not_an_int"],
+                "run_name": ["r1"],
+                "test/mse": [0.5],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
         assert results["D"]["M"]["seeds_info"]["model"] == "?"
 
-    def test_best_result_no_run_name_no_run_names_in_best_params(self, default_analysis_kwargs):
+    def test_best_result_no_run_name_no_run_names_in_best_params(
+        self, default_analysis_kwargs
+    ):
         """Branch: run_name not in best_result.columns -> best_params has no run_names. (analyze_results)"""
-        df = pd.DataFrame({
-            config.COLUMN_CONFIG["model_target"]: ["M"],
-            config.COLUMN_CONFIG["dataset_name"]: ["D"],
-            "seed": [1],
-            "task_definition.seq_len": [10],
-            "optimization.lr": [0.001],
-            "test/mse": [0.5],
-        })
+        df = pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: ["M"],
+                config.COLUMN_CONFIG["dataset_name"]: ["D"],
+                "seed": [1],
+                "task_definition.seq_len": [10],
+                "optimization.lr": [0.001],
+                "test/mse": [0.5],
+            }
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(df, **default_analysis_kwargs)
         bp = results["D"]["M"]["best_hyperparameters"]
@@ -1012,9 +1084,13 @@ class TestSchemaFirstConfigsFailedStats:
         """
         # Grid of 3 (single varying key so merge keys match aggregated results)
         grid_3 = {"task_definition.seq_len": [10, 20, 30]}
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
-            "baselines.lstm_model.LSTM_Forecaster": grid_3,
-        }):
+        with patch.object(
+            config,
+            "EXPECTED_SEARCH_SPACE",
+            {
+                "baselines.lstm_model.LSTM_Forecaster": grid_3,
+            },
+        ):
             results = analysis.analyze_results(
                 mock_df_partial_valid_metric,
                 **{
@@ -1058,7 +1134,10 @@ class TestSortMetricFallback:
         assert res.get("sort_metric_is_fallback") is True
         assert res.get("original_sort_metric") == "val/loss"
         assert res.get("sort_metric_used") == "val/mse"
-        assert "sorted_aggregated_results" in res and not res["sorted_aggregated_results"].empty
+        assert (
+            "sorted_aggregated_results" in res
+            and not res["sorted_aggregated_results"].empty
+        )
 
     def test_no_fallback_when_no_val_or_test_metric(self, base_config_columns):
         """
@@ -1066,19 +1145,21 @@ class TestSortMetricFallback:
         Expected: Fallback returns None; we do not set sort_metric_is_fallback.
         Pipeline completes without crash.
         """
-        df = pd.DataFrame([
-            {
-                config.COLUMN_CONFIG["model_target"]: "SomeModel",
-                config.COLUMN_CONFIG["dataset_name"]: "DS1",
-                config.DEFAULT_MODEL_SEED_COL: 1,
-                "run_name": "r1",
-                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
-                config.COLUMN_CONFIG["optimization_mode"]: "min",
-                "task_definition.seq_len": 10,
-                "optimization.lr": 0.001,
-                "custom/only": 1.0,
-            }
-        ])
+        df = pd.DataFrame(
+            [
+                {
+                    config.COLUMN_CONFIG["model_target"]: "SomeModel",
+                    config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                    config.DEFAULT_MODEL_SEED_COL: 1,
+                    "run_name": "r1",
+                    config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                    config.COLUMN_CONFIG["optimization_mode"]: "min",
+                    "task_definition.seq_len": 10,
+                    "optimization.lr": 0.001,
+                    "custom/only": 1.0,
+                }
+            ]
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df,
@@ -1098,30 +1179,32 @@ class TestSortMetricFallback:
         When fallback is needed, prefer a metric that varies across rows over one that is constant
         (e.g. test/mae_normalized over test/loss when test/loss is 1.0 for all rows).
         """
-        df = pd.DataFrame([
-            {
-                config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
-                config.COLUMN_CONFIG["dataset_name"]: "DS1",
-                config.DEFAULT_MODEL_SEED_COL: 1,
-                "run_name": "r1",
-                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
-                config.COLUMN_CONFIG["optimization_mode"]: "min",
-                "task_definition.seq_len": 10,
-                "test/loss": 1.0,
-                "test/mae_normalized": 0.25,
-            },
-            {
-                config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
-                config.COLUMN_CONFIG["dataset_name"]: "DS1",
-                config.DEFAULT_MODEL_SEED_COL: 2,
-                "run_name": "r2",
-                config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
-                config.COLUMN_CONFIG["optimization_mode"]: "min",
-                "task_definition.seq_len": 10,
-                "test/loss": 1.0,
-                "test/mae_normalized": 0.31,
-            },
-        ])
+        df = pd.DataFrame(
+            [
+                {
+                    config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
+                    config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                    config.DEFAULT_MODEL_SEED_COL: 1,
+                    "run_name": "r1",
+                    config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                    config.COLUMN_CONFIG["optimization_mode"]: "min",
+                    "task_definition.seq_len": 10,
+                    "test/loss": 1.0,
+                    "test/mae_normalized": 0.25,
+                },
+                {
+                    config.COLUMN_CONFIG["model_target"]: "FitPredictWrapper",
+                    config.COLUMN_CONFIG["dataset_name"]: "DS1",
+                    config.DEFAULT_MODEL_SEED_COL: 2,
+                    "run_name": "r2",
+                    config.COLUMN_CONFIG["optimization_metric"]: "test/mse",
+                    config.COLUMN_CONFIG["optimization_mode"]: "min",
+                    "task_definition.seq_len": 10,
+                    "test/loss": 1.0,
+                    "test/mae_normalized": 0.31,
+                },
+            ]
+        )
         with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
             results = analysis.analyze_results(
                 df,
@@ -1161,9 +1244,13 @@ class TestBackwardCompatibilityLegacySearchSpace:
         Expected: Grid lookup succeeds using legacy structure.
         """
         # Legacy structure: {model: {hp: [values]}}
-        with patch.object(config, "EXPECTED_SEARCH_SPACE", {
-            "baselines.tide_model.TiDE_Forecaster": expected_grid,
-        }):
+        with patch.object(
+            config,
+            "EXPECTED_SEARCH_SPACE",
+            {
+                "baselines.tide_model.TiDE_Forecaster": expected_grid,
+            },
+        ):
             results = analysis.analyze_results(
                 mock_df_partial_sweep,
                 **default_analysis_kwargs,
@@ -1173,7 +1260,9 @@ class TestBackwardCompatibilityLegacySearchSpace:
         res = results["DS1"]["baselines.tide_model.TiDE_Forecaster"]
         tbl = res["sorted_aggregated_results"]
         # Should still work with legacy structure
-        assert len(tbl) == 4 or len(tbl) >= 2  # May use grid or data-first depending on implementation
+        assert (
+            len(tbl) == 4 or len(tbl) >= 2
+        )  # May use grid or data-first depending on implementation
 
 
 # --- Sort Metric Resolution (analysis.analyze_results with sort_metric_resolver) ---
@@ -1182,129 +1271,148 @@ class TestBackwardCompatibilityLegacySearchSpace:
 class TestSortMetricResolution:
     """Validates sort metric resolution in analyze_results."""
 
-    def test_analyze_results_with_sort_metric_resolver_stores_metric(self, default_analysis_kwargs):
+    def test_analyze_results_with_sort_metric_resolver_stores_metric(
+        self, default_analysis_kwargs
+    ):
         """
         Branch: sort_metric_resolver provided, stores sort_metric_used in results.
         Methodology: Call analyze_results with resolver that returns "test/accuracy".
         Expected: sort_metric_used = "test/accuracy" in results.
         """
+
         def resolver(dataset, model, task_type=None, dataset_category=None):
             return "test/accuracy"
-        
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "test/accuracy": [0.8, 0.9],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
-        results = analysis.analyze_results(
-            df,
-            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "test/accuracy": [0.8, 0.9],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
         )
-        
+
+        results = analysis.analyze_results(
+            df, **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+
         res = results["DS1"]["M"]
         assert "sort_metric_used" in res
         assert res["sort_metric_used"] == "test/accuracy"
 
-    def test_analyze_results_without_resolver_no_sort_metric_used(self, default_analysis_kwargs):
+    def test_analyze_results_without_resolver_no_sort_metric_used(
+        self, default_analysis_kwargs
+    ):
         """
         Branch: sort_metric_resolver=None, sort_metric_used is None.
         Methodology: Call analyze_results without resolver.
         Expected: sort_metric_used = None (or not present).
         """
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
+        )
+
         results = analysis.analyze_results(df, **default_analysis_kwargs)
-        
+
         res = results["DS1"]["M"]
         assert res.get("sort_metric_used") is None
 
-    def test_sort_metric_resolver_returns_none_uses_optimization(self, default_analysis_kwargs):
+    def test_sort_metric_resolver_returns_none_uses_optimization(
+        self, default_analysis_kwargs
+    ):
         """
         Branch: Resolver returns None, sort_metric_used is None (use optimization metric).
         Methodology: Resolver returns None.
         Expected: sort_metric_used = None.
         """
+
         def resolver(dataset, model, task_type=None, dataset_category=None):
             return None
-        
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
-        results = analysis.analyze_results(
-            df,
-            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
         )
-        
+
+        results = analysis.analyze_results(
+            df, **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+
         res = results["DS1"]["M"]
         assert res["sort_metric_used"] is None
 
-    def test_sort_metric_resolver_receives_correct_parameters(self, default_analysis_kwargs):
+    def test_sort_metric_resolver_receives_correct_parameters(
+        self, default_analysis_kwargs
+    ):
         """
         Branch: Resolver called with dataset, model, task_type, dataset_category.
         Methodology: Mock resolver to capture arguments.
         Expected: Called with correct dataset and model.
         """
         captured_args = []
-        
+
         def resolver(dataset, model, task_type=None, dataset_category=None):
             captured_args.append((dataset, model, task_type, dataset_category))
             return "test/accuracy"
-        
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
-        analysis.analyze_results(
-            df,
-            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
         )
-        
+
+        analysis.analyze_results(
+            df, **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+
         assert len(captured_args) == 1
         dataset, model, task_type, dataset_category = captured_args[0]
         assert dataset == "DS1"
         assert model == "M"
 
-    def test_sort_metric_resolver_exception_handled_gracefully(self, default_analysis_kwargs):
+    def test_sort_metric_resolver_exception_handled_gracefully(
+        self, default_analysis_kwargs
+    ):
         """
         Branch: Resolver raises exception, handled gracefully, uses optimization metric.
         Methodology: Resolver raises ValueError.
         Expected: Warning logged, sort_metric_used = None.
         """
+
         def resolver(dataset, model, task_type=None, dataset_category=None):
             raise ValueError("Resolver error")
-        
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
-        results = analysis.analyze_results(
-            df,
-            **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
         )
-        
+
+        results = analysis.analyze_results(
+            df, **{**default_analysis_kwargs, "sort_metric_resolver": resolver}
+        )
+
         res = results["DS1"]["M"]
         # Should handle exception and set to None
         assert res["sort_metric_used"] is None
@@ -1316,10 +1424,10 @@ class TestSortMetricResolution:
         Expected: Resolver from config used.
         """
         from picid_report.config import PipelineConfig
-        
+
         def resolver(dataset, model, task_type=None, dataset_category=None):
             return "test/f1"
-        
+
         pipeline_config = PipelineConfig(
             column_config=config.COLUMN_CONFIG,
             expected_search_space={},
@@ -1329,19 +1437,20 @@ class TestSortMetricResolution:
             column_filters_to_drop=config.COLUMN_FILTERS_TO_DROP,
             sort_metric_resolver=resolver,
         )
-        
-        df = pd.DataFrame({
-            "model._target_": ["M", "M"],
-            "datasource.data_name": ["DS1", "DS1"],
-            "test/mse": [0.5, 0.6],
-            "task_definition.seq_len": [10, 20],
-            "seed": [1, 2],
-        })
-        
-        results = analysis.analyze_results(
-            df,
-            **{**default_analysis_kwargs, "pipeline_config": pipeline_config}
+
+        df = pd.DataFrame(
+            {
+                "model._target_": ["M", "M"],
+                "datasource.data_name": ["DS1", "DS1"],
+                "test/mse": [0.5, 0.6],
+                "task_definition.seq_len": [10, 20],
+                "seed": [1, 2],
+            }
         )
-        
+
+        results = analysis.analyze_results(
+            df, **{**default_analysis_kwargs, "pipeline_config": pipeline_config}
+        )
+
         res = results["DS1"]["M"]
         assert res["sort_metric_used"] == "test/f1"

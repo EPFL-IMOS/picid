@@ -62,7 +62,7 @@ my_transform_name:
     _target_: picid.transforms.path.to.YourClass
     arg1: value
     arg2: value
-  
+
   # The Control Block
   metadata:
     apply_to: input_feature_name
@@ -106,7 +106,7 @@ The `metadata` block is the control center. It dictates how data moves in and ou
     ```yaml
     metadata:
       apply_to: target
-      assign_to: 
+      assign_to:
         target: fault_classification  # Renames internal 'target' output to 'fault_classification'
     ```
 
@@ -238,7 +238,7 @@ concatenate_features:
     axis: 1
   metadata:
     # Concatenates spectral features with time features
-    apply_to: ["spectral_features", "time_domain_features"] 
+    apply_to: ["spectral_features", "time_domain_features"]
     assign_to: features
 ```
 
@@ -300,11 +300,11 @@ scaler_global:
   transform:
     # Python class inherits ConcatFitAndPerSegmentTransformMixin
     _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
-    
+
   metadata:
     apply_to: features
     fit_on: train
-    # The framework detects the Mixin and knows to stitch all train units 
+    # The framework detects the Mixin and knows to stitch all train units
     # together before calling fit().
 ```
 
@@ -319,11 +319,11 @@ merge_units:
     # Python class inherits NoFitConcatAlongAxisMixin
     _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
     axis: 0  # <--- REQUIRED: How to stitch them together?
-    
+
   metadata:
     apply_to: features
     assign_to: features
-    # Note: After this transform, your data is no longer a list of units, 
+    # Note: After this transform, your data is no longer a list of units,
     # but a single dataset.
 ```
 
@@ -335,7 +335,7 @@ log_transform:
   transform:
     # Python class inherits NoFitPerSegmentMixin
     _target_: picid.transforms.math.LogTransform
-    
+
   metadata:
     apply_to: features
     # fit_on is NOT needed (and will raise error/warning if provided)

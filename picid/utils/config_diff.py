@@ -1,4 +1,5 @@
 """Compare two resolved config YAMLs and report key-level differences."""
+
 from __future__ import annotations
 
 

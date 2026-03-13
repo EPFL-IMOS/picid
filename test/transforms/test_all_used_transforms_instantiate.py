@@ -1,4 +1,5 @@
 """Test that all transform configs used by experiments can instantiate."""
+
 from __future__ import annotations
 
 import tempfile
@@ -36,6 +37,7 @@ def hydra_initialized():
         version_base="1.3", config_path="../../configs", job_name="test_run"
     ):
         yield
+
 
 # Transform paths from override /transforms: in configs/experiment/ (unique set)
 USED_TRANSFORM_PATHS = [

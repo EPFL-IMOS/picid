@@ -3,7 +3,6 @@ from typing import Any, Dict, Tuple
 
 import torch
 import numpy as np
-import awkward as ak
 from tqdm import tqdm
 
 from picid.data.optimization.sequencer import RaggedArraySequencer

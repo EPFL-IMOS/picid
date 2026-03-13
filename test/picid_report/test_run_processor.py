@@ -4,12 +4,10 @@ Test suite for picid_report.core.run_processor.
 Covers _filter_columns, _normalize_column, and load_runs_df with mocks (no real wandb or disk).
 """
 
-import ast
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
 import pandas as pd
-import pytest
 
 from picid_report.core import run_processor
 
@@ -74,11 +72,13 @@ class TestLoadRunsDf:
             os.makedirs(cache_dir)
             csv_path = os.path.join(cache_dir, "proj.csv")
             # summary and config must be valid literal_eval strings (double quotes for JSON)
-            raw = pd.DataFrame({
-                "summary": ['{"test/mse": 0.5}'],
-                "config": ['{"model._target_": "M", "datasource.data_name": "D"}'],
-                "run_name": ["r1"],
-            })
+            raw = pd.DataFrame(
+                {
+                    "summary": ['{"test/mse": 0.5}'],
+                    "config": ['{"model._target_": "M", "datasource.data_name": "D"}'],
+                    "run_name": ["r1"],
+                }
+            )
             raw.to_csv(csv_path)
             df, config_cols, dropped = run_processor.load_runs_df(
                 "proj", "user", csv_cache_dir=cache_dir
@@ -99,7 +99,10 @@ class TestLoadRunsDf:
         with tempfile.TemporaryDirectory() as tmp:
             cache_dir = os.path.join(tmp, "csv_cache")
             os.makedirs(cache_dir)
-            with patch("picid_report.core.run_processor.pd.read_csv", side_effect=FileNotFoundError):
+            with patch(
+                "picid_report.core.run_processor.pd.read_csv",
+                side_effect=FileNotFoundError,
+            ):
                 with patch("picid_report.core.run_processor.wandb.Api") as MockApi:
                     mock_api = MockApi.return_value
                     mock_api.runs.return_value = [mock_run]
@@ -124,7 +127,10 @@ class TestLoadRunsDf:
         with tempfile.TemporaryDirectory() as tmp:
             cache_dir = os.path.join(tmp, "csv_cache")
             os.makedirs(cache_dir)
-            with patch("picid_report.core.run_processor.pd.read_csv", side_effect=FileNotFoundError):
+            with patch(
+                "picid_report.core.run_processor.pd.read_csv",
+                side_effect=FileNotFoundError,
+            ):
                 with patch("picid_report.core.run_processor.wandb.Api") as MockApi:
                     mock_api = MockApi.return_value
                     mock_api.runs.return_value = [mock_run_finished, mock_run_crashed]

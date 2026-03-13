@@ -22,7 +22,7 @@
 
 
 Configure Guild
- 
+
 ```
 wandb login <key>
 export GUILD_HOME=/workspace/experiments/...
@@ -37,13 +37,13 @@ guild run experiment_runner:train exp_name=etth1
 ```
 
 ```
-on server 
+on server
 guild run experiment_runner_server:train exp_name=etth1
 ```
 
 
 
-Use Queue 
+Use Queue
 
 ```
 guild run --background --yes queue gpus=0
@@ -55,15 +55,14 @@ guild run --force-flags --stage-trials experiment_runner:sweep exp_name=etth1
 
 
 
-## Usage 
+## Usage
 
 1. Install Pytorch and necessary dependencies.
 
 ```
 conda create -n cetst_env
 conda activate cetst_env
-conda install python=3.10 
+conda install python=3.10
 conda install pytorch==2.2.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 pip install -r requirements.txt
 ```
-

@@ -9,7 +9,6 @@ from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 import logging
-import itertools
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -74,9 +73,7 @@ class CustomEvaluatorInterface(ABC):
 
 
 class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
-
     def __init__(self, evaluators: dict[str, AbstractEvaluator]) -> None:
-
         super().__init__()
 
         self.evaluators = evaluators
@@ -475,9 +472,9 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         self.predict_after_training = predict_after_training
         self.debug = debug
         if self.debug:
-            logger.warning(f"---------------------------------------------------")
-            logger.warning(f"Debug mode is ON. Using only small subsets of data.")
-            logger.warning(f"---------------------------------------------------")
+            logger.warning("---------------------------------------------------")
+            logger.warning("Debug mode is ON. Using only small subsets of data.")
+            logger.warning("---------------------------------------------------")
 
         # This line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
@@ -488,7 +485,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return f"{self.__class__.__name__}(backbone={self.backbone})"
 
     def __batch_to_fit_predict(self, batch):
-
         X = batch["context"]
         y = batch["target"]
         assert (
@@ -678,7 +674,6 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
 
 
 class ConstantLossLightningModule(BackboneWrapperLightningModule):
-
     def __init__(
         self,
         backbone,
@@ -712,7 +707,6 @@ class ConstantLossLightningModule(BackboneWrapperLightningModule):
 
 
 class TrainingLightningModule(BackboneWrapperLightningModule):
-
     def __init__(
         self,
         backbone,

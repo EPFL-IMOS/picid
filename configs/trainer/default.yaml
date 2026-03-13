@@ -22,4 +22,3 @@ deterministic: False
 # inference mode: Whether to use :func:`torch.inference_mode` or :func:`torch.no_grad`
 # during evaluation (``validate``/``test``/``predict``).
 inference_mode: False
-

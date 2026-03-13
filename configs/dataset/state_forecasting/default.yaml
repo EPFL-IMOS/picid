@@ -3,10 +3,8 @@ _recursive_: False
 
 dataset_cfg:
   _target_:  picid.data.datasets.sliding_window_batch_dataset.SlidingWindowBatchDataset
-  seq_len: ${task_definition.seq_len} 
-  label_len: ${task_definition.label_len} 
-  pred_len: ${task_definition.pred_len} 
+  seq_len: ${task_definition.seq_len}
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
 
   stride: ${task_definition.stride}
-  
-  

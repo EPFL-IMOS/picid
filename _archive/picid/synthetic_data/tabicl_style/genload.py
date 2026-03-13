@@ -37,15 +37,22 @@ import numpy as np
 from torch.utils.data import IterableDataset
 
 from picid.synthetic_data.tabicl_style.dataset import PriorDataset
-from picid.synthetic_data.tabicl_style.prior_config import DEFAULT_FIXED_HP, DEFAULT_SAMPLED_HP
+from picid.synthetic_data.tabicl_style.prior_config import (
+    DEFAULT_FIXED_HP,
+    DEFAULT_SAMPLED_HP,
+)
 
 warnings.filterwarnings(
-    "ignore", message=".*The PyTorch API of nested tensors is in prototype stage.*", category=UserWarning
+    "ignore",
+    message=".*The PyTorch API of nested tensors is in prototype stage.*",
+    category=UserWarning,
 )
 
 
 def dense2sparse(
-    dense_tensor: torch.Tensor, row_lengths: torch.Tensor, dtype: torch.dtype = torch.float32
+    dense_tensor: torch.Tensor,
+    row_lengths: torch.Tensor,
+    dtype: torch.dtype = torch.float32,
 ) -> torch.Tensor:
     """Convert a dense tensor with trailing zeros into a compact 1D representation.
 
@@ -71,7 +78,9 @@ def dense2sparse(
     assert dense_tensor.dim() == 2, "dense_tensor must be 2D"
     num_rows, num_cols = dense_tensor.shape
     assert row_lengths.shape[0] == num_rows, "row_lengths must match number of rows"
-    assert (row_lengths <= num_cols).all(), "row_lengths cannot exceed number of columns"
+    assert (
+        row_lengths <= num_cols
+    ).all(), "row_lengths cannot exceed number of columns"
 
     indices = torch.arange(num_cols, device=dense_tensor.device)
     mask = indices.unsqueeze(0) < row_lengths.unsqueeze(1)
@@ -113,7 +122,9 @@ def sparse2dense(
     """
 
     assert sparse_tensor.dim() == 1, "data must be 1D"
-    assert row_lengths.sum() == len(sparse_tensor), "data length must match sum of row_lengths"
+    assert row_lengths.sum() == len(
+        sparse_tensor
+    ), "data length must match sum of row_lengths"
 
     num_rows = len(row_lengths)
     max_len = max_len or row_lengths.max().item()
@@ -151,7 +162,9 @@ class SliceNestedTensor:
             step = 1 if idx.step is None else idx.step
 
             indices = list(range(start, stop, step))
-            return SliceNestedTensor(torch.nested.nested_tensor([self.nested_tensor[i] for i in indices]))
+            return SliceNestedTensor(
+                torch.nested.nested_tensor([self.nested_tensor[i] for i in indices])
+            )
         elif isinstance(idx, int):
             return self.nested_tensor[idx]
         else:
@@ -187,7 +200,9 @@ def cat_slice_nested_tensors(tensors: List, dim=0) -> SliceNestedTensor:
         Concatenated tensor wrapped in SliceNestedTensor
     """
     # Extract the wrapped nested tensors
-    nested_tensors = [t.nested_tensor if isinstance(t, SliceNestedTensor) else t for t in tensors]
+    nested_tensors = [
+        t.nested_tensor if isinstance(t, SliceNestedTensor) else t for t in tensors
+    ]
     return SliceNestedTensor(torch.cat(nested_tensors, dim=dim))
 
 
@@ -300,7 +315,9 @@ class LoadPriorDataset(IterableDataset):
             y = SliceNestedTensor(y)
         else:
             # Convert sparse tensor to dense
-            X = sparse2dense(X, d.repeat_interleave(seq_lens[0]), dtype=torch.float32).view(batch_size, seq_lens[0], -1)
+            X = sparse2dense(
+                X, d.repeat_interleave(seq_lens[0]), dtype=torch.float32
+            ).view(batch_size, seq_lens[0], -1)
 
         # Delete file if requested
         if self.delete_after_load and batch_file.exists():
@@ -329,7 +346,11 @@ class LoadPriorDataset(IterableDataset):
             - train_sizes: Position at which to split training and evaluation data
         """
         # Check if we've reached the maximum number of batches and have no buffered data
-        if self.max_batches is not None and self.current_idx >= self.max_batches and (self.buffer_size == 0):
+        if (
+            self.max_batches is not None
+            and self.current_idx >= self.max_batches
+            and (self.buffer_size == 0)
+        ):
             raise StopIteration
 
         # Initialize or use existing buffer
@@ -352,7 +373,9 @@ class LoadPriorDataset(IterableDataset):
 
             try:
                 # Load another batch and append to buffer
-                X, y, d, seq_lens, train_sizes, file_batch_size = self._load_batch_file()
+                X, y, d, seq_lens, train_sizes, file_batch_size = (
+                    self._load_batch_file()
+                )
 
                 # Concatenate with existing buffer
                 if self.buffer_X is None:
@@ -366,15 +389,23 @@ class LoadPriorDataset(IterableDataset):
                 else:
                     # Otherwise concatenate, handling SliceNestedTensor if needed
                     if isinstance(X, SliceNestedTensor):
-                        self.buffer_X = cat_slice_nested_tensors([self.buffer_X, X], dim=0)
-                        self.buffer_y = cat_slice_nested_tensors([self.buffer_y, y], dim=0)
+                        self.buffer_X = cat_slice_nested_tensors(
+                            [self.buffer_X, X], dim=0
+                        )
+                        self.buffer_y = cat_slice_nested_tensors(
+                            [self.buffer_y, y], dim=0
+                        )
                     else:
                         self.buffer_X = torch.cat([self.buffer_X, X], dim=0)
                         self.buffer_y = torch.cat([self.buffer_y, y], dim=0)
 
                     self.buffer_d = torch.cat([self.buffer_d, d], dim=0)
-                    self.buffer_seq_lens = torch.cat([self.buffer_seq_lens, seq_lens], dim=0)
-                    self.buffer_train_sizes = torch.cat([self.buffer_train_sizes, train_sizes], dim=0)
+                    self.buffer_seq_lens = torch.cat(
+                        [self.buffer_seq_lens, seq_lens], dim=0
+                    )
+                    self.buffer_train_sizes = torch.cat(
+                        [self.buffer_train_sizes, train_sizes], dim=0
+                    )
                     self.buffer_size += file_batch_size
             except Exception as e:
                 # If we can't load more files, use what we have
@@ -440,14 +471,20 @@ class LoadPriorDataset(IterableDataset):
             repr_str += f"    prior_type: {self.metadata.get('prior_type', 'N/A')}\n"
             repr_str += f"    batch_size (generated): {self.metadata.get('batch_size', 'N/A')}\n"
             repr_str += f"    batch_size_per_gp: {self.metadata.get('batch_size_per_gp', 'N/A')}\n"
-            repr_str += f"    min features: {self.metadata.get('min_features', 'N/A')}\n"
-            repr_str += f"    max features: {self.metadata.get('max_features', 'N/A')}\n"
+            repr_str += (
+                f"    min features: {self.metadata.get('min_features', 'N/A')}\n"
+            )
+            repr_str += (
+                f"    max features: {self.metadata.get('max_features', 'N/A')}\n"
+            )
             repr_str += f"    max classes: {self.metadata.get('max_classes', 'N/A')}\n"
             repr_str += f"    seq_len: {self.metadata.get('min_seq_len', 'N/A') or 'None'} - {self.metadata.get('max_seq_len', 'N/A')}\n"
             repr_str += f"    log_seq_len: {self.metadata.get('log_seq_len', 'N/A')}\n"
             repr_str += f"    sequence length varies across groups: {self.metadata.get('seq_len_per_gp', 'N/A')}\n"
             repr_str += f"    train_size: {self.metadata.get('min_train_size', 'N/A')} - {self.metadata.get('max_train_size', 'N/A')}\n"
-            repr_str += f"    replay_small: {self.metadata.get('replay_small', 'N/A')}\n"
+            repr_str += (
+                f"    replay_small: {self.metadata.get('replay_small', 'N/A')}\n"
+            )
         repr_str += ")"
 
         return repr_str
@@ -554,7 +591,14 @@ class SavePriorDataset:
         batch_file = self.save_dir / f"batch_{batch_idx:06d}.pt"
         temp_file = self.save_dir / f"batch_{batch_idx:06d}.pt.tmp"
         torch.save(
-            {"X": X, "y": y, "d": d, "seq_lens": seq_lens, "train_sizes": train_sizes, "batch_size": B},
+            {
+                "X": X,
+                "y": y,
+                "d": d,
+                "seq_lens": seq_lens,
+                "train_sizes": train_sizes,
+                "batch_size": B,
+            },
             temp_file,
         )
         # Atomic rename to ensure file integrity
@@ -563,7 +607,9 @@ class SavePriorDataset:
     def run(self):
         """Generate and save batches of prior datasets."""
         print(f"Save directory: {self.save_dir}")
-        print(f"Generating {self.args.num_batches} batches starting from index {self.args.resume_from}")
+        print(
+            f"Generating {self.args.num_batches} batches starting from index {self.args.resume_from}"
+        )
 
         for batch_idx in tqdm(
             range(self.args.resume_from, self.args.resume_from + self.args.num_batches),
@@ -598,21 +644,47 @@ if __name__ == "__main__":
             )
 
     parser = argparse.ArgumentParser(description="Generate training prior datasets")
-    parser.add_argument("--save_dir", type=str, default="data", help="Directory to save the generated data")
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default="data",
+        help="Directory to save the generated data",
+    )
     parser.add_argument("--np_seed", type=int, default=42, help="Random seed for numpy")
-    parser.add_argument("--torch_seed", type=int, default=42, help="Random seed for torch")
+    parser.add_argument(
+        "--torch_seed", type=int, default=42, help="Random seed for torch"
+    )
     # parser.add_argument("--num_batches", type=int, default=10000, help="Number of batches to generate")
-    parser.add_argument("--num_batches", type=int, default=16, help="Number of batches to generate")
-    parser.add_argument("--resume_from", type=int, default=0, help="Resume generation from this batch index")
+    parser.add_argument(
+        "--num_batches", type=int, default=16, help="Number of batches to generate"
+    )
+    parser.add_argument(
+        "--resume_from",
+        type=int,
+        default=0,
+        help="Resume generation from this batch index",
+    )
     parser.add_argument("--batch_size", type=int, default=512, help="Total batch size")
     # parser.add_argument("--batch_size", type=int, default=16, help="Total batch size")
-    parser.add_argument("--batch_size_per_gp", type=int, default=4, help="Batch size per group")
-    parser.add_argument("--min_features", type=int, default=2, help="Minimum number of features")
+    parser.add_argument(
+        "--batch_size_per_gp", type=int, default=4, help="Batch size per group"
+    )
+    parser.add_argument(
+        "--min_features", type=int, default=2, help="Minimum number of features"
+    )
     # parser.add_argument("--max_features", type=int, default=100, help="Maximum number of features")
-    parser.add_argument("--max_features", type=int, default=10, help="Maximum number of features")
-    parser.add_argument("--max_classes", type=int, default=10, help="Maximum number of classes")
-    parser.add_argument("--min_seq_len", type=int, default=None, help="Minimum sequence length")
-    parser.add_argument("--max_seq_len", type=int, default=1024, help="Maximum sequence length")
+    parser.add_argument(
+        "--max_features", type=int, default=10, help="Maximum number of features"
+    )
+    parser.add_argument(
+        "--max_classes", type=int, default=10, help="Maximum number of classes"
+    )
+    parser.add_argument(
+        "--min_seq_len", type=int, default=None, help="Minimum sequence length"
+    )
+    parser.add_argument(
+        "--max_seq_len", type=int, default=1024, help="Maximum sequence length"
+    )
     # parser.add_argument("--max_seq_len", type=int, default=16, help="Maximum sequence length")
     parser.add_argument(
         "--log_seq_len",
@@ -627,10 +699,16 @@ if __name__ == "__main__":
         help="If True, sample sequence length independently for each group",
     )
     parser.add_argument(
-        "--min_train_size", type=train_size_type, default=0.1, help="Minimum training size position/ratio"
+        "--min_train_size",
+        type=train_size_type,
+        default=0.1,
+        help="Minimum training size position/ratio",
     )
     parser.add_argument(
-        "--max_train_size", type=train_size_type, default=0.9, help="Maximum training size position/ratio"
+        "--max_train_size",
+        type=train_size_type,
+        default=0.9,
+        help="Maximum training size position/ratio",
     )
     parser.add_argument(
         "--replay_small",
@@ -645,10 +723,18 @@ if __name__ == "__main__":
         choices=["mlp_scm", "tree_scm", "mix_scm"],
         help="Type of prior to use",
     )
-    parser.add_argument("--n_jobs", type=int, default=-1, help="Number of jobs for parallel processing")
-    parser.add_argument("--num_threads_per_generate", type=int, default=1, help="Threads per generation")
     parser.add_argument(
-        "--device", type=str, default="cpu", choices=["cpu", "cuda"], help="Device to use for generation"
+        "--n_jobs", type=int, default=-1, help="Number of jobs for parallel processing"
+    )
+    parser.add_argument(
+        "--num_threads_per_generate", type=int, default=1, help="Threads per generation"
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        choices=["cpu", "cuda"],
+        help="Device to use for generation",
     )
 
     args = parser.parse_args()

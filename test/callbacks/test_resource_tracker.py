@@ -5,8 +5,6 @@ Validates FLOPs/throughput/GPU/timing hooks and helpers. Aligns with PHM
 pipeline efficiency logging (docs: runai.md, pipeline training).
 """
 
-import pytest
-import numpy as np
 import torch
 from unittest.mock import MagicMock, patch
 
@@ -95,14 +93,18 @@ class TestResourceTrackerHelpers:
 class TestResourceTrackerFlops:
     """Validates _calculate_flops early return and get_flops path."""
 
-    def test_calculate_flops_skips_after_first_call(self, mock_pl_module, phm_batch_features):
+    def test_calculate_flops_skips_after_first_call(
+        self, mock_pl_module, phm_batch_features
+    ):
         """Doc: resource_tracker.py - if flops_calculated, return immediately."""
         cb = ResourceTracker()
         cb.flops_calculated = True
         cb._calculate_flops(mock_pl_module, phm_batch_features)
         mock_pl_module.log.assert_not_called()
 
-    def test_calculate_flops_uses_get_flops_when_present(self, mock_pl_module, phm_batch_features):
+    def test_calculate_flops_uses_get_flops_when_present(
+        self, mock_pl_module, phm_batch_features
+    ):
         """Doc: resource_tracker.py - if pl_module has get_flops, use it."""
         mock_pl_module.get_flops = MagicMock(return_value=1e9)
         cb = ResourceTracker()
@@ -119,7 +121,9 @@ class TestResourceTrackerFlops:
         cb._calculate_flops(mock_pl_module, batch)
         assert cb.flops_calculated is True
 
-    def test_calculate_flops_uses_flop_count_analysis_when_no_get_flops(self, phm_batch_features):
+    def test_calculate_flops_uses_flop_count_analysis_when_no_get_flops(
+        self, phm_batch_features
+    ):
         """Doc: resource_tracker.py - else use FlopCountAnalysis(pl_module, x)."""
         pl_module = torch.nn.Linear(5, 1)  # real module without get_flops
         pl_module.log = MagicMock()
@@ -140,7 +144,9 @@ class TestResourceTrackerFlops:
 class TestResourceTrackerHooks:
     """Validates epoch/batch hooks update timers and stats."""
 
-    def test_on_train_epoch_start_resets_gpu_loads(self, mock_trainer_global_zero, mock_pl_module):
+    def test_on_train_epoch_start_resets_gpu_loads(
+        self, mock_trainer_global_zero, mock_pl_module
+    ):
         """Doc: resource_tracker.py - on_train_epoch_start resets gpu_loads."""
         cb = ResourceTracker()
         cb.stats["gpu_loads"] = [1, 2, 3]
@@ -148,16 +154,26 @@ class TestResourceTrackerHooks:
         assert cb.stats["gpu_loads"] == []
         assert "train_epoch" in cb.timers
 
-    def test_on_train_batch_end_skips_first_n(self, mock_trainer_global_zero, mock_pl_module, phm_batch_features):
+    def test_on_train_batch_end_skips_first_n(
+        self, mock_trainer_global_zero, mock_pl_module, phm_batch_features
+    ):
         """Doc: resource_tracker.py - batch times appended only when batch_idx > skip_first_n."""
         cb = ResourceTracker(skip_first_n=2)
-        cb.on_train_batch_start(mock_trainer_global_zero, mock_pl_module, phm_batch_features, 0)
-        cb.on_train_batch_end(mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 0)
+        cb.on_train_batch_start(
+            mock_trainer_global_zero, mock_pl_module, phm_batch_features, 0
+        )
+        cb.on_train_batch_end(
+            mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 0
+        )
         assert len(cb.stats["train_batch_times"]) == 0
-        cb.on_train_batch_end(mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 5)
+        cb.on_train_batch_end(
+            mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 5
+        )
         assert len(cb.stats["train_batch_times"]) == 1
 
-    def test_on_validation_epoch_end_logs_duration(self, mock_trainer_global_zero, mock_pl_module):
+    def test_on_validation_epoch_end_logs_duration(
+        self, mock_trainer_global_zero, mock_pl_module
+    ):
         """Doc: resource_tracker.py - on_validation_epoch_end logs val_epoch_duration."""
         cb = ResourceTracker()
         cb.on_validation_epoch_start(mock_trainer_global_zero, mock_pl_module)
@@ -167,11 +183,17 @@ class TestResourceTrackerHooks:
         calls = [str(c) for c in mock_pl_module.log.call_args_list]
         assert any("val_epoch_duration" in c for c in calls)
 
-    def test_on_test_batch_start_end_appends_inference_latency(self, mock_trainer_global_zero, mock_pl_module, phm_batch_features):
+    def test_on_test_batch_start_end_appends_inference_latency(
+        self, mock_trainer_global_zero, mock_pl_module, phm_batch_features
+    ):
         """Doc: resource_tracker.py - test batch hooks append to inference_latencies."""
         cb = ResourceTracker()
-        cb.on_test_batch_start(mock_trainer_global_zero, mock_pl_module, phm_batch_features, 0)
-        cb.on_test_batch_end(mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 0)
+        cb.on_test_batch_start(
+            mock_trainer_global_zero, mock_pl_module, phm_batch_features, 0
+        )
+        cb.on_test_batch_end(
+            mock_trainer_global_zero, mock_pl_module, None, phm_batch_features, 0
+        )
         assert len(cb.stats["inference_latencies"]) == 1
 
     def test_on_fit_end_logs_summary(self, mock_trainer_global_zero, mock_pl_module):
@@ -183,16 +205,24 @@ class TestResourceTrackerHooks:
         cb.on_fit_end(mock_trainer_global_zero, mock_pl_module)
         mock_trainer_global_zero.logger.log_metrics.assert_called_once()
         kwargs = mock_trainer_global_zero.logger.log_metrics.call_args[0][0]
-        assert "AvgTime/train_batch_mean_ms" in kwargs or "AvgTime/train_epoch_mean_sec" in kwargs or "Efficiency/gpu_load_avg" in kwargs
+        assert (
+            "AvgTime/train_batch_mean_ms" in kwargs
+            or "AvgTime/train_epoch_mean_sec" in kwargs
+            or "Efficiency/gpu_load_avg" in kwargs
+        )
 
-    def test_on_test_end_logs_inference_summary(self, mock_trainer_global_zero, mock_pl_module):
+    def test_on_test_end_logs_inference_summary(
+        self, mock_trainer_global_zero, mock_pl_module
+    ):
         """Doc: resource_tracker.py - on_test_end logs inference latency mean/std."""
         cb = ResourceTracker()
         cb.stats["inference_latencies"] = [0.01, 0.02]
         cb.on_test_end(mock_trainer_global_zero, mock_pl_module)
         mock_trainer_global_zero.logger.log_metrics.assert_called_once()
 
-    def test_on_predict_end_logs_inference_summary(self, mock_trainer_global_zero, mock_pl_module):
+    def test_on_predict_end_logs_inference_summary(
+        self, mock_trainer_global_zero, mock_pl_module
+    ):
         """Doc: resource_tracker.py - on_predict_end same as on_test_end."""
         cb = ResourceTracker()
         cb.stats["inference_latencies"] = [0.01]

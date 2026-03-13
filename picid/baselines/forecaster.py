@@ -7,7 +7,6 @@ from picid.baselines.definitions import (
     ALL_TASKS,
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
-    FORECASTING_TASKS,
 )
 from picid.baselines.linear_model.linear_ar import LinearModel
 from picid.evaluator.base import AbstractEvaluator
@@ -247,7 +246,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         y_t: torch.Tensor,
         **forward_kwargs,
     ) -> Tuple[torch.Tensor]:
-
         if y_t is not None:
             (y_t,) = self.nan_to_num(y_t)
 
@@ -339,7 +337,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         elif self.task_type in REGRESSION_TASKS or (
             self.task_type in CLASSIFICATION_TASKS
         ):
-
             f = batch["features"]
             assert f.dim() == 3, "features must be 3D (B, T, D)"
             t = batch[self.task_type]
@@ -379,7 +376,6 @@ class Forecaster(CustomEvaluatorLightningModule):
         return self(*batch, **self.eval_step_forward_kwargs)
 
     def configure_optimizers(self):
-
         optimizer = self.optimizer_factory(params=self.parameters())
 
         if self.scheduler_factory is not None:

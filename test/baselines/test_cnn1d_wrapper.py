@@ -1,4 +1,5 @@
 """Tests for CNN1D_Wrapper (explicit signature, regression/classification, forward)."""
+
 import pytest
 import torch
 

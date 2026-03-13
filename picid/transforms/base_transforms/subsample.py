@@ -5,7 +5,7 @@ import numpy as np
 
 # Assuming this import path is correct for your project
 from picid.data.data_objects.data import NamedTransformInput
-from picid.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.utils.decorators import check_transform_output_consistency
 
@@ -14,18 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class SubsampleTransform(NoFitPerSegmentMixin, DenseTransform):
-
     def __init__(
         self,
         step: int,
         **kwargs,
     ):
-
         super().__init__()
         self.step = step
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         lengths = [len(segment) for segment in data.values()]
         for key, value in data.items():
             data[key] = value[:: self.step]
@@ -90,11 +87,9 @@ class WindowedAggregationTransform(NoFitPerSegmentMixin, DenseTransform):
 
     @check_transform_output_consistency
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         lengths = [len(segment) for segment in data.values()]
 
         for key, value in data.items():
-
             if self.window_size == "full":
                 window_size = value.shape[self.dim]
             else:

@@ -60,7 +60,7 @@ imputation:
 #     corrupted_key: features_corrupted
 #     original_key: features
 #     n_channels_to_plot: 5
-  
+
 #   metadata:
 #     apply_to: ["features_imputed", "features_corrupted", "features"]
 

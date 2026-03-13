@@ -11,7 +11,7 @@ Steps:
 
 
 
-> **Warning**  
+> **Warning**
 > We assume that you have access to persistent storage mounted to the docker container. An example:
 > ```bash
 > -v ~/datasets:/mnt/imos-students/${LDAP_USERNAME}/datasets \

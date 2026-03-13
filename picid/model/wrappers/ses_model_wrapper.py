@@ -3,7 +3,7 @@
 from .base import AbstractFeedForwardWrapper
 
 from picid.model.methods.ses_model import SESModelBaseline
-from ...baselines.definitions import REGRESSION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class SESModelWrapper(AbstractFeedForwardWrapper):
@@ -13,7 +13,6 @@ class SESModelWrapper(AbstractFeedForwardWrapper):
     """
 
     def __init__(self, task_type: str, **kwargs):
-
         # Define supported tasks based on your new categories
         self.regression_tasks = FORECASTING_TASKS
         self.classification_tasks = None

@@ -1,7 +1,4 @@
 """Tests for picid.utils.config_diff."""
-from pathlib import Path
-
-import pytest
 
 from picid.utils.config_diff import diff_configs
 
@@ -21,7 +18,10 @@ def test_diff_configs_reports_different_values(tmp_path):
     a.write_text("trainer:\n  max_epochs: 5\nseed: 42\n")
     b.write_text("trainer:\n  max_epochs: 3\nseed: 42\n")
     result = diff_configs(str(a), str(b))
-    assert any(k == "trainer.max_epochs" and v1 == 5 and v2 == 3 for k, v1, v2 in result["different_values"])
+    assert any(
+        k == "trainer.max_epochs" and v1 == 5 and v2 == 3
+        for k, v1, v2 in result["different_values"]
+    )
 
 
 def test_diff_configs_reports_only_in_first(tmp_path):

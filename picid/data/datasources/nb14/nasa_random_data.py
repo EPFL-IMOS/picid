@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import logging
-import plotly.graph_objects as go
 import scipy.io
 from pathlib import Path
 from phmd.download import download
@@ -57,8 +56,8 @@ class NasaRandomizedData:
             ) = self._get_data(validation_names)
 
         logger.info(
-            """Train x: %s, train y soh: %s | Test x: %s, test y soh: %s | 
-                            battery n cycle train: %s, battery n cycle test: %s, 
+            """Train x: %s, train y soh: %s | Test x: %s, test y soh: %s |
+                            battery n cycle train: %s, battery n cycle test: %s,
                             time train: %s, time test: %s |
                             raw current train: %s, raw current test: %s |
                             """
@@ -77,8 +76,8 @@ class NasaRandomizedData:
         )
         if validation_names is not None:
             logger.info(
-                """Validation x: %s, validation y soh: %s | 
-                                battery n cycle validation: %s, 
+                """Validation x: %s, validation y soh: %s |
+                                battery n cycle validation: %s,
                                 time validation: %s ,
                                 raw current validation: %s |
                                 """
@@ -170,7 +169,6 @@ class NasaRandomizedData:
 
             # --- 2. Process each identified cycle ---
             for x in set(cycle["cycle"]):
-
                 # =============================================================
                 # === THIS IS THE KEY DIFFERENCE FROM UNIBO ===
                 # We are ONLY interested in DISCHARGE ("D") cycles.
@@ -286,7 +284,7 @@ class NasaRandomizedData:
         # - time is the array of DISCHARGE times
         return cycle_x, cycle_y, battery_n_cycle, time, current, initial_cycle_lenghts
 
-    def _to_padded_numpy(self, l, shape):
+    def _to_padded_numpy(self, l, shape):  # noqa: E741
         """Helper function to pad a list of arrays to a fixed shape."""
         padded_array = np.zeros(shape)
         initia_lenghts = []

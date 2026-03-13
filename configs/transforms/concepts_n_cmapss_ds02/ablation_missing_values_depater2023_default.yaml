@@ -38,7 +38,7 @@ imputation:
   transform:
     _target_: picid.transforms.base_transforms.imputation_methods.ImputationTransform
     strategy: "copy_past"
-    
+
   metadata:
     fit_on: train
     apply_to: features
@@ -54,7 +54,7 @@ imputation:
 #     original_key: features
 #     dataset_name: Concepts N-CMAPSS (DS02)
 #     n_channels_to_plot: 14
-  
+
 #   metadata:
 #     apply_to: ["features_imputed", "features_corrupted", "features"]
 

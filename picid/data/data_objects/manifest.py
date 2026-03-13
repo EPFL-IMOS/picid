@@ -4,9 +4,10 @@ Metadata manifest — versioned, queryable metadata attached to the container.
 Schema: each entry has schema_version, producer_version, category (datasource | transform),
 optional scope (step_id, key, split), and a payload dict. Queryable by step_id, key, split.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 MANIFEST_SCHEMA_VERSION = "1.0"

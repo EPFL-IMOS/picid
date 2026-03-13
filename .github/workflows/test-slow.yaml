@@ -1,17 +1,40 @@
-name: Slow Tests (Nightly)
+name: Slow & Snapshot Tests
 
 on:
-  schedule:
-    - cron: "0 2 * * *"  # 2 AM UTC daily
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  slow-tests:
+  slow-and-snapshots:
     runs-on: ubuntu-latest
     steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh -T git@github.com || true
+
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          persist-credentials: false
+          submodules: false
+
+      - name: Update Submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+        env:
+          GIT_SSH_COMMAND: "ssh -v"
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -25,5 +48,9 @@ jobs:
           uv sync
           uv pip install -e ".[dev]"
 
-      - name: Run slow tests
-        run: uv run pytest test/ -m slow -v
+      - name: Download PHME20 (for requires_snapshots tests)
+        run: |
+          uv run python -c "from phmd.download import download; download('PHME20', cache_dir='datasets/phmd_cache', unzip=True)"
+
+      - name: Run slow and requires_snapshots tests
+        run: uv run pytest test/ -m "slow or requires_snapshots" -v

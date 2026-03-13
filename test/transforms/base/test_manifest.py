@@ -1,4 +1,5 @@
 """Tests for Phase 4.1: metadata manifest (ManifestEntry, MetadataManifest, pipeline recording)."""
+
 import pytest
 
 from picid.data.data_objects.manifest import (
@@ -6,7 +7,6 @@ from picid.data.data_objects.manifest import (
     ManifestEntry,
     MetadataManifest,
 )
-from picid.data.data_objects.data import SplitDatasetContainer
 from picid.transforms.base.pipeline import RecordManifestStep, TransformContext
 
 from test.transforms.base.conftest import (
@@ -152,7 +152,9 @@ class TestContainerManifest:
 class TestRecordManifestStep:
     def test_no_manifest_no_op(self):
         container = create_dummy_single_unit_container()
-        container.manifest = None  # explicit no-manifest: RecordManifestStep should no-op
+        container.manifest = (
+            None  # explicit no-manifest: RecordManifestStep should no-op
+        )
         assert getattr(container, "manifest", None) is None
         ctx = TransformContext(
             data=container,

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import numpy as np
 import awkward as ak
@@ -8,10 +8,8 @@ from picid.data.data_objects.data import NamedTransformInput
 from picid.transforms.base.base_transform import (
     DenseTransform,
     RaggedTransform,
-    RaggedOrDenseTransform,
 )
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
-from picid.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +39,7 @@ class RegularizeRaggedDataTransform(NoFitPerSegmentMixin, RaggedTransform):
         return ak.to_regular(data[keys[0]])
 
 
-class ExpandScalarToReferenceFeatureSize(
-    NoFitPerSegmentMixin, DenseTransform
-):
+class ExpandScalarToReferenceFeatureSize(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, scalar_key: str, **kwargs):
         """
         Initialize the transform.

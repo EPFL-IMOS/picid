@@ -98,7 +98,6 @@ class SlidingWindowBatchDataset(BaseDataset):
         subset_blocks: Optional[int] = None,
         **kwargs,
     ):
-
         self.sequencers: Dict[str, BaseSequencer] = {}
         self._length: Optional[int] = None
         self._seq_idx = None
@@ -232,7 +231,6 @@ class SlidingWindowBatchDataset(BaseDataset):
 
         out = {}
         for k, drv in self.sequencers.items():
-
             sequencer_output = drv.sequences_batch(idx)
             x, y = sequencer_output
 

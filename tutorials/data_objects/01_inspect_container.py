@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Tutorial: Build and inspect SplitDatasetContainer."""
+
 import numpy as np
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from picid.data.data_objects.data import SplitDatasetContainer
+
 
 def main():
     arr1 = np.random.randn(100, 3).astype(np.float32)
@@ -22,6 +25,7 @@ def main():
     g = container.group_by_split()
     assert len(g["train"]) == 2
     print("OK")
+
 
 if __name__ == "__main__":
     main()

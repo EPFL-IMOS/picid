@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override, Union
+from typing import Dict, List, Optional, Tuple, override, Union
 import numpy as np
 
 from picid.transforms.base.base_transform import DenseTransform
@@ -81,9 +81,7 @@ def diff_at_step_n(vector, n):
     return v_i_plus_n - v_i
 
 
-class HealthIndexTransform(
-    NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
-):
+class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     """
     Calculates a Health Index (HI) based on a runtime channel and a
     predefined total life for a *specific unit* in a dataset.

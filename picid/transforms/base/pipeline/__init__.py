@@ -7,6 +7,7 @@ implementations (steps.py), default before/after checks (checks.py), and the
 hook registry / _emit (hooks_registry.py). Import pipeline types and steps
 from here or from picid.transforms.base.pipeline.
 """
+
 from picid.transforms.base.pipeline.checks import (
     build_default_after_checks,
     build_default_before_checks,

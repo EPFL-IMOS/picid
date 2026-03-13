@@ -1,0 +1,112 @@
+{
+  "prognostics/linear_regression": {
+    "test/loss": 38.2342,
+    "test/mae_normalized": 5.9802,
+    "test/mse_normalized": 38.2342,
+    "test/rmse_normalized": 6.1834,
+    "test/nasa_score_normalized": 0.8414
+  },
+  "prognostics/exponential_regression": {
+    "test/loss": 4.8991,
+    "test/mae_normalized": 2.1696,
+    "test/mse_normalized": 4.8991,
+    "test/rmse_normalized": 2.2134,
+    "test/nasa_score_normalized": 0.2435
+  },
+  "prognostics/lstm": {
+    "test/loss": 0.8242,
+    "test/mae_normalized": 0.8908,
+    "test/mse_normalized": 0.8242,
+    "test/rmse_normalized": 0.9079,
+    "test/nasa_score_normalized": 0.0933
+  },
+  "prognostics/patchtst": {
+    "test/loss": 0.3139,
+    "test/mae_normalized": 0.4382,
+    "test/mse_normalized": 0.3139,
+    "test/rmse_normalized": 0.5603,
+    "test/nasa_score_normalized": 0.0451
+  },
+  "prognostics/crossformer": {
+    "test/loss": 0.5886,
+    "test/mae_normalized": 0.7436,
+    "test/mse_normalized": 0.5886,
+    "test/rmse_normalized": 0.7672,
+    "test/nasa_score_normalized": 0.0774
+  },
+  "diagnostics/linear_classifier": {
+    "test/loss": 1.4903,
+    "test/f1": 0.212,
+    "test/accuracy": 0.2833,
+    "test/precision": 0.2223,
+    "test/recall": 0.2502,
+    "test/auroc": 0.5541
+  },
+  "diagnostics/mlp": {
+    "test/loss": 1.9134,
+    "test/f1": 0.3211,
+    "test/accuracy": 0.3333,
+    "test/precision": 0.3222,
+    "test/recall": 0.3538,
+    "test/auroc": 0.5529
+  },
+  "diagnostics/lstm": {
+    "test/loss": 1.4376,
+    "test/f1": 0.1262,
+    "test/accuracy": 0.2333,
+    "test/precision": 0.1205,
+    "test/recall": 0.2549,
+    "test/auroc": 0.4684
+  },
+  "diagnostics/patchtst": {
+    "test/loss": 16.0328,
+    "test/f1": 0.2106,
+    "test/accuracy": 0.25,
+    "test/precision": 0.1988,
+    "test/recall": 0.2242,
+    "test/auroc": 0.5016
+  },
+  "prognostics_ragged/linear_regression": {
+    "test/loss": 2.6425,
+    "test/mae_normalized": 1.2937,
+    "test/mse_normalized": 2.6425,
+    "test/rmse_normalized": 1.6256,
+    "test/nasa_score_normalized": 0.1344
+  },
+  "prognostics_ragged/exponential_regression": {
+    "test/loss": 0.4631,
+    "test/mae_normalized": 0.5433,
+    "test/mse_normalized": 0.4631,
+    "test/rmse_normalized": 0.6805,
+    "test/nasa_score_normalized": 0.0564
+  },
+  "prognostics_ragged/lstm": {
+    "test/loss": 0.0914,
+    "test/mae_normalized": 0.2581,
+    "test/mse_normalized": 0.0914,
+    "test/rmse_normalized": 0.3023,
+    "test/nasa_score_normalized": 0.0227
+  },
+  "prognostics_ragged/patchtst": {
+    "test/loss": 0.461,
+    "test/mae_normalized": 0.5487,
+    "test/mse_normalized": 0.461,
+    "test/rmse_normalized": 0.679,
+    "test/nasa_score_normalized": 0.0513
+  },
+  "prognostics_ragged/crossformer": {
+    "test/loss": 0.0876,
+    "test/mae_normalized": 0.2555,
+    "test/mse_normalized": 0.0876,
+    "test/rmse_normalized": 0.2959,
+    "test/nasa_score_normalized": 0.0235
+  },
+  "anomaly_detection/isolation_forest": {
+    "test/loss": 1.0,
+    "test/f1": 0.4,
+    "test/accuracy": 0.4,
+    "test/precision": 0.4167,
+    "test/recall": 0.4167,
+    "test/auroc": 0.5
+  }
+}

@@ -1,12 +1,11 @@
 """
 Tests for agtf30k: module-level functions and AGTF30KDataSource (mocked I/O).
 """
+
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
-from unittest.mock import patch, MagicMock
 
 from picid.data.datasources.agtf30k import (
     subsampling,
@@ -52,8 +51,6 @@ def test_agtf30k_data_source_init():
     assert ds.task_mode == "regression"
 
 
-
-
 def test_agtf30k_load_data_calls_load_data(mocker):
     """load_data calls _load_data and sets data_dict (mocked _load_data)."""
     mocker.patch.object(
@@ -81,14 +78,24 @@ def test_agtf30k_load_data_calls_load_data(mocker):
 def test_agtf30k_load_data_full_path_mocked_io(mocker):
     """_load_data path with mocked os.path.exists and pd.read_csv (no real files)."""
     required_cols = [
-        "signaldate", "alt", "MN", "PLA",
-        "Wf", "Pa", "S2_Pt", "S25_Pt", "S36_Pt", "S45_Tt", "S5_Pt",
-        "VAFN", "N_LPC", "N_HPC", "V",
+        "signaldate",
+        "alt",
+        "MN",
+        "PLA",
+        "Wf",
+        "Pa",
+        "S2_Pt",
+        "S25_Pt",
+        "S36_Pt",
+        "S45_Tt",
+        "S5_Pt",
+        "VAFN",
+        "N_LPC",
+        "N_HPC",
+        "V",
     ]
     n = 6
-    fake_df = pd.DataFrame(
-        {c: np.arange(n, dtype=float) for c in required_cols}
-    )
+    fake_df = pd.DataFrame({c: np.arange(n, dtype=float) for c in required_cols})
     mocker.patch("picid.data.datasources.agtf30k.os.path.exists", return_value=True)
     mocker.patch("picid.data.datasources.agtf30k.pd.read_csv", return_value=fake_df)
     ds = AGTF30KDataSource(

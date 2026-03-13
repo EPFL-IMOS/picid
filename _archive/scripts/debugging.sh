@@ -24,7 +24,7 @@ for i in {1..5}; do
 
     if [[ "$job_counter" -ge "$MAX_PARALLEL" ]]; then
         # Wait until any one finishes
-        wait -n 
+        wait -n
         ((job_counter--))
     fi
 done

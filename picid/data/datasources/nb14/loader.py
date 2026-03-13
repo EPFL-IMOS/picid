@@ -1,4 +1,3 @@
-import copy
 import logging
 import warnings
 from collections import defaultdict
@@ -10,7 +9,7 @@ from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.nb14.nasa_random_data import NasaRandomizedData
 from picid.data.datasources.nb14.prepare_rul_data import RulHandler
-from picid.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
+from picid.data.datasources.nb14.utils import table_to_ak_array
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
@@ -115,7 +114,7 @@ class NB14Loader(AbstractDataSourceLoader):
 
         # Instantiate multisource_data_splitter if is not none
         assert (
-            kwargs.get("multisource_data_splitter") == None
+            kwargs.get("multisource_data_splitter") is None
         ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
         self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
 

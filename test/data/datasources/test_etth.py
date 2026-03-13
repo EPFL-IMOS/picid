@@ -1,11 +1,11 @@
 """
 Tests for ETThLoader with mocked I/O (pd.read_csv).
 """
+
 from __future__ import annotations
 
-import pandas as pd
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from picid.data.datasources.ETTh import ETThLoader
 
@@ -23,10 +23,14 @@ def etth_kwargs():
 
 def test_etth_load_data_returns_features_and_timestamps(etth_kwargs, mock_csv_df_etth):
     """load_data populates data_dict with 'features' and 'timestamps' (read_data mocked)."""
-    with patch.object(ETThLoader, "read_data", return_value=(
-        mock_csv_df_etth.drop(columns=["date"]),
-        mock_csv_df_etth["date"].copy(),
-    )):
+    with patch.object(
+        ETThLoader,
+        "read_data",
+        return_value=(
+            mock_csv_df_etth.drop(columns=["date"]),
+            mock_csv_df_etth["date"].copy(),
+        ),
+    ):
         loader = ETThLoader(**etth_kwargs)
         loader.load_data()
     assert "features" in loader.data_dict
@@ -46,7 +50,9 @@ def test_etth_read_data_univariate_selects_target_column(etth_kwargs, mock_csv_d
     assert df_stamp.name == "date"
 
 
-def test_etth_read_data_multivariate_keeps_all_non_timestamp(etth_kwargs, mock_csv_df_etth):
+def test_etth_read_data_multivariate_keeps_all_non_timestamp(
+    etth_kwargs, mock_csv_df_etth
+):
     """read_data in non-univariate mode drops only timestamp column."""
     with patch("pandas.read_csv", return_value=mock_csv_df_etth.copy()):
         loader = ETThLoader(**etth_kwargs)
@@ -58,10 +64,14 @@ def test_etth_read_data_multivariate_keeps_all_non_timestamp(etth_kwargs, mock_c
 
 def test_etth_get_meta_data_includes_target_name(etth_kwargs, mock_csv_df_etth):
     """get_meta_data includes target_name."""
-    with patch.object(ETThLoader, "read_data", return_value=(
-        mock_csv_df_etth.drop(columns=["date"]),
-        mock_csv_df_etth["date"].copy(),
-    )):
+    with patch.object(
+        ETThLoader,
+        "read_data",
+        return_value=(
+            mock_csv_df_etth.drop(columns=["date"]),
+            mock_csv_df_etth["date"].copy(),
+        ),
+    ):
         loader = ETThLoader(**etth_kwargs)
         loader.load_data()
         meta = loader.get_meta_data()

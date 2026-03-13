@@ -1,10 +1,9 @@
 """Wrapper for the LinearRegression model."""
-from sklearn.linear_model import LogisticRegression
 
 from .base import AbstractFeedForwardWrapper
 
 from picid.model.methods.linear_regression_model import LinearRegressionModelBaseline
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS, FORECASTING_TASKS
+from ...baselines.definitions import FORECASTING_TASKS
 
 
 class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
@@ -20,7 +19,9 @@ class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
         self.supported_types = self.regression_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for LinearRegressionModelWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for LinearRegressionModelWrapper."
+            )
 
         self.task_type = task_type
         backbone = LinearRegressionModelBaseline(**kwargs)

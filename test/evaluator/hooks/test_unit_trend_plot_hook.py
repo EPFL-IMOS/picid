@@ -6,7 +6,6 @@ Validates: Guard conditions, mode/epoch filtering, subsampling, 1D/2D unit IDs.
 """
 
 import numpy as np
-import pytest
 from unittest.mock import MagicMock, patch
 
 from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
@@ -115,7 +114,9 @@ def test_unit_trend_plot_hook_returns_early_when_no_unit_ids():
 
 
 @patch("picid.evaluator.hooks.unit_trend_plot.plt")
-def test_unit_trend_plot_hook_plots_per_unit_1d_ids(mock_plt, phm_multiunit_buffer_data):
+def test_unit_trend_plot_hook_plots_per_unit_1d_ids(
+    mock_plt, phm_multiunit_buffer_data
+):
     """
     Validates main flow: one plot per unique unit with 1D unit_ids.
 
@@ -173,15 +174,9 @@ def test_unit_trend_plot_hook_plots_per_unit_2d_ids(mock_plt):
     hook.on_compute_end({}, evaluator, mode="val", epoch=0, step=0)
 
     assert mock_plt.subplots.call_count == 3
-    evaluator.log_plot.assert_any_call(
-        mock_fig, "unit_1_1_trend", "val", 0, 0
-    )
-    evaluator.log_plot.assert_any_call(
-        mock_fig, "unit_1_2_trend", "val", 0, 0
-    )
-    evaluator.log_plot.assert_any_call(
-        mock_fig, "unit_2_1_trend", "val", 0, 0
-    )
+    evaluator.log_plot.assert_any_call(mock_fig, "unit_1_1_trend", "val", 0, 0)
+    evaluator.log_plot.assert_any_call(mock_fig, "unit_1_2_trend", "val", 0, 0)
+    evaluator.log_plot.assert_any_call(mock_fig, "unit_2_1_trend", "val", 0, 0)
 
 
 @patch("picid.evaluator.hooks.unit_trend_plot.plt")

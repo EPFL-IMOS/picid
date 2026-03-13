@@ -3,5 +3,5 @@ _target_: picid.model.wrappers.fit_predict_isolation_forest_wrapper.FitPredictIs
 task_type: ${task_definition.task_type}
 
 n_estimators: 100
-contamination: 0.1 
-random_state: 42 
+contamination: 0.1
+random_state: 42

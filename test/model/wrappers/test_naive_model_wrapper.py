@@ -67,9 +67,5 @@ def test_naive_model_wrapper_forward_with_window_average():
     assert model_out["predictions"].shape == (2, 2, 1)
     # Predictions should be mean of last 4 values, repeated for pred_len
     expected_mean = batch["target"]["target_seq_x"][:, -4:, :].mean(dim=1, keepdim=True)
-    assert torch.allclose(
-        model_out["predictions"][:, 0:1, :], expected_mean, atol=1e-5
-    )
-    assert torch.allclose(
-        model_out["predictions"][:, 1:2, :], expected_mean, atol=1e-5
-    )
+    assert torch.allclose(model_out["predictions"][:, 0:1, :], expected_mean, atol=1e-5)
+    assert torch.allclose(model_out["predictions"][:, 1:2, :], expected_mean, atol=1e-5)

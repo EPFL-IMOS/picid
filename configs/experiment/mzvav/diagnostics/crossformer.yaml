@@ -4,4 +4,3 @@ defaults:
   - mzvav/diagnostics/base
   - /model_configs/diagnostics/crossformer
   - override /transforms: mzvav/default
-

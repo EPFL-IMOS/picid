@@ -52,11 +52,12 @@ DataTransform's name, class, and metadata dict.  The resulting structure is
 compatible with compute_cache_key and is deterministic for the same pipeline
 definition.
 """
+
 from __future__ import annotations
 
 import logging
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from picid.transforms.base.data_transform import DataTransform
 from picid.data.data_objects.data import SplitDatasetContainer
@@ -68,6 +69,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Protocol — what the pipeline runners actually need
 # ---------------------------------------------------------------------------
+
 
 @runtime_checkable
 class TransformSequenceProtocol(Protocol):
@@ -118,6 +120,7 @@ class TransformSequenceProtocol(Protocol):
 # ---------------------------------------------------------------------------
 # TransformPipeline
 # ---------------------------------------------------------------------------
+
 
 class TransformPipeline:
     """
@@ -193,7 +196,7 @@ class TransformPipeline:
         names = list(self._transforms.keys())
         try:
             idx = names.index(transform_name)
-            return names[idx + 1:]
+            return names[idx + 1 :]
         except ValueError:
             return list(names)
 

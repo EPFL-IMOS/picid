@@ -77,7 +77,7 @@ COLUMN_FILTERS_TO_IGNORE_FOR_HP_SEARCH = [
     "model.model_cache_path",
     # Repeated config parameters (model.seq_len often mirrors task_definition.seq_len)
     "model.max_seq_len",
-    "model.ts_in", 
+    "model.ts_in",
     "model.transformer_args.seq_len",
     "model.seq_len",
     "dataset.dataset_cfg.seq_len",
@@ -227,7 +227,9 @@ class PipelineConfig:
     special_columns: List[str]
     columns_to_normalize: List[str]
     column_filters_to_drop: List[str]
-    sort_metric_resolver: Optional[Callable[[str, str, Optional[str], Optional[str]], Optional[str]]] = None
+    sort_metric_resolver: Optional[
+        Callable[[str, str, Optional[str], Optional[str]], Optional[str]]
+    ] = None
 
     @classmethod
     def from_default(cls) -> "PipelineConfig":
@@ -235,10 +237,11 @@ class PipelineConfig:
         # Import get_sort_metric from configs if available
         try:
             from picid_report.configs import get_sort_metric
+
             resolver = get_sort_metric
         except ImportError:
             resolver = None
-        
+
         return cls(
             column_config=dict(COLUMN_CONFIG),
             expected_search_space={

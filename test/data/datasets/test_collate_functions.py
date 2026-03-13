@@ -5,6 +5,7 @@ Tests custom collate_fn implementations with varying batch sizes.
 Asserts padding, stacking, and dictionary merging for tensor-only and
 tuple-value samples. Real data (synthetic tensors), no mocks.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -19,6 +20,7 @@ from picid.data.datasets.collate_functions import (
 # ---------------------------------------------------------------------------
 # collate_key_value_batch: tensor-only batches (primary use case)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("batch_size", [1, 2, 4, 8])
 def test_collate_key_value_batch_tensor_only_shape_and_dtype(batch_size):
@@ -77,6 +79,7 @@ def test_collate_key_value_batch_unsupported_type_raises():
 # collate_identity: batch is list of "full batch" returns
 # ---------------------------------------------------------------------------
 
+
 def test_collate_identity_returns_first_element():
     """When using BatchSampler, batch is list of one full-batch item; identity returns it."""
     single_batch = {"features": torch.randn(4, 10, 5), "target": torch.randn(4, 10, 1)}
@@ -89,6 +92,7 @@ def test_collate_identity_returns_first_element():
 # ---------------------------------------------------------------------------
 # Real-world assertion: label index vs source
 # ---------------------------------------------------------------------------
+
 
 def test_collate_preserves_batch_dimension_for_downstream():
     """Collated batch has batch dim first (each sample (1, T, F) -> cat -> (B, T, F))."""
@@ -128,10 +132,7 @@ def test_collate_identity_with_multiple_elements_returns_first():
 
 def test_collate_key_value_batch_many_keys():
     """Batch with many keys; all are present in output and stacked correctly."""
-    batch = [
-        {f"k{i}": torch.tensor([[float(i)]]) for i in range(5)}
-        for _ in range(3)
-    ]
+    batch = [{f"k{i}": torch.tensor([[float(i)]]) for i in range(5)} for _ in range(3)]
     out = collate_key_value_batch(batch)
     assert len(out) == 5
     for i in range(5):
@@ -141,8 +142,14 @@ def test_collate_key_value_batch_many_keys():
 def test_collate_key_value_batch_mixed_tensor_and_tuple_keys():
     """Batch with both tensor and tuple values: tensor keys are collated; tuple path is executed."""
     batch = [
-        {"a": torch.tensor([[1.0]]), "b": (torch.tensor([[0.0]]), torch.tensor([[1.0]]))},
-        {"a": torch.tensor([[2.0]]), "b": (torch.tensor([[0.0]]), torch.tensor([[2.0]]))},
+        {
+            "a": torch.tensor([[1.0]]),
+            "b": (torch.tensor([[0.0]]), torch.tensor([[1.0]])),
+        },
+        {
+            "a": torch.tensor([[2.0]]),
+            "b": (torch.tensor([[0.0]]), torch.tensor([[2.0]])),
+        },
     ]
     out = collate_key_value_batch(batch)
     assert "a" in out

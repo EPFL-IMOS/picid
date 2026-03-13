@@ -9,6 +9,7 @@ and can be used for logging, metrics, or debugging.
 Default hooks (e.g. logging, timing) are registered lazily on first _emit() to
 avoid circular imports with the base hooks module.
 """
+
 from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional
@@ -46,6 +47,7 @@ def clear_hooks(event: Optional[str] = None) -> None:
 def _register_default_hooks() -> None:
     """Import and register default hooks from base/hooks. Called once on first _emit()."""
     from picid.transforms.base import hooks
+
     hooks.register_defaults()
 
 

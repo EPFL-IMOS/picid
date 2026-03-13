@@ -1,14 +1,12 @@
 import logging
 from typing import Any
 
-from sklearn.preprocessing import MinMaxScaler
 
 import awkward as ak
 
 from picid.data.data_objects.data import NamedTransformInput
-from picid.transforms.base.base_transform import DenseTransform, RaggedTransform
+from picid.transforms.base.base_transform import RaggedTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
-from picid.transforms.utils import _convert_to_numpy
 
 logger = logging.getLogger(__name__)
 

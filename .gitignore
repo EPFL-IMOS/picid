@@ -57,5 +57,6 @@ lmetk_report_artifacts
 
 # Git worktrees (isolated feature branches)
 .worktrees/
-
+.cursor/*
+.mypy_cache/*
 tasks/*

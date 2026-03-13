@@ -162,7 +162,6 @@ class PatchTST_Forecaster(TransformerForecaster):
             x_t = None
 
         if self.include_x_t:
-
             if self.d_x_mask is not None:
                 x_t[:, :, self.mask_tt] = 0
 
@@ -232,7 +231,6 @@ class PatchTST_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch

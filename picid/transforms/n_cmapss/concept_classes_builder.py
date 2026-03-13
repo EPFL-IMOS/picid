@@ -5,11 +5,10 @@ import numpy as np
 
 # Assuming this import path is correct for your project
 from picid.data.data_objects.data import NamedTransformInput
-from picid.transforms.base.base_transform import RaggedOrDenseTransform, DenseTransform
+from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import (
     ConcatFitAndPerSegmentTransformMixin,
 )
-from picid.utils.decorators import check_transform_output_consistency
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,7 +46,6 @@ class ConceptClassesBuilder(ConcatFitAndPerSegmentTransformMixin, DenseTransform
             self.lookup.set(class_key)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-
         concepts = data["concepts"].copy()
 
         if not np.isin(concepts, [0, 1]).all():

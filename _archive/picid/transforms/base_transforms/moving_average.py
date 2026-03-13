@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, override
+from typing import Dict, List, Optional, Tuple, override
 import numpy as np
 
 from picid.data.data_objects.data import NamedTransformInput

@@ -6,11 +6,11 @@ race conditions, or shared-memory issues. Uses a wrapper that
 converts scalar indices to list so SlidingWindowBatchDataset
 receives __getitem__(list) as in production.
 """
+
 from __future__ import annotations
 
 import numpy as np
 import pytest
-import torch
 from torch.utils.data import Dataset, DataLoader
 
 from picid.data.datasets.sliding_window_batch_dataset import SlidingWindowBatchDataset
@@ -19,10 +19,13 @@ from picid.data.datasets.collate_functions import collate_key_value_batch
 
 class _ListIndexWrapper(Dataset):
     """Wraps a dataset that expects list indices; DataLoader passes scalar idx."""
+
     def __init__(self, ds):
         self.ds = ds
+
     def __len__(self):
         return len(self.ds)
+
     def __getitem__(self, idx):
         return self.ds[[idx]]
 

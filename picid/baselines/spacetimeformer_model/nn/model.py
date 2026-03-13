@@ -121,7 +121,7 @@ class Spacetimeformer(nn.Module):
 
         if not self.decoder_only:
             if inverted_encoder:
-                self.enc_embedding = IEmbedding(
+                self.enc_embedding = Embedding(
                     c_in=max_seq_len, d_model=d_model, dropout=dropout_emb
                 )
             else:
@@ -211,11 +211,11 @@ class Spacetimeformer(nn.Module):
                         activation=activation,
                         norm=norm,
                     )
-                    for l in range(e_layers)
+                    for l in range(e_layers)  # noqa: E741
                 ],
                 conv_layers=[
                     ConvBlock(split_length_into=split_length_into, d_model=d_model)
-                    for l in range(intermediate_downsample_convs)
+                    for l in range(intermediate_downsample_convs)  # noqa: E741
                 ],
                 norm_layer=(
                     Normalization(norm, d_model=d_model) if use_final_norm else None
@@ -259,7 +259,7 @@ class Spacetimeformer(nn.Module):
                     activation=activation,
                     norm=norm,
                 )
-                for l in range(d_layers)
+                for l in range(d_layers)  # noqa: E741
             ],
             norm_layer=Normalization(norm, d_model=d_model) if use_final_norm else None,
             emb_dropout=dropout_emb,
@@ -315,7 +315,7 @@ class Spacetimeformer(nn.Module):
         dec_vt_emb, dec_s_emb, _, dec_mask_seq = self.dec_embedding(y=dec_y, x=dec_x)
 
         if self.attention_method == "causual":
-            b, l, f = dec_y.shape
+            b, l, f = dec_y.shape  # noqa: E741
             dec_mask_seq = TriangularCausalMask(b, l, device=dec_y.device).mask.squeeze(
                 1
             )

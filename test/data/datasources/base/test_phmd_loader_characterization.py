@@ -4,6 +4,7 @@ Characterization tests for phmd_loader: convert_outer_list_to_inner and PHMDMult
 Uses mock for phmd package so tests run without PHMD data. Covers convert_outer_list_to_inner
 and a minimal concrete PHMD loader subclass (load_data, get_data, get_meta_data, get_data_name, split_data, __repr__).
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -190,7 +191,9 @@ def test_phmd_loader_get_cache_file_name_with_auxiliary(mock_phmd_loader):
     assert "aux1_aux2" in name or "aux_" in name
 
 
-def test_phmd_loader_retrieve_cached_task_data_missing_raises(mock_phmd_loader, tmp_path):
+def test_phmd_loader_retrieve_cached_task_data_missing_raises(
+    mock_phmd_loader, tmp_path
+):
     """_retrieve_cached_task_data raises FileNotFoundError when path does not exist."""
     missing = tmp_path / "missing.pkl"
     with pytest.raises(FileNotFoundError, match="Cache file not found"):
@@ -200,6 +203,7 @@ def test_phmd_loader_retrieve_cached_task_data_missing_raises(mock_phmd_loader, 
 def test_phmd_loader_retrieve_cached_task_data_exists(mock_phmd_loader, tmp_path):
     """_retrieve_cached_task_data returns unpickled data when file exists."""
     import pickle
+
     cache_file = tmp_path / "cached.pkl"
     data = {"x": [1, 2, 3]}
     with open(cache_file, "wb") as f:
@@ -232,14 +236,17 @@ class LoaderWithMockedInit(PHMDMultiSourceLoader):
     def _init_phmd_dataset(self, task_names):
         """Return minimal main_fold so the for-split/unit loop runs."""
         import pandas as pd
+
         self.meta_data = {}
         unit_col = "unit_id"
-        train_df = pd.DataFrame({
-            unit_col: [1],
-            "feat0": [1.0],
-            "feat1": [2.0],
-            "rul": [10.0],
-        })
+        train_df = pd.DataFrame(
+            {
+                unit_col: [1],
+                "feat0": [1.0],
+                "feat1": [2.0],
+                "rul": [10.0],
+            }
+        )
         val_df = train_df.copy()
         test_df = train_df.copy()
         main_fold = {"train": train_df, "val": val_df, "test": test_df}

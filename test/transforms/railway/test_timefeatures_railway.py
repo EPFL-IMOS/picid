@@ -12,7 +12,6 @@ from picid.transforms.railway.timefeatures_railway import (
 
 
 class TestRailwayTimeFeaturesTransform:
-
     def test_transform_data_basic(self):
         """Extract time features from timestamps."""
         t = RailwayTimeFeaturesTransform(
@@ -20,7 +19,16 @@ class TestRailwayTimeFeaturesTransform:
             normalize_time_features=True,
         )
         # Mix of dates so no column is all-zero
-        timestamps = pd.Series(pd.to_datetime(["2023-01-01 10:00", "2023-01-15 14:30", "2023-02-01 09:00", "2023-02-20 16:45"]))
+        timestamps = pd.Series(
+            pd.to_datetime(
+                [
+                    "2023-01-01 10:00",
+                    "2023-01-15 14:30",
+                    "2023-02-01 09:00",
+                    "2023-02-20 16:45",
+                ]
+            )
+        )
         data = {"timestamps": timestamps}
         metadata = {}
         result = t.transform_data(data, metadata)
@@ -42,7 +50,9 @@ class TestRailwayTimeFeaturesTransform:
             use_features=["hour", "minute"],
             normalize_time_features=True,
         )
-        timestamps = pd.Series(pd.date_range("2023-01-01 10:00", periods=3, freq="15min"))
+        timestamps = pd.Series(
+            pd.date_range("2023-01-01 10:00", periods=3, freq="15min")
+        )
         data = {"timestamps": timestamps}
         result = t(data, metadata={})
         assert isinstance(result, np.ndarray)
@@ -59,10 +69,11 @@ class TestRailwayTimeFeaturesTransform:
 
 
 class TestTimeFeaturesFunction:
-
     def test_time_features_series(self):
         # Multiple months so month/day vary (no all-zero column)
-        dates = pd.Series(pd.to_datetime(["2023-01-15", "2023-02-15", "2023-03-15", "2023-04-15"]))
+        dates = pd.Series(
+            pd.to_datetime(["2023-01-15", "2023-02-15", "2023-03-15", "2023-04-15"])
+        )
         df = time_features(dates, use_features=["month", "day"], normalize=True)
         assert isinstance(df, pd.DataFrame)
         assert list(df.columns) == ["month", "day"]
@@ -72,7 +83,8 @@ class TestTimeFeaturesFunction:
     def test_time_features_numpy_array_accepted(self):
         """Numpy datetime array is converted to Series; use varied dates to avoid zero-column."""
         dates = np.array(
-            pd.to_datetime(["2023-01-15", "2023-02-15", "2023-03-15"]), dtype="datetime64[ns]"
+            pd.to_datetime(["2023-01-15", "2023-02-15", "2023-03-15"]),
+            dtype="datetime64[ns]",
         )
         df = time_features(dates, use_features=["month", "day"], normalize=True)
         assert isinstance(df, pd.DataFrame)
@@ -86,16 +98,17 @@ class TestTimeFeaturesFunction:
 
 
 class TestReconstructDatetimeFromFeatures:
-
     def test_reconstruct_from_dataframe(self):
-        df = pd.DataFrame({
-            "year": [2023, 2023],
-            "month": [1, 1],
-            "day": [1, 2],
-            "hour": [0, 12],
-            "minute": [0, 30],
-            "second": [0, 0],
-        })
+        df = pd.DataFrame(
+            {
+                "year": [2023, 2023],
+                "month": [1, 1],
+                "day": [1, 2],
+                "hour": [0, 12],
+                "minute": [0, 30],
+                "second": [0, 0],
+            }
+        )
         result = reconstruct_datetime_from_features(df, list(df.columns))
         assert isinstance(result, pd.Series)
         assert len(result) == 2

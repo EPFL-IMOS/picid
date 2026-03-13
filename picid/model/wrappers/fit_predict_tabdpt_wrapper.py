@@ -30,14 +30,15 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         yield_batch_size: int = 128,
         **kwargs,
     ):
-
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
         self.supported_types = self.regression_tasks + self.classification_tasks
 
         if task_type not in self.supported_types:
-            raise ValueError(f"Task {task_type} not supported for FitPredictTabDPTWrapper.")
+            raise ValueError(
+                f"Task {task_type} not supported for FitPredictTabDPTWrapper."
+            )
 
         self.task_type = task_type
 
@@ -70,7 +71,6 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
-
         if self.reinit_on_fit:
             self._reinit_backbone()
 

@@ -8,7 +8,6 @@ n=1 std 0.0, and MultiIndex flattening. Each test references the function under 
 
 from collections import defaultdict
 import pandas as pd
-import pytest
 
 from picid_report.report import reporting
 
@@ -57,7 +56,9 @@ def _make_all_results(
     if sort_metric_used is not None:
         all_results["DS1"]["ModelA"]["sort_metric_used"] = sort_metric_used
     if sort_metric_is_fallback is not None:
-        all_results["DS1"]["ModelA"]["sort_metric_is_fallback"] = sort_metric_is_fallback
+        all_results["DS1"]["ModelA"]["sort_metric_is_fallback"] = (
+            sort_metric_is_fallback
+        )
     if original_sort_metric is not None:
         all_results["DS1"]["ModelA"]["original_sort_metric"] = original_sort_metric
     return all_results
@@ -155,17 +156,19 @@ class TestCreateSummaryTable:
         # Create sorted_aggregated_results with two configs
         # Config 1: test/mse=0.3 (best for mse), test/accuracy=0.7
         # Config 2: test/mse=0.5, test/accuracy=0.9 (best for accuracy)
-        df_sorted = pd.DataFrame({
-            "Model": ["M", "M"],
-            "task_definition.seq_len": [10, 20],
-            "test/mse_mean": [0.3, 0.5],  # First is best for mse
-            "test/mse_std": [0.05, 0.06],
-            "test/mse_count": [3, 3],
-            "test/accuracy_mean": [0.7, 0.9],  # Second is best for accuracy
-            "test/accuracy_std": [0.02, 0.01],
-            "test/accuracy_count": [3, 3],
-        })
-        
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M", "M"],
+                "task_definition.seq_len": [10, 20],
+                "test/mse_mean": [0.3, 0.5],  # First is best for mse
+                "test/mse_std": [0.05, 0.06],
+                "test/mse_count": [3, 3],
+                "test/accuracy_mean": [0.7, 0.9],  # Second is best for accuracy
+                "test/accuracy_std": [0.02, 0.01],
+                "test/accuracy_count": [3, 3],
+            }
+        )
+
         all_results = defaultdict(lambda: defaultdict(dict))
         all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = df_sorted
         all_results["DS1"]["ModelA"]["best_performance"] = {
@@ -174,9 +177,9 @@ class TestCreateSummaryTable:
             "metrics": {
                 "mse": {"test": {"mean": 0.3, "std": 0.05, "count": 3}},
                 "accuracy": {"test": {"mean": 0.7, "std": 0.02, "count": 3}},
-            }
+            },
         }
-        
+
         # Use sort_metric="test/accuracy" - should select config 2
         df = reporting.create_summary_table(all_results, sort_metric="test/accuracy")
         assert not df.empty
@@ -200,7 +203,9 @@ class TestGetExperimentStatsDf:
             total_runs=75,
             configs_failed_not_full_seed_set=2,
         )
-        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame(
+            {"x": [1]}
+        )
         df = reporting.get_experiment_stats_df(all_results)
         assert "Runs" in df.columns
         assert "Configs Failed (not full seed set)" in df.columns
@@ -224,7 +229,9 @@ class TestGetExperimentStatsDf:
             total_runs=75,
             configs_failed_not_full_seed_set=1,
         )
-        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame(
+            {"x": [1]}
+        )
         df = reporting.get_experiment_stats_df(all_results)
         row = df.iloc[0]
         assert row["Runs"] == 75
@@ -235,7 +242,9 @@ class TestGetExperimentStatsDf:
         Legacy all_results without total_runs/configs_failed: Runs is empty, Configs Failed is 0.
         """
         all_results = _make_all_results(seeds_info={"model": "[1, 2, 3]"})
-        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame({"x": [1]})
+        all_results["DS1"]["ModelA"]["sorted_aggregated_results"] = pd.DataFrame(
+            {"x": [1]}
+        )
         # Do not pass total_runs or configs_failed_not_full_seed_set
         df = reporting.get_experiment_stats_df(all_results)
         row = df.iloc[0]
@@ -288,9 +297,7 @@ class TestDisplayPerformanceTables:
         Methodology: metrics with std=NaN.
         Expected: Value string has "0.0000" not "nan".
         """
-        metrics_data = {
-            "mse": {"test": {"mean": 0.5, "std": float("nan"), "count": 1}}
-        }
+        metrics_data = {"mse": {"test": {"mean": 0.5, "std": float("nan"), "count": 1}}}
         all_results = _make_all_results(metrics_data=metrics_data)
         reporting.display_performance_tables(all_results, precision=4)
 
@@ -361,18 +368,20 @@ class TestBuildHpImpactDfWithSortMetric:
         Methodology: Call _build_hp_impact_df with sort_metric=None.
         Expected: Uses optimization metric for sorting and column order.
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+            }
+        )
         res = {
             "sorted_aggregated_results": df_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
-            }
+            },
         }
         result = reporting._build_hp_impact_df(res, precision=4, sort_metric=None)
         assert result is not None
@@ -389,25 +398,29 @@ class TestBuildHpImpactDfWithSortMetric:
         # Create DataFrame with two configs
         # Config 1: test/mse=0.3 (best for mse), test/accuracy=0.7
         # Config 2: test/mse=0.5, test/accuracy=0.9 (best for accuracy)
-        df_sorted = pd.DataFrame({
-            "Model": ["M", "M"],
-            "task_definition.seq_len": [10, 20],
-            "test/mse_mean": [0.3, 0.5],  # Sorted by mse (ascending)
-            "test/mse_std": [0.05, 0.06],
-            "test/mse_count": [3, 3],
-            "test/accuracy_mean": [0.7, 0.9],
-            "test/accuracy_std": [0.02, 0.01],
-            "test/accuracy_count": [3, 3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M", "M"],
+                "task_definition.seq_len": [10, 20],
+                "test/mse_mean": [0.3, 0.5],  # Sorted by mse (ascending)
+                "test/mse_std": [0.05, 0.06],
+                "test/mse_count": [3, 3],
+                "test/accuracy_mean": [0.7, 0.9],
+                "test/accuracy_std": [0.02, 0.01],
+                "test/accuracy_count": [3, 3],
+            }
+        )
         res = {
             "sorted_aggregated_results": df_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
-            }
+            },
         }
-        
+
         # Use sort_metric="test/accuracy" - should sort descending (maximize accuracy)
-        result = reporting._build_hp_impact_df(res, precision=4, sort_metric="test/accuracy")
+        result = reporting._build_hp_impact_df(
+            res, precision=4, sort_metric="test/accuracy"
+        )
         assert result is not None
         df, metric_used = result
         assert metric_used == "test/accuracy"
@@ -424,24 +437,30 @@ class TestBuildHpImpactDfWithSortMetric:
         Methodology: sort_metric="test/nonexistent", column doesn't exist.
         Expected: Uses optimization metric, no crash.
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+            }
+        )
         res = {
             "sorted_aggregated_results": df_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
-            }
+            },
         }
-        result = reporting._build_hp_impact_df(res, precision=4, sort_metric="test/nonexistent")
+        result = reporting._build_hp_impact_df(
+            res, precision=4, sort_metric="test/nonexistent"
+        )
         assert result is not None
         df, metric_used = result
         # When sort_metric column not found, should fallback to optimization metric
-        assert metric_used == "test/mse"  # Falls back to optimization metric when column not found
+        assert (
+            metric_used == "test/mse"
+        )  # Falls back to optimization metric when column not found
 
 
 # --- iter_hp_impact_tables with sort_metric (reporting.iter_hp_impact_tables) ---
@@ -456,15 +475,19 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call iter_hp_impact_tables with sort_metric=None.
         Expected: Yields (dataset, model, df, metric_used) with optimization metric.
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df_sorted)
-        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=None))
+        entries = list(
+            reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=None)
+        )
         assert len(entries) == 1
         dataset, model, df, metric_used = entries[0]
         assert metric_used == "test/mse"  # Optimization metric
@@ -475,18 +498,24 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call iter_hp_impact_tables with sort_metric="test/accuracy".
         Expected: Yields entries with metric_used="test/accuracy".
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-            "test/accuracy_mean": [0.9],
-            "test/accuracy_std": [0.02],
-            "test/accuracy_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+                "test/accuracy_mean": [0.9],
+                "test/accuracy_std": [0.02],
+                "test/accuracy_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df_sorted)
-        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric="test/accuracy"))
+        entries = list(
+            reporting.iter_hp_impact_tables(
+                all_results, precision=4, sort_metric="test/accuracy"
+            )
+        )
         assert len(entries) == 1
         dataset, model, df, metric_used = entries[0]
         assert metric_used == "test/accuracy"
@@ -497,19 +526,25 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call with dict sort_metric.
         Expected: Uses per-combination metric.
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-            "test/accuracy_mean": [0.9],
-            "test/accuracy_std": [0.02],
-            "test/accuracy_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+                "test/accuracy_mean": [0.9],
+                "test/accuracy_std": [0.02],
+                "test/accuracy_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df_sorted)
         sort_metric_dict = {("DS1", "ModelA"): "test/accuracy"}
-        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=sort_metric_dict))
+        entries = list(
+            reporting.iter_hp_impact_tables(
+                all_results, precision=4, sort_metric=sort_metric_dict
+            )
+        )
         assert len(entries) == 1
         dataset, model, df, metric_used = entries[0]
         assert metric_used == "test/accuracy"
@@ -521,25 +556,34 @@ class TestIterHpImpactTablesWithSortMetric:
         original_sort_metric=val/loss. Call iter_hp_impact_tables.
         Expected: metric_used contains "fallback" and "val/loss" (original not found).
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "val/mse_mean": [0.52],
-            "val/mse_std": [0.08],
-            "val/mse_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "val/mse_mean": [0.52],
+                "val/mse_std": [0.08],
+                "val/mse_count": [3],
+            }
+        )
         all_results = _make_all_results(
             sorted_aggregated=df_sorted,
             sort_metric_used="val/mse",
             sort_metric_is_fallback=True,
             original_sort_metric="val/loss",
         )
-        entries = list(reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric="val/mse"))
+        entries = list(
+            reporting.iter_hp_impact_tables(
+                all_results, precision=4, sort_metric="val/mse"
+            )
+        )
         assert len(entries) == 1
         _dataset, _model, _df, metric_used = entries[0]
         assert "fallback" in metric_used.lower()
         assert "val/loss" in metric_used
-        assert "original metric" in metric_used.lower() or "not found" in metric_used.lower()
+        assert (
+            "original metric" in metric_used.lower()
+            or "not found" in metric_used.lower()
+        )
 
 
 # --- display_hp_impact (reporting.display_hp_impact) ---
@@ -664,18 +708,22 @@ class TestDisplayHpImpact:
         Methodology: Call display_hp_impact with sort_metric.
         Expected: No crash, displays tables sorted by sort_metric.
         """
-        df_sorted = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-            "test/accuracy_mean": [0.9],
-            "test/accuracy_std": [0.02],
-            "test/accuracy_count": [3],
-        })
+        df_sorted = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+                "test/accuracy_mean": [0.9],
+                "test/accuracy_std": [0.02],
+                "test/accuracy_count": [3],
+            }
+        )
         all_results = _make_all_results(sorted_aggregated=df_sorted)
-        reporting.display_hp_impact(all_results, precision=4, sort_metric="test/accuracy")
+        reporting.display_hp_impact(
+            all_results, precision=4, sort_metric="test/accuracy"
+        )
         # We only assert no crash
 
 
@@ -696,9 +744,11 @@ class TestDisplayFormatIntegrity:
 
     def test_count_string_passed_through(self):
         """Branch: count is str -> cnt_val = count (not int). (create_summary_table)"""
-        all_results = _make_all_results(metrics_data={
-            "mse": {"test": {"mean": 0.5, "std": 0.0, "count": "n/a"}},
-        })
+        all_results = _make_all_results(
+            metrics_data={
+                "mse": {"test": {"mean": 0.5, "std": 0.0, "count": "n/a"}},
+            }
+        )
         df = reporting.create_summary_table(all_results, precision=2)
         assert not df.empty
         cell = df.iloc[0, 0]
@@ -724,11 +774,12 @@ class TestDisplayFormatIntegrity:
 
     def test_display_performance_tables_count_non_int(self):
         """Branch: count not int in display string. (display_performance_tables line 158)"""
-        all_results = _make_all_results(metrics_data={
-            "mse": {"test": {"mean": 0.5, "std": 0.0, "count": 2}},
-        })
+        all_results = _make_all_results(
+            metrics_data={
+                "mse": {"test": {"mean": 0.5, "std": 0.0, "count": 2}},
+            }
+        )
         reporting.display_performance_tables(all_results)
-
 
     def test_display_performance_tables_len_parts_less_than_2(self):
         """Branch: len(parts) < 2 -> val_str stays '-'. (display_performance_tables)"""
@@ -752,20 +803,24 @@ class TestDisplayFormatIntegrity:
         # contains no slash... So full_metric = "val" only if we had add("val") somewhere. We don't. So
         # I'll add a test that just runs the loop with a metric that has 3 parts (e.g. "a/b/c") to hit
         # m_lookup = "/".join(parts[1:]) and p_lookup = parts[0].
-        all_results = _make_all_results(metrics_data={
-            "mse": {"test": {"mean": 0.5, "std": 0.0, "count": 2}},
-        })
+        all_results = _make_all_results(
+            metrics_data={
+                "mse": {"test": {"mean": 0.5, "std": 0.0, "count": 2}},
+            }
+        )
         reporting.display_performance_tables(all_results)
 
     def test_display_hp_impact_opt_metric_not_in_final_metrics(self):
         """Branch: opt_metric not in final_metrics -> don't remove, just sort. (display_hp_impact)"""
-        df = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_std": [0.1],
-            "test/mse_count": [3],
-        })
+        df = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_std": [0.1],
+                "test/mse_count": [3],
+            }
+        )
         all_results = _make_all_results(
             sorted_aggregated=df,
             optimized_on={"metric": "other_metric", "strategy": "min"},
@@ -774,12 +829,14 @@ class TestDisplayFormatIntegrity:
 
     def test_display_hp_impact_s_col_not_in_row(self):
         """Branch: s_col not in row -> std_val 0.0. (display_hp_impact format_impact_row)"""
-        df = pd.DataFrame({
-            "Model": ["M"],
-            "task_definition.seq_len": [10],
-            "test/mse_mean": [0.5],
-            "test/mse_count": [3],
-        })
+        df = pd.DataFrame(
+            {
+                "Model": ["M"],
+                "task_definition.seq_len": [10],
+                "test/mse_mean": [0.5],
+                "test/mse_count": [3],
+            }
+        )
         # no test/mse_std column
         all_results = _make_all_results(
             sorted_aggregated=df,

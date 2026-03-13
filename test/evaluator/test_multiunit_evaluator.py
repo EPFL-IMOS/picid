@@ -1,12 +1,9 @@
 import pytest
 import numpy as np
-import xarray as xr
 from unittest.mock import MagicMock, patch
-from collections import defaultdict
 from pathlib import Path
 
 from picid.evaluator.multiunit import MultiUnitEvaluator
-from picid.metrics.base import AbstractMetric
 from picid.evaluator.hooks.save_predictions import SavePredictionsHook  # ADDED
 from picid.evaluator.hooks.unit_trend_plot import UnitTrendPlotHook
 

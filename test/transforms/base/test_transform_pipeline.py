@@ -8,20 +8,19 @@ from picid.transforms.base.transform_pipeline import (
     TransformSequenceProtocol,
 )
 from picid.transforms.base.data_transform import DataTransform
-from picid.data.data_objects.data import SplitDatasetContainer
 
 from test.transforms.base.conftest import (
     DummyStatelessTransform,
-    DummyFittableTransform,
     create_dummy_split_container,
 )
 
 
 class TestTransformPipelineInit:
-
     def test_init_valid(self):
         t = DummyStatelessTransform()
-        dt1 = DataTransform("scale", t, {"apply_to": "features", "assign_to": "features"})
+        dt1 = DataTransform(
+            "scale", t, {"apply_to": "features", "assign_to": "features"}
+        )
         pipeline = TransformPipeline([dt1])
         assert len(pipeline) == 1
         assert "scale" in pipeline
@@ -39,12 +38,15 @@ class TestTransformPipelineInit:
 
 
 class TestTransformPipelineRun:
-
     def test_run_applies_transforms(self):
         t = DummyStatelessTransform()
-        dt = DataTransform("double", t, {"apply_to": "features", "assign_to": "features"})
+        dt = DataTransform(
+            "double", t, {"apply_to": "features", "assign_to": "features"}
+        )
         pipeline = TransformPipeline([dt])
-        data = create_dummy_split_container(n_units=1, n_samples_per_unit=3, n_features=2)
+        data = create_dummy_split_container(
+            n_units=1, n_samples_per_unit=3, n_features=2
+        )
         orig = data["features"]["train"][0].copy()
         result = pipeline.run(data)
         # DummyStatelessTransform multiplies by 2
@@ -59,7 +61,9 @@ class TestTransformPipelineRun:
         dt1 = DataTransform("t1", t, {"apply_to": "features", "assign_to": "features"})
         dt2 = DataTransform("t2", t, {"apply_to": "features", "assign_to": "features"})
         pipeline = TransformPipeline([dt1, dt2])
-        data = create_dummy_split_container(n_units=1, n_samples_per_unit=2, n_features=2)
+        data = create_dummy_split_container(
+            n_units=1, n_samples_per_unit=2, n_features=2
+        )
         orig = data["features"]["train"][0].copy()
         result = pipeline.run(data)
         # 2x * 2x = 4x
@@ -71,7 +75,6 @@ class TestTransformPipelineRun:
 
 
 class TestTransformPipelineProtocol:
-
     def test_config_property(self):
         t = DummyStatelessTransform()
         dt = DataTransform("x", t, {"apply_to": "features"})
@@ -142,7 +145,6 @@ class TestTransformPipelineProtocol:
 
 
 class TestTransformSequenceProtocol:
-
     def test_pipeline_satisfies_protocol(self):
         """TransformPipeline is runtime checkable as TransformSequenceProtocol."""
         t = DummyStatelessTransform()

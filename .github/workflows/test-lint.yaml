@@ -1,0 +1,66 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, github-actions-test ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Setup SSH for private submodules (e.g., TabPFN)
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh -T git@github.com || true
+
+      # 2. Checkout (submodules handled manually so SSH is used)
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Update Submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+        env:
+          GIT_SSH_COMMAND: "ssh -v"
+
+      # 3. Setup uv with Caching
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # 4. Install the environment
+      # uv sync installs picid + local submodules + dev dependencies
+      - name: Install Dependencies
+        run: uv sync --all-extras
+
+      # 5. Run Ruff (Style & Syntax)
+      # It will only check 'picid' based on your pyproject.toml settings
+      - name: Ruff Check
+        run: uv run ruff check picid
+
+      # 6. Run Mypy (Type Logic)
+      - name: Mypy Type Check
+        # We point it specifically at picid to avoid submodule errors
+        run: uv run mypy picid
+        # Set to true if you don't want to block PRs while fixing existing errors
+        continue-on-error: true

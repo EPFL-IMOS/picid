@@ -17,7 +17,6 @@ class BaseVectorizedConcatDataset(ConcatDataset):
 
     def __getitem__(self, idx: List[int] | np.ndarray) -> dict:
         if isinstance(idx, list) or isinstance(idx, np.ndarray):
-
             idx_np = np.asarray(idx)
             if len(self.datasets) == 1:
                 # trivial case, all indices belong to the only dataset
@@ -56,7 +55,6 @@ class BaseVectorizedConcatDataset(ConcatDataset):
 
 
 class BaseDataset(Dataset, ABC):
-
     def __init__(self, data_dict: dict[str, ndarray | list[ndarray]], **kwargs):
         super().__init__()
 
@@ -75,7 +73,6 @@ class BaseDataset(Dataset, ABC):
 
 
 class BaseConcatDataset(ConcatDataset, ABC):
-
     @abstractmethod
     def get_collate_fn(self) -> Callable:
         """

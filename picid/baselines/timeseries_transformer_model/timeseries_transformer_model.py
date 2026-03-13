@@ -58,7 +58,7 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         if self.d_x > 0:
             self.t2v = Time2Vec(input_dim=d_x, embed_dim=time_emb_dim * d_x)
 
-        time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
+        _time_dim = time_emb_dim * d_x if time_emb_dim > 0 else d_x
 
         self.n_timefeatures = n_timefeatures
         if self.n_timefeatures > 0:
@@ -190,7 +190,6 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch

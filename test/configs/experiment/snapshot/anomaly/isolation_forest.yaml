@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - snapshot/anomaly/base
+  - /model_configs/anomaly_detection/isolation_forest

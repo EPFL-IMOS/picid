@@ -10,7 +10,6 @@ from collections import defaultdict
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
 
 from picid_report import run
 

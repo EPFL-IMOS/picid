@@ -3,6 +3,7 @@
 Uses config_discovery (same as picid-assemble) so the web generator stays
 in sync with the config tree. Run before mkdocs build.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,6 +30,9 @@ def main(output_dir: Path | None = None) -> None:
             task_type = task_dir.name
             keys = list_experiments_for_group_task(group.name, task_type)
             experiment_keys.extend(keys)
+
+    # Exclude base configs (not runnable experiments)
+    experiment_keys = [k for k in experiment_keys if not k.endswith("/base")]
 
     config_map = {
         "experiment_keys": sorted(set(experiment_keys)),

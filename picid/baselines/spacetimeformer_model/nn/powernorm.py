@@ -69,7 +69,7 @@ class PowerFunction(torch.autograd.Function):
         ctx.current_iter = current_iter
         ctx.warmup_iters = warmup_iters
         ctx.abkw = abkw
-        rmax = 1
+        _rmax = 1
         N, C, H, W = x.size()
         x2 = (mask_x * mask_x).mean(dim=0)
 
@@ -96,9 +96,9 @@ class PowerFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         eps = ctx.eps
-        debug = ctx.debug
-        current_iter = ctx.current_iter
-        warmup_iters = ctx.warmup_iters
+        _debug = ctx.debug
+        _current_iter = ctx.current_iter
+        _warmup_iters = ctx.warmup_iters
         abkw = ctx.abkw
 
         N, C, H, W = grad_output.size()
@@ -108,7 +108,7 @@ class PowerFunction(torch.autograd.Function):
         g = grad_output * weight.reshape(1, C, 1, 1)
         g = g * 1
 
-        gz = (g * z).mean(dim=3).mean(dim=2).mean(dim=0)
+        _gz = (g * z).mean(dim=3).mean(dim=2).mean(dim=0)
 
         approx_grad_g = g - (1 - abkw) * ema_gz * z
         ema_gz.add_(
@@ -202,7 +202,7 @@ class MaskPowerNorm(nn.Module):
             bn_mask = bn_mask.transpose(0, 1)
 
         if pad_mask is not None:
-            pad_size = (~bn_mask).sum()
+            _pad_size = (~bn_mask).sum()
             mask_input = input[bn_mask, :]
         else:
             mask_input = input.clone()

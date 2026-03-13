@@ -1,4 +1,3 @@
-import copy
 import logging
 import warnings
 from collections import defaultdict
@@ -10,7 +9,7 @@ import numpy as np
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.nb14.prepare_rul_data import RulHandler
-from picid.data.datasources.nb14.utils import flatten_cycles, table_to_ak_array
+from picid.data.datasources.nb14.utils import table_to_ak_array
 from picid.data.datasources.unibo.model_data_handler import ModelDataHandler
 from picid.data.datasources.unibo.unibo_powertools_data import (
     CycleCols,
@@ -163,11 +162,18 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         self.data_dict = None
         self.meta_data = {}
 
-        self.rul_anomaly_threshold = kwargs.get("rul_anomaly_threshold", rul_anomaly_threshold)
-        self.rul_anomaly_fraction = kwargs.get("rul_anomaly_fraction", rul_anomaly_fraction)
+        self.rul_anomaly_threshold = kwargs.get(
+            "rul_anomaly_threshold", rul_anomaly_threshold
+        )
+        self.rul_anomaly_fraction = kwargs.get(
+            "rul_anomaly_fraction", rul_anomaly_fraction
+        )
 
         if self.task_mode == "anomaly_detection":
-            if self.rul_anomaly_threshold is not None and self.rul_anomaly_fraction is not None:
+            if (
+                self.rul_anomaly_threshold is not None
+                and self.rul_anomaly_fraction is not None
+            ):
                 raise ValueError(
                     "For task_mode='anomaly_detection', set exactly one of "
                     "rul_anomaly_threshold (absolute) or rul_anomaly_fraction (relative)."
@@ -177,7 +183,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         # Instantiate multisource_data_splitter if is not none
         assert (
-            kwargs.get("multisource_data_splitter") == None
+            kwargs.get("multisource_data_splitter") is None
         ), "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
         self.multisource_data_splitter = "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
 
@@ -315,7 +321,9 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             initial_cycle_lenghts_validation,
             initial_cycle_lenghts_test,
         ) = dataset_handler.get_discharge_whole_cycle_future(
-            train_names, test_names, val_names  # Pass all three
+            train_names,
+            test_names,
+            val_names,  # Pass all three
         )
 
         # 3. --- Organize Data for Looping ---

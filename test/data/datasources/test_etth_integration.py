@@ -1,4 +1,5 @@
 """Integration test for ETThLoader with real CSV (no mocks)."""
+
 from __future__ import annotations
 
 import pytest

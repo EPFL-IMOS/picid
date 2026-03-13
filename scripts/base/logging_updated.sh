@@ -41,23 +41,23 @@ run_and_log() {
     local log_group="$2" # e.g., "xjtu_sy/spectral/lr_0.01"
     local run_name="$3"  # e.g., "stf"
     # Default to "./logs" if the 4th argument (root_dir) is empty or not provided
-    local root_dir="${4:-./logs}" 
+    local root_dir="${4:-./logs}"
 
     # --- Path Definitions ---
 
     # 1. Define specific log directory for this run's detailed logs
     local specific_log_dir="$root_dir/$log_group"
     mkdir -p "$specific_log_dir"
-    
+
     # 2. Define specific log file paths
     local stdout_log="$specific_log_dir/${run_name}_stdout.log"
     local stderr_log="$specific_log_dir/${run_name}_stderr.log"
-    
+
     # 3. Define global summary log file paths (in the root dir)
     mkdir -p "$root_dir" # Ensure root dir exists
     local success_log="$root_dir/SUCCESSFUL_RUNS.log"
     local failed_log="$root_dir/FAILED_RUNS.log"
-    
+
     # 4. Define temporary log file paths (will be renamed on failure)
     local tmp_stdout="${stdout_log}.tmp"
     local tmp_stderr="${stderr_log}.tmp"
@@ -76,13 +76,13 @@ run_and_log() {
         echo "✅ [SUCCESS] Finished: $run_name"
         # Log success to the global summary file
         echo "$(date): [SUCCESS] ${log_group}/${run_name}" >> "$success_log"
-        
+
         # On success, remove the temporary files (we don't need the full logs)
         rm -f "$tmp_stdout" "$tmp_stderr"
         return 0
     else
         echo "❌ [FAILURE] Finished: $run_name"
-        
+
         # On failure, rename the temp files to permanent logs
         mv "$tmp_stdout" "$stdout_log"
         mv "$tmp_stderr" "$stderr_log"
@@ -104,7 +104,7 @@ run_and_log() {
 }
 
 
-# Example: 
+# Example:
 
 #!/bin/bash
 
@@ -152,18 +152,18 @@ run_and_log() {
 #     echo "============================================================"
 
 #     for model in "${MODELS[@]}"; do
-        
+
 #         # 7. Use 'eval' to substitute the $model variable into the command
 #         eval "final_cmd=\"$cmd_template\""
-        
+
 #         # 8. Define a unique run name for this specific job.
 #         # Here, we just use the model name.
 #         local run_name="$model"
-        
+
 #         # 9. Call the new, general-purpose logger
 #         # It will handle all logging, directory creation, and error reporting.
 #         run_and_log "$final_cmd" "$log_group" "$run_name" "$ROOT_LOG_DIR"
-        
+
 #         # The return code (0 for success, 1 for failure) is available
 #         # in $? if you need to check it, e.g., to stop the script.
 #         # if [ $? -ne 0 ]; then

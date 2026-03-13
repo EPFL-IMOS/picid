@@ -2,7 +2,6 @@ import warnings
 from typing import override, Dict, Any
 import logging
 
-import numpy as np
 import pandas as pd
 import awkward as ak
 
@@ -27,7 +26,6 @@ class MZVAVLoader(SingleSourceLoader):
         group_by_days=False,
         **kwargs,
     ):
-
         self.data_path = data_path
         self.timestamp_name = timestamp_name
         self.target_name = target_name
