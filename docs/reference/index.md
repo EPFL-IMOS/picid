@@ -1,15 +1,8 @@
 # Reference
 
-Detailed reference for datasources, datasets, transforms, evaluators, models, and API.
+Reference content is split into:
 
-- [Datasources](datasources.md) — Available datasources and their domains and tasks.
-- [Data objects & containers](dataobject.md) — Core data structures and flow from datasource to container.
-- [Datasets](datasets.md) — Task-centric datasets and batch shapes.
-- [Datasets inner workings](datasets_inner_workings.md) — Data loading architecture (sequencers, sliding windows, collation).
-- [Transforms](transforms.md) — Transform system overview and links to Quick start, User guide, Developer guide.
-- [Evaluators](evaluators.md) — Evaluator subsystem (classification, forecasting, multi-unit, reconstruction, hooks).
-- [Model types](model_types.md) — Fit-predict vs batchwise and current limitations.
-- [API](api/package_reference.md) — Package reference: browse all modules (data, transforms, model, evaluator, etc.) with full inputs/outputs.
-- [Scripts](scripts.md) — Scripts for setup, reproducibility, snapshot tests, publish, and experiment generator. Each subfolder has its own README.
+1. **Module docs** (hand-written): [Modules](../modules/index.md)
+2. **API docs** (auto-generated): [API Index](api/index.md)
 
-[← Back to documentation index](../index.md)
+Legacy reference pages are retained as stubs for URL compatibility during migration.

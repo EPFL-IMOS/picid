@@ -1,3 +1,3 @@
-# API (legacy)
+# API (Legacy)
 
-See [Package Reference](api/package_reference.md) for the full module index and [picid.data.data_objects](api/picid_data_data_objects.md) for data containers.
+This page has moved to [API Reference](api/index.md).
