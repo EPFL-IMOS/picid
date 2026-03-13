@@ -12,7 +12,7 @@ from pytorch_lightning.callbacks import RichModelSummary
 
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter, BySourceSplitter
-from picid.interface import CustomSingleSourceLoader, EasyInterface
+from picid.interface import CustomSingleSourceLoader, EntryInterface
 from picid.interface.datasources import CustomMultiSourceLoader
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig

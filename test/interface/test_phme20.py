@@ -1,7 +1,7 @@
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 
-from picid.interface import EasyInterface
+from picid.interface import EntryInterface
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig
@@ -30,7 +30,7 @@ def test_pydantic_easy_interface():
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
-    interface = EasyInterface()
+    interface = EntryInterface()
     interface.train(datasource='phme20',
                     loggers=loggers,
                     callbacks=callbacks,
@@ -41,7 +41,7 @@ def test_pydantic_easy_interface():
 
 
 def test_pydantic_easy_interface_input_processed_datasource():
-    interface = EasyInterface()
+    interface = EntryInterface()
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})

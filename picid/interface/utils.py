@@ -12,7 +12,7 @@ from torch import nn
 
 from picid.data.data_objects.data import DatasetContainer
 from picid.evaluator.base import AbstractEvaluator
-from picid.interface.model_wrapper import CustomModelWrapper
+from picid.interface.model.custom_model import CustomModelTrainer
 from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
     AbstractFitPredictWrapper
 from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule
@@ -83,7 +83,7 @@ def create_lightning_module(
     else:
         scheduler_factory = None
 
-    if isinstance(backbone, CustomModelWrapper):
+    if isinstance(backbone, CustomModelTrainer):
 
         if isinstance(backbone, AbstractFeedForwardWrapper):
             model = ConstantLossLightningModule(

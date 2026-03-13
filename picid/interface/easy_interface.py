@@ -14,7 +14,7 @@ from torch import nn
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.interface.model_wrapper import CustomModelWrapper
+from picid.interface.model.custom_model import CustomModelTrainer
 from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
@@ -24,7 +24,7 @@ from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, re
 from picid.transforms.base.data_transform import DataTransform
 
 
-class EasyInterface:
+class EntryInterface:
     """
         A high-level interface for managing machine learning experiments,
         data source discovery, configuration composition, and model training.
@@ -32,7 +32,7 @@ class EasyInterface:
 
     def __init__(self):
         """
-            Initializes the EasyInterface, sets up internal configuration tracking,
+            Initializes the EntryInterface, sets up internal configuration tracking,
             and populates the list of available data sources from the config path.
         """
         self._model_cfg = None
@@ -121,8 +121,8 @@ class EasyInterface:
             if resource_type == 'datasource':
                 max_level = 1
 
-            resources = EasyInterface.get_available_resource(str(resource_type),
-                                                            max_level=max_level)
+            resources = EntryInterface.get_available_resource(str(resource_type),
+                                                              max_level=max_level)
 
             v = str(v)
 
@@ -183,7 +183,7 @@ class EasyInterface:
     def compose_config_file(self,
                             *,
                             task_definition: BaseTaskDefinition,
-                            model: AbsModelConfig | CustomModelWrapper,
+                            model: AbsModelConfig | CustomModelTrainer,
                             datasource: str | ProcessedDatasource,
                             evaluators,
                             callbacks: dict | Callback | list[Callback] | None = None,
@@ -210,7 +210,7 @@ class EasyInterface:
         training_model_cfg = None
         model_cfg = None
 
-        if not isinstance(model, CustomModelWrapper):
+        if not isinstance(model, CustomModelTrainer):
             model_config_path = (project_config.config_path /
                                  'model' /
                                  (model.config_name + '.yaml'))
@@ -315,7 +315,7 @@ class EasyInterface:
               output_dir: object = None,
               *,
               task_definition: BaseTaskDefinition,
-              model: AbsModelConfig | CustomModelWrapper,
+              model: AbsModelConfig | CustomModelTrainer,
               datasource: str | None | ProcessedDatasource = None,
               callbacks: dict | Callback | list[Callback] | None = None,
               loggers: list[Logger | BaseLogger] = None,
@@ -447,7 +447,7 @@ class EasyInterface:
                 del cfg.model['config_name']
 
         model = create_lightning_module(
-            backbone=model if isinstance(model, CustomModelWrapper) else None,
+            backbone=model if isinstance(model, CustomModelTrainer) else None,
             cfg=cfg,
             datamodule=datamodule,
             evaluators=evaluators,

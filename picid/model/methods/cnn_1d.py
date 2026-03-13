@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.autoencoder.residual_1d import ResidualBlock
 
 
@@ -72,11 +74,11 @@ class EncoderModel(nn.Module):
 
         # --- 3. Build FINAL Output Head ---
         # (This logic is unchanged)
-        if self.task_type == "regression":
+        if self.task_type in REGRESSION_TASKS:
             self.final_head = torch.nn.Sequential(
                 torch.nn.Linear(self.latent_dim, 1), torch.nn.Flatten(start_dim=0)
             )
-        elif self.task_type == "classification":
+        elif self.task_type in CLASSIFICATION_TASKS:
             if num_classes <= 0:
                 raise ValueError("num_classes must be positive for classification.")
             self.final_head = torch.nn.Sequential(

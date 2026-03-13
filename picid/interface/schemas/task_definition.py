@@ -43,6 +43,7 @@ class Prognostic(BaseTaskDefinition):
     config_name : str = Field('prognostics', frozen=True)
 
     task_type : Literal['ahrul', 'rul']
+    pred_len : int = 0
 
 
 class Forecasting(BaseTaskDefinition):

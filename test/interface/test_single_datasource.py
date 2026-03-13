@@ -11,7 +11,7 @@ from pytorch_lightning.callbacks import RichModelSummary
 
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter
-from picid.interface import CustomSingleSourceLoader, EasyInterface
+from picid.interface import CustomSingleSourceLoader, EntryInterface
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
@@ -73,7 +73,7 @@ from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 #     callbacks = [EarlyStopping(monitor=None),
 #                  RichModelSummary()]
 #
-#     interface = EasyInterface()
+#     interface = EntryInterface()
 #     processed_datasource = interface.process_datasource(datasource, transforms)
 #
 #     interface.train(datasource=processed_datasource,
@@ -122,7 +122,7 @@ from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 # #     callbacks = [EarlyStopping(monitor=None),
 # #                  RichModelSummary()]
 # #
-# #     interface = EasyInterface()
+# #     interface = EntryInterface()
 # #     processed_datasource = interface.process_datasource(datasource, transforms)
 # #
 # #     interface.train(datasource=processed_datasource,
@@ -134,7 +134,7 @@ from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 #
 #
 # def test_pydantic_easy_interface_input_processed_datasource():
-#     interface = EasyInterface()
+#     interface = EntryInterface()
 #
 #     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
 #                            metadata={'apply_to': 'features', 'fit_on': 'train'})
