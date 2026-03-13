@@ -1,7 +1,6 @@
-# Getting started
+# Getting Started
 
-Install TabPHM, set paths, run your first experiment.
-
-- [Setup](setup.md) — Install (`uv`), paths, and how to run an experiment.
-
-[← Back to documentation index](../index.md)
+- [Install](install.md)
+- [Quickstart (5 minutes)](quickstart-5min.md)
+- [First Run Walkthrough](first-run.md)
+- [Legacy Setup Page](setup.md)
