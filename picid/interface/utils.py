@@ -12,6 +12,7 @@ from torch import nn
 
 from picid.data.data_objects.data import DatasetContainer
 from picid.evaluator.base import AbstractEvaluator
+from picid.interface.model_wrapper import CustomModelWrapper
 from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
     AbstractFitPredictWrapper
 from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule
@@ -82,42 +83,28 @@ def create_lightning_module(
     else:
         scheduler_factory = None
 
-    model = None
-    if not cfg.model.get("metadata", False):
-        add_backbone_args = {}
+    if isinstance(backbone, CustomModelWrapper):
 
-        if backbone is not None:
-            backbone_wrapper = backbone
-        else:
-            if cfg.datasource.data_name == "railway":
-                add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
-                add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
-
-            backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args)
-
-            if cfg.model.get("load_path", False):
-                backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
-
-        if isinstance(backbone_wrapper, AbstractFeedForwardWrapper):
+        if isinstance(backbone, AbstractFeedForwardWrapper):
             model = ConstantLossLightningModule(
-                backbone=backbone_wrapper,
+                backbone=backbone,
                 loss=loss,
                 evaluators=evaluators,
                 optimizer_factory=optimizer_factory,
                 scheduler_factory=scheduler_factory,
             )
-        elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
+        elif isinstance(backbone, AbstractFeedForwardTrainingWrapper):
             model = TrainingLightningModule(
-                backbone=backbone_wrapper,
+                backbone=backbone,
                 loss=loss,
                 evaluators=evaluators,
                 optimizer_factory=optimizer_factory,
                 scheduler_factory=scheduler_factory,
             )
 
-        elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
+        elif isinstance(backbone, AbstractFitPredictWrapper):
             model = FitPredictWrapperLightningModule(
-                backbone=backbone_wrapper,
+                backbone=backbone,
                 loss=loss,
                 evaluators=evaluators,
                 optimizer_factory=optimizer_factory,
@@ -126,18 +113,66 @@ def create_lightning_module(
             )
         else:
             raise ValueError(
-                f"Unsupported backbone wrapper type: {type(backbone_wrapper)}"
+                f"Unsupported backbone wrapper type: {type(backbone)}"
             )
-
     else:
-        if cfg.model.metadata.get("lightning_model", False):
-            # Model is already a standard LightningModule and does not require a wrapper
-            model = hydra.utils.instantiate(
-                cfg.model,
-                evaluators=evaluators,
-                optimizer_factory=optimizer_factory,
-                scheduler_factory=scheduler_factory,
-            )
+        model = None
+
+        if 'model' in cfg and not cfg.model.get("metadata", False):
+            add_backbone_args = {}
+
+            if backbone is not None:
+                backbone_wrapper = backbone
+            else:
+                if cfg.datasource.data_name == "railway":
+                    add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
+                    add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
+
+                backbone_wrapper = hydra.utils.instantiate(cfg.model, **add_backbone_args)
+
+                if cfg.model.get("load_path", False):
+                    backbone_wrapper.backbone.load_state_dict(torch.load(cfg.model.load_path))
+
+            if isinstance(backbone_wrapper, AbstractFeedForwardWrapper):
+                model = ConstantLossLightningModule(
+                    backbone=backbone_wrapper,
+                    loss=loss,
+                    evaluators=evaluators,
+                    optimizer_factory=optimizer_factory,
+                    scheduler_factory=scheduler_factory,
+                )
+            elif isinstance(backbone_wrapper, AbstractFeedForwardTrainingWrapper):
+                model = TrainingLightningModule(
+                    backbone=backbone_wrapper,
+                    loss=loss,
+                    evaluators=evaluators,
+                    optimizer_factory=optimizer_factory,
+                    scheduler_factory=scheduler_factory,
+                )
+
+            elif isinstance(backbone_wrapper, AbstractFitPredictWrapper):
+                model = FitPredictWrapperLightningModule(
+                    backbone=backbone_wrapper,
+                    loss=loss,
+                    evaluators=evaluators,
+                    optimizer_factory=optimizer_factory,
+                    scheduler_factory=scheduler_factory,
+                    debug=cfg.get("debug", False),
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported backbone wrapper type: {type(backbone_wrapper)}"
+                )
+
+        else:
+            if cfg.model.metadata.get("lightning_model", False):
+                # Model is already a standard LightningModule and does not require a wrapper
+                model = hydra.utils.instantiate(
+                    cfg.model,
+                    evaluators=evaluators,
+                    optimizer_factory=optimizer_factory,
+                    scheduler_factory=scheduler_factory,
+                )
 
     assert model is not None, "Model could not be instantiated."
     return model

@@ -1,3 +1,4 @@
+from einops import rearrange
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 from torch import nn
@@ -22,21 +23,23 @@ def test_linear_model():
 
     transforms = [scaler, scaler_target]
 
+    task_definition = Prognostic(task_type='rul', pred_len=0)
+
     config = {
-        "input_channels": 1,
-        "seq_len": 16,
-        "hidden_dim": 128,
+        "input_channels": 5,
+        "seq_len": task_definition.seq_len,
+        "hidden_dim": 64,
         "num_layers": 3,
     }
 
-    backbone = MLP(config, task_type='rul', num_targets=1)
-    backbone = ModelWrapper(model=backbone, pre_process_function=lambda x: nn.Flatten(1)(x).permute(0, 2, 1))
+    backbone = MLP(config, task_type=task_definition.task_type, num_targets=1)
+    backbone = ModelWrapper(model=backbone,
+                            pre_process_function=lambda x: x.permute(0, 2, 1),
+                            forward_function=lambda x: rearrange(x, "b c -> b 1 c"))
 
     custom_model = CustomModelWrapper(task_type='rul', model=backbone)
 
     # model = MLPConfig(input_ch    annels=1, num_targets=1)
-
-    task_definition = Prognostic(task_type='rul')
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 
@@ -46,7 +49,10 @@ def test_linear_model():
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
     interface = EasyInterface()
-    interface.train(datasource='phme20',
+    datasource = interface.get_datasource('phme20')
+    processed_datasource = interface.process_datasource(datasource, transforms)
+
+    interface.train(datasource=processed_datasource,
                     # custom_backbone=custom_model,
                     loggers=loggers,
                     callbacks=callbacks,

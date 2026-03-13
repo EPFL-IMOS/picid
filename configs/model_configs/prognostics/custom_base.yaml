@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - override /dataset: prognostics/rul_multiunit_dataset
+  - override /datamodule: base_datamodule
+  - override /optimization: reduce_on_plateau
+
+task_definition:
+  requires_training: true

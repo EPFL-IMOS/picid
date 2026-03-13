@@ -1,8 +1,10 @@
 from typing import Callable
 
 import torch
+from einops import rearrange
 from torch import nn
 
+from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
 
 
@@ -36,6 +38,12 @@ class ModelWrapper(nn.Module):
 
         self._pre_process_function = pre_process_function
 
+    def __getattr__(self, item):
+        try:
+            return super().__getattr__(item)
+        except AttributeError:
+            return getattr(self.base_model, item)
+
     def forward(self, x, **kwargs):
         x = self._pre_process_function(x)
         pred = self.base_model(x)
@@ -53,11 +61,9 @@ class CustomModelWrapper(AbstractFeedForwardTrainingWrapper):
                  # model_wrapper: nn.Module = ModelWrapper,
                  **kwargs):
 
+        # add checks on task type
         self.task_type = task_type
         self._pre_process_function = pre_process_function
-
-        # backbone = model_wrapper(model, forward_function=post_process_function,
-        #                          parent_model=self)
 
         super().__init__(model, **kwargs)
 
@@ -65,6 +71,23 @@ class CustomModelWrapper(AbstractFeedForwardTrainingWrapper):
         x, y = self._pre_process_function(batch, to_extract=['features', self.task_type], **kwargs)
 
         outputs = self.backbone(x, batch=batch, **kwargs)
+
+        if self.task_type in REGRESSION_TASKS:
+            if len(outputs.shape) == 2:
+                outputs = rearrange(outputs, "b c -> b 1 c")
+            y = y.unsqueeze(1)
+
+            # if predictions.shape[-1] != targets.shape[-1]:
+            #     logger.debug(
+            #         f"[MLP] Dimension mismatch: Preds {predictions.shape} vs Targets {targets.shape}"
+            #     )
+
+        elif self.task_type in CLASSIFICATION_TASKS:
+            if len(outputs.shape) == 2:
+                outputs = rearrange(outputs, "b c -> b 1 c")
+            y = y.unsqueeze(1)
+        else:
+            raise ValueError(f"Unsupported task type: {self.task_type}")
 
         model_out = {
             "predictions": outputs,

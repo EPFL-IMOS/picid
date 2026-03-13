@@ -74,7 +74,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
             df_target = self._inner_data.iloc[:, self._target_column].to_frame().copy()
             data = self._inner_data.drop(self._inner_data.columns[self._target_column], axis=1, inplace=False)
 
-        return data, df_target
+        return data.to_numpy(), df_target.to_numpy()
 
     def _load_numpy(self):
         """

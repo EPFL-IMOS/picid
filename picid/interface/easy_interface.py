@@ -221,7 +221,13 @@ class EasyInterface:
                                    'model_configs'/
                                    task_definition.config_name /
                                    (model.config_name + '.yaml'))
-            training_model_cfg = OmegaConf.load(training_model_path)
+        else:
+            training_model_path = (project_config.config_path /
+                                   'model_configs' /
+                                   task_definition.config_name /
+                                   'custom_base.yaml')
+
+        training_model_cfg = OmegaConf.load(training_model_path)
 
         overrides = overrides if overrides is not None else []
         #  TO CHECK POSSIBLE, but almost certain, ERRORS AND INCOMPATIBILITIES
@@ -436,7 +442,7 @@ class EasyInterface:
                 l = hydra.utils.instantiate(d)
                 log_functions.append(l)
 
-        if 'config_name' in cfg.model:
+        if 'model' in cfg and 'config_name' in cfg.model:
             with open_dict(cfg):
                 del cfg.model['config_name']
 

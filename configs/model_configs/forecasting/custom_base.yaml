@@ -1,0 +1,9 @@
+#@package _global_
+
+defaults:
+  - override /dataset: context_batch
+  - override /datamodule: base_datamodule
+  - override /optimization: reduce_on_plateau
+
+task_definition:
+  requires_training: true
