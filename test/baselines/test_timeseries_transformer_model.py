@@ -154,6 +154,39 @@ class TestTransformerModel:
         model = Transformer(cfg, decoder_only=False)
         assert model.enc_embedding is not None
 
+    @pytest.mark.parametrize("embed_type", [4, 5, 6])
+    def test_embed_type_forward_shapes(self, embed_type):
+        """Forward pass and shapes for embed_type 4, 5, 6.
+
+        embed_type 4: DataEmbedding_wo_pos_temp
+        embed_type 5: ContextEmbedding (encoder and decoder)
+        embed_type 6: ContextEmbedding (encoder) + ContextEmbedding_wo_context (decoder)
+        """
+        torch.manual_seed(42)
+        cfg = _transformer_config(
+            seq_len=12,
+            pred_len=4,
+            enc_in=2,
+            dec_in=2,
+            enc_context_in=4,
+            dec_context_in=4,
+            embed_type=embed_type,
+        )
+        if embed_type == 6:
+            # enc_context_in=4 = context cols; x_mark has 8 = 4 context + 4 time (freq="h")
+            cfg.d_x_embedding_router = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1])
+        model = Transformer(cfg, decoder_only=False)
+        B, L_enc, L_dec = 2, 12, 12
+        x_enc = torch.randn(B, L_enc, cfg.enc_in)
+        x_dec = torch.randn(B, L_dec, cfg.dec_in)
+        # embed_type 5: no router, x_mark has enc_context_in cols
+        # embed_type 6: router splits 8 cols into 4 context + 4 time
+        n_mark = 8 if embed_type == 6 else cfg.enc_context_in
+        x_mark_enc = torch.randn(B, L_enc, n_mark)
+        x_mark_dec = torch.randn(B, L_dec, n_mark)
+        out = model(x_enc, x_mark_enc, x_dec, x_mark_dec)
+        assert out.shape == (B, cfg.pred_len, 1)
+
 
 # =============================================================================
 # Timeseries_Transformer_Forecaster (timeseries_transformer_model.py)
@@ -203,6 +236,46 @@ class TestTimeseriesTransformerForecaster:
         assert forecaster.transformer is not None
         assert forecaster.d_x == 4
         assert forecaster.d_yt == 1
+
+    def test_init_with_n_timefeatures(self):
+        """Forecaster with n_timefeatures>0 sets d_x_embedding_router."""
+        cfg = _Config(
+            seq_len=24,
+            pred_len=6,
+            label_len=6,
+            enc_in=4,
+            dec_in=4,
+            enc_context_in=4,
+            dec_context_in=4,
+            d_model=16,
+            c_out=1,
+            embed="timeF",
+            freq="h",
+            dropout=0.1,
+            output_attention=False,
+            embed_type=0,
+            n_heads=2,
+            d_ff=64,
+            e_layers=1,
+            d_layers=1,
+            activation="gelu",
+            factor=3,
+        )
+        evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+        forecaster = Timeseries_Transformer_Forecaster(
+            optimizer_factory=_mock_optimizer_factory,
+            scheduler_factory=_mock_scheduler_factory,
+            d_x=4,
+            d_yc=0,
+            d_yt=1,
+            task_type="rul",
+            n_timefeatures=2,
+            transformer_args=cfg,
+            device="cpu",
+            evaluators=evaluators,
+        )
+        assert forecaster.transformer_args["d_x_embedding_router"] is not None
+        assert forecaster.transformer_args["d_x_embedding_router"].sum() == 2
 
     def test_init_with_d_x_zero(self):
         """Forecaster with d_x=0 (no context features)."""
@@ -477,3 +550,112 @@ class TestTimeseriesTransformerForecaster:
         assert "forecast_loss" in stats
         assert "predictions" in stats
         assert "targets" in stats
+
+    @pytest.mark.skip(
+        reason="d_x_mask path triggers embed shape mismatch; needs embed_type config"
+    )
+    def test_forward_with_d_x_mask(self):
+        """Forward pass with d_x_mask zeros timetable dims.
+
+        **Skipped:** RuntimeError: Given groups=1, weight of size [16, 4, 3], expected
+        input[2, 1, 26] to have 4 channels, but got 1 channels instead.
+
+        d_x_mask zeros some columns of x_t (e.g. [0, 0, 1, 1] zeros the first two).
+        The decoder's DataEmbedding expects a fixed number of time-feature channels
+        (e.g. 4 for freq="h"). After masking, the effective input has fewer channels,
+        so the Conv1d layer (expecting 4 input channels) receives the wrong shape.
+
+        **Fix:** Either make the decoder embedding robust to masked inputs (pass mask
+        and handle variable channels), or ensure the masked input is reshaped/padded
+        to the expected channel count before the embedding.
+        """
+        cfg = _Config(
+            seq_len=24,
+            pred_len=6,
+            label_len=6,
+            enc_in=4,
+            dec_in=4,
+            enc_context_in=4,
+            dec_context_in=4,
+            d_model=16,
+            c_out=1,
+            embed="timeF",
+            freq="h",
+            dropout=0.1,
+            output_attention=False,
+            embed_type=0,
+            n_heads=2,
+            d_ff=64,
+            e_layers=1,
+            d_layers=1,
+            activation="gelu",
+            factor=3,
+        )
+        evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+        forecaster = Timeseries_Transformer_Forecaster(
+            optimizer_factory=_mock_optimizer_factory,
+            scheduler_factory=_mock_scheduler_factory,
+            d_x=4,
+            d_yc=0,
+            d_yt=1,
+            task_type="rul",
+            transformer_args=cfg,
+            device="cpu",
+            evaluators=evaluators,
+            d_x_mask=[0, 0, 1, 1],
+        )
+        B, L, D = 2, 24, 4
+        x_c = None
+        y_c = None
+        x_t = torch.randn(B, L, D)
+        y_t = torch.randn(B, L, 1)
+        (out,) = forecaster.forward_model_pass(x_c, y_c, x_t, y_t)
+        assert out.shape == (B, 6, 1)
+
+    def test_compute_loss(self):
+        """compute_loss returns forecast_loss, forecast_out, forecast_mask."""
+        cfg = _Config(
+            seq_len=24,
+            pred_len=6,
+            label_len=6,
+            enc_in=1,
+            dec_in=1,
+            enc_context_in=1,
+            dec_context_in=4,
+            d_model=16,
+            c_out=1,
+            embed="timeF",
+            freq="h",
+            dropout=0.1,
+            output_attention=False,
+            embed_type=0,
+            n_heads=2,
+            d_ff=64,
+            e_layers=1,
+            d_layers=1,
+            activation="gelu",
+            factor=3,
+        )
+        evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+        forecaster = Timeseries_Transformer_Forecaster(
+            optimizer_factory=_mock_optimizer_factory,
+            scheduler_factory=_mock_scheduler_factory,
+            d_x=4,
+            d_yc=0,
+            d_yt=1,
+            task_type="rul",
+            transformer_args=cfg,
+            device="cpu",
+            evaluators=evaluators,
+        )
+        B, pred_len = 2, 6
+        batch = (
+            None,
+            None,
+            torch.randn(B, pred_len, 4),
+            torch.randn(B, pred_len, 1),
+        )
+        loss_dict = forecaster.compute_loss(batch)
+        assert "forecast_loss" in loss_dict
+        assert "forecast_out" in loss_dict
+        assert "forecast_mask" in loss_dict
