@@ -31,13 +31,8 @@ def test_pydantic_easy_interface():
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
     interface = EntryInterface()
-    interface.train(datasource='phme20',
-                    loggers=loggers,
-                    callbacks=callbacks,
-                    task_definition=task_definition,
-                    model=model,
-                    evaluators=evaluators,
-                    transforms=transforms)
+    interface.train(task_definition=task_definition, model=model, datasource='phme20', callbacks=callbacks,
+                    loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
 def test_pydantic_easy_interface_input_processed_datasource():
@@ -64,8 +59,5 @@ def test_pydantic_easy_interface_input_processed_datasource():
     callbacks = [EarlyStopping(monitor=None),
                  RichModelSummary()]
 
-    interface.train(datasource=processed_datasource,
-                    loggers=loggers,
-                    callbacks=callbacks,
-                    task_definition=task_definition,
-                    model=model)
+    interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
+                    loggers=loggers)

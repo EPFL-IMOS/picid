@@ -1,2 +1,2 @@
-from .easy_interface import EntryInterface
+from .interface import EntryInterface
 from .datasources import CustomSingleSourceLoader

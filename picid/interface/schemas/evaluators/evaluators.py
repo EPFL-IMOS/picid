@@ -11,7 +11,6 @@ TargetField = Annotated[str, Field(frozen=True, serialization_alias='_target_')]
 
 class AbsEvalConfig(BaseModel, ABC):
     model_class : TargetField
-    # config_name : str = Field(frozen=True)
 
     metric_names : list[str]
 

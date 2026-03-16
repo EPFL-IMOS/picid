@@ -53,14 +53,8 @@ def test_mlp_model():
     datasource = interface.get_datasource('phme20')
     processed_datasource = interface.process_datasource(datasource, transforms)
 
-    interface.train(datasource=processed_datasource,
-                    # custom_backbone=custom_model,
-                    loggers=loggers,
-                    callbacks=callbacks,
-                    task_definition=task_definition,
-                    model=custom_model,
-                    evaluators=evaluators,
-                    transforms=transforms)
+    interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
+                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
 def test_1dcnn_model():
@@ -107,11 +101,5 @@ def test_1dcnn_model():
     datasource = interface.get_datasource('phme20')
     processed_datasource = interface.process_datasource(datasource, transforms)
 
-    interface.train(datasource=processed_datasource,
-                    # custom_backbone=custom_model,
-                    loggers=loggers,
-                    callbacks=callbacks,
-                    task_definition=task_definition,
-                    model=custom_model,
-                    evaluators=evaluators,
-                    transforms=transforms)
+    interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
+                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms)

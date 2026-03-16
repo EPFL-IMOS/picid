@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from logging import Logger
 from pathlib import Path
 from typing import List
@@ -35,15 +36,7 @@ class EntryInterface:
             Initializes the EntryInterface, sets up internal configuration tracking,
             and populates the list of available data sources from the config path.
         """
-        self._model_cfg = None
-        self._datasource_cfg = None
-        self._experiment_cfg = None
-        self._transforms_cfg = None
-        self._current_datasource = None
-
         self._config_path = project_config.config_path
-
-        self.available_datasources = self.get_available_resource('datasource')
 
     def get_datasource(self, v: str):
         """
@@ -58,7 +51,6 @@ class EntryInterface:
         datasource = self.load_resource(v, 'datasource')
         dataset_source = hydra.utils.instantiate(datasource)
 
-        self._current_datasource = dataset_source
         return dataset_source
 
     def process_datasource(self, datasource: str | AbstractDataSourceLoader,
@@ -88,6 +80,11 @@ class EntryInterface:
                                              cache_path=project_config.cache_path)
 
         return preprocessor.pipeline()
+
+    @staticmethod
+    @lru_cache
+    def get_available_datasources():
+        return EntryInterface.get_available_resource('datasource')
 
     @staticmethod
     def load_resource(v: str | Path | dict = None,
@@ -180,16 +177,16 @@ class EntryInterface:
 
         return all_files
 
-    def compose_config_file(self,
-                            *,
-                            task_definition: BaseTaskDefinition,
-                            model: AbsModelConfig | CustomModelTrainer,
-                            datasource: str | ProcessedDatasource,
-                            evaluators,
-                            callbacks: dict | Callback | list[Callback] | None = None,
-                            transforms: str | dict = None,
-                            overrides: List[str] = None
-                            ) -> DictConfig:
+    def _compose_config_file(self,
+                             *,
+                             task_definition: BaseTaskDefinition,
+                             model: AbsModelConfig | CustomModelTrainer,
+                             datasource: str | ProcessedDatasource,
+                             evaluators,
+                             callbacks: dict | Callback | list[Callback] | None = None,
+                             transforms: str | dict = None,
+                             overrides: List[str] = None
+                             ) -> DictConfig:
         """
             Assembles a full Hydra experiment configuration by merging model,
             task, data, and callback configurations.
@@ -245,7 +242,7 @@ class EntryInterface:
                      node=datasource)
             overrides.append('datasource=datasource_cfg')
         else:
-            raise ValueError('datasource must be a string (see available_datasources attribute) or '
+            raise ValueError('datasource must be a string (see get_available_datasources() function) or '
                              'a ProcessedDatasource (using the process_datasource function).')
 
         if model_cfg is not None:
@@ -311,18 +308,15 @@ class EntryInterface:
 
         return cfg
 
-    def train(self,
-              output_dir: object = None,
-              *,
+    def train(self, *,
               task_definition: BaseTaskDefinition,
               model: AbsModelConfig | CustomModelTrainer,
               datasource: str | None | ProcessedDatasource = None,
               callbacks: dict | Callback | list[Callback] | None = None,
               loggers: list[Logger | BaseLogger] = None,
-              evaluators : dict[str, DefaultEvaluatorConfig] = None,
+              evaluators: dict[str, DefaultEvaluatorConfig] = None,
               transforms: list[DataTransform] = [],
               overrides: List[str] = None,
-              custom_backbone: nn.Module = None,
               enable_progress_bar: bool = True) -> None:
         """
             The main entry point for running an experiment. It handles data loading,
@@ -343,12 +337,12 @@ class EntryInterface:
                 None: This function initiates the `trainer.fit()` process.
         """
 
-        cfg = self.compose_config_file(datasource=datasource,
-                                       task_definition=task_definition,
-                                       evaluators=evaluators,
-                                       callbacks=callbacks,
-                                       overrides=overrides,
-                                       model=model)
+        cfg = self._compose_config_file(datasource=datasource,
+                                        task_definition=task_definition,
+                                        evaluators=evaluators,
+                                        callbacks=callbacks,
+                                        overrides=overrides,
+                                        model=model)
 
         if isinstance(datasource, ProcessedDatasource):
             data_dict = datasource.data_dict
@@ -357,7 +351,8 @@ class EntryInterface:
             datasource = self.load_resource(datasource, 'datasource')
 
             dataset_source = hydra.utils.instantiate(datasource)
-            process_datasource = self.process_datasource(dataset_source, transforms)
+            if transforms is not None and len(transforms) > 0:
+                process_datasource = self.process_datasource(dataset_source, transforms)
 
             data_dict = process_datasource.data_dict
             meta_data_dict = process_datasource.meta_data_dict
