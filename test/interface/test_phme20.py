@@ -1,3 +1,4 @@
+import pytest
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 
