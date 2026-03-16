@@ -224,7 +224,7 @@ exclude_lines = [
 #rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
 # uni2ts = { path = "./local_packages/uni2ts", editable = true }
 phmd = { git = "https://github.com/EPFL-IMOS/imos_phmd.git", branch='collab_lalr' }
-TabPFN = { git = "https://github.com/EPFL-IMOS/TabPFN-IMOS.git", branch='collab_lalr' }
+TabPFN = { git = "https://github.com/EPFL-IMOS/TabPFN-IMOS.git" }
 tabdpt = { git = "https://github.com/layer6ai-labs/TabDPT" }
 carte-ai = { git = "https://github.com/soda-inria/carte"}
 rul-datasets = { git = "https://github.com/tilman151/rul-datasets" }
