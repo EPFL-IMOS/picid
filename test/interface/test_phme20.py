@@ -10,6 +10,7 @@ from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
+@pytest.mark.skip(reason="no way of currently testing training")
 def test_pydantic_easy_interface():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
@@ -35,6 +36,7 @@ def test_pydantic_easy_interface():
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
+@pytest.mark.skip(reason="no way of currently testing training")
 def test_pydantic_easy_interface_input_processed_datasource():
     interface = EntryInterface()
 

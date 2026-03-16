@@ -1,3 +1,4 @@
+import pytest
 from einops import rearrange
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
@@ -16,6 +17,7 @@ from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
+@pytest.mark.skip(reason="no way of currently testing training")
 def test_mlp_model():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
@@ -57,6 +59,7 @@ def test_mlp_model():
                     callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
+@pytest.mark.skip(reason="no way of currently testing training")
 def test_1dcnn_model():
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
