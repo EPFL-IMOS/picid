@@ -1,11 +1,12 @@
 from abc import ABC
 from typing import Annotated
 
-from pydantic import BaseModel, Field, model_serializer
-from pydantic_core.core_schema import SerializerFunctionWrapHandler
+from pydantic import BaseModel, Field
 
-from picid.evaluator.hooks import BaseEvalHook
 from picid.interface.schemas.evaluators.hooks import AbsHookConfig, SavePredictionsHookConfig, UnitTrendPlotHookConfig
+
+__all__ = ["AbsEvalConfig", "DefaultEvaluatorConfig", "ClassificationEvaluatorConfig",
+           "RulEvaluatorConfig", "PerUnitEvaluatorConfig", "ForecastingEvaluatorConfig"]
 
 TargetField = Annotated[str, Field(frozen=True, serialization_alias='_target_')]
 
@@ -65,6 +66,3 @@ class ForecastingEvaluatorConfig(AbsEvalConfig):
 
     target_dim_position: int | None = None
     hooks: list[AbsHookConfig] = [SavePredictionsHookConfig(dims=["sample", "time", "feature"])]
-
-
-print(DefaultEvaluatorConfig().model_dump(by_alias=True))

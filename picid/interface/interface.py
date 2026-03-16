@@ -8,13 +8,11 @@ import hydra
 import numpy as np
 from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
-from lightning import Callback, LightningDataModule, Trainer
+from lightning import Callback, Trainer
 from omegaconf import OmegaConf, DictConfig, open_dict
-from torch import nn
 
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 from picid.interface.model.custom_model import CustomModelTrainer
 from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
@@ -428,14 +426,13 @@ class EntryInterface:
         if loggers is None:
             loggers = []
 
-        for l in loggers:
-            if isinstance(l, Logger):
-                log_functions.append(l)
-            elif isinstance(l, BaseLogger):
-                d = l.model_dump(by_alias=True)
+        for logger in loggers:
+            if isinstance(logger, Logger):
+                log_functions.append(logger)
+            elif isinstance(logger, BaseLogger):
+                d = logger.model_dump(by_alias=True)
                 d['save_dir'] = project_config.save_dir
-                l = hydra.utils.instantiate(d)
-                log_functions.append(l)
+                log_functions.append(hydra.utils.instantiate(d))
 
         if 'model' in cfg and 'config_name' in cfg.model:
             with open_dict(cfg):

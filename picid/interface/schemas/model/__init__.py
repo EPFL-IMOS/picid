@@ -7,3 +7,7 @@ from .lstm import LSTMConfig
 from .mean import MeanConfig
 from .mlp import MLPConfig
 from .naive import NaiveConfig
+
+__all__ = ["AbsModelConfig", "CNN1DConfig", "CrossformerConfig",
+           "LinearRegressionConfig", "LinearRegressionConfig",
+           "LSTMConfig", "LSTMConfig", "MeanConfig", "NaiveConfig"]

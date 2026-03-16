@@ -369,7 +369,7 @@ class InterfacePreProcessor:
                 "Data has not been preprocessed. Please run the pipeline() first."
             )
 
-        if return_splits_on_first_level == True:
+        if return_splits_on_first_level:
             return self.data.to_split_dict()
         else:
             return self.data

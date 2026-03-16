@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
-__all__ = ["Settings", "config"]
+__all__ = ["Settings", "project_config"]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='TAB_PHM_', extra='ignore')

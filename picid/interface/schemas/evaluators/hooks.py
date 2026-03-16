@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 
 TargetField = Annotated[str, Field(frozen=True, serialization_alias='_target_')]
 
+__all__ = ["AbsHookConfig", "ReconstructionPlotHookConfig", "SavePredictionsHookConfig",
+           "UnitTrendPlotHookConfig"]
+
 class AbsHookConfig(BaseModel, ABC):
     model_class : TargetField
 
