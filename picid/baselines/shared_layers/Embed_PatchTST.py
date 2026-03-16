@@ -4,6 +4,16 @@ import math
 
 
 class PositionalEmbedding(nn.Module):
+    """Sinusoidal positional embedding (fixed, non-trainable).
+
+    Parameters
+    ----------
+    d_model : int
+        Embedding dimension.
+    max_len : int, optional
+        Maximum sequence length. Defaults to 5000.
+    """
+
     def __init__(self, d_model, max_len=5000):
         super(PositionalEmbedding, self).__init__()
         # Compute the positional encodings once in log space.
@@ -22,6 +32,18 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
+        """Return positional embeddings for the sequence length of x.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor; x.size(1) is the sequence length.
+
+        Returns
+        -------
+        torch.Tensor
+            Positional embeddings of shape (1, seq_len, d_model).
+        """
         return self.pe[:, : x.size(1)]
 
 
@@ -114,6 +136,22 @@ class TimeFeatureEmbedding(nn.Module):
 
 
 class DataEmbedding(nn.Module):
+    """Combines value, positional, and optional temporal embeddings for time series.
+
+    Parameters
+    ----------
+    c_in : int
+        Number of input channels/variates.
+    d_model : int
+        Embedding dimension.
+    embed_type : str, optional
+        Temporal embedding type: "fixed" or "timeF". Defaults to "fixed".
+    freq : str, optional
+        Time frequency: "h", "t", "s", "m", "a", "w", "d", "b". Defaults to "h".
+    dropout : float, optional
+        Dropout probability. Defaults to 0.1.
+    """
+
     def __init__(self, c_in, d_model, embed_type="fixed", freq="h", dropout=0.1):
         super(DataEmbedding, self).__init__()
 
@@ -127,6 +165,20 @@ class DataEmbedding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input of shape (B, L, c_in).
+        x_mark : torch.Tensor or None
+            Optional temporal features of shape (B, L, n_temporal_features).
+
+        Returns
+        -------
+        torch.Tensor
+            Embedded output of shape (B, L, d_model).
+        """
         if x_mark is None:
             x = self.value_embedding(x) + self.position_embedding(x)
         else:
@@ -177,6 +229,22 @@ class DataEmbedding_wo_pos(nn.Module):
 
 
 class PatchEmbedding(nn.Module):
+    """Patch-based embedding with patching, linear projection, and positional encoding.
+
+    Parameters
+    ----------
+    d_model : int
+        Output embedding dimension.
+    patch_len : int
+        Length of each patch.
+    stride : int
+        Stride between patches.
+    padding : int
+        Right padding applied before patching.
+    dropout : float
+        Dropout probability.
+    """
+
     def __init__(self, d_model, patch_len, stride, padding, dropout):
         super(PatchEmbedding, self).__init__()
         # Patching
@@ -194,6 +262,20 @@ class PatchEmbedding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        """Forward pass: patch, project, add positional embedding.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input of shape (B, n_vars, seq_len).
+
+        Returns
+        -------
+        torch.Tensor
+            Embedded patches of shape (B * n_vars, n_patches, d_model).
+        int
+            Number of input variables (n_vars).
+        """
         # do patching
         n_vars = x.shape[1]
         x = self.padding_patch_layer(x)

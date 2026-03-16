@@ -15,6 +15,18 @@ from .nn import Spacetimeformer
 
 
 def find_ckpt(path):
+    """Find first checkpoint file in path/checkpoints (excluding 'last').
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        Root directory containing a checkpoints subdirectory.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to first .ckpt file found, excluding stem 'last'.
+    """
     path = path / "checkpoints"
     files = [
         x
@@ -25,6 +37,13 @@ def find_ckpt(path):
 
 
 class Spacetimeformer_Forecaster(TransformerForecaster):
+    """Spacetimeformer forecaster for regression, classification, and state forecasting.
+
+    Supports decoder-only mode (regression/classification) and encoder-decoder mode
+    (forecasting). Uses spatio-temporal or temporal embeddings with optional
+    Performer attention.
+    """
+
     def __init__(
         self,
         optimizer_factory: Callable[..., torch.optim.Optimizer],
@@ -102,6 +121,151 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
+        """Initialize Spacetimeformer forecaster.
+
+        Parameters
+        ----------
+        optimizer_factory : Callable[..., torch.optim.Optimizer]
+            Factory for creating the optimizer.
+        scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
+            Factory for creating the learning rate scheduler.
+        d_yc : int
+            Context target dimension.
+        d_yt : int
+            Target output dimension.
+        d_x : int
+            Covariate dimension (0 for state forecasting).
+        task_type : str
+            One of regression, classification, or state_forecasting.
+        n_timefeatures : int, optional
+            Number of time features in d_x.
+        max_seq_len : int, optional
+            Maximum sequence length.
+        start_token_len : int, optional
+            Length of start tokens for encoder-decoder (0 for decoder-only).
+        attn_factor : int, optional
+            Attention factor for ProbSparse attention.
+        d_model : int, optional
+            Model dimension.
+        d_queries_keys : int, optional
+            Query/key dimension.
+        d_values : int, optional
+            Value dimension.
+        n_heads : int, optional
+            Number of attention heads.
+        e_layers : int, optional
+            Number of encoder layers.
+        d_layers : int, optional
+            Number of decoder layers.
+        d_ff : int, optional
+            Feed-forward dimension.
+        dropout_emb : float, optional
+            Embedding dropout.
+        dropout_qkv : float, optional
+            QKV dropout.
+        dropout_ff : float, optional
+            Feed-forward dropout.
+        dropout_attn_out : float, optional
+            Attention output dropout.
+        dropout_attn_matrix : float, optional
+            Attention matrix dropout.
+        pos_emb_type : str, optional
+            Positional embedding type.
+        timetable_emb_type : str, optional
+            Timetable embedding type.
+        time_emb_type : str, optional
+            Time embedding type.
+        variable_emb_type : str, optional
+            Variable embedding type.
+        inverted_encoder : bool, optional
+            Use iTransformer-style inverted encoder.
+        global_self_attn : str, optional
+            Global self-attention type.
+        local_self_attn : str, optional
+            Local self-attention type.
+        global_cross_attn : str, optional
+            Global cross-attention type.
+        local_cross_attn : str, optional
+            Local cross-attention type.
+        performer_kernel : str, optional
+            Performer attention kernel.
+        embed_method : str, optional
+            Embedding method (spatio-temporal or temporal).
+        attention_method : str, optional
+            Attention method (causal or non-causal).
+        performer_relu : bool, optional
+            Use ReLU in Performer.
+        performer_redraw_interval : int, optional
+            Performer projection redraw interval.
+        attn_time_windows : int, optional
+            Number of attention time windows.
+        use_shifted_time_windows : bool, optional
+            Use shifted time windows.
+        activation : str, optional
+            Activation function.
+        head_f : str, optional
+            Head function type.
+        norm : str, optional
+            Normalization type.
+        use_final_norm : bool, optional
+            Use final normalization.
+        initial_downsample_convs : int, optional
+            Initial downsampling convolutions.
+        intermediate_downsample_convs : int, optional
+            Intermediate downsampling convolutions.
+        loss : str, optional
+            Loss function.
+        class_loss_imp : float, optional
+            Classification loss importance.
+        recon_loss_imp : float, optional
+            Reconstruction loss importance.
+        time_emb_dim : int, optional
+            Time embedding dimension.
+        null_value : float, optional
+            Null value for masking.
+        pad_value : float, optional
+            Padding value.
+        linear_window : int, optional
+            Linear window size.
+        linear_shared_weights : bool, optional
+            Share linear weights.
+        use_revin : bool, optional
+            Use RevIN normalization.
+        use_seasonal_decomp : bool, optional
+            Use seasonal decomposition.
+        use_val_enc : bool, optional
+            Use value embedding in encoder.
+        use_val_dec : bool, optional
+            Use value embedding in decoder.
+        use_tt_enc : bool, optional
+            Use timetable embedding in encoder.
+        use_tt_dec : bool, optional
+            Use timetable embedding in decoder.
+        use_time : bool, optional
+            Use time embedding.
+        use_space : bool, optional
+            Use space embedding.
+        use_given : bool, optional
+            Use given embedding.
+        recon_mask_skip_all : float, optional
+            Reconstruction mask skip probability.
+        recon_mask_max_seq_len : int, optional
+            Max sequence length for reconstruction mask.
+        recon_mask_drop_seq : float, optional
+            Sequence drop probability.
+        recon_mask_drop_standard : float, optional
+            Standard drop probability.
+        recon_mask_drop_full : float, optional
+            Full drop probability.
+        verbose : bool, optional
+            Verbosity.
+        target_mask : optional
+            Target mask for multi-output.
+        mask_y_c : bool, optional
+            Mask context targets.
+        **kwargs
+            Passed to parent (e.g. evaluators).
+        """
         if task_type in STATE_FORECASTING_TASKS:
             # currently we populate d_x as zero vector for state forecasting
             # this would need to be changes if we want to include timefeatures
@@ -240,6 +404,21 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         return kwargs
 
     def step(self, batch: Tuple[torch.Tensor], train: bool) -> dict[str, torch.Tensor]:
+        """Execute one training or evaluation step.
+
+        Parameters
+        ----------
+        batch : Tuple[torch.Tensor]
+            (x_c, y_c, x_t, y_t) batch tuple.
+        train : bool
+            Whether in training mode.
+
+        Returns
+        -------
+        dict
+            Stats with keys: predictions, targets, mask, forecast_loss, class_loss,
+            recon_loss, loss, acc.
+        """
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
@@ -277,6 +456,20 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
     ) -> Tuple[torch.Tensor]:
+        """Compute cross-entropy classification loss and accuracy.
+
+        Parameters
+        ----------
+        logits : torch.Tensor
+            Model logits (B*T, num_classes).
+        labels : torch.Tensor
+            Integer class labels.
+
+        Returns
+        -------
+        Tuple[torch.Tensor]
+            (class_loss, accuracy).
+        """
         labels = labels.view(-1).to(logits.device)
         d_y = labels.max() + 1
 
@@ -304,6 +497,23 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         return class_loss, acc
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
+        """Compute forecast, reconstruction, and optional classification loss.
+
+        Parameters
+        ----------
+        batch : Tuple
+            (x_c, y_c, x_t, y_t) batch.
+        time_mask : optional
+            Time mask for forecasting loss.
+        forward_kwargs : dict, optional
+            Kwargs passed to forward (e.g. target_mask).
+
+        Returns
+        -------
+        dict
+            forecast_loss, class_loss, acc, forecast_out, forecast_mask,
+            recon_out, recon_loss, recon_mask.
+        """
         x_c, y_c, x_t, y_t = batch
 
         target_mask = forward_kwargs.get("target_mask", None)
@@ -348,6 +558,29 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
+        """Run forward pass through the Spacetimeformer model.
+
+        Parameters
+        ----------
+        x_c : torch.Tensor or None
+            Context covariates (B, L_c, d_x).
+        y_c : torch.Tensor or None
+            Context targets (B, L_c, d_yc).
+        x_t : torch.Tensor or None
+            Target covariates (B, L_t, d_x).
+        y_t : torch.Tensor
+            Target values (B, L_t, d_yt).
+        output_attn : bool, optional
+            Return attention weights.
+        target_mask : optional
+            Mask for multi-output targets.
+
+        Returns
+        -------
+        Tuple
+            (forecast_output, recon_output, (logits, labels)).
+            If output_attn: adds attention as 4th element.
+        """
         # set data to [batch, length, dim] format
         if y_c is not None:
             if len(y_c.shape) == 2:

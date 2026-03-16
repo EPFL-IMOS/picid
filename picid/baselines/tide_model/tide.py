@@ -4,7 +4,19 @@ import torch.nn.functional as F
 
 
 class LayerNorm(nn.Module):
-    """LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False"""
+    """
+    LayerNorm with optional bias.
+
+    PyTorch's built-in LayerNorm does not support bias=False; this module
+    allows disabling the bias term.
+
+    Parameters
+    ----------
+    ndim : int
+        Number of normalized dimensions (feature size).
+    bias : bool
+        If True, use a learnable bias; if False, no bias.
+    """
 
     def __init__(self, ndim, bias):
         super().__init__()
@@ -12,10 +24,41 @@ class LayerNorm(nn.Module):
         self.bias = nn.Parameter(torch.zeros(ndim)) if bias else None
 
     def forward(self, input):
+        """
+        Apply layer normalization.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input tensor of shape (..., ndim).
+
+        Returns
+        -------
+        torch.Tensor
+            Normalized tensor, same shape as input.
+        """
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-2)
 
 
 class ResBlock(nn.Module):
+    """
+    Residual block with two linear layers and a skip connection.
+
+    Computes: LayerNorm(ReLU(Linear(x)) -> Linear -> Dropout + Linear_skip(x)).
+    Parameters
+    ----------
+    input_dim : int
+        Input feature dimension.
+    hidden_dim : int
+        Hidden layer dimension.
+    output_dim : int
+        Output feature dimension.
+    dropout : float, optional
+        Dropout probability.
+    bias : bool, optional
+        Whether to use bias in linear layers.
+    """
+
     def __init__(self, input_dim, hidden_dim, output_dim, dropout=0.1, bias=True):
         super().__init__()
 
@@ -28,6 +71,19 @@ class ResBlock(nn.Module):
         # self.ln = RMSNorm(output_dim, bias=bias)
 
     def forward(self, x):
+        """
+        Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape (batch, input_dim).
+
+        Returns
+        -------
+        torch.Tensor
+            Output tensor of shape (batch, output_dim).
+        """
         out = self.fc1(x)
         out = self.relu(out)
         out = self.fc2(out)
@@ -40,7 +96,20 @@ class ResBlock(nn.Module):
 # TiDE
 class Model(nn.Module):
     """
-    paper: https://arxiv.org/pdf/2304.08424.pdf
+    TiDE: Time-series Dense Encoder.
+
+    MLP-based encoder for time series forecasting and related tasks.
+    Paper: https://arxiv.org/pdf/2304.08424.pdf
+
+    Parameters
+    ----------
+    configs : object
+        Configuration with attributes: task_name, seq_len, pred_len, freq,
+        feature_dim, feature_encode_dim, d_model, e_layers, d_layers, d_ff,
+        dropout, c_out, num_class (optional). Either freq or feature_dim must
+        be None.
+    bias : bool, optional
+        Whether to use bias in linear layers.
     """
 
     def __init__(self, configs, bias=True):
@@ -220,7 +289,30 @@ class Model(nn.Module):
         return hidden
 
     def forward(self, x_enc, x_mark_enc, x_dec, batch_y_mark, mask=None):
-        """x_mark_enc is the exogenous dynamic feature described in the original paper"""
+        """
+        Forward pass.
+
+        Parameters
+        ----------
+        x_enc : torch.Tensor
+            Encoder input: shape (batch, seq_len, channels).
+        x_mark_enc : torch.Tensor or None
+            Exogenous dynamic features for encoder; shape (batch, seq_len, feature_dim)
+            for forecast, or None for state_forecasting.
+        x_dec : torch.Tensor or None
+            Decoder input (unused in TiDE).
+        batch_y_mark : torch.Tensor or None
+            Exogenous features for decoder; shape (batch, seq_len+pred_len, feature_dim)
+            for forecast, or None for state_forecasting.
+        mask : torch.Tensor or None, optional
+            Optional mask (unused).
+
+        Returns
+        -------
+        torch.Tensor
+            Output tensor of shape (batch, pred_len, c_out) for forecast tasks,
+            or (batch, 1, num_class) for classification.
+        """
         if (
             self.task_name == "long_term_forecast"
             or self.task_name == "short_term_forecast"

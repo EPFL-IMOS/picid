@@ -22,6 +22,7 @@ BATCH_SIZE = 2
 
 OmegaConf.register_new_resolver("infer_dataloader_length", lambda key: 10)
 OmegaConf.register_new_resolver("infer_data_dim", lambda key, dim: N_FEATURES)
+OmegaConf.register_new_resolver("sum", lambda *args: sum(args))
 
 
 def pytest_configure(config):

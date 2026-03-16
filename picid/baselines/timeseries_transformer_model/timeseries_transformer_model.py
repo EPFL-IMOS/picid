@@ -14,6 +14,54 @@ from .timeseries_transformer import Model as Transformer
 
 
 class Timeseries_Transformer_Forecaster(TransformerForecaster):
+    """Forecaster wrapping a vanilla Transformer for forecasting, regression, and classification.
+
+    Uses decoder-only mode for regression/classification/state_forecasting tasks,
+    and full encoder-decoder for forecasting. Supports ContextEmbedding (embed_type 5/6)
+    with d_x_embedding_router for separating time features from context.
+
+    Parameters
+    ----------
+    optimizer_factory : callable
+        Factory returning an optimizer given model parameters.
+    scheduler_factory : callable
+        Factory returning a learning rate scheduler given optimizer.
+    d_x : int
+        Dimension of context features (including time features if n_timefeatures > 0).
+    d_yc : int
+        Dimension of context target channels.
+    d_yt : int
+        Dimension of target channels.
+    task_type : str
+        One of "forecasting", "rul", "classification", "state_forecasting", etc.
+    n_timefeatures : int, optional
+        Number of time features in d_x; used to build d_x_embedding_router. Defaults to 0.
+    loss : str, optional
+        Loss name. Defaults to "mse".
+    linear_window : int, optional
+        Linear window size. Defaults to 0.
+    use_revin : bool, optional
+        Whether to use RevIN. Defaults to False.
+    use_seasonal_decomp : bool, optional
+        Whether to use seasonal decomposition. Defaults to False.
+    linear_shared_weights : bool, optional
+        Whether to share linear weights. Defaults to False.
+    time_emb_dim : int, optional
+        Time embedding dimension. Defaults to 0.
+    teacher_forcing_prob : float, optional
+        Teacher forcing probability. Defaults to 0.5.
+    transformer_args : dict, optional
+        Config passed to the underlying Transformer Model.
+    device : str, optional
+        Device string. Defaults to "cuda".
+    d_x_mask : list of int, optional
+        Mask for d_x dimensions. Defaults to None.
+    mask_y_c : bool, optional
+        Whether to mask y_c. Defaults to False.
+    **kwargs
+        Additional arguments (e.g. evaluators) passed to TransformerForecaster.
+    """
+
     def __init__(
         self,
         optimizer_factory: Callable[..., torch.optim.Optimizer],
@@ -88,15 +136,39 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
 
     @property
     def train_step_forward_kwargs(self):
+        """Forward kwargs for training (output_attn=False)."""
         return {"output_attn": False}
 
     @property
     def eval_step_forward_kwargs(self):
+        """Forward kwargs for evaluation (output_attn=False)."""
         return {"output_attn": False}
 
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
+        """Run a single forward pass through the transformer.
+
+        Parameters
+        ----------
+        x_c : torch.Tensor or None
+            Context features (B, L_ctx, d_x). None for regression/classification.
+        y_c : torch.Tensor or None
+            Context targets (B, L_ctx, d_yc). None for regression/classification.
+        x_t : torch.Tensor
+            Target features (B, L_tgt, d_x).
+        y_t : torch.Tensor
+            Target values (B, L_tgt, d_yt).
+        output_attn : bool, optional
+            Whether to return attention weights. Defaults to False.
+        target_mask : torch.Tensor, optional
+            Mask for target features. Defaults to None.
+
+        Returns
+        -------
+        tuple of torch.Tensor
+            (output,) where output has shape (B, pred_len, d_yt).
+        """
         # set data to [batch, length, dim] format
         if y_c is not None:
             if len(y_c.shape) == 2:
@@ -106,6 +178,9 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         if len(y_t.shape) == 2:
             y_t = y_t.unsqueeze(-1)
 
+        # TODO: rows 182-184 are potentially dead code. Reason: Duplicate of lines 176-177;
+        # when y_c is not None we already zero it above; when y_c is None (regression/classification)
+        # we assert before reaching this. Additional Note: Remove or consolidate with mask_y_c block above.
         if self.mask_y_c:
             y_c = torch.zeros_like(y_c)
 
@@ -159,6 +234,20 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         return (output,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
+        """Execute one training or evaluation step.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t).
+        train : bool
+            If True, training step; else evaluation step.
+
+        Returns
+        -------
+        dict
+            Stats with keys: predictions, targets, mask, forecast_loss, loss.
+        """
         kwargs = (
             self.train_step_forward_kwargs if train else self.eval_step_forward_kwargs
         )
@@ -190,6 +279,22 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
+        """Compute forecast loss for a batch.
+
+        Parameters
+        ----------
+        batch : tuple of torch.Tensor
+            (x_c, y_c, x_t, y_t).
+        time_mask : torch.Tensor, optional
+            Mask for time dimension. Defaults to None.
+        forward_kwargs : dict, optional
+            Kwargs passed to forward (e.g. output_attn, target_mask). Defaults to {}.
+
+        Returns
+        -------
+        dict
+            Keys: forecast_loss, forecast_out, forecast_mask.
+        """
         target_mask = forward_kwargs.get("target_mask", None)
 
         x_c, y_c, x_t, y_t = batch

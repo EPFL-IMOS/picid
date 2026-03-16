@@ -4,6 +4,16 @@ import math
 
 
 class PositionalEmbedding(nn.Module):
+    """Sinusoidal positional embedding (fixed, non-trainable).
+
+    Parameters
+    ----------
+    d_model : int
+        Embedding dimension.
+    max_len : int, optional
+        Maximum sequence length. Defaults to 5000.
+    """
+
     def __init__(self, d_model, max_len=5000):
         super(PositionalEmbedding, self).__init__()
         # Compute the positional encodings once in log space.
@@ -22,6 +32,18 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
+        """Return positional embeddings for the sequence length of x.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor; x.size(1) is the sequence length.
+
+        Returns
+        -------
+        torch.Tensor
+            Positional embeddings of shape (1, seq_len, d_model).
+        """
         return self.pe[:, : x.size(1)]
 
 
@@ -115,6 +137,22 @@ class TimeFeatureEmbedding(nn.Module):
 
 
 class DataEmbedding(nn.Module):
+    """Combines value, positional, and temporal embeddings for time series.
+
+    Parameters
+    ----------
+    c_in : int
+        Number of input channels/variates.
+    d_model : int
+        Embedding dimension.
+    embed_type : str, optional
+        Temporal embedding type: "fixed" or "timeF". Defaults to "fixed".
+    freq : str, optional
+        Time frequency: "h", "t", "s", "m", "a", "w", "d", "b". Defaults to "h".
+    dropout : float, optional
+        Dropout probability. Defaults to 0.1.
+    """
+
     def __init__(self, c_in, d_model, embed_type="fixed", freq="h", dropout=0.1):
         super(DataEmbedding, self).__init__()
 
@@ -128,6 +166,20 @@ class DataEmbedding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input of shape (B, L, c_in).
+        x_mark : torch.Tensor
+            Temporal features of shape (B, L, n_temporal_features).
+
+        Returns
+        -------
+        torch.Tensor
+            Embedded output of shape (B, L, d_model).
+        """
         x = (
             self.value_embedding(x)
             + self.temporal_embedding(x_mark)
@@ -137,6 +189,26 @@ class DataEmbedding(nn.Module):
 
 
 class ContextEmbedding(nn.Module):
+    """Embedding that combines value, context, positional, and temporal features.
+
+    Parameters
+    ----------
+    c_in : int
+        Number of input channels/variates.
+    c_context : int
+        Number of context channels.
+    d_model : int
+        Embedding dimension.
+    embed_type : str, optional
+        Temporal embedding type: "fixed" or "timeF". Defaults to "timeF".
+    freq : str, optional
+        Time frequency. Defaults to "h".
+    dropout : float, optional
+        Dropout probability. Defaults to 0.1.
+    d_x_embedding_router : torch.Tensor, optional
+        Mask to separate time features from context features in x_mark.
+    """
+
     def __init__(
         self,
         c_in,
@@ -162,6 +234,20 @@ class ContextEmbedding(nn.Module):
         self.d_x_embedding_router = d_x_embedding_router
 
     def forward(self, x, x_mark):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input of shape (B, L, c_in).
+        x_mark : torch.Tensor
+            Context and temporal features of shape (B, L, D_C).
+
+        Returns
+        -------
+        torch.Tensor
+            Embedded output of shape (B, L, d_model).
+        """
         _, _, D_C = x_mark.shape
         # time_features_mask = torch.tensor([0]*(D_C-4)+[1]*4)
         time_features_mask = self.d_x_embedding_router

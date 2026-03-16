@@ -21,8 +21,31 @@ from picid.baselines.shared_layers.Embed_DLinear import (
 
 
 class Model(nn.Module):
-    """
-    Vanilla Transformer with O(L^2) complexity
+    """Vanilla Transformer with O(L^2) complexity.
+
+    Supports encoder-decoder or decoder-only modes. Embedding type is selected
+    via configs.embed_type: 0=DataEmbedding, 1=DataEmbedding, 2=DataEmbedding_wo_pos,
+    3=DataEmbedding_wo_temp, 4=DataEmbedding_wo_pos_temp, 5=ContextEmbedding,
+    6=ContextEmbedding (encoder) + ContextEmbedding_wo_context (decoder).
+
+    Parameters
+    ----------
+    configs : object
+        Configuration with pred_len, output_attention, d_model, enc_in, dec_in,
+        enc_context_in, dec_context_in, embed_type, embed, freq, dropout,
+        n_heads, d_ff, e_layers, d_layers, activation, factor, c_out,
+        d_x_embedding_router (optional).
+    decoder_only : bool, optional
+        If True, use decoder-only mode (no encoder). Defaults to False.
+
+    Attributes
+    ----------
+    pred_len : int
+        Prediction length.
+    d_model : int
+        Model dimension.
+    decoder_only : bool
+        Whether the model is decoder-only.
     """
 
     def __init__(self, configs, decoder_only: bool = False):
@@ -220,6 +243,31 @@ class Model(nn.Module):
         dec_self_mask=None,
         dec_enc_mask=None,
     ):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x_enc : torch.Tensor or None
+            Encoder input of shape (B, L_enc, enc_in). None if decoder_only.
+        x_mark_enc : torch.Tensor or None
+            Encoder temporal/context features (B, L_enc, D). None if decoder_only.
+        x_dec : torch.Tensor
+            Decoder input of shape (B, L_dec, dec_in).
+        x_mark_dec : torch.Tensor or None
+            Decoder temporal/context features (B, L_dec, D). None for some tasks.
+        enc_self_mask : torch.Tensor, optional
+            Encoder self-attention mask.
+        dec_self_mask : torch.Tensor, optional
+            Decoder self-attention mask.
+        dec_enc_mask : torch.Tensor, optional
+            Decoder-encoder cross-attention mask.
+
+        Returns
+        -------
+        torch.Tensor or tuple
+            If output_attention and not decoder_only: (pred, attns).
+            Else: pred of shape (B, pred_len, c_out).
+        """
         if not self.decoder_only:
             enc_out = self.enc_embedding(x_enc, x_mark_enc)
             enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)

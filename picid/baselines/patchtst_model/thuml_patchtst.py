@@ -14,11 +14,35 @@ from picid.baselines.shared_layers.Embed_PatchTST import (
 
 
 class Transpose(nn.Module):
+    """Transpose tensor dimensions.
+
+    Parameters
+    ----------
+    *dims : int
+        Dimensions to transpose.
+    contiguous : bool, optional
+        If True, call .contiguous() after transpose. Default is False.
+
+    """
+
     def __init__(self, *dims, contiguous=False):
         super().__init__()
         self.dims, self.contiguous = dims, contiguous
 
     def forward(self, x):
+        """Transpose input tensor.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Transposed tensor.
+
+        """
         if self.contiguous:
             return x.transpose(*self.dims).contiguous()
         else:
@@ -26,13 +50,39 @@ class Transpose(nn.Module):
 
 
 class FlattenHead(nn.Module):
+    """Flatten and project encoder output to target window.
+
+    Parameters
+    ----------
+    nf : int
+        Input feature size (d_model * patch_num after flatten).
+    target_window : int
+        Output sequence length.
+    head_dropout : float, optional
+        Dropout probability. Default is 0.
+
+    """
+
     def __init__(self, nf, target_window, head_dropout=0):
         super().__init__()
         self.flatten = nn.Flatten(start_dim=-2)
         self.linear = nn.Linear(nf, target_window)
         self.dropout = nn.Dropout(head_dropout)
 
-    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
+    def forward(self, x):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input of shape [bs, nvars, d_model, patch_num].
+
+        Returns
+        -------
+        torch.Tensor
+            Output of shape [bs, nvars, target_window].
+
+        """
         x = self.flatten(x)
         x = self.linear(x)
         x = self.dropout(x)
@@ -40,15 +90,24 @@ class FlattenHead(nn.Module):
 
 
 class Model(nn.Module):
-    """
+    """PatchTST model.
+
     Paper link: https://arxiv.org/pdf/2211.14730.pdf
+
+    Parameters
+    ----------
+    configs : object
+        Configuration with task_name, seq_len, pred_len, enc_in, d_model,
+        dropout, e_layers, d_ff, n_heads, activation, factor, num_class
+        (classification), num_reg_targets (regression).
+    patch_len : int, optional
+        Patch length for patch_embedding. Default is 16.
+    stride : int, optional
+        Stride for patch_embedding. Default is 8.
+
     """
 
     def __init__(self, configs, patch_len=16, stride=8):
-        """
-        patch_len: int, patch len for patch_embedding
-        stride: int, stride for patch_embedding
-        """
         super().__init__()
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len
@@ -206,6 +265,28 @@ class Model(nn.Module):
         return output
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
+        """Forward pass.
+
+        Parameters
+        ----------
+        x_enc : torch.Tensor
+            Encoder input of shape [B, L, D].
+        x_mark_enc : torch.Tensor, optional
+            Encoder time features (unused).
+        x_dec : torch.Tensor, optional
+            Decoder input (unused).
+        x_mark_dec : torch.Tensor, optional
+            Decoder time features (unused).
+        mask : torch.Tensor, optional
+            Attention mask. Default is None.
+
+        Returns
+        -------
+        torch.Tensor
+            For forecast: [B, pred_len, D]. For regression: [B, num_reg_targets].
+            For classification: [B, num_class].
+
+        """
         if (
             self.task_name == "long_term_forecast"
             or self.task_name == "short_term_forecast"

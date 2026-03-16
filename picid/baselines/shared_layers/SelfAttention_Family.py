@@ -8,6 +8,22 @@ from .masking import TriangularCausalMask, ProbMask
 
 
 class FullAttention(nn.Module):
+    """Full (dense) scaled dot-product attention.
+
+    Parameters
+    ----------
+    mask_flag : bool, optional
+        If True, apply causal mask for autoregressive decoding. Defaults to True.
+    factor : int, optional
+        Unused; kept for API compatibility. Defaults to 5.
+    scale : float, optional
+        Attention scale. Defaults to 1/sqrt(E) where E is head dimension.
+    attention_dropout : float, optional
+        Dropout on attention weights. Defaults to 0.1.
+    output_attention : bool, optional
+        If True, return attention weights. Defaults to False.
+    """
+
     def __init__(
         self,
         mask_flag=True,
@@ -23,6 +39,24 @@ class FullAttention(nn.Module):
         self.dropout = nn.Dropout(attention_dropout)
 
     def forward(self, queries, keys, values, attn_mask):
+        """Forward pass.
+
+        Parameters
+        ----------
+        queries : torch.Tensor
+            Query tensor of shape (B, L, H, E).
+        keys : torch.Tensor
+            Key tensor of shape (B, S, H, E).
+        values : torch.Tensor
+            Value tensor of shape (B, S, H, D).
+        attn_mask : object, optional
+            Optional attention mask. If mask_flag and None, uses TriangularCausalMask.
+
+        Returns
+        -------
+        tuple of (torch.Tensor, torch.Tensor or None)
+            Output tensor of shape (B, L, H, D) and optional attention weights.
+        """
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
         scale = self.scale or 1.0 / sqrt(E)
@@ -148,6 +182,22 @@ class ProbAttention(nn.Module):
 
 
 class AttentionLayer(nn.Module):
+    """Multi-head attention wrapper with Q/K/V projections.
+
+    Parameters
+    ----------
+    attention : nn.Module
+        Inner attention module (e.g., FullAttention, ProbAttention).
+    d_model : int
+        Model dimension.
+    n_heads : int
+        Number of attention heads.
+    d_keys : int, optional
+        Key dimension per head. Defaults to d_model // n_heads.
+    d_values : int, optional
+        Value dimension per head. Defaults to d_model // n_heads.
+    """
+
     def __init__(self, attention, d_model, n_heads, d_keys=None, d_values=None):
         super(AttentionLayer, self).__init__()
 
@@ -162,6 +212,24 @@ class AttentionLayer(nn.Module):
         self.n_heads = n_heads
 
     def forward(self, queries, keys, values, attn_mask):
+        """Forward pass.
+
+        Parameters
+        ----------
+        queries : torch.Tensor
+            Query tensor of shape (B, L, d_model).
+        keys : torch.Tensor
+            Key tensor of shape (B, S, d_model).
+        values : torch.Tensor
+            Value tensor of shape (B, S, d_model).
+        attn_mask : object, optional
+            Optional attention mask.
+
+        Returns
+        -------
+        tuple of (torch.Tensor, object)
+            Output tensor of shape (B, L, d_model) and attention weights.
+        """
         B, L, _ = queries.shape
         _, S, _ = keys.shape
         H = self.n_heads
