@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="02_03_2026"
+wandb_log_folder="16_03_2026"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -107,6 +107,7 @@ for seed in "${SEEDS[@]}"; do
                     paths=runai \
                     experiment=${exp_name} \
                     # trainer.devices=[${device}] \
+                    trainer.accelerator=cpu \
                     logger.wandb.project=${final_log_folder} \
                     task_definition.seq_len=${context_length} \
                     task_definition.stride_train=${train_set_stride} \
@@ -114,7 +115,6 @@ for seed in "${SEEDS[@]}"; do
                     cache.use_cache_after_transfroms=True \
                     seed=${seed}
                 )
-                # debug=train_debug
 
                 final_command="${command_to_run[*]}"
 
