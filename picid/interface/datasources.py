@@ -1,3 +1,4 @@
+import logging
 from typing import Literal, Callable, Any
 
 import numpy as np
@@ -7,6 +8,7 @@ from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
 from picid.data.preprocessing import BySourceSplitter
 
+log = logging.getLogger(__name__)
 
 class CustomSingleSourceLoader(SingleSourceLoader):
     """
@@ -58,6 +60,8 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         self._inner_data = data
         self._target_column = target_column
         self._task_mode = task_mode
+
+        log.info(f'Created {data_name} datasource from {loading_type} with target column {target_column}.')
 
     def _load_csv(self):
         """
@@ -112,15 +116,18 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         self.data_dict = data_dict
         self._is_loaded = True
 
+        log.info(f'Loaded {self.data_name} datasource resulting in data shape {data.shape} for task {self._task_mode} '
+                 f'with target shape {target.shape}.')
+
         return self.data_dict
 
     @classmethod
-    def load_from_csv(cls, csv: DataFrame, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_csv(cls, source: DataFrame, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a CSV DataFrame.
 
                 Args:
-                    csv (DataFrame): The source pandas DataFrame.
+                    source (DataFrame): The source pandas DataFrame.
                     target_column (int | str): The column identifier for the target.
                     data_splitter (Callable, optional): Custom split logic.
                     **kwargs: Extra arguments for the class constructor.
@@ -129,15 +136,17 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     CustomSingleSourceLoader: An instance configured for CSV loading.
         """
 
-        return cls(csv, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
+        log.info(f'Creating the single source loader from csv.')
+
+        return cls(source, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
 
     @classmethod
-    def load_from_numpy(cls, numpy: np.ndarray, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_numpy(cls, source: np.ndarray, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a NumPy array.
 
                 Args:
-                    numpy (np.ndarray): The source NumPy array.
+                    source (np.ndarray): The source NumPy array.
                     target_column (int | str): The index of the target column.
                     data_splitter (Callable, optional): Custom split logic.
                     **kwargs: Extra arguments for the class constructor.
@@ -146,7 +155,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     CustomSingleSourceLoader: An instance configured for NumPy loading.
         """
 
-        return cls(numpy, target_column, data_splitter=data_splitter, loading_type='numpy', task_mode=task_mode, **kwargs)
+        return cls(source, target_column, data_splitter=data_splitter, loading_type='numpy', task_mode=task_mode, **kwargs)
 
 
 class CustomMultiSourceLoader(MultiSourceLoader):
@@ -161,6 +170,9 @@ class CustomMultiSourceLoader(MultiSourceLoader):
                  multisource_data_splitter: BySourceSplitter | None = None,
                  data_name: str = 'custom multi source datasource',
                  **kwargs):
+
+        log.info(f'Creating Multi Source Loader (name: {data_name}) with task mode {task_mode} '
+                 f'and sources dictionary: {list(sources.keys())}')
 
         super().__init__(source_list=sources, data_name=data_name, task_mode=task_mode,
                          multisource_data_splitter=multisource_data_splitter, **kwargs)
@@ -178,13 +190,17 @@ class CustomMultiSourceLoader(MultiSourceLoader):
                             **kwargs):
         _sources = []
 
+        log.info(f'Creating a Multi Source Loader from primitives with task mode {task_mode}. Number of sources: {len(sources)}, '
+                 f'target columns: {target_column}.')
+
         is_part_of_multisource = False
         if isinstance(data_splitter, BySourceSplitter):
             is_part_of_multisource = True
         else:
-            assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None the number of '
-                                                                      'sources must be equal to the number of '
-                                                                      'single_source_data_splitter.')
+            assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None '
+                                                                                      'the number of sources must be '
+                                                                                      'equal to the number of '
+                                                                                      'single_source_data_splitter.')
 
         _sources = {}
         for s, source in sources.items():

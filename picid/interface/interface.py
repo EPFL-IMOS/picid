@@ -1,6 +1,7 @@
+import json
+import logging
 import os
 from functools import lru_cache
-from logging import Logger
 from pathlib import Path
 from typing import List
 
@@ -9,6 +10,7 @@ import numpy as np
 from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
 from lightning import Callback, Trainer
+from lightning.pytorch.loggers import Logger
 from omegaconf import OmegaConf, DictConfig, open_dict
 
 from picid.config import project_config
@@ -21,6 +23,9 @@ from picid.interface.schemas.task_definition import BaseTaskDefinition
 from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
     create_lightning_module
 from picid.transforms.base.data_transform import DataTransform
+
+
+log = logging.getLogger(__name__)
 
 
 class EntryInterface:
@@ -67,10 +72,7 @@ class EntryInterface:
                         typically containing features and targets.
         """
 
-        # preprocessor_mode = "per_unit"
-        #
-        # if isinstance(datasource, MultiSourceLoader):
-        #     preprocessor_mode = "cross_unit"
+        log.info('Processing datasource.')
 
         preprocessor = InterfacePreProcessor(datasource,
                                              transforms,
@@ -202,10 +204,13 @@ class EntryInterface:
                 DictConfig: A unified configuration object ready for Hydra instantiation.
         """
 
-        training_model_cfg = None
+        log.info('Composing internal experiment components.')
+
         model_cfg = None
 
         if not isinstance(model, CustomModelTrainer):
+            log.info('Using a module model.')
+
             model_config_path = (project_config.config_path /
                                  'model' /
                                  (model.config_name + '.yaml'))
@@ -216,11 +221,19 @@ class EntryInterface:
                                    'model_configs'/
                                    task_definition.config_name /
                                    (model.config_name + '.yaml'))
+            log.info('Using a module model.')
+            log.info(f'Model path: {model_config_path}')
+            log.info(f'Trainer model path: {training_model_path}')
+
         else:
+
             training_model_path = (project_config.config_path /
                                    'model_configs' /
                                    task_definition.config_name /
                                    'custom_base.yaml')
+
+            log.info('Using custom model.')
+            log.info(f'Trainer model path: {training_model_path}')
 
         training_model_cfg = OmegaConf.load(training_model_path)
 
@@ -233,12 +246,17 @@ class EntryInterface:
 
         if isinstance(datasource, ProcessedDatasource):
             overrides.append(f'+datasource.task_mode={datasource.task_mode}')
+
+            log.info(f'Using custom datasource as override (+datasource.task_mode={datasource.task_mode})')
+
         elif isinstance(datasource, str):
             datasource = self.load_resource(datasource, 'datasource')
             cs.store(group="datasource",
                      name="datasource_cfg",
                      node=datasource)
             overrides.append('datasource=datasource_cfg')
+            log.info(f'Using picid datasource {datasource}')
+
         else:
             raise ValueError('datasource must be a string (see get_available_datasources() function) or '
                              'a ProcessedDatasource (using the process_datasource function).')
@@ -263,16 +281,13 @@ class EntryInterface:
                      node=training_model_cfg, package="_global_")
             overrides.append('+model_configs=training_model_cfg')
 
-        if transforms is not None:
-            cs.store(group="transforms", name="transforms_cfg",
-                     node=transforms)
-            overrides.append('+transforms=transforms_cfg')
-
         if callbacks is None or isinstance(callbacks, dict):
             if isinstance(callbacks, dict):
                 callbacks_cfg = OmegaConf.load(str(callbacks))
+                log.info('Using custom callbacks.')
             else:
                 callbacks_cfg = OmegaConf.load(project_config.config_path / 'callbacks' / 'default.yaml')
+                log.info('Using default callbacks.')
 
             cs.store(group="callbacks",
                      name="callbacks_cfg",
@@ -282,8 +297,10 @@ class EntryInterface:
         if evaluators is None or isinstance(evaluators, dict):
             if isinstance(evaluators, dict):
                 evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
+                log.info('Using custom evaluators.')
             else:
                 evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+                log.info('Using default evaluators.')
 
             cs.store(group="evaluator",
                      name="evaluator_cfg",
@@ -301,6 +318,9 @@ class EntryInterface:
             cfg = hydra.compose(config_name='run',
                                 overrides=overrides,
                                 return_hydra_config=True)
+
+            log.info('Final config file:')
+            log.info(str(cfg))
 
         GlobalHydra.set_instance(local_instance)
 
@@ -342,17 +362,26 @@ class EntryInterface:
                                         overrides=overrides,
                                         model=model)
 
+        log.info('Training config file creation ended.')
+
         if isinstance(datasource, ProcessedDatasource):
             data_dict = datasource.data_dict
             meta_data_dict = datasource.meta_data_dict
+
+            log.info('Using an already processed datasource.')
         else:
+            log.info('Loading the datasource.')
             datasource = self.load_resource(datasource, 'datasource')
 
             dataset_source = hydra.utils.instantiate(datasource)
+
+            log.info('Processing the datasource.')
             process_datasource = self.process_datasource(dataset_source, transforms)
 
             data_dict = process_datasource.data_dict
             meta_data_dict = process_datasource.meta_data_dict
+
+            log.info('Datasource correctly processed.')
 
         register_data_dim_resolver(data=data_dict["train"])
 
@@ -365,8 +394,12 @@ class EntryInterface:
 
         input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
 
+        log.info('Creating the datasets.')
+
         datasets = {}
         for split in ["train", "val", "test"]:
+            log.info(f'Creating {split} dataset.')
+
             key = f"dataset_{split}"
 
             init_cfg = cfg.dataset
@@ -394,6 +427,8 @@ class EntryInterface:
             dataset_test=dataset_test,
         )
 
+        log.info(f'Creating loaders.')
+
         # Log the sizes of one batch for each data loader
         loader_lengths = {}
         for split, loader in zip(
@@ -405,6 +440,11 @@ class EntryInterface:
                 ],
         ):
             loader_lengths[split] = len(loader)
+
+            log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
+
+
+        log.info(f'Creating evaluators.')
 
         evaluators = {}
         for s in ["train", "val", "test"]:
@@ -418,12 +458,17 @@ class EntryInterface:
         loss = hydra.utils.instantiate(cfg.loss)
 
         if 'callbacks' in cfg:
+            log.info(f'Loading callbacks.')
             callbacks: list[Callback] = list(hydra.utils.instantiate(cfg["callbacks"]).values() if callbacks is not None else [])
+        else:
+            log.info(f'No callbacks to load.')
 
         log_functions = []
 
         if loggers is None:
             loggers = []
+
+        log.info(f'Creating loggers.')
 
         for logger in loggers:
             if isinstance(logger, Logger):
@@ -437,6 +482,7 @@ class EntryInterface:
             with open_dict(cfg):
                 del cfg.model['config_name']
 
+        log.info(f'Creating torch lightning module.')
         model = create_lightning_module(
             backbone=model if isinstance(model, CustomModelTrainer) else None,
             cfg=cfg,
@@ -445,6 +491,7 @@ class EntryInterface:
             loss=loss,
         )
 
+        log.info(f'Creating the trainer class.')
         trainer: Trainer = hydra.utils.instantiate(
             cfg.trainer,
             callbacks=callbacks,
@@ -454,6 +501,7 @@ class EntryInterface:
             enable_progress_bar=enable_progress_bar,
         )
 
+        log.info(f'Fitting the trainer.')
         trainer.fit(
             model=model,
             datamodule=datamodule,
