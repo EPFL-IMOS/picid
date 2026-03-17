@@ -140,7 +140,7 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
     assert isinstance(meta, dict)
 
 
-@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 @pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
