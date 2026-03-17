@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from functools import lru_cache
@@ -141,7 +140,7 @@ class EntryInterface:
         return cfg
 
     @staticmethod
-    def get_available_resource(resource_type: str, max_level: int = None):
+    def get_available_resource(resource_type: str, max_level: int = None, as_tuple: bool = False):
         """
             Scans the internal configuration directory to list all available resource files
             for a specific type.
@@ -172,6 +171,10 @@ class EntryInterface:
             if level > max_level:
                 break
 
+        if as_tuple:
+            return list(map(lambda x: x[0] if len(x) == 1 else x,
+                            [tuple(td.replace('.yaml', '').split(os.sep)) for td in all_files]))
+
         if resource_type == 'datasource':
             all_files = [f.replace('.yaml', '') for f in all_files]
 
@@ -179,24 +182,24 @@ class EntryInterface:
 
     def _compose_config_file(self,
                              *,
-                             task_definition: BaseTaskDefinition,
-                             model: AbsModelConfig | CustomModelTrainer,
+                             task_definition: BaseTaskDefinition | tuple[str, str],
+                             model: AbsModelConfig | CustomModelTrainer | str,
                              datasource: str | ProcessedDatasource,
                              evaluators,
                              callbacks: dict | Callback | list[Callback] | None = None,
                              transforms: str | dict = None,
-                             overrides: List[str] = None
+                             overrides: List[str] | str = None
                              ) -> DictConfig:
+
         """
             Assembles a full Hydra experiment configuration by merging model,
             task, data, and callback configurations.
 
             Args:
-                task_definition (BaseTaskDefinition): Definition of the learning task.
+                task_definition (BaseTaskDefinition | str): Definition of the learning task.
                 model (AbsModelConfig): Configuration for the architecture.
                 datasource (str | ProcessedDatasource): Data identifier or processed object.
                 callbacks: Configuration for training callbacks.
-                training_model: Optional training-specific overrides.
                 transforms: Data transformation configurations.
                 overrides (List[str]): Manual Hydra overrides (e.g., ['+params.lr=0.01']).
 
@@ -208,37 +211,66 @@ class EntryInterface:
 
         model_cfg = None
 
+        task_folder_name = task_definition.config_name if not isinstance(task_definition, tuple) else task_definition[0]
+
+        available_task_definition_as_tuples = self.get_available_resource('task_definition', as_tuple=True)
+
+        assert task_definition in available_task_definition_as_tuples, (f'Selected task definition {task_definition} '
+                                                                        f'does not exist. Select one from the '
+                                                                        f'following list:'
+                                                                        f' {available_task_definition_as_tuples}')
+
         if not isinstance(model, CustomModelTrainer):
-            log.info('Using a module model.')
+            model_folder_name = model.config_name if not isinstance(model, str) else model
 
-            model_config_path = (project_config.config_path /
-                                 'model' /
-                                 (model.config_name + '.yaml'))
+            log.info('Using a picid model.')
+
+            available_model_definition_as_tuples = self.get_available_resource('model', as_tuple=True)
+            assert model_folder_name in available_model_definition_as_tuples, (f'Selected model definition {model_folder_name} '
+                                                                           f'does not exist. Select one from the '
+                                                                           f'following list:'
+                                                                           f' {available_model_definition_as_tuples}')
+
+            model_config_path = (project_config.config_path / 'model' / (model_folder_name + '.yaml'))
             model_cfg = OmegaConf.load(model_config_path)
-            model_cfg.update(model.model_dump(by_alias=True))
 
-            training_model_path = (project_config.config_path /
-                                   'model_configs'/
-                                   task_definition.config_name /
-                                   (model.config_name + '.yaml'))
+            if isinstance(model, AbsModelConfig):
+                model_cfg.update(model.model_dump(by_alias=True))
+
+            available_model_config_definition_as_tuples = self.get_available_resource('model_configs',
+                                                                                      as_tuple=True)
+
+            assert (task_folder_name, model_folder_name) in available_model_config_definition_as_tuples, (
+                f'Selected model config definition {model_folder_name} '
+                f'does not exist for task {task_folder_name}. Select one from the '
+                f'following list:'
+                f' {available_model_config_definition_as_tuples}')
+
+            training_model_path = (project_config.config_path / 'model_configs'/ task_folder_name / (model_folder_name + '.yaml'))
+
+            selected_task_definition = os.sep.join(task_definition) + '.yaml'
+            task_definition_cfg = OmegaConf.load(project_config.config_path / 'task_definition' / selected_task_definition)
+
             log.info('Using a module model.')
             log.info(f'Model path: {model_config_path}')
             log.info(f'Trainer model path: {training_model_path}')
 
         else:
 
-            training_model_path = (project_config.config_path /
-                                   'model_configs' /
-                                   task_definition.config_name /
-                                   'custom_base.yaml')
+            training_model_path = (project_config.config_path / 'model_configs' / task_folder_name / 'custom_base.yaml')
 
             log.info('Using custom model.')
             log.info(f'Trainer model path: {training_model_path}')
 
+            task_definition_cfg = task_definition.model_dump(by_alias=True)
+
         training_model_cfg = OmegaConf.load(training_model_path)
 
+        if isinstance(overrides, str):
+            overrides = [overrides]
+
         overrides = overrides if overrides is not None else []
-        #  TO CHECK POSSIBLE, but almost certain, ERRORS AND INCOMPATIBILITIES
+
         local_instance = GlobalHydra.instance()
         GlobalHydra.instance().clear()
 
@@ -273,7 +305,8 @@ class EntryInterface:
 
         cs.store(group="task_definition",
                  name="task_definition_cfg",
-                 node=task_definition.model_dump(by_alias=True))
+                 node=task_definition_cfg)
+
         overrides.append('task_definition=task_definition_cfg')
 
         if training_model_cfg is not None:
@@ -327,22 +360,22 @@ class EntryInterface:
         return cfg
 
     def train(self, *,
-              task_definition: BaseTaskDefinition,
-              model: AbsModelConfig | CustomModelTrainer,
-              datasource: str | None | ProcessedDatasource = None,
-              callbacks: dict | Callback | list[Callback] | None = None,
+              task_definition: BaseTaskDefinition | tuple[str, str],
+              model: AbsModelConfig | CustomModelTrainer | str,
+              datasource: ProcessedDatasource | str | None  = None,
+              callbacks: Callback | list[Callback] | dict | None = None,
               loggers: list[Logger | BaseLogger] = None,
               evaluators: dict[str, DefaultEvaluatorConfig] = None,
               transforms: list[DataTransform] = [],
-              overrides: List[str] = None,
+              overrides: List[str] | str = None,
               enable_progress_bar: bool = True) -> None:
+
         """
             The main entry point for running an experiment. It handles data loading,
             preprocessing, dataset instantiation, and PyTorch Lightning trainer execution.
 
             Args:
-                output_dir (object): Directory where logs and weights are saved.
-                task_definition (BaseTaskDefinition): Definition of the task and its metrics.
+                task_definition (BaseTaskDefinition | tuple[str, str]): Definition of the task and its metrics. it can be defined by the user using a BaseTaskDefinition config file or passed a tuple of string (task_name, task_type)
                 model (AbsModelConfig): The model configuration to use.
                 datasource: The source data identifier.
                 callbacks: Training callbacks.
@@ -376,6 +409,10 @@ class EntryInterface:
             dataset_source = hydra.utils.instantiate(datasource)
 
             log.info('Processing the datasource.')
+            if transforms is None:
+                if 'transforms' in cfg:
+                    transforms = hydra.utils.instantiate(cfg['transforms'])
+
             process_datasource = self.process_datasource(dataset_source, transforms)
 
             data_dict = process_datasource.data_dict
@@ -427,7 +464,7 @@ class EntryInterface:
             dataset_test=dataset_test,
         )
 
-        log.info(f'Creating loaders.')
+        log.info('Creating loaders.')
 
         # Log the sizes of one batch for each data loader
         loader_lengths = {}
@@ -444,7 +481,7 @@ class EntryInterface:
             log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
 
 
-        log.info(f'Creating evaluators.')
+        log.info('Creating evaluators.')
 
         evaluators = {}
         for s in ["train", "val", "test"]:
@@ -458,17 +495,17 @@ class EntryInterface:
         loss = hydra.utils.instantiate(cfg.loss)
 
         if 'callbacks' in cfg:
-            log.info(f'Loading callbacks.')
+            log.info('Loading callbacks.')
             callbacks: list[Callback] = list(hydra.utils.instantiate(cfg["callbacks"]).values() if callbacks is not None else [])
         else:
-            log.info(f'No callbacks to load.')
+            log.info('No callbacks to load.')
 
         log_functions = []
 
         if loggers is None:
             loggers = []
 
-        log.info(f'Creating loggers.')
+        log.info('Creating loggers.')
 
         for logger in loggers:
             if isinstance(logger, Logger):
@@ -482,7 +519,7 @@ class EntryInterface:
             with open_dict(cfg):
                 del cfg.model['config_name']
 
-        log.info(f'Creating torch lightning module.')
+        log.info('Creating torch lightning module.')
         model = create_lightning_module(
             backbone=model if isinstance(model, CustomModelTrainer) else None,
             cfg=cfg,
@@ -491,7 +528,7 @@ class EntryInterface:
             loss=loss,
         )
 
-        log.info(f'Creating the trainer class.')
+        log.info('Creating the trainer class.')
         trainer: Trainer = hydra.utils.instantiate(
             cfg.trainer,
             callbacks=callbacks,
@@ -501,7 +538,7 @@ class EntryInterface:
             enable_progress_bar=enable_progress_bar,
         )
 
-        log.info(f'Fitting the trainer.')
+        log.info('Fitting the trainer.')
         trainer.fit(
             model=model,
             datamodule=datamodule,

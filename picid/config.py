@@ -1,5 +1,6 @@
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
@@ -21,14 +22,14 @@ class Settings(BaseSettings):
 
     log_dir: Path = output_dir / "log_dir"
     plot_dir: Path = output_dir / "plot_dir"
-    eval_details: Path= output_dir / "eval_details"
+    eval_details: Path = output_dir / "eval_details"
     model_workdir: Path = output_dir / "model_workdir"
     ckpt_dir: Path = output_dir / "eval_details"
     artifacts_dir: Path = output_dir / "artifacts_dir"
     model_cache_dir: Path = output_dir / "model_cache_dir"
     save_dir: Path = output_dir / "save_dir"
 
-    config_path: Path = local_home / "configs"
+    config_path: Path = Field(local_home / "configs", frozen=True)
 
     enable_logging: bool = True
     log_level: str = "INFO"

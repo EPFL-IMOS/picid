@@ -136,7 +136,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     CustomSingleSourceLoader: An instance configured for CSV loading.
         """
 
-        log.info(f'Creating the single source loader from csv.')
+        log.info('Creating the single source loader from csv.')
 
         return cls(source, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
 
@@ -180,7 +180,7 @@ class CustomMultiSourceLoader(MultiSourceLoader):
         if multisource_data_splitter:
             check = [s.data_splitter is None for s in self.data_source_dict.values()]
             assert all(check), \
-                (f'If multisource_data_splitter is not None, '
+                ('If multisource_data_splitter is not None, '
                  f'the sources cannot have data_splitter != None (given {check}).')
 
     @classmethod
