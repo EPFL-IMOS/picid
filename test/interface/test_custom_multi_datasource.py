@@ -1,4 +1,5 @@
 import dis
+import os
 from copy import deepcopy
 from io import StringIO
 
@@ -86,7 +87,7 @@ def test_multi_source_loader_multi_part_load_split_get_returns_split_container(
     assert "test" in data["features"]
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
 @pytest.mark.parametrize('get_sources', [[3, 'numpy'], [3, 'csv']], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
@@ -129,5 +130,6 @@ def test_training(get_sources):
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
     interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
+                    overrides='trainer.max_epochs=1',
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 

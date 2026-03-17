@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pytest
 from lightning.pytorch.callbacks import EarlyStopping
@@ -138,7 +140,7 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
     assert isinstance(meta, dict)
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
 @pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
@@ -184,5 +186,7 @@ def test_training(get_sources):
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
     interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
-                    loggers=loggers, evaluators=evaluators, transforms=transforms)
+                    loggers=loggers, evaluators=evaluators, transforms=transforms,
+                    overrides='trainer.max_epochs=1',
+                    )
 

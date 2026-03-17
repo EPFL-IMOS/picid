@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
@@ -11,7 +13,7 @@ from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
 def test_pydantic_easy_interface():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
@@ -35,6 +37,7 @@ def test_pydantic_easy_interface():
 
     interface = EntryInterface()
     interface.train(task_definition=task_definition, model=model, datasource='phme20', callbacks=callbacks,
+                    overrides='trainer.max_epochs=1',
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
@@ -71,7 +74,7 @@ def test_pydantic_minimal_interface_asserts():
 
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
 def test_pydantic_easy_interface_input_processed_datasource():
     interface = EntryInterface()
 
@@ -97,4 +100,5 @@ def test_pydantic_easy_interface_input_processed_datasource():
                  RichModelSummary()]
 
     interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
+                    overrides='trainer.max_epochs=1',
                     loggers=loggers)

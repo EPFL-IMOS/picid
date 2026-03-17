@@ -209,16 +209,7 @@ class EntryInterface:
 
         log.info('Composing internal experiment components.')
 
-        model_cfg = None
-
         task_folder_name = task_definition.config_name if not isinstance(task_definition, tuple) else task_definition[0]
-
-        available_task_definition_as_tuples = self.get_available_resource('task_definition', as_tuple=True)
-
-        assert task_definition in available_task_definition_as_tuples, (f'Selected task definition {task_definition} '
-                                                                        f'does not exist. Select one from the '
-                                                                        f'following list:'
-                                                                        f' {available_task_definition_as_tuples}')
 
         if not isinstance(model, CustomModelTrainer):
             model_folder_name = model.config_name if not isinstance(model, str) else model
@@ -237,6 +228,21 @@ class EntryInterface:
             if isinstance(model, AbsModelConfig):
                 model_cfg.update(model.model_dump(by_alias=True))
 
+            log.info('Using a module model.')
+            log.info(f'Model path: {model_config_path}')
+        else:
+            model_folder_name = None
+            model_cfg = None
+
+            assert not isinstance(task_definition, tuple), ('With a custom model you must define '
+                                                            'a task definition config '
+                                                            'class extending BaseTaskDefinition.')
+            log.info('Using user defined model.')
+
+        if isinstance(model, CustomModelTrainer):
+            training_model_path = (
+                    project_config.config_path / 'model_configs' / task_folder_name / 'custom_base.yaml')
+        else:
             available_model_config_definition_as_tuples = self.get_available_resource('model_configs',
                                                                                       as_tuple=True)
 
@@ -246,25 +252,28 @@ class EntryInterface:
                 f'following list:'
                 f' {available_model_config_definition_as_tuples}')
 
-            training_model_path = (project_config.config_path / 'model_configs'/ task_folder_name / (model_folder_name + '.yaml'))
+            training_model_path = (
+                    project_config.config_path / 'model_configs' / task_folder_name / (model_folder_name + '.yaml'))
+
+        if isinstance(task_definition, tuple):
+
+            available_task_definition_as_tuples = self.get_available_resource('task_definition', as_tuple=True)
+
+            assert task_definition in available_task_definition_as_tuples, (
+                f'Selected task definition {task_definition} '
+                f'does not exist. Select one from the '
+                f'following list:'
+                f' {available_task_definition_as_tuples}')
 
             selected_task_definition = os.sep.join(task_definition) + '.yaml'
-            task_definition_cfg = OmegaConf.load(project_config.config_path / 'task_definition' / selected_task_definition)
-
-            log.info('Using a module model.')
-            log.info(f'Model path: {model_config_path}')
-            log.info(f'Trainer model path: {training_model_path}')
+            task_definition_cfg = project_config.config_path / 'task_definition' / selected_task_definition
 
         else:
-
-            training_model_path = (project_config.config_path / 'model_configs' / task_folder_name / 'custom_base.yaml')
-
-            log.info('Using custom model.')
-            log.info(f'Trainer model path: {training_model_path}')
-
             task_definition_cfg = task_definition.model_dump(by_alias=True)
 
         training_model_cfg = OmegaConf.load(training_model_path)
+
+        log.info(f'Trainer model path: {training_model_path}')
 
         if isinstance(overrides, str):
             overrides = [overrides]
