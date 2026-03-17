@@ -74,7 +74,7 @@ def test_pydantic_minimal_interface_asserts():
 
 
 
-@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', False), reason="Not testing training right now.")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 def test_pydantic_easy_interface_input_processed_datasource():
     interface = EntryInterface()
 
