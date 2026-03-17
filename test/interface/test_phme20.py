@@ -20,10 +20,11 @@ def test_pydantic_easy_interface():
                   metadata={'apply_to': 'rul', 'fit_on': 'train'})
 
     transforms = [scaler, scaler_target]
+    # transforms = []
 
     model = LSTMConfig(n_layers=8)
 
-    task_definition = Prognostic(task_type='rul', pred_len=0)
+    task_definition = Prognostic(task_type='rul')
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 

@@ -327,8 +327,8 @@ class EntryInterface:
                 datasource: The source data identifier.
                 callbacks: Training callbacks.
                 loggers (list): List of loggers for tracking metrics (e.g., TensorBoard, WandB).
-                transforms (list): Data transformations to apply before training.
-                overrides (list): Hydra configuration overrides.
+                transforms (list): Data transformations to apply before training. It is ignored if datasource isinstance of ProcessedDatasource.
+                overrides (list): Hydra configuration overrides. It must respect the Hydra overriding syntax.
                 enable_progress_bar (bool): Whether to show the Lightning progress bar.
 
             Returns:
@@ -349,8 +349,7 @@ class EntryInterface:
             datasource = self.load_resource(datasource, 'datasource')
 
             dataset_source = hydra.utils.instantiate(datasource)
-            if transforms is not None and len(transforms) > 0:
-                process_datasource = self.process_datasource(dataset_source, transforms)
+            process_datasource = self.process_datasource(dataset_source, transforms)
 
             data_dict = process_datasource.data_dict
             meta_data_dict = process_datasource.meta_data_dict
