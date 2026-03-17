@@ -3,6 +3,9 @@ from typing import Callable
 from torch import nn
 
 
+def empty_function(r):
+    return r
+
 class ModelWrapper(nn.Module):
     """
 
@@ -43,12 +46,12 @@ class ModelWrapper(nn.Module):
         self.base_model = model
 
         if post_process_function is None:
-            post_process_function = lambda x: x
+            post_process_function = empty_function
 
         self._post_process_function = post_process_function
 
         if pre_process_function is None:
-            pre_process_function = lambda x: x
+            pre_process_function = empty_function
 
         self._pre_process_function = pre_process_function
 
