@@ -58,13 +58,6 @@ def test_pydantic_minimal_interface_train():
 def test_pydantic_minimal_interface_asserts():
     interface = EntryInterface()
 
-    interface.train(model='lstm',
-                    task_definition='prognostics',
-                    datasource=('phme20', 'raw'),
-                    overrides='trainer.max_epochs=1',
-                    # transforms=transforms,
-                    debug=True)
-
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
     scaler_target = DataTransform(transform_name='scaler_targets', transform=MinMaxScalerSklearn(),

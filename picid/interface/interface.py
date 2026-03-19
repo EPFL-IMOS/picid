@@ -311,16 +311,16 @@ class EntryInterface:
             log.info(f'Using custom datasource as override (+datasource.task_mode={datasource.task_mode})')
 
         if isinstance(datasource, tuple):
-            assert model_folder_name is not None, f''
+            assert model_folder_name is not None, "With datasource as a tuple you must specify also the model to use."
 
             source, sub_folder = datasource
 
             complete_path = (source, task_folder_name, sub_folder, model_folder_name)
 
-            possible_experiments = self.get_available_resource(f'experiment', as_tuple=True)
+            possible_experiments = self.get_available_resource('experiment', as_tuple=True)
 
             filtered = filter(lambda x: x == complete_path,
-                              self.get_available_resource(f'experiment', as_tuple=True))
+                              self.get_available_resource('experiment', as_tuple=True))
 
             assert len(list(filtered)) > 0, (f'Selected combination ({complete_path}) of datasource ({datasource}), '
                                              f'task type ({task_folder_name}),'
