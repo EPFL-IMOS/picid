@@ -259,6 +259,7 @@ def create_lightning_module_from_backbone(
     assert model is not None, "Model could not be instantiated."
     return model
 
+
 class ProcessedDatasource:
     def __init__(self,
                  datasource: DatasetContainer,

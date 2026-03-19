@@ -36,13 +36,22 @@ def test_pydantic_easy_interface():
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
     interface = EntryInterface()
-    interface.train(task_definition=task_definition, model=model, datasource='phme20', callbacks=callbacks,
+    interface.train(task_definition=('prognostics', 'rul'), model=model,
+                    datasource=('phme20', 'raw'), callbacks=callbacks,
                     overrides='trainer.max_epochs=1',
-                    loggers=loggers, evaluators=evaluators, transforms=transforms)
+                    loggers=loggers, evaluators=evaluators, transforms=transforms,
+                    debug=True)
 
 
 def test_pydantic_minimal_interface_asserts():
     interface = EntryInterface()
+
+    interface.train(model='lstm',
+                    task_definition='prognostics',
+                    datasource=('phme20', 'raw'),
+                    overrides='trainer.max_epochs=1',
+                    # transforms=transforms,
+                    debug=True)
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})

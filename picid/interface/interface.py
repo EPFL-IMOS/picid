@@ -2,7 +2,7 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Sequence
 
 import hydra
 import numpy as np
@@ -25,6 +25,12 @@ from picid.transforms.base.data_transform import DataTransform
 
 
 log = logging.getLogger(__name__)
+
+
+def get_default_transforms(dataset, task, model):
+    if 'hsf15' in dataset:
+        dataset = '/'.join(dataset.split('_'))
+
 
 
 class EntryInterface:
@@ -153,7 +159,7 @@ class EntryInterface:
                 list[str]: A list of relative paths (identifiers) for available resources.
         """
 
-        if max_level is None:
+        if max_level is None or max_level <= 0:
             max_level = np.inf
 
         path = Path(project_config.config_path)
@@ -164,10 +170,10 @@ class EntryInterface:
         level = 0
 
         for root, dirs, files in os.walk(path):
-            level += 1
             for file in files:
                 all_files.append(str((Path(root) / file).relative_to(path)))
 
+            level += 1
             if level > max_level:
                 break
 
@@ -182,9 +188,9 @@ class EntryInterface:
 
     def _compose_config_file(self,
                              *,
-                             task_definition: BaseTaskDefinition | tuple[str, str],
+                             task_definition: BaseTaskDefinition | tuple[str, str] | str,
                              model: AbsModelConfig | CustomModelTrainer | str,
-                             datasource: str | ProcessedDatasource,
+                             datasource: str | tuple[str, str] | ProcessedDatasource,
                              evaluators,
                              callbacks: dict | Callback | list[Callback] | None = None,
                              transforms: str | dict = None,
@@ -209,7 +215,16 @@ class EntryInterface:
 
         log.info('Composing internal experiment components.')
 
-        task_folder_name = task_definition.config_name if not isinstance(task_definition, tuple) else task_definition[0]
+        if isinstance(task_definition, str):
+            task_folder_name = task_definition
+
+            assert isinstance(datasource, tuple), ('When defining task_definition as a strig, the datasource '
+                                                   'parameter should be a tuple of strings defining the overall experiment.')
+        else:
+            task_folder_name = task_definition.config_name if not isinstance(task_definition, tuple) else task_definition[0]
+
+        model_folder_name = None
+        task_definition_cfg = None
 
         if not isinstance(model, CustomModelTrainer):
             model_folder_name = model.config_name if not isinstance(model, str) else model
@@ -266,10 +281,15 @@ class EntryInterface:
                 f' {available_task_definition_as_tuples}')
 
             selected_task_definition = os.sep.join(task_definition) + '.yaml'
-            task_definition_cfg = project_config.config_path / 'task_definition' / selected_task_definition
-
-        else:
+            task_definition_path = project_config.config_path / 'task_definition' / selected_task_definition
+            task_definition_cfg = OmegaConf.load(task_definition_path)
+        elif task_definition is None:
+            assert isinstance(datasource, tuple), ('If task_definition is not given, '
+                                                   'the datasource must be a tuple of strings defining '
+                                                   'the overall experiment.')
+        elif isinstance(task_definition, BaseTaskDefinition):
             task_definition_cfg = task_definition.model_dump(by_alias=True)
+
 
         training_model_cfg = OmegaConf.load(training_model_path)
 
@@ -289,6 +309,35 @@ class EntryInterface:
             overrides.append(f'+datasource.task_mode={datasource.task_mode}')
 
             log.info(f'Using custom datasource as override (+datasource.task_mode={datasource.task_mode})')
+
+        if isinstance(datasource, tuple):
+            assert model_folder_name is not None, f''
+
+            source, sub_folder = datasource
+
+            complete_path = (source, task_folder_name, sub_folder, model_folder_name)
+
+            possible_experiments = self.get_available_resource(f'experiment', as_tuple=True)
+
+            filtered = filter(lambda x: x == complete_path,
+                              self.get_available_resource(f'experiment', as_tuple=True))
+
+            assert len(list(filtered)) > 0, (f'Selected combination ({complete_path}) of datasource ({datasource}), '
+                                             f'task type ({task_folder_name}),'
+                                             f' and model ({model_folder_name}) is not a valid one. '
+                                             f'Select one from the following list: {possible_experiments}')
+
+            _complete_path = project_config.config_path / 'experiment' / ('/'.join(complete_path) + '.yaml')
+
+            datasource_cfg = OmegaConf.load(_complete_path)
+
+            # for d in datasource_cfg:
+
+            cs.store(group="experiment",
+                     name="experiment_cfg", package="_global_",
+                     node=datasource_cfg)
+            overrides.append('experiment=experiment_cfg')
+            log.info(f'Using picid datasource {_complete_path}')
 
         elif isinstance(datasource, str):
             datasource = self.load_resource(datasource, 'datasource')
@@ -312,11 +361,12 @@ class EntryInterface:
                      node=model_cfg)
             overrides.append('model=model_cfg')
 
-        cs.store(group="task_definition",
-                 name="task_definition_cfg",
-                 node=task_definition_cfg)
+        if task_definition_cfg is not None:
+            cs.store(group="task_definition",
+                     name="task_definition_cfg",
+                     node=task_definition_cfg)
 
-        overrides.append('task_definition=task_definition_cfg')
+            overrides.append('task_definition=task_definition_cfg')
 
         if training_model_cfg is not None:
             cs.store(group="model_configs", name="training_model_cfg",
@@ -341,6 +391,7 @@ class EntryInterface:
                 evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
                 log.info('Using custom evaluators.')
             else:
+                # FIX IT
                 evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
                 log.info('Using default evaluators.')
 
@@ -368,16 +419,18 @@ class EntryInterface:
 
         return cfg
 
+
     def train(self, *,
-              task_definition: BaseTaskDefinition | tuple[str, str],
               model: AbsModelConfig | CustomModelTrainer | str,
+              task_definition: BaseTaskDefinition | tuple[str, str],
               datasource: ProcessedDatasource | str | None  = None,
               callbacks: Callback | list[Callback] | dict | None = None,
               loggers: list[Logger | BaseLogger] = None,
               evaluators: dict[str, DefaultEvaluatorConfig] = None,
-              transforms: list[DataTransform] = [],
+              transforms: list[DataTransform] = None,
               overrides: List[str] | str = None,
-              enable_progress_bar: bool = True) -> None:
+              enable_progress_bar: bool = True,
+              debug: bool = False) -> None:
 
         """
             The main entry point for running an experiment. It handles data loading,
@@ -397,6 +450,13 @@ class EntryInterface:
                 None: This function initiates the `trainer.fit()` process.
         """
 
+        if transforms is not None:
+            assert isinstance(transforms, Sequence), ('transforms must be a list of transforms '
+                                                      'or None (default one will be used, if possible).')
+
+        if debug:
+            log.info('Debug mode is enabled. No training will be performed.')
+
         cfg = self._compose_config_file(datasource=datasource,
                                         task_definition=task_definition,
                                         evaluators=evaluators,
@@ -411,16 +471,26 @@ class EntryInterface:
             meta_data_dict = datasource.meta_data_dict
 
             log.info('Using an already processed datasource.')
+
         else:
             log.info('Loading the datasource.')
-            datasource = self.load_resource(datasource, 'datasource')
+            if isinstance(datasource, tuple):
+                datasource = cfg.datasource
+            else:
+                datasource = self.load_resource(datasource, 'datasource')
 
             dataset_source = hydra.utils.instantiate(datasource)
 
             log.info('Processing the datasource.')
             if transforms is None:
-                if 'transforms' in cfg:
-                    transforms = hydra.utils.instantiate(cfg['transforms'])
+                assert 'transforms' in cfg, ('There is not transforms defined in config file. '
+                                             'Fix the inputs of this function or pass a custom transforms list.')
+                transforms_cfg = hydra.utils.instantiate(cfg['transforms'])
+
+                transforms = []
+                for k, t in transforms_cfg.items():
+                    transforms.append(DataTransform(transform_name=k, transform=t['transform'],
+                                  metadata=t['metadata']))
 
             process_datasource = self.process_datasource(dataset_source, transforms)
 
@@ -547,9 +617,10 @@ class EntryInterface:
             enable_progress_bar=enable_progress_bar,
         )
 
-        log.info('Fitting the trainer.')
-        trainer.fit(
-            model=model,
-            datamodule=datamodule,
-        )
+        if not debug:
+            log.info('Fitting the trainer.')
+            trainer.fit(
+                model=model,
+                datamodule=datamodule,
+            )
 
