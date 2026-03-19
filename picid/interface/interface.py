@@ -233,8 +233,8 @@ class EntryInterface:
 
             available_model_definition_as_tuples = self.get_available_resource('model', as_tuple=True)
             assert model_folder_name in available_model_definition_as_tuples, (f'Selected model definition {model_folder_name} '
-                                                                           f'does not exist. Select one from the '
-                                                                           f'following list:'
+                                                                           'does not exist. Select one from the '
+                                                                           'following list:'
                                                                            f' {available_model_definition_as_tuples}')
 
             model_config_path = (project_config.config_path / 'model' / (model_folder_name + '.yaml'))
@@ -264,7 +264,7 @@ class EntryInterface:
             assert (task_folder_name, model_folder_name) in available_model_config_definition_as_tuples, (
                 f'Selected model config definition {model_folder_name} '
                 f'does not exist for task {task_folder_name}. Select one from the '
-                f'following list:'
+                'following list:'
                 f' {available_model_config_definition_as_tuples}')
 
             training_model_path = (
@@ -276,8 +276,8 @@ class EntryInterface:
 
             assert task_definition in available_task_definition_as_tuples, (
                 f'Selected task definition {task_definition} '
-                f'does not exist. Select one from the '
-                f'following list:'
+                'does not exist. Select one from the '
+                'following list:'
                 f' {available_task_definition_as_tuples}')
 
             selected_task_definition = os.sep.join(task_definition) + '.yaml'

@@ -43,6 +43,18 @@ def test_pydantic_easy_interface():
                     debug=True)
 
 
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
+def test_pydantic_minimal_interface_train():
+    interface = EntryInterface()
+
+    interface.train(model='lstm',
+                    task_definition='prognostics',
+                    datasource=('phme20', 'raw'),
+                    overrides='trainer.max_epochs=1',
+                    # transforms=transforms,
+                    debug=True)
+
+
 def test_pydantic_minimal_interface_asserts():
     interface = EntryInterface()
 
