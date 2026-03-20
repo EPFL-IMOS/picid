@@ -9,8 +9,8 @@ __all__ = ["Settings", "project_config"]
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='TAB_PHM_', extra='ignore')
 
-    local_home: Path = Path(".").expanduser()
-    user_home: Path = Path("~").expanduser() / 'TAB_PHM'
+    root_dir: Path = Path('.').resolve()
+    user_home: Path = Path("~").expanduser() / 'picid'
 
     output_dir: Path = user_home
 
@@ -25,11 +25,11 @@ class Settings(BaseSettings):
     eval_details: Path = output_dir / "eval_details"
     model_workdir: Path = output_dir / "model_workdir"
     ckpt_dir: Path = output_dir / "eval_details"
-    artifacts_dir: Path = output_dir / "artifacts_dir"
+    artifacts_dir: Path = output_dir / "artifacts"
     model_cache_dir: Path = output_dir / "model_cache_dir"
     save_dir: Path = output_dir / "save_dir"
 
-    config_path: Path = Field(local_home / "configs", frozen=True)
+    config_path: Path = Field(root_dir / "configs", frozen=False)
 
     enable_logging: bool = True
     log_level: str = "INFO"

@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pytest
+import torch.cuda
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
 
@@ -140,7 +141,7 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
     assert isinstance(meta, dict)
 
 
-@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
+# @pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 @pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
@@ -187,6 +188,6 @@ def test_training(get_sources):
 
     interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     loggers=loggers, evaluators=evaluators, transforms=transforms,
-                    overrides='trainer.max_epochs=1',
-                    )
+                    overrides=['trainer.max_epochs=1',
+                               f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
 

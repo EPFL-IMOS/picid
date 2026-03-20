@@ -1,4 +1,5 @@
 import pytest
+import torch
 from einops import rearrange
 from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import RichModelSummary
@@ -17,7 +18,7 @@ from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+# @pytest.mark.skip(reason="no way of currently testing training")
 def test_mlp_model():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
@@ -56,10 +57,11 @@ def test_mlp_model():
     processed_datasource = interface.process_datasource(datasource, transforms)
 
     interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
-                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms)
+                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
 
 
-@pytest.mark.skip(reason="no way of currently testing training")
+# @pytest.mark.skip(reason="no way of currently testing training")
 def test_1dcnn_model():
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
@@ -105,4 +107,5 @@ def test_1dcnn_model():
     processed_datasource = interface.process_datasource(datasource, transforms)
 
     interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
-                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms)
+                    callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
