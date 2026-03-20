@@ -60,14 +60,14 @@ def verify_thread_limits(expected: int):
             log.info(f"{var:25s}: {val}")
 
     # native library threadpools
-    try:
-        for lib in threadpool_info():
-            name = lib.get("internal_api", "unknown")
-            num_threads = lib.get("num_threads")
-            path = Path(lib.get("filepath", "")).name
-            log.info(f"{name:12s} ({path:35s}) → {num_threads} threads")
-    except Exception as e:
-        log.error(f"Could not query threadpools: {e}")
+    # try:
+    #     for lib in threadpool_info():
+    #         name = lib.get("internal_api", "unknown")
+    #         num_threads = lib.get("num_threads")
+    #         path = Path(lib.get("filepath", "")).name
+    #         log.info(f"{name:12s} ({path:35s}) → {num_threads} threads")
+    # except Exception as e:
+    #     log.error(f"Could not query threadpools: {e}")
 
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
     def get_key(lengths, key):
@@ -431,7 +431,8 @@ class EntryInterface:
         datasource_cfg = None
         task_cfg = None
 
-        if overrides is None: overrides = []
+        if overrides is None:
+            overrides = []
 
         if isinstance(overrides, str):
             overrides = [overrides]

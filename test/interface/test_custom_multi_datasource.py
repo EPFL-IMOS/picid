@@ -126,6 +126,6 @@ def test_training(get_sources):
     interface.train(run_name='test',task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     overrides=['trainer.max_epochs=1',
                                f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}',
-                               '+devices=1'],
+                               'trainer.devices=1'],
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 
