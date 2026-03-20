@@ -1,3 +1,6 @@
+import os
+
+import pytest
 import torch
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import RichModelSummary
@@ -15,7 +18,7 @@ from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
-# @pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 def test_mlp_model():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
@@ -58,7 +61,7 @@ def test_mlp_model():
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', 'trainer.devices=1'])
 
 
-# @pytest.mark.skip(reason="no way of currently testing training")
+@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 def test_1dcnn_model():
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
