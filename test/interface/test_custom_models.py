@@ -1,16 +1,13 @@
-import pytest
 import torch
-from einops import rearrange
 from lightning.pytorch.callbacks import EarlyStopping
-from pytorch_lightning.callbacks import RichModelSummary
-from torch import nn
+from lightning.pytorch.callbacks import RichModelSummary
+
 
 from picid.interface import EntryInterface
 from picid.interface.model import CustomModelTrainer
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
-from picid.interface.schemas.model import LSTMConfig, MLPConfig
 from picid.interface.schemas.task_definition import Prognostic
 from picid.model.methods.cnn_1d import EncoderModel
 from picid.model.methods.mlp import MLP
@@ -47,7 +44,7 @@ def test_mlp_model():
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 
-    callbacks = [EarlyStopping(monitor=None),
+    callbacks = [EarlyStopping(monitor='val/loss'),
                  RichModelSummary()]
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
@@ -56,7 +53,7 @@ def test_mlp_model():
     datasource = interface.get_datasource('phme20')
     processed_datasource = interface.process_datasource(datasource, transforms)
 
-    interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
+    interface.train(run_name='test',task_definition=task_definition, model=custom_model, datasource=processed_datasource,
                     callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
 
@@ -97,7 +94,7 @@ def test_1dcnn_model():
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 
-    callbacks = [EarlyStopping(monitor=None),
+    callbacks = [EarlyStopping(monitor='val/loss'),
                  RichModelSummary()]
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
@@ -106,6 +103,6 @@ def test_1dcnn_model():
     datasource = interface.get_datasource('phme20')
     processed_datasource = interface.process_datasource(datasource, transforms)
 
-    interface.train(task_definition=task_definition, model=custom_model, datasource=processed_datasource,
+    interface.train(run_name='test', task_definition=task_definition, model=custom_model, datasource=processed_datasource,
                     callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])

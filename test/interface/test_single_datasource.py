@@ -1,10 +1,8 @@
-import os
-
 import numpy as np
 import pytest
 import torch.cuda
 from lightning.pytorch.callbacks import EarlyStopping
-from pytorch_lightning.callbacks import RichModelSummary
+from lightning.pytorch.callbacks import RichModelSummary
 
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter
@@ -181,12 +179,13 @@ def test_training(get_sources):
 
     loggers = [CsvLogger(name='base_csv_logger', version='1')]
 
-    callbacks = [EarlyStopping(monitor=None),
+    callbacks = [EarlyStopping(monitor='val/loss'),
                  RichModelSummary()]
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
-    interface.train(task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
+    interface.train(run_name='test',
+                    task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     loggers=loggers, evaluators=evaluators, transforms=transforms,
                     overrides=['trainer.max_epochs=1',
                                f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])

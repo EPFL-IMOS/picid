@@ -11,8 +11,10 @@ import numpy as np
 from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf, DictConfig, open_dict
+from hydra.core.hydra_config import HydraConfig
 
 from lightning import Callback, Trainer, seed_everything
+from lightning.pytorch.callbacks.callback import Callback as PytorchCallback
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 
@@ -376,6 +378,7 @@ class EntryInterface:
 
     def _compose_config_file(self,
                              *,
+                             run_name: str,
                              task_definition: BaseTaskDefinition | tuple[str, str] | str | None,
                              model: AbsModelConfig | CustomModelTrainer | str | None,
                              datasource: str | tuple[str, str] | ProcessedDatasource | None,
@@ -437,8 +440,8 @@ class EntryInterface:
                                                          task=task_yaml_name,
                                                          model=model_yaml_name)
 
-        local_instance = GlobalHydra.instance()
-        GlobalHydra.instance().clear()
+        # local_instance = GlobalHydra.instance()
+        # GlobalHydra.instance().clear()
 
         cs = ConfigStore.instance()
 
@@ -487,15 +490,20 @@ class EntryInterface:
                          node=callbacks_cfg)
                 overrides.append('callbacks=callbacks_cfg')
             else:
-                # TODO: TEST
-                if isinstance(callbacks, (str, dict, Callback)):
+                if not isinstance(callbacks, Sequence):
                     callbacks = [callbacks]
 
-                types = list(set(type(c) for c in callbacks))
-                assert len(types) == 1, f'All calbacks should be have the same type ({types} were provided).'
+                callbacks_to_inst = len(set(type(c) for c in callbacks if not isinstance(c, (Callback, PytorchCallback))))
 
-                callbacks_cfg = []
-                if not isinstance(callbacks[0], Callback):
+                if callbacks_to_inst > 0:
+
+                    log.info('Creating callbacks confing.')
+
+                    assert all(isinstance(c, (str, dict)) for c in callbacks), \
+                        ('In addition to lightning callbacks, you can defined them as string or dicts. '
+                         f'{[isinstance(c, (str, dict)) for c in callbacks]} where given.')
+
+                    callbacks_cfg = []
                     for c in callbacks:
                         if isinstance(c, str):
                             callbacks_cfg.append(OmegaConf.load(project_config.config_path / 'callbacks' / f'{c}.yaml'))
@@ -506,6 +514,8 @@ class EntryInterface:
                              name="callbacks_cfg",
                              node=callbacks_cfg)
                     overrides.append('callbacks=callbacks_cfg')
+                else:
+                    log.info('No callbacks for creating a confing.')
 
         # TODO: FIX AND TEST
         if evaluators is not None or isinstance(evaluators, dict):
@@ -527,21 +537,30 @@ class EntryInterface:
                  node=project_config.model_dump())
         overrides.append('paths=paths_cfg')
 
-        with hydra.initialize_config_dir(config_dir=str(project_config.config_path.absolute()),
-                                         job_name="interface", version_base="1.3"):
+        hydra_config = OmegaConf.load(project_config.config_path / 'hydra' / 'interface.yaml')
+        # OmegaConf.update(hydra_config, 'interface_run_name', run_name)
 
-            cfg = hydra.compose(config_name='run',
-                                overrides=overrides,
-                                return_hydra_config=True)
+        cs.store(group="hydra",
+                 name="hydra_cfg",
+                 node=hydra_config)
+        overrides.append('hydra=hydra_cfg')
 
-            # display_targets(cfg)
+        overrides.append(f'hydra.job.name={run_name}')
 
-        GlobalHydra.set_instance(local_instance)
+
+        cfg = hydra.compose(config_name='run',
+                            overrides=overrides,
+                            return_hydra_config=True)
+
+        # display_targets(cfg)
+
+        # GlobalHydra.set_instance(local_instance)
 
         return cfg
 
 
     def train(self, *,
+              run_name: str,
               model: AbsModelConfig | CustomModelTrainer | str,
               task_definition: BaseTaskDefinition | tuple[str, str] | str,
               datasource: ProcessedDatasource | tuple[str, str] | str | None,
@@ -572,277 +591,299 @@ class EntryInterface:
                 None: This function initiates the `trainer.fit()` process.
         """
 
-        if transforms is not None:
-            assert isinstance(transforms, Sequence), ('transforms must be a list of transforms '
-                                                      'or None (default one will be used, if possible).')
+        local_instance = GlobalHydra.instance()
+        GlobalHydra.instance().clear()
 
-        if debug:
-            log.info('Debug mode is enabled. No training will be performed.')
+        with hydra.initialize_config_dir(config_dir=str(project_config.config_path.absolute()),
+                                         job_name="interface", version_base="1.3"):
 
-        cfg = self._compose_config_file(datasource=datasource,
-                                        task_definition=task_definition,
-                                        evaluators=evaluators,
-                                        callbacks=callbacks,
-                                        overrides=overrides,
-                                        model=model)
+            if transforms is not None:
+                assert isinstance(transforms, Sequence), ('transforms must be a list of transforms '
+                                                          'or None (default one will be used, if possible).')
 
-        # if cfg.get("num_threads", None) is not None:
-        #     log.warning(f"Setting number of threads for all libraries to {cfg.num_threads}")
-        #     verify_thread_limits(cfg.num_threads)
-        #     parallel_backend("loky", n_jobs=cfg.num_threads)
-        #     torch.set_num_threads(cfg.num_threads)
-        #     torch.set_num_interop_threads(cfg.num_threads)
-        #     log.info(f"Set number of threads to {cfg.num_threads}")
-        # else:
-        #     log.info("Using default number of threads for all libraries")
+            if debug:
+                log.info('Debug mode is enabled. No training will be performed.')
 
-        if seed is None:
-            seed = cfg.get('seed', seed)
+            cfg = self._compose_config_file(run_name = run_name,
+                                            datasource=datasource,
+                                            task_definition=task_definition,
+                                            evaluators=evaluators,
+                                            callbacks=callbacks,
+                                            overrides=overrides,
+                                            model=model)
 
-        seed_everything(seed, workers=True)
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-        random.seed(seed)
+            HydraConfig.instance().set_config(cfg)
+            # display_targets(cfg)
 
-        log.info('Training config file creation ended.')
-
-        if isinstance(datasource, ProcessedDatasource):
-            data_dict = datasource.data_dict
-            meta_data_dict = datasource.meta_data_dict
-
-            log.info('Using an already processed datasource.')
-
-        else:
-            log.info('Loading the datasource.')
-            # if isinstance(datasource, tuple):
-            datasource = cfg.datasource
+            # if cfg.get("num_threads", None) is not None:
+            #     log.warning(f"Setting number of threads for all libraries to {cfg.num_threads}")
+            #     verify_thread_limits(cfg.num_threads)
+            #     parallel_backend("loky", n_jobs=cfg.num_threads)
+            #     torch.set_num_threads(cfg.num_threads)
+            #     torch.set_num_interop_threads(cfg.num_threads)
+            #     log.info(f"Set number of threads to {cfg.num_threads}")
             # else:
-            #     datasource = self.load_resource(datasource, 'datasource')
+            #     log.info("Using default number of threads for all libraries")
 
-            dataset_source = hydra.utils.instantiate(datasource)
+            if seed is None:
+                seed = cfg.get('seed', seed)
 
-            log.info('Processing the datasource.')
-            if transforms is None:
-                assert 'transforms' in cfg, ('There is not transforms defined in config file. '
-                                             'Fix the inputs of this function or pass a custom transforms list.')
-                transforms_cfg = hydra.utils.instantiate(cfg['transforms'])
+            seed_everything(seed, workers=True)
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            random.seed(seed)
 
-                transforms = []
-                for k, t in transforms_cfg.items():
-                    transforms.append(DataTransform(transform_name=k, transform=t['transform'],
-                                                    metadata=t['metadata']))
+            log.info('Training config file creation ended.')
 
-            process_datasource = self.process_datasource(dataset_source, transforms)
+            if isinstance(datasource, ProcessedDatasource):
+                data_dict = datasource.data_dict
+                meta_data_dict = datasource.meta_data_dict
 
-            data_dict = process_datasource.data_dict
-            meta_data_dict = process_datasource.meta_data_dict
+                log.info('Using an already processed datasource.')
 
-            log.info('Datasource correctly processed.')
-
-        register_data_dim_resolver(data=data_dict["train"])
-
-        features_set = set(data_dict["train"].keys())
-        for split in ["val", "test"]:
-            assert set(data_dict[split].keys()) == features_set, (
-                f"Mismatch in features for split {split}. "
-                f"Expected: {features_set}, "
-                f"Found: {set(data_dict[split].keys())}")
-
-        input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
-
-        log.info('Creating the datasets.')
-
-        datasets = {}
-        for split in ["train", "val", "test"]:
-            log.info(f'Creating {split} dataset.')
-
-            key = f"dataset_{split}"
-
-            init_cfg = cfg.dataset
-            if (oc := getattr(cfg.dataset, "_overrides", None)) is not None:
-                if split in oc:
-                    overrides = cfg.dataset._overrides[split]
-                    init_cfg = OmegaConf.merge(cfg.dataset, overrides)
-
-            meta_data_dict = meta_data_dict.copy()
-            meta_data_dict["current_data_split"] = split
-
-            datasets[key] = hydra.utils.instantiate(
-                init_cfg,
-                data_dict={key: data_dict[split][key] for key in input_data_task_keys},
-                meta_data_dict=meta_data_dict)
-
-        dataset_train = datasets["dataset_train"]
-        dataset_val = datasets["dataset_val"]
-        dataset_test = datasets["dataset_test"]
-
-        datamodule = hydra.utils.instantiate(
-            cfg.datamodule,
-            dataset_train=dataset_train,
-            dataset_val=dataset_val,
-            dataset_test=dataset_test,
-        )
-
-        log.info('Creating loaders.')
-
-        # Log the sizes of one batch for each data loader
-        loader_lengths = {}
-        for split, loader in zip(
-                ["train", "val", "test"],
-                [
-                    datamodule.train_dataloader(),
-                    datamodule.val_dataloader(),
-                    datamodule.test_dataloader(),
-                ],
-        ):
-            loader_lengths[split] = len(loader)
-
-            log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
-
-            batch = next(iter(loader))
-
-            for key, value in batch.items():
-                # TODO: handle nested structures (attributedict, list, etc)
-                if isinstance(value, torch.Tensor):
-                    log.info(f"  {key}: {value.shape}")
-                else:
-                    log.info(f"  {key}: Non-tensor value of type {type(value)}")
-
-        log_functions = []
-
-        if loggers is None:
-            loggers = []
-
-        log.info('Creating loggers.')
-
-        for logger in loggers:
-            if isinstance(logger, Logger):
-                log_functions.append(logger)
-            elif isinstance(logger, BaseLogger):
-                d = logger.model_dump(by_alias=True)
-                d['save_dir'] = project_config.save_dir
-                log_functions.append(hydra.utils.instantiate(d))
-
-        for d in cfg.get("logger", {}).values():
-            log_functions.append(hydra.utils.instantiate(d))
-
-        log.info('Creating evaluators.')
-
-        evaluators = {}
-        if 'evaluator' in cfg:
-
-            transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
-
-            for s in ["train", "val", "test"]:
-                inverse_transform_required = cfg.evaluator[s].get("apply_inverse_scaling", False)
-                inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
-                inverse_transform_which = cfg.evaluator[s].get("inverse_transform_which", "last")
-                inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
-
-                inverse_transform = None
-                if inverse_transform_required:
-                    # Prefer key-based lookup: discover inverter from registry
-                    if inverse_transform_key is not None:
-                        inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
-                                inverse_transform_key, which=inverse_transform_which))
-
-                        if inverse_transform is None:
-                            raise ValueError(
-                                f"Evaluator for {s} requires inverse scaling and inverse_transform_key={inverse_transform_key!r} "
-                                "was set, but no transform that assigns to that key implements InverseTransformMixin."
-                            )
-                        if chosen_name:
-                            log.info(
-                                "Inverse transform for %s: using transform %r for key %r (which=%s).",
-                                s,
-                                chosen_name,
-                                inverse_transform_key,
-                                inverse_transform_which,
-                            )
-                    elif inverse_transform_name is not None:
-                        inverse_transform = transforms_manager.get_transform(
-                            inverse_transform_name
-                        ).transform_instance
-                        assert isinstance(inverse_transform, InverseTransformMixin), (
-                            f"The transform {inverse_transform_name} does not implement "
-                            "InverseTransformMixin but is selected for inverse_transform in evaluator."
-                        )
-                    else:
-                        raise ValueError(
-                            f"Evaluator for {s} requires inverse scaling but neither "
-                            "inverse_transform_key (e.g. 'rul') nor inverse_transform_name is provided."
-                        )
-
-                remote_logger = None
-                for lgr in log_functions:
-                    if isinstance(lgr, WandbLogger):
-                        remote_logger = lgr
-
-                evaluator = hydra.utils.instantiate(
-                    cfg.evaluator[s],
-                    inverse_transform=inverse_transform,
-                    remote_logger=remote_logger,
-                )
-                log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
-                evaluators[s] = evaluator
-
-        loss = hydra.utils.instantiate(cfg.loss)
-        
-        if callbacks is not None:
-            if isinstance(callbacks, Callbacks) or (isinstance(callbacks, list) and isinstance(callbacks[0], Callback)):
-                log.info(f'Using user define callbacks: {callbacks}.')
-        else:
-            if 'callbacks' in cfg:
-                log.info('Loading callbacks.')
-                for _, k in cfg['callbacks'].items():
-                    log.info(f"Instantiating callback <{k['_target_']}>")
-
-                callbacks: list[Callback] = list(hydra.utils.instantiate(cfg["callbacks"]).values())
             else:
-                log.info('No callbacks to load.')
+                log.info('Loading the datasource.')
+                # if isinstance(datasource, tuple):
+                datasource = cfg.datasource
+                # else:
+                #     datasource = self.load_resource(datasource, 'datasource')
 
-        for callback in callbacks:
-            if isinstance(callback, ModelCheckpointWithConfig):
-                callback.config = cfg
+                dataset_source = hydra.utils.instantiate(datasource)
 
-        if 'model' in cfg and 'config_name' in cfg.model:
-            with open_dict(cfg):
-                del cfg.model['config_name']
+                log.info('Processing the datasource.')
+                if transforms is None:
+                    assert 'transforms' in cfg, ('There is not transforms defined in config file. '
+                                                 'Fix the inputs of this function or pass a custom transforms list.')
+                    transforms_cfg = hydra.utils.instantiate(cfg['transforms'])
 
-        log.info('Creating torch lightning module.')
-        model = create_lightning_module(
-            backbone=model if isinstance(model, CustomModelTrainer) else None,
-            cfg=cfg,
-            datamodule=datamodule,
-            evaluators=evaluators,
-            loss=loss,
-        )
+                    transforms = []
+                    for k, t in transforms_cfg.items():
+                        transforms.append(DataTransform(transform_name=k, transform=t['transform'],
+                                                        metadata=t['metadata']))
 
-        log.info('Creating the trainer class.')
-        trainer: Trainer = hydra.utils.instantiate(
-            cfg.trainer,
-            callbacks=callbacks,
-            logger=log_functions,
-            num_sanity_val_steps=0,
-            # **additional_trainer_args,
-            enable_progress_bar=enable_progress_bar,
-        )
+                process_datasource = self.process_datasource(dataset_source, transforms)
 
-        if not debug:
-            log.info('Fitting the trainer.')
-            trainer.fit(
-                model=model,
-                datamodule=datamodule,
+                data_dict = process_datasource.data_dict
+                meta_data_dict = process_datasource.meta_data_dict
+
+                log.info('Datasource correctly processed.')
+
+            register_data_dim_resolver(data=data_dict["train"])
+
+            features_set = set(data_dict["train"].keys())
+            for split in ["val", "test"]:
+                assert set(data_dict[split].keys()) == features_set, (
+                    f"Mismatch in features for split {split}. "
+                    f"Expected: {features_set}, "
+                    f"Found: {set(data_dict[split].keys())}")
+
+            input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
+
+            log.info('Creating the datasets.')
+
+            datasets = {}
+            for split in ["train", "val", "test"]:
+                log.info(f'Creating {split} dataset.')
+
+                key = f"dataset_{split}"
+
+                init_cfg = cfg.dataset
+                if (oc := getattr(cfg.dataset, "_overrides", None)) is not None:
+                    if split in oc:
+                        overrides = cfg.dataset._overrides[split]
+                        init_cfg = OmegaConf.merge(cfg.dataset, overrides)
+
+                meta_data_dict = meta_data_dict.copy()
+                meta_data_dict["current_data_split"] = split
+
+                datasets[key] = hydra.utils.instantiate(
+                    init_cfg,
+                    data_dict={key: data_dict[split][key] for key in input_data_task_keys},
+                    meta_data_dict=meta_data_dict)
+
+            dataset_train = datasets["dataset_train"]
+            dataset_val = datasets["dataset_val"]
+            dataset_test = datasets["dataset_test"]
+
+            datamodule = hydra.utils.instantiate(
+                cfg.datamodule,
+                dataset_train=dataset_train,
+                dataset_val=dataset_val,
+                dataset_test=dataset_test,
             )
 
-            if cfg.trainer.max_epochs > 1:
-                # Intention is to reload all deep-learning trained models from checkpoint
-                test_results = trainer.test(ckpt_path="best", datamodule=datamodule)
-            else:
-                # If max epochs is 1, there is no checkpoint to load from
-                # So we just test the model as is
-                log.info("Starting testing without training (used for pre-trained models)!")
-                test_results = trainer.test(model=model, datamodule=datamodule)
+            log.info('Creating loaders.')
 
-            print(test_results)
-            return test_results
+            # Log the sizes of one batch for each data loader
+            loader_lengths = {}
+            for split, loader in zip(
+                    ["train", "val", "test"],
+                    [
+                        datamodule.train_dataloader(),
+                        datamodule.val_dataloader(),
+                        datamodule.test_dataloader(),
+                    ],
+            ):
+                loader_lengths[split] = len(loader)
+
+                log.info(f"[1/{loader_lengths[split]}] Batch shapes for {split}:")
+
+                batch = next(iter(loader))
+
+                for key, value in batch.items():
+                    # TODO: handle nested structures (attributedict, list, etc)
+                    if isinstance(value, torch.Tensor):
+                        log.info(f"  {key}: {value.shape}")
+                    else:
+                        log.info(f"  {key}: Non-tensor value of type {type(value)}")
+
+            log_functions = []
+
+            if loggers is None:
+                loggers = []
+
+            log.info('Creating loggers.')
+
+            for logger in loggers:
+                if isinstance(logger, Logger):
+                    log_functions.append(logger)
+                elif isinstance(logger, BaseLogger):
+                    d = logger.model_dump(by_alias=True)
+                    d['save_dir'] = project_config.save_dir
+                    log_functions.append(hydra.utils.instantiate(d))
+
+            for d in cfg.get("logger", {}).values():
+                log_functions.append(hydra.utils.instantiate(d))
+
+            log.info('Creating evaluators.')
+
+            evaluators = {}
+            if 'evaluator' in cfg and 'trasforms' in cfg:
+
+                # TODO: try to remove it in favor of the custom define one
+                transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
+
+                for s in ["train", "val", "test"]:
+                    inverse_transform_required = cfg.evaluator[s].get("apply_inverse_scaling", False)
+                    inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
+                    inverse_transform_which = cfg.evaluator[s].get("inverse_transform_which", "last")
+                    inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
+
+                    inverse_transform = None
+                    if inverse_transform_required:
+                        # Prefer key-based lookup: discover inverter from registry
+                        if inverse_transform_key is not None:
+                            inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
+                                    inverse_transform_key, which=inverse_transform_which))
+
+                            if inverse_transform is None:
+                                raise ValueError(
+                                    f"Evaluator for {s} requires inverse scaling and inverse_transform_key={inverse_transform_key!r} "
+                                    "was set, but no transform that assigns to that key implements InverseTransformMixin."
+                                )
+                            if chosen_name:
+                                log.info(
+                                    "Inverse transform for %s: using transform %r for key %r (which=%s).",
+                                    s,
+                                    chosen_name,
+                                    inverse_transform_key,
+                                    inverse_transform_which,
+                                )
+                        elif inverse_transform_name is not None:
+                            inverse_transform = transforms_manager.get_transform(
+                                inverse_transform_name
+                            ).transform_instance
+                            assert isinstance(inverse_transform, InverseTransformMixin), (
+                                f"The transform {inverse_transform_name} does not implement "
+                                "InverseTransformMixin but is selected for inverse_transform in evaluator."
+                            )
+                        else:
+                            raise ValueError(
+                                f"Evaluator for {s} requires inverse scaling but neither "
+                                "inverse_transform_key (e.g. 'rul') nor inverse_transform_name is provided."
+                            )
+
+                    remote_logger = None
+                    for lgr in log_functions:
+                        if isinstance(lgr, WandbLogger):
+                            remote_logger = lgr
+
+                    evaluator = hydra.utils.instantiate(
+                        cfg.evaluator[s],
+                        inverse_transform=inverse_transform,
+                        remote_logger=remote_logger,
+                    )
+                    log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
+                    evaluators[s] = evaluator
+
+            else:
+                for s in ["train", "val", "test"]:
+                    evaluator = hydra.utils.instantiate(
+                        cfg.evaluator[s],
+                        inverse_transform=None,
+                        remote_logger=None,
+                    )
+                    evaluators[s] = evaluator
+
+            loss = hydra.utils.instantiate(cfg.loss)
+
+            if callbacks is not None:
+                if isinstance(callbacks, Callback) or (isinstance(callbacks, list) and isinstance(callbacks[0], Callback)):
+                    log.info(f'Using user define callbacks: {callbacks}.')
+            else:
+                if 'callbacks' in cfg:
+                    log.info('Loading callbacks.')
+                    for _, k in cfg['callbacks'].items():
+                        log.info(f"Instantiating callback <{k['_target_']}>")
+
+                    callbacks: list[Callback] = list(hydra.utils.instantiate(cfg["callbacks"]).values())
+                else:
+                    log.info('No callbacks to load.')
+
+            for callback in callbacks:
+                if isinstance(callback, ModelCheckpointWithConfig):
+                    callback.config = cfg
+
+            if 'model' in cfg and 'config_name' in cfg.model:
+                with open_dict(cfg):
+                    del cfg.model['config_name']
+
+            log.info('Creating torch lightning module.')
+            model = create_lightning_module(
+                backbone=model if isinstance(model, CustomModelTrainer) else None,
+                cfg=cfg,
+                datamodule=datamodule,
+                evaluators=evaluators,
+                loss=loss,
+            )
+
+            log.info('Creating the trainer class.')
+            trainer: Trainer = hydra.utils.instantiate(
+                cfg.trainer,
+                callbacks=callbacks,
+                logger=log_functions,
+                num_sanity_val_steps=0,
+                # **additional_trainer_args,
+                enable_progress_bar=enable_progress_bar,
+            )
+
+            if not debug:
+                log.info('Fitting the trainer.')
+                trainer.fit(
+                    model=model,
+                    datamodule=datamodule,
+                )
+
+                if cfg.trainer.max_epochs > 1:
+                    # Intention is to reload all deep-learning trained models from checkpoint
+                    test_results = trainer.test(ckpt_path="best", datamodule=datamodule)
+                else:
+                    # If max epochs is 1, there is no checkpoint to load from
+                    # So we just test the model as is
+                    log.info("Starting testing without training (used for pre-trained models)!")
+                    test_results = trainer.test(model=model, datamodule=datamodule)
+
+                print(test_results)
+                return test_results
+
+        GlobalHydra.set_instance(local_instance)
