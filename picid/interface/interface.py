@@ -12,14 +12,16 @@ from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf, DictConfig, open_dict
 from hydra.core.hydra_config import HydraConfig
+import yaml
 
 from lightning import Callback, Trainer, seed_everything
 from lightning.pytorch.callbacks.callback import Callback as PytorchCallback
+from pytorch_lightning.callbacks.callback import Callback as DeprecatedPytorchCallback
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.loggers.wandb import WandbLogger
 
-from threadpoolctl import threadpool_info
-from joblib import parallel_backend
+# from threadpoolctl import threadpool_info
+# from joblib import parallel_backend
 
 import torch
 import random
@@ -36,7 +38,8 @@ from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, re
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.transform_manager import ConfigTransformManager
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
-from picid.utils import display_targets
+from picid.transforms.base.multisource import InverseTransformMixin
+# from picid.utils import display_targets
 
 def verify_thread_limits(expected: int):
     log.info(f"[Thread sanity check] Expected threads: {expected}")
@@ -65,6 +68,21 @@ def verify_thread_limits(expected: int):
             log.info(f"{name:12s} ({path:35s}) → {num_threads} threads")
     except Exception as e:
         log.error(f"Could not query threadpools: {e}")
+
+def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
+    def get_key(lengths, key):
+        if key not in lengths:
+            raise KeyError(
+                f"Resolver issue: key: '{key}' "
+                f"not found in dataloader lengths dictionary ({lengths.keys()})."
+            )
+        return lengths[key]
+
+    OmegaConf.register_new_resolver(
+        "infer_dataloader_length",
+        lambda key: get_key(lengths, key),
+        replace=True,
+    )
 
 def safe_div(a, b):
     # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
@@ -493,7 +511,8 @@ class EntryInterface:
                 if not isinstance(callbacks, Sequence):
                     callbacks = [callbacks]
 
-                callbacks_to_inst = len(set(type(c) for c in callbacks if not isinstance(c, (Callback, PytorchCallback))))
+                callbacks_to_inst = len(set(type(c) for c in callbacks
+                                            if not isinstance(c, (DeprecatedPytorchCallback, PytorchCallback))))
 
                 if callbacks_to_inst > 0:
 
@@ -613,6 +632,7 @@ class EntryInterface:
                                             model=model)
 
             HydraConfig.instance().set_config(cfg)
+            log.info(yaml.dump(OmegaConf.to_container(cfg, resolve=False), default_flow_style=False, indent=4))
             # display_targets(cfg)
 
             # if cfg.get("num_threads", None) is not None:
@@ -632,6 +652,17 @@ class EntryInterface:
             torch.manual_seed(seed)
             np.random.seed(seed)
             random.seed(seed)
+
+            if not (fa_flag := cfg.get("flash_attention", True)):
+                if not fa_flag:
+                    log.warning(
+                        "Flash attention is disabled. This may lead to increased memory usage."
+                    )
+                    #  If OOM errors occur, try to set these to False
+                    # because otherwise flash attention does not throw an error.
+                    torch.backends.cuda.enable_flash_sdp(False)
+                    torch.backends.cuda.enable_mem_efficient_sdp(False)
+                    torch.backends.cuda.enable_math_sdp(True)
 
             log.info('Training config file creation ended.')
 
@@ -756,6 +787,8 @@ class EntryInterface:
                 log_functions.append(hydra.utils.instantiate(d))
 
             log.info('Creating evaluators.')
+
+            register_infer_dataloader_length_resolver(loader_lengths)
 
             evaluators = {}
             if 'evaluator' in cfg and 'trasforms' in cfg:

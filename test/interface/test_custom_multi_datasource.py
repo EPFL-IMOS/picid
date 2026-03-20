@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 import torch
 from lightning.pytorch.callbacks import EarlyStopping
-from pytorch_lightning.callbacks import RichModelSummary
+from lightning.pytorch.callbacks import RichModelSummary
 
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter, BySourceSplitter
@@ -125,6 +125,7 @@ def test_training(get_sources):
 
     interface.train(run_name='test',task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     overrides=['trainer.max_epochs=1',
-                               f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'],
+                               f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}',
+                               '+devices=1'],
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 

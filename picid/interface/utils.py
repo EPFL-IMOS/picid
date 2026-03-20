@@ -13,7 +13,6 @@ from torch import nn
 
 from picid.data.data_objects.data import DatasetContainer
 from picid.evaluator.base import AbstractEvaluator
-from picid.interface.model.custom_model import CustomModelTrainer
 from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
     AbstractFitPredictWrapper
 from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule

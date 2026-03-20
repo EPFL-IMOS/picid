@@ -55,7 +55,7 @@ def test_mlp_model():
 
     interface.train(run_name='test',task_definition=task_definition, model=custom_model, datasource=processed_datasource,
                     callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
-                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', '+zdevices=1'])
 
 
 # @pytest.mark.skip(reason="no way of currently testing training")
@@ -105,4 +105,4 @@ def test_1dcnn_model():
 
     interface.train(run_name='test', task_definition=task_definition, model=custom_model, datasource=processed_datasource,
                     callbacks=callbacks, loggers=loggers, evaluators=evaluators, transforms=transforms,
-                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'])
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', '+devices=1'])

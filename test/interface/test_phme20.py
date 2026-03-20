@@ -37,7 +37,7 @@ def test_pydantic_easy_interface():
     interface = EntryInterface()
     interface.train(run_name='test',task_definition=task_definition, model=model,
                     datasource=('phme20', 'raw'), callbacks=callbacks,
-                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'],
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', '+devices=1'],
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
@@ -48,7 +48,7 @@ def test_pydantic_minimal_interface_train():
     interface.train(run_name='test',model='lstm',
                     task_definition=('prognostics', 'rul'),
                     datasource=('phme20', 'raw'),
-                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'],
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', '+devices=1'],
                     # transforms=transforms,
                     debug=False)
 
@@ -119,5 +119,5 @@ def test_pydantic_easy_interface_input_processed_datasource():
                  RichModelSummary()]
 
     interface.train(run_name='test',task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
-                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}'],
+                    overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', '+devices=1'],
                     loggers=loggers)
