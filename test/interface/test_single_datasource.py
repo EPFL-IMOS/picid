@@ -9,6 +9,7 @@ from lightning.pytorch.callbacks import RichModelSummary
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter
 from picid.interface import CustomSingleSourceLoader, EntryInterface
+from picid.interface.schemas import TrainerConfig
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig
@@ -141,7 +142,7 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
     assert isinstance(meta, dict)
 
 
-@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
+# @pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
 @pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
@@ -186,8 +187,11 @@ def test_training(get_sources):
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
+    tconf = TrainerConfig(accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+                  devices=[1])
+
     interface.train(run_name='test',
+                    training_config=tconf,
                     task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     loggers=loggers, evaluators=evaluators, transforms=transforms,
-                    overrides=['trainer.max_epochs=1',
-                               f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', 'trainer.devices=1'])
+                    overrides=[])

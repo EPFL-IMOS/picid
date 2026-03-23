@@ -33,6 +33,7 @@ from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
+from picid.interface.schemas.trainer import TrainerConfig
 from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
     create_lightning_module
 from picid.transforms.base.data_transform import DataTransform
@@ -402,10 +403,11 @@ class EntryInterface:
                              datasource: str | tuple[str, str] | ProcessedDatasource | None,
                              evaluators: list[str] | str | dict = None,
                              callbacks: list[str] | str | dict | Callback | list[Callback] | None = None,
+                             trainer_config: TrainerConfig | None = None,
                              transforms: str | dict = None,
                              overrides: List[str] | str = None
                              ) -> DictConfig:
-        
+
         """
             Assembles a full Hydra experiment configuration by merging model,
             task, data, and callback configurations.
@@ -491,7 +493,7 @@ class EntryInterface:
             cs.store(group="model_configs", name="model_configs_cfg", package="_global_",
                      node=training_model_cfg)
             overrides.append('+model_configs=model_configs_cfg')
-        
+
         if task_cfg is not None:
             cs.store(group="task_definition",
                      name="task_definition_cfg",
@@ -537,20 +539,42 @@ class EntryInterface:
                 else:
                     log.info('No callbacks for creating a confing.')
 
-        # TODO: FIX AND TEST
-        if evaluators is not None or isinstance(evaluators, dict):
-            if isinstance(evaluators, dict):
-                evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
-                log.info('Using custom evaluators.')
-            else:
-                # FIX IT
-                evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
-                log.info('Using default evaluators.')
+        if trainer_config is None:
+            trainer_cfg = OmegaConf.load(project_config.config_path / 'trainer' / 'default.yaml')
+        else:
+            trainer_cfg = trainer_config.model_dump(by_alias=True)
 
-            cs.store(group="evaluator",
-                     name="evaluator_cfg",
-                     node=evaluators_cfg)
-            overrides.append('evaluator=evaluator_cfg')
+        cs.store(group="trainer",
+                 name="trainer_cfg",
+                 node=trainer_cfg)
+        overrides.append('trainer=trainer_cfg')
+
+        # FOR NOW, ONLY ALREADY DEFINED EVALUATORS ARE AVAILABLE
+        if evaluators is None:
+            evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+            log.info('Using default evaluators.')
+        else:
+            assert isinstance(evaluators, str), f'evaluators must be a string. {type(evaluators)} given.'
+            available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
+
+            assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
+
+            evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
+
+        # # TODO: FIX AND TEST
+        # if evaluators is not None or isinstance(evaluators, dict):
+        #     if isinstance(evaluators, dict):
+        #         evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
+        #         log.info('Using custom evaluators.')
+        #     else:
+        #         # FIX IT
+        #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+        #         log.info('Using default evaluators.')
+
+        cs.store(group="evaluator",
+                 name="evaluator_cfg",
+                 node=evaluators_cfg)
+        overrides.append('evaluator=evaluator_cfg')
 
         cs.store(group="paths",
                  name="paths_cfg",
@@ -578,15 +602,15 @@ class EntryInterface:
 
         return cfg
 
-
     def train(self, *,
               run_name: str,
               model: AbsModelConfig | CustomModelTrainer | str,
               task_definition: BaseTaskDefinition | tuple[str, str] | str,
+              training_config: TrainerConfig | None = None,
               datasource: ProcessedDatasource | tuple[str, str] | str | None,
               callbacks: Callback | list[Callback] | dict | None = None,
               loggers: list[Logger | BaseLogger] = None,
-              evaluators: dict[str, DefaultEvaluatorConfig] = None,
+              evaluators: str = None,
               transforms: list[DataTransform] = None,
               overrides: List[str] | str = None,
               enable_progress_bar: bool = True,
@@ -625,6 +649,7 @@ class EntryInterface:
                 log.info('Debug mode is enabled. No training will be performed.')
 
             cfg = self._compose_config_file(run_name = run_name,
+                                            trainer_config=training_config,
                                             datasource=datasource,
                                             task_definition=task_definition,
                                             evaluators=evaluators,
@@ -675,10 +700,7 @@ class EntryInterface:
 
             else:
                 log.info('Loading the datasource.')
-                # if isinstance(datasource, tuple):
                 datasource = cfg.datasource
-                # else:
-                #     datasource = self.load_resource(datasource, 'datasource')
 
                 dataset_source = hydra.utils.instantiate(datasource)
 
