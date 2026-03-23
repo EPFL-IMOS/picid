@@ -29,7 +29,6 @@ import random
 from picid.config import project_config
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 from picid.interface.model.custom_model import CustomModelTrainer
-from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
@@ -37,9 +36,10 @@ from picid.interface.schemas.trainer import TrainerConfig
 from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
     create_lightning_module, get_inverter_for_key_with_name
 from picid.transforms.base.data_transform import DataTransform
-from picid.transforms.base.transform_manager import ConfigTransformManager
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from picid.transforms.base.multisource import InverseTransformMixin
+#from picid.transforms.base.transform_manager import ConfigTransformManager
+# from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 # from picid.utils import display_targets
 
 def verify_thread_limits(expected: int):
@@ -827,11 +827,12 @@ class EntryInterface:
                 if cfg.evaluator[s].get("apply_inverse_scaling", False):
                     inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
                     inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
-
+                    inverse_transform_which = cfg.evaluator[s].get("inverse_transform_which", "last")
                     # Prefer key-based lookup: discover inverter from registry
+                    
                     if inverse_transform_key is not None:
                         inverse_transform, chosen_name = get_inverter_for_key_with_name(transforms, inverse_transform_key,
-                                                                                        which=cfg.evaluator[s].get("inverse_transform_which", "last"))
+                                                                                        which=inverse_transform_which)
 
                         # inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
                         #         inverse_transform_key, which=inverse_transform_which))

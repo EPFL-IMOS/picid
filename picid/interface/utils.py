@@ -16,7 +16,6 @@ from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
     AbstractFitPredictWrapper
 from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule
-from picid.transforms.base import BaseTransform
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.multisource import InverseTransformMixin
 from picid.utils.awkward_utils import get_ak_shape
