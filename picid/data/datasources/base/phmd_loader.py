@@ -1,4 +1,5 @@
-"""Shared loader for PHMD-backed multi-source datasets.
+"""
+Shared loader for PHMD-backed multi-source datasets.
 
 The PHMD datasets follow a common pattern: each task is stored in a cached
 dataset object, units are grouped by a unit identifier column, and each unit is
@@ -18,20 +19,38 @@ from picid.data.datasources.base.predefined_split_loader import (
 )
 from picid.data.datasources.base.phmd_assembly import build_split_payloads
 from picid.data.datasources.base.phmd_repository import PHMDRepository
+from picid.data.datasources.utils import convert_outer_list_to_inner
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["PHMDMultiSourceLoader", "convert_outer_list_to_inner"]
+
 
 class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
-    """Base class for PHMD loaders that expose one record per unit.
+    """
+    Provide a base class for PHMD loaders that expose one record per unit.
 
     Concrete subclasses provide the feature, target, and unit-column mapping,
     while this base class handles PHMD dataset retrieval, unit-wise iteration,
     and assembly of the final split container.
+
+    Parameters
+    ----------
+    **kwargs
+        Loader configuration forwarded to :class:`PredefinedSplitLoaderBase`
+        together with PHMD-specific arguments such as ``fold`` and
+        ``cache_dir``.
     """
 
     def __init__(self, **kwargs):
-        """Initialise the PHMD loader and prepare the local cache directory."""
+        """
+        Initialise the PHMD loader and prepare the local cache directory.
+
+        Parameters
+        ----------
+        **kwargs
+            Loader configuration including ``fold`` and ``cache_dir``.
+        """
         super().__init__(**kwargs)
         self.fold: int = kwargs["fold"]
         self.dataset_fold: str = kwargs.get("dataset_fold", None)
@@ -59,11 +78,19 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
         return "MultiSource(unloaded)"
 
     def get_multisource_data_splitter(self):
-        """Return the configured multisource splitter, if any."""
+        """
+        Return the configured multisource splitter, if any.
+
+        Returns
+        -------
+        object
+            The configured multisource splitter or ``None``.
+        """
         return self.multisource_data_splitter
 
     def _init_phmd_dataset(self, task_names):
-        """Load the PHMD dataset and resolve the requested task folds.
+        """
+        Load the PHMD dataset and resolve the requested task folds.
 
         Parameters
         ----------
@@ -81,15 +108,47 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
         return bundle.task_folds
 
     def _retrieve_cached_task_data(self, path: Path):
-        """Load a cached task payload from disk."""
+        """
+        Load a cached task payload from disk.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            Cache file path to load.
+
+        Returns
+        -------
+        object
+            Deserialized cached payload.
+        """
         return self._repository.retrieve_cached_task_data(path)
 
     def _get_cache_file_name(self, data_type) -> str:
-        """Return a stable cache filename for the requested payload type."""
+        """
+        Return a stable cache filename for the requested payload type.
+
+        Parameters
+        ----------
+        data_type : str
+            Split or payload type to encode into the cache filename.
+
+        Returns
+        -------
+        str
+            Stable cache filename for the requested payload type.
+        """
         return self._repository.get_cache_file_name(data_type)
 
     def _load_data(self):
-        """Load and convert the PHMD dataset into split-aware unit payloads."""
+        """
+        Load and convert the PHMD dataset into split-aware unit payloads.
+
+        Returns
+        -------
+        dict[str, dict[str, list]]
+            Nested split payload with per-unit feature, target, and metadata
+            lists for ``train``, ``val``, and ``test``.
+        """
         self.meta_data = {}
         tasks_fold_dict = self._init_phmd_dataset(
             self.auxiliary_tasks + [self.task_mode]
@@ -125,12 +184,26 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
 
     @abstractmethod
     def _process_unit(self, df_unit, unit_name, features_col, target_col):
-        """Convert one unit-level dataframe into the final payload shape."""
+        """
+        Convert one unit-level dataframe into the final payload shape.
+
+        Parameters
+        ----------
+        df_unit : pandas.DataFrame
+            Unit-level dataframe to convert.
+        unit_name : str
+            Unit identifier used for metadata and diagnostics.
+        features_col : list[str]
+            Feature columns selected for the unit payload.
+        target_col : str
+            Target column selected for the active task mode.
+        """
         raise NotImplementedError("Subclasses must implement _process_unit")
 
     @abstractmethod
     def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
-        """Preprocess the task folds before unit-level conversion.
+        """
+        Prepare the task folds before unit-level conversion.
 
         Parameters
         ----------
