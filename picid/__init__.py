@@ -1,5 +1,6 @@
-"""PICID Package with automatic path detection."""
+"""PICID package with automatic path detection and lazy top-level imports."""
 
+from importlib import import_module
 import os
 from pathlib import Path
 import logging
@@ -47,12 +48,15 @@ def _setup_project_root():
 # Set up PROJECT_ROOT automatically when package is imported
 _setup_project_root()
 
-# Your existing package exports
-from . import (
-    data,
-)
-
 __all__ = ["data", "_setup_project_root"]
+
+
+def __getattr__(name: str):
+    if name == "data":
+        module = import_module("picid.data")
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __version__ = "0.1.0"

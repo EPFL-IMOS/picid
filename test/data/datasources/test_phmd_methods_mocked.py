@@ -100,7 +100,6 @@ def test_phmd_xjtu_get_unit_column():
 def test_phmd_xjtu_preprocess_fold_rul_returns_main():
     """_preprocess_fold returns main_fold when task_mode is not fault."""
     loader = XJTU_SYLoader(**_phmd_kwargs())
-    loader._init_kwargs = {"task_mode": "rul"}
     main_fold = {
         "train": pd.DataFrame({"x": [1]}),
         "val": pd.DataFrame(),
@@ -113,7 +112,6 @@ def test_phmd_xjtu_preprocess_fold_rul_returns_main():
 def test_phmd_xjtu_process_unit_rul():
     """_process_unit in rul mode returns features and target."""
     loader = XJTU_SYLoader(**_phmd_kwargs())
-    loader._init_kwargs = {"use_ragged": False}
     df = pd.DataFrame({"f1": [1.0, 2.0], "f2": [3.0, 4.0], "rul": [10.0, 9.0]})
     out = loader._process_unit(df, "1_1", ["f1", "f2"], "rul")
     assert out["features"].shape == (2, 2)
@@ -126,7 +124,6 @@ def test_phmd_xjtu_process_unit_fault():
     loader = XJTU_SYLoader(
         fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp"
     )
-    loader._init_kwargs = {"use_ragged": False}
     df = pd.DataFrame(
         {
             "f1": [1.0, 2.0],
@@ -145,7 +142,6 @@ def test_phmd_xjtu_process_unit_unknown_task_raises():
     loader = XJTU_SYLoader(
         fold=0, data_name="XJTU", task_mode="unknown", cache_dir="/tmp"
     )
-    loader._init_kwargs = {"use_ragged": False}
     df = pd.DataFrame({"f1": [1.0], "rul": [10.0]})
     with pytest.raises(ValueError, match="Unknown task_mode"):
         loader._process_unit(df, "1_1", ["f1"], "rul")
@@ -195,9 +191,12 @@ def test_merge_data_folds_on_key_no_new_columns():
 def test_phmd_xjtu_process_unit_fault_ragged_raises():
     """_process_unit in fault mode with use_ragged=True raises NotImplementedError."""
     loader = XJTU_SYLoader(
-        fold=0, data_name="XJTU", task_mode="fault", cache_dir="/tmp"
+        fold=0,
+        data_name="XJTU",
+        task_mode="fault",
+        cache_dir="/tmp",
+        use_ragged=True,
     )
-    loader._init_kwargs = {"use_ragged": True}
     n = 32768 * 2  # divisible by SAMPLE_RANGE_SIZE
     df = pd.DataFrame(
         {

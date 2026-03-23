@@ -1,12 +1,13 @@
 """Main entry point for training and testing models."""
 
+import json
+import math
 import os
 import sys
 import time
 import yaml
-from pathlib import Path
 from collections.abc import Iterable
-import json
+from pathlib import Path
 
 # Ensure project root is importable (for pipeline regression loader in test.data)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -68,10 +69,10 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
 from picid.data.cache.file_lock import FileLock
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.contracts import DatasourceProtocol
 
 from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.exceptions import PreprocessingDatasourceError
 from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import (
     AbstractFeedForwardWrapper,
@@ -150,6 +151,65 @@ def safe_div(a, b):
 
 
 OmegaConf.register_new_resolver("quot", lambda a, b: safe_div(a, b))
+
+
+def _write_metrics_to_eval_details(
+    cfg: DictConfig, stage: str, split: str, metrics: dict[str, Any]
+) -> None:
+    """Write metrics to eval_details/{stage}/{split}/metrics.json when paths exist."""
+    p_dir = getattr(cfg.paths, "eval_details", None)
+    if not p_dir or not metrics:
+        return
+    out = Path(str(p_dir)) / stage / split / "metrics.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # Strip "val/" or "test/" prefix from keys
+    clean = {k.split("/", 1)[1] if "/" in k else k: v for k, v in metrics.items()}
+
+    def _json_default(o: Any) -> Any:
+        if isinstance(o, torch.Tensor):
+            v = o.detach().cpu().item()
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                return str(v)
+            return v
+        if isinstance(o, (np.floating, np.integer)):
+            v = float(o) if isinstance(o, np.floating) else int(o)
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                return str(v)
+            return v
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+            return str(o)
+        raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(clean, f, indent=2, default=_json_default)
+    log.info("Saved metrics to %s", out)
+
+
+def _log_preprocessing_datasource_error(exc: PreprocessingDatasourceError) -> None:
+    """Render datasource preprocessing failures with explicit top-level context.
+
+    Parameters
+    ----------
+    exc : PreprocessingDatasourceError
+        Preprocessing exception raised while interacting with the datasource.
+
+    Returns
+    -------
+    None
+        The function logs additional context but does not suppress the error.
+    """
+
+    log.error("Datasource preprocessing failed.")
+    if exc.stage is not None:
+        log.error("Preprocessing datasource stage: %s", exc.stage)
+    if exc.datasource_type is not None:
+        log.error("Datasource class: %s", exc.datasource_type)
+    if exc.datasource_name is not None:
+        log.error("Datasource name: %r", exc.datasource_name)
+    if exc.datasource_error_type is not None:
+        log.error("Datasource error type: %s", exc.datasource_error_type)
+    if exc.cause is not None:
+        log.error("Original datasource error: %s", exc.cause)
 
 
 # safe diff that returns a if a or b are strings
@@ -411,7 +471,7 @@ def rerun_best_model_checkpoint(
     datamodule: LightningDataModule,
     device: torch.device,
     callbacks: list[Callback],
-    evaluators: list[AbstractEvaluator],
+    evaluators: dict[str, AbstractEvaluator],
     loss: Any,
     logger: list[Logger],
 ) -> None:
@@ -453,10 +513,13 @@ def rerun_best_model_checkpoint(
 
     log.info("Re-testing best model checkpoint on validation set!")
     val_loader = datamodule.val_dataloader()
-    results = checkpoint_trainer.test(model=checkpoint_model, dataloaders=val_loader)
-    if results:
+    val_results = checkpoint_trainer.test(
+        model=checkpoint_model, dataloaders=val_loader
+    )
+    if val_results:
+        _write_metrics_to_eval_details(cfg, "best_epoch", "val", val_results[0])
         logged = {}
-        for k, v in results[0].items():
+        for k, v in val_results[0].items():
             suffix = k.split("/", 1)[1] if "/" in k else k
             logged[f"val_best_rerun/{suffix}"] = v
         log.info(logged)
@@ -468,10 +531,13 @@ def rerun_best_model_checkpoint(
 
     log.info("Re-testing best model checkpoint on test set!")
     test_loader = datamodule.test_dataloader()
-    results = checkpoint_trainer.test(model=checkpoint_model, dataloaders=test_loader)
-    if results:
+    test_results = checkpoint_trainer.test(
+        model=checkpoint_model, dataloaders=test_loader
+    )
+    if test_results:
+        _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
         logged = {}
-        for k, v in results[0].items():
+        for k, v in test_results[0].items():
             suffix = k.split("/", 1)[1] if "/" in k else k
             logged[f"test_best_rerun/{suffix}"] = v
         log.info(logged)
@@ -548,9 +614,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     # Instantiate and load dataset
     log.info(f"Instantiating loader <{cfg.datasource._target_}>")
-    dataset_source: SingleSourceLoader | MultiSourceLoader = hydra.utils.instantiate(
-        cfg.datasource
-    )
+    dataset_source: DatasourceProtocol = hydra.utils.instantiate(cfg.datasource)
     # Create manager
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
     # Get transform names
@@ -599,12 +663,16 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     try:
         # Run the preprocessing pipeline
-        preprocessor.pipeline(
-            data_cache_path=data_cache_path,
-            data_library_part_path=data_library_part_path,
-            transform_library_part_path=transform_library_part_path,
-            cache_preprocessed=cache_preprocessed_flag,
-        )
+        try:
+            preprocessor.pipeline(
+                data_cache_path=data_cache_path,
+                data_library_part_path=data_library_part_path,
+                transform_library_part_path=transform_library_part_path,
+                cache_preprocessed=cache_preprocessed_flag,
+            )
+        except PreprocessingDatasourceError as exc:
+            _log_preprocessing_datasource_error(exc)
+            raise
 
         # TODO: return_splits_on_first_level is not clea..
         data_dict = preprocessor.get_processed_data_dict(
@@ -824,12 +892,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         log.info("Starting testing without training (used for pre-trained models)!")
         test_results = trainer.test(model=model, datamodule=datamodule)
 
-    # Pipeline regression: write test metrics for snapshot comparison
-    out_path = os.environ.get("PIPELINE_REGRESSION_OUTPUT")
-    if out_path and test_results:
-        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(test_results[0], f, indent=2)
+    if test_results:
+        _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
 
     # We want to avoid running this for pfn models where there is no training
     # and thus no checkpoint and rerunning pfn model would take significant time.

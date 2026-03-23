@@ -1,33 +1,54 @@
+"""Abstract splitter contracts for datasource preprocessing."""
+
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
 import numpy as np
 
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.contracts import DatasourceProtocol
 
 
 class SourceSplitter(ABC):
+    """Interface for splitters that partition whole datasource sources.
+
+    The splitter contract stays structural so preprocessing can work with any
+    datasource implementation that satisfies the shared protocol.
+    """
+
     @abstractmethod
     def split_data(
-        self, sources: Dict[str, SingleSourceLoader]
-    ) -> Dict[str, Dict[str, SingleSourceLoader]]:
-        """
-        Split the data by source.
+        self, sources: Dict[str, DatasourceProtocol]
+    ) -> Dict[str, Dict[str, DatasourceProtocol]]:
+        """Split datasource loaders into train/val/test source groups.
 
         Parameters
         ----------
-        data : Dict[str, np.ndarray]
-            Dictionary containing data arrays for each source.
+        sources : Dict[str, DatasourceProtocol]
+            Mapping from source name to instantiated datasource.
 
         Returns
         -------
-        Dict[str, np.ndarray]
-            Dictionary containing split data arrays for each source.
+        Dict[str, Dict[str, DatasourceProtocol]]
+            Mapping from split name to the sources assigned to that split.
         """
         pass
 
 
 class TimeSeriesSplitter(ABC):
+    """Interface for splitters that partition one time-series payload."""
+
     @abstractmethod
     def split_data(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Split one array into train, validation, and test partitions.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+            Input array to partition.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]
+            Train, validation, and test partitions in that order.
+        """
         pass

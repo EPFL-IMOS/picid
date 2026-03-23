@@ -61,9 +61,16 @@ from picid.data.data_objects.manifest import (
     ManifestEntry,
     MetadataManifest,
 )
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.exceptions import (
+    DatasourceContractError,
+    DatasourceError,
+)
+from picid.data.datasources.base.contracts import DatasourceProtocol
 from picid.data.preprocessing.base import PreProcessorInterface
-from picid.exceptions import TransformError
+from picid.exceptions import (
+    TransformError,
+    build_preprocessing_datasource_error,
+)
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.pipeline import _get_producer_version
 from picid.transforms.base.transform_manager import ConfigTransformManager
@@ -118,7 +125,7 @@ class PreProcessor(PreProcessorInterface):
 
     def __init__(
         self,
-        datasource: AbstractDataSourceLoader,
+        datasource: DatasourceProtocol,
         transforms: Optional[AnyTransformSequence] = None,
         **kwargs,
     ):
@@ -171,17 +178,65 @@ class PreProcessor(PreProcessorInterface):
     # ------------------------------------------------------------------
 
     def fetch_data(self) -> None:
-        """Load data from the datasource and attach a manifest entry."""
-        data = self.datasource.get_data()
+        """Load data from the datasource and attach a manifest entry.
+
+        Raises
+        ------
+        PreprocessingDatasourceError
+            If the datasource raises a typed datasource exception while
+            materializing the dataset container.
+        """
+        data = self._run_datasource_step("get_data", self.datasource.get_data)
 
         if not isinstance(data, DatasetContainer):
-            raise TypeError(
+            contract_error = DatasourceContractError(
                 f"datasource.get_data() must return a DatasetContainer, "
                 f"got {type(data).__name__}."
             )
+            raise build_preprocessing_datasource_error(
+                "get_data", self.datasource, contract_error
+            ) from contract_error
 
         self.data = data
         self._add_datasource_manifest_entry()
+
+    def _run_datasource_step(
+        self,
+        stage: str,
+        operation: Callable[[], Any],
+    ) -> Any:
+        """Execute one datasource operation with preprocessing-stage context.
+
+        Parameters
+        ----------
+        stage : str
+            Datasource operation being executed, for example ``"load_data"``.
+        operation : Callable[[], Any]
+            Zero-argument callable that performs the datasource action.
+
+        Returns
+        -------
+        Any
+            Result produced by the datasource operation.
+
+        Raises
+        ------
+        PreprocessingDatasourceError
+            If the datasource raises a typed datasource exception.
+
+        Notes
+        -----
+        Assertion-based invariant failures are intentionally not caught here so
+        programming bugs and data-corruption assertions keep their original
+        signal.
+        """
+
+        try:
+            return operation()
+        except DatasourceError as exc:
+            raise build_preprocessing_datasource_error(
+                stage, self.datasource, exc
+            ) from exc
 
     def _add_datasource_manifest_entry(self) -> None:
         """Append a datasource provenance entry to self.data.manifest if present."""
@@ -221,6 +276,16 @@ class PreProcessor(PreProcessorInterface):
             val = getattr(ds, "data_name", None)
             if isinstance(val, str):
                 return val
+
+        if hasattr(ds, "get_data_names") and callable(getattr(ds, "get_data_names")):
+            try:
+                val = ds.get_data_names()
+                if isinstance(val, tuple) and len(val) == 1:
+                    return val[0]
+                if isinstance(val, tuple) and all(isinstance(x, str) for x in val):
+                    return list(val)
+            except Exception:
+                pass
 
         if hasattr(ds, "get_data_name") and callable(getattr(ds, "get_data_name")):
             try:
@@ -403,6 +468,12 @@ class PreProcessor(PreProcessorInterface):
         Returns
         -------
         DatasetContainer
+
+        Raises
+        ------
+        PreprocessingDatasourceError
+            If a datasource-stage operation fails with a typed datasource
+            exception while preprocessing is materializing the dataset.
         """
         cache_enabled = bool(
             data_cache_path

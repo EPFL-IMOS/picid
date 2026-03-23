@@ -12,12 +12,43 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
 
 from picid.data.data_objects.data import DatasetContainer
+from picid.data.datasources.base.exceptions import (
+    DatasourceContractError,
+    DatasourceError,
+)
+from picid.exceptions import build_preprocessing_datasource_error
 from picid.utils.hash_utils import compute_cache_key, ensure_serializable
 
 if TYPE_CHECKING:
     from picid.data.preprocessing.preprocessor import PreProcessor
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_datasource_cache_fingerprint(datasource: object) -> dict:
+    """Return the datasource fingerprint used for preprocessing cache keys.
+
+    Parameters
+    ----------
+    datasource : object
+        Datasource instance expected to expose ``get_cache_fingerprint()``.
+
+    Returns
+    -------
+    dict
+        Serialisable datasource fingerprint for cache key derivation.
+
+    Raises
+    ------
+    DatasourceContractError
+        If the datasource does not implement ``get_cache_fingerprint()``.
+    """
+    getter = getattr(datasource, "get_cache_fingerprint", None)
+    if not callable(getter):
+        raise DatasourceContractError(
+            "Datasource must implement get_cache_fingerprint() for cached preprocessing."
+        )
+    return getter()
 
 
 # ---------------------------------------------------------------------------
@@ -37,10 +68,24 @@ class DirectPipelineRunner:
         self._pp = preprocessor
 
     def run(self) -> DatasetContainer:
+        """Run the non-cached preprocessing pipeline end to end.
+
+        Returns
+        -------
+        DatasetContainer
+            Fully transformed dataset container.
+
+        Raises
+        ------
+        PreprocessingDatasourceError
+            If a datasource-stage call fails with a typed datasource exception.
+        """
         pp = self._pp
-        pp.datasource.load_data()
-        pp.datasource.split_data()
-        pp.meta_data = pp.datasource.get_meta_data()
+        pp._run_datasource_step("load_data", pp.datasource.load_data)
+        pp._run_datasource_step("split_data", pp.datasource.split_data)
+        pp.meta_data = pp._run_datasource_step(
+            "get_meta_data", pp.datasource.get_meta_data
+        )
         pp.fetch_data()
         pp.data = pp.apply_transforms(pp.data, pp.transforms.get_transforms())
         return pp.data
@@ -60,7 +105,7 @@ class CachingPipelineRunner:
     Cache key derivation
     --------------------
     The preprocessed key is computed from:
-        - datasource._init_kwargs  (serialised)
+        - datasource.get_cache_fingerprint()  (serialised)
         - transforms.config        (serialised; stable for same pipeline definition)
         - library source files in data_library_part_path + transform_library_part_path
 
@@ -93,7 +138,15 @@ class CachingPipelineRunner:
         self._combined_paths = [data_library_part_path, transform_library_part_path]
 
         pp = preprocessor
-        self._datasource_config = ensure_serializable(pp.datasource._init_kwargs)
+        try:
+            datasource_fingerprint = _resolve_datasource_cache_fingerprint(
+                pp.datasource
+            )
+        except DatasourceError as exc:
+            raise build_preprocessing_datasource_error(
+                "get_cache_fingerprint", pp.datasource, exc
+            ) from exc
+        self._datasource_config = ensure_serializable(datasource_fingerprint)
         self._transforms_config = ensure_serializable(pp.transforms.config)
         self._preprocessed_config = {
             "datasource": self._datasource_config,
@@ -164,13 +217,30 @@ class CachingPipelineRunner:
         return None
 
     def _load_and_split(self) -> None:
-        """Load and split via cache or direct build."""
+        """Load and split the datasource via cache or direct build.
+
+        Returns
+        -------
+        None
+            The method updates the preprocessor datasource, metadata, and data
+            in place.
+
+        Raises
+        ------
+        PreprocessingDatasourceError
+            If the datasource fails during cache-fingerprint resolution,
+            loading, splitting, or metadata retrieval with a typed datasource
+            exception.
+        """
         pp = self._pp
 
         def _build():
-            pp.datasource.load_data()
-            pp.datasource.split_data()
-            return pp.datasource, pp.datasource.get_meta_data()
+            pp._run_datasource_step("load_data", pp.datasource.load_data)
+            pp._run_datasource_step("split_data", pp.datasource.split_data)
+            meta_data = pp._run_datasource_step(
+                "get_meta_data", pp.datasource.get_meta_data
+            )
+            return pp.datasource, meta_data
 
         pp.datasource, pp.meta_data = pp.cache.handle(
             cache_dir=self._cache_dir,

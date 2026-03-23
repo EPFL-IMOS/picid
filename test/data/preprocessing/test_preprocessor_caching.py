@@ -12,8 +12,14 @@ import pytest
 from pathlib import Path
 
 from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.exceptions import (
+    DatasourceContractError,
+    DatasourceLoadError,
+    DatasourceSplitError,
+)
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.cache.offline import FileSystemCache
+from picid.exceptions import PreprocessingDatasourceError
 from picid.transforms.base.transform_manager import ConfigTransformManager
 from picid.transforms.base.transform_pipeline import TransformPipeline
 from picid.transforms.base.data_transform import DataTransform
@@ -22,6 +28,7 @@ from picid.utils.hash_utils import compute_cache_key, ensure_serializable
 from sklearn.utils.validation import check_is_fitted
 
 from test.transforms.base.conftest import DummyStatelessTransform
+from test.data.preprocessing.test_preprocessor import _PreprocessingErrorDatasource
 
 
 # -----------------------------------------------------------------------------
@@ -91,6 +98,9 @@ class _PicklableDatasource:
                 },
             )
         return self._container
+
+    def get_cache_fingerprint(self) -> dict:
+        return dict(self._init_kwargs)
 
 
 # -----------------------------------------------------------------------------
@@ -271,7 +281,7 @@ class TestPipelinePreprocessedCache:
         )
         # Stage 1 and Stage 2 should have written
         cache = FileSystemCache()
-        datasource_config = ensure_serializable(datasource._init_kwargs)
+        datasource_config = ensure_serializable(datasource.get_cache_fingerprint())
         transforms_config = ensure_serializable(manager_no_cache_point.config)
         preprocessed_config = {
             "datasource": datasource_config,
@@ -334,6 +344,97 @@ class TestPipelinePreprocessedCache:
         assert result is not None
         # No cache dir was passed, so nothing under tmp_path
         assert not (tmp_path / "preprocessed").exists()
+
+    def test_cached_pipeline_wraps_cache_fingerprint_datasource_error(
+        self, cache_dir, library_dir, manager_no_cache_point
+    ):
+        """Cached pipeline should wrap get_cache_fingerprint failures with stage context."""
+        datasource = _PreprocessingErrorDatasource(
+            cache_error=DatasourceContractError("fingerprint failed"),
+        )
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+
+        with pytest.raises(PreprocessingDatasourceError) as exc_info:
+            preprocessor.pipeline(
+                data_cache_path=cache_dir,
+                data_library_part_path=library_dir,
+                transform_library_part_path=library_dir,
+                cache_preprocessed=True,
+            )
+
+        exc = exc_info.value
+        assert exc.stage == "get_cache_fingerprint"
+        assert exc.datasource_type == "_PreprocessingErrorDatasource"
+        assert exc.datasource_name == "faulty"
+        assert exc.datasource_error_type == "DatasourceContractError"
+
+    @pytest.mark.parametrize(
+        ("datasource_kwargs", "stage", "error_type"),
+        [
+            (
+                {"load_error": DatasourceLoadError("load failed")},
+                "load_data",
+                "DatasourceLoadError",
+            ),
+            (
+                {"split_error": DatasourceSplitError("split failed")},
+                "split_data",
+                "DatasourceSplitError",
+            ),
+        ],
+    )
+    def test_cached_pipeline_wraps_load_and_split_failures(
+        self,
+        cache_dir,
+        library_dir,
+        manager_no_cache_point,
+        datasource_kwargs,
+        stage,
+        error_type,
+    ):
+        """Cached pipeline should wrap load/split datasource failures with stage context."""
+        datasource = _PreprocessingErrorDatasource(**datasource_kwargs)
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+
+        with pytest.raises(PreprocessingDatasourceError) as exc_info:
+            preprocessor.pipeline(
+                data_cache_path=cache_dir,
+                data_library_part_path=library_dir,
+                transform_library_part_path=library_dir,
+                cache_preprocessed=True,
+            )
+
+        exc = exc_info.value
+        assert exc.stage == stage
+        assert exc.datasource_type == "_PreprocessingErrorDatasource"
+        assert exc.datasource_name == "faulty"
+        assert exc.datasource_error_type == error_type
+
+    def test_cached_pipeline_does_not_wrap_assertion_error_in_cache_fingerprint(
+        self, cache_dir, library_dir, manager_no_cache_point
+    ):
+        """AssertionError invariants from get_cache_fingerprint should bubble unchanged."""
+        datasource = _PreprocessingErrorDatasource(
+            cache_error=AssertionError("fingerprint invariant"),
+        )
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=manager_no_cache_point,
+        )
+
+        with pytest.raises(AssertionError, match="fingerprint invariant"):
+            preprocessor.pipeline(
+                data_cache_path=cache_dir,
+                data_library_part_path=library_dir,
+                transform_library_part_path=library_dir,
+                cache_preprocessed=True,
+            )
 
 
 # -----------------------------------------------------------------------------
@@ -407,7 +508,7 @@ class TestPipelineBoundaryCache:
         boundary_names = manager_with_cache_point.get_cache_point_names()
         assert "heavy" in boundary_names
         boundary_config = {
-            "datasource": ensure_serializable(datasource._init_kwargs),
+            "datasource": ensure_serializable(datasource.get_cache_fingerprint()),
             "transforms": manager_with_cache_point.get_config_up_to_and_including(
                 "heavy"
             ),
@@ -680,7 +781,7 @@ class TestPreProcessorWithTransformPipelineWithCache:
         # Preprocessed cache should exist
         cache = FileSystemCache()
         config = {
-            "datasource": ensure_serializable(datasource._init_kwargs),
+            "datasource": ensure_serializable(datasource.get_cache_fingerprint()),
             "transforms": ensure_serializable(pipeline.config),
         }
         key = compute_cache_key(

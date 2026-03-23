@@ -21,6 +21,10 @@ from picid.data.datasources.base.phmd_loader import (
     convert_outer_list_to_inner,
     PHMDMultiSourceLoader,
 )
+from picid.data.datasources.base.exceptions import (
+    DatasourceConfigurationError,
+    DatasourceStateError,
+)
 from picid.data.data_objects.data import SplitDatasetContainer
 
 
@@ -129,7 +133,7 @@ def test_phmd_loader_load_data_get_data(mock_phmd_loader):
 
 
 def test_phmd_loader_get_data_before_load_raises(mock_phmd_loader):
-    with pytest.raises(AssertionError, match="must be loaded"):
+    with pytest.raises(DatasourceStateError, match="must be loaded"):
         mock_phmd_loader.get_data()
 
 
@@ -141,9 +145,8 @@ def test_phmd_loader_get_meta_data(mock_phmd_loader):
 
 def test_phmd_loader_get_data_name(mock_phmd_loader):
     mock_phmd_loader.load_data()
-    # get_data_name returns self.data_dict["metadata"] (structure differs from multi_source)
-    name = mock_phmd_loader.get_data_name()
-    assert name is not None
+    assert mock_phmd_loader.get_data_name() == "MockPHMD"
+    assert mock_phmd_loader.get_data_names() == ("MockPHMD",)
 
 
 def test_phmd_loader_split_data_warns(mock_phmd_loader, caplog):
@@ -162,9 +165,12 @@ def test_phmd_loader_repr_loaded(mock_phmd_loader):
     assert "MultiSource" in r or "units" in r
 
 
-def test_phmd_loader_init_rejects_multisource_splitter(tmp_path):
-    """PHMDMultiSourceLoader.__init__ asserts multisource_data_splitter is None."""
-    with pytest.raises(AssertionError, match="multisource_data_splitter"):
+def test_phmd_loader_rejects_multisource_splitter(tmp_path):
+    """PHMDMultiSourceLoader should fail fast on incompatible splitter config."""
+    with pytest.raises(
+        DatasourceConfigurationError,
+        match="does not accept multisource_data_splitter",
+    ):
         MockPHMDLoader(
             data_name="X",
             task_mode="rul",

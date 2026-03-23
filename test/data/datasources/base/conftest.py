@@ -45,6 +45,15 @@ class InMemorySingleSourceLoader(SingleSourceLoader):
         }
 
 
+class PrivateContractSingleSourceLoader(InMemorySingleSourceLoader):
+    """Loader whose public get_data must not be used by MultiSourceLoader internals."""
+
+    def get_data(self):
+        raise AssertionError(
+            "MultiSourceLoader should use the internal single-source container helpers."
+        )
+
+
 @pytest.fixture
 def in_memory_loader():
     """Single in-memory loader (standalone: load → split → get_data returns SplitDatasetContainer)."""
@@ -110,6 +119,16 @@ def two_sources_config_no_multisource_splitter():
     return _two_source_config()
 
 
+@pytest.fixture
+def two_sources_config_no_multisource_splitter_private_contract():
+    config = _two_source_config()
+    target = "test.data.datasources.base.conftest.PrivateContractSingleSourceLoader"
+    for source_name in ("unit_a", "unit_b"):
+        config[source_name]["_target_"] = target
+        config[source_name] = OmegaConf.create(config[source_name])
+    return config
+
+
 def _two_sources_with_by_source_splitter_config():
     """Config for three sources with BySourceSplitter (train=unit_a, val=unit_b, test=unit_c)."""
     source_a = {
@@ -155,6 +174,16 @@ def _two_sources_with_by_source_splitter_config():
 @pytest.fixture
 def two_sources_config_with_by_source_splitter():
     return _two_sources_with_by_source_splitter_config()
+
+
+@pytest.fixture
+def two_sources_config_with_by_source_splitter_private_contract():
+    config = _two_sources_with_by_source_splitter_config()
+    target = "test.data.datasources.base.conftest.PrivateContractSingleSourceLoader"
+    for source_name in ("unit_a", "unit_b", "unit_c"):
+        config[source_name]["_target_"] = target
+        config[source_name] = OmegaConf.create(config[source_name])
+    return config
 
 
 class FailingSingleSourceLoader(SingleSourceLoader):

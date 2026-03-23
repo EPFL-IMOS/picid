@@ -21,8 +21,91 @@ Test Coverage Strategy:
 
 import pytest
 
+from picid.data.data_objects.data import DatasetContainer
+from picid.data.datasources.base.exceptions import DatasourceStateError
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.preprocessing.base import PreProcessorInterface
+from picid.exceptions import PreprocessingDatasourceError
+
+
+class _PreprocessingErrorDatasource:
+    """Tiny datasource stub used to drive preprocessing error paths.
+
+    Parameters
+    ----------
+    load_error : BaseException | None, optional
+        Exception raised by ``load_data()``.
+    split_error : BaseException | None, optional
+        Exception raised by ``split_data()``.
+    meta_error : BaseException | None, optional
+        Exception raised by ``get_meta_data()``.
+    data_error : BaseException | None, optional
+        Exception raised by ``get_data()``.
+    cache_error : BaseException | None, optional
+        Exception raised by ``get_cache_fingerprint()``.
+    data_name : str, optional
+        Logical datasource name exposed to preprocessing error reporting.
+    task_mode : str, optional
+        Task mode exposed to preprocessing error reporting.
+    """
+
+    def __init__(
+        self,
+        *,
+        load_error: BaseException | None = None,
+        split_error: BaseException | None = None,
+        meta_error: BaseException | None = None,
+        data_error: BaseException | None = None,
+        cache_error: BaseException | None = None,
+        data_name: str = "faulty",
+        task_mode: str = "regression",
+    ):
+        self.data_name = data_name
+        self.task_mode = task_mode
+        self._load_error = load_error
+        self._split_error = split_error
+        self._meta_error = meta_error
+        self._data_error = data_error
+        self._cache_error = cache_error
+        self._container = DatasetContainer(
+            features={"train": [], "val": [], "test": []},
+            target={"train": [], "val": [], "test": []},
+        )
+
+    def load_data(self) -> None:
+        if self._load_error is not None:
+            raise self._load_error
+
+    def split_data(self) -> None:
+        if self._split_error is not None:
+            raise self._split_error
+
+    def get_meta_data(self) -> dict:
+        if self._meta_error is not None:
+            raise self._meta_error
+        return {"source": self.data_name}
+
+    def get_data(self) -> DatasetContainer:
+        if self._data_error is not None:
+            raise self._data_error
+        return self._container
+
+    def get_cache_fingerprint(self) -> dict:
+        if self._cache_error is not None:
+            raise self._cache_error
+        return {
+            "data_name": self.data_name,
+            "task_mode": self.task_mode,
+        }
+
+    def get_data_name(self) -> str:
+        return self.data_name
+
+    def get_data_names(self) -> tuple[str, ...]:
+        return (self.data_name,)
+
+    def get_split_mode(self) -> str:
+        return "within_units"
 
 
 class TestPreProcessorInitialization:
@@ -195,6 +278,41 @@ class TestPreProcessorFetchData:
         preprocessor.fetch_data()
 
         assert preprocessor.data is not None
+
+    def test_fetch_data_wraps_typed_datasource_error_with_stage_context(
+        self, mock_transform_manager
+    ):
+        """fetch_data wraps typed datasource exceptions with get_data stage context."""
+        datasource = _PreprocessingErrorDatasource(
+            data_error=DatasourceStateError("boom"),
+        )
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=mock_transform_manager,
+        )
+
+        with pytest.raises(PreprocessingDatasourceError) as exc_info:
+            preprocessor.fetch_data()
+
+        exc = exc_info.value
+        assert exc.stage == "get_data"
+        assert exc.datasource_type == "_PreprocessingErrorDatasource"
+        assert exc.datasource_name == "faulty"
+        assert exc.datasource_error_type == "DatasourceStateError"
+        assert isinstance(exc.cause, DatasourceStateError)
+
+    def test_fetch_data_does_not_wrap_assertion_error(self, mock_transform_manager):
+        """AssertionError invariants from datasource.get_data() should bubble unchanged."""
+        datasource = _PreprocessingErrorDatasource(
+            data_error=AssertionError("invariant broken"),
+        )
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=mock_transform_manager,
+        )
+
+        with pytest.raises(AssertionError, match="invariant broken"):
+            preprocessor.fetch_data()
 
 
 class TestPreProcessorGetProcessedData:

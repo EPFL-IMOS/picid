@@ -8,11 +8,22 @@ Run.py contract: datasource → get_split_mode() → PreProcessor → pipeline()
 
 from __future__ import annotations
 
+import sys
+import types
 import numpy as np
 import pytest
+from omegaconf import OmegaConf
+from unittest.mock import MagicMock, patch
 
 from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.datasources.base.exceptions import (
+    DatasourceContractError,
+    DatasourceLoadError,
+    DatasourceStateError,
+    DatasourceSplitError,
+)
 from picid.data.preprocessing.preprocessor import PreProcessor
+from picid.exceptions import PreprocessingDatasourceError
 from picid.transforms.base.transform_manager import ConfigTransformManager
 
 
@@ -21,10 +32,54 @@ from test.data.preprocessing.test_preprocessor_caching import (
     _PicklableDatasource,
     _TRANSFORM_CONFIG_NO_CACHE_POINT,
 )
+from test.data.preprocessing.test_preprocessor import _PreprocessingErrorDatasource
 
 
 def _make_manager():
     return ConfigTransformManager(transforms_config=_TRANSFORM_CONFIG_NO_CACHE_POINT)
+
+
+def _import_run_module():
+    """Import picid.run with the minimal missing optional dependency stubbed out."""
+    einops_stub = types.ModuleType("einops")
+    einops_stub.rearrange = lambda value, *args, **kwargs: value
+    evaluator_pkg = types.ModuleType("picid.evaluator")
+    evaluator_pkg.__path__ = []  # Mark as package so submodule imports resolve.
+    evaluator_base = types.ModuleType("picid.evaluator.base")
+
+    class _AbstractEvaluator:  # pragma: no cover - import-only stub
+        """Minimal stand-in for the evaluator base class imported by picid.run."""
+
+    evaluator_base.AbstractEvaluator = _AbstractEvaluator
+
+    original_register_new_resolver = OmegaConf.register_new_resolver
+
+    def _register_new_resolver(name, resolver, *, replace=False, use_cache=False):
+        """Make repeated run.py imports idempotent inside the test process."""
+        return original_register_new_resolver(
+            name,
+            resolver,
+            replace=True,
+            use_cache=use_cache,
+        )
+
+    with (
+        patch.dict(
+            sys.modules,
+            {
+                "einops": einops_stub,
+                "picid.evaluator": evaluator_pkg,
+                "picid.evaluator.base": evaluator_base,
+            },
+        ),
+        patch.object(
+            OmegaConf, "register_new_resolver", side_effect=_register_new_resolver
+        ),
+    ):
+        sys.modules.pop("picid.run", None)
+        import picid.run as run_module
+
+    return run_module
 
 
 def _assert_split_dict_structure(split_dict: dict) -> None:
@@ -145,11 +200,7 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
 @pytest.fixture
 def picklable_datasource_with_split_mode():
     """Datasource that has get_split_mode() for run.py-style tests."""
-    ds = _PicklableDatasource(seed=10, n_units=1, n_samples=12, n_features=2)
-    ds._init_kwargs = getattr(
-        ds, "_init_kwargs", {}
-    )  # already set on _PicklableDatasource
-    return ds
+    return _PicklableDatasource(seed=10, n_units=1, n_samples=12, n_features=2)
 
 
 def test_run_contract_get_split_mode_then_pipeline(
@@ -171,6 +222,143 @@ def test_run_contract_get_split_mode_then_pipeline(
     assert isinstance(meta, dict)
 
 
+@pytest.mark.parametrize(
+    ("stage", "datasource_kwargs", "error_type"),
+    [
+        (
+            "load_data",
+            {"load_error": DatasourceLoadError("load failed")},
+            "DatasourceLoadError",
+        ),
+        (
+            "split_data",
+            {"split_error": DatasourceSplitError("split failed")},
+            "DatasourceSplitError",
+        ),
+        (
+            "get_meta_data",
+            {"meta_error": DatasourceContractError("meta failed")},
+            "DatasourceContractError",
+        ),
+    ],
+)
+def test_direct_pipeline_wraps_datasource_stage_failures(
+    stage, datasource_kwargs, error_type
+):
+    """Direct pipeline should wrap datasource-layer errors with stage context."""
+    datasource = _PreprocessingErrorDatasource(**datasource_kwargs)
+    manager = _make_manager()
+    preprocessor = PreProcessor(
+        datasource=datasource,
+        transforms=manager,
+    )
+
+    with pytest.raises(PreprocessingDatasourceError) as exc_info:
+        preprocessor.pipeline()
+
+    exc = exc_info.value
+    assert exc.stage == stage
+    assert exc.datasource_type == "_PreprocessingErrorDatasource"
+    assert exc.datasource_name == "faulty"
+    assert exc.datasource_error_type == error_type
+
+
+def test_direct_pipeline_does_not_wrap_assertion_errors():
+    """AssertionError invariants should propagate unchanged through the direct pipeline."""
+    datasource = _PreprocessingErrorDatasource(
+        load_error=AssertionError("load invariant"),
+    )
+    manager = _make_manager()
+    preprocessor = PreProcessor(
+        datasource=datasource,
+        transforms=manager,
+    )
+
+    with pytest.raises(AssertionError, match="load invariant"):
+        preprocessor.pipeline()
+
+
+def test_run_top_level_logs_preprocessing_datasource_error_stage_details(tmp_path):
+    """run.py should surface stage-aware preprocessing datasource failures in its top-level log."""
+    run_module = _import_run_module()
+    fake_datasource = MagicMock()
+    fake_datasource.get_split_mode.return_value = "within_units"
+
+    fake_preprocessor = MagicMock()
+    fake_preprocessor.pipeline.side_effect = PreprocessingDatasourceError(
+        "Datasource failed during preprocessing.",
+        stage="get_data",
+        datasource_type="FailingDatasource",
+        datasource_name="failing_source",
+        cause=DatasourceStateError("Data must be loaded before getting data."),
+    )
+
+    cfg = OmegaConf.create(
+        {
+            "seed": 7,
+            "paths": {
+                "root_dir": str(tmp_path / "root"),
+                "output_dir": str(tmp_path / "out"),
+                "cache_path": str(tmp_path / "cache"),
+            },
+            "cache": {
+                "use_cache_after_loading": False,
+                "use_cache_after_transfroms": False,
+                "use_preprocessing_file_lock": False,
+            },
+            "datasource": {"_target_": "test.Datasource"},
+            "transforms": {},
+        }
+    )
+
+    with (
+        patch.object(
+            run_module.hydra.utils, "instantiate", return_value=fake_datasource
+        ),
+        patch.object(
+            run_module,
+            "ConfigTransformManager",
+            return_value=MagicMock(get_transform_names=MagicMock(return_value=[])),
+        ),
+        patch.object(run_module, "PreProcessor", return_value=fake_preprocessor),
+        patch.object(run_module, "instantiate_loggers", return_value=[]),
+        patch.object(run_module, "display_targets"),
+        patch.object(run_module.L, "seed_everything"),
+        patch.object(run_module.torch, "manual_seed"),
+        patch.object(run_module.np.random, "seed"),
+        patch.object(run_module.random, "seed"),
+        patch.object(run_module.log, "error") as mock_log_error,
+    ):
+        with pytest.raises(PreprocessingDatasourceError):
+            run_module.run(cfg)
+
+    assert mock_log_error.call_count == 6
+    assert mock_log_error.call_args_list[0].args == (
+        "Datasource preprocessing failed.",
+    )
+    assert mock_log_error.call_args_list[1].args == (
+        "Preprocessing datasource stage: %s",
+        "get_data",
+    )
+    assert mock_log_error.call_args_list[2].args == (
+        "Datasource class: %s",
+        "FailingDatasource",
+    )
+    assert mock_log_error.call_args_list[3].args == (
+        "Datasource name: %r",
+        "failing_source",
+    )
+    assert mock_log_error.call_args_list[4].args == (
+        "Datasource error type: %s",
+        "DatasourceStateError",
+    )
+    assert mock_log_error.call_args_list[5].args[0] == "Original datasource error: %s"
+    assert isinstance(mock_log_error.call_args_list[5].args[1], DatasourceStateError)
+    assert str(mock_log_error.call_args_list[5].args[1]) == (
+        "Data must be loaded before getting data."
+    )
+
+
 @pytest.mark.skip(
     reason="Transform strategy expects container-style data[key]; per-unit chunks have ndarray. Use picklable datasource for pipeline tests."
 )
@@ -188,7 +376,7 @@ def test_run_contract_with_real_loader():
     )
     loader.load_data()
     loader.split_data()
-    assert loader.get_split_mode() == "per_unit"
+    assert loader.get_split_mode() == "within_units"
     manager = _make_manager()
     preprocessor = PreProcessor(
         datasource=loader,
