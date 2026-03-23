@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
+from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 from picid.data.datasources.MZVAV import MZVAVLoader
 
 
@@ -74,6 +75,15 @@ def test_mzvav_split_data_no_op(mzvav_kwargs):
     """split_data is a no-op (logs that MZVAV does not support splitting) — coverage."""
     loader = MZVAVLoader(**mzvav_kwargs)
     loader.split_data()  # no raise
+
+
+def test_mzvav_rejects_multisource_splitter_for_split_mode(mzvav_kwargs):
+    """Predefined-split loaders should reject multisource splitters explicitly."""
+    with pytest.raises(
+        DatasourceConfigurationError,
+        match="does not accept multisource_data_splitter",
+    ):
+        MZVAVLoader(**mzvav_kwargs, multisource_data_splitter=object())
 
 
 def test_mzvav_read_data_with_real_csv(tmp_path, mzvav_kwargs):

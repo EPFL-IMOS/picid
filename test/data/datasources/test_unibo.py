@@ -2,6 +2,9 @@ import pytest
 import numpy as np
 import pandas as pd
 import awkward as ak
+from unittest.mock import patch
+
+from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 
 # --- Import the classes you need to test ---
 # (You will need to adjust these import paths to match your library structure)
@@ -494,3 +497,86 @@ def test_unibo_loader_anomaly_detection_absolute_threshold():
     assert np.isin(arr, [0.0, 1.0]).all()
     # 10,8,6 > 5 -> 0; 4,2,0 <= 5 -> 1
     assert arr[0] == 0.0 and arr[-1] == 1.0
+
+
+def test_unibo_loader_cache_fingerprint_captures_effective_anomaly_defaults():
+    from picid.data.datasources.unibo.loader import UNIBO21Loader
+
+    loader = UNIBO21Loader(
+        data_dir="/tmp",
+        data_name="UNIBO21",
+        task_mode="anomaly_detection",
+    )
+
+    assert loader.get_cache_fingerprint()["rul_anomaly_fraction"] == 0.3
+    assert loader.get_cache_fingerprint()["rul_anomaly_threshold"] is None
+
+
+def test_unibo_loader_rejects_multisource_splitter_and_uses_predefined_splits():
+    """UNIBO21 is predefined-split only, so a splitter config is ignored."""
+    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.datasources.unibo.loader import UNIBO21Loader
+
+    mock_data = {
+        "train": [
+            {
+                "features": np.ones((1, 2, 3)),
+                "target": np.ones((1, 2, 1)),
+                "metadata": {
+                    "unit_name": "000-DM-3.0-4019-S",
+                    "unit_id": 0,
+                    "n_cycles": 1,
+                },
+            }
+        ],
+        "val": [
+            {
+                "features": np.ones((1, 2, 3)) * 2,
+                "target": np.ones((1, 2, 1)) * 2,
+                "metadata": {
+                    "unit_name": "002-DM-3.0-4019-S",
+                    "unit_id": 2,
+                    "n_cycles": 1,
+                },
+            }
+        ],
+        "test": [
+            {
+                "features": np.ones((1, 2, 3)) * 3,
+                "target": np.ones((1, 2, 1)) * 3,
+                "metadata": {
+                    "unit_name": "003-DM-3.0-4019-S",
+                    "unit_id": 3,
+                    "n_cycles": 1,
+                },
+            }
+        ],
+    }
+
+    with (
+        patch.object(UNIBO21Loader, "read_data", return_value=mock_data),
+        pytest.raises(
+            DatasourceConfigurationError,
+            match="does not accept multisource_data_splitter",
+        ),
+    ):
+        UNIBO21Loader(
+            data_dir="/tmp",
+            data_name="UNIBO21",
+            task_mode="regression",
+            multisource_data_splitter=object(),
+        )
+
+    with patch.object(UNIBO21Loader, "read_data", return_value=mock_data):
+        loader = UNIBO21Loader(
+            data_dir="/tmp",
+            data_name="UNIBO21",
+            task_mode="regression",
+        )
+        loader.load_data()
+
+    data = loader.get_data()
+    assert isinstance(data, SplitDatasetContainer)
+    assert loader.get_split_mode() == "within_units"
+    assert loader.get_data_name() == "UNIBO21"
+    assert loader.get_data_names() == ("UNIBO21",)

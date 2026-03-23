@@ -1,13 +1,22 @@
+"""UNIBO21 datasource loader with predefined battery splits.
+
+The loader follows the same high-level pattern as NB14, but it operates on the
+UNIBO Powertools battery data. The split membership is encoded through the
+module-level ``train_names``, ``val_names``, and ``test_names`` lists so the
+loader reproduces the experiment setup already used by the project.
+"""
+
 import logging
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, Optional, override
+from typing import Any, Optional
 
 import awkward as ak
 import numpy as np
 
-from picid.data.data_objects.data import SplitDatasetContainer
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.predefined_split_loader import (
+    PredefinedSplitLoaderBase,
+)
 from picid.data.datasources.nb14.prepare_rul_data import RulHandler
 from picid.data.datasources.nb14.utils import table_to_ak_array
 from picid.data.datasources.unibo.model_data_handler import ModelDataHandler
@@ -15,32 +24,10 @@ from picid.data.datasources.unibo.unibo_powertools_data import (
     CycleCols,
     UniboPowertoolsData,
 )
+from picid.data.datasources.utils import convert_outer_list_to_inner
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
-
-
-def convert_outer_list_to_inner(data_list):
-    if not data_list:
-        return {}
-
-    # Ensure all dictionaries have the same keys
-    keys = data_list[0].keys()
-    for d in data_list:
-        if d.keys() != keys:
-            raise ValueError("Not all dicts have the same keys!")
-
-    # Concatenate values for each key
-    stacked = {}
-    for key in keys:
-        stacked[key] = [d[key] for d in data_list]
-
-    # Check that all keys in the stacked have the same length
-    lengths = [len(stacked[key]) for key in stacked]
-    if len(set(lengths)) != 1:
-        raise ValueError("All keys in the stacked dict must have the same length.")
-
-    return stacked
 
 
 # Ideally we should adapt the processing code to consume train
@@ -146,7 +133,16 @@ test_names = [
 ]
 
 
-class UNIBO21Loader(AbstractDataSourceLoader):
+class UNIBO21Loader(PredefinedSplitLoaderBase):
+    """Load the UNIBO21 battery dataset and expose predefined split payloads.
+
+    Notes
+    -----
+    For anomaly detection, the loader keeps the existing convention that the
+    target is derived from an RUL threshold. The threshold can be specified
+    either as an absolute value or as a fraction of the battery lifetime.
+    """
+
     def __init__(
         self,
         *,
@@ -154,66 +150,45 @@ class UNIBO21Loader(AbstractDataSourceLoader):
         rul_anomaly_fraction: Optional[float] = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
         self.data_path = kwargs["data_dir"]
-
-        self._is_splitted = False
-        self._is_loaded = False
-        self.data_dict = None
-        self.meta_data = {}
-
-        self.rul_anomaly_threshold = kwargs.get(
+        effective_threshold = kwargs.get(
             "rul_anomaly_threshold", rul_anomaly_threshold
         )
-        self.rul_anomaly_fraction = kwargs.get(
+        effective_fraction = kwargs.get(
             "rul_anomaly_fraction", rul_anomaly_fraction
         )
 
-        if self.task_mode == "anomaly_detection":
-            if (
-                self.rul_anomaly_threshold is not None
-                and self.rul_anomaly_fraction is not None
-            ):
+        if kwargs["task_mode"] == "anomaly_detection":
+            if effective_threshold is not None and effective_fraction is not None:
                 raise ValueError(
                     "For task_mode='anomaly_detection', set exactly one of "
                     "rul_anomaly_threshold (absolute) or rul_anomaly_fraction (relative)."
                 )
-            if self.rul_anomaly_threshold is None and self.rul_anomaly_fraction is None:
-                self.rul_anomaly_fraction = 0.3  # default: last 30% of life
+            if effective_threshold is None and effective_fraction is None:
+                effective_fraction = 0.3  # default: last 30% of life
 
-        # Instantiate multisource_data_splitter if is not none
-        assert (
-            kwargs.get("multisource_data_splitter") is None
-        ), "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
-        self.multisource_data_splitter = "For UNIBO21, multisource_data_splitter is not supported. UNIBO21 are given with splits."
+        self.rul_anomaly_threshold = effective_threshold
+        self.rul_anomaly_fraction = effective_fraction
+        kwargs["rul_anomaly_threshold"] = self.rul_anomaly_threshold
+        kwargs["rul_anomaly_fraction"] = self.rul_anomaly_fraction
 
-    @override
-    def load_data(self):
-        """Load data from the data source."""
-        self.data_dict = self._load_data()
-        self._is_loaded = True
-        self._is_splitted = True
+        super().__init__(**kwargs)
 
-    @override
-    def get_data(self) -> dict | list[dict]:
-        """Return data sources.
+    def get_multisource_data_splitter(self):
+        return self.multisource_data_splitter
+
+    def _load_data(self) -> dict:
+        """Read the dataset and assemble the predefined split container.
 
         Returns
         -------
-        dict | list[dict]
-            Either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
-
+        dict
+            Split-aware container with one list of unit payloads per field and
+            per split.
         """
-        assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_splitted is True, "Data must be splitted before getting data."
-
-        return SplitDatasetContainer(**self.data_dict)
-
-    def _load_data(self) -> dict:
-        # Read raw CSV
         data = self.read_data()
 
-        # Convert to desired format
+        # Convert the split-wise list-of-dicts payload into columnar containers.
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
         test = convert_outer_list_to_inner(data["test"])
@@ -236,7 +211,8 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             f"Number of test units: {len(out_dict['features']['test'])}, units: {[entry['unit_name'][:3] for entry in out_dict['metadata']['test']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['test']]}"
         )
 
-        # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
+        # Extract metadata from each split so downstream code can resolve unit
+        # ids and names without re-walking the raw payload.
         unit_ids_meta_data = {
             "unit_ids": {
                 "train": [
@@ -259,7 +235,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             },
         }
 
-        # update the meta_data with any other info you want to store
+        # Persist the derived metadata alongside the split payload.
         self.meta_data.update(unit_ids_meta_data)
 
         return out_dict
@@ -267,8 +243,21 @@ class UNIBO21Loader(AbstractDataSourceLoader):
     def read_data(
         self,
     ):
-        # 1. --- Setup ---
-        # (Assuming train_names, val_names, test_names are available in scope)
+        """Read the raw UNIBO battery files and prepare split-wise unit payloads.
+
+        Returns
+        -------
+        collections.defaultdict[list]
+            Mapping from split name to a list of processed unit dictionaries.
+
+        Notes
+        -----
+        The raw UNIBO dataset is first prepared through
+        :class:`UniboPowertoolsData`, then converted into cycle-level tensors by
+        :class:`ModelDataHandler`, and finally transformed into the per-battery
+        payload expected by the datasource layer.
+        """
+        # 1. Set up the raw dataset handler.
         dataset = UniboPowertoolsData(
             test_types=[],
             chunk_size=1000000,
@@ -281,8 +270,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
 
         rul_handler = RulHandler()
 
-        # --- KEY CHANGE 1 ---
-        # Pass all three name lists to your newly refactored class
+        # Pass all three split name lists to the dataset preparer.
         dataset.prepare_data(train_names, test_names, val_names)
 
         dataset_handler = ModelDataHandler(
@@ -298,9 +286,7 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             5.0: 4.5,
         }
 
-        # --- KEY CHANGE 2 ---
-        # We now assume dataset_handler also returns data for the validation split
-        # (18 variables total, just like your NASA data handler)
+        # The dataset handler returns train, validation, and test tensors in one call.
         (
             train_x,
             train_y_soh,
@@ -473,25 +459,3 @@ class UNIBO21Loader(AbstractDataSourceLoader):
             left_idx = right_idx
 
         return data_split
-
-    def get_meta_data(self) -> Dict[str, Any]:
-        """
-        Return metadata about the data source.
-        This can include information like data source name, version, etc.
-        """
-        assert self._is_loaded, "Data must be loaded before getting metadata."
-        return self.meta_data
-
-    def get_data_name(self) -> list[str]:
-        """Return source data names."""
-        return self.data_dict["metadata"]
-
-    def get_multisource_data_splitter(self):
-        """Return multisource data splitter."""
-        return self.multisource_data_splitter
-
-    @override
-    def split_data(self):
-        logger.warning(
-            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
-        )

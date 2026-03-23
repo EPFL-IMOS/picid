@@ -1,7 +1,13 @@
+"""Pronostia PHMD datasource wrapper."""
+
+from __future__ import annotations
+
 import logging
-import pandas as pd
-import numpy as np
+
 import awkward as ak
+import numpy as np
+import pandas as pd
+
 from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 
 logger = logging.getLogger(__name__)
@@ -44,6 +50,8 @@ SAMPLE_RANGE_SIZE = 2560
 
 
 class PronostiaLoader(PHMDMultiSourceLoader):
+    """Pronostia PHMD datasource using the refactored PHMD base."""
+
     def _get_features_columns(self):
         return self.meta_data["features"]
 

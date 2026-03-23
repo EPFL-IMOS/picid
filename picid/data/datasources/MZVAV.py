@@ -1,5 +1,19 @@
+"""MZVAV datasource loader with predefined day-level splits.
+
+The raw CSV contains timestamped HVAC measurements and sparse fault labels.
+This loader reconstructs the same day-level split logic used historically in
+the project:
+
+- known fault dates are annotated with grouped fault ids
+- the annotated days are split into train, validation, and test subsets
+- all rows belonging to the selected days are returned for each split
+
+When ``group_by_days`` is enabled, the split payload is additionally regrouped
+into ragged day-level sequences.
+"""
+
 import warnings
-from typing import override, Dict, Any
+from typing import override
 import logging
 
 import pandas as pd
@@ -7,8 +21,9 @@ import awkward as ak
 
 from sklearn.model_selection import train_test_split
 
-from picid.data.data_objects.data import SplitDatasetContainer
-from picid.data.datasources.base.single_source_loader import SingleSourceLoader
+from picid.data.datasources.base.predefined_split_loader import (
+    PredefinedSplitLoaderBase,
+)
 from picid.utils.awkward_utils import ak_unflatten_discontinous_groups
 
 
@@ -16,7 +31,19 @@ warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
 
-class MZVAVLoader(SingleSourceLoader):
+class MZVAVLoader(PredefinedSplitLoaderBase):
+    """Load the MZVAV dataset and expose train/validation/test day splits.
+
+    Examples
+    --------
+    A typical configuration provides:
+
+    - ``data_path`` pointing to the CSV file
+    - ``timestamp_name`` naming the timestamp column
+    - ``target_name`` naming the sparse fault label column
+    - ``random_state`` to keep the day split reproducible
+    """
+
     def __init__(
         self,
         data_path,
@@ -35,28 +62,23 @@ class MZVAVLoader(SingleSourceLoader):
             **kwargs,
         )
 
-    @override
-    def load_data(self):
-        """Load data from the data source."""
-        self.data_dict = self._load_data()
-        self._is_loaded = True
-        self._is_splitted = True
-
-    @override
-    def get_data(self) -> dict | list[dict]:
-        """Return data sources.
-
-        Returns:
-            dict | list[dict] : either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
-
-        """
-        assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_splitted is True, "Data must be splitted before getting data."
-
-        return SplitDatasetContainer(**self.data_dict)
-
     def _load_data(self):
-        # Read raw CSV
+        """Read the CSV data and derive day-based predefined splits.
+
+        Returns
+        -------
+        dict[str, dict[str, pandas.DataFrame | list[awkward.Array]]]
+            Split-aware dictionary containing the feature frame, target frame,
+            timestamps, initial timestamps, and day identifiers. When
+            ``group_by_days`` is enabled, each split field is wrapped into
+            day-level Awkward sequences.
+
+        Notes
+        -----
+        The train/validation/test partitioning is performed on the set of
+        labeled days, not on individual rows. Every row belonging to a selected
+        day is kept together in the same split.
+        """
         df, df_target, df_stamp, days_to_fault = self.read_data()
 
         train_val_days, test_days = train_test_split(
@@ -106,7 +128,20 @@ class MZVAVLoader(SingleSourceLoader):
             return out_dict
 
     def read_data(self):
-        # Read raw CSV
+        """Read the raw CSV and derive the day-level fault labels.
+
+        Returns
+        -------
+        tuple[pandas.DataFrame, pandas.DataFrame, pandas.Series, pandas.Series]
+            Feature dataframe, target dataframe, timestamp series, and one
+            label per fault day.
+
+        Notes
+        -----
+        The hard-coded ``fault_number_by_dates`` mapping preserves the existing
+        project convention that several calendar dates belong to one grouped
+        fault family, for example damper or heating-coil faults.
+        """
         df = pd.read_csv(
             self.data_path,
             sep=",",
@@ -114,12 +149,12 @@ class MZVAVLoader(SingleSourceLoader):
             date_format="%m/%d/%Y %H:%M",
         )
 
-        # Fill data
+        # Forward-fill missing values before labeling.
         df = df.ffill()
 
         assert df.isna().sum().sum() == 0
 
-        # Make labels
+        # Mark the known fault dates with their grouped label ids.
         fault_number_by_dates = {
             "2/12/2008": 1,
             "5/7/2008": 1,
@@ -146,29 +181,12 @@ class MZVAVLoader(SingleSourceLoader):
 
         days_to_fault = df[self.target_name].resample("D").first().dropna()
 
-        # Get timestamps
+        # Keep the timestamps before removing the target column.
         df_stamp = df.index.to_series().copy()
 
-        # Extract target and drop it from the dataframe and ensure to have dataframe, hence the conversion .values returns shape (-1, 1)
+        # Extract the target and keep it as a dataframe so downstream code sees
+        # a ``(-1, 1)`` shape instead of a flat series.
         df_target = df[self.target_name].to_frame().copy()
         df.drop(columns=[self.target_name], inplace=True)
 
         return df, df_target, df_stamp, days_to_fault
-
-    @override
-    def split_data(self):
-        logger.warning(
-            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
-        )
-
-    def get_data_name(self):
-        """Return data name."""
-        return self.data_name
-
-    def get_meta_data(self) -> Dict[str, Any]:
-        """
-        Return metadata about the data source.
-        This can include information like data source name, version, etc.
-        """
-        assert self._is_loaded, "Data must be loaded before getting metadata."
-        return {}

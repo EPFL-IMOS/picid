@@ -5,9 +5,13 @@ Uses conftest phmd mock; exercises init and, where possible, load_data with mock
 
 from __future__ import annotations
 
+import pytest
+
 # phmd is mocked in conftest; import loaders that depend on it
+from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 from picid.data.datasources.phmd_cbmv3 import CBMv3Loader
 from picid.data.datasources.phmd_hsf15 import HSF15Loader
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from picid.data.datasources.phmd_pronostia import (
     PronostiaLoader,
     UNIT_NAMES_TO_ID,
@@ -28,6 +32,29 @@ def _minimal_phmd_kwargs(cache_dir="/tmp/phmd_cache"):
     }
 
 
+def test_phmd_wrappers_reject_multisource_splitter():
+    """PHMD wrappers should fail fast on incompatible splitter config."""
+    loader_classes = (
+        CBMv3Loader,
+        HSF15Loader,
+        PronostiaLoader,
+        PHMDNCMAPSSLoader,
+        PHME20Loader,
+        Pubd16Loader,
+        XJTU_SYLoader,
+    )
+
+    for loader_cls in loader_classes:
+        with pytest.raises(
+            DatasourceConfigurationError,
+            match="does not accept multisource_data_splitter",
+        ):
+            loader_cls(
+                **_minimal_phmd_kwargs(),
+                multisource_data_splitter=object(),
+            )
+
+
 def test_phmd_cbmv3_loader_init():
     """CBMv3Loader initializes."""
     loader = CBMv3Loader(**_minimal_phmd_kwargs())
@@ -46,6 +73,7 @@ def test_pronostia_loader_init():
     assert loader.data_name == "NB14"
     assert "1_3" in UNIT_NAMES_TO_ID
     assert "1_3" in TEST_RULS
+    assert isinstance(loader, PHMDMultiSourceLoader)
 
 
 def test_phmd_n_cmapss_loader_init():
@@ -70,3 +98,4 @@ def test_phmd_xjtu_sy_loader_init():
     """XJTU_SYLoader initializes."""
     loader = XJTU_SYLoader(**_minimal_phmd_kwargs())
     assert loader.data_name == "NB14"
+    assert isinstance(loader, PHMDMultiSourceLoader)

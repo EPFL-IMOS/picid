@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from picid.data.datasources.base.phmd_loader import PHMDMultiSourceLoader
 from picid.data.datasources.phmd_pronostia import (
     PronostiaLoader,
     SAMPLE_RANGE_SIZE,
@@ -50,7 +51,6 @@ def test_pronostia_process_unit_standard_mode_returns_dict(
     """_process_unit with use_ragged=False returns features, target, unit_id, metadata."""
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "rul"
-    loader._init_kwargs = dict(pronostia_kwargs)
     out = loader._process_unit(
         small_unit_df,
         unit_name="Bearing1_3",
@@ -67,13 +67,18 @@ def test_pronostia_process_unit_standard_mode_returns_dict(
     assert len(out["target"]) == 20
 
 
+def test_pronostia_loader_uses_refactored_phmd_base(pronostia_kwargs):
+    """PronostiaLoader now inherits from the refactored PHMD base."""
+    loader = PronostiaLoader(**pronostia_kwargs)
+    assert isinstance(loader, PHMDMultiSourceLoader)
+
+
 def test_pronostia_process_unit_raises_for_non_rul_task(
     pronostia_kwargs, small_unit_df
 ):
     """_process_unit raises ValueError when task_mode is not 'rul'."""
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "classification"
-    loader._init_kwargs = dict(pronostia_kwargs)
     with pytest.raises(ValueError, match="configured for 'rul'"):
         loader._process_unit(
             small_unit_df,
@@ -90,7 +95,6 @@ def test_pronostia_process_unit_ragged_mode_requires_divisible_length(
     pronostia_kwargs["use_ragged"] = True
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "rul"
-    loader._init_kwargs = dict(pronostia_kwargs)
     with pytest.raises(ValueError, match="not divisible"):
         loader._process_unit(
             small_unit_df,
@@ -116,7 +120,6 @@ def test_pronostia_process_unit_ragged_mode_success(pronostia_kwargs):
     pronostia_kwargs["use_ragged"] = True
     loader = PronostiaLoader(**pronostia_kwargs)
     loader.task_mode = "rul"
-    loader._init_kwargs = dict(pronostia_kwargs)
     out = loader._process_unit(
         df,
         unit_name="Bearing1_3",

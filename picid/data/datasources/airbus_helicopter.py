@@ -11,15 +11,16 @@ import requests
 from tqdm import tqdm
 
 # Internal library imports
-from picid.data.data_objects.data import SplitDatasetContainer
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.predefined_split_loader import (
+    PredefinedSplitLoaderBase,
+)
 from .utils import convert_outer_list_to_inner
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
 
-class AirbusHelicopterLoader(AbstractDataSourceLoader):
+class AirbusHelicopterLoader(PredefinedSplitLoaderBase):
     """
     Loader for the Airbus Helicopter Accelerometer Dataset.
 
@@ -52,6 +53,8 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         **kwargs,
     ):
         """
+        Initialize the Airbus predefined-split loader.
+
         Parameters
         ----------
         data_dir : str
@@ -62,6 +65,12 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
             Task type (e.g. 'anomaly_detection').
         download : bool
             If True, downloads files if missing. Default True.
+
+        Notes
+        -----
+        The dataset already ships with a healthy training file and an anomaly
+        file. The loader therefore keeps the published split structure instead
+        of applying an additional datasource splitter.
         """
         super().__init__(
             data_name=data_name,
@@ -72,22 +81,22 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
         self.data_path = data_dir
         self.should_download = download
-
-        self._is_splitted = False
-        self._is_loaded = False
-        self.data_dict = None
-        self.meta_data = {}
-
         if multisource_data_splitter is not None:
             logger.warning(
                 f"{self.data_name} does not support multisource splitting. "
                 "The dataset relies on predefined file splits."
             )
-        self.multisource_data_splitter = None
 
     @override
     def load_data(self):
-        """Loads and structures the data, downloading if necessary."""
+        """Load and structure the data, downloading files if necessary.
+
+        Notes
+        -----
+        The method first ensures the target directory exists, optionally
+        downloads the three required source files, and then delegates the split
+        assembly to the shared predefined-split base.
+        """
         # Ensure directory exists
         os.makedirs(self.data_path, exist_ok=True)
 
@@ -95,19 +104,16 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         if self.should_download:
             self._download_missing_files()
 
-        self.data_dict = self._load_data()
-        self._is_loaded = True
-        self._is_splitted = True
-
-    @override
-    def get_data(self) -> SplitDatasetContainer:
-        """Returns the formatted data container."""
-        assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_splitted is True, "Data must be splitted before getting data."
-        return SplitDatasetContainer(**self.data_dict)
+        super().load_data()
 
     def _download_missing_files(self):
-        """Checks for files and downloads them if missing."""
+        """Check for the required source files and download missing ones.
+
+        Notes
+        -----
+        Partial downloads are removed on failure so later runs do not interpret
+        a truncated file as a valid dataset artifact.
+        """
         for filename, url in self._URLS.items():
             file_path = os.path.join(self.data_path, filename)
 
@@ -147,17 +153,35 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
     def _load_data(self) -> dict:
         """
-        Orchestrates the reading and formatting of data into the
-        standard {train, val, test} structure.
+        Orchestrate reading and formatting into the standard split structure.
+
+        Returns
+        -------
+        dict
+            Dictionary with ``train``, ``val``, and ``test`` payloads for each
+            exported field.
+
+        Examples
+        --------
+        The returned structure has the form::
+
+            {
+                "features": {"train": [...], "val": [...], "test": [...]},
+                "target": {"train": [...], "val": [...], "test": [...]},
+                "metadata": {"train": [...], "val": [...], "test": [...]},
+            }
+
+        The validation split is intentionally cloned from the anomaly split to
+        preserve the historical dataset contract already used by the project.
         """
-        # 1. Read raw data from disk
+        # 1. Read the raw files from disk.
         raw_data_splits = self.read_data()
 
-        # 2. Convert list of dicts -> dict of lists (Columnar format)
+        # 2. Convert the list-of-dicts payload into a columnar dict-of-lists.
         train = convert_outer_list_to_inner(raw_data_splits["train"])
         test = convert_outer_list_to_inner(raw_data_splits["test"])
 
-        # 3. Create Validation Split (Deep copy of test)
+        # 3. Clone the test split into validation to preserve the published split layout.
         val = convert_outer_list_to_inner(copy.deepcopy(raw_data_splits["test"]))
 
         # --- SIZE ASSERTIONS ---
@@ -169,7 +193,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         assert n_test == 594, f"Expected 594 test samples, found {n_test}"
         assert n_val == 594, f"Expected 594 validation samples, found {n_val}"
 
-        # 4. Structure into the final output format
+        # 4. Assemble the final split-aware output format.
         out_dict = {}
         keys = train.keys() if train else test.keys()
 
@@ -180,12 +204,12 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
                 "test": test.get(key, []),
             }
 
-        # Logging stats
+        # Log the split sizes after assembly.
         logger.info(
             f"Loaded Airbus Data: {n_train} train, {n_test} test, {n_val} validation sequences."
         )
 
-        # 5. Extract and store metadata
+        # 5. Extract and store metadata derived from the assembled payload.
         unit_ids = out_dict.get("unit_id", {})
         metadata_vals = out_dict.get("metadata", {})
 
@@ -211,12 +235,25 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         return out_dict
 
     def read_data(self) -> Dict[str, list]:
-        """Reads files, inspects them, and converts to processed list of dicts."""
+        """Read the source files and convert them into split-wise record lists.
+
+        Returns
+        -------
+        dict[str, list]
+            Dictionary with ``train`` and ``test`` lists of per-sequence
+            dictionaries.
+
+        Notes
+        -----
+        The ground-truth CSV is used only for the anomaly/test split. Healthy
+        training sequences are labeled as zero directly in
+        :meth:`_process_dataframe`.
+        """
         train_file = os.path.join(self.data_path, "training_healthy.h5")
         test_file = os.path.join(self.data_path, "dataset_anomalies.h5")
         gt_file = os.path.join(self.data_path, "ground_truth.csv")
 
-        # 1. Load Ground Truth Map
+        # 1. Load the ground-truth labels for the anomaly split.
         if os.path.exists(gt_file):
             df_gt = pd.read_csv(gt_file)
             if "seqID" in df_gt.columns:
@@ -231,7 +268,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
         split_data = {"train": [], "test": []}
 
-        # 2. Process Train Data
+        # 2. Process the training split.
         if os.path.exists(train_file):
             logger.info(f"Reading {train_file}...")
             df_train = pd.read_hdf(train_file, key="dftrain")
@@ -241,7 +278,7 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         else:
             raise FileNotFoundError(f"Training file not found: {train_file}")
 
-        # 3. Process Test Data
+        # 3. Process the anomaly/test split.
         if os.path.exists(test_file):
             logger.info(f"Reading {test_file}...")
             df_test = pd.read_hdf(test_file, key="dfvalid")
@@ -256,7 +293,30 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
     def _process_dataframe(
         self, df: pd.DataFrame, split_name: str, gt_map: Dict = None
     ) -> list:
-        """Converts the loaded pandas DataFrame into the list-of-dicts format."""
+        """Convert one dataframe split into the list-of-dicts loader format.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Source dataframe read from the HDF5 file.
+        split_name : str
+            Name of the split being processed, for example ``"train"`` or
+            ``"test"``.
+        gt_map : dict, optional
+            Mapping from sequence id to anomaly label, used for the test split.
+
+        Returns
+        -------
+        list
+            One dictionary per sequence, each containing features, targets,
+            unit ids, and metadata.
+
+        Notes
+        -----
+        Each flat row is reshaped from ``61440`` values into
+        ``(60, 1024, 1)``, which corresponds to ``60`` seconds sampled at
+        ``1024`` Hz with one feature channel.
+        """
         processed_list = []
 
         SAMPLING_FREQ = 1024  # Hz
@@ -266,13 +326,13 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
         iterator = tqdm(df.values, desc=f"Processing {split_name}", unit="seq")
 
         for idx, row_values in enumerate(iterator):
-            # --- ASSERTIONS ---
+            # --- Assertions ---
             assert len(row_values) == EXPECTED_LENGTH, (
                 f"Sequence {idx} in {split_name} has invalid length {len(row_values)}. "
                 f"Expected {EXPECTED_LENGTH}."
             )
 
-            # --- 1. FEATURE PROCESSING ---
+            # --- 1. Feature processing ---
             features_np = row_values.reshape(DURATION_SEC, SAMPLING_FREQ, 1)
 
             assert features_np.shape == (DURATION_SEC, SAMPLING_FREQ, 1), (
@@ -325,15 +385,5 @@ class AirbusHelicopterLoader(AbstractDataSourceLoader):
 
         return processed_list
 
-    def get_meta_data(self) -> Dict[str, Any]:
-        assert self._is_loaded, "Data must be loaded before getting metadata."
-        return self.meta_data
-
     def get_data_name(self) -> str:
         return self.data_name
-
-    @override
-    def split_data(self):
-        logger.warning(
-            f"{self.data_name} relies on predefined splits. split_data() has no effect."
-        )

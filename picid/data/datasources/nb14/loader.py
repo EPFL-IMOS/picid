@@ -1,12 +1,25 @@
+"""NB14 datasource loader with predefined train/validation/test battery splits.
+
+The loader wraps the NASA randomized battery data helpers already used in the
+project and preserves the Bosello-style split definition encoded in the module
+constants:
+
+- ``train_names`` lists the batteries assigned to training
+- ``val_names`` lists the validation batteries
+- ``test_names`` lists the held-out batteries
+
+Each split is converted into the standard per-unit payload expected by the rest
+of the preprocessing pipeline.
+"""
+
 import logging
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, override
+from typing import Any
 
 import awkward as ak
 import numpy as np
-from picid.data.data_objects.data import SplitDatasetContainer
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+from picid.data.datasources.base.predefined_split_loader import PredefinedSplitLoaderBase
 from picid.data.datasources.nb14.nasa_random_data import NasaRandomizedData
 from picid.data.datasources.nb14.prepare_rul_data import RulHandler
 from picid.data.datasources.nb14.utils import table_to_ak_array
@@ -16,6 +29,18 @@ logger = logging.getLogger(__name__)
 
 
 def convert_outer_list_to_inner(data_list):
+    """Convert a list of per-unit dictionaries into a dict of per-field lists.
+
+    Examples
+    --------
+    A split stored as::
+
+        [{"features": x1, "target": y1}, {"features": x2, "target": y2}]
+
+    becomes::
+
+        {"features": [x1, x2], "target": [y1, y2]}
+    """
     if not data_list:
         return {}
 
@@ -102,47 +127,34 @@ UNIT_NAMES_TO_ID = {
 }
 
 
-class NB14Loader(AbstractDataSourceLoader):
+class NB14Loader(PredefinedSplitLoaderBase):
+    """Load the NB14 battery dataset and expose predefined battery splits.
+
+    Notes
+    -----
+    The loader keeps the split definitions in Python constants instead of
+    learning them from the raw files. This mirrors the existing experimental
+    setup, where battery ids are explicitly assigned to one split.
+    """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.data_path = kwargs["data_dir"]
-
-        self._is_splitted = False
-        self._is_loaded = False
         self.data_dict = None
         self.meta_data = {}
 
-        # Instantiate multisource_data_splitter if is not none
-        assert (
-            kwargs.get("multisource_data_splitter") is None
-        ), "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
-        self.multisource_data_splitter = "For RigidBodyDynanics, multisource_data_splitter is not supported. RigidBodyDynanics are given with splits."
-
-    @override
-    def load_data(self):
-        self.data_dict = self._load_data()
-        self._is_loaded = True
-        self._is_splitted = True
-
-    @override
-    def get_data(self) -> dict | list[dict]:
-        """Return data sources.
+    def _load_data(self) -> dict:
+        """Read the dataset and assemble the predefined split container.
 
         Returns
         -------
-        dict | list[dict]
-            Either dict in case we use multisource_data_splitter or list of dicts in case we use data_splitter
-
+        dict
+            Split-aware container with one list of unit payloads per field and
+            per split.
         """
-        assert self._is_loaded is True, "Data must be loaded before getting data."
-        assert self._is_splitted is True, "Data must be splitted before getting data."
-        return SplitDatasetContainer(**self.data_dict)
-
-    def _load_data(self) -> dict:
-        # Read raw CSV
         data = self.read_data()
 
-        # Convert to desired format
+        # Convert the split-wise list-of-dicts payload into columnar containers.
         train = convert_outer_list_to_inner(data["train"])
         val = convert_outer_list_to_inner(data["val"])
         test = convert_outer_list_to_inner(data["test"])
@@ -165,7 +177,8 @@ class NB14Loader(AbstractDataSourceLoader):
             f"Number of test units: {len(out_dict['features']['test'])}, units: {[entry['unit_name'].split('/')[-1] for entry in out_dict['metadata']['test']]}, n_cycles: {[entry['n_cycles'] for entry in out_dict['metadata']['test']]}"
         )
 
-        # Extract metadata from the splits to be accessible later by return self.meta_data_dict["unit_ids"][self.meta_data_dict["current_data_split"]][self.meta_data_dict["concat_dataset_index"]]
+        # Extract metadata from each split so downstream code can resolve unit
+        # ids and names without re-walking the raw payload.
         unit_ids_meta_data = {
             "unit_ids": {
                 "train": [
@@ -188,19 +201,32 @@ class NB14Loader(AbstractDataSourceLoader):
             },
         }
 
-        # update the meta_data with any other info you want to store
+        # Persist the derived metadata alongside the split payload.
         self.meta_data.update(unit_ids_meta_data)
 
         return out_dict
 
     def read_data(self):
+        """Read the raw NB14 battery files and prepare split-wise unit payloads.
+
+        Returns
+        -------
+        collections.defaultdict[list]
+            Mapping from split name to a list of processed unit dictionaries.
+
+        Notes
+        -----
+        The raw handler first returns cycle-aligned signals. The loader then
+        uses :class:`RulHandler` to derive the future RUL target and keeps only
+        the RUL column before converting each battery into the final payload.
+        """
         nasa_data_handler = NasaRandomizedData(self.data_path)
         rul_handler = RulHandler()
 
         CAPACITY_THRESHOLDS = None
         NOMINAL_CAPACITY = 2.2
 
-        # 1. Get all data: Note the CORRECTED variable names
+        # 1. Retrieve all split tensors from the raw handler.
         (
             train_x,
             train_y,
@@ -224,8 +250,7 @@ class NB14Loader(AbstractDataSourceLoader):
             train_names=train_names, test_names=test_names, validation_names=val_names
         )
 
-        # 2. Organize the data into a structure we can loop over.
-        #    (Assuming train_names, val_names, test_names are available in this scope)
+        # 2. Organize the split tensors into one structure we can iterate over.
         split_data = {
             "train": {
                 "x": train_x,
@@ -258,11 +283,9 @@ class NB14Loader(AbstractDataSourceLoader):
 
         processed_data = defaultdict(list)
 
-        # 3. Loop through the structure and apply the logic *once*
+        # 3. Process each split with the shared RUL preparation logic.
         for split_name, data in split_data.items():
-            # Prepare the Y data (RUL)
-            # We pass data["y_soh"] and data["battery_range"]
-            # which now correctly hold train_y and battery_n_cycle_train
+            # Prepare the RUL target from the SOH signal and cycle ranges.
             y_raw = rul_handler.prepare_y_future(
                 data["names"],
                 data["battery_range"],
@@ -273,10 +296,10 @@ class NB14Loader(AbstractDataSourceLoader):
                 capacity=NOMINAL_CAPACITY,
             )
 
-            # Keep only RUL (the second column)
+            # Keep only the RUL target column.
             y_rul = y_raw[:, 1]
 
-            # Process the split and store it
+            # Convert the split into the loader's per-unit payload format.
             processed_data[split_name] = self._process_split(
                 x=data["x"],
                 y=y_rul,
@@ -363,24 +386,9 @@ class NB14Loader(AbstractDataSourceLoader):
 
         return data_split
 
-    def get_meta_data(self) -> Dict[str, Any]:
-        """
-        Return metadata about the data source.
-        This can include information like data source name, version, etc.
-        """
-        assert self._is_loaded, "Data must be loaded before getting metadata."
-        return self.meta_data
-
-    def get_data_name(self) -> list[str]:
-        """Return source data names."""
-        return self.data_dict["metadata"]
-
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
 
-    @override
-    def split_data(self):
-        logger.warning(
-            f"{self.data_name} does not support data splitting. The project relies on predefined splits."
-        )
+    def get_split_mode(self):
+        return "within_units"

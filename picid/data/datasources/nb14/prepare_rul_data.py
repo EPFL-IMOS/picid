@@ -2,6 +2,7 @@ import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
+TRAPEZOID_INTEGRAL = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
 
 
 class RulHandler:
@@ -37,7 +38,7 @@ class RulHandler:
             integral_sum = 0
             pre_i = a
             for i in range(a, b, cycle_lenght):
-                integral = np.trapz(
+                integral = TRAPEZOID_INTEGRAL(
                     y=current[pre_i:i][current[pre_i:i] > 0],
                     x=time[pre_i:i][current[pre_i:i] > 0],
                 )

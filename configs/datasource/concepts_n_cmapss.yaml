@@ -22,10 +22,7 @@ load_arguments:
   n_DS: "02"
   mode: "train"
   fc: null
-  # Keep the standalone datasource config valid by default.
-  # This mirrors the DS02 training subset already used by the experiment-facing
-  # multi-source config, while derived configs remain free to override it.
-  units: [2, 5, 10, 16, 20]
+  units: null
   concepts:
     - "LPT-E"
     - "LPT-F"

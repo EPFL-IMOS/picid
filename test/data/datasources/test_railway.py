@@ -4,9 +4,12 @@ Tests for RailwayLoader with mocked I/O (pd.read_csv).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from unittest.mock import patch
+from omegaconf import OmegaConf
 
 from picid.data.datasources.railway import RailwayLoader
 
@@ -61,3 +64,18 @@ def test_railway_get_data_name(railway_kwargs):
     """get_data_name returns data_name."""
     loader = RailwayLoader(**railway_kwargs)
     assert loader.get_data_name() == "Railway"
+
+
+def test_railway_config_requires_task_definition_lengths():
+    """Railway config should require explicit task-definition window lengths."""
+    config = OmegaConf.load(
+        Path(__file__).resolve().parents[3]
+        / "configs"
+        / "datasource"
+        / "railway.yaml"
+    )
+    splitter = OmegaConf.to_container(config.data_splitter, resolve=False)
+
+    assert splitter["seq_len"] == "${task_definition.seq_len}"
+    assert splitter["label_len"] == "${task_definition.label_len}"
+    assert splitter["pred_len"] == "${task_definition.pred_len}"

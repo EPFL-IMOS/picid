@@ -6,6 +6,7 @@ from pathlib import Path
 from phmd.download import download
 
 logger = logging.getLogger(__name__)
+TRAPEZOID_INTEGRAL = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
 
 DATA_PATH = "data/nasa-randomized/"
 NOMINAL_CAPACITY = 2.2
@@ -231,7 +232,7 @@ class NasaRandomizedData:
                     # We calculate the capacity by integrating the current
                     # over time for this reference discharge.
                     current_y = (
-                        np.trapz(
+                        TRAPEZOID_INTEGRAL(
                             current[-1],  # The current array we just stored
                             np.hstack(
                                 cycle.loc[cycle["cycle"] == x, "time"]
