@@ -16,7 +16,9 @@ from picid.evaluator.base import AbstractEvaluator
 from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
     AbstractFitPredictWrapper
 from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule
+from picid.transforms.base import BaseTransform
 from picid.transforms.base.data_transform import DataTransform
+from picid.transforms.base.multisource import InverseTransformMixin
 from picid.utils.awkward_utils import get_ak_shape
 
 log = logging.getLogger(__name__)
@@ -392,3 +394,36 @@ class InterfacePreProcessor:
                                    task_mode=self.datasource.task_mode,
                                    data_dict=self.data.to_split_dict(),
                                    meta_data_dict=self.get_meta_data_dict())
+
+
+
+def get_inverter_for_key_with_name(transforms: list[DataTransform],
+                                   key: str,
+                                   which: str = "last")\
+        -> tuple[InverseTransformMixin | None, str | None]:
+
+    if which not in ("first", "last"):
+        raise ValueError(
+            f"get_inverter_for_key_with_name(which=...) must be 'first' or 'last', got {which!r}"
+        )
+
+    inverters = [t for t in transforms if isinstance(t.transform_instance, InverseTransformMixin)]
+
+    if len(inverters) == 0:
+        return None, None
+
+    inverter = None
+    inverter_name = None
+    for dt in inverters:
+        assign_to = getattr(dt, "assign_to", None)
+        if assign_to is None:
+            continue
+        keys = [assign_to] if isinstance(assign_to, str) else list(assign_to)
+        if key not in keys:
+            continue
+        if isinstance(dt.transform_instance, InverseTransformMixin):
+            inverter = dt.transform_instance
+            inverter_name = dt.transform_name
+            if which == "first":
+                return inverter, inverter_name
+    return inverter, inverter_name

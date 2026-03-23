@@ -35,7 +35,7 @@ from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
 from picid.interface.schemas.trainer import TrainerConfig
 from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
-    create_lightning_module
+    create_lightning_module, get_inverter_for_key_with_name
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.transform_manager import ConfigTransformManager
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
@@ -561,20 +561,20 @@ class EntryInterface:
 
             evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
 
-        # # TODO: FIX AND TEST
-        # if evaluators is not None or isinstance(evaluators, dict):
-        #     if isinstance(evaluators, dict):
-        #         evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
-        #         log.info('Using custom evaluators.')
-        #     else:
-        #         # FIX IT
-        #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
-        #         log.info('Using default evaluators.')
+            # # TODO: FIX AND TEST
+            # if evaluators is not None or isinstance(evaluators, dict):
+            #     if isinstance(evaluators, dict):
+            #         evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
+            #         log.info('Using custom evaluators.')
+            #     else:
+            #         # FIX IT
+            #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+            #         log.info('Using default evaluators.')
 
-        cs.store(group="evaluator",
-                 name="evaluator_cfg",
-                 node=evaluators_cfg)
-        overrides.append('evaluator=evaluator_cfg')
+            cs.store(group="evaluator",
+                     name="evaluator_cfg",
+                     node=evaluators_cfg)
+            overrides.append('evaluator=evaluator_cfg')
 
         cs.store(group="paths",
                  name="paths_cfg",
@@ -714,6 +714,8 @@ class EntryInterface:
                     for k, t in transforms_cfg.items():
                         transforms.append(DataTransform(transform_name=k, transform=t['transform'],
                                                         metadata=t['metadata']))
+                else:
+                    assert all(isinstance(t, DataTransform) for t in transforms), f'transforms must be a list of DataTransform or None. {[type(t) for t in transforms]} were given.'
 
                 process_datasource = self.process_datasource(dataset_source, transforms)
 
@@ -814,72 +816,79 @@ class EntryInterface:
             register_infer_dataloader_length_resolver(loader_lengths)
 
             evaluators = {}
-            if 'evaluator' in cfg and 'trasforms' in cfg:
 
-                # TODO: try to remove it in favor of the custom define one
-                transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
+            # if 'evaluator' in cfg:
+            # TODO: try to remove it in favor of the custom define one
+            # transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
 
-                for s in ["train", "val", "test"]:
-                    inverse_transform_required = cfg.evaluator[s].get("apply_inverse_scaling", False)
+            for s in ["train", "val", "test"]:
+
+                inverse_transform = None
+                if cfg.evaluator[s].get("apply_inverse_scaling", False):
                     inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
-                    inverse_transform_which = cfg.evaluator[s].get("inverse_transform_which", "last")
                     inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
 
-                    inverse_transform = None
-                    if inverse_transform_required:
-                        # Prefer key-based lookup: discover inverter from registry
-                        if inverse_transform_key is not None:
-                            inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
-                                    inverse_transform_key, which=inverse_transform_which))
+                    # Prefer key-based lookup: discover inverter from registry
+                    if inverse_transform_key is not None:
+                        inverse_transform, chosen_name = get_inverter_for_key_with_name(transforms, inverse_transform_key,
+                                                                                        which=cfg.evaluator[s].get("inverse_transform_which", "last"))
 
-                            if inverse_transform is None:
-                                raise ValueError(
-                                    f"Evaluator for {s} requires inverse scaling and inverse_transform_key={inverse_transform_key!r} "
-                                    "was set, but no transform that assigns to that key implements InverseTransformMixin."
-                                )
-                            if chosen_name:
-                                log.info(
-                                    "Inverse transform for %s: using transform %r for key %r (which=%s).",
-                                    s,
-                                    chosen_name,
-                                    inverse_transform_key,
-                                    inverse_transform_which,
-                                )
-                        elif inverse_transform_name is not None:
-                            inverse_transform = transforms_manager.get_transform(
-                                inverse_transform_name
-                            ).transform_instance
-                            assert isinstance(inverse_transform, InverseTransformMixin), (
-                                f"The transform {inverse_transform_name} does not implement "
-                                "InverseTransformMixin but is selected for inverse_transform in evaluator."
-                            )
-                        else:
+                        # inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
+                        #         inverse_transform_key, which=inverse_transform_which))
+
+                        if inverse_transform is None:
                             raise ValueError(
-                                f"Evaluator for {s} requires inverse scaling but neither "
-                                "inverse_transform_key (e.g. 'rul') nor inverse_transform_name is provided."
+                                f"Evaluator for {s} requires inverse scaling and inverse_transform_key={inverse_transform_key!r} "
+                                "was set, but no transform that assigns to that key implements InverseTransformMixin."
                             )
+                        if chosen_name:
+                            log.info(
+                                "Inverse transform for %s: using transform %r for key %r (which=%s).",
+                                s,
+                                chosen_name,
+                                inverse_transform_key,
+                                inverse_transform_which,
+                            )
+                    elif inverse_transform_name is not None:
+                        inverse_transform = [dt.transform_instance
+                                             for dt in transforms if dt.name == inverse_transform_name]
 
-                    remote_logger = None
-                    for lgr in log_functions:
-                        if isinstance(lgr, WandbLogger):
-                            remote_logger = lgr
+                        inverse_transform = inverse_transform[0]
 
-                    evaluator = hydra.utils.instantiate(
-                        cfg.evaluator[s],
-                        inverse_transform=inverse_transform,
-                        remote_logger=remote_logger,
-                    )
-                    log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
-                    evaluators[s] = evaluator
+                        # inverse_transform = transforms_manager.get_transform(
+                        #     inverse_transform_name
+                        # ).transform_instance
+                        assert isinstance(inverse_transform, InverseTransformMixin), (
+                            f"The transform {inverse_transform_name} does not implement "
+                            "InverseTransformMixin but is selected for inverse_transform in evaluator."
+                        )
+                    else:
+                        raise ValueError(
+                            f"Evaluator for {s} requires inverse scaling but neither "
+                            "inverse_transform_key (e.g. 'rul') nor inverse_transform_name is provided."
+                        )
 
-            else:
-                for s in ["train", "val", "test"]:
-                    evaluator = hydra.utils.instantiate(
-                        cfg.evaluator[s],
-                        inverse_transform=None,
-                        remote_logger=None,
-                    )
-                    evaluators[s] = evaluator
+                remote_logger = None
+                for lgr in log_functions:
+                    if isinstance(lgr, WandbLogger):
+                        remote_logger = lgr
+
+                evaluator = hydra.utils.instantiate(
+                    cfg.evaluator[s],
+                    inverse_transform=inverse_transform,
+                    remote_logger=remote_logger,
+                )
+                log.info(f"Evaluator for {s}: {cfg.evaluator[s]._target_}")
+                evaluators[s] = evaluator
+
+            # else:
+            #     for s in ["train", "val", "test"]:
+            #         evaluator = hydra.utils.instantiate(
+            #             cfg.evaluator[s],
+            #             inverse_transform=None,
+            #             remote_logger=None,
+            #         )
+            #         evaluators[s] = evaluator
 
             loss = hydra.utils.instantiate(cfg.loss)
 
