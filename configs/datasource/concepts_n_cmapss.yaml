@@ -4,28 +4,32 @@
 _target_: picid.data.datasources.concepts_n_cmapss.N_CMAPSSDataSource
 
 # Must have keys
-data_name: ${.data_folder}_${.n_DS}
+data_name: ${.data_folder}_${.load_arguments.n_DS}
 task_mode: rul
 
 # Additional
 data_folder: N-CMAPSS
 path: ${paths.data_dir}/${.data_folder}
-n_DS: "02"
-mode: "train"
 cruise: false
-units: null
 subsampling_rate: 1
-concepts:
-    - "LPT-E"
-    - "LPT-F"
-    - "HPT-E"
 combined_concepts: false
 binary_concepts: true
 RUL: "linear"
 include_healthy: true
-window_size: ${task_definition.seq_len}
-stride: 1
 scaling: "legacy"
+
+load_arguments:
+  n_DS: "02"
+  mode: "train"
+  fc: null
+  # Keep the standalone datasource config valid by default.
+  # This mirrors the DS02 training subset already used by the experiment-facing
+  # multi-source config, while derived configs remain free to override it.
+  units: [2, 5, 10, 16, 20]
+  concepts:
+    - "LPT-E"
+    - "LPT-F"
+    - "HPT-E"
 
 # TODO: We currently have no data splitter implemented
 # for this dataset to split within an unit.

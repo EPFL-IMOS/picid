@@ -4,9 +4,12 @@ Tests for concepts_n_cmapss: module-level functions and N_CMAPSSDataSource (mock
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
+from omegaconf import OmegaConf
 
 from picid.data.datasources.concepts_n_cmapss import (
     subsampling,
@@ -18,7 +21,7 @@ from picid.data.datasources.concepts_n_cmapss import (
 
 
 def test_subsampling():
-    """subsampling returns every nth row."""
+    """Subsampling returns every nth row."""
     df = pd.DataFrame({"a": [1, 2, 3, 4, 5]})
     out = subsampling(df, 2)
     assert len(out) == 3
@@ -26,27 +29,27 @@ def test_subsampling():
 
 
 def test_binarize_concept():
-    """binarize_concept thresholds at -0.0015."""
+    """Binarize_concept thresholds at -0.0015."""
     assert binarize_concept(-0.002) is True
     assert binarize_concept(0.0) is False
 
 
 def test_scale_concept():
-    """scale_concept clips to [0, 1]."""
+    """Scale_concept clips to [0, 1]."""
     x = np.array([-0.035, 0.0])
     out = scale_concept(x)
     assert out[0] == 1.0 and out[1] == 0.0
 
 
 def test_flatten_RUL_no_hs_change():
-    """flatten_RUL returns df unchanged when no hs diff == -1."""
+    """Flatten_RUL returns df unchanged when no hs diff == -1."""
     df = pd.DataFrame({"cycle": [1, 2, 3], "hs": [1, 1, 1], "RUL": [10, 9, 8]})
     out = flatten_RUL(df)
     pd.testing.assert_frame_equal(out, df)
 
 
 def test_flatten_RUL_with_hs_change():
-    """flatten_RUL updates RUL for cycles before first hs change."""
+    """Flatten_RUL updates RUL for cycles before first hs change."""
     df = pd.DataFrame(
         {
             "cycle": [1, 2, 3, 4],
@@ -77,12 +80,29 @@ def test_n_cmapss_init_requires_fc_or_units():
     """N_CMAPSSDataSource raises if both or neither of fc/units specified."""
 
     class LoadArgsBothNone:
+        """Load arguments with neither ``fc`` nor ``units`` configured."""
+
         mode = "train"
         n_DS = 1
         concepts = ["LPT"]
 
         @staticmethod
         def get(k, d=None):
+            """
+            Return ``None`` for all optional subset selectors.
+
+            Parameters
+            ----------
+            k : str
+                Requested selector name.
+            d : object, optional
+                Default value ignored by this helper.
+
+            Returns
+            -------
+            None
+                Always returns ``None``.
+            """
             return None
 
     with pytest.raises(ValueError, match="Specify exactly one"):
@@ -95,15 +115,40 @@ def test_n_cmapss_init_requires_fc_or_units():
 
 
 def _make_load_args():
-    """LoadArgs-like object: mode, n_DS, concepts, get(units)=None, get(fc)=1."""
+    """
+    Create a minimal ``load_arguments`` object for datasource tests.
+
+    Returns
+    -------
+    object
+        LoadArgs-like object with ``mode``, ``n_DS``, ``concepts``,
+        ``get('units') == None`` and ``get('fc') == 1``.
+    """
 
     class LoadArgs:
+        """Load arguments with ``fc`` selected and ``units`` unset."""
+
         mode = "train"
         n_DS = 1
         concepts = ["LPT"]
 
         @staticmethod
         def get(k, d=None):
+            """
+            Return load-argument defaults used by the test helper.
+
+            Parameters
+            ----------
+            k : str
+                Requested selector name.
+            d : object, optional
+                Default value returned for unrecognized selectors.
+
+            Returns
+            -------
+            object
+                ``None`` for ``units``, ``1`` for ``fc``, else ``d``.
+            """
             if k == "units":
                 return None
             if k == "fc":
@@ -126,8 +171,28 @@ def test_n_cmapss_init_success_with_fc():
     assert ds.selected_units is None
 
 
+def test_concepts_n_cmapss_base_config_is_valid_standalone_subset():
+    """The base datasource config should be valid as a standalone datasource."""
+    config = OmegaConf.load(
+        Path(__file__).resolve().parents[3]
+        / "configs"
+        / "datasource"
+        / "concepts_n_cmapss.yaml"
+    )
+
+    assert config.load_arguments.fc is None
+    assert list(config.load_arguments.units) == [2, 5, 10, 16, 20]
+
+
 def test_n_cmapss_load_data_mocked(mocker):
-    """N_CMAPSSDataSource.load_data with mocked _load_data."""
+    """
+    N_CMAPSSDataSource.load_data with mocked _load_data.
+
+    Parameters
+    ----------
+    mocker : pytest_mock.plugin.MockerFixture
+        Fixture used to replace ``_load_data`` with a deterministic payload.
+    """
     mocker.patch.object(
         N_CMAPSSDataSource,
         "_load_data",
@@ -157,7 +222,14 @@ def test_n_cmapss_load_data_raises_when_file_missing():
 
 
 def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
-    """Exercise full _load_data path with a minimal valid HDF5 fixture."""
+    """
+    Exercise full _load_data path with a minimal valid HDF5 fixture.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Temporary directory used to build the minimal HDF5 fixture.
+    """
     import h5py
 
     n_rows = 50
@@ -205,12 +277,29 @@ def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
         f.create_dataset("A_var", data=np.array(A_var, dtype="S20"))
 
     class LoadArgs:
+        """Load arguments for the minimal HDF5 fixture scenario."""
+
         mode = "train"
         n_DS = 1
         concepts = ["LPT", "HPT"]
 
         @staticmethod
         def get(k, d=None):
+            """
+            Return the configured selector for the fixture-backed test.
+
+            Parameters
+            ----------
+            k : str
+                Requested selector name.
+            d : object, optional
+                Default value returned for unrecognized selectors.
+
+            Returns
+            -------
+            object
+                ``None`` for ``units``, ``2`` for ``fc``, else ``d``.
+            """
             if k == "units":
                 return None
             if k == "fc":
