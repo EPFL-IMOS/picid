@@ -1,4 +1,5 @@
-"""Shared PHMD split assembly helpers.
+"""
+Shared PHMD split assembly helpers.
 
 The PHMD datasets all follow the same high-level pattern: a fold payload is
 grouped by unit, each unit is converted into a nested record, and the result is
@@ -21,7 +22,8 @@ SplitPayload = dict[str, dict[str, list[Any]]]
 
 
 def _normalize_unit_column(df: pd.DataFrame, unit_column: str) -> pd.Series:
-    """Return the unit column as a one-dimensional series.
+    """
+    Return the unit column as a one-dimensional series.
 
     Parameters
     ----------
@@ -48,7 +50,21 @@ def _apply_debug_subset(
     unit_payload: dict[str, Any],
     debug_subset_range: tuple[int, int, int] | None,
 ) -> dict[str, Any]:
-    """Slice awkward-array payloads for debug runs while preserving metadata."""
+    """
+    Slice awkward-array payloads for debug runs while preserving metadata.
+
+    Parameters
+    ----------
+    unit_payload : dict[str, Any]
+        Per-unit payload emitted by the PHMD unit conversion hook.
+    debug_subset_range : tuple[int, int, int] | None
+        Optional ``(n_cycles, cycle_len, feature_num)`` slice restriction.
+
+    Returns
+    -------
+    dict[str, Any]
+        Updated payload with awkward-array entries sliced for debug runs.
+    """
 
     if debug_subset_range is None:
         return unit_payload
@@ -77,7 +93,8 @@ def build_split_payloads(
     process_unit: Callable[[pd.DataFrame, Any, list[str], str], dict[str, Any]],
     debug_subset_range: tuple[int, int, int] | None = None,
 ) -> tuple[SplitPayload, dict[str, Any]]:
-    """Convert a split dataframe fold into the PHMD split container shape.
+    """
+    Convert a split dataframe fold into the PHMD split container shape.
 
     Parameters
     ----------
@@ -147,11 +164,12 @@ def build_split_payloads(
     test = convert_outer_list_to_inner(split_payloads["test"])
 
     out_dict: SplitPayload = {}
-    for key in train.keys():
+    all_keys = set(train) | set(val) | set(test)
+    for key in all_keys:
         out_dict[key] = {
-            "train": train[key],
-            "val": val[key],
-            "test": test[key],
+            "train": train.get(key, []),
+            "val": val.get(key, []),
+            "test": test.get(key, []),
         }
 
     extra_meta: dict[str, Any] = {}

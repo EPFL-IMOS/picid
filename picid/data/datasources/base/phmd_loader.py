@@ -177,9 +177,10 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
         if extra_meta:
             self.meta_data.update(extra_meta)
 
-        logger.info(f"Number of train units: {len(out_dict['features']['train'])}")
-        logger.info(f"Number of val units: {len(out_dict['features']['val'])}")
-        logger.info(f"Number of test units: {len(out_dict['features']['test'])}")
+        features_splits = out_dict.get("features", {})
+        logger.info(f"Number of train units: {len(features_splits.get('train', []))}")
+        logger.info(f"Number of val units: {len(features_splits.get('val', []))}")
+        logger.info(f"Number of test units: {len(features_splits.get('test', []))}")
         return out_dict
 
     @abstractmethod

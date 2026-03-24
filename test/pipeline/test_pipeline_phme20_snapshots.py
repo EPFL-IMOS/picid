@@ -1,4 +1,5 @@
-"""Pipeline snapshot tests using phme20 real data only.
+"""
+Pipeline snapshot tests using phme20 real data only.
 
 Compares current pipeline output to saved slices (loaded and transformed);
 asserts preprocessing time within bounds. Uses only phme20—no synthetic data.
@@ -39,14 +40,57 @@ CONFIG_KEYS = {
 
 
 def _snapshot_dir(name: str, stage: str) -> Path:
+    """
+    Return the snapshot directory for the given config and stage.
+
+    Parameters
+    ----------
+    name : str
+        Snapshot-backed datasource name.
+    stage : str
+        Snapshot stage such as ``loaded`` or ``transformed``.
+
+    Returns
+    -------
+    pathlib.Path
+        Snapshot directory path for the requested dataset stage.
+    """
     return SNAPSHOTS_ROOT / name / stage
 
 
 def _manifest_path(name: str, stage: str) -> Path:
+    """
+    Return the manifest path for the given config and stage.
+
+    Parameters
+    ----------
+    name : str
+        Snapshot-backed datasource name.
+    stage : str
+        Snapshot stage such as ``loaded`` or ``transformed``.
+
+    Returns
+    -------
+    pathlib.Path
+        Manifest path for the requested dataset stage.
+    """
     return _snapshot_dir(name, stage) / "slices_manifest.json"
 
 
 def _has_snapshots(name: str) -> bool:
+    """
+    Return whether both loaded and transformed snapshots are present.
+
+    Parameters
+    ----------
+    name : str
+        Snapshot-backed datasource name.
+
+    Returns
+    -------
+    bool
+        ``True`` when both loaded and transformed manifests exist.
+    """
     loaded = _manifest_path(name, "loaded").exists()
     transformed = _manifest_path(name, "transformed").exists()
     return loaded and transformed
@@ -55,7 +99,14 @@ def _has_snapshots(name: str) -> bool:
 @pytest.mark.requires_snapshots
 @pytest.mark.parametrize("config_name", ["phme20"])
 def test_loaded_slices_match_saved(config_name: str):
-    """After load only, slice manifest and numeric slices match saved (skip if snapshots missing)."""
+    """
+    Compare loaded PHME20 slices against saved snapshots.
+
+    Parameters
+    ----------
+    config_name : str
+        Snapshot-backed datasource configuration name.
+    """
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
@@ -131,7 +182,14 @@ def test_loaded_slices_match_saved(config_name: str):
 @pytest.mark.requires_snapshots
 @pytest.mark.parametrize("config_name", ["phme20"])
 def test_transformed_slices_match_saved(config_name: str):
-    """Full pipeline output matches saved transformed slices; timing within bounds (skip if snapshots missing)."""
+    """
+    Compare transformed PHME20 slices against saved snapshots.
+
+    Parameters
+    ----------
+    config_name : str
+        Snapshot-backed datasource configuration name.
+    """
     if not _has_snapshots(config_name):
         pytest.skip(
             f"Snapshots missing for {config_name}. "
@@ -155,12 +213,31 @@ def test_transformed_slices_match_saved(config_name: str):
     project_root = Path(__file__).resolve().parents[2]
     data_dir = project_root / "datasets"
     ds_path, tf_path = CONFIGS[config_name]
+    keys = CONFIG_KEYS.get(config_name, ["features", "target"])
     ds_cfg = OmegaConf.load(project_root / ds_path)
     ds_cfg = OmegaConf.merge(
         ds_cfg, OmegaConf.create({"paths": {"data_dir": str(data_dir)}})
     )
     tf_cfg = OmegaConf.load(project_root / tf_path)
     datasource = instantiate(ds_cfg)
+    datasource.load_data()
+    datasource.split_data()
+    loaded_split_dict = (
+        datasource.get_data().to_split_dict()
+        if hasattr(datasource.get_data(), "to_split_dict")
+        else {}
+    )
+    missing_loaded = [
+        k
+        for k in keys
+        if not any(k in loaded_split_dict.get(s, {}) for s in ("train", "val", "test"))
+    ]
+    if missing_loaded:
+        pytest.skip(
+            f"Pipeline input missing keys {missing_loaded} for {config_name}. "
+            "Data may be unavailable (e.g. PHMD not cached). "
+            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
+        )
     transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
     preprocessor = PreProcessor(
         datasource=datasource,
