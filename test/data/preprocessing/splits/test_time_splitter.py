@@ -26,7 +26,7 @@ Test Coverage Strategy:
 import numpy as np
 import pytest
 
-from picid.data.preprocessing.splits.time_splitter import TimeSplitter, ValueWarning
+from picid.data.split_strategies.time_splitter import TimeSplitter, ValueWarning
 
 
 class TestTimeSplitterInitialization:

@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.preprocessing.splits import TimeSplitter
+from picid.data.split_strategies import TimeSplitter
 
 
 class SyntheticFromFileLoader(SingleSourceLoader):

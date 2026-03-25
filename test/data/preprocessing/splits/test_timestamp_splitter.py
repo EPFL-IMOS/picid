@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from picid.data.preprocessing.splits.database_splitter import TimeStampSplitter
+from picid.data.split_strategies.database_splitter import TimeStampSplitter
 
 
 class TestTimeStampSplitterInitialization:

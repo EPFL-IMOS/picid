@@ -23,7 +23,8 @@ Test Coverage Strategy:
 import numpy as np
 import pytest
 
-from picid.data.preprocessing.splits.by_source_splitter import (
+import picid.data.preprocessing.splits as legacy_splitters
+from picid.data.split_strategies.by_source_splitter import (
     BySourceSplitter,
     convert_outer_list_to_inner,
 )
@@ -195,6 +196,14 @@ class TestBySourceSplitterSplitData:
 
         with pytest.raises(ValueError):
             splitter.split_data(data_list, source_names)
+
+
+def test_legacy_splitters_package_reexports_new_public_api():
+    """Legacy preprocessing.splits import path still re-exports the new package API."""
+    assert legacy_splitters.BySourceSplitter is BySourceSplitter
+    assert legacy_splitters.TimeSplitter.__module__.startswith(
+        "picid.data.split_strategies"
+    )
 
 
 class TestBySourceSplitterCall:

@@ -5,7 +5,7 @@ import pytest
 from omegaconf import OmegaConf
 
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.preprocessing.splits import TimeSplitter
+from picid.data.split_strategies import TimeSplitter
 
 
 class InMemorySingleSourceLoader(SingleSourceLoader):
@@ -89,7 +89,7 @@ def _two_source_config():
         "data_name": "unit_a",
         "task_mode": "regression",
         "data_splitter": {
-            "_target_": "picid.data.preprocessing.splits.TimeSplitter",
+            "_target_": "picid.data.split_strategies.TimeSplitter",
             **splitter_cfg,
         },
     }
@@ -100,7 +100,7 @@ def _two_source_config():
         "data_name": "unit_b",
         "task_mode": "regression",
         "data_splitter": {
-            "_target_": "picid.data.preprocessing.splits.TimeSplitter",
+            "_target_": "picid.data.split_strategies.TimeSplitter",
             **splitter_cfg,
         },
     }
@@ -160,7 +160,7 @@ def _two_sources_with_by_source_splitter_config():
         "task_mode": "regression",
         "source_list": {"unit_a": source_a, "unit_b": source_b, "unit_c": source_c},
         "multisource_data_splitter": {
-            "_target_": "picid.data.preprocessing.splits.BySourceSplitter",
+            "_target_": "picid.data.split_strategies.BySourceSplitter",
             "sources_train": ["unit_a"],
             "sources_val": ["unit_b"],
             "sources_test": ["unit_c"],

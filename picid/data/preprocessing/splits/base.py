@@ -1,11 +1,12 @@
 """Abstract splitter contracts for datasource preprocessing."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple
+from typing import TYPE_CHECKING, Dict, Tuple
 
 import numpy as np
 
-from picid.data.datasources.base.contracts import DatasourceProtocol
+if TYPE_CHECKING:
+    from picid.data.datasources.base.contracts import DatasourceProtocol
 
 
 class SourceSplitter(ABC):
@@ -17,18 +18,18 @@ class SourceSplitter(ABC):
 
     @abstractmethod
     def split_data(
-        self, sources: Dict[str, DatasourceProtocol]
-    ) -> Dict[str, Dict[str, DatasourceProtocol]]:
+        self, sources: Dict[str, "DatasourceProtocol"]
+    ) -> Dict[str, Dict[str, "DatasourceProtocol"]]:
         """Split datasource loaders into train/val/test source groups.
 
         Parameters
         ----------
-        sources : Dict[str, DatasourceProtocol]
+        sources : Dict[str, "DatasourceProtocol"]
             Mapping from source name to instantiated datasource.
 
         Returns
         -------
-        Dict[str, Dict[str, DatasourceProtocol]]
+        Dict[str, Dict[str, "DatasourceProtocol"]]
             Mapping from split name to the sources assigned to that split.
         """
         pass
