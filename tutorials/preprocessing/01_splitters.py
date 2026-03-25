@@ -7,10 +7,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from picid.data.preprocessing.splits import TimeSplitter, BySourceSplitter
+from picid.data.split_strategies import BySourceSplitter, TimeSplitter
 
 
 def main():
+    """Run the splitter tutorial smoke example."""
     # --- TimeSplitter ---
     data = np.random.randn(500, 3).astype(np.float32)
     splitter = TimeSplitter(

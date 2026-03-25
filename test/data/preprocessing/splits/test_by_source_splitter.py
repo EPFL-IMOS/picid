@@ -1,29 +1,14 @@
-"""Comprehensive tests for BySourceSplitter.
+"""
+Comprehensive tests for ``BySourceSplitter``.
 
-This module tests the source-based data splitting functionality used
-in multi-unit PHM experiments where different units are assigned to
-different splits (train/val/test).
-
-PHM Context:
------------
-In bearing RUL prediction, units (bearings) are assigned to different
-splits to ensure the model generalizes across units. This prevents
-data leakage where the model learns unit-specific patterns.
-
-Test Coverage Strategy:
-----------------------
-1. **Initialization Tests**: Source list validation and overlap detection
-2. **Split Assignment**: Correct source-to-split mapping
-3. **Data Transformation**: Proper data reorganization
-4. **Tree View Generation**: Human-readable split visualization
-5. **Edge Cases**: Empty sources, single source, overlapping sources
-6. **Error Handling**: Invalid inputs, mismatched lengths
+This module covers initialization, split assignment, data reorganization,
+tree-view generation, and edge cases for source-based splitting in
+multi-unit PHM experiments.
 """
 
 import numpy as np
 import pytest
 
-import picid.data.preprocessing.splits as legacy_splitters
 from picid.data.split_strategies.by_source_splitter import (
     BySourceSplitter,
     convert_outer_list_to_inner,
@@ -34,7 +19,8 @@ class TestBySourceSplitterInitialization:
     """Tests for BySourceSplitter initialization."""
 
     def test_init_default_empty_lists(self):
-        """Test initialization with default empty lists.
+        """
+        Test initialization with default empty lists.
 
         **PHM Logic**: Empty lists allow dynamic source assignment.
 
@@ -51,7 +37,8 @@ class TestBySourceSplitterInitialization:
         assert splitter.sources_test == []
 
     def test_init_with_source_lists(self):
-        """Test initialization with source lists.
+        """
+        Test initialization with source lists.
 
         **PHM Logic**: Assign specific units to each split.
 
@@ -72,7 +59,8 @@ class TestBySourceSplitterInitialization:
         assert splitter.sources_test == ["unit_4", "unit_5"]
 
     def test_init_overlapping_sources_error(self):
-        """Test that overlapping sources raise error.
+        """
+        Test that overlapping sources raise error.
 
         **PHM Logic**: A source cannot be in multiple splits (data leakage).
 
@@ -90,7 +78,8 @@ class TestBySourceSplitterInitialization:
             )
 
     def test_init_none_converted_to_empty_list(self):
-        """Test that None sources are converted to empty lists.
+        """
+        Test that None sources are converted to empty lists.
 
         **PHM Logic**: None is equivalent to no sources specified.
 
@@ -113,7 +102,8 @@ class TestBySourceSplitterSplitData:
     """Tests for split_data method."""
 
     def test_split_data_basic(self):
-        """Test basic data splitting by source.
+        """
+        Test basic data splitting by source.
 
         **PHM Logic**: Each source's data should be assigned to correct split.
 
@@ -148,7 +138,8 @@ class TestBySourceSplitterSplitData:
         assert "test" in result["features"]
 
     def test_split_data_multiple_train_sources(self):
-        """Test splitting with multiple sources per split.
+        """
+        Test splitting with multiple sources per split.
 
         **PHM Logic**: Multiple units may be assigned to training.
 
@@ -179,7 +170,8 @@ class TestBySourceSplitterSplitData:
         assert train_features is not None
 
     def test_split_data_mismatched_lengths_error(self):
-        """Test error when data_list and source_names have different lengths.
+        """
+        Test error when data_list and source_names have different lengths.
 
         **PHM Logic**: Each data container must have a corresponding name.
 
@@ -198,19 +190,12 @@ class TestBySourceSplitterSplitData:
             splitter.split_data(data_list, source_names)
 
 
-def test_legacy_splitters_package_reexports_new_public_api():
-    """Legacy preprocessing.splits import path still re-exports the new package API."""
-    assert legacy_splitters.BySourceSplitter is BySourceSplitter
-    assert legacy_splitters.TimeSplitter.__module__.startswith(
-        "picid.data.split_strategies"
-    )
-
-
 class TestBySourceSplitterCall:
     """Tests for __call__ method."""
 
     def test_call_returns_tuple(self):
-        """Test that __call__ returns (split_data, tree_view).
+        """
+        Test that ``__call__`` returns ``(split_data, tree_view)``.
 
         **PHM Logic**: __call__ provides both data and visualization.
 
@@ -235,7 +220,8 @@ class TestBySourceSplitterTreeView:
     """Tests for tree view generation."""
 
     def test_get_split_tree_view(self):
-        """Test tree view generation.
+        """
+        Test tree view generation.
 
         **PHM Logic**: Tree view shows which sources are in which split.
 
@@ -268,7 +254,8 @@ class TestConvertOuterListToInner:
     """Tests for convert_outer_list_to_inner utility function."""
 
     def test_basic_conversion(self):
-        """Test basic list-of-dicts to dict-of-lists conversion.
+        """
+        Test basic list-of-dicts to dict-of-lists conversion.
 
         **PHM Logic**: Transform list[{k:v}] to {k: [v1, v2, ...]}.
 
@@ -286,7 +273,8 @@ class TestConvertOuterListToInner:
         assert result["b"] == [2, 4, 6]
 
     def test_empty_list_handling(self):
-        """Test handling of empty list.
+        """
+        Test handling of an empty list.
 
         **PHM Logic**: Empty list may return empty dict or raise.
 
@@ -301,7 +289,8 @@ class TestConvertOuterListToInner:
         assert result == {}
 
     def test_different_keys_error(self):
-        """Test that dicts with different keys raise error.
+        """
+        Test that dicts with different keys raise error.
 
         **PHM Logic**: All dicts must have same structure.
 
@@ -320,7 +309,8 @@ class TestConvertOuterListToInner:
             convert_outer_list_to_inner(input_list)
 
     def test_single_dict(self):
-        """Test conversion of single-element list.
+        """
+        Test conversion of a single-element list.
 
         **PHM Logic**: Single source should still convert correctly.
 
@@ -342,7 +332,8 @@ class TestBySourceSplitterEdgeCases:
     """Edge case tests for BySourceSplitter."""
 
     def test_unassigned_sources(self):
-        """Test handling of sources not assigned to any split.
+        """
+        Test handling of sources not assigned to any split.
 
         **PHM Logic**: Sources not in any split list should be ignored.
 
@@ -373,7 +364,8 @@ class TestBySourceSplitterEdgeCases:
         assert result["features"]["val"] is not None
 
     def test_all_sources_in_one_split(self):
-        """Test all sources assigned to single split.
+        """
+        Test all sources assigned to a single split.
 
         **PHM Logic**: Valid scenario for cross-validation folds.
 

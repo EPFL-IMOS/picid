@@ -1,8 +1,8 @@
-"""Public splitter strategy API.
+"""
+Public splitter strategy API.
 
 This package is the canonical import path for split logic used by datasources
-and preprocessing. The legacy ``picid.data.preprocessing.splits`` package
-re-exports these names for compatibility.
+and preprocessing.
 """
 
 from picid.data.split_strategies.base import SourceSplitter, TimeSeriesSplitter

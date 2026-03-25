@@ -1,6 +1,10 @@
 """Init file for Preprocessor module."""
 
-from .splits import TimeSplitter, TimeStampSplitter, BySourceSplitter
+from picid.data.split_strategies import (
+    BySourceSplitter,
+    TimeSplitter,
+    TimeStampSplitter,
+)
 
 __all__ = [
     "TimeSplitter",
