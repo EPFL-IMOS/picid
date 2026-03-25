@@ -21,7 +21,7 @@ Test Coverage Strategy:
 
 import pytest
 
-from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
 from picid.data.datasources.base.exceptions import DatasourceStateError
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.preprocessing.base import PreProcessorInterface
@@ -336,7 +336,20 @@ class TestPreProcessorGetProcessedData:
         )
 
         with pytest.raises(RuntimeError):
-            preprocessor.get_processed_data_dict()
+            preprocessor.get_processed_data_container()
+
+    def test_get_processed_split_dict_before_pipeline_error(
+        self, mock_single_source_loader, mock_transform_manager
+    ):
+        """Split-first export should also fail until pipeline() materializes data."""
+        preprocessor = PreProcessor(
+            datasource=mock_single_source_loader, transforms=mock_transform_manager
+        )
+
+        with pytest.raises(RuntimeError):
+            preprocessor.get_processed_split_dict(
+                view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+            )
 
 
 class TestPreProcessorApplyTransforms:
@@ -429,14 +442,16 @@ class TestPreProcessorInterface:
         )
 
         # Check required methods exist
-        assert hasattr(preprocessor, "get_processed_data_dict")
+        assert hasattr(preprocessor, "get_processed_data_container")
+        assert hasattr(preprocessor, "get_processed_split_dict")
         assert hasattr(preprocessor, "get_meta_data_dict")
         assert hasattr(preprocessor, "fetch_data")
         assert hasattr(preprocessor, "apply_transforms")
         assert hasattr(preprocessor, "pipeline")
 
         # Methods should be callable
-        assert callable(preprocessor.get_processed_data_dict)
+        assert callable(preprocessor.get_processed_data_container)
+        assert callable(preprocessor.get_processed_split_dict)
         assert callable(preprocessor.get_meta_data_dict)
         assert callable(preprocessor.fetch_data)
         assert callable(preprocessor.apply_transforms)

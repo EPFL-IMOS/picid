@@ -118,7 +118,6 @@ class TestStrategyCopyCharacterization:
         ragged = ak.Array([[1.0, 2.0], [3.0, 4.0, 5.0]])
         container = SplitDatasetContainer(
             features={"train": [ragged], "val": [ragged]},
-            is_multi_unit=False,
         )
         result, _ = strategy.apply(
             transform_instance=transform,

@@ -204,7 +204,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
         self.include_healthy = include_healthy
         self.subsampling_rate = subsampling_rate
         self.cruise = cruise
-        self.concepts = load_arguments.concepts
+        self.requested_concepts = list(load_arguments.concepts)
         self.binary_concepts = binary_concepts
         self.combined_concepts = combined_concepts
         self.scaling = scaling
@@ -348,14 +348,17 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             self.df_W = self.df_W.loc[df_cruise.index]
             del df_all, df_cruise
 
-        if self.concepts == "all":
-            self.concepts = [
+        requested_concepts: str | list[str]
+        if len(self.requested_concepts) == 1 and self.requested_concepts[0] == "all":
+            requested_concepts = [
                 f"{c}-{m}"
                 for c in ("Fan", "LPC", "HPC", "LPT", "HPT")
                 for m in ("E", "F")
             ]
+        else:
+            requested_concepts = list(self.requested_concepts)
 
-        self.concepts = pd.DataFrame(
+        concepts = pd.DataFrame(
             {
                 "Fan": self.df_T[["fan_eff_mod", "fan_flow_mod"]].min(axis=1),
                 "LPC": self.df_T[["LPC_eff_mod", "LPC_flow_mod"]].min(axis=1),
@@ -373,33 +376,29 @@ class N_CMAPSSDataSource(SingleSourceLoader):
                 "HPT-E": self.df_T["HPT_eff_mod"],
                 "HPT-F": self.df_T["HPT_flow_mod"],
             }
-        )[[c for c in self.concepts if c not in ["healthy", "Fc"]]]
+        )[[c for c in requested_concepts if c not in ["healthy", "Fc"]]]
 
         # Remove non-minimum degradation.
-        # self.concepts = self.concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
+        # concepts = concepts.apply(lambda row: pd.Series([val if val == min(row) else 0 for val in row]), axis=1)
 
         if self.binary_concepts:
-            self.concepts = self.concepts.apply(binarize_concept)
+            concepts = concepts.apply(binarize_concept)
         else:  # Continuous concepts in ``[0, 1]`` for BCE-style losses.
-            self.concepts = self.concepts.apply(scale_concept)
+            concepts = concepts.apply(scale_concept)
         if (
             self.combined_concepts
         ):  # TODO: Treat the continuous-concept case explicitly.
-            for combination in combinations(self.concepts.columns.tolist(), 2):
+            for combination in combinations(concepts.columns.tolist(), 2):
                 combination_col = "+".join(combination)
-                self.concepts[combination_col] = self.concepts[list(combination)].all(
-                    axis=1
-                )
+                concepts[combination_col] = concepts[list(combination)].all(axis=1)
                 for c in combination:
-                    self.concepts[c] = np.logical_xor(
-                        self.concepts[c], self.concepts[combination_col]
-                    )
-        if "healthy" in self.concepts:
-            self.concepts["healthy"] = (self.concepts == 0).all(axis=1)
-        if "Fc" in self.concepts:
-            self.concepts = pd.concat(
+                    concepts[c] = np.logical_xor(concepts[c], concepts[combination_col])
+        if "healthy" in requested_concepts:
+            concepts["healthy"] = (concepts == 0).all(axis=1)
+        if "Fc" in requested_concepts:
+            concepts = pd.concat(
                 (
-                    self.concepts,
+                    concepts,
                     pd.get_dummies(self.df_A["Fc"]).reindex(
                         columns=[1, 2, 3], fill_value=0
                     ),
@@ -407,9 +406,9 @@ class N_CMAPSSDataSource(SingleSourceLoader):
                 axis=1,
             )
         # drop constant concepts
-        # self.concepts = self.concepts.loc[:, (self.concepts != self.concepts.iloc[0]).any()]
-        logger.info(f"Used concepts: {self.concepts.columns}")
-        self.concepts = self.concepts.astype(int)
+        # concepts = concepts.loc[:, (concepts != concepts.iloc[0]).any()]
+        logger.info(f"Used concepts: {concepts.columns}")
+        concepts = concepts.astype(int)
 
         # ak.from_arrow(pa.Table.from_pandas(self.df_X))
 
@@ -420,7 +419,7 @@ class N_CMAPSSDataSource(SingleSourceLoader):
             "unit": self.df_A["unit"].values,
             "n_DS": np.ones(self.df_A["unit"].shape) * int(self.n_DS),
             "descriptors": self.df_W.values,  # Operating conditions.
-            "concepts": self.concepts.values,
+            "concepts": concepts.values,
             "rul": self.df_Y.values,  # Remaining useful life.
             # degradation=self.df_T.values, # Degradation variables behind the concepts.
             # auxiliary_data=self.df_A.values, # Auxiliary data: ``unit``, ``cycle``, ``Fc``, ``hs``.

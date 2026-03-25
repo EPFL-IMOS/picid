@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 from numpy import ndarray
 
+from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
 from picid.data.datasources.base.contracts import DatasourceProtocol
 from picid.transforms.base.transform_pipeline import TransformSequenceProtocol
 
@@ -39,24 +40,38 @@ class PreProcessorInterface(ABC):
         self.transforms = transforms
 
     @abstractmethod
-    def get_processed_data_dict(
+    def get_processed_data_container(self) -> DatasetContainer:
+        """Return the processed dataset container.
+
+        Returns
+        -------
+        DatasetContainer
+            Final processed container with manifests and slice metadata
+            preserved.
+        """
+        raise NotImplementedError(
+            "get_processed_data_container method not implemented."
+        )
+
+    @abstractmethod
+    def get_processed_split_dict(
         self,
-        return_splits_on_first_level: bool = False,
+        view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
     ) -> dict[str, dict[str, ndarray | list[ndarray]]]:
         """Return the processed dataset as a nested split dictionary.
 
         Parameters
         ----------
-        return_splits_on_first_level : bool, optional
-            When True, the split name becomes the first dictionary key. When
-            False, the returned structure is keyed by data tensor name first.
+        view_policy : SplitViewPolicy, optional
+            Export policy controlling whether the split-first dictionary keeps
+            list-per-unit payloads or unwraps singleton lists explicitly.
 
         Returns
         -------
         dict[str, dict[str, numpy.ndarray | list[numpy.ndarray]]]
-            Final processed data grouped by tensor name and split.
+            Final processed data grouped by split and tensor name.
         """
-        raise NotImplementedError("get_processed_data method not implemented.")
+        raise NotImplementedError("get_processed_split_dict method not implemented.")
 
     @abstractmethod
     def get_meta_data_dict(self):

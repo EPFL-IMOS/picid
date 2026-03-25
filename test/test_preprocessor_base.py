@@ -2,22 +2,29 @@ import pytest
 import numpy as np
 
 from picid.data.preprocessing.base import PreProcessorInterface
+from picid.data.data_objects.data import SplitDatasetContainer, SplitViewPolicy
 
 
 class DummyPreprocessor(PreProcessorInterface):
-    def get_processed_data_dict(self):
-        return {
-            "features": {
-                "train": np.array([1]),
-                "val": np.array([2]),
-                "test": np.array([3]),
+    def get_processed_data_container(self):
+        return SplitDatasetContainer(
+            features={
+                "train": [np.array([1])],
+                "val": [np.array([2])],
+                "test": [np.array([3])],
             },
-            "target": {
-                "train": np.array([0]),
-                "val": np.array([0]),
-                "test": np.array([0]),
+            target={
+                "train": [np.array([0])],
+                "val": [np.array([0])],
+                "test": [np.array([0])],
             },
-        }
+        )
+
+    def get_processed_split_dict(
+        self,
+        view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
+    ):
+        return self.get_processed_data_container().to_split_dict(view_policy)
 
     def get_meta_data_dict(self):
         return {"meta": "ok"}
@@ -31,7 +38,7 @@ class DummyPreprocessor(PreProcessorInterface):
     def pipeline(self):
         self.fetch_data()
         self.apply_transforms()
-        return self.get_processed_data_dict()
+        return self.get_processed_data_container()
 
 
 def test_abstract_preprocessor_cannot_instantiate():
@@ -55,16 +62,16 @@ def test_dummy_preprocessor_basic_flow():
     dp.apply_transforms()
     assert dp._transformed is True
 
-    processed = dp.get_processed_data_dict()
+    processed = dp.get_processed_split_dict()
     assert isinstance(processed, dict)
-    assert "features" in processed and "target" in processed
+    assert "train" in processed and "val" in processed and "test" in processed
 
     for key in ("train", "val", "test"):
-        assert isinstance(processed["features"][key], np.ndarray)
-        assert isinstance(processed["target"][key], np.ndarray)
+        assert isinstance(processed[key]["features"], list)
+        assert isinstance(processed[key]["target"], list)
 
     out = dp.pipeline()
-    assert out == processed
+    assert isinstance(out, SplitDatasetContainer)
 
     meta = dp.get_meta_data_dict()
     assert isinstance(meta, dict)

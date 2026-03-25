@@ -2,7 +2,7 @@
 Characterization tests for PreProcessor pipeline and run.py contract (Phase 0).
 
 Uses mock datasource + ConfigTransformManager, runs pipeline (with optional cache),
-asserts output shape and get_processed_data_dict / get_meta_data_dict.
+asserts output shape and processed-data accessors / get_meta_data_dict.
 Run.py contract: datasource → get_split_mode() → PreProcessor → pipeline() → assert shapes.
 """
 
@@ -15,7 +15,7 @@ import pytest
 from omegaconf import OmegaConf
 from unittest.mock import MagicMock, patch
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects.data import SplitDatasetContainer, SplitViewPolicy
 from picid.data.datasources.base.exceptions import (
     DatasourceContractError,
     DatasourceLoadError,
@@ -119,8 +119,8 @@ def test_pipeline_mock_datasource_real_manager_output_shape():
         assert len(result["target"][split]) == 2
 
 
-def test_pipeline_get_processed_data_dict_shape():
-    """After pipeline(), get_processed_data_dict(return_splits_on_first_level=True) has train/val/test and features/target."""
+def test_pipeline_get_processed_split_dict_shape():
+    """After pipeline(), get_processed_split_dict() exposes train/val/test and features/target."""
     datasource = _PicklableDatasource(seed=2, n_units=1, n_samples=10, n_features=2)
     manager = _make_manager()
     preprocessor = PreProcessor(
@@ -128,8 +128,45 @@ def test_pipeline_get_processed_data_dict_shape():
         transforms=manager,
     )
     preprocessor.pipeline()
-    data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
+    data_dict = preprocessor.get_processed_split_dict(
+        view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+    )
     _assert_split_dict_structure(data_dict)
+
+
+def test_pipeline_get_processed_split_dict_can_unwrap_singletons():
+    """Explicit singleton unwrapping is still available through the preprocessor API."""
+    datasource = _PicklableDatasource(seed=22, n_units=1, n_samples=10, n_features=2)
+    manager = _make_manager()
+    preprocessor = PreProcessor(
+        datasource=datasource,
+        transforms=manager,
+    )
+
+    preprocessor.pipeline()
+    data_dict = preprocessor.get_processed_split_dict(
+        view_policy=SplitViewPolicy.UNWRAP_SINGLETONS
+    )
+
+    assert hasattr(data_dict["train"]["features"], "shape")
+    assert hasattr(data_dict["train"]["target"], "shape")
+
+
+def test_pipeline_get_processed_split_dict_unwrap_rejects_multi_unit_data():
+    """Preprocessor split export should reject singleton unwrapping for multi-unit splits."""
+    datasource = _PicklableDatasource(seed=23, n_units=2, n_samples=10, n_features=2)
+    manager = _make_manager()
+    preprocessor = PreProcessor(
+        datasource=datasource,
+        transforms=manager,
+    )
+
+    preprocessor.pipeline()
+
+    with pytest.raises(ValueError, match="requires exactly one unit"):
+        preprocessor.get_processed_split_dict(
+            view_policy=SplitViewPolicy.UNWRAP_SINGLETONS
+        )
 
 
 def test_pipeline_get_meta_data_dict():
@@ -167,7 +204,9 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
         cache_preprocessed=True,
     )
     assert result1 is not None
-    d1 = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
+    d1 = preprocessor.get_processed_split_dict(
+        view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+    )
 
     # Second run: should hit cache
     datasource2 = _PicklableDatasource(seed=4, n_units=1, n_samples=15, n_features=2)
@@ -182,7 +221,9 @@ def test_pipeline_with_cache_roundtrip(tmp_path):
         cache_preprocessed=True,
     )
     assert result2 is not None
-    d2 = preprocessor2.get_processed_data_dict(return_splits_on_first_level=True)
+    d2 = preprocessor2.get_processed_split_dict(
+        view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+    )
 
     _assert_split_dict_structure(d1)
     _assert_split_dict_structure(d2)
@@ -216,7 +257,9 @@ def test_run_contract_get_split_mode_then_pipeline(
         transforms=manager,
     )
     preprocessor.pipeline()
-    data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
+    data_dict = preprocessor.get_processed_split_dict(
+        view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+    )
     meta = preprocessor.get_meta_data_dict()
     _assert_split_dict_structure(data_dict)
     assert isinstance(meta, dict)
@@ -384,7 +427,9 @@ def test_run_contract_with_real_loader():
     )
     result = preprocessor.pipeline()
     assert result is not None
-    data_dict = preprocessor.get_processed_data_dict(return_splits_on_first_level=True)
+    data_dict = preprocessor.get_processed_split_dict(
+        view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+    )
     meta = preprocessor.get_meta_data_dict()
     _assert_split_dict_structure(data_dict)
     assert isinstance(meta, dict)

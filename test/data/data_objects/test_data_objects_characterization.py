@@ -1,14 +1,19 @@
 """
 Characterization tests for DatasetContainer and SplitDatasetContainer (Phase 0).
 
-Covers: single vs multi-unit normalization, optional manifest/slice_info,
-validate(), to_split_dict(), group_by_split(), get_instance_cls().
+Covers: split payload normalization, cardinality reporting, validate(),
+to_split_dict(), group_by_split(), get_instance_cls().
 """
 
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects.data import (
+    DatasetContainer,
+    SplitDatasetContainer,
+    SplitUnitCardinality,
+    SplitViewPolicy,
+)
 from picid.data.data_objects.base import BaseDataObjectWithMetadata
 
 
@@ -50,22 +55,22 @@ def multi_unit_split_container():
     )
 
 
-# ----- DatasetContainer: single vs multi-unit normalization -----
+# ----- DatasetContainer: split payload normalization -----
 
 
 def test_dataset_container_single_unit_normalization():
-    """Single arrays per split are wrapped in lists (is_multi_unit becomes False)."""
+    """Single arrays per split are wrapped in canonical one-unit lists."""
     c = DatasetContainer(
         features={"train": np.zeros((10, 2)), "val": np.zeros((5, 2))},
         target={"train": np.zeros((10, 1)), "val": np.zeros((5, 1))},
     )
-    assert c.is_multi_unit is False
     assert len(c["features"]["train"]) == 1
     assert c["features"]["train"][0].shape == (10, 2)
+    assert c.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
 
 
 def test_dataset_container_multi_unit():
-    """Explicit list of arrays per split stays as-is."""
+    """Explicit lists per split stay as-is and report multi-unit cardinality."""
     c = DatasetContainer(
         features={
             "train": [np.zeros((10, 2)), np.zeros((10, 2))],
@@ -77,6 +82,57 @@ def test_dataset_container_multi_unit():
         },
     )
     assert len(c["features"]["train"]) == 2
+    assert c.unit_cardinality == SplitUnitCardinality.MIXED
+
+
+def test_dataset_container_multi_unit_per_split_cardinality():
+    """Two-or-more units in every populated split report MULTI_UNIT_PER_SPLIT."""
+    c = DatasetContainer(
+        features={
+            "train": [np.zeros((10, 2)), np.zeros((10, 2))],
+            "val": [np.zeros((5, 2)), np.zeros((5, 2))],
+        },
+        target={
+            "train": [np.zeros((10, 1)), np.zeros((10, 1))],
+            "val": [np.zeros((5, 1)), np.zeros((5, 1))],
+        },
+    )
+
+    assert c.unit_cardinality == SplitUnitCardinality.MULTI_UNIT_PER_SPLIT
+
+
+def test_dataset_container_empty_cardinality_for_empty_lists():
+    """All-empty splits report EMPTY cardinality without special flags."""
+    c = DatasetContainer(
+        features={"train": [], "val": [], "test": []},
+        target={"train": [], "val": [], "test": []},
+    )
+
+    assert c.unit_cardinality == SplitUnitCardinality.EMPTY
+
+
+def test_dataset_container_ignores_metadata_for_cardinality():
+    """Metadata payloads do not affect split cardinality calculation."""
+    c = DatasetContainer(
+        features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
+        target={"train": [np.zeros((10, 1))], "val": [np.zeros((5, 1))]},
+        metadata={
+            "train": [{"unit_name": "u1"}, {"unit_name": "u2"}],
+            "val": [{"unit_name": "u3"}],
+        },
+    )
+
+    assert c.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+
+
+def test_dataset_container_constructor_derives_cardinality_from_payload():
+    """Constructor derives cardinality from normalized split payloads alone."""
+    c = DatasetContainer(
+        features={"train": np.zeros((10, 2)), "val": np.zeros((5, 2))},
+        target={"train": np.zeros((10, 1)), "val": np.zeros((5, 1))},
+    )
+
+    assert c.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
 
 
 # ----- SplitDatasetContainer.validate() -----
@@ -108,29 +164,94 @@ def test_split_container_validate_inconsistent_units_raises():
             "test": [np.zeros((30, 1))],
         },
     )
-    # Current implementation: nested values are container instances, not dicts,
-    # so all_splits may be empty and validate() does not raise. Just ensure validate runs.
-    c.validate()
+    with pytest.raises(AssertionError, match="same number of units per split"):
+        c.validate()
+
+
+def test_dataset_container_split_name_mismatch_raises():
+    """Split alignment assertions fire when payload keys expose different split names."""
+    c = SplitDatasetContainer(
+        features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
+        target={"train": [np.zeros((10, 1))], "test": [np.zeros((5, 1))]},
+    )
+
+    with pytest.raises(AssertionError, match="same split names"):
+        _ = c.unit_cardinality
 
 
 # ----- to_split_dict() -----
 
 
 def test_split_container_to_split_dict_structure(single_unit_split_container):
-    """to_split_dict() returns {split: {data_key: list or single array}}."""
+    """Default to_split_dict() keeps the canonical list-per-unit view."""
     d = single_unit_split_container.to_split_dict()
     assert set(d.keys()) == {"train", "val", "test"}
     assert "features" in d["train"]
     assert "target" in d["train"]
-    # Single unit: to_split_dict returns single element per key for is_multi_unit=False
     assert isinstance(d["train"]["features"], list)
     assert len(d["train"]["features"]) == 1
+
+
+def test_split_container_to_split_dict_explicit_singleton_unwrap():
+    """UNWRAP_SINGLETONS turns one-unit split lists into direct payload values."""
+    c = SplitDatasetContainer(
+        features={"train": np.zeros((10, 2)), "val": np.zeros((5, 2))},
+        target={"train": np.zeros((10, 1)), "val": np.zeros((5, 1))},
+    )
+
+    d = c.to_split_dict(SplitViewPolicy.UNWRAP_SINGLETONS)
+
+    assert isinstance(d["train"]["features"], np.ndarray)
+    assert d["train"]["features"].shape == (10, 2)
+
+
+def test_split_container_to_split_dict_unwrap_raises_for_multi_unit():
+    """UNWRAP_SINGLETONS raises when any populated split has multiple units."""
+    with pytest.raises(ValueError, match="requires exactly one unit"):
+        multi_unit_split_container = SplitDatasetContainer(
+            features={
+                "train": [np.random.randn(100, 5), np.random.randn(100, 5)],
+                "val": [np.random.randn(30, 5), np.random.randn(30, 5)],
+            },
+            target={
+                "train": [np.random.randn(100, 1), np.random.randn(100, 1)],
+                "val": [np.random.randn(30, 1), np.random.randn(30, 1)],
+            },
+        )
+        multi_unit_split_container.to_split_dict(SplitViewPolicy.UNWRAP_SINGLETONS)
+
+
+def test_split_container_to_split_dict_unwrap_raises_for_mixed_cardinality():
+    """UNWRAP_SINGLETONS raises when split cardinality mixes one-unit and multi-unit splits."""
+    c = SplitDatasetContainer(
+        features={
+            "train": [np.random.randn(100, 5), np.random.randn(100, 5)],
+            "val": [np.random.randn(30, 5)],
+        },
+        target={
+            "train": [np.random.randn(100, 1), np.random.randn(100, 1)],
+            "val": [np.random.randn(30, 1)],
+        },
+    )
+
+    with pytest.raises(ValueError, match="requires exactly one unit"):
+        c.to_split_dict(SplitViewPolicy.UNWRAP_SINGLETONS)
 
 
 def test_split_container_to_split_dict_empty():
     """Empty container returns {}."""
     c = SplitDatasetContainer()
     assert c.to_split_dict() == {}
+
+
+def test_dataset_container_repr_marks_invalid_cardinality():
+    """__repr__ should stay safe even when split alignment is invalid."""
+    c = SplitDatasetContainer(
+        features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
+        target={"train": [np.zeros((10, 1))], "test": [np.zeros((5, 1))]},
+    )
+
+    assert "unit_cardinality=invalid" in repr(c)
 
 
 # ----- group_by_split() -----

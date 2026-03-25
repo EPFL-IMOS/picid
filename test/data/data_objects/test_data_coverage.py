@@ -11,6 +11,8 @@ from picid.data.data_objects.data import (
     DatasetContainer,
     NamedTransformInput,
     SplitDatasetContainer,
+    SplitUnitCardinality,
+    SplitViewPolicy,
 )
 
 
@@ -32,7 +34,7 @@ def test_dataset_container_repr_empty():
 
 
 def test_dataset_container_repr_with_data():
-    """__repr__ on DatasetContainer with data includes keys, splits, unit counts."""
+    """__repr__ on DatasetContainer includes keys, splits, unit counts, and cardinality."""
     c = DatasetContainer(
         features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
         target={"train": [np.zeros((10, 1))], "val": [np.zeros((5, 1))]},
@@ -43,7 +45,7 @@ def test_dataset_container_repr_with_data():
     assert "target" in r
     assert "train" in r
     assert "val" in r
-    assert "is_multi_unit" in r
+    assert "unit_cardinality" in r
 
 
 def test_split_dataset_container_repr_includes_unit_counts():
@@ -65,7 +67,7 @@ def test_split_dataset_container_repr_includes_unit_counts():
     # Unit counts e.g. {'train': 2, 'val': 1}
     assert "'train': 2" in r or '"train": 2' in r
     assert "'val': 1" in r or '"val": 1' in r
-    assert "is_multi_unit=True" in r
+    assert "unit_cardinality=mixed" in r
 
 
 def test_dataset_container_repr_no_recursion():
@@ -92,17 +94,27 @@ def test_split_container_validate_empty():
     c.validate()
 
 
-def test_split_container_to_split_dict_single_unit_unwraps():
-    """to_split_dict() when is_multi_unit is False stores unit_list[0] per key."""
-    # Pass non-list per split so container wraps and sets is_multi_unit=False
+def test_split_container_to_split_dict_single_unit_keeps_lists_by_default():
+    """Default to_split_dict() preserves list-of-one payloads for one-unit splits."""
     c = SplitDatasetContainer(
         features={"train": np.zeros((10, 2)), "val": np.zeros((5, 2))},
         target={"train": np.zeros((10, 1)), "val": np.zeros((5, 1))},
     )
-    assert c.is_multi_unit is False
     d = c.to_split_dict()
     assert "train" in d
     assert "features" in d["train"]
+    assert isinstance(d["train"]["features"], list)
+    assert d["train"]["features"][0].shape == (10, 2)
+    assert c.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+
+
+def test_split_container_to_split_dict_single_unit_unwraps_explicitly():
+    """Explicit unwrapping keeps legacy behavior available without being implicit."""
+    c = SplitDatasetContainer(
+        features={"train": np.zeros((10, 2)), "val": np.zeros((5, 2))},
+        target={"train": np.zeros((10, 1)), "val": np.zeros((5, 1))},
+    )
+    d = c.to_split_dict(SplitViewPolicy.UNWRAP_SINGLETONS)
     assert isinstance(d["train"]["features"], np.ndarray)
     assert d["train"]["features"].shape == (10, 2)
 
@@ -156,7 +168,7 @@ def test_split_container_validate_inconsistent_unit_counts_raises():
         "train": [np.zeros((10, 1))],  # 1 unit vs 2 for features/train
         "val": [np.zeros((5, 1))],
     }
-    with pytest.raises(ValueError, match="Inconsistent number of units"):
+    with pytest.raises(AssertionError, match="same number of units per split"):
         c.validate()
 
 

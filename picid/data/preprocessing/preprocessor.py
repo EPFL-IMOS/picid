@@ -55,7 +55,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 
 from picid.data.cache.offline import FileSystemCache
-from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
@@ -153,21 +153,20 @@ class PreProcessor(PreProcessorInterface):
     def get_meta_data_dict(self) -> dict:
         return self.meta_data
 
-    def get_processed_data_dict(
-        self, return_splits_on_first_level: bool = False
-    ) -> Union[DatasetContainer, Dict[str, Any]]:
-        """
-        Return the final processed data.
-
-        When return_splits_on_first_level is True, returns:
-            {split: {key: ndarray | list[ndarray]}}
-        Otherwise returns the DatasetContainer directly.
-        """
+    def get_processed_data_container(self) -> DatasetContainer:
+        """Return the final processed dataset container."""
         if not self._is_preprocessed or self.data is None:
             raise RuntimeError("Data has not been preprocessed. Run pipeline() first.")
-        if return_splits_on_first_level:
-            return self.data.to_split_dict()
         return self.data
+
+    def get_processed_split_dict(
+        self,
+        view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
+    ) -> Dict[str, Any]:
+        """Return the final processed data as a split-first dictionary view."""
+        return self.get_processed_data_container().to_split_dict(
+            view_policy=view_policy
+        )
 
     def get_cached_transform_manager(self) -> AnyTransformSequence:
         """Return the (possibly restored-from-cache) transform sequence."""
@@ -352,7 +351,8 @@ class PreProcessor(PreProcessorInterface):
                 )
 
                 pre_descr = to_descriptive_dict(
-                    data.to_split_dict()["train"], calculate_stat=False
+                    data.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)["train"],
+                    calculate_stat=False,
                 )
                 start_time = time.time()
 
@@ -378,7 +378,8 @@ class PreProcessor(PreProcessorInterface):
                 )
 
                 post_descr = to_descriptive_dict(
-                    data.to_split_dict()["train"], calculate_stat=False
+                    data.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)["train"],
+                    calculate_stat=False,
                 )
                 log_str = self._extract_log_string(transform_log)
 

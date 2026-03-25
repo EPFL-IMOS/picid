@@ -69,6 +69,7 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
 from picid.data.cache.file_lock import FileLock
+from picid.data.data_objects.data import SplitViewPolicy
 from picid.data.datasources.base.contracts import DatasourceProtocol
 
 from picid.data.preprocessing.preprocessor import PreProcessor
@@ -676,9 +677,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             _log_preprocessing_datasource_error(exc)
             raise
 
-        # TODO: return_splits_on_first_level is not clea..
-        data_dict = preprocessor.get_processed_data_dict(
-            return_splits_on_first_level=True
+        data_dict = preprocessor.get_processed_split_dict(
+            view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
         )
         meta_data_dict = preprocessor.get_meta_data_dict()
         if cache_preprocessed_flag:
@@ -688,8 +688,13 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             file_lock.release()
             log.info("Preprocessing file lock released.")
 
-    assert set(data_dict.keys()) == {"train", "val", "test"}
+    assert set(data_dict.keys()) == {
+        "train",
+        "val",
+        "test",
+    }, f"Expected splits 'train', 'val', 'test', but got {set(data_dict.keys())}"
 
+    # Check that the features are the same for all splits
     features_set = set(data_dict["train"].keys())
     for split in ["val", "test"]:
         assert set(data_dict[split].keys()) == features_set, (
@@ -697,6 +702,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
             f"Expected: {features_set}, "
             f"Found: {set(data_dict[split].keys())}"
         )
+
     # Potentially we can delete this line hence offloading explicitly stating the input keys in the .yaml files
     input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
 

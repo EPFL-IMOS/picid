@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-import copy
+from enum import StrEnum
 import logging
 import warnings
 from typing import Any, Dict, Generic, List, Optional, TypeVar
@@ -24,6 +24,22 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=(np.ndarray | ak.Array))
 ARRAY_LIKE_TYPES = (pd.DataFrame, pd.Series, np.ndarray, list, tuple)
+
+
+class SplitUnitCardinality(StrEnum):
+    """Describe how many units each populated split contains."""
+
+    EMPTY = "empty"
+    SINGLE_UNIT_PER_SPLIT = "single_unit_per_split"
+    MULTI_UNIT_PER_SPLIT = "multi_unit_per_split"
+    MIXED = "mixed"
+
+
+class SplitViewPolicy(StrEnum):
+    """Control how split-first views are exported from a container."""
+
+    KEEP_UNIT_LISTS = "keep_unit_lists"
+    UNWRAP_SINGLETONS = "unwrap_singletons"
 
 
 class NamedTransformInput(BaseDataObjectWithMetadata):
@@ -128,7 +144,6 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     def __init__(
         self,
         *args,
-        is_multi_unit: bool = True,
         manifest: Optional[MetadataManifest] = None,
         slice_info: Optional[SliceInfo] = None,
         **kwargs: Any,
@@ -138,7 +153,6 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         By default a new MetadataManifest is attached; pass manifest= to override.
         Optional slice_info= for slice-awareness (see SliceInfo).
         """
-        self.is_multi_unit: bool = is_multi_unit
         self.manifest: Optional[MetadataManifest] = (
             manifest if manifest is not None else MetadataManifest()
         )
@@ -149,21 +163,96 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         # also make sure that kwargs is empty when args has content and otherwise
         # also make sure that keys of args are the same
 
-        # Normalize the input data to ensure unit data is always in a list
+        # The base __init__ will now receive the normalized kwargs
+        super().__init__(**self._normalize_split_payloads(kwargs))
+        self._assert_internal_list_storage()
+
+    @staticmethod
+    def _normalize_split_payloads(kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Normalize split payloads so every split stores a list of units."""
+        normalized_kwargs: dict[str, Any] = {}
         for data_key, splits_dict in kwargs.items():
-            if isinstance(splits_dict, dict):
-                for split, data_for_split in splits_dict.items():
-                    # If the data for a split is not a list, wrap it in one
+            if isinstance(splits_dict, Mapping):
+                normalized_splits = dict(splits_dict)
+                for split, data_for_split in normalized_splits.items():
                     if not isinstance(data_for_split, list):
                         logger.info(
-                            f"Found single item for '{data_key}/{split}'. "
-                            "Wrapping it in a list for consistency."
+                            "Found single item for '%s/%s'. Wrapping it in a list "
+                            "for consistency.",
+                            data_key,
+                            split,
                         )
-                        self.is_multi_unit = False  # Found a single-unit entry
-                        splits_dict[split] = [data_for_split]
+                        normalized_splits[split] = [data_for_split]
+                normalized_kwargs[data_key] = normalized_splits
+            else:
+                normalized_kwargs[data_key] = splits_dict
+        return normalized_kwargs
 
-        # The base __init__ will now receive the normalized kwargs
-        super().__init__(**kwargs)
+    def _iter_split_payloads(
+        self, *, include_metadata: bool = True
+    ) -> list[tuple[str, Mapping[str, list[Any]]]]:
+        """Return top-level payloads that expose split-keyed mappings."""
+        payloads: list[tuple[str, Mapping[str, list[Any]]]] = []
+        for data_key, splits_data in self.items():
+            if data_key == "metadata" and not include_metadata:
+                continue
+            if isinstance(splits_data, Mapping):
+                payloads.append((data_key, splits_data))
+        return payloads
+
+    def _assert_internal_list_storage(self) -> None:
+        """Assert that every split payload is stored as a list of units."""
+        for data_key, splits_data in self._iter_split_payloads():
+            for split, unit_list in splits_data.items():
+                assert isinstance(unit_list, list), (
+                    f"Expected {data_key}/{split} to be stored as a list of units, "
+                    f"got {type(unit_list).__name__}."
+                )
+
+    def _get_unit_counts_by_split(self) -> dict[str, int]:
+        """Return one unit count per split after verifying structural alignment."""
+        payloads = self._iter_split_payloads(include_metadata=False)
+        if not payloads:
+            return {}
+
+        reference_key, reference_splits = payloads[0]
+        reference_split_names = set(reference_splits.keys())
+        split_counts = {
+            split: len(unit_list) for split, unit_list in reference_splits.items()
+        }
+
+        for data_key, splits_data in payloads[1:]:
+            current_split_names = set(splits_data.keys())
+            assert current_split_names == reference_split_names, (
+                "All payload keys must expose the same split names. "
+                f"{reference_key} has {sorted(reference_split_names)} while "
+                f"{data_key} has {sorted(current_split_names)}."
+            )
+            for split, unit_list in splits_data.items():
+                current_count = len(unit_list)
+                assert split_counts[split] == current_count, (
+                    "All payload keys must expose the same number of units per split. "
+                    f"{reference_key}/{split} has {split_counts[split]} units while "
+                    f"{data_key}/{split} has {current_count}."
+                )
+
+        return split_counts
+
+    @property
+    def unit_cardinality(self) -> SplitUnitCardinality:
+        """Describe how many units each populated split contains."""
+        counts = [
+            count for count in self._get_unit_counts_by_split().values() if count > 0
+        ]
+        if not counts:
+            return SplitUnitCardinality.EMPTY
+
+        unique_counts = set(counts)
+        if unique_counts == {1}:
+            return SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+        if all(count > 1 for count in unique_counts):
+            return SplitUnitCardinality.MULTI_UNIT_PER_SPLIT
+        return SplitUnitCardinality.MIXED
 
     # --- Public API Methods ---
 
@@ -181,15 +270,13 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         if not self:
             logger.info("MultiDatasetChunk is empty. Nothing to validate.")
             return
+        self._assert_internal_list_storage()
+        self._get_unit_counts_by_split()
 
     def copy(
         self: "BaseDataObjectWithMetadata[T]", deep: bool = True
     ) -> "BaseDataObjectWithMetadata[T]":
         new = super().copy(deep=deep)  # this already builds the _data
-        # fix up metadata separately
-        new.is_multi_unit = (
-            copy.deepcopy(self.is_multi_unit) if deep else self.is_multi_unit
-        )
         manifest_src = getattr(self, "manifest", None)
         if manifest_src is not None:
             object.__setattr__(new, "manifest", manifest_src.copy(deep=deep))
@@ -219,37 +306,43 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     def __repr__(self) -> str:
         summary = self._repr_summary()
-        multi = (
-            f", is_multi_unit={self.is_multi_unit}"
-            if hasattr(self, "is_multi_unit")
-            else ""
-        )
-        return f"{self.__class__.__name__}({summary}{multi})"
+        cardinality = ""
+        if self._iter_split_payloads(include_metadata=False):
+            try:
+                cardinality = f", unit_cardinality={self.unit_cardinality.value}"
+            except (AssertionError, ValueError):
+                cardinality = ", unit_cardinality=invalid"
+        return f"{self.__class__.__name__}({summary}{cardinality})"
 
 
 class SplitDatasetContainer(DatasetContainer, Generic[T]):
-    def __init__(self, *args, is_multi_unit: bool = True, **kwargs: Any):
+    def __init__(self, *args, **kwargs: Any):
         """
-        Default is_multi_unit=True because most PHM datasources produce multiple units per split.
-        When DatasetContainer receives non-list data, it wraps it and sets is_multi_unit=False.
-        See to_split_dict for the unwrap behavior when is_multi_unit=False.
+        Store split payloads in canonical list-per-unit form.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments forwarded to :class:`DatasetContainer`.
+        **kwargs : dict[str, Any]
+            Split-keyed payloads stored under data keys such as ``features`` or
+            ``target``.
         """
-        super().__init__(*args, is_multi_unit=is_multi_unit, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def validate(self):
         super().validate()
 
-        all_splits = set()
-        for splits_data in self.values():
-            if isinstance(splits_data, dict):
-                all_splits.update(splits_data.keys())
+        all_splits = set(self._get_unit_counts_by_split().keys())
 
         for split in sorted(list(all_splits)):
             # Check 1: Consistent NUMBER of units across all feature keys for this split
             split_list_lengths = {
                 len(self[key][split])
                 for key in self
-                if isinstance(self[key], dict) and split in self[key]
+                if key != "metadata"
+                and isinstance(self[key], Mapping)
+                and split in self[key]
             }
             if len(split_list_lengths) > 1:
                 raise ValueError(
@@ -266,7 +359,9 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
                 {
                     key
                     for key in self
-                    if isinstance(self[key], dict) and split in self[key]
+                    if key != "metadata"
+                    and isinstance(self[key], Mapping)
+                    and split in self[key]
                 }
                 for i in range(num_units)
             ]
@@ -284,12 +379,21 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
             "MultiDatasetChunk validation successful. All splits and units are consistent."
         )
 
-    def to_split_dict(self) -> Dict[str, Dict[str, List[Any]]]:
+    def to_split_dict(
+        self,
+        view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Reorganizes the data into a dictionary grouped by split.
 
         This method returns a dictionary where each split contains the original
-        lists of feature data, rather than lists of DataChunk objects.
+        payload lists, unless singleton unwrapping is explicitly requested.
+
+        Parameters
+        ----------
+        view_policy : SplitViewPolicy, default=SplitViewPolicy.KEEP_UNIT_LISTS
+            Export policy controlling whether per-split singleton lists remain
+            lists or are unwrapped to their first element.
 
         Returns:
             A dictionary where keys are splits ('train', 'val', 'test')
@@ -298,25 +402,23 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         if not self:
             return {}
 
-        all_splits = set()
-        for splits_data in self.values():
-            if isinstance(splits_data, Mapping):
-                all_splits.update(splits_data.keys())
+        split_counts = self._get_unit_counts_by_split()
+        all_splits = set(split_counts.keys())
+
+        if view_policy == SplitViewPolicy.UNWRAP_SINGLETONS:
+            if self.unit_cardinality != SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT:
+                raise ValueError(
+                    "SplitViewPolicy.UNWRAP_SINGLETONS requires exactly one unit in "
+                    "every populated split."
+                )
 
         split_dict = {split: {} for split in all_splits}
-        for data_key, splits_data in self.items():
-            if isinstance(splits_data, Mapping):
-                for split, unit_list in splits_data.items():
-                    if not self.is_multi_unit:
-                        assert len(unit_list) == 1, (
-                            "The number of units is greater than 1, although "
-                            "the data is set to be not multi_unit"
-                        )
-                        # Single-source data is represented as list-of-1 for API consistency.
-                        # Unwrap here so downstream receives a single array, not list of one.
-                        split_dict[split][data_key] = unit_list[0]
-                    else:
-                        split_dict[split][data_key] = unit_list
+        for data_key, splits_data in self._iter_split_payloads():
+            for split, unit_list in splits_data.items():
+                if view_policy == SplitViewPolicy.UNWRAP_SINGLETONS and unit_list:
+                    split_dict[split][data_key] = unit_list[0]
+                else:
+                    split_dict[split][data_key] = unit_list
 
         return split_dict
 

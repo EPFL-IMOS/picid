@@ -16,7 +16,9 @@ from picid.data.data_objects.data import (
     NamedTransformInput,
     ReturnObject,
     SimpleReturnObject,
+    SplitUnitCardinality,
     SplitDatasetContainer,
+    SplitViewPolicy,
 )
 from picid.data.data_objects.manifest import ManifestEntry, MetadataManifest
 from picid.data.data_objects.slice_info import SliceInfo
@@ -39,7 +41,9 @@ __all__ = [
     "ReturnObject",
     "SimpleReturnObject",
     "SliceInfo",
+    "SplitUnitCardinality",
     "SplitDatasetContainer",
+    "SplitViewPolicy",
     "ToDataFrameMixin",
     "ToNumpyMixin",
     "check_for_nans",

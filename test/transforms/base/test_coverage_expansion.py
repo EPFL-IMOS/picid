@@ -203,7 +203,6 @@ class TestStrategyCoverage:
         ragged = ak.Array([[1.0, 2.0], [3.0]])
         container = SplitDatasetContainer(
             features={"train": [ragged], "val": [ragged]},
-            is_multi_unit=False,
         )
         inner = container["features"]
         inner.get_instance_cls = (
@@ -234,7 +233,6 @@ class TestStrategyCoverage:
         transform = DummyStatelessTransform()
         container = SplitDatasetContainer(
             features={"train": [np.array([[1.0]])], "val": [np.array([[1.0]])]},
-            is_multi_unit=False,
         )
         container._data["features"] = NotMapping()
         with pytest.raises(

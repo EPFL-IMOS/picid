@@ -172,12 +172,11 @@ def test_n_cmapss_load_data_raises_when_file_missing():
         ds._load_data()
 
 
-def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
-    """Exercise full _load_data path with a minimal valid HDF5 fixture."""
+def _write_minimal_n_cmapss_h5(tmp_path: Path) -> None:
+    """Write a minimal fixture-backed N-CMAPSS HDF5 file."""
     import h5py
 
     n_rows = 50
-    # Minimal N-CMAPSS-like structure
     A_var = ["unit", "cycle", "Fc", "hs"]
     A = np.column_stack(
         [
@@ -220,22 +219,38 @@ def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
         f.create_dataset("T_var", data=np.array(T_var, dtype="S20"))
         f.create_dataset("A_var", data=np.array(A_var, dtype="S20"))
 
-    class LoadArgs:
-        mode = "train"
-        n_DS = 1
-        concepts = ["LPT", "HPT"]
+class _FixtureLoadArgs:
+    """Load arguments for the minimal HDF5 fixture scenario."""
 
-        @staticmethod
-        def get(k, d=None):
-            if k == "units":
-                return None
-            if k == "fc":
-                return 2
-            return d
+    mode = "train"
+    n_DS = 1
+    concepts = ["LPT", "HPT"]
+
+    @staticmethod
+    def get(k, d=None):
+        """Return the configured selector for the fixture-backed test."""
+        if k == "units":
+            return None
+        if k == "fc":
+            return 2
+        return d
+
+
+def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
+    """
+    Exercise full _load_data path with a minimal valid HDF5 fixture.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Temporary directory used to build the minimal HDF5 fixture.
+    """
+    _write_minimal_n_cmapss_h5(tmp_path)
+    expected_rows = 50
 
     ds = N_CMAPSSDataSource(
         path=str(tmp_path),
-        load_arguments=LoadArgs(),
+        load_arguments=_FixtureLoadArgs(),
         data_name="N_CMAPSS",
         task_mode="rul",
         group_by_unit=False,
@@ -244,5 +259,25 @@ def test_n_cmapss_load_with_minimal_h5_fixture(tmp_path):
     assert "features" in result
     assert "rul" in result
     assert "concepts" in result
-    assert result["features"].shape[0] == n_rows
-    assert result["concepts"].shape[0] == n_rows
+    assert result["features"].shape[0] == expected_rows
+    assert result["concepts"].shape[0] == expected_rows
+
+
+def test_n_cmapss_repeated_loads_on_same_instance_are_stable(tmp_path):
+    """Repeated load_data() calls on the same datasource instance stay stable."""
+    _write_minimal_n_cmapss_h5(tmp_path)
+    ds = N_CMAPSSDataSource(
+        path=str(tmp_path),
+        load_arguments=_FixtureLoadArgs(),
+        data_name="N_CMAPSS",
+        task_mode="rul",
+        group_by_unit=False,
+    )
+
+    ds.load_data()
+    first = ds.data_dict["concepts"].copy()
+
+    ds.load_data()
+    second = ds.data_dict["concepts"]
+
+    np.testing.assert_array_equal(first, second)

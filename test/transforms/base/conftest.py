@@ -261,7 +261,6 @@ def create_dummy_single_unit_container(n_samples=10, n_features=3):
             "train": [create_dummy_dense_data(n_samples, n_features)],
             "val": [create_dummy_dense_data(n_samples, n_features)],
         },
-        is_multi_unit=False,
     )
 
 

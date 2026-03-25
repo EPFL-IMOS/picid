@@ -93,18 +93,13 @@ def test_split_container_validate_consistent_units():
 
 
 def test_split_container_validate_inconsistent_units_raises():
-    """validate() raises when unit counts differ within a split (or completes without crash)."""
+    """validate() raises when unit counts differ within a split."""
     c = SplitDatasetContainer(
         features={"train": [np.zeros((10, 2)), np.zeros((10, 2)), np.zeros((10, 2))]},
         target={"train": [np.zeros((10, 1))]},
     )
-    try:
+    with pytest.raises(AssertionError, match="same number of units per split"):
         c.validate()
-    except ValueError as e:
-        assert "Inconsistent number of units" in str(e)
-        return
-    # If implementation does not raise, at least ensure no crash
-    assert True
 
 
 # ---------------------------------------------------------------------------
