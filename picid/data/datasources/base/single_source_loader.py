@@ -134,10 +134,6 @@ class SingleSourceLoader(AbstractDataSourceLoader):
         self._require_loaded("getting metadata")
         return {}
 
-    def get_data_names(self) -> tuple[str, ...]:
-        """Return the canonical single-source name tuple."""
-        return (self.data_name,)
-
     def _get_loaded_data_container(self) -> DatasetContainer:
         """Build a plain dataset container from the loaded payload."""
         self._require_loaded("getting data")

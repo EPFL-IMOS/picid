@@ -25,10 +25,9 @@ from picid.data.datasources.base.exceptions import (
 from picid.data.datasources.base.contracts import (
     CompositionDatasourceProtocol,
     LoaderState,
-    SplitMode,
 )
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
-from picid.data.preprocessing.splits import BySourceSplitter
+from picid.data.split_strategies import BySourceSplitter
 
 logger = logging.getLogger(__name__)
 
@@ -290,16 +289,6 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         self._require_loaded("getting metadata")
         return {}
 
-    def get_data_names(self) -> tuple[str, ...]:
-        """Return the outer datasource identity.
-
-        Returns
-        -------
-        tuple[str, ...]
-            Single-item tuple containing the composed datasource name.
-        """
-        return (self.data_name,)
-
     def get_source_names(self) -> tuple[str, ...]:
         """Return child datasource aliases in deterministic order.
 
@@ -321,19 +310,6 @@ class MultiSourceLoader(AbstractDataSourceLoader):
             own their own splits.
         """
         return self.multisource_data_splitter
-
-    def get_split_mode(self) -> str:
-        """Return the canonical split mode for the composed datasource.
-
-        Returns
-        -------
-        str
-            ``"within_units"`` when child datasources split themselves, or
-            ``"between_units"`` when a multisource splitter owns the split.
-        """
-        if self.multisource_data_splitter is None:
-            return SplitMode.WITHIN_UNITS.value
-        return SplitMode.BETWEEN_UNITS.value
 
     def get_cache_fingerprint(self) -> dict[str, Any]:
         """Return the cache identity for the composed datasource.

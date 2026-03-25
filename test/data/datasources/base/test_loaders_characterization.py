@@ -336,7 +336,7 @@ def test_multi_source_loader_get_multisource_data_splitter(
     assert loader_no.get_multisource_data_splitter() is None
 
     loader_yes = MultiSourceLoader(**two_sources_config_with_by_source_splitter)
-    from picid.data.preprocessing.splits import BySourceSplitter
+    from picid.data.split_strategies import BySourceSplitter
 
     assert isinstance(loader_yes.get_multisource_data_splitter(), BySourceSplitter)
 
@@ -461,7 +461,7 @@ def test_multi_source_loader_repr(
 # ----- Interface: get_split_mode -----
 
 
-def test_single_source_loader_get_split_mode_per_unit(in_memory_loader):
+def test_single_source_loader_get_split_mode_within_units(in_memory_loader):
     """SingleSourceLoader get_split_mode() returns the canonical within-units mode."""
     assert in_memory_loader.get_split_mode() == "within_units"
 

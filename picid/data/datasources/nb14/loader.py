@@ -389,6 +389,3 @@ class NB14Loader(PredefinedSplitLoaderBase):
     def get_multisource_data_splitter(self):
         """Return multisource data splitter."""
         return self.multisource_data_splitter
-
-    def get_split_mode(self):
-        return "within_units"

@@ -9,7 +9,7 @@ spreading the contract across multiple tiny modules.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
 
@@ -27,36 +27,6 @@ class SplitMode(StrEnum):
 
     WITHIN_UNITS = "within_units"
     BETWEEN_UNITS = "between_units"
-
-
-SplitModeLike: TypeAlias = SplitMode | str
-
-LEGACY_SPLIT_MODE_ALIASES: dict[str, SplitMode] = {
-    "per_unit": SplitMode.WITHIN_UNITS,
-    "cross_unit": SplitMode.BETWEEN_UNITS,
-}
-
-
-def normalize_split_mode(value: SplitModeLike) -> SplitMode:
-    """Normalize legacy split-mode aliases to the canonical enum.
-
-    Parameters
-    ----------
-    value : SplitModeLike
-        Canonical enum value or legacy string alias.
-
-    Returns
-    -------
-    SplitMode
-        Canonical split mode enum.
-    """
-
-    if isinstance(value, SplitMode):
-        return value
-    if value in LEGACY_SPLIT_MODE_ALIASES:
-        return LEGACY_SPLIT_MODE_ALIASES[value]
-    return SplitMode(value)
-
 
 @runtime_checkable
 class DatasourceProtocol(Protocol):

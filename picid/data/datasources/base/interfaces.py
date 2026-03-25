@@ -74,7 +74,7 @@ class AbstractDataSourceLoader(ABC):
         self.debug_subset_range = kwargs.get("debug_subset_range", None)
         self.debug_subsample_rate = kwargs.get("debug_subsample_rate", None)
 
-    def get_split_mode(self):
+    def get_split_mode(self) -> str:
         """Return the canonical split mode for the datasource.
 
         Returns
@@ -85,12 +85,9 @@ class AbstractDataSourceLoader(ABC):
             responsible for partitioning sources.
         """
 
-        if not self.multisource_data_splitter:
-            split_mode = SplitMode.WITHIN_UNITS.value
-        else:
-            split_mode = SplitMode.BETWEEN_UNITS.value
-
-        return split_mode
+        if self.multisource_data_splitter is None:
+            return SplitMode.WITHIN_UNITS.value
+        return SplitMode.BETWEEN_UNITS.value
 
     def __repr__(self):
         args = ", ".join(f"{k}={v!r}" for k, v in self._repr_config.items())

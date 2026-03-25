@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import pytest
 
-from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
+import picid.data.datasources.base as base_package
 from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.datasources.base.contracts import DatasourceProtocol, LoaderState
+from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
 
 class ConcreteLoader(AbstractDataSourceLoader):
@@ -29,9 +30,6 @@ class ConcreteLoader(AbstractDataSourceLoader):
     def get_data_name(self) -> str:
         return self.data_name
 
-    def get_data_names(self) -> tuple[str, ...]:
-        return (self.data_name,)
-
     def get_meta_data(self) -> dict:
         return {"data_name": self.data_name}
 
@@ -48,6 +46,12 @@ def test_interface_get_split_mode_within_units_when_no_multisource_splitter():
 def test_interface_get_split_mode_between_units_when_multisource_splitter_present():
     """get_split_mode returns the canonical between-units mode when a multisource splitter is provided."""
     loader = ConcreteLoader(multisource_data_splitter=object())
+    assert loader.get_split_mode() == "between_units"
+
+
+def test_interface_get_split_mode_treats_falsy_splitter_values_as_multisource():
+    """Split mode should key off None checks, not truthiness, for splitter presence."""
+    loader = ConcreteLoader(multisource_data_splitter=[])
     assert loader.get_split_mode() == "between_units"
 
 
@@ -159,3 +163,9 @@ def test_interface_protocol_keeps_composition_helpers_off_public_contract():
     """The public datasource protocol should not expose composition-only methods."""
     assert not hasattr(DatasourceProtocol, "get_loaded_data_for_composition")
     assert not hasattr(DatasourceProtocol, "get_split_data_for_composition")
+
+
+def test_base_package_does_not_export_legacy_split_mode_normalizer():
+    """Legacy split-mode normalization helpers are no longer part of the public base API."""
+    assert not hasattr(base_package, "normalize_split_mode")
+    assert "normalize_split_mode" not in getattr(base_package, "__all__", [])

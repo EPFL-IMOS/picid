@@ -11,7 +11,6 @@ from picid.data.datasources.base.contracts import (
     DatasourceProtocol,
     LoaderState,
     SplitMode,
-    normalize_split_mode,
 )
 from picid.data.datasources.base.exceptions import (
     DatasourceCompositionError,
@@ -37,5 +36,4 @@ __all__ = [
     "PredefinedSplitLoaderBase",
     "SingleSourceLoader",
     "SplitMode",
-    "normalize_split_mode",
 ]

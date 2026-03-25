@@ -207,6 +207,13 @@ def test_nb14_loader_read_data(mock_nb14_loader_deps):
 def test_nb14_loader_uses_predefined_split_base_and_rejects_multisource_splitter(
     mock_nb14_loader_deps,
 ):
+    loader = NB14Loader(
+        data_dir="fake/path",
+        data_name="NB14",
+        task_mode="prognostics",
+    )
+    assert loader.get_split_mode() == "within_units"
+
     with pytest.raises(
         DatasourceConfigurationError,
         match="does not accept multisource_data_splitter",
