@@ -150,12 +150,10 @@ def test_loaded_slices_match_saved(config_name: str):
         for k in keys
         if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))
     ]
-    if missing:
-        pytest.skip(
-            f"Container missing keys {missing} for {config_name}. "
-            "Data may be unavailable (e.g. PHMD not cached). "
-            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
-        )
+    assert not missing, (
+        f"Runtime container missing keys {missing} for {config_name}. "
+        "Expected PHME20 to be present via datasets/phmd_cache."
+    )
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -232,12 +230,10 @@ def test_transformed_slices_match_saved(config_name: str):
         for k in keys
         if not any(k in loaded_split_dict.get(s, {}) for s in ("train", "val", "test"))
     ]
-    if missing_loaded:
-        pytest.skip(
-            f"Pipeline input missing keys {missing_loaded} for {config_name}. "
-            "Data may be unavailable (e.g. PHMD not cached). "
-            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
-        )
+    assert not missing_loaded, (
+        f"Loaded runtime container missing keys {missing_loaded} for {config_name}. "
+        "Expected PHME20 to be present via datasets/phmd_cache."
+    )
     transforms_manager = ConfigTransformManager(transforms_config=tf_cfg)
     preprocessor = PreProcessor(
         datasource=datasource,
@@ -260,12 +256,10 @@ def test_transformed_slices_match_saved(config_name: str):
         for k in keys
         if not any(k in split_dict.get(s, {}) for s in ("train", "val", "test"))
     ]
-    if missing:
-        pytest.skip(
-            f"Pipeline output missing keys {missing} for {config_name}. "
-            "Data may be unavailable (e.g. PHMD not cached). "
-            "Run: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py --data-dir <datasets>"
-        )
+    assert not missing, (
+        f"Transformed runtime container missing keys {missing} for {config_name}. "
+        "Expected PHME20 to be present via datasets/phmd_cache."
+    )
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:

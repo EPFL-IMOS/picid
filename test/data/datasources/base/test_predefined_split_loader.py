@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects.data import SplitDatasetContainer, SplitUnitCardinality
 from picid.data.datasources.base.exceptions import (
     DatasourceConfigurationError,
     DatasourceStateError,
@@ -52,6 +52,27 @@ class FailingReloadPredefinedSplitLoader(InMemoryPredefinedSplitLoader):
         return super()._load_data()
 
 
+class SingleUnitPredefinedSplitLoader(InMemoryPredefinedSplitLoader):
+    def _load_data(self) -> dict:
+        return {
+            "features": {
+                "train": [np.ones((3, 2))],
+                "val": [np.ones((2, 2))],
+                "test": [np.ones((1, 2))],
+            },
+            "target": {
+                "train": [np.ones((3, 1))],
+                "val": [np.ones((2, 1))],
+                "test": [np.ones((1, 1))],
+            },
+            "metadata": {
+                "train": [{"unit_name": "u1"}],
+                "val": [{"unit_name": "u1"}],
+                "test": [{"unit_name": "u1"}],
+            },
+        }
+
+
 def test_predefined_split_loader_load_get_and_noop_split():
     loader = InMemoryPredefinedSplitLoader()
     loader.load_data()
@@ -61,6 +82,34 @@ def test_predefined_split_loader_load_get_and_noop_split():
     assert loader.get_data_names() == ("predefined",)
     assert loader.get_data_name() == "predefined"
     assert loader.get_split_mode() == "within_units"
+
+
+def test_predefined_split_loader_get_data_is_stable_across_repeated_calls():
+    """Repeated get_data() calls must preserve multi-unit semantics."""
+    loader = InMemoryPredefinedSplitLoader()
+    loader.load_data()
+
+    first = loader.get_data()
+    second = loader.get_data()
+
+    assert first.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    assert second.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    assert len(second.to_split_dict()["train"]["features"]) == 1
+
+
+def test_predefined_split_loader_one_unit_per_split_is_stable_across_repeated_calls():
+    """Repeated get_data() calls must preserve one-unit-per-split list storage."""
+    loader = SingleUnitPredefinedSplitLoader()
+    loader.load_data()
+
+    first = loader.get_data()
+    second = loader.get_data()
+
+    assert first.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    assert second.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    split_dict = second.to_split_dict()
+    assert len(split_dict["train"]["features"]) == 1
+    assert split_dict["train"]["features"][0].shape == (3, 2)
 
 
 def test_predefined_split_loader_rejects_multisource_splitter():

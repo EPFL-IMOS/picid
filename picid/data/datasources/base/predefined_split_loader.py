@@ -13,7 +13,7 @@ from abc import abstractmethod
 from typing import Any
 
 from picid.data.data_objects.data import SplitDatasetContainer
-from picid.data.datasources.base.contracts import LoaderState, SplitMode
+from picid.data.datasources.base.contracts import LoaderState
 from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
@@ -121,7 +121,9 @@ class PredefinedSplitLoaderBase(AbstractDataSourceLoader):
         self._require_loaded("getting data")
         self._require_split_ready("getting data")
         assert self.data_dict is not None, "Data container is not initialized."
-        return SplitDatasetContainer(**self.data_dict)
+        # Build the public container from a deep copy so metadata normalization
+        # inside SplitDatasetContainer cannot mutate the cached loader payload.
+        return SplitDatasetContainer(**deepcopy(self.data_dict))
 
     def get_meta_data(self) -> dict[str, Any]:
         """Return metadata associated with the predefined split payload.
@@ -139,28 +141,6 @@ class PredefinedSplitLoaderBase(AbstractDataSourceLoader):
 
         self._require_loaded("getting metadata")
         return self.meta_data
-
-    def get_data_names(self) -> tuple[str, ...]:
-        """Return the canonical datasource name tuple.
-
-        Returns
-        -------
-        tuple[str, ...]
-            Single-item tuple containing the datasource name.
-        """
-
-        return (self.data_name,)
-
-    def get_split_mode(self) -> str:
-        """Return the canonical predefined-split mode.
-
-        Returns
-        -------
-        str
-            Always ``"within_units"`` for predefined-split datasources.
-        """
-
-        return SplitMode.WITHIN_UNITS.value
 
     def get_cache_fingerprint(self) -> dict[str, Any]:
         """Return a stable fingerprint for predefined-split caching.
