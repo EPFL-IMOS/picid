@@ -39,6 +39,15 @@ SORT_METRIC_OVERRIDES: Dict[tuple, str] = {
 }
 
 
+DEFAULT_MODELS_WITHOUT_RERUN = [
+    "model.wrappers.fit_predict_xgboost_wrapper.FitPredictXGBoostWrapper",
+    "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper",
+    "model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper",
+]
+
+DEFAULT_MODELS_WITHOUT_RERUN_LOSS_REPLACEMENT_KEY = "mse_denormalized_mean"
+
+
 def get_sort_metric(
     dataset: str,
     model: str,
@@ -76,6 +85,8 @@ def get_sort_metric(
     """
     # 1. Check specific override
     key = (dataset, model)
+    out = DEFAULT_SORT_METRIC
+
     if key in SORT_METRIC_OVERRIDES:
         out = SORT_METRIC_OVERRIDES[key]
         logger.debug(
@@ -86,9 +97,8 @@ def get_sort_metric(
             dataset_category,
             out,
         )
-        return out
     # 2. Check task type default
-    if task_type and task_type in SORT_METRIC_BY_TASK_TYPE:
+    elif task_type and task_type in SORT_METRIC_BY_TASK_TYPE:
         out = SORT_METRIC_BY_TASK_TYPE[task_type]
         logger.debug(
             "get_sort_metric(%s, %s, ...) -> task_type %s -> %s",
@@ -97,9 +107,8 @@ def get_sort_metric(
             task_type,
             out,
         )
-        return out
     # 3. Check dataset category default
-    if dataset_category and dataset_category in SORT_METRIC_BY_DATASET_CATEGORY:
+    elif dataset_category and dataset_category in SORT_METRIC_BY_DATASET_CATEGORY:
         out = SORT_METRIC_BY_DATASET_CATEGORY[dataset_category]
         logger.debug(
             "get_sort_metric(%s, %s, ...) -> category %s -> %s",
@@ -108,15 +117,20 @@ def get_sort_metric(
             dataset_category,
             out,
         )
-        return out
-    # 4. Use global default (val_best_rerun/loss) when inference fails
-    logger.debug(
-        "get_sort_metric(%s, %s, ...) -> default %s",
-        dataset,
-        model,
-        DEFAULT_SORT_METRIC,
-    )
-    return DEFAULT_SORT_METRIC
+    else:
+        # 4. Use global default (val_best_rerun/loss) when inference fails
+        logger.debug(
+            "get_sort_metric(%s, %s, ...) -> default %s",
+            dataset,
+            model,
+            out,
+        )
+
+    if model in DEFAULT_MODELS_WITHOUT_RERUN:
+        out = out.replace("_best_rerun", "")
+        out = out.replace("loss", DEFAULT_MODELS_WITHOUT_RERUN_LOSS_REPLACEMENT_KEY)
+
+    return out
 
 
 def infer_task_type_from_dataset(dataset: str) -> Optional[str]:

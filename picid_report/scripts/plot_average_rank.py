@@ -41,6 +41,7 @@ CLASSIFICATION_LOGICAL_METRICS = [
     ("f1", ["test_best_rerun/f1", "test/f1"]),
 ]
 
+
 # Prefer mae_normalized so regression plots rank by MAE when available.
 # Include _mean variants so we match both CSV formats (e.g. test/mae_normalized vs test/mae_normalized_mean).
 def _reg_cands(base: str) -> list:
@@ -51,6 +52,7 @@ def _reg_cands(base: str) -> list:
         f"test_best_rerun/{base}_mean",
         f"test/{base}_mean",
     ]
+
 
 REGRESSION_LOGICAL_METRICS = [
     ("mae_normalized", _reg_cands("mae_normalized")),
@@ -133,7 +135,11 @@ def _load_summary_csv(path: Path):
 
 def _metrics_in_row(row1: list) -> set:
     """Set of metric names (lowercase) present in row1 (column headers)."""
-    return {(row1[i] or "").strip().lower() for i in range(1, len(row1)) if (row1[i] or "").strip()}
+    return {
+        (row1[i] or "").strip().lower()
+        for i in range(1, len(row1))
+        if (row1[i] or "").strip()
+    }
 
 
 def _metric_looks_classification(metric: str) -> bool:
@@ -176,7 +182,9 @@ def _column_has_parseable_value(col_idx: int, data_rows: list) -> bool:
 
 def _dataset_key(path: Path, dataset_name: str) -> str:
     """Unique key per (file, dataset) so the same dataset name from different files is not merged when ranking."""
-    run_id = path.parent.parent.name if path and path.parent and path.parent.parent else ""
+    run_id = (
+        path.parent.parent.name if path and path.parent and path.parent.parent else ""
+    )
     return f"{run_id}::{dataset_name}" if run_id else dataset_name
 
 
@@ -221,7 +229,9 @@ def pick_metric_and_collect_records_with_fallback(
             by_dataset[d] = [col_idx for col_idx, _ in by_dataset[d]]
         # At least one model must have a parseable value in at least one of these columns
         all_cols = {col_idx for cols in by_dataset.values() for col_idx in cols}
-        if not any(_column_has_parseable_value(col_idx, data_rows) for col_idx in all_cols):
+        if not any(
+            _column_has_parseable_value(col_idx, data_rows) for col_idx in all_cols
+        ):
             continue
         out = []
         for row in data_rows:
@@ -247,7 +257,9 @@ def pick_metric_and_collect_records_with_fallback(
     return None, []
 
 
-def pick_metric_and_collect_records(path: Path, candidates: list) -> tuple[str | None, list]:
+def pick_metric_and_collect_records(
+    path: Path, candidates: list
+) -> tuple[str | None, list]:
     """
     For a summary CSV, pick the first candidate metric that appears in row1 and has
     at least one parseable value. Return (chosen_metric, list of (dataset, model, value)).
@@ -256,7 +268,9 @@ def pick_metric_and_collect_records(path: Path, candidates: list) -> tuple[str |
     row0, row1, data_rows = _load_summary_csv(path)
     if row0 is None or row1 is None:
         return None, []
-    metrics_lower = {i: (row1[i] or "").strip().lower() for i in range(1, min(len(row0), len(row1)))}
+    metrics_lower = {
+        i: (row1[i] or "").strip().lower() for i in range(1, min(len(row0), len(row1)))
+    }
     for cand in candidates:
         cand_lower = cand.strip().lower()
         cols_to_use = []  # (col_idx, dataset_name)
@@ -266,7 +280,10 @@ def pick_metric_and_collect_records(path: Path, candidates: list) -> tuple[str |
                 cols_to_use.append((i, dataset))
         if not cols_to_use:
             continue
-        if not any(_column_has_parseable_value(col_idx, data_rows) for col_idx, _ in cols_to_use):
+        if not any(
+            _column_has_parseable_value(col_idx, data_rows)
+            for col_idx, _ in cols_to_use
+        ):
             continue
         out = []
         for row in data_rows:
@@ -352,7 +369,9 @@ def _format_metrics_label(metrics_used: list) -> str:
     counts = Counter(metrics_used)
     if len(counts) == 1:
         return list(counts.keys())[0]
-    parts = [f"{m} ({c})" for m, c in sorted(counts.items(), key=lambda x: (-x[1], x[0]))]
+    parts = [
+        f"{m} ({c})" for m, c in sorted(counts.items(), key=lambda x: (-x[1], x[0]))
+    ]
     return ", ".join(parts)
 
 
@@ -369,10 +388,14 @@ def compute_average_ranks(records: list, rank_mode: str = "min"):
     df["rank"] = df.groupby("dataset")["value"].rank(
         ascending=ascending, method="average", na_option="bottom"
     )
-    agg = df.groupby("model").agg(
-        average_rank=("rank", "mean"),
-        n_datasets=("dataset", "nunique"),
-    ).reset_index()
+    agg = (
+        df.groupby("model")
+        .agg(
+            average_rank=("rank", "mean"),
+            n_datasets=("dataset", "nunique"),
+        )
+        .reset_index()
+    )
     agg = agg.rename(columns={"model": "model_full"})
     agg["model_short"] = agg["model_full"].map(_shorten_model_name)
     agg = agg.sort_values("average_rank").reset_index(drop=True)
@@ -388,7 +411,9 @@ def compute_rank_one_dataset(records: list, rank_mode: str = "min"):
         return pd.DataFrame()
     df = pd.DataFrame(records, columns=["model", "value"])
     ascending = rank_mode == "min"
-    df["rank"] = df["value"].rank(ascending=ascending, method="average", na_option="bottom")
+    df["rank"] = df["value"].rank(
+        ascending=ascending, method="average", na_option="bottom"
+    )
     df = df.rename(columns={"model": "model_full", "rank": "average_rank"})
     df["model_short"] = df["model_full"].map(_shorten_model_name)
     df["n_datasets"] = 1
@@ -408,7 +433,9 @@ def compute_mean_scores(records: list) -> pd.DataFrame:
         df.groupby("model")["value"]
         .agg(["mean", "std", "count"])
         .reset_index()
-        .rename(columns={"mean": "mean_value", "std": "std_value", "count": "n_datasets"})
+        .rename(
+            columns={"mean": "mean_value", "std": "std_value", "count": "n_datasets"}
+        )
     )
     agg["std_value"] = agg["std_value"].fillna(0)
     agg = agg.rename(columns={"model": "model_full"})
@@ -445,7 +472,15 @@ def plot_average_rank(
     if "n_datasets" in df.columns:
         y_max = heights.max() if len(heights) else 0
         for i, (h, n) in enumerate(zip(heights, df["n_datasets"])):
-            ax.text(i, h + (y_max * 0.02 if y_max else 0.1), f"n={int(n)}", ha="center", va="bottom", fontsize=8, color="gray")
+            ax.text(
+                i,
+                h + (y_max * 0.02 if y_max else 0.1),
+                f"n={int(n)}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+                color="gray",
+            )
         ax.margins(y=0.06)
     plt.xticks(rotation=45, ha="right")
     fig.tight_layout()
@@ -464,6 +499,7 @@ def _scale_to_percent_if_needed(y, yerr, metric_label: str) -> tuple:
     (already in percent). Returns (y_scaled, yerr_scaled).
     """
     import numpy as np
+
     metric = (metric_label or "").strip().lower()
     if not any(m in metric for m in ("accuracy", "f1", "precision", "recall")):
         return y, yerr
@@ -517,13 +553,24 @@ def plot_metric_scores(
     ax.yaxis.grid(True, linestyle="--", alpha=0.5, color="gray")
     if "n_datasets" in df.columns:
         import numpy as np
+
         yerr_safe = np.nan_to_num(yerr, nan=0.0) if yerr is not None else None
         top = y + (yerr_safe if yerr_safe is not None else 0)
         y_plot_max = float(np.nanmax(top)) if len(top) else 0.0
         for i, (yi, ni) in enumerate(zip(y, df["n_datasets"])):
-            err_i = (yerr_safe[i] if yerr_safe is not None and i < len(yerr_safe) else 0.0)
+            err_i = (
+                yerr_safe[i] if yerr_safe is not None and i < len(yerr_safe) else 0.0
+            )
             label_y = yi + err_i + (y_plot_max * 0.02 if y_plot_max else 0.01)
-            ax.text(i, label_y, f"n={int(ni)}", ha="center", va="bottom", fontsize=8, color="gray")
+            ax.text(
+                i,
+                label_y,
+                f"n={int(ni)}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+                color="gray",
+            )
         ax.margins(y=0.06)
     plt.xticks(rotation=45, ha="right")
     fig.tight_layout()
@@ -576,10 +623,14 @@ def _save_per_dataset_score_plots(
         if df.empty:
             continue
         # Order bars by score: best first (higher_better => descending, else ascending)
-        df = df.sort_values("mean_value", ascending=not higher_better).reset_index(drop=True)
+        df = df.sort_values("mean_value", ascending=not higher_better).reset_index(
+            drop=True
+        )
         safe_name = _safe_filename(f"{dataset_key}_{metric}")
         out_path = task_dir / f"{safe_name}_scores.png"
-        display_name = dataset_key.split("::")[-1] if "::" in dataset_key else dataset_key
+        display_name = (
+            dataset_key.split("::")[-1] if "::" in dataset_key else dataset_key
+        )
         title = f"{metric} — {display_name} ({task_label})"
         plot_metric_scores(
             df,
@@ -614,7 +665,9 @@ def _save_per_dataset_rank_plots(
         safe_name = _safe_filename(f"{dataset_key}_{metric}")
         out_path = task_dir / f"{safe_name}.png"
         # Title: show dataset display name (after ::) if present
-        display_name = dataset_key.split("::")[-1] if "::" in dataset_key else dataset_key
+        display_name = (
+            dataset_key.split("::")[-1] if "::" in dataset_key else dataset_key
+        )
         title = f"Rank by {metric} — {display_name} ({task_label})"
         plot_average_rank(
             df,
@@ -696,7 +749,11 @@ def main():
         if df.empty:
             print("No data after computing ranks.", file=sys.stderr)
             sys.exit(1)
-        out_path = args.out if args.out is not None else output_dir / "plots" / "average_rank.png"
+        out_path = (
+            args.out
+            if args.out is not None
+            else output_dir / "plots" / "average_rank.png"
+        )
         out_path = out_path.resolve()
         plot_average_rank(
             df,
@@ -744,7 +801,9 @@ def main():
                 metrics_used.append(chosen)
             for dk, model, val, std, n_runs in recs:
                 all_records.append((dk, model, val))
-                records_with_metric.append((dk, model, val, std, n_runs, chosen or "accuracy"))
+                records_with_metric.append(
+                    (dk, model, val, std, n_runs, chosen or "accuracy")
+                )
         if all_records:
             df = compute_average_ranks(all_records, rank_mode="max")
             if not df.empty:
@@ -765,12 +824,17 @@ def main():
                 task_dir = plots_dir / "classification"
                 task_dir.mkdir(parents=True, exist_ok=True)
                 _save_per_dataset_rank_plots(
-                    records_with_metric, task_dir, rank_mode="max", task_label="classification"
+                    records_with_metric,
+                    task_dir,
+                    rank_mode="max",
+                    task_label="classification",
                 )
                 # Aggregate score plot (mean accuracy/f1 across datasets) and per-dataset score plots
                 df_scores = compute_mean_scores(all_records)
                 if not df_scores.empty:
-                    df_scores = df_scores.sort_values("mean_value", ascending=False).reset_index(drop=True)
+                    df_scores = df_scores.sort_values(
+                        "mean_value", ascending=False
+                    ).reset_index(drop=True)
                     score_png = plots_dir / "average_accuracy_classification.png"
                     plot_metric_scores(
                         df_scores,
@@ -782,7 +846,10 @@ def main():
                     )
                     print(f"Saved plot to {score_png}")
                     _save_per_dataset_score_plots(
-                        records_with_metric, task_dir, task_label="classification", higher_better=True
+                        records_with_metric,
+                        task_dir,
+                        task_label="classification",
+                        higher_better=True,
                     )
 
     if args.task_type in ("both", "regression") and regression_paths:
@@ -797,7 +864,9 @@ def main():
                 metrics_used.append(chosen)
             for dk, model, val, std, n_runs in recs:
                 all_records.append((dk, model, val))
-                records_with_metric.append((dk, model, val, std, n_runs, chosen or "loss"))
+                records_with_metric.append(
+                    (dk, model, val, std, n_runs, chosen or "loss")
+                )
         if all_records:
             df = compute_average_ranks(all_records, rank_mode="min")
             if not df.empty:
@@ -818,12 +887,17 @@ def main():
                 task_dir = plots_dir / "regression"
                 task_dir.mkdir(parents=True, exist_ok=True)
                 _save_per_dataset_rank_plots(
-                    records_with_metric, task_dir, rank_mode="min", task_label="regression"
+                    records_with_metric,
+                    task_dir,
+                    rank_mode="min",
+                    task_label="regression",
                 )
                 # Aggregate score plot (mean MAE/loss across datasets) and per-dataset score plots
                 df_scores = compute_mean_scores(all_records)
                 if not df_scores.empty:
-                    df_scores = df_scores.sort_values("mean_value", ascending=True).reset_index(drop=True)
+                    df_scores = df_scores.sort_values(
+                        "mean_value", ascending=True
+                    ).reset_index(drop=True)
                     score_png = plots_dir / "average_score_regression.png"
                     plot_metric_scores(
                         df_scores,
@@ -835,7 +909,10 @@ def main():
                     )
                     print(f"Saved plot to {score_png}")
                     _save_per_dataset_score_plots(
-                        records_with_metric, task_dir, task_label="regression", higher_better=False
+                        records_with_metric,
+                        task_dir,
+                        task_label="regression",
+                        higher_better=False,
                     )
 
     if not any_saved:

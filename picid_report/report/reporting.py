@@ -444,6 +444,11 @@ def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
             metric_used = opt_metric
 
     metric_bases = set(c.rsplit("_", 1)[0] for c in df.columns if c.endswith("_mean"))
+
+    # We cannot write in-place because of <key>_mean_mean is reduced to _mean which causes conflicts.
+    # Instead, we create a new df_out and add formatted columns to it.
+    df_out = df.copy()
+
     for base in metric_bases:
         m_col, s_col, c_col = f"{base}_mean", f"{base}_std", f"{base}_count"
         if m_col in df.columns and c_col in df.columns:
@@ -454,11 +459,16 @@ def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
                 std_val = (
                     row[s_col] if s_col in row and not pd.isna(row[s_col]) else 0.0
                 )
+
+                # print(
+                #     f"DEBUG: Formatting impact row for {base} with mean={row[m_col]}, std={std_val}, count={row[c_col]}"
+                # )
                 return format_mean_std_count(
                     row[m_col], std_val, int(row[c_col]), precision
                 )
 
-            df[base] = df.apply(format_impact_row, axis=1)
+            df_out[base] = df.apply(format_impact_row, axis=1)
+    df_out = df_out.copy()
 
     raw_stats, ignore = (
         ["_mean", "_std", "_count"],
@@ -470,7 +480,7 @@ def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
     )
     hp_cols = [
         c
-        for c in df.columns
+        for c in df_out.columns
         if not any(c.endswith(s) for s in raw_stats)
         and c not in ignore
         and c not in metric_bases
@@ -485,7 +495,7 @@ def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
         final_metrics.remove(opt_metric)
         final_metrics = [opt_metric] + final_metrics
 
-    return df[hp_cols + final_metrics].fillna("-"), metric_used
+    return df_out[hp_cols + final_metrics].fillna("-"), metric_used
 
 
 def iter_hp_impact_tables(
@@ -517,6 +527,8 @@ def iter_hp_impact_tables(
             else:
                 combo_sort_metric = sort_metric
 
+            # print(f"DEBUG: Processing {model} on {dataset}")
+            # print(res.keys())
             result = _build_hp_impact_df(res, precision, sort_metric=combo_sort_metric)
             if result is not None:
                 df, metric_used = result

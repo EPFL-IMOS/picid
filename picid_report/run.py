@@ -19,6 +19,9 @@ import re
 from collections import defaultdict
 from typing import Callable, List, Optional, Set, Tuple
 
+import numpy as np
+import xarray as xr
+
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -57,6 +60,92 @@ DEFAULT_REQUIRED_MODEL_SEEDS: Optional[Set[int]] = {72, 88, 101, 666, 226688}
 DEFAULT_ADDITIONAL_IGNORED_COLS = ["gpu_id", "slurm_job_id"]
 
 
+def all_results_to_xarray(
+    all_results: defaultdict, reporting_metrics: List[str]
+) -> xr.DataArray:
+    """Convert nested ``all_results`` into a single xarray.DataArray.
+
+    Dimensions: (dataset, model, metric, prefix, stat) where stat is one of
+    ``mean``, ``std``, ``count`` captured from ``best_performance.metrics``.
+    Missing entries are filled with NaN so the result is rectangular.
+    """
+
+    datasets = sorted(all_results.keys())
+    models = sorted({m for ds in all_results.values() for m in ds.keys()})
+
+    metrics_set = set(reporting_metrics or [])
+    prefixes_set = set()
+    stats = ["mean", "std", "count"]
+
+    # Discover all metrics/prefixes present in the results
+    for ds_results in all_results.values():
+        for res_entry in ds_results.values():
+            metrics_data = res_entry.get("best_performance", {}).get("metrics", {})
+            metrics_set.update(metrics_data.keys())
+            for prefix_dict in metrics_data.values():
+                prefixes_set.update(prefix_dict.keys())
+
+    metrics = sorted(metrics_set)
+    prefixes = sorted(prefixes_set)
+
+    dataset_idx = {name: i for i, name in enumerate(datasets)}
+    model_idx = {name: i for i, name in enumerate(models)}
+    metric_idx = {name: i for i, name in enumerate(metrics)}
+    prefix_idx = {name: i for i, name in enumerate(prefixes)}
+
+    data = np.full(
+        (
+            len(datasets),
+            len(models),
+            len(metrics),
+            len(prefixes),
+            len(stats),
+        ),
+        np.nan,
+    )
+
+    for dataset_name, model_dict in all_results.items():
+        d_i = dataset_idx.get(dataset_name)
+        if d_i is None:
+            continue
+        for model_name, res_entry in model_dict.items():
+            m_i = model_idx.get(model_name)
+            if m_i is None:
+                continue
+            metrics_data = res_entry.get("best_performance", {}).get("metrics", {})
+            for metric_name, prefix_dict in metrics_data.items():
+                k_i = metric_idx.get(metric_name)
+                if k_i is None:
+                    continue
+                for prefix_name, values in prefix_dict.items():
+                    p_i = prefix_idx.get(prefix_name)
+                    if p_i is None:
+                        continue
+                    for s_i, stat_name in enumerate(stats):
+                        val = values.get(stat_name)
+                        if val is None:
+                            continue
+                        try:
+                            data[d_i, m_i, k_i, p_i, s_i] = float(val)
+                        except (TypeError, ValueError):
+                            continue
+
+    coords = {
+        "dataset": datasets,
+        "model": models,
+        "metric": metrics,
+        "prefix": prefixes,
+        "stat": stats,
+    }
+
+    return xr.DataArray(
+        data,
+        coords=coords,
+        dims=("dataset", "model", "metric", "prefix", "stat"),
+        name="best_performance",
+    )
+
+
 def run_pipeline(
     project_name: str = DEFAULT_PROJECT_NAME,
     user: str = DEFAULT_USER,
@@ -76,7 +165,7 @@ def run_pipeline(
     precision: int = 4,
     output_dir: Optional[str] = None,
     export_laTeX: bool = False,
-    plot_metric: str = "test/mse",
+    plot_metric: str = "test/mae_denormalized",
     sort_metric: Optional[str] = None,
     report_filename: Optional[str] = None,
     quiet: bool = False,
@@ -288,6 +377,9 @@ def run_pipeline(
         if show_performance_tables:
             display_performance_tables(all_results, precision=precision)
         display_hp_impact(all_results, precision=precision, sort_metric=sort_metric)
+
+    all_results_xarr = all_results_to_xarray(all_results, reporting_metrics)
+
     summary_df = create_summary_table(
         all_results, precision=precision, sort_metric=sort_metric
     )

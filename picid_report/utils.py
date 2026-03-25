@@ -31,7 +31,11 @@ def format_mean_std_count(
     """
     std_val = std if not pd.isna(std) else 0.0
     cnt_val = int(count) if not isinstance(count, str) else count
+    # print(
+    # f"DEBUG: mean={mean}, std={std}, count={count} -> std_val={std_val}, cnt_val={cnt_val}"
+    # )
     return f"{mean:.{precision}f} ± {std_val:.{precision}f} (n={cnt_val})"
+    # return f"{mean} ± {std_val} (n={cnt_val})"
 
 
 def flatten_aggregated_columns(df: pd.DataFrame) -> pd.DataFrame:
