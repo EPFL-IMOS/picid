@@ -392,12 +392,14 @@ def compute_average_ranks(records: list, rank_mode: str = "min"):
         df.groupby("model")
         .agg(
             average_rank=("rank", "mean"),
+            std_rank=("rank", "std"),
             n_datasets=("dataset", "nunique"),
         )
         .reset_index()
     )
     agg = agg.rename(columns={"model": "model_full"})
     agg["model_short"] = agg["model_full"].map(_shorten_model_name)
+    agg["std_rank"] = agg["std_rank"].fillna(0)
     agg = agg.sort_values("average_rank").reset_index(drop=True)
     return agg
 
@@ -463,13 +465,27 @@ def plot_average_rank(
     fig, ax = plt.subplots(figsize=figsize)
     x = range(len(df))
     heights = df["average_rank"].values
-    ax.bar(x, heights, tick_label=df["model_short"])
+    yerr = df["std_rank"].values if "std_rank" in df.columns else None
+    ax.bar(
+        x,
+        heights,
+        tick_label=df["model_short"],
+        yerr=yerr,
+        capsize=4,
+        error_kw={"elinewidth": 1, "ecolor": "gray"},
+    )
     ax.set_ylabel(ylabel)
     ax.set_xlabel("Model")
     ax.set_title(title)
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, linestyle="--", alpha=0.5, color="gray")
     if "n_datasets" in df.columns:
+        cols = [
+            c
+            for c in ["model_short", "n_datasets", "average_rank", "std_rank"]
+            if c in df.columns
+        ]
+        # print(f"\n[DEBUG] n_datasets per model:\n{df[cols].to_string()}")
         y_max = heights.max() if len(heights) else 0
         for i, (h, n) in enumerate(zip(heights, df["n_datasets"])):
             ax.text(

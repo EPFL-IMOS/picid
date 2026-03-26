@@ -44,6 +44,7 @@ from picid_report import (
     load_runs_df,
     plot_best_metric_bars,
     plot_hp_impact,
+    plot_summary,
     validate_schema,
     clean_and_rename_models,
 )
@@ -61,48 +62,62 @@ DEFAULT_ADDITIONAL_IGNORED_COLS = ["gpu_id", "slurm_job_id"]
 
 
 def all_results_to_xarray(
-    all_results: defaultdict, reporting_metrics: List[str]
-) -> xr.DataArray:
-    """Convert nested ``all_results`` into a single xarray.DataArray.
+    all_results: defaultdict,
+    reporting_metrics: List[str],
+    project_name: str = "",
+) -> xr.Dataset:
+    """Convert nested ``all_results`` into an ``xr.Dataset``.
 
-    Dimensions: (dataset, model, metric, prefix, stat) where stat is one of
-    ``mean``, ``std``, ``count`` captured from ``best_performance.metrics``.
-    Missing entries are filled with NaN so the result is rectangular.
+    Variables with dims ``(dataset, model, metric_key)``:
+        ``mean``, ``std``, ``n`` — best-performance stats for each combined
+        ``"prefix/metric_name"`` key (e.g. ``"test_best_rerun/mae_normalized"``).
+
+    Variables with dims ``(dataset, model)`` — per-entry metadata:
+        ``sort_metric``  — metric key used to rank HP configs.
+        ``opt_metric``   — metric the model was optimised on during training.
+        ``opt_mode``     — ``"min"`` or ``"max"``.
+        ``opt_value``    — best value of the optimisation metric.
+        ``total_runs``   — total W&B runs for this (dataset, model).
+        ``configs_failed_seed``   — HP configs dropped due to incomplete seeds.
+        ``configs_failed_metric`` — HP configs dropped due to missing metric.
+
+    Dataset-level ``.attrs``: ``project_name``, ``reporting_metrics``,
+    ``created_at`` (ISO-8601 UTC).
     """
+    import datetime
 
     datasets = sorted(all_results.keys())
     models = sorted({m for ds in all_results.values() for m in ds.keys()})
 
-    metrics_set = set(reporting_metrics or [])
-    prefixes_set = set()
-    stats = ["mean", "std", "count"]
-
-    # Discover all metrics/prefixes present in the results
+    # Build the flat metric_key set: "prefix/metric_name"
+    metric_keys_set: set = set()
     for ds_results in all_results.values():
         for res_entry in ds_results.values():
             metrics_data = res_entry.get("best_performance", {}).get("metrics", {})
-            metrics_set.update(metrics_data.keys())
-            for prefix_dict in metrics_data.values():
-                prefixes_set.update(prefix_dict.keys())
+            for metric_name, prefix_dict in metrics_data.items():
+                for prefix_name in prefix_dict:
+                    metric_keys_set.add(f"{prefix_name}/{metric_name}")
+    metric_keys = sorted(metric_keys_set)
 
-    metrics = sorted(metrics_set)
-    prefixes = sorted(prefixes_set)
+    n_ds = len(datasets)
+    n_m = len(models)
+    n_k = len(metric_keys)
 
     dataset_idx = {name: i for i, name in enumerate(datasets)}
     model_idx = {name: i for i, name in enumerate(models)}
-    metric_idx = {name: i for i, name in enumerate(metrics)}
-    prefix_idx = {name: i for i, name in enumerate(prefixes)}
+    mk_idx = {key: i for i, key in enumerate(metric_keys)}
 
-    data = np.full(
-        (
-            len(datasets),
-            len(models),
-            len(metrics),
-            len(prefixes),
-            len(stats),
-        ),
-        np.nan,
-    )
+    arr_mean = np.full((n_ds, n_m, n_k), np.nan)
+    arr_std = np.full((n_ds, n_m, n_k), np.nan)
+    arr_n = np.full((n_ds, n_m, n_k), np.nan)
+
+    arr_sort_metric = np.full((n_ds, n_m), None, dtype=object)
+    arr_opt_metric = np.full((n_ds, n_m), None, dtype=object)
+    arr_opt_mode = np.full((n_ds, n_m), None, dtype=object)
+    arr_opt_value = np.full((n_ds, n_m), np.nan)
+    arr_total_runs = np.full((n_ds, n_m), np.nan)
+    arr_failed_seed = np.full((n_ds, n_m), np.nan)
+    arr_failed_metric = np.full((n_ds, n_m), np.nan)
 
     for dataset_name, model_dict in all_results.items():
         d_i = dataset_idx.get(dataset_name)
@@ -112,37 +127,78 @@ def all_results_to_xarray(
             m_i = model_idx.get(model_name)
             if m_i is None:
                 continue
+
+            # --- metric data ---
             metrics_data = res_entry.get("best_performance", {}).get("metrics", {})
             for metric_name, prefix_dict in metrics_data.items():
-                k_i = metric_idx.get(metric_name)
-                if k_i is None:
-                    continue
                 for prefix_name, values in prefix_dict.items():
-                    p_i = prefix_idx.get(prefix_name)
-                    if p_i is None:
+                    k_i = mk_idx.get(f"{prefix_name}/{metric_name}")
+                    if k_i is None:
                         continue
-                    for s_i, stat_name in enumerate(stats):
-                        val = values.get(stat_name)
-                        if val is None:
-                            continue
-                        try:
-                            data[d_i, m_i, k_i, p_i, s_i] = float(val)
-                        except (TypeError, ValueError):
-                            continue
+                    for arr, key in (
+                        (arr_mean, "mean"),
+                        (arr_std, "std"),
+                        (arr_n, "cnt"),  # stored as "cnt" in analysis.py
+                    ):
+                        val = values.get(key)
+                        if val is not None:
+                            try:
+                                arr[d_i, m_i, k_i] = float(val)
+                            except (TypeError, ValueError):
+                                pass
 
-    coords = {
-        "dataset": datasets,
-        "model": models,
-        "metric": metrics,
-        "prefix": prefixes,
-        "stat": stats,
-    }
+            # --- (dataset, model) metadata ---
+            arr_sort_metric[d_i, m_i] = res_entry.get("sort_metric_used")
 
-    return xr.DataArray(
-        data,
-        coords=coords,
-        dims=("dataset", "model", "metric", "prefix", "stat"),
-        name="best_performance",
+            opt = res_entry.get("best_performance", {}).get("optimized_on", {})
+            arr_opt_metric[d_i, m_i] = opt.get("metric")
+            arr_opt_mode[d_i, m_i] = opt.get("mode")
+            opt_val = opt.get("value")
+            if opt_val is not None:
+                try:
+                    arr_opt_value[d_i, m_i] = float(opt_val)
+                except (TypeError, ValueError):
+                    pass
+
+            for arr, key in (
+                (arr_total_runs, "total_runs"),
+                (arr_failed_seed, "configs_failed_not_full_seed_set"),
+                (arr_failed_metric, "configs_failed_missing_invalid_metric"),
+            ):
+                val = res_entry.get(key)
+                if val is not None:
+                    try:
+                        arr[d_i, m_i] = float(val)
+                    except (TypeError, ValueError):
+                        pass
+
+    dims3 = ("dataset", "model", "metric_key")
+    dims2 = ("dataset", "model")
+    coords3 = {"dataset": datasets, "model": models, "metric_key": metric_keys}
+    coords2 = {"dataset": datasets, "model": models}
+
+    return xr.Dataset(
+        {
+            "mean": xr.DataArray(arr_mean, dims=dims3, coords=coords3),
+            "std": xr.DataArray(arr_std, dims=dims3, coords=coords3),
+            "n": xr.DataArray(arr_n, dims=dims3, coords=coords3),
+            "sort_metric": xr.DataArray(arr_sort_metric, dims=dims2, coords=coords2),
+            "opt_metric": xr.DataArray(arr_opt_metric, dims=dims2, coords=coords2),
+            "opt_mode": xr.DataArray(arr_opt_mode, dims=dims2, coords=coords2),
+            "opt_value": xr.DataArray(arr_opt_value, dims=dims2, coords=coords2),
+            "total_runs": xr.DataArray(arr_total_runs, dims=dims2, coords=coords2),
+            "configs_failed_seed": xr.DataArray(
+                arr_failed_seed, dims=dims2, coords=coords2
+            ),
+            "configs_failed_metric": xr.DataArray(
+                arr_failed_metric, dims=dims2, coords=coords2
+            ),
+        },
+        attrs={
+            "project_name": project_name,
+            "reporting_metrics": list(reporting_metrics or []),
+            "created_at": datetime.datetime.utcnow().isoformat(),
+        },
     )
 
 
@@ -378,7 +434,9 @@ def run_pipeline(
             display_performance_tables(all_results, precision=precision)
         display_hp_impact(all_results, precision=precision, sort_metric=sort_metric)
 
-    all_results_xarr = all_results_to_xarray(all_results, reporting_metrics)
+    all_results_xarr = all_results_to_xarray(
+        all_results, reporting_metrics, project_name=project_name
+    )
 
     summary_df = create_summary_table(
         all_results, precision=precision, sort_metric=sort_metric
@@ -393,6 +451,7 @@ def run_pipeline(
         _save_outputs(
             output_dir=output_dir,
             all_results=all_results,
+            all_results_xarr=all_results_xarr,
             summary_df=summary_df,
             stats_df=stats_df,
             show_plots=show_plots,
@@ -416,6 +475,47 @@ def run_pipeline(
     return df, all_results, summary_df
 
 
+def combine_results_nc(output_base: str) -> xr.Dataset:
+    """Load all ``results.nc`` files under *output_base* and merge into one Dataset.
+
+    Each per-project ``results.nc`` typically covers a single dataset.  This
+    function concatenates them along the ``dataset`` dimension using an outer
+    join, so metric_keys that only exist in some projects (e.g. regression
+    metrics absent from classification projects) are filled with NaN.
+
+    Parameters
+    ----------
+    output_base : str
+        Root directory to search, e.g. ``"report_output"``.  All files
+        matching ``<output_base>/*/results.nc`` are loaded.
+
+    Returns
+    -------
+    xr.Dataset
+        Combined dataset with all datasets as coordinates.
+
+    Raises
+    ------
+    FileNotFoundError
+        When no ``results.nc`` files are found under *output_base*.
+    """
+    import glob as _glob
+
+    paths = sorted(_glob.glob(os.path.join(output_base, "*", "results.nc")))
+    if not paths:
+        raise FileNotFoundError(
+            f"No results.nc files found under {output_base!r}. "
+            "Run the pipeline with --output-dir first."
+        )
+
+    datasets = [xr.open_dataset(p) for p in paths]
+    logger.info("combine_results_nc: merging %d files from %s", len(paths), output_base)
+    combined = xr.concat(datasets, dim="dataset", join="outer", combine_attrs="drop_conflicts")
+    for ds in datasets:
+        ds.close()
+    return combined
+
+
 def _safe_basename(dataset: str, model: str, max_len: int = 80) -> str:
     """Sanitize dataset and model for use in filenames."""
     safe_ds = re.sub(r"[^\w\-.]", "_", str(dataset))[:max_len]
@@ -426,6 +526,7 @@ def _safe_basename(dataset: str, model: str, max_len: int = 80) -> str:
 def _save_outputs(
     output_dir: str,
     all_results: defaultdict,
+    all_results_xarr: xr.Dataset,
     summary_df: pd.DataFrame,
     stats_df: pd.DataFrame,
     show_plots: bool,
@@ -440,6 +541,11 @@ def _save_outputs(
     plots_dir = os.path.join(output_dir, "plots")
     os.makedirs(tables_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
+
+    # xarray Dataset
+    xarr_path = os.path.join(output_dir, "results.nc")
+    all_results_xarr.to_netcdf(xarr_path)
+    logger.info("xarray Dataset written to %s", xarr_path)
 
     # Summary table
     export_summary_table(
@@ -500,6 +606,26 @@ def _save_outputs(
     hp_impact_entries: List[Tuple[str, str, pd.DataFrame, str, str]] = []
 
     if show_plots:
+        # Summary heatmap (model × dataset) from xarray
+        _CLASSIFICATION_HINTS = ("accuracy", "auroc", "f1", "precision", "recall")
+        summary_mode = "max" if any(h in plot_metric for h in _CLASSIFICATION_HINTS) else "min"
+        # Derive a fallback prefix: strip _best_rerun so fit-predict models (XGBoost,
+        # TabPFN, TabDPT) fill in from their plain test/* or val/* metrics.
+        _fallback = plot_metric.replace("_best_rerun", "") if "_best_rerun" in plot_metric else None
+        summary_path = os.path.join(plots_dir, "summary.png")
+        fig_summary = plot_summary(
+            all_results_xarr, metric_key=plot_metric, mode=summary_mode,
+            fallback_metric_keys=[_fallback] if _fallback else None,
+            save_path=summary_path,
+        )
+        if fig_summary is not None:
+            try:
+                import matplotlib.pyplot as plt
+                plt.close(fig_summary)
+            except Exception:
+                pass
+            global_plots.append((f"Summary: {plot_metric}", "plots/summary.png"))
+
         # Bar chart of best metric
         bars_path = os.path.join(plots_dir, "best_metric_bars.png")
         fig_bars = plot_best_metric_bars(

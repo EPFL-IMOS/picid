@@ -49,4 +49,20 @@ while IFS= read -r proj || [[ -n "$proj" ]]; do
   echo ""
 done < "$PROJECTS_FILE"
 
+
+echo "=============================================="
+echo "Generating average rank plots..."
+echo "=============================================="
+uv run python -m picid_report.scripts.plot_average_rank --output-dir "$OUTPUT_BASE" "${EXTRA_ARGS[@]}" || \
+  echo "Warning: plot_average_rank failed (non-fatal)" >&2
+
+
+
+echo "=============================================="
+echo "Generating cross-dataset summary heatmaps..."
+echo "=============================================="
+uv run python -m picid_report.scripts.plot_summary_all -o "$OUTPUT_BASE" "${EXTRA_ARGS[@]}" || \
+  echo "Warning: plot_summary_all failed (non-fatal)" >&2
+
 echo "Done. Reports under $OUTPUT_BASE/<project_name>/<project_name>.html"
+echo "Cross-dataset heatmaps: $OUTPUT_BASE/plots/summary_regression.pdf, summary_classification.pdf"

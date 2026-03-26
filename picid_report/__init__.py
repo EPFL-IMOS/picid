@@ -25,6 +25,7 @@ from picid_report.report import (
     write_report_html,
     plot_best_metric_bars,
     plot_hp_impact,
+    plot_summary,
 )
 
 _logger = logging.getLogger("picid_report")
@@ -53,5 +54,6 @@ __all__ = [
     "load_runs_df",
     "plot_best_metric_bars",
     "plot_hp_impact",
+    "plot_summary",
     "validate_schema",
 ]

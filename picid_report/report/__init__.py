@@ -15,7 +15,7 @@ from picid_report.report.reporting import (
     write_tables_tex,
 )
 from picid_report.report.report_html import write_report_html
-from picid_report.report.plots import plot_best_metric_bars, plot_hp_impact
+from picid_report.report.plots import plot_best_metric_bars, plot_hp_impact, plot_summary
 
 __all__ = [
     "reporting",
@@ -33,4 +33,5 @@ __all__ = [
     "write_report_html",
     "plot_best_metric_bars",
     "plot_hp_impact",
+    "plot_summary",
 ]
