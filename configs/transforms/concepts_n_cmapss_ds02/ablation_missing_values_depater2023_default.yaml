@@ -10,6 +10,8 @@ mcar_corruption_train_val:
   metadata:
     transform_on_keys: ["train", "val"]
     apply_to: features
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 
 mcar_corruption_test:
@@ -24,6 +26,8 @@ mcar_corruption_test:
   metadata:
     transform_on_keys: ["test"]
     apply_to: features
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 
 missing_values_analytics:
@@ -33,6 +37,8 @@ missing_values_analytics:
 
   metadata:
     apply_to: features
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 imputation:
   transform:
@@ -42,6 +48,8 @@ imputation:
   metadata:
     fit_on: train
     apply_to: features
+    # This transforms introduces NaN into data which violates integrity checks, hence we turn off the validation for this transform
+    validate_output: False
 
 # To apply the plotter transform it is required to have ["features_imputed", "features_corrupted", "features"
 # plotter:
