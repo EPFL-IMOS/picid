@@ -22,7 +22,7 @@ import pytest
 import awkward as ak
 from typing import Tuple, Optional
 from dataclasses import dataclass
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
 
 
 # =============================================================================

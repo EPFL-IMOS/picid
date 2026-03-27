@@ -16,7 +16,7 @@ from picid.transforms.base.multisource import (
     find_singular_ragged_dim,
     tolist,
 )
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (

@@ -514,7 +514,7 @@ def test_unibo_loader_cache_fingerprint_captures_effective_anomaly_defaults():
 
 def test_unibo_loader_rejects_multisource_splitter_and_uses_predefined_splits():
     """UNIBO21 is predefined-split only, so a splitter config is ignored."""
-    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects import SplitDatasetContainer
     from picid.data.datasources.unibo.loader import UNIBO21Loader
 
     mock_data = {

@@ -14,7 +14,7 @@ from picid.transforms.base.data_kind import (
     infer_data_kind,
 )
 from picid.transforms.base.multisource import find_singular_ragged_dim
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 from test.transforms.base.conftest import (
     DummyStatelessTransform,

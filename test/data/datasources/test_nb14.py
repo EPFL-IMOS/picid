@@ -6,7 +6,7 @@ import awkward as ak
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 from picid.data.datasources.nb14 import loader as nb14_loader
 from picid.data.datasources.nb14.loader import NB14Loader, NasaRandomizedData, RulHandler

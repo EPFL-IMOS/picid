@@ -8,7 +8,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.datasources.base.exceptions import DatasourceConfigurationError
 from picid.data.datasources.airbus_helicopter import AirbusHelicopterLoader
 

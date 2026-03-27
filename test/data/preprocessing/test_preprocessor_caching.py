@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.datasources.base.exceptions import (
     DatasourceContractError,
     DatasourceLoadError,

@@ -48,7 +48,7 @@ from picid.transforms.bearings.health_index import (
     DEFAULT_TOTAL_LIFE_LOOKUP,
     DECREASE_PERIOD,
 )
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 
 # =============================================================================

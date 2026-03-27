@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 import awkward as ak
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base_transforms.identity import IdentityPassThrough
 from test.transforms.base.conftest import create_dummy_split_container
 

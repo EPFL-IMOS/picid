@@ -2,7 +2,7 @@ import numpy as np
 import awkward as ak
 import pytest
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.signal_processing.cumsum import CumSumTransform
 
 

@@ -13,7 +13,7 @@ import inspect
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.transforms.base.data_transform import DataTransform, _type_matches, _matches
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     SplitDatasetContainer,
 )
 

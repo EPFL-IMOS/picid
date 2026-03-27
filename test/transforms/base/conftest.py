@@ -20,7 +20,7 @@ from picid.transforms.base.multisource import (
     NoFitPerSegmentMixin,
     InverseTransformMixin,
 )
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     NamedTransformInput,
     SplitDatasetContainer,
 )

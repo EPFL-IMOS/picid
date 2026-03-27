@@ -59,7 +59,7 @@ def small_time_series_data():
 @pytest.fixture
 def sample_dataset_container():
     """Create a sample SplitDatasetContainer for testing."""
-    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects import SplitDatasetContainer
 
     return SplitDatasetContainer(
         features={
@@ -78,7 +78,7 @@ def sample_dataset_container():
 @pytest.fixture
 def multi_unit_dataset_container():
     """Create a multi-unit SplitDatasetContainer."""
-    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects import SplitDatasetContainer
 
     n_units = 3
     return SplitDatasetContainer(
@@ -247,7 +247,7 @@ def hourly_timestamp_data():
 @pytest.fixture
 def multi_source_data():
     """Create multiple source data for BySourceSplitter tests."""
-    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects import SplitDatasetContainer
 
     sources = {
         "source_a": SplitDatasetContainer(
@@ -269,7 +269,7 @@ def multi_source_data():
 @pytest.fixture
 def source_containers():
     """Create list of DatasetContainers for source splitting."""
-    from picid.data.data_objects.data import SplitDatasetContainer
+    from picid.data.data_objects import SplitDatasetContainer
 
     containers = [
         SplitDatasetContainer(

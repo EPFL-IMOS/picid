@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.battery.sequence2statistics import Sequence2Statistics
 
 

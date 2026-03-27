@@ -3,7 +3,7 @@ from typing import Any, Dict
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.transforms.base.base_transform import BaseTransform
 from picid.transforms.base.data_transform import DataTransform
 

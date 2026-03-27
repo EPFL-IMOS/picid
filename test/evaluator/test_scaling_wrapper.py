@@ -22,7 +22,7 @@ from picid.evaluator.scaling_wrapper import (
     ScalingWrapper,
     MultivariateTimeseriesScalingWrapper,
 )
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 
 # =============================================================================

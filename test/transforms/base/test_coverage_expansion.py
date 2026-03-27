@@ -15,7 +15,7 @@ from typing import Any, Dict
 from omegaconf import OmegaConf
 from sortedcontainers import SortedDict
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
 from picid.transforms.base.base_transform import DenseTransform, RaggedTransform
 from picid.transforms.base.strategy import TransformStrategy
 from picid.transforms.base.data_transform import DataTransform
@@ -801,7 +801,7 @@ class TestMultisourceCoverage:
 
     def test_transform_ragged_but_regular_returns_base_data_object(self):
         """Lines 402-403: ragged_but_regular path when transform returns BaseDataObjectWithMetadata."""
-        from picid.data.data_objects.base import BaseDataObjectWithMetadata
+        from picid.data.data_objects import BaseDataObjectWithMetadata
 
         regular_ak = ak.from_numpy(
             np.array([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])

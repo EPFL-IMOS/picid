@@ -515,7 +515,7 @@ class TestToDescriptiveDictBaseDataObject:
 
     def test_base_data_object_conversion(self):
         """to_descriptive_dict handles BaseDataObject like dict."""
-        from picid.data.data_objects.base import BaseDataObject
+        from picid.data.data_objects import BaseDataObject
 
         obj = BaseDataObject(x=np.array([1, 2, 3]))
         result = to_descriptive_dict(obj)

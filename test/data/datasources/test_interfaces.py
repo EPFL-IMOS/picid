@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 import picid.data.datasources.base as base_package
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.datasources.base.contracts import DatasourceProtocol, LoaderState
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 

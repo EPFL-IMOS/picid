@@ -12,7 +12,7 @@ from picid.transforms.base.base_transform import (
     RaggedTransform,
     RaggedOrDenseTransform,
 )
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (

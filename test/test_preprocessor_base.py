@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from picid.data.preprocessing.base import PreProcessorInterface
-from picid.data.data_objects.data import SplitDatasetContainer, SplitViewPolicy
+from picid.data.data_objects import SplitDatasetContainer, SplitViewPolicy
 
 
 class DummyPreprocessor(PreProcessorInterface):

@@ -9,7 +9,7 @@ from hydra import compose, initialize_config_dir
 from hydra.utils import instantiate
 from hydra.core.global_hydra import GlobalHydra
 
-from picid.data.data_objects.data import SplitViewPolicy
+from picid.data.data_objects import SplitViewPolicy
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.transforms.base.transform_manager import ConfigTransformManager
 

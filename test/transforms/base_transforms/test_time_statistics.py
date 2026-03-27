@@ -30,7 +30,7 @@ import pytest
 from scipy import stats as scipy_stats
 
 from picid.transforms.base_transforms.time_statistics import TimeStatsTransform
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 
 class TestTimeStatsTransformInitialization:

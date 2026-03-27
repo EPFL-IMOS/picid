@@ -18,7 +18,7 @@ from picid.data.datasources.base.exceptions import (
     DatasourceConfigurationError,
     DatasourceStateError,
 )
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 
 
 # ----- convert_outer_list_to_inner -----

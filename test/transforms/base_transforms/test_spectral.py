@@ -7,7 +7,7 @@ to ensure complete coverage of picid.transforms.base_transforms.spectral.
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base_transforms.spectral import SpectralStatsTransform
 
 

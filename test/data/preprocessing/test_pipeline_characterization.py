@@ -15,7 +15,7 @@ import pytest
 from omegaconf import OmegaConf
 from unittest.mock import MagicMock, patch
 
-from picid.data.data_objects.data import SplitDatasetContainer, SplitViewPolicy
+from picid.data.data_objects import SplitDatasetContainer, SplitViewPolicy
 from picid.data.datasources.base.exceptions import (
     DatasourceContractError,
     DatasourceLoadError,

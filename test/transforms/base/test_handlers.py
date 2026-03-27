@@ -17,7 +17,7 @@ from picid.transforms.base.handlers import (
     RaggedDenseHandler,
     RaggedRaggedHandler,
 )
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 from test.transforms.base.conftest import (
     DummyStatelessTransform,

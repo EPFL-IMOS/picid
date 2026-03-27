@@ -16,7 +16,7 @@ from picid.transforms.base.strategy import (
     postprocess_transformed_data,
 )
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     NamedTransformInput,
     SplitDatasetContainer,
     SimpleReturnObject,

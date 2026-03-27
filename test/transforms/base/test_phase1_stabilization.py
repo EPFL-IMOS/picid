@@ -23,7 +23,7 @@ import pytest
 import awkward as ak
 from typing import Any, Dict, Optional
 
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     NamedTransformInput,
     SplitDatasetContainer,
     SimpleReturnObject,
