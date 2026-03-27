@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 
 from numpy import ndarray
 
-from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
+from picid.data.data_objects import DatasetContainer, SplitViewPolicy
 from picid.data.datasources.base.contracts import DatasourceProtocol
 from picid.transforms.base.transform_pipeline import TransformSequenceProtocol
 

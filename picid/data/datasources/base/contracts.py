@@ -11,7 +11,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 
 
 class LoaderState(StrEnum):

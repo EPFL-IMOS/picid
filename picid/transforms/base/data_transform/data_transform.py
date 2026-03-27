@@ -29,7 +29,7 @@ import omegaconf
 from hydra.utils import instantiate
 from omegaconf.dictconfig import DictConfig
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
 from picid.transforms.base.base_transform import BaseTransform
 from picid.transforms.base.strategy import TransformStrategy
 

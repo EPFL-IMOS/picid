@@ -11,7 +11,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 from picid.data.datasources.base.contracts import LoaderState, SplitMode
 from picid.data.datasources.base.exceptions import (
     DatasourceConfigurationError,

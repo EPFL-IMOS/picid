@@ -69,7 +69,7 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
 from picid.data.cache.file_lock import FileLock
-from picid.data.data_objects.data import SplitViewPolicy
+from picid.data.data_objects import SplitViewPolicy
 from picid.data.datasources.base.contracts import DatasourceProtocol
 
 from picid.data.preprocessing.preprocessor import PreProcessor

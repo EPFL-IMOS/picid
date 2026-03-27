@@ -14,7 +14,7 @@ from typing import Any, Callable, List, Optional, Union
 
 import awkward as ak
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 # -----------------------------------------------------------------------------
 # Data kind: classification of data for dispatch

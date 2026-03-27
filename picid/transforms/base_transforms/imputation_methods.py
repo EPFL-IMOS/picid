@@ -6,7 +6,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.data.data_objects.utils import convert_to_numpy
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import ConcatFitAndPerSegmentTransformMixin

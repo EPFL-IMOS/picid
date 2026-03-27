@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 import awkward as ak
 import numpy as np
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.data_kind import (
     CAPABILITY_BOTH,
     CAPABILITY_DENSE,

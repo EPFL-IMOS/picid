@@ -26,7 +26,7 @@ import copy
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.data_kind import get_capability, infer_data_kind
 from picid.transforms.base.handlers import get_handler
 

@@ -13,7 +13,7 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.tree import Tree
 
-from picid.data.data_objects.base import BaseDataObject
+from picid.data.data_objects import BaseDataObject
 from picid.utils.awkward_utils import get_ak_shape, ak_find_var_dims
 
 

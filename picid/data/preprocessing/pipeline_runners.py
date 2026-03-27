@@ -11,7 +11,7 @@ import logging
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
 
-from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects import DatasetContainer
 from picid.data.datasources.base.exceptions import (
     DatasourceContractError,
     DatasourceError,

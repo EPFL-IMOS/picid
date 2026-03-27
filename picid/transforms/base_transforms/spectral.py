@@ -5,7 +5,7 @@ from numpy.fft import fft
 from scipy import stats
 from scipy.stats import entropy
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.data.data_objects.utils import convert_to_numpy

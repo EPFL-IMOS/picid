@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 import logging
 
-from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects import DatasetContainer
 
 logger = logging.getLogger(__name__)
 

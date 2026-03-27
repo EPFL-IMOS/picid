@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional, override
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 from picid.data.datasources.base.exceptions import (
     DatasourceCompositionError,
     DatasourceConfigurationError,

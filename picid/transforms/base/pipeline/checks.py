@@ -18,7 +18,7 @@ import logging
 import warnings
 from typing import Any, Callable, Dict, List, Tuple
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 
 from picid.transforms.base.pipeline.context import AfterCheck, BeforeCheck
 

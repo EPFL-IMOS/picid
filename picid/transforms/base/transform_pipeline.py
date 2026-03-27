@@ -60,7 +60,7 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from picid.transforms.base.data_transform import DataTransform
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.utils.hash_utils import ensure_serializable
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import awkward as ak
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform, RaggedTransform
 from picid.transforms.base.multisource import (
     NoFitPerSegmentMixin,

@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Optional, override
 import numpy as np
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
 from picid.data.data_objects.utils import convert_to_numpy
 

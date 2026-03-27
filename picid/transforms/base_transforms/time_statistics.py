@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats  # For skewness and kurtosis
 import scipy
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
 from picid.data.data_objects.utils import convert_to_numpy

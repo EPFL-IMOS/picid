@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # --- LIBRARY IMPORTS ---
 # These are the base classes you must inherit from or use
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
 

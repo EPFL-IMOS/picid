@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
 
 from picid.transforms.base.data_kind import get_capability, infer_data_kind
 from picid.transforms.base.handlers import get_handler

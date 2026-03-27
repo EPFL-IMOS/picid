@@ -10,7 +10,7 @@ DenseTransform / RaggedOrDenseTransform to declare capability for handler dispat
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.utils.decorators import check_transform_output_consistency
 
 

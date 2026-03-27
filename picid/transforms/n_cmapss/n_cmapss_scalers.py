@@ -4,7 +4,7 @@ import awkward as ak
 import numpy as np
 
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import (
     RaggedOrDenseTransform,
 )
