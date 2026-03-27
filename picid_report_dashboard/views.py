@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+import re
+
 import numpy as np
 import pandas as pd
 import panel as pn
@@ -46,30 +48,39 @@ def _shorten_model_name(name: str) -> str:
 def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
     """Shorten a dataset label for display in chart axes.
 
-    Handles the '[project_suffix]' appended by ResultsLoader for duplicates:
-    'MyDataset [16_03_2026_very_long_project_name]' -> 'MyDataset [long_project]'
+    Every dataset now carries a '[project_name]' suffix from ResultsLoader.
+    Strip the date prefix (e.g. '16_03_2026_') and drop 'MultiSource_' to save space.
+    'MultiSource_concepts_N-CMAPSS [16_03_2026_concepts_n_cmapss_prognostics_]'
+        -> 'N-CMAPSS [concepts_n_cmapss_prognostics]'
     """
-    if len(name) <= max_len:
-        return name
-    # If there's a project suffix, keep the dataset name and abbreviate the suffix
     if " [" in name and name.endswith("]"):
         ds_part, bracket = name.rsplit(" [", 1)
         suffix = bracket.rstrip("]")
-        # Take the last meaningful segment of the suffix (split by _ or -)
-        parts = [p for p in suffix.replace("-", "_").split("_") if p]
-        abbrev = "_".join(parts[-2:]) if len(parts) >= 2 else suffix[:12]
-        short = f"{ds_part} [{abbrev}]"
+        # Strip MultiSource_ prefix from dataset name
+        ds_part = re.sub(r"^MultiSource_", "", ds_part)
+        # Strip leading date stamp (dd_mm_yyyy_) from project suffix
+        suffix = re.sub(r"^\d{2}_\d{2}_\d{4}_", "", suffix).rstrip("_")
+        short = f"{ds_part} [{suffix}]"
         if len(short) <= max_len:
             return short
-        # If dataset name itself is still too long, truncate it
-        return ds_part[:max_len - len(abbrev) - 4] + f"… [{abbrev}]"
-    # No bracket — just truncate with ellipsis
-    return name[: max_len - 1] + "…"
+        # Abbreviate suffix to last 2 underscore-segments
+        parts = [p for p in suffix.split("_") if p]
+        abbrev = "_".join(parts[-2:]) if len(parts) >= 2 else suffix[:12]
+        return f"{ds_part} [{abbrev}]"
+    return name if len(name) <= max_len else name[: max_len - 1] + "…"
 
 
 # ---------------------------------------------------------------------------
 # Heatmap (model × dataset)
 # ---------------------------------------------------------------------------
+
+_ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
+
+
+def _is_alt_model(name: str) -> bool:
+    lower = name.lower()
+    return any(p in lower for p in _ALT_METRIC_MODELS)
+
 
 def build_heatmap(
     loader: ResultsLoader,
@@ -77,15 +88,41 @@ def build_heatmap(
     mode: str = "min",
     width: int = 900,
     height: int = 400,
+    alt_metric_key: str | None = None,
+    show_n: bool = True,
+    show_rank: bool = False,
 ) -> pn.viewable.Viewable:
     """Color-coded heatmap of mean metric values across datasets and models."""
     import holoviews as hv
     hv.extension("bokeh")
 
     df = loader.metric_matrix(metric_key, "mean")
+    n_df = loader.metric_matrix(metric_key, "n")
     # Melt to long form
     long = df.reset_index().melt(id_vars="index", var_name="model", value_name="value")
     long = long.rename(columns={"index": "dataset"})
+    n_long = n_df.reset_index().melt(id_vars="index", var_name="model", value_name="n")
+    n_long = n_long.rename(columns={"index": "dataset"})
+    long = long.merge(n_long, on=["dataset", "model"], how="left")
+
+    # Substitute alt metric values (and their n) before dropna so alt models aren't lost
+    if alt_metric_key:
+        alt_df = loader.metric_matrix(alt_metric_key, "mean")
+        alt_n_df = loader.metric_matrix(alt_metric_key, "n")
+        alt_long = alt_df.reset_index().melt(id_vars="index", var_name="model", value_name="alt_value")
+        alt_long = alt_long.rename(columns={"index": "dataset"})
+        alt_n_long = alt_n_df.reset_index().melt(id_vars="index", var_name="model", value_name="alt_n")
+        alt_n_long = alt_n_long.rename(columns={"index": "dataset"})
+        alt_map = alt_long.set_index(["dataset", "model"])["alt_value"]
+        alt_n_map = alt_n_long.set_index(["dataset", "model"])["alt_n"]
+        mask = long["model"].apply(_is_alt_model)
+        long.loc[mask, "value"] = long.loc[mask].apply(
+            lambda r: alt_map.get((r["dataset"], r["model"]), r["value"]), axis=1
+        )
+        long.loc[mask, "n"] = long.loc[mask].apply(
+            lambda r: alt_n_map.get((r["dataset"], r["model"]), r["n"]), axis=1
+        )
+
     long = long.dropna(subset=["value"])
 
     if long.empty:
@@ -95,33 +132,79 @@ def build_heatmap(
     long["model"] = long["model"].map(_shorten_model_name)
     long["dataset"] = long["dataset"].map(_shorten_dataset_name)
 
-    # Clamp outliers for color range
-    vmin = np.nanpercentile(long["value"], 2)
-    vmax = np.nanpercentile(long["value"], 98)
+    # Column-normalise: within each dataset, rank models 0→1
+    def _col_norm(x):
+        lo, hi = x.min(), x.max()
+        if hi == lo:
+            return pd.Series(0.5, index=x.index)
+        return (x - lo) / (hi - lo)
 
-    n_datasets = len(loader.datasets)
-    n_models = long["model"].nunique()
-    row_height = max(50, min(80, 400 // n_datasets))
-    plot_height = max(300, row_height * n_datasets)
-    # Reserve enough width per model column so labels don't crowd
-    col_width = max(55, min(80, 900 // max(n_models, 1)))
-    plot_width = max(600, col_width * n_models)
+    long["color"] = long.groupby("dataset")["value"].transform(_col_norm)
+    if mode == "min":
+        long["color"] = 1.0 - long["color"]
 
-    heatmap = hv.HeatMap(long, kdims=["model", "dataset"], vdims=["value"]).opts(
-        frame_width=plot_width,
+    # Average column: mean value per model, normalised independently across models
+    avg_val = long.groupby("model")["value"].mean()
+    avg_n = long.groupby("model")["n"].mean()
+    lo, hi = avg_val.min(), avg_val.max()
+    if hi > lo:
+        avg_color = (avg_val - lo) / (hi - lo)
+        if mode == "min":
+            avg_color = 1.0 - avg_color
+    else:
+        avg_color = pd.Series(0.5, index=avg_val.index)
+
+    # Sort models by average color (best at top)
+    model_order = avg_color.sort_values(ascending=False).index.tolist()
+
+    # Rank within each dataset (1 = best); computed before average rows are added
+    long["rank"] = long.groupby("dataset")["value"].rank(method="min", ascending=(mode == "min")).astype(int)
+
+    # Append average rows (placed last on x-axis); no rank for the average column
+    avg_rows = pd.DataFrame({
+        "dataset": "Average",
+        "model": avg_val.index,
+        "value": avg_val.values,
+        "n": avg_n.values,
+        "color": avg_color.reindex(avg_val.index).values,
+        "rank": pd.NA,
+    })
+    long = pd.concat([long, avg_rows], ignore_index=True)
+
+    dataset_order = [d for d in long["dataset"].unique() if d != "Average"] + ["Average"]
+
+    n_models = len(model_order)
+    row_height = max(30, min(60, 400 // max(n_models, 1)))
+    plot_height = max(300, row_height * n_models)
+
+    def _make_label(r):
+        rank_str = f"#{int(r['rank'])} " if (show_rank and pd.notna(r.get("rank"))) else ""
+        n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else (" (n=N/A)" if show_n else "")
+        return f"{rank_str}{r['value']:.2f}{n_str}"
+
+    long["label"] = long.apply(_make_label, axis=1)
+
+    model_dim = hv.Dimension("model", values=model_order)
+    dataset_dim = hv.Dimension("dataset", values=dataset_order)
+    heatmap = hv.HeatMap(long, kdims=[dataset_dim, model_dim], vdims=["color", "value"]).opts(
+        responsive=True,
         frame_height=plot_height,
-        colorbar=True,
-        clim=(vmin, vmax),
-        cmap="RdYlGn_r" if mode == "min" else "RdYlGn",
+        colorbar=False,
+        clim=(0.0, 1.0),
+        cmap="RdYlGn",
         tools=["hover"],
         xrotation=45,
-        title=f"{metric_key} (mean)",
+        title=f"{metric_key} (mean, col-normalised)",
         fontsize={"title": 13, "labels": 11, "ticks": 9},
-        labelled=[],         # suppress redundant "model" / "dataset" axis titles
+        labelled=[],
         toolbar="above",
-        responsive=True,
     )
-    return pn.pane.HoloViews(heatmap, sizing_mode="stretch_width", min_height=400)
+    labels = hv.Labels(long, kdims=[dataset_dim, model_dim], vdims=["label"]).opts(
+        text_color="white",
+        text_font_style="bold",
+        text_font_size="9pt",
+    )
+    return pn.pane.HoloViews(heatmap * labels, sizing_mode="stretch_width")
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +218,7 @@ def build_bar_chart(
     mode: str = "min",
     width: int = 700,
     height: int = 400,
+    alt_metric_key: str | None = None,
 ) -> pn.viewable.Viewable:
     """Horizontal bar chart with error bars for a single dataset."""
     import holoviews as hv
@@ -147,6 +231,14 @@ def build_bar_chart(
     std_row = loader.metric_matrix(metric_key, "std").loc[dataset]
 
     df = pd.DataFrame({"model": mean_row.index, "mean": mean_row.values, "std": std_row.values})
+
+    if alt_metric_key:
+        alt_mean = loader.metric_matrix(alt_metric_key, "mean").loc[dataset]
+        alt_std = loader.metric_matrix(alt_metric_key, "std").loc[dataset]
+        alt_mask = df["model"].apply(_is_alt_model)
+        df.loc[alt_mask, "mean"] = alt_mean.reindex(df.loc[alt_mask, "model"]).values
+        df.loc[alt_mask, "std"] = alt_std.reindex(df.loc[alt_mask, "model"]).values
+
     df = df.dropna(subset=["mean"]).sort_values("mean", ascending=(mode == "min"))
     df["std"] = df["std"].fillna(0)
 
@@ -156,12 +248,14 @@ def build_bar_chart(
     # Apply shortened display names
     df["model"] = df["model"].map(_shorten_model_name)
 
+    model_order = df["model"].tolist()
     n_models = len(df)
     bar_height = max(30, min(50, 400 // max(n_models, 1)))
     plot_height = max(300, bar_height * n_models)
 
-    bars = hv.Bars(df, kdims=["model"], vdims=["mean"]).opts(
-        frame_width=600,
+    model_dim = hv.Dimension("model", values=model_order)
+    bars = hv.Bars(df, kdims=[model_dim], vdims=["mean"]).opts(
+        responsive=True,
         frame_height=plot_height,
         invert_axes=True,
         tools=["hover"],
@@ -174,7 +268,7 @@ def build_bar_chart(
         toolbar="above",
         labelled=["x"],   # keep value axis label, suppress category label
     )
-    errorbars = hv.ErrorBars(df, kdims=["model"], vdims=["mean", "std"]).opts(
+    errorbars = hv.ErrorBars(df, kdims=[model_dim], vdims=["mean", "std"]).opts(
         line_width=1.5, line_color="black"
     )
     return pn.pane.HoloViews(bars * errorbars, sizing_mode="stretch_width")
@@ -184,10 +278,32 @@ def build_bar_chart(
 # Summary table
 # ---------------------------------------------------------------------------
 
-def build_summary_table(loader: ResultsLoader) -> pn.viewable.Viewable:
+def _parse_dataset_filter(dataset: str) -> tuple[str, str | None]:
+    """Split 'DatasetName [project_name]' into (base_name, project_name)."""
+    if " [" in dataset and dataset.endswith("]"):
+        base, proj = dataset.rsplit(" [", 1)
+        return base, proj.rstrip("]")
+    return dataset, None
+
+
+def build_summary_table(
+    loader: ResultsLoader,
+    dataset: str | None = None,
+    model: str | None = None,
+    metric: str | None = None,
+) -> pn.viewable.Viewable:
     df = loader.summary_df
     if df is None:
         return pn.pane.Markdown("No `summary.csv` found in report output.")
+    if dataset:
+        ds_base, project = _parse_dataset_filter(dataset)
+        df = df[df["Dataset"] == ds_base]
+        if project:
+            df = df[df["Project"] == project]
+    if model:
+        df = df[df["Model"] == model]
+    if metric:
+        df = df[df["Metric"] == metric]
     return pn.widgets.Tabulator(
         df,
         pagination="local",
@@ -201,10 +317,21 @@ def build_summary_table(loader: ResultsLoader) -> pn.viewable.Viewable:
 # Experiment stats
 # ---------------------------------------------------------------------------
 
-def build_stats_table(loader: ResultsLoader) -> pn.viewable.Viewable:
+def build_stats_table(
+    loader: ResultsLoader,
+    dataset: str | None = None,
+    model: str | None = None,
+) -> pn.viewable.Viewable:
     df = loader.stats_df
     if df is None:
         return pn.pane.Markdown("No `experiment_stats.csv` found in report output.")
+    if dataset:
+        ds_base, project = _parse_dataset_filter(dataset)
+        df = df[df["Dataset"] == ds_base]
+        if project:
+            df = df[df["Project"] == project]
+    if model:
+        df = df[df["Model"] == model]
     return pn.widgets.Tabulator(
         df,
         pagination="local",
@@ -226,13 +353,86 @@ def build_hp_impact_table(
     df = loader.hp_impact_df(dataset, model)
     if df is None:
         return pn.pane.Markdown(
-            f"No HP impact table found for **{dataset}** / **{model}**."
+            f"No HP config table found for **{dataset}** / **{model}**. "
+            f"Re-run the report pipeline to generate it."
         )
-    return pn.widgets.Tabulator(
-        df,
-        pagination="local",
-        page_size=30,
-        show_index=False,
+
+    is_raw = any(c.endswith("_mean") for c in df.columns)
+
+    if is_raw:
+        # New format: numeric _mean/_std columns + seeds
+        mean_cols = [c for c in df.columns if c.endswith("_mean")]
+        std_cols = [c for c in df.columns if c.endswith("_std")]
+        stat_cols = set(mean_cols) | set(std_cols) | {"seeds"}
+        hp_cols = [c for c in df.columns if c not in stat_cols]
+        for c in mean_cols + std_cols:
+            df[c] = pd.to_numeric(df[c], errors="coerce").round(4)
+        ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + mean_cols + std_cols
+    else:
+        # Legacy format: formatted string columns ("mean ± std (n=X)")
+        # Extract seeds from the first metric column that has (n=X)
+        metric_cols = [c for c in df.columns if "±" in df[c].astype(str).iloc[0] if not df.empty]
+        hp_cols = [c for c in df.columns if c not in metric_cols]
+        if metric_cols and not df.empty:
+            df.insert(len(hp_cols), "seeds",
+                df[metric_cols[0]].str.extract(r"\(n=(\d+)\)")[0].astype("Int64"))
+        ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + metric_cols
+
+    df = df[ordered_cols]
+
+    # Pre-select only varying HP columns (nunique > 1) + seeds + metric cols
+    if is_raw:
+        stat_default = (["seeds"] if "seeds" in df.columns else []) + mean_cols + std_cols
+        varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
+        default_cols = (varying_hp or hp_cols) + stat_default
+    else:
+        stat_default = (["seeds"] if "seeds" in df.columns else []) + metric_cols
+        varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
+        default_cols = (varying_hp or hp_cols) + stat_default
+
+    col_selector = pn.widgets.MultiChoice(
+        name="Visible columns",
+        options=ordered_cols,
+        value=default_cols,
+        sizing_mode="stretch_width",
+    )
+
+    rotated_header_css = """
+    .tabulator .tabulator-col .tabulator-col-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 20px;
+        position: relative;
+    }
+    .tabulator .tabulator-col .tabulator-col-content .tabulator-col-title {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+    }
+    .tabulator .tabulator-col .tabulator-col-content .tabulator-arrow {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    """
+
+    def _table(cols):
+        visible = cols if cols else ordered_cols
+        return pn.widgets.Tabulator(
+            df[visible],
+            pagination="local",
+            page_size=30,
+            show_index=False,
+            sortable=True,
+            sizing_mode="stretch_width",
+            stylesheets=[rotated_header_css],
+        )
+
+    return pn.Column(
+        col_selector,
+        pn.bind(_table, col_selector),
         sizing_mode="stretch_width",
     )
 

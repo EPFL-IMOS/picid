@@ -37,6 +37,7 @@ from picid_report import (
     export_summary_table,
     export_experiment_stats,
     export_hp_impact_tables,
+    export_hp_configs_raw,
     get_experiment_stats_df,
     iter_hp_impact_tables,
     write_tables_tex,
@@ -138,7 +139,7 @@ def all_results_to_xarray(
                     for arr, key in (
                         (arr_mean, "mean"),
                         (arr_std, "std"),
-                        (arr_n, "cnt"),  # stored as "cnt" in analysis.py
+                        (arr_n, "count"),  # stored as "count" in analysis.py
                     ):
                         val = values.get(key)
                         if val is not None:
@@ -601,6 +602,7 @@ def _save_outputs(
     export_hp_impact_tables(
         all_results, hp_impact_dir, precision=precision, sort_metric=sort_metric
     )
+    export_hp_configs_raw(all_results, hp_impact_dir)
 
     global_plots: List[Tuple[str, str]] = []
     hp_impact_entries: List[Tuple[str, str, pd.DataFrame, str, str]] = []

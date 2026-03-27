@@ -606,6 +606,55 @@ def export_hp_impact_tables(
     return out
 
 
+def export_hp_configs_raw(
+    all_results: defaultdict,
+    output_dir: str,
+) -> None:
+    """Save one raw CSV per (dataset, model) with one row per HP config.
+
+    Columns:
+        - HP parameter columns (one per hyperparameter)
+        - ``seeds``  — number of seeds run for that config (same across all metrics)
+        - ``{metric}_mean`` and ``{metric}_std`` — numeric, one pair per metric
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    stat_suffixes = ("_mean", "_std", "_count")
+
+    for dataset, models in all_results.items():
+        for model, res in models.items():
+            if "sorted_aggregated_results" not in res or res["sorted_aggregated_results"].empty:
+                continue
+            df = res["sorted_aggregated_results"].copy()
+            df = flatten_aggregated_columns(df)
+
+            hp_cols = [
+                c for c in df.columns
+                if not any(c.endswith(s) for s in stat_suffixes)
+                and c != "run_name"
+            ]
+            metric_bases = sorted({c[:-5] for c in df.columns if c.endswith("_mean")})
+
+            out = df[hp_cols].copy()
+
+            # Seeds: take count from first metric (identical across all metrics per row)
+            for base in metric_bases:
+                count_col = f"{base}_count"
+                if count_col in df.columns:
+                    out.insert(len(hp_cols), "seeds", df[count_col].astype("Int64"))
+                    break
+
+            for base in metric_bases:
+                m_col, s_col = f"{base}_mean", f"{base}_std"
+                if m_col in df.columns:
+                    out[f"{base}_mean"] = df[m_col]
+                    if s_col in df.columns:
+                        out[f"{base}_std"] = df[s_col]
+
+            safe_ds = re.sub(r"[^\w\-.]", "_", str(dataset))[:80]
+            safe_m = re.sub(r"[^\w\-.]", "_", str(model))[:80]
+            out.to_csv(os.path.join(output_dir, f"hp_configs_{safe_ds}_{safe_m}.csv"), index=False)
+
+
 def write_tables_tex(
     path: str,
     summary_df: pd.DataFrame,

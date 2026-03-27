@@ -71,19 +71,10 @@ class ResultsLoader:
             raise FileNotFoundError(
                 f"No results.nc files found under {self.base_dir!r}."
             )
-        seen: dict[str, int] = {}  # dataset_name -> count of appearances
         relabeled = []
         for proj_dir, proj_name in zip(self.project_dirs, self.project_names):
             ds = xr.open_dataset(os.path.join(proj_dir, "results.nc"))
-            # Rename duplicate dataset coordinates to include the project name
-            new_coords = []
-            for coord in ds.coords["dataset"].values:
-                key = str(coord)
-                if key in seen:
-                    new_coords.append(f"{key} [{proj_name}]")
-                else:
-                    seen[key] = 1
-                    new_coords.append(key)
+            new_coords = [f"{coord} [{proj_name}]" for coord in ds.coords["dataset"].values]
             ds = ds.assign_coords(dataset=new_coords)
             relabeled.append(ds)
 
@@ -199,7 +190,8 @@ class ResultsLoader:
                 var_name="Metric",
                 value_name="Value",
             )
-            frames.append(melted[["Dataset", "Metric", "Model", "Value"]])
+            melted["Project"] = os.path.basename(d)
+            frames.append(melted[["Project", "Dataset", "Metric", "Model", "Value"]])
         if not frames:
             return None
         return pd.concat(frames, ignore_index=True)
@@ -211,7 +203,9 @@ class ResultsLoader:
         for d in self.project_dirs:
             p = os.path.join(d, "tables", "experiment_stats.csv")
             if os.path.isfile(p):
-                frames.append(pd.read_csv(p))
+                df = pd.read_csv(p)
+                df.insert(0, "Project", os.path.basename(d))
+                frames.append(df)
         if not frames:
             return None
         return pd.concat(frames, ignore_index=True)
@@ -221,15 +215,33 @@ class ResultsLoader:
     ) -> Optional[pd.DataFrame]:
         """Load the HP impact CSV for a (dataset, model) combination.
 
-        Searches all project HP impact directories for a matching filename.
+        ``dataset`` may carry a ' [project_name]' suffix from the dashboard
+        coordinate labelling. The suffix is stripped for filename lookup and
+        used to restrict the search to the matching project directory.
         """
         def _safe(s: str) -> str:
             return re.sub(r"[^\w\-.]", "_", str(s))[:80]
 
-        filename = f"{_safe(dataset)}_{_safe(model)}.csv"
-        for d in self.project_dirs:
+        # Split 'DatasetName [project_name]' → (base_name, project_name)
+        if " [" in dataset and dataset.endswith("]"):
+            ds_base, project_name = dataset.rsplit(" [", 1)
+            project_name = project_name.rstrip("]")
+        else:
+            ds_base, project_name = dataset, None
+
+        ds_safe = _safe(ds_base)
+        model_safe = _safe(model)
+
+        # Search only the matching project directory when we know the project
+        search_dirs = [
+            d for d in self.project_dirs
+            if project_name is None or os.path.basename(d) == project_name
+        ]
+
+        for d in search_dirs:
             hp_dir = os.path.join(d, "tables", "hp_impact")
-            p = os.path.join(hp_dir, filename)
-            if os.path.isfile(p):
-                return pd.read_csv(p)
+            for prefix in ("hp_configs_", "hp_impact_"):
+                p = os.path.join(hp_dir, f"{prefix}{ds_safe}_{model_safe}.csv")
+                if os.path.isfile(p):
+                    return pd.read_csv(p, index_col=0)
         return None
