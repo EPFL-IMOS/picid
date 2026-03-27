@@ -14,10 +14,15 @@ import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from picid.data.datasources.base.contracts import LoaderState
 from picid.data.datasources.base.predefined_split_loader import (
     PredefinedSplitLoaderBase,
 )
 from picid.data.datasources.base.phmd_assembly import build_split_payloads
+from picid.data.datasources.base.phmd_payload_cache import (
+    load_phmd_payload_cache,
+    save_phmd_payload_cache,
+)
 from picid.data.datasources.base.phmd_repository import PHMDRepository
 from picid.data.datasources.utils import convert_outer_list_to_inner
 
@@ -39,7 +44,14 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
     **kwargs
         Loader configuration forwarded to :class:`PredefinedSplitLoaderBase`
         together with PHMD-specific arguments such as ``fold`` and
-        ``cache_dir``.
+        ``cache_dir``. Optional ``payload_cache_path`` (``str`` or
+        :class:`pathlib.Path`): after the first successful :meth:`load_data`,
+        writes processed ``data_dict`` and ``meta_data`` with
+        :meth:`get_cache_fingerprint` for validation; later runs restore from
+        disk when the fingerprint matches, skipping PHMD reads and per-unit
+        processing. Intended for notebooks and analysis. The path is omitted from
+        the fingerprint so moving the cache file does not change preprocessor
+        cache keys.
     """
 
     def __init__(self, **kwargs):
@@ -49,7 +61,8 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
         Parameters
         ----------
         **kwargs
-            Loader configuration including ``fold`` and ``cache_dir``.
+            Loader configuration including ``fold``, ``cache_dir``, and
+            optional ``payload_cache_path`` (see class docstring).
         """
         super().__init__(**kwargs)
         self.fold: int = kwargs["fold"]
@@ -70,6 +83,49 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
             task_mode=self.task_mode,
             auxiliary_tasks=self.auxiliary_tasks,
         )
+        raw_pc = kwargs.get("payload_cache_path")
+        self._payload_cache_path: str | None = (
+            str(Path(raw_pc).expanduser()) if raw_pc is not None else None
+        )
+
+    def _build_cache_config(self):
+        """
+        Return cache fingerprint without ``payload_cache_path`` (I/O only).
+
+        Returns
+        -------
+        dict
+            Serialisable fingerprint for :meth:`get_cache_fingerprint`.
+        """
+        fp = super()._build_cache_config()
+        fp.pop("payload_cache_path", None)
+        return fp
+
+    def load_data(self) -> None:
+        """Load split payload, optionally restoring from ``payload_cache_path``."""
+        if self._payload_cache_path:
+            restored = load_phmd_payload_cache(
+                self._payload_cache_path,
+                self.get_cache_fingerprint(),
+            )
+            if restored is not None:
+                self.data_dict = restored["data_dict"]
+                self.meta_data = restored["meta_data"]
+                self._is_loaded = True
+                self._is_splitted = True
+                self._state = LoaderState.SPLIT
+                return
+
+        super().load_data()
+
+        if self._payload_cache_path:
+            assert self.data_dict is not None
+            save_phmd_payload_cache(
+                self._payload_cache_path,
+                self.get_cache_fingerprint(),
+                self.data_dict,
+                self.meta_data,
+            )
 
     def __repr__(self) -> str:
         """Return a compact debug representation of the loader state."""
