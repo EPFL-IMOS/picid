@@ -60,3 +60,4 @@ lmetk_report_artifacts
 .cursor/*
 .mypy_cache/*
 tasks/*
+.claude/worktrees/

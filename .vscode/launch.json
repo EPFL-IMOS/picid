@@ -1484,6 +1484,17 @@
                 "--report-name",
                 "16_03_2026_mzvav_diagnostics_",
             ]
-        }
+        },
+        {
+            "name": "Plot Average Rank",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "picid_report.scripts.plot_average_rank",
+            "console": "integratedTerminal",
+            "args": [
+                "--output-dir",
+                "report_output",
+            ]
+        },
     ]
 }
