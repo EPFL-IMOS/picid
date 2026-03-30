@@ -6,6 +6,61 @@ from hydra import compose
 
 from picid.data.datasources.phmd_xjtu_sy import XJTU_SYLoader
 
+XJTU_IN_DOMAIN_FOLDS = {
+    "fold_1": {
+        "train": ["1_3", "1_4", "1_5", "2_3", "2_4", "2_5", "3_3", "3_4", "3_5"],
+        "val": ["1_1", "2_1", "3_1"],
+        "test": ["1_2", "2_2", "3_2"],
+    },
+    "fold_2": {
+        "train": ["1_1", "1_4", "1_5", "2_1", "2_4", "2_5", "3_1", "3_4", "3_5"],
+        "val": ["1_2", "2_2", "3_2"],
+        "test": ["1_3", "2_3", "3_3"],
+    },
+    "fold_3": {
+        "train": ["1_1", "1_2", "1_5", "2_1", "2_2", "2_5", "3_1", "3_2", "3_5"],
+        "val": ["1_3", "2_3", "3_3"],
+        "test": ["1_4", "2_4", "3_4"],
+    },
+    "fold_4": {
+        "train": ["1_1", "1_2", "1_3", "2_1", "2_2", "2_3", "3_1", "3_2", "3_3"],
+        "val": ["1_4", "2_4", "3_4"],
+        "test": ["1_5", "2_5", "3_5"],
+    },
+    "fold_5": {
+        "train": ["1_2", "1_3", "1_4", "2_2", "2_3", "2_4", "3_2", "3_3", "3_4"],
+        "val": ["1_5", "2_5", "3_5"],
+        "test": ["1_1", "2_1", "3_1"],
+    },
+}
+XJTU_DOMAIN_SHIFT_FOLDS = {
+    "fold_1": {
+        "train": ["1_2", "1_3", "1_4", "1_5", "2_2", "2_3", "2_4", "2_5"],
+        "val": ["1_1", "2_1"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+    "fold_2": {
+        "train": ["1_1", "1_3", "1_4", "1_5", "2_1", "2_3", "2_4", "2_5"],
+        "val": ["1_2", "2_2"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+    "fold_3": {
+        "train": ["1_1", "1_2", "1_4", "1_5", "2_1", "2_2", "2_4", "2_5"],
+        "val": ["1_3", "2_3"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+    "fold_4": {
+        "train": ["1_1", "1_2", "1_3", "1_5", "2_1", "2_2", "2_3", "2_5"],
+        "val": ["1_4", "2_4"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+    "fold_5": {
+        "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4"],
+        "val": ["1_5", "2_5"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+}
+
 
 def _loader_kwargs() -> dict:
     return {
@@ -55,8 +110,17 @@ def _mock_payload() -> dict:
     return payload
 
 
+def _assert_disjoint_and_cover_all(split_table: dict[str, list[str]], expected_units: set[str]) -> None:
+    seen: set[str] = set()
+    for split_name in ("train", "val", "test"):
+        split_units = set(split_table[split_name])
+        assert split_units.isdisjoint(seen), f"{split_name} overlaps prior splits"
+        seen |= split_units
+    assert seen == expected_units
+
+
 def test_xjtu_sy_loader_domain_shift_reassigns_units_to_paper_protocol() -> None:
-    loader = XJTU_SYLoader(**_loader_kwargs(), split_mode="domain_shift")
+    loader = XJTU_SYLoader(**_loader_kwargs(), split_mode="domain_shift", fold_id=5)
 
     assert loader.split_assignments == {
         "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4"],
@@ -97,16 +161,66 @@ def test_xjtu_sy_loader_domain_shift_reassigns_units_to_paper_protocol() -> None
     ]
 
 
+def test_xjtu_sy_loader_resolves_exact_fold_tables() -> None:
+    loader = XJTU_SYLoader(
+        **_loader_kwargs(),
+        split_mode="in_domain",
+        fold_id=2,
+        split_assignments_by_mode={
+            "in_domain": XJTU_IN_DOMAIN_FOLDS,
+            "domain_shift": XJTU_DOMAIN_SHIFT_FOLDS,
+        },
+    )
+
+    assert loader.split_assignments == XJTU_IN_DOMAIN_FOLDS["fold_2"]
+
+
+def test_xjtu_sy_cv_tables_match_expected_structure() -> None:
+    all_units = {
+        "1_1", "1_2", "1_3", "1_4", "1_5",
+        "2_1", "2_2", "2_3", "2_4", "2_5",
+        "3_1", "3_2", "3_3", "3_4", "3_5",
+    }
+    source_units = {unit for unit in all_units if not unit.startswith("3_")}
+    target_units = {unit for unit in all_units if unit.startswith("3_")}
+
+    for split_table in XJTU_IN_DOMAIN_FOLDS.values():
+        _assert_disjoint_and_cover_all(split_table, all_units)
+        assert len(split_table["train"]) == 9
+        assert len(split_table["val"]) == 3
+        assert len(split_table["test"]) == 3
+        assert sum(unit.startswith("3_") for unit in split_table["train"]) == 3
+        assert sum(unit.startswith("3_") for unit in split_table["val"]) == 1
+        assert sum(unit.startswith("3_") for unit in split_table["test"]) == 1
+
+    for split_table in XJTU_DOMAIN_SHIFT_FOLDS.values():
+        _assert_disjoint_and_cover_all(split_table, source_units | target_units)
+        assert set(split_table["test"]) == target_units
+        assert set(split_table["train"]).issubset(source_units)
+        assert set(split_table["val"]).issubset(source_units)
+        assert len(split_table["train"]) == 8
+        assert len(split_table["val"]) == 2
+        assert len(split_table["test"]) == 5
+
+
 def test_xjtu_sy_configs_and_experiment_bases_compose() -> None:
     cfg = compose(config_name="run", overrides=["datasource=xjtu_sy"])
     assert cfg.datasource._target_ == "picid.data.datasources.phmd_xjtu_sy.XJTU_SYLoader"
     assert cfg.datasource.split_mode == "in_domain"
+    assert cfg.datasource.fold_id == 1
+    assert dict(cfg.datasource.split_assignments_by_mode.in_domain.fold_1) == XJTU_IN_DOMAIN_FOLDS["fold_1"]
+    assert dict(cfg.datasource.split_assignments_by_mode.domain_shift.fold_5) == XJTU_DOMAIN_SHIFT_FOLDS["fold_5"]
 
     cfg = compose(
         config_name="run",
-        overrides=["datasource=xjtu_sy", "datasource.split_mode=domain_shift"],
+        overrides=[
+            "datasource=xjtu_sy",
+            "datasource.split_mode=domain_shift",
+            "datasource.fold_id=4",
+        ],
     )
     assert cfg.datasource.split_mode == "domain_shift"
+    assert cfg.datasource.fold_id == 4
 
     for experiment_name, split_mode, expected_transform_key in (
         ("xjtu_sy/prognostics/in_domain/combined/base", "in_domain", "concatenate_features"),
@@ -117,4 +231,5 @@ def test_xjtu_sy_configs_and_experiment_bases_compose() -> None:
         cfg = compose(config_name="run", overrides=[f"experiment={experiment_name}"])
         assert cfg.datasource._target_ == "picid.data.datasources.phmd_xjtu_sy.XJTU_SYLoader"
         assert cfg.datasource.split_mode == split_mode
+        assert cfg.datasource.fold_id == 1
         assert expected_transform_key in cfg.transforms

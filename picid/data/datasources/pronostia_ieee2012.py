@@ -138,7 +138,8 @@ class PronostiaIEEE2012Loader(PredefinedSplitLoaderBase):
         data_dir: str,
         split_assignments: dict[str, list[str]] | None = None,
         split_mode: str | None = None,
-        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None = None,
+        fold_id: int | str | None = None,
+        split_assignments_by_mode: dict[str, Any] | None = None,
         sample_range_size: int = 2560,
         download_if_missing: bool = True,
         download_url: str = DEFAULT_DOWNLOAD_URL,
@@ -156,9 +157,11 @@ class PronostiaIEEE2012Loader(PredefinedSplitLoaderBase):
         # letting the repo expose one canonical datasource config file whose split
         # policy is selected by a single parameter.
         self.split_mode = split_mode
+        self.fold_id = fold_id
         self.split_assignments = self._resolve_split_assignments(
             split_assignments=split_assignments,
             split_mode=split_mode,
+            fold_id=fold_id,
             split_assignments_by_mode=split_assignments_by_mode,
         )
         self.sample_range_size = int(sample_range_size)
@@ -174,7 +177,8 @@ class PronostiaIEEE2012Loader(PredefinedSplitLoaderBase):
         *,
         split_assignments: dict[str, list[str]] | None,
         split_mode: str | None,
-        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None,
+        fold_id: int | str | None,
+        split_assignments_by_mode: dict[str, Any] | None,
     ) -> dict[str, list[str]]:
         """Resolve the configured split table into the loader's concrete split map.
 
@@ -200,9 +204,39 @@ class PronostiaIEEE2012Loader(PredefinedSplitLoaderBase):
                 f"{split_mode!r}. Available modes: {sorted(split_assignments_by_mode)}"
             )
 
+        split_table_or_folds = split_assignments_by_mode[split_mode]
+
+        # Support both:
+        # 1. direct tables: {train: [...], val: [...], test: [...]}
+        # 2. CV tables: {fold_1: {train: [...]}, ..., fold_5: {...}}
+        #
+        # The second form is what the repo uses now for five-fold CV, while the
+        # first form remains accepted so scripts can still pass one explicit mode
+        # table without inventing synthetic fold names.
+        if {"train", "val", "test"}.issubset(split_table_or_folds):
+            resolved_table = split_table_or_folds
+        else:
+            if fold_id is None:
+                raise ValueError(
+                    "PronostiaIEEE2012Loader requires fold_id when "
+                    "split_assignments_by_mode contains multiple CV folds."
+                )
+
+            fold_key = (
+                fold_id
+                if isinstance(fold_id, str) and str(fold_id) in split_table_or_folds
+                else f"fold_{fold_id}"
+            )
+            if fold_key not in split_table_or_folds:
+                raise ValueError(
+                    "Unknown PRONOSTIA fold_id "
+                    f"{fold_id!r} for split_mode {split_mode!r}. "
+                    f"Available folds: {sorted(split_table_or_folds)}"
+                )
+            resolved_table = split_table_or_folds[fold_key]
+
         return {
-            split: list(unit_keys)
-            for split, unit_keys in split_assignments_by_mode[split_mode].items()
+            split: list(unit_keys) for split, unit_keys in resolved_table.items()
         }
 
     def _load_data(self) -> dict[str, dict[str, list[Any]]]:

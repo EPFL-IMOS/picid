@@ -34,6 +34,60 @@ FULL_TEST_UNITS = (
     "2_7",
     "3_3",
 )
+PRONOSTIA_IN_DOMAIN_FOLDS = {
+    "fold_1": {
+        "train": ["1_4", "1_5", "1_6", "1_7", "2_4", "2_5", "2_6", "2_7", "3_1"],
+        "val": ["1_1", "2_1", "3_2"],
+        "test": ["1_2", "1_3", "2_2", "2_3", "3_3"],
+    },
+    "fold_2": {
+        "train": ["1_1", "1_5", "1_6", "1_7", "2_1", "2_5", "2_6", "2_7", "3_2"],
+        "val": ["1_2", "2_2", "3_3"],
+        "test": ["1_3", "1_4", "2_3", "2_4", "3_1"],
+    },
+    "fold_3": {
+        "train": ["1_1", "1_2", "1_6", "1_7", "2_1", "2_2", "2_6", "2_7", "3_3"],
+        "val": ["1_3", "2_3", "3_1"],
+        "test": ["1_4", "1_5", "2_4", "2_5", "3_2"],
+    },
+    "fold_4": {
+        "train": ["1_1", "1_2", "1_3", "1_7", "2_1", "2_2", "2_3", "2_7", "3_1"],
+        "val": ["1_4", "2_4", "3_2"],
+        "test": ["1_5", "1_6", "2_5", "2_6", "3_3"],
+    },
+    "fold_5": {
+        "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4", "3_2"],
+        "val": ["1_5", "2_5", "3_3"],
+        "test": ["1_6", "1_7", "2_6", "2_7", "3_1"],
+    },
+}
+PRONOSTIA_DOMAIN_SHIFT_FOLDS = {
+    "fold_1": {
+        "train": ["1_3", "1_4", "1_5", "1_6", "1_7", "2_3", "2_4", "2_5", "2_6", "2_7"],
+        "val": ["1_1", "1_2", "2_1", "2_2"],
+        "test": ["3_1", "3_2", "3_3"],
+    },
+    "fold_2": {
+        "train": ["1_1", "1_4", "1_5", "1_6", "1_7", "2_1", "2_4", "2_5", "2_6", "2_7"],
+        "val": ["1_2", "1_3", "2_2", "2_3"],
+        "test": ["3_1", "3_2", "3_3"],
+    },
+    "fold_3": {
+        "train": ["1_1", "1_2", "1_5", "1_6", "1_7", "2_1", "2_2", "2_5", "2_6", "2_7"],
+        "val": ["1_3", "1_4", "2_3", "2_4"],
+        "test": ["3_1", "3_2", "3_3"],
+    },
+    "fold_4": {
+        "train": ["1_1", "1_2", "1_3", "1_6", "1_7", "2_1", "2_2", "2_3", "2_6", "2_7"],
+        "val": ["1_4", "1_5", "2_4", "2_5"],
+        "test": ["3_1", "3_2", "3_3"],
+    },
+    "fold_5": {
+        "train": ["1_1", "1_2", "1_3", "1_4", "1_7", "2_1", "2_2", "2_3", "2_4", "2_7"],
+        "val": ["1_5", "1_6", "2_5", "2_6"],
+        "test": ["3_1", "3_2", "3_3"],
+    },
+}
 
 
 def _write_acc_file(path: Path, value: float, sample_range_size: int) -> None:
@@ -113,6 +167,15 @@ def _make_loader(data_dir: Path, **overrides):
     return PronostiaIEEE2012Loader(**kwargs)
 
 
+def _assert_disjoint_and_cover_all(split_table: dict[str, list[str]], expected_units: set[str]) -> None:
+    seen: set[str] = set()
+    for split_name in ("train", "val", "test"):
+        split_units = set(split_table[split_name])
+        assert split_units.isdisjoint(seen), f"{split_name} overlaps prior splits"
+        seen |= split_units
+    assert seen == expected_units
+
+
 def test_pronostia_ieee2012_loader_reads_sorted_two_channel_windows_and_metadata(
     tmp_path: Path,
 ) -> None:
@@ -167,10 +230,16 @@ def test_pronostia_ieee2012_loader_supports_split_mode_without_false_choice_flag
         task_mode="rul",
         data_dir=str(tmp_path),
         split_mode="in_domain",
+        fold_id=3,
         sample_range_size=SAMPLE_RANGE_SIZE,
         split_assignments_by_mode={
-            "in_domain": {"train": ["1_1"], "val": [], "test": []},
-            "domain_shift": {"train": [], "val": ["1_1"], "test": []},
+            "in_domain": {
+                "fold_1": {"train": [], "val": ["1_1"], "test": []},
+                "fold_3": {"train": ["1_1"], "val": [], "test": []},
+            },
+            "domain_shift": {
+                "fold_1": {"train": [], "val": ["1_1"], "test": []},
+            },
         },
     )
 
@@ -183,6 +252,50 @@ def test_pronostia_ieee2012_loader_supports_split_mode_without_false_choice_flag
     assert not hasattr(loader, "include_temperature")
     assert not hasattr(loader, "derive_full_test_rul")
     assert not hasattr(loader, "split_assignments_by_mode")
+
+
+def test_pronostia_ieee2012_loader_resolves_exact_fold_tables() -> None:
+    from picid.data.datasources.pronostia_ieee2012 import PronostiaIEEE2012Loader
+
+    loader = PronostiaIEEE2012Loader(
+        data_name="pronostia_ieee2012_split_resolution_test",
+        task_mode="rul",
+        data_dir="/tmp/unused_pronostia",
+        split_mode="domain_shift",
+        fold_id=4,
+        split_assignments_by_mode={
+            "in_domain": PRONOSTIA_IN_DOMAIN_FOLDS,
+            "domain_shift": PRONOSTIA_DOMAIN_SHIFT_FOLDS,
+        },
+        download_if_missing=False,
+        sample_range_size=SAMPLE_RANGE_SIZE,
+    )
+
+    assert loader.split_assignments == PRONOSTIA_DOMAIN_SHIFT_FOLDS["fold_4"]
+
+
+def test_pronostia_cv_tables_match_expected_structure() -> None:
+    all_units = set(UNIT_NAMES_TO_ID)
+    source_units = {unit for unit in UNIT_NAMES_TO_ID if not unit.startswith("3_")}
+    target_units = {"3_1", "3_2", "3_3"}
+
+    for split_table in PRONOSTIA_IN_DOMAIN_FOLDS.values():
+        _assert_disjoint_and_cover_all(split_table, all_units)
+        assert len(split_table["train"]) == 9
+        assert len(split_table["val"]) == 3
+        assert len(split_table["test"]) == 5
+        assert sum(unit.startswith("3_") for unit in split_table["train"]) == 1
+        assert sum(unit.startswith("3_") for unit in split_table["val"]) == 1
+        assert sum(unit.startswith("3_") for unit in split_table["test"]) == 1
+
+    for split_table in PRONOSTIA_DOMAIN_SHIFT_FOLDS.values():
+        _assert_disjoint_and_cover_all(split_table, source_units | target_units)
+        assert set(split_table["test"]) == target_units
+        assert set(split_table["train"]).issubset(source_units)
+        assert set(split_table["val"]).issubset(source_units)
+        assert len(split_table["train"]) == 10
+        assert len(split_table["val"]) == 4
+        assert len(split_table["test"]) == 3
 
 
 def test_pronostia_ieee2012_loader_uses_last_two_columns_from_raw_acc_files(
@@ -464,12 +577,20 @@ def test_pronostia_ieee2012_configs_and_experiment_bases_compose() -> None:
         == "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader"
     )
     assert cfg.datasource.split_mode == "in_domain"
+    assert cfg.datasource.fold_id == 1
+    assert dict(cfg.datasource.split_assignments_by_mode.in_domain.fold_1) == PRONOSTIA_IN_DOMAIN_FOLDS["fold_1"]
+    assert dict(cfg.datasource.split_assignments_by_mode.domain_shift.fold_5) == PRONOSTIA_DOMAIN_SHIFT_FOLDS["fold_5"]
 
     cfg = compose(
         config_name="run",
-        overrides=["datasource=pronostia", "datasource.split_mode=domain_shift"],
+        overrides=[
+            "datasource=pronostia",
+            "datasource.split_mode=domain_shift",
+            "datasource.fold_id=4",
+        ],
     )
     assert cfg.datasource.split_mode == "domain_shift"
+    assert cfg.datasource.fold_id == 4
 
     cfg = compose(config_name="run", overrides=["datasource=pronostia_phmd"])
     assert (
@@ -477,19 +598,26 @@ def test_pronostia_ieee2012_configs_and_experiment_bases_compose() -> None:
         == "picid.data.datasources.phmd_pronostia.PronostiaLoader"
     )
 
-    for experiment_name, expected_target, expected_transform_key in (
+    for experiment_name, split_mode, expected_transform_key in (
         (
-            "pronostia/prognostics/combined/lstm",
-            "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader",
+            "pronostia/prognostics/in_domain/combined/base",
+            "in_domain",
             "concatenate_features",
         ),
+        ("pronostia/prognostics/in_domain/raw/base", "in_domain", "reshape_x"),
         (
-            "pronostia/prognostics/raw/lstm",
-            "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader",
-            "reshape_x",
+            "pronostia/prognostics/domain_shift/combined/base",
+            "domain_shift",
+            "concatenate_features",
         ),
+        ("pronostia/prognostics/domain_shift/raw/base", "domain_shift", "reshape_x"),
     ):
         cfg = compose(config_name="run", overrides=[f"experiment={experiment_name}"])
-        assert cfg.datasource._target_ == expected_target
+        assert (
+            cfg.datasource._target_
+            == "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader"
+        )
+        assert cfg.datasource.split_mode == split_mode
+        assert cfg.datasource.fold_id == 1
         assert cfg.datasource.task_mode == "rul"
         assert expected_transform_key in cfg.transforms

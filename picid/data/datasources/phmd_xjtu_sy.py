@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import logging
+from typing import Any
 
 import awkward as ak
 import numpy as np
@@ -38,14 +39,58 @@ FAULT_TARGET_COLS = ["Outer race", "Cage", "Inner race"]
 # bearings belong to train/validation/test for reporting.
 XJTU_SY_SPLIT_ASSIGNMENTS_BY_MODE = {
     "in_domain": {
-        "train": ["1_1", "1_2", "1_3", "2_1", "2_2", "2_3", "3_1", "3_2", "3_3"],
-        "val": ["1_4", "2_4", "3_4"],
-        "test": ["1_5", "2_5", "3_5"],
+        "fold_1": {
+            "train": ["1_3", "1_4", "1_5", "2_3", "2_4", "2_5", "3_3", "3_4", "3_5"],
+            "val": ["1_1", "2_1", "3_1"],
+            "test": ["1_2", "2_2", "3_2"],
+        },
+        "fold_2": {
+            "train": ["1_1", "1_4", "1_5", "2_1", "2_4", "2_5", "3_1", "3_4", "3_5"],
+            "val": ["1_2", "2_2", "3_2"],
+            "test": ["1_3", "2_3", "3_3"],
+        },
+        "fold_3": {
+            "train": ["1_1", "1_2", "1_5", "2_1", "2_2", "2_5", "3_1", "3_2", "3_5"],
+            "val": ["1_3", "2_3", "3_3"],
+            "test": ["1_4", "2_4", "3_4"],
+        },
+        "fold_4": {
+            "train": ["1_1", "1_2", "1_3", "2_1", "2_2", "2_3", "3_1", "3_2", "3_3"],
+            "val": ["1_4", "2_4", "3_4"],
+            "test": ["1_5", "2_5", "3_5"],
+        },
+        "fold_5": {
+            "train": ["1_2", "1_3", "1_4", "2_2", "2_3", "2_4", "3_2", "3_3", "3_4"],
+            "val": ["1_5", "2_5", "3_5"],
+            "test": ["1_1", "2_1", "3_1"],
+        },
     },
     "domain_shift": {
-        "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4"],
-        "val": ["1_5", "2_5"],
-        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        "fold_1": {
+            "train": ["1_2", "1_3", "1_4", "1_5", "2_2", "2_3", "2_4", "2_5"],
+            "val": ["1_1", "2_1"],
+            "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        },
+        "fold_2": {
+            "train": ["1_1", "1_3", "1_4", "1_5", "2_1", "2_3", "2_4", "2_5"],
+            "val": ["1_2", "2_2"],
+            "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        },
+        "fold_3": {
+            "train": ["1_1", "1_2", "1_4", "1_5", "2_1", "2_2", "2_4", "2_5"],
+            "val": ["1_3", "2_3"],
+            "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        },
+        "fold_4": {
+            "train": ["1_1", "1_2", "1_3", "1_5", "2_1", "2_2", "2_3", "2_5"],
+            "val": ["1_4", "2_4"],
+            "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        },
+        "fold_5": {
+            "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4"],
+            "val": ["1_5", "2_5"],
+            "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+        },
     },
 }
 
@@ -56,22 +101,26 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
     def __init__(
         self,
         split_mode: str | None = None,
+        fold_id: int | str | None = None,
         split_assignments: dict[str, list[str]] | None = None,
-        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None = None,
+        split_assignments_by_mode: dict[str, dict[str, Any]] | None = None,
         **kwargs,
     ):
         # Preserve the custom split configuration in the constructor snapshot so
         # payload-cache fingerprints change when the evaluation protocol changes.
         kwargs.update(
             split_mode=split_mode,
+            fold_id=fold_id,
             split_assignments=deepcopy(split_assignments),
             split_assignments_by_mode=deepcopy(split_assignments_by_mode),
         )
         super().__init__(**kwargs)
         self.split_mode = split_mode
+        self.fold_id = fold_id
         self.split_assignments = self._resolve_split_assignments(
             split_assignments=split_assignments,
             split_mode=split_mode,
+            fold_id=fold_id,
             split_assignments_by_mode=split_assignments_by_mode,
         )
 
@@ -80,7 +129,8 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         *,
         split_assignments: dict[str, list[str]] | None,
         split_mode: str | None,
-        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None,
+        fold_id: int | str | None,
+        split_assignments_by_mode: dict[str, dict[str, Any]] | None,
     ) -> dict[str, list[str]] | None:
         """Return the active unit split table for the configured evaluation mode.
 
@@ -102,9 +152,30 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                 "Unknown XJTU-SY split_mode "
                 f"{split_mode!r}. Available modes: {sorted(split_tables)}"
             )
+
+        split_table_or_folds = split_tables[split_mode]
+        if {"train", "val", "test"}.issubset(split_table_or_folds):
+            resolved_table = split_table_or_folds
+        else:
+            if fold_id is None:
+                raise ValueError(
+                    "XJTU_SYLoader requires fold_id when split_assignments_by_mode "
+                    "contains multiple CV folds."
+                )
+            fold_key = (
+                fold_id
+                if isinstance(fold_id, str) and str(fold_id) in split_table_or_folds
+                else f"fold_{fold_id}"
+            )
+            if fold_key not in split_table_or_folds:
+                raise ValueError(
+                    "Unknown XJTU-SY fold_id "
+                    f"{fold_id!r} for split_mode {split_mode!r}. "
+                    f"Available folds: {sorted(split_table_or_folds)}"
+                )
+            resolved_table = split_table_or_folds[fold_key]
         return {
-            split: list(unit_keys)
-            for split, unit_keys in split_tables[split_mode].items()
+            split: list(unit_keys) for split, unit_keys in resolved_table.items()
         }
 
     def _load_data(self):
