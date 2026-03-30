@@ -155,7 +155,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             elif self.task_mode == "fault":
                 # This functionality has not been implemented yet.
                 raise NotImplementedError(
-                    "Ragged mode is not yet implemented for the 'fault' task."
+                    "Ragged mode is not yet implemented for the 'fault' task yet."
                 )
 
             # Convert the NumPy arrays to Awkward Arrays for ragged processing
@@ -170,11 +170,11 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             "unit_id": ak.from_numpy(np.array(unit_id)),
             "metadata": {
                 "unit_id": unit_id,
-                "unit_name": f"Bearing {unit_name.strip("Bearing")}",
+                "unit_name": f"Bearing {unit_name.strip('Bearing')}",
                 "unit_length": len(df_features),
                 "features_columns": features_col,
                 "target_col": processed_target_col,
-                "target_in_features": True,  # Fixed typo: 'featurs' -> 'features'
+                "target_in_features": True,
                 "task": self.task_mode,
             },
         }

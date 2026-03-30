@@ -6,15 +6,18 @@ to_split_dict(), group_by_split(), get_instance_cls().
 """
 
 import numpy as np
+import pandas as pd
 import pytest
+import awkward as ak
 
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     DatasetContainer,
     SplitDatasetContainer,
     SplitUnitCardinality,
     SplitViewPolicy,
 )
-from picid.data.data_objects.base import BaseDataObjectWithMetadata
+from picid.data.data_objects import BaseDataObjectWithMetadata
+from picid.data.data_objects.validation import describe_unit_payload
 
 
 # ----- Fixtures -----
@@ -140,18 +143,12 @@ def test_dataset_container_constructor_derives_cardinality_from_payload():
 
 def test_split_container_validate_success(single_unit_split_container):
     """validate() does not raise when structure is consistent."""
-    single_unit_split_container.validate()
+    report = single_unit_split_container.validate()
+    assert report["is_consistent"] is True
 
 
-def test_split_container_validate_inconsistent_units_raises():
-    """validate() raises when number of units differs across keys for a split.
-
-    Note: This only triggers when the container stores raw dicts per key; when
-    the implementation stores nested container instances, all_splits can be empty
-    and the check is skipped. We use a container built so that values() yields
-    Mapping-like structures with .keys() (e.g. nested container with train/val/test).
-    """
-    # Build with explicit list lengths that differ: 2 units for features/train, 1 for target/train
+def test_split_container_validate_inconsistent_units_reports_heterogeneity():
+    """validate() reports heterogeneous unit counts instead of raising by default."""
     c = SplitDatasetContainer(
         features={
             "train": [np.zeros((100, 5)), np.zeros((100, 5))],
@@ -164,19 +161,96 @@ def test_split_container_validate_inconsistent_units_raises():
             "test": [np.zeros((30, 1))],
         },
     )
-    with pytest.raises(AssertionError, match="same number of units per split"):
-        c.validate()
+    report = c.validate()
+    assert report["is_consistent"] is False
+    assert report["unit_counts_match"] is False
 
 
-def test_dataset_container_split_name_mismatch_raises():
-    """Split alignment assertions fire when payload keys expose different split names."""
+def test_split_container_validate_strict_inconsistent_units_raises():
+    """validate(strict=True) still raises on heterogeneous split cardinality."""
+    c = SplitDatasetContainer(
+        features={
+            "train": [np.zeros((100, 5)), np.zeros((100, 5))],
+            "val": [np.zeros((30, 5))],
+            "test": [np.zeros((30, 5))],
+        },
+        target={
+            "train": [np.zeros((100, 1))],
+            "val": [np.zeros((30, 1))],
+            "test": [np.zeros((30, 1))],
+        },
+    )
+    with pytest.raises(ValueError, match="heterogeneous split payloads"):
+        c.validate(strict=True)
+
+
+def test_split_container_validate_reports_unit_schema_mismatch():
+    """validate() should report mismatched per-unit payload schemas within a split."""
+    c = SplitDatasetContainer(
+        features={
+            "train": [
+                {"sensor_a": np.zeros((2,)), "sensor_b": np.ones((2,))},
+                {"sensor_a": np.zeros((2,)), "sensor_c": np.ones((2,))},
+            ]
+        },
+        target={"train": [np.zeros((1,)), np.zeros((1,))]},
+    )
+
+    report = c.validate()
+
+    assert report["is_consistent"] is False
+    assert report["unit_schema_match"] is False
+    assert report["schema_mismatches"]
+    features_row = next(row for row in report["rows"] if row["key"] == "features")
+    assert features_row["schema_status"]["train"] == "heterogeneous"
+
+
+def test_split_container_validate_strict_schema_mismatch_raises():
+    """validate(strict=True) should raise on per-unit payload schema mismatch."""
+    c = SplitDatasetContainer(
+        features={
+            "train": [
+                {"sensor_a": np.zeros((2,)), "sensor_b": np.ones((2,))},
+                {"sensor_a": np.zeros((2,)), "sensor_c": np.ones((2,))},
+            ]
+        },
+        target={"train": [np.zeros((1,)), np.zeros((1,))]},
+    )
+
+    with pytest.raises(ValueError, match="schema"):
+        c.validate(strict=True)
+
+
+def test_split_container_validate_reports_homogeneous_unit_schema_details():
+    """validate() should report homogeneous unit schemas explicitly for mapping payloads."""
+    c = SplitDatasetContainer(
+        features={
+            "train": [
+                {"sensor_a": np.zeros((2,)), "sensor_b": np.ones((2,))},
+                {"sensor_a": np.zeros((2,)), "sensor_b": np.ones((2,))},
+            ]
+        },
+        target={"train": [np.zeros((1,)), np.zeros((1,))]},
+    )
+
+    report = c.validate()
+    features_row = next(row for row in report["rows"] if row["key"] == "features")
+
+    assert features_row["schema_status"]["train"] == "homogeneous"
+    assert "sensor_a" in features_row["schemas"]["train"]
+    assert "sensor_b" in features_row["schemas"]["train"]
+
+
+def test_dataset_container_split_name_mismatch_is_reported():
+    """validate() reports split-name mismatches without making cardinality invalid."""
     c = SplitDatasetContainer(
         features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
         target={"train": [np.zeros((10, 1))], "test": [np.zeros((5, 1))]},
     )
 
-    with pytest.raises(AssertionError, match="same split names"):
-        _ = c.unit_cardinality
+    report = c.validate()
+    assert report["split_names_match"] is False
+    assert c.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
 
 
 # ----- to_split_dict() -----
@@ -244,14 +318,94 @@ def test_split_container_to_split_dict_empty():
     assert c.to_split_dict() == {}
 
 
-def test_dataset_container_repr_marks_invalid_cardinality():
-    """__repr__ should stay safe even when split alignment is invalid."""
+def test_dataset_container_repr_reports_relaxed_cardinality():
+    """__repr__ should stay safe when split alignment is heterogeneous."""
     c = SplitDatasetContainer(
-        features={"train": [np.zeros((10, 2))], "val": [np.zeros((5, 2))]},
-        target={"train": [np.zeros((10, 1))], "test": [np.zeros((5, 1))]},
+        features={"train": [np.zeros((10, 2)), np.zeros((10, 2))]},
+        target={"train": [np.zeros((10, 1))]},
     )
 
-    assert "unit_cardinality=invalid" in repr(c)
+    assert "unit_cardinality=mixed" in repr(c)
+
+
+def test_split_container_to_split_dict_allows_heterogeneous_counts():
+    """Default split export keeps heterogeneous payloads without raising."""
+    c = SplitDatasetContainer(
+        features={"train": [np.zeros((10, 2))]},
+        target={"train": [np.zeros((10, 1)), np.zeros((10, 1))]},
+    )
+
+    split_dict = c.to_split_dict()
+
+    assert len(split_dict["train"]["features"]) == 1
+    assert len(split_dict["train"]["target"]) == 2
+
+
+def test_split_container_validate_handles_awkward_payload_descriptions():
+    """validate() should describe awkward payloads without assuming ``.shape`` exists."""
+    c = SplitDatasetContainer(
+        features={"train": [ak.Array([{"a": 1, "b": [1, 2]}])]},
+        target={"train": [np.zeros((1, 1))]},
+    )
+
+    report = c.validate()
+
+    assert report["rows"][0]["shapes"]["train"].startswith("ak[")
+
+
+def test_describe_unit_payload_empty():
+    """_describe_unit_payload should label empty split payloads explicitly."""
+    assert describe_unit_payload([]) == "empty"
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (np.zeros((2, 3)), "(2, 3)"),
+        (pd.Series([1, 2, 3]), "(3,)"),
+        (pd.DataFrame({"a": [1, 2], "b": [3, 4]}), "(2, 2)"),
+    ],
+)
+def test_describe_unit_payload_uses_tabular_shapes(payload, expected):
+    """_describe_unit_payload should report NumPy/pandas payload shapes directly."""
+    assert describe_unit_payload([payload]) == expected
+
+
+def test_describe_unit_payload_reports_mapping():
+    """_describe_unit_payload should label mapping-like payloads explicitly."""
+    payload = BaseDataObjectWithMetadata(
+        features=np.zeros((2, 2)), target=np.zeros((2, 1))
+    )
+
+    assert describe_unit_payload([payload]) == "mapping"
+
+
+class _BrokenShapePayload:
+    @property
+    def shape(self):
+        raise AttributeError("shape unavailable")
+
+    def __len__(self):
+        return 7
+
+
+def test_describe_unit_payload_falls_back_to_len_when_shape_is_broken():
+    """_describe_unit_payload should fall back to length when ``shape`` is unusable."""
+    assert describe_unit_payload([_BrokenShapePayload()]) == "len=7"
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ([1, 2, 3], "len=3"),
+        ("abc", "str"),
+        (b"abc", "bytes"),
+        (42, "int"),
+    ],
+)
+def test_describe_unit_payload_fallback_branches(payload, expected):
+    """_describe_unit_payload should cover generic length and scalar fallbacks."""
+    assert describe_unit_payload([payload]) == expected
 
 
 # ----- group_by_split() -----

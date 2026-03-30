@@ -19,13 +19,25 @@ Test Coverage Strategy:
 6. **Error Handling**: Transform failures
 """
 
+import copy
+from collections import OrderedDict
+from unittest.mock import Mock
 import pytest
+import numpy as np
 
-from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
+from picid.data.data_objects import (
+    DatasetContainer,
+    NamedTransformInput,
+    SplitDatasetContainer,
+    SplitViewPolicy,
+)
 from picid.data.datasources.base.exceptions import DatasourceStateError
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.data.preprocessing.base import PreProcessorInterface
 from picid.exceptions import PreprocessingDatasourceError
+from picid.transforms.base.base_transform import DenseTransform
+from picid.transforms.base.data_transform import DataTransform
+from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 
 class _PreprocessingErrorDatasource:
@@ -106,6 +118,70 @@ class _PreprocessingErrorDatasource:
 
     def get_split_mode(self) -> str:
         return "within_units"
+
+
+class _MetadataAwareDatasource:
+    """Datasource stub that returns a split container with both metadata scopes."""
+
+    def __init__(self):
+        self.data_name = "metadata-demo"
+        self.task_mode = "regression"
+        self._container = SplitDatasetContainer(
+            features={
+                "train": [np.array([[1.0], [2.0]])],
+                "val": [np.array([[3.0]])],
+                "test": [],
+            },
+            target={
+                "train": [np.array([[0.0], [1.0]])],
+                "val": [np.array([[2.0]])],
+                "test": [],
+            },
+            container_metadata={"dataset_name": "metadata-demo", "column_map": {}},
+            unit_metadata={
+                "train": [{"unit_name": "train-1"}],
+                "val": [{"unit_name": "val-1"}],
+                "test": [],
+            },
+        )
+
+    def load_data(self) -> None:
+        return None
+
+    def split_data(self) -> None:
+        return None
+
+    def get_meta_data(self) -> dict:
+        return {"dataset_name": self.data_name}
+
+    def get_data(self) -> DatasetContainer:
+        return self._container.copy(deep=True)
+
+    def get_cache_fingerprint(self) -> dict:
+        return {"data_name": self.data_name, "task_mode": self.task_mode}
+
+    def get_data_name(self) -> str:
+        return self.data_name
+
+    def get_data_names(self) -> tuple[str, ...]:
+        return (self.data_name,)
+
+    def get_split_mode(self) -> str:
+        return "within_units"
+
+
+class _PreprocessingMetadataTransform(NoFitPerSegmentMixin, DenseTransform):
+    """Transform that records metadata scopes while preserving unit counts."""
+
+    def __init__(self):
+        super().__init__()
+        self.seen_unit_metadata = []
+        self.seen_pipeline_metadata = []
+
+    def transform_data(self, data: NamedTransformInput, metadata: dict) -> np.ndarray:
+        self.seen_unit_metadata.append(copy.deepcopy(data.metadata))
+        self.seen_pipeline_metadata.append(copy.deepcopy(metadata))
+        return data["features"] * 2
 
 
 class TestPreProcessorInitialization:
@@ -253,6 +329,32 @@ class TestPreProcessorFetchData:
 
         mock_single_source_loader.get_data.assert_called_once()
 
+
+def test_preprocessor_apply_transforms_preserves_container_and_unit_metadata():
+    """PreProcessor should keep both metadata scopes intact through transforms."""
+    datasource = _MetadataAwareDatasource()
+    transform = _PreprocessingMetadataTransform()
+    dt = DataTransform(
+        "scale-features",
+        transform,
+        {"apply_to": "features", "assign_to": "features"},
+    )
+    preprocessor = PreProcessor(datasource=datasource)
+
+    preprocessor.fetch_data()
+    processed = preprocessor.apply_transforms(
+        preprocessor.data,
+        OrderedDict([(dt.transform_name, dt)]),
+    )
+
+    assert processed.container_metadata["dataset_name"] == "metadata-demo"
+    assert processed.unit_metadata["train"][0]["unit_name"] == "train-1"
+    assert processed.to_split_dict()["val"]["unit_metadata"][0]["unit_name"] == "val-1"
+    assert transform.seen_unit_metadata[0]["unit_name"] == "train-1"
+    assert transform.seen_pipeline_metadata[0]["container_metadata"][
+        "dataset_name"
+    ] == ("metadata-demo")
+
     def test_fetch_data_stores_result(
         self,
         mock_single_source_loader,
@@ -350,6 +452,27 @@ class TestPreProcessorGetProcessedData:
             preprocessor.get_processed_split_dict(
                 view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
             )
+
+    def test_get_processed_split_dict_triggers_container_validation(
+        self, mock_single_source_loader, mock_transform_manager
+    ):
+        """Split export should validate the processed container before returning it."""
+        preprocessor = PreProcessor(
+            datasource=mock_single_source_loader, transforms=mock_transform_manager
+        )
+        preprocessor._is_preprocessed = True
+        preprocessor.data = SplitDatasetContainer(
+            features={"train": [1], "val": [2], "test": [3]},
+            target={"train": [0], "val": [0], "test": [0]},
+        )
+        validate_mock = Mock(return_value=None)
+        object.__setattr__(preprocessor.data, "validate", validate_mock)
+
+        preprocessor.get_processed_split_dict(
+            view_policy=SplitViewPolicy.KEEP_UNIT_LISTS
+        )
+
+        validate_mock.assert_called_once_with()
 
 
 class TestPreProcessorApplyTransforms:

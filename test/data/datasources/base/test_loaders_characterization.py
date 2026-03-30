@@ -9,7 +9,7 @@ multi without multisource splitter, multi with BySourceSplitter, and edge cases
 import pytest
 from omegaconf import OmegaConf
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 from picid.data.datasources.base.contracts import LoaderState
 from picid.data.datasources.base.exceptions import DatasourceStateError
 from picid.data.datasources.base.multi_source_loader import MultiSourceLoader
@@ -80,7 +80,7 @@ def test_single_source_loader_get_data_before_split_raises(in_memory_loader):
 
 
 def test_single_source_loader_metadata_normalized_to_train_val_test():
-    """Metadata not in {train, val, test} is normalized to train/val/test."""
+    """Non-split loader metadata becomes container metadata on the container."""
 
     class LoaderWithMetadata(InMemorySingleSourceLoader):
         def _load_data(self):
@@ -92,11 +92,11 @@ def test_single_source_loader_metadata_normalized_to_train_val_test():
     loader.load_data()
     loader.split_data()
     data = loader.get_data()
-    # metadata is exposed via __getitem__("metadata") -> .metadata (may include column_map)
     meta = data["metadata"]
     assert meta is not None
     assert isinstance(meta, dict)
-    assert {"train", "val", "test"}.issubset(meta.keys())
+    assert meta["info"] == "single"
+    assert meta["column_map"] == {}
 
 
 def test_single_source_loader_get_meta_data_after_load(in_memory_loader):

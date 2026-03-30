@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+import awkward as ak
 
 from picid.data.data_objects.utils import (
     get_length,
@@ -18,13 +19,6 @@ from picid.data.data_objects.utils import (
     check_for_nans,
     convert_to_numpy,
 )
-
-try:
-    import awkward as ak
-
-    HAS_AWKWARD = True
-except ImportError:
-    HAS_AWKWARD = False
 
 
 # ----- get_length -----
@@ -162,7 +156,6 @@ def test_check_for_nans_series_non_numeric_skipped():
 # ----- check_for_nans: awkward.Array -----
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_numeric_with_nan_raises():
     """Numeric awkward array with NaN raises ValueError; message includes key."""
     arr = ak.Array([1.0, np.nan, 2.0])
@@ -172,7 +165,6 @@ def test_check_for_nans_awkward_numeric_with_nan_raises():
     assert "ak_feat" in exc_info.value.args[0]
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_numeric_no_nan_ok():
     """Numeric awkward array without NaN returns None."""
     arr = ak.Array([1.0, 2.0, 3.0])
@@ -180,7 +172,6 @@ def test_check_for_nans_awkward_numeric_no_nan_ok():
     assert result is None
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_nested_numeric_with_nan_raises():
     """Nested numeric awkward array with NaN raises; flatten is applied."""
     arr = ak.Array([[1.0, 2.0], [np.nan, 4.0]])
@@ -190,7 +181,6 @@ def test_check_for_nans_awkward_nested_numeric_with_nan_raises():
     assert "nested" in exc_info.value.args[0]
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_nested_numeric_no_nan_ok():
     """Nested numeric awkward array without NaN returns None."""
     arr = ak.Array([[1.0, 2.0], [3.0, 4.0]])
@@ -198,7 +188,6 @@ def test_check_for_nans_awkward_nested_numeric_no_nan_ok():
     assert result is None
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_non_numeric_skipped():
     """Non-numeric awkward array (e.g. strings) is not checked; no error."""
     arr = ak.Array(["a", "b", "c"])
@@ -206,7 +195,6 @@ def test_check_for_nans_awkward_non_numeric_skipped():
     assert result is None
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_awkward_warn_only():
     """awkward array with NaN and raise_on_error=False issues warning only."""
     arr = ak.Array([1.0, np.nan])
@@ -218,7 +206,6 @@ def test_check_for_nans_awkward_warn_only():
     assert "ak_x" in str(warn_info[0].message)
 
 
-@pytest.mark.skipif(not HAS_AWKWARD, reason="awkward not installed")
 def test_check_for_nans_mixed_list_awkward_nan_raises():
     """Multiple values: one awkward with NaN raises for that key."""
     ok_arr = np.array([1.0, 2.0])

@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     DatasetContainer,
     NamedTransformInput,
     SplitDatasetContainer,
@@ -146,20 +146,16 @@ def test_split_container_validate_success_with_consistent_multi_unit():
         "train": [np.zeros((10, 1)), np.zeros((10, 1))],
         "val": [np.zeros((5, 1))],
     }
-    c.validate()
+    report = c.validate()
+    assert report["is_consistent"] is True
 
 
-def test_split_container_validate_inconsistent_unit_counts_raises():
-    """validate() raises when unit counts differ across keys for same split (lines 223-232).
-
-    Use raw dicts in _data because BaseDataObject wraps nested dicts; validate() checks
-    isinstance(splits_data, dict) so we need raw dicts to exercise the validation loop.
-    """
+def test_split_container_validate_inconsistent_unit_counts_reports_heterogeneity():
+    """validate() reports heterogeneous unit counts instead of raising by default."""
     c = SplitDatasetContainer(
         features={"train": [np.zeros((5, 2))], "val": [np.zeros((3, 2))]},
         target={"train": [np.zeros((5, 1))], "val": [np.zeros((3, 1))]},
     )
-    # Inject raw dicts with inconsistent unit counts (features/train has 2, target/train has 1)
     c._data["features"] = {
         "train": [np.zeros((10, 2)), np.zeros((10, 2))],
         "val": [np.zeros((5, 2))],
@@ -168,8 +164,9 @@ def test_split_container_validate_inconsistent_unit_counts_raises():
         "train": [np.zeros((10, 1))],  # 1 unit vs 2 for features/train
         "val": [np.zeros((5, 1))],
     }
-    with pytest.raises(AssertionError, match="same number of units per split"):
-        c.validate()
+    report = c.validate()
+    assert report["is_consistent"] is False
+    assert report["unit_counts_match"] is False
 
 
 def test_dataset_container_copy_manifest_none():
@@ -184,7 +181,7 @@ def test_dataset_container_copy_manifest_none():
 
 def test_group_by_split_produces_units():
     """group_by_split() with multi-unit data appends BaseDataObjectWithMetadata (line 339)."""
-    from picid.data.data_objects.base import BaseDataObjectWithMetadata
+    from picid.data.data_objects import BaseDataObjectWithMetadata
 
     c = SplitDatasetContainer(
         features={

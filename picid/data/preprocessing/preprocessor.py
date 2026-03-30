@@ -55,7 +55,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 
 from picid.data.cache.offline import FileSystemCache
-from picid.data.data_objects.data import DatasetContainer, SplitViewPolicy
+from picid.data.data_objects import DatasetContainer, SplitViewPolicy
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
     ManifestEntry,
@@ -164,9 +164,9 @@ class PreProcessor(PreProcessorInterface):
         view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
     ) -> Dict[str, Any]:
         """Return the final processed data as a split-first dictionary view."""
-        return self.get_processed_data_container().to_split_dict(
-            view_policy=view_policy
-        )
+        container = self.get_processed_data_container()
+        container.validate()
+        return container.to_split_dict(view_policy=view_policy)
 
     def get_cached_transform_manager(self) -> AnyTransformSequence:
         """Return the (possibly restored-from-cache) transform sequence."""

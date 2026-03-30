@@ -15,7 +15,7 @@ from box import Box
 import awkward as ak
 from pandas.core.generic import NDFrame
 
-from picid.data.data_objects.data import DatasetContainer, SplitDatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 from picid.data.datasources.base.contracts import LoaderState
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
 
@@ -159,10 +159,15 @@ class SingleSourceLoader(AbstractDataSourceLoader):
 
         for key, value in self.data_dict.items():
             if key == "metadata" and not self._is_split_mapping(value):
-                normalized_data[key] = {
-                    "train": value,
-                    "val": value,
-                    "test": value,
+                normalized_data["container_metadata"] = value
+                continue
+
+            if key == "metadata" and self._is_split_mapping(value):
+                normalized_data["unit_metadata"] = {
+                    split: split_value
+                    if isinstance(split_value, list)
+                    else [split_value]
+                    for split, split_value in value.items()
                 }
                 continue
 

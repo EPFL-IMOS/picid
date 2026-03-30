@@ -7,6 +7,7 @@ Registry: (DataKind, TransformCapability) -> TransformHandler.
 
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any, Callable, Dict, List, Protocol, Tuple
 
@@ -14,8 +15,8 @@ import numpy as np
 import awkward as ak
 from sortedcontainers import SortedDict
 
-from picid.data.data_objects.data import NamedTransformInput
-from picid.data.data_objects.base import BaseDataObjectWithMetadata
+from picid.data.data_objects import NamedTransformInput
+from picid.data.data_objects import BaseDataObjectWithMetadata
 
 from picid.transforms.base.data_kind import (
     CAPABILITY_BOTH,
@@ -129,7 +130,21 @@ class DenseDenseHandler:
                         if hasattr(val, "to_numpy"):
                             segment_dict[key] = val.to_numpy()
             seg_input = (
-                NamedTransformInput(**segment_dict) if segment_dict else data_segment
+                NamedTransformInput(
+                    # Dense-only transforms may receive awkward-backed inputs
+                    # here after an on-the-fly conversion to NumPy. Preserve the
+                    # original per-unit metadata while rebuilding the temporary
+                    # NamedTransformInput so metadata-aware transforms still see
+                    # the same unit context.
+                    metadata=(
+                        copy.deepcopy(data_segment.metadata)
+                        if data_segment.metadata is not None
+                        else None
+                    ),
+                    **segment_dict,
+                )
+                if segment_dict
+                else data_segment
             )
             out_segment = transform_func(seg_input, metadata=metadata)
             if converted_to_numpy:
@@ -226,7 +241,17 @@ class RaggedDenseHandler:
                     k: data_segment[k][coord].to_numpy() for k in data_segment.keys()
                 }
                 out_subsegment = [
-                    transform_func(NamedTransformInput(**subsegment), metadata=metadata)
+                    transform_func(
+                        NamedTransformInput(
+                            metadata=(
+                                copy.deepcopy(data_segment.metadata)
+                                if data_segment.metadata is not None
+                                else None
+                            ),
+                            **subsegment,
+                        ),
+                        metadata=metadata,
+                    )
                 ]
                 out_subsegment = postprocess(out_subsegment, metadata)
                 assert (

@@ -41,7 +41,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from picid.data.data_objects.data import (
+from picid.data.data_objects import (
     NamedTransformInput,
     NamedDictReturnObject,
     ReturnObject,
@@ -230,6 +230,7 @@ class TransformStrategy:
         self,
         data_to_prepare: Dict[str, Any],
         split: str,
+        unit_metadata_by_split: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     ) -> List[NamedTransformInput]:
         """
         Build one NamedTransformInput per unit for the given split.
@@ -246,27 +247,71 @@ class TransformStrategy:
         directly by FitStep/TransformStep as a fallback for test contexts
         where RegisterChunkBuilderStep did not run.
         """
-        keys = list(data_to_prepare.keys())
-        if not keys:
-            return []
-
-        first_val = data_to_prepare[keys[0]][split]
-        assert isinstance(first_val, list), (
-            f"data['{keys[0]}']['{split}'] must be List[array] (one per unit). "
-            "See docs/reference/datasources.md#loader-data-contract."
+        keys, num_units, unit_metadata_for_split = self._validate_chunk_alignment(
+            data_to_prepare=data_to_prepare,
+            split=split,
+            unit_metadata_by_split=unit_metadata_by_split,
         )
-        num_units = len(first_val)
 
         return [
             NamedTransformInput(
-                **{
-                    key: data_to_prepare[key][split][i]
-                    for key in keys
-                    if split in data_to_prepare[key]
-                }
+                # The chunk keeps the payload arrays by reference, but its
+                # metadata is the per-unit metadata record for this exact unit.
+                metadata=unit_metadata_for_split[i]
+                if unit_metadata_for_split
+                else None,
+                **{key: data_to_prepare[key][split][i] for key in keys},
             )
             for i in range(num_units)
         ]
+
+    @staticmethod
+    def _validate_chunk_alignment(
+        data_to_prepare: Dict[str, Any],
+        split: str,
+        unit_metadata_by_split: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    ) -> Tuple[List[str], int, List[Dict[str, Any]]]:
+        """Validate split-local payload counts before chunk materialization."""
+        keys = list(data_to_prepare.keys())
+        if not keys:
+            return [], 0, []
+
+        counts: dict[str, int] = {}
+        for key in keys:
+            if split not in data_to_prepare[key]:
+                raise ValueError(
+                    f"Split '{split}' is missing for payload key '{key}' during "
+                    "chunk preparation."
+                )
+            split_value = data_to_prepare[key][split]
+            if not isinstance(split_value, list):
+                raise ValueError(
+                    f"data['{key}']['{split}'] must be a list of units, got "
+                    f"{type(split_value).__name__}."
+                )
+            counts[key] = len(split_value)
+
+        unique_counts = set(counts.values())
+        if len(unique_counts) > 1:
+            raise ValueError(
+                f"Misaligned unit counts for split '{split}' during chunk "
+                f"preparation: {counts}."
+            )
+
+        num_units = unique_counts.pop() if unique_counts else 0
+        unit_metadata_for_split = []
+        if unit_metadata_by_split is not None:
+            unit_metadata_for_split = unit_metadata_by_split.get(split, [])
+            # We fail before chunk creation so schema/layout bugs surface as a
+            # clear contract error instead of a later IndexError during
+            # transform execution.
+            if len(unit_metadata_for_split) != num_units:
+                raise ValueError(
+                    f"unit_metadata is misaligned for split '{split}': expected "
+                    f"{num_units} entries but got {len(unit_metadata_for_split)}."
+                )
+
+        return keys, num_units, unit_metadata_for_split
 
     def _merge_transformed_data(
         self,

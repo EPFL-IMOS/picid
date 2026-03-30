@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional
 
 import awkward as ak
 
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.data.data_objects.slice_info import SliceInfo
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
@@ -147,13 +147,28 @@ class RegisterChunkBuilderStep:
 
         def build_transform_chunks(split: str) -> List[NamedTransformInput]:
             target_data = {key: data[key] for key in apply_to_keys}
-            return strategy._prepare_chunks_for_split(target_data, split)
+            return strategy._prepare_chunks_for_split(
+                target_data,
+                split,
+                # unit_metadata is optional; when present it is threaded into
+                # the split-local chunk builder so every NamedTransformInput
+                # sees its own per-unit metadata.
+                unit_metadata_by_split=(
+                    data.unit_metadata if getattr(data, "unit_metadata", {}) else None
+                ),
+            )
 
         def build_fit_chunks() -> List[NamedTransformInput]:
             if not fit_on_split or not fit_on_key:
                 return []
             fit_data = {fit_on_key: data[fit_on_key]}
-            return strategy._prepare_chunks_for_split(fit_data, fit_on_split)
+            return strategy._prepare_chunks_for_split(
+                fit_data,
+                fit_on_split,
+                unit_metadata_by_split=(
+                    data.unit_metadata if getattr(data, "unit_metadata", {}) else None
+                ),
+            )
 
         context.build_transform_chunks = build_transform_chunks
         context.build_fit_chunks = build_fit_chunks
@@ -240,7 +255,13 @@ class FitStep:
             logger.debug("FitStep: build_fit_chunks not registered. Building inline.")
             fit_data = {context.fit_on_key: context.data[context.fit_on_key]}
             fit_chunks = context.strategy._prepare_chunks_for_split(
-                fit_data, context.fit_on_split
+                fit_data,
+                context.fit_on_split,
+                unit_metadata_by_split=(
+                    context.data.unit_metadata
+                    if getattr(context.data, "unit_metadata", {})
+                    else None
+                ),
             )
         else:
             return context
@@ -253,6 +274,7 @@ class FitStep:
             "apply_to_keys": context.fit_on_key,
             "assign_to_keys": context.assign_to_keys,
             "assign_to_map": context.assign_to_keys_map,
+            "container_metadata": getattr(context.data, "container_metadata", {}),
         }
         if context.include_slice_info_in_metadata and context.slice_info is not None:
             metadata["slice_info"] = _slice_info_to_metadata(context.slice_info)
@@ -287,8 +309,20 @@ class TransformStep:
                     split,
                 )
                 target_data = {key: context.data[key] for key in context.apply_to_keys}
-                chunks = context.strategy._prepare_chunks_for_split(target_data, split)
+                chunks = context.strategy._prepare_chunks_for_split(
+                    target_data,
+                    split,
+                    unit_metadata_by_split=(
+                        context.data.unit_metadata
+                        if getattr(context.data, "unit_metadata", {})
+                        else None
+                    ),
+                )
             else:
+                continue
+
+            if not chunks:
+                context.log[split] = {}
                 continue
 
             metadata = {
@@ -296,6 +330,7 @@ class TransformStep:
                 "apply_to_keys": context.apply_to_keys,
                 "assign_to_keys": context.assign_to_keys,
                 "assign_to_map": context.assign_to_keys_map,
+                "container_metadata": getattr(context.data, "container_metadata", {}),
             }
             if (
                 context.include_slice_info_in_metadata
@@ -369,6 +404,7 @@ class MergeStep:
             return context
 
         self._warn_on_changes(context)
+        self._assert_unit_metadata_alignment(context)
 
         context.strategy._merge_transformed_data(
             base_data=context.transformed_data,
@@ -411,6 +447,41 @@ class MergeStep:
                             len(before),
                             len(after_list),
                         )
+
+    @staticmethod
+    def _assert_unit_metadata_alignment(context: TransformContext) -> None:
+        """Raise when transformed output can no longer align with unit metadata."""
+        transformed_data = context.transformed_data
+        if transformed_data is None:
+            return
+
+        unit_metadata = getattr(transformed_data, "unit_metadata", {})
+        if not unit_metadata:
+            return
+
+        mismatches = []
+        for (
+            assign_to_key,
+            split_results,
+        ) in context.transformed_results_for_new_key.items():
+            for split, after_list in split_results.items():
+                # Unit metadata is preserved automatically only for
+                # unit-preserving transforms. If a transform collapses or expands
+                # units, it must implement an explicit propagation strategy
+                # instead of silently leaving metadata behind.
+                expected = len(unit_metadata.get(split, []))
+                actual = len(after_list)
+                if expected != actual:
+                    mismatches.append(
+                        f"{assign_to_key}/{split}: expected {expected} metadata "
+                        f"entries but got {actual} transformed units"
+                    )
+
+        if mismatches:
+            raise ValueError(
+                "Transform output cannot preserve unit_metadata alignment: "
+                + "; ".join(mismatches)
+            )
 
 
 class IntegrityCheckAfterStep:

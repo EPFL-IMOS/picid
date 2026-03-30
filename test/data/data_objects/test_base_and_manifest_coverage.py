@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from picid.data.data_objects.base import (
+from picid.data.data_objects import (
     BaseDataObject,
     BaseDataObjectWithMetadata,
 )
@@ -63,10 +63,11 @@ class MinimalBaseDataObject(BaseDataObject):
 
 
 def test_base_data_object_setitem_empty_list_warns():
-    """__setitem__ with empty list triggers log warning; key is not stored (coverage)."""
+    """__setitem__ preserves empty lists so known empty splits are not lost."""
     obj = MinimalBaseDataObject()
-    obj["k"] = []  # hits logger.warning branch; empty list is not stored
-    assert "k" not in obj  # implementation does not store empty list
+    obj["k"] = []
+    assert "k" in obj
+    assert obj["k"] == []
 
 
 def test_base_data_object_setitem_invalid_type_raises():

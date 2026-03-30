@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from picid.data.data_objects.data import NamedTransformInput, SplitDatasetContainer
+from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
 from picid.data.data_objects.utils import check_for_nans, check_length_consistency
 
 
@@ -89,17 +89,19 @@ def test_split_container_validate_consistent_units():
             "val": [np.zeros((5, 1))],
         },
     )
-    c.validate()
+    report = c.validate()
+    assert report["is_consistent"] is True
 
 
-def test_split_container_validate_inconsistent_units_raises():
-    """validate() raises when unit counts differ within a split."""
+def test_split_container_validate_inconsistent_units_reports_heterogeneity():
+    """validate() reports when unit counts differ within a split."""
     c = SplitDatasetContainer(
         features={"train": [np.zeros((10, 2)), np.zeros((10, 2)), np.zeros((10, 2))]},
         target={"train": [np.zeros((10, 1))]},
     )
-    with pytest.raises(AssertionError, match="same number of units per split"):
-        c.validate()
+    report = c.validate()
+    assert report["is_consistent"] is False
+    assert report["unit_counts_match"] is False
 
 
 # ---------------------------------------------------------------------------
