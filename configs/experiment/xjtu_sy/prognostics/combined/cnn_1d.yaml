@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/cnn_1d
-  - override /transforms: bearings/xjtu_sy/combined

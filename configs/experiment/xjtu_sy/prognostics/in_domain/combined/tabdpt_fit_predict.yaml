@@ -1,9 +1,8 @@
 #@package _global_
 
 defaults:
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/xgboost_fit_predict
-  - override /transforms: bearings/xjtu_sy/combined_fit_predict
+  - /experiment/xjtu_sy/prognostics/in_domain/combined/base
+  - /model_configs/prognostics/tabdpt_fit_predict
 
 task_definition:
   model:

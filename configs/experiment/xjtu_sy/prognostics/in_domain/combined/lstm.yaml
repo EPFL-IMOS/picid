@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - /experiment/xjtu_sy/prognostics/in_domain/combined/base
+  - /model_configs/prognostics/lstm

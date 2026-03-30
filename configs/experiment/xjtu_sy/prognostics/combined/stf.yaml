@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/stf
-  - override /transforms: bearings/xjtu_sy/combined

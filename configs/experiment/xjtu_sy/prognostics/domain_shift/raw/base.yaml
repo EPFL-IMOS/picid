@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - /experiment/xjtu_sy/prognostics/domain_shift/base
+  - override /transforms: bearings/xjtu_sy/raw

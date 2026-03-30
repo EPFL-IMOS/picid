@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import logging
 
 import awkward as ak
@@ -32,9 +33,151 @@ UNIT_NAMES_TO_ID = {
 SAMPLE_RANGE_SIZE = 32768
 FAULT_TARGET_COLS = ["Outer race", "Cage", "Inner race"]
 
+# Custom evaluation protocols used in the paper. The PHMD payload still serves as
+# the transport/source dataset, but these tables redefine which fully observed
+# bearings belong to train/validation/test for reporting.
+XJTU_SY_SPLIT_ASSIGNMENTS_BY_MODE = {
+    "in_domain": {
+        "train": ["1_1", "1_2", "1_3", "2_1", "2_2", "2_3", "3_1", "3_2", "3_3"],
+        "val": ["1_4", "2_4", "3_4"],
+        "test": ["1_5", "2_5", "3_5"],
+    },
+    "domain_shift": {
+        "train": ["1_1", "1_2", "1_3", "1_4", "2_1", "2_2", "2_3", "2_4"],
+        "val": ["1_5", "2_5"],
+        "test": ["3_1", "3_2", "3_3", "3_4", "3_5"],
+    },
+}
+
 
 class XJTU_SYLoader(PHMDMultiSourceLoader):
     """XJTU-SY PHMD datasource using the refactored PHMD base."""
+
+    def __init__(
+        self,
+        split_mode: str | None = None,
+        split_assignments: dict[str, list[str]] | None = None,
+        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None = None,
+        **kwargs,
+    ):
+        # Preserve the custom split configuration in the constructor snapshot so
+        # payload-cache fingerprints change when the evaluation protocol changes.
+        kwargs.update(
+            split_mode=split_mode,
+            split_assignments=deepcopy(split_assignments),
+            split_assignments_by_mode=deepcopy(split_assignments_by_mode),
+        )
+        super().__init__(**kwargs)
+        self.split_mode = split_mode
+        self.split_assignments = self._resolve_split_assignments(
+            split_assignments=split_assignments,
+            split_mode=split_mode,
+            split_assignments_by_mode=split_assignments_by_mode,
+        )
+
+    def _resolve_split_assignments(
+        self,
+        *,
+        split_assignments: dict[str, list[str]] | None,
+        split_mode: str | None,
+        split_assignments_by_mode: dict[str, dict[str, list[str]]] | None,
+    ) -> dict[str, list[str]] | None:
+        """Return the active unit split table for the configured evaluation mode.
+
+        When no custom split mode is provided, the loader falls back to the PHMD
+        fold split exactly as before. This keeps the dataset transport unchanged
+        and makes the custom protocols opt-in at the config layer.
+        """
+        if split_assignments is not None:
+            return {
+                split: list(unit_keys) for split, unit_keys in split_assignments.items()
+            }
+
+        if split_mode is None:
+            return None
+
+        split_tables = split_assignments_by_mode or XJTU_SY_SPLIT_ASSIGNMENTS_BY_MODE
+        if split_mode not in split_tables:
+            raise ValueError(
+                "Unknown XJTU-SY split_mode "
+                f"{split_mode!r}. Available modes: {sorted(split_tables)}"
+            )
+        return {
+            split: list(unit_keys)
+            for split, unit_keys in split_tables[split_mode].items()
+        }
+
+    def _load_data(self):
+        out_dict = super()._load_data()
+        if self.split_assignments is None:
+            return out_dict
+
+        remapped = self._apply_custom_split_assignments(out_dict)
+        self._refresh_split_metadata(remapped)
+        return remapped
+
+    def _apply_custom_split_assignments(self, out_dict):
+        """Reassemble the PHMD unit payload using the configured custom protocol.
+
+        PHMD already materializes one payload entry per bearing, so custom split
+        support only needs to relocate whole-unit records across train/val/test.
+        No raw signal processing changes here; this is strictly an evaluation
+        protocol layer on top of the existing PHMD XJTU-SY ingestion.
+        """
+        assert self.split_assignments is not None, "Custom split assignments missing."
+        unit_metadata = out_dict["unit_metadata"]
+
+        indexed_units: dict[str, tuple[str, int]] = {}
+        for split_name in ("train", "val", "test"):
+            for idx, meta in enumerate(unit_metadata.get(split_name, [])):
+                unit_key = meta["unit_name"].replace("Bearing ", "")
+                indexed_units[unit_key] = (split_name, idx)
+
+        self._validate_split_assignments(indexed_units)
+
+        remapped = {
+            key: {"train": [], "val": [], "test": []}
+            for key in out_dict
+        }
+        for target_split in ("train", "val", "test"):
+            for unit_key in self.split_assignments.get(target_split, []):
+                source_split, idx = indexed_units[unit_key]
+                for key in out_dict:
+                    remapped[key][target_split].append(out_dict[key][source_split][idx])
+        return remapped
+
+    def _validate_split_assignments(self, indexed_units: dict[str, tuple[str, int]]) -> None:
+        configured_keys: list[str] = []
+        for split_name in ("train", "val", "test"):
+            configured_keys.extend(self.split_assignments.get(split_name, []))
+
+        duplicates = sorted(
+            {key for key in configured_keys if configured_keys.count(key) > 1}
+        )
+        if duplicates:
+            raise ValueError(f"Units assigned to multiple splits: {duplicates}")
+
+        unknown_units = sorted(set(configured_keys) - set(indexed_units))
+        if unknown_units:
+            raise ValueError(f"Configured units not found in PHMD fold payload: {unknown_units}")
+
+        unassigned_units = sorted(set(indexed_units) - set(configured_keys))
+        if unassigned_units:
+            raise ValueError(
+                f"Unassigned units present in PHMD fold payload: {unassigned_units}"
+            )
+
+    def _refresh_split_metadata(self, out_dict) -> None:
+        unit_metadata = out_dict.get("unit_metadata", {})
+        unit_ids = out_dict.get("unit_id", {})
+        self.meta_data["unit_names"] = {
+            split: [meta["unit_name"] for meta in unit_metadata.get(split, [])]
+            for split in ("train", "val", "test")
+        }
+        self.meta_data["unit_ids"] = {
+            split: unit_ids.get(split, [])
+            for split in ("train", "val", "test")
+        }
 
     def _get_features_columns(self):
         return self.meta_data["features"]
