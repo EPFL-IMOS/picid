@@ -1,0 +1,7 @@
+_target_: picid.data.datasources.phmd_pronostia.PronostiaLoader
+fold: 0
+data_name: PRONOSTIA
+task_mode: rul # rul, fault
+cache_dir: ${paths.data_dir}/phmd_cache
+
+use_ragged: True # This flag at the end assumed to be true by def
