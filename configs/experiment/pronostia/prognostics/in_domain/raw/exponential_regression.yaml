@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - /experiment/pronostia/prognostics/in_domain/raw/base
+  - /model_configs/prognostics/exponential_regression

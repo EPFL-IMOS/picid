@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - pronostia/prognostics/base
-  - /model_configs/prognostics/crossformer
-  - override /transforms: bearings/pronostia/combined

@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - /experiment/pronostia/prognostics/in_domain/base
+  - override /transforms: bearings/pronostia/raw

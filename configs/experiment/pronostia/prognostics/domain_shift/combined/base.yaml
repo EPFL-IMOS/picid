@@ -1,0 +1,5 @@
+#@package _global_
+
+defaults:
+  - /experiment/pronostia/prognostics/domain_shift/base
+  - override /transforms: bearings/pronostia/combined
