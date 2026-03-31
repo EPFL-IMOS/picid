@@ -25,23 +25,24 @@ logger = logging.getLogger(__name__)
 
 class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     """
-    A pass-through transform that plots features and/or targets
-    from `awkward` arrays.
+    Plot feature and target arrays for debugging and inspection.
 
-    This transform is for debugging and analysis. It intelligently
-    handles ragged arrays and broadcasting between features and targets
-    before flattening them into 2D numpy arrays for plotting.
+    The transform is intentionally pass-through. It flattens ragged inputs
+    only for plotting, saves figures to disk, and returns the original data
+    unchanged.
 
-    It handles multiple data shapes, including:
-    - (N, var, F) features and (N, 1) targets (broadcasts target).
-    - (N, var, F) features and (N, var, 1) targets (flattens both).
-    - (N, F) features and (N, 1) targets (standard numpy).
-
-    Plots are saved to structured subdirectories:
-    `saving_path/features_and_targets/`
-    `saving_path/features_only/`
-    `saving_path/targets_only/`
-    `saving_path/original_targets/` (if broadcasting occurs)
+    Parameters
+    ----------
+    saving_path : str
+        Root directory where plots are written.
+    unit_key : str
+        Metadata key used to build output filenames.
+    features_key : str, optional
+        Data key holding the feature array.
+    target_key : str, optional
+        Data key holding the target array.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(
@@ -53,23 +54,22 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         **kwargs,
     ):
         """
-        Initialize the AwkwardFeatureTargetPlotter.
+        Initialize the plotting transform and choose the plot regime.
 
         Parameters
         ----------
         saving_path : str
-            The root directory path to save images.
+            Root directory where plots are written.
         unit_key : str
-            The key in the `metadata` dict to find the
-            unit identifier (e.g., 'unit_id').
+            Metadata key used to build output filenames.
         features_key : str, optional
-            The key in the `data` dict for the features.
-            If None, only targets will be plotted.
+            Data key holding the feature array. If ``None``, only targets are
+            plotted.
         target_key : str, optional
-            The key in the `data` dict for the targets.
-            If None, only features will be plotted.
+            Data key holding the target array. If ``None``, only features are
+            plotted.
         **kwargs
-            Additional arguments for BaseTransform.
+            Additional keyword arguments forwarded to the base transform.
         """
         super().__init__(**kwargs)
         self.saving_path = saving_path
@@ -111,7 +111,19 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         )
 
     def _get_unit_id(self, metadata: Dict) -> str:
-        """Helper to safely extract the unit ID from metadata for logging/filenames."""
+        """
+        Extract a printable unit identifier from metadata.
+
+        Parameters
+        ----------
+        metadata : dict
+            Metadata dictionary that may contain the unit identifier.
+
+        Returns
+        -------
+        str
+            Printable unit identifier used in filenames.
+        """
         if metadata and self.unit_key in metadata:
             unit_id = metadata[self.unit_key]
             if (
@@ -128,8 +140,18 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         self, data: NamedTransformInput
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
         """
-        Handles shape checking, broadcasting, and flattening of awkward arrays.
-        Returns (feat_flat, targ_flat, orig_targ_np).
+        Flatten ragged arrays into plotting-friendly NumPy views.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input mapping containing features and/or targets.
+
+        Returns
+        -------
+        tuple[numpy.ndarray or None, numpy.ndarray or None, numpy.ndarray or None]
+            Flattened features, flattened targets, and the original target
+            before broadcasting when that special case applies.
         """
         feat_data, targ_data = None, None
         feat_shape, targ_shape = [], []
@@ -205,7 +227,18 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         return feat_flat, targ_flat, orig_targ_np
 
     def _save_plot(self, fig: plt.Figure, unit_id_str: str, regime: str):
-        """Creates directory and saves the plot."""
+        """
+        Save a single figure under the regime-specific output folder.
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure
+            Figure object to persist.
+        unit_id_str : str
+            Unit identifier used in the output filename.
+        regime : str
+            Output subdirectory name.
+        """
         regime_path = os.path.join(self.saving_path, regime)
         os.makedirs(regime_path, exist_ok=True)
 
@@ -221,7 +254,16 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
             plt.close(fig)  # Close figure to free memory
 
     def _save_original_target_plot(self, orig_targ_data: np.ndarray, unit_id_str: str):
-        """Saves a separate plot of the original (N, 1) target."""
+        """
+        Save the pre-broadcast target plot for comparison/debugging.
+
+        Parameters
+        ----------
+        orig_targ_data : numpy.ndarray
+            Target values before any broadcasting step.
+        unit_id_str : str
+            Unit identifier used in the output filename.
+        """
         n_samples, n_features = orig_targ_data.shape
         x_axis = np.arange(n_samples)
 
@@ -257,7 +299,19 @@ class FeatureTargetPlotter(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> NamedTransformInput:
         """
-        Generates and saves the plot(s), then returns the data unmodified.
+        Generate the requested plots and return the input unchanged.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input arrays to visualize.
+        metadata : dict
+            Metadata used to label the saved plot files.
+
+        Returns
+        -------
+        NamedTransformInput
+            The original input data, unchanged.
         """
         unit_id_str = self._get_unit_id(
             {self.unit_key: data.get(self.unit_key, "unknown_unit")}

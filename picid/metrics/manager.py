@@ -9,8 +9,23 @@ logger = logging.getLogger(__name__)
 
 class MetricManager:
     """
-    Orchestrates multiple metric instances.
-    Handles dual-scaling (normalized/denormalized) and task-specific aggregation.
+    Orchestrate multiple metric instances.
+
+    Handles dual-scaling (normalized/denormalized) and task-specific
+    aggregation.
+
+    Parameters
+    ----------
+    metric_names : List[str]
+        Metric names to manage.
+    task_type : str
+        Task type, typically ``"regression"`` or ``"classification"``.
+    paths : Optional[Dict[str, str]], default=None
+        File-system paths required by filesystem-backed metrics.
+    num_classes : Optional[int], default=None
+        Number of classes for classification metrics.
+    is_dual : bool, default=False
+        Whether to track both raw and normalized metrics.
     """
 
     def __init__(
@@ -22,18 +37,20 @@ class MetricManager:
         is_dual: bool = False,
     ):
         """
+        Initialize the metric manager and build the managed metric sets.
+
         Parameters
         ----------
-        metric_names :
-            List of metrics to track (e.g., ['mse', 'mae']).
-        task_type :
-            'regression' or 'classification'.
-        paths :
-            Required for AbstractFileSystemMetrics (e.g., Railway metrics).
-        num_classes :
-            Required for classification metrics.
-        is_dual :
-            If True, tracks both raw and normalized metrics.
+        metric_names : List[str]
+            Metric names to manage.
+        task_type : str
+            Task type, typically ``"regression"`` or ``"classification"``.
+        paths : Optional[Dict[str, str]], default=None
+            File-system paths required by filesystem-backed metrics.
+        num_classes : Optional[int], default=None
+            Number of classes for classification metrics.
+        is_dual : bool, default=False
+            Whether to track both raw and normalized metrics.
         """
         if not metric_names or len(metric_names) == 0:
             raise ValueError("metric_names cannot be empty")
@@ -49,7 +66,14 @@ class MetricManager:
         self.normalized_metrics = self._create_metric_set() if is_dual else None
 
     def _create_metric_set(self) -> Dict[str, Any]:
-        """Uses MetricFactory to build the required metric objects."""
+        """
+        Use :class:`MetricFactory` to build the required metric objects.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Mapping of metric names to instantiated metric objects.
+        """
         res = {}
         for name in self.metric_names:
             if self.task_type == "classification":
@@ -72,7 +96,20 @@ class MetricManager:
         norm_preds: Optional[np.ndarray] = None,
         norm_targets: Optional[np.ndarray] = None,
     ) -> None:
-        """Updates all managed metrics with new batch data."""
+        """
+        Update all managed metrics with a new batch of predictions and targets.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Raw model predictions.
+        targets : np.ndarray
+            Raw ground-truth targets.
+        norm_preds : Optional[np.ndarray], default=None
+            Normalized predictions used in dual mode.
+        norm_targets : Optional[np.ndarray], default=None
+            Normalized targets used in dual mode.
+        """
         # Update primary metrics
         for metric in self.metrics.values():
             metric.update(predictions, targets)
@@ -83,7 +120,14 @@ class MetricManager:
                 metric.update(norm_preds, norm_targets)
 
     def compute(self) -> Dict[str, float]:
-        """Computes and returns a dictionary of all metric results."""
+        """
+        Compute and return all managed metric values.
+
+        Returns
+        -------
+        Dict[str, float]
+            Dictionary of computed metric values.
+        """
         results = {}
 
         # Classification results (usually no suffixes needed)
@@ -102,7 +146,7 @@ class MetricManager:
         return results
 
     def reset(self) -> None:
-        """Resets all internal metric states."""
+        """Reset all internal metric states."""
         for metric in self.metrics.values():
             metric.reset()
         if self.normalized_metrics:

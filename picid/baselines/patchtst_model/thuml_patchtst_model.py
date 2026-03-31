@@ -14,11 +14,73 @@ from .thuml_patchtst import Model as PatchTST
 
 
 class PatchTST_Forecaster(TransformerForecaster):
-    """PatchTST forecaster for time-series forecasting, regression, and classification.
+    """
+    PatchTST forecaster for time-series forecasting, regression, and classification.
 
     Wraps the PatchTST model (thuml_patchtst.Model) with training logic,
     loss computation, and step handling. Supports long-term forecasting,
     regression, and classification task types.
+
+    Parameters
+    ----------
+    optimizer_factory : Callable[..., torch.optim.Optimizer]
+        Factory returning a torch optimizer.
+    scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
+        Factory returning a learning rate scheduler.
+    d_x : int
+        Dimension of exogenous input features.
+    d_yc : int
+        Dimension of context target variables.
+    d_yt : int
+        Dimension of target variables (output).
+    ts_in : int
+        Input sequence length.
+    ts_out : int
+        Output sequence length (prediction horizon).
+    task_type : str
+        One of long_term_forecast, regression, classification, etc.
+    dropout : float, optional
+        Dropout probability. Default is 0.1.
+    patch_len : int, optional
+        Patch length for PatchTST embedding. Default is 16.
+    stride : int, optional
+        Stride for PatchTST embedding. Default is 8.
+    e_layers : int, optional
+        Number of encoder layers. Default is 3.
+    d_layers : int, optional
+        Number of decoder layers. Default is 3.
+    d_ff : int, optional
+        Feed-forward dimension. Default is 64.
+    n_heads : int, optional
+        Number of attention heads. Default is 4.
+    activation : str, optional
+        Activation function name. Default is ``"gelu"``.
+    factor : int, optional
+        Attention factor. Default is 3.
+    use_x_dim : bool, optional
+        Whether to use exogenous features. Default is False.
+    include_x_t : bool, optional
+        Whether to include future exogenous in input. Default is True.
+    loss : str, optional
+        Loss function name. Default is ``"mse"``.
+    linear_window : int, optional
+        Linear window size. Default is 0.
+    d_model : int, optional
+        Model dimension. Default is 64.
+    use_revin : bool, optional
+        Whether to use RevIN normalization. Default is False.
+    use_seasonal_decomp : bool, optional
+        Whether to use seasonal decomposition. Default is False.
+    linear_shared_weights : bool, optional
+        Whether to share linear weights. Default is False.
+    transformer_args : dict, optional
+        Extra transformer arguments. Default is None.
+    d_x_mask : list of int, optional
+        Mask for exogenous dimensions. Default is None.
+    mask_y_c : bool, optional
+        Whether to mask context targets. Default is False.
+    **kwargs
+        Passed to the parent forecaster, for example ``evaluators``.
     """
 
     def __init__(
@@ -56,7 +118,8 @@ class PatchTST_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
-        """Initialize PatchTST forecaster.
+        """
+        Initialize PatchTST forecaster.
 
         Parameters
         ----------
@@ -215,7 +278,8 @@ class PatchTST_Forecaster(TransformerForecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
-        """Run a single forward pass through the PatchTST model.
+        """
+        Run a single forward pass through the PatchTST model.
 
         Parameters
         ----------
@@ -293,7 +357,8 @@ class PatchTST_Forecaster(TransformerForecaster):
         return (outputs,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
-        """Execute one training or evaluation step.
+        """
+        Execute one training or evaluation step.
 
         Parameters
         ----------
@@ -338,7 +403,8 @@ class PatchTST_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-        """Compute forecast loss from a batch.
+        """
+        Compute forecast loss from a batch.
 
         Parameters
         ----------

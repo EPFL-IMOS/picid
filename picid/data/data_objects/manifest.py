@@ -53,15 +53,26 @@ class ManifestEntry:
 
 class MetadataManifest:
     """
-    Container for manifest entries; attachable to DatasetContainer.
-    Queryable by step_id, key, split (None means "any").
+    Store manifest entries and support simple filtering by scope.
+
+    Parameters
+    ----------
+    entries : list[ManifestEntry] | None, optional
+        Optional initial manifest entries.
     """
 
     def __init__(self, entries: Optional[List[ManifestEntry]] = None) -> None:
         self._entries: List[ManifestEntry] = list(entries) if entries else []
 
     def add(self, entry: ManifestEntry) -> None:
-        """Append an entry."""
+        """
+        Append one manifest entry.
+
+        Parameters
+        ----------
+        entry : ManifestEntry
+            Entry to append.
+        """
         self._entries.append(entry)
 
     def query(
@@ -73,7 +84,23 @@ class MetadataManifest:
         category: Optional[str] = None,
     ) -> List[ManifestEntry]:
         """
-        Return entries matching the given filters. None for a filter means "any".
+        Return entries matching the given filters.
+
+        Parameters
+        ----------
+        step_id : str | None, optional
+            Step identifier to filter by.
+        key : str | None, optional
+            Data key to filter by.
+        split : str | None, optional
+            Split name to filter by.
+        category : str | None, optional
+            Manifest category to filter by.
+
+        Returns
+        -------
+        list[ManifestEntry]
+            Entries matching the requested filters.
         """
         out = []
         for e in self._entries:
@@ -89,7 +116,19 @@ class MetadataManifest:
         return out
 
     def copy(self, deep: bool = True) -> "MetadataManifest":
-        """Return a copy of the manifest. If deep, payloads are deep-copied."""
+        """
+        Return a copy of the manifest.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            Whether payload dictionaries should be deep-copied.
+
+        Returns
+        -------
+        MetadataManifest
+            Copy of the manifest entries.
+        """
         if deep:
             import copy as copy_mod
 

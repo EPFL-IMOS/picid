@@ -47,7 +47,7 @@ from picid.transforms.base.multisource.utils import (
 
 
 class MultiSourceFitInterface(ABC):
-    """Abstract contract: fit strategies must implement fit_multi_source."""
+    """Abstract contract for fit strategies in the multi-source pipeline."""
 
     @abstractmethod
     def fit_multi_source(
@@ -58,7 +58,7 @@ class MultiSourceFitInterface(ABC):
 
 
 class MultiSourceTransformInterface(ABC):
-    """Abstract contract: transform strategies must implement transform_multi_source."""
+    """Abstract contract for transform strategies in the multi-source pipeline."""
 
     @abstractmethod
     def transform_multi_source(
@@ -90,9 +90,18 @@ class _BaseDispatcher(MultiSourceTransformInterface, ABC):
         """
         Shared setup for fit and transform dispatch.
 
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            Input chunks grouped by split.
+        metadata : dict[str, Any], optional
+            Pipeline metadata for the current transform call.
+
         Returns
         -------
-        handler, metadata_copy, data_kind, capability
+        tuple
+            A tuple containing the resolved handler, a metadata copy, the
+            inferred data kind, and the transform capability.
         """
         metadata = metadata or {}
         apply_to_keys = metadata.get("apply_to_keys")
@@ -275,6 +284,13 @@ class NoFitConcatAlongAxisMixin(NoFitMixin, ConcatenateBeforeTransformMixin):
     Requires self.axis to be set before transform_multi_source.
     This mixin's __init__(axis, **kwargs) sets self.axis; subclasses must call it
     (e.g. via super().__init__(axis=axis, **kwargs)).
+
+    Parameters
+    ----------
+    axis : int
+        Axis along which the input segments are concatenated.
+    **kwargs
+        Additional keyword arguments forwarded to the parent class.
     """
 
     def __init__(self, axis: int, **kwargs):
@@ -288,6 +304,11 @@ class InverseTransformMixin(ABC):
 
     Requires inverse_transform (or inverse_transform_data) to be implemented.
     Provides inverse_transform_data and inverse_transform_multi_source (per segment).
+
+    Parameters
+    ----------
+    **kwargs
+        Additional keyword arguments forwarded to the parent class.
     """
 
     def __init__(self, **kwargs):

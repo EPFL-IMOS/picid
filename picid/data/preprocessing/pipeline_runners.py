@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_datasource_cache_fingerprint(datasource: object) -> dict:
-    """Return the datasource fingerprint used for preprocessing cache keys.
+    """
+    Return the datasource fingerprint used for preprocessing cache keys.
 
     Parameters
     ----------
@@ -58,17 +59,23 @@ def _resolve_datasource_cache_fingerprint(datasource: object) -> dict:
 
 class DirectPipelineRunner:
     """
-    Run the pipeline without any caching.
+    Run preprocessing end to end without caching.
 
-    Owns: load → split → fetch → transform → return.
-    Accepts any TransformSequenceProtocol as transforms.
+    This path loads, splits, materializes, and transforms the dataset without
+    persisting intermediate cache artifacts.
+
+    Parameters
+    ----------
+    preprocessor : PreProcessor
+        Owning preprocessor object.
     """
 
     def __init__(self, preprocessor: "PreProcessor"):
         self._pp = preprocessor
 
     def run(self) -> DatasetContainer:
-        """Run the non-cached preprocessing pipeline end to end.
+        """
+        Run the non-cached preprocessing pipeline end to end.
 
         Returns
         -------
@@ -93,33 +100,42 @@ class DirectPipelineRunner:
 
 class CachingPipelineRunner:
     """
-    Run the pipeline with a three-tier cache:
-        loaded_and_splitted_data  — raw loaded + split container
-        boundary                  — state after a designated heavy transform
-        preprocessed              — fully transformed final result
+    Run preprocessing with the three-tier caching strategy.
 
-    Works with any object satisfying TransformSequenceProtocol, so both
-    ConfigTransformManager (framework) and TransformPipeline (library) are
-    supported without any changes here.
-
-    Cache key derivation
-    --------------------
-    The preprocessed key is computed from:
-        - datasource.get_cache_fingerprint()  (serialised)
-        - transforms.config        (serialised; stable for same pipeline definition)
-        - library source files in data_library_part_path + transform_library_part_path
-
-    For ConfigTransformManager, transforms.config is the OmegaConf DictConfig.
-    For TransformPipeline, transforms.config is a plain dict built from transform
-    class names and metadata dicts.  Both are compatible with compute_cache_key.
+    The runner first tries the final cache, then the loaded/split cache, then
+    boundary caches produced after cache-point transforms.
 
     Parameters
     ----------
     preprocessor : PreProcessor
+        Owning preprocessor object.
     data_cache_path : str
+        Root directory for cache artifacts.
     data_library_part_path : str
+        Path used in cache key derivation for datasource code.
     transform_library_part_path : str
+        Path used in cache key derivation for transform code.
     save_boundary_caches : bool
+        Whether boundary caches should be persisted.
+
+    Notes
+    -----
+    Cache stages:
+
+    - ``loaded_and_splitted_data`` stores the raw loaded and split container.
+    - ``boundary`` stores state after designated heavy transforms.
+    - ``preprocessed`` stores the fully transformed final result.
+
+    The final cache key is derived from three inputs:
+
+    - ``datasource.get_cache_fingerprint()``, serialized.
+    - ``transforms.config``, serialized in a stable form.
+    - Python source files under ``data_library_part_path`` and
+      ``transform_library_part_path``.
+
+    ``ConfigTransformManager`` and ``TransformPipeline`` expose different
+    concrete config types, but both are normalized into serializable values and
+    hashed the same way here.
     """
 
     def __init__(
@@ -199,7 +215,14 @@ class CachingPipelineRunner:
     # ------------------------------------------------------------------
 
     def _try_load_preprocessed(self) -> Optional[DatasetContainer]:
-        """Return cached final result if the hash matches, else None."""
+        """
+        Return cached final result if the hash matches, else ``None``.
+
+        Returns
+        -------
+        DatasetContainer | None
+            Cached final result when available.
+        """
         pp = self._pp
         meta = pp.cache.load_metadata(
             self._cache_dir, stage="preprocessed", cache_key=self._preprocessed_key
@@ -217,7 +240,8 @@ class CachingPipelineRunner:
         return None
 
     def _load_and_split(self) -> None:
-        """Load and split the datasource via cache or direct build.
+        """
+        Load and split the datasource via cache or direct build.
 
         Returns
         -------
@@ -254,7 +278,7 @@ class CachingPipelineRunner:
 
     def _try_restore_from_boundary(self) -> Optional[OrderedDict]:
         """
-        Try to restore from the latest valid boundary cache (reverse order).
+        Try to restore from the latest valid boundary cache.
 
         Returns an OrderedDict of the remaining (not-yet-applied) transforms if a
         boundary was successfully restored, or None if no boundary matched.  The
@@ -264,6 +288,11 @@ class CachingPipelineRunner:
         The caller is responsible for running the returned tail transforms via
         _run_all_transforms so that any new cache points among them are handled
         correctly.
+        Returns
+        -------
+        DatasetContainer | None
+            Restored and completed dataset container, or ``None`` when no
+            boundary cache matched.
         """
         pp = self._pp
         cache_point_names = pp.transforms.get_cache_point_names()
@@ -306,7 +335,9 @@ class CachingPipelineRunner:
                     current_dts[name].transform_instance = saved_dt.transform_instance
 
             names_after = full_transforms.get_transform_names_after(boundary_name)
-            tail = OrderedDict((n, current_dts[n]) for n in names_after if n in current_dts)
+            tail = OrderedDict(
+                (n, current_dts[n]) for n in names_after if n in current_dts
+            )
 
             logger.info(
                 "Restored from boundary cache after %r; %d remaining transform(s) to run.",
@@ -317,9 +348,7 @@ class CachingPipelineRunner:
 
         return None
 
-    def _run_all_transforms(
-        self, transforms: Optional[OrderedDict] = None
-    ) -> None:
+    def _run_all_transforms(self, transforms: Optional[OrderedDict] = None) -> None:
         """
         Apply transforms, optionally saving a boundary cache after each cache point.
 
@@ -387,7 +416,9 @@ class CachingPipelineRunner:
             pp.data = pp.apply_transforms(pp.data, transforms)
 
     def _save_preprocessed(self) -> None:
-        """Save the fully transformed container to the preprocessed cache."""
+        """
+        Save the fully transformed container to the preprocessed cache.
+        """
         pp = self._pp
         pp.cache.save(
             cache_dir=self._cache_dir,

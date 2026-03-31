@@ -48,8 +48,12 @@ class BaseVectorizedConcatDataset(ConcatDataset):
     @abstractmethod
     def get_collate_fn(self) -> Callable:
         """
-        Collate function to be implemented by subclasses.
-        This function should combine a list of samples into a batch.
+        Return the collate function used for vectorized indexing.
+
+        Returns
+        -------
+        Callable
+            Collate function that combines a list of samples into a batch.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -66,8 +70,12 @@ class BaseDataset(Dataset, ABC):
     @abstractmethod
     def get_collate_fn(self) -> Callable:
         """
-        Collate function to be implemented by subclasses.
-        This function should combine a list of samples into a batch.
+        Return the collate function used by the dataset.
+
+        Returns
+        -------
+        Callable
+            Collate function that combines a list of samples into a batch.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -76,7 +84,11 @@ class BaseConcatDataset(ConcatDataset, ABC):
     @abstractmethod
     def get_collate_fn(self) -> Callable:
         """
-        Collate function to be implemented by subclasses.
-        This function should combine a list of samples into a batch.
+        Return the collate function used by the concatenated dataset.
+
+        Returns
+        -------
+        Callable
+            Collate function that combines a list of samples into a batch.
         """
         raise NotImplementedError("Subclasses must implement this method.")

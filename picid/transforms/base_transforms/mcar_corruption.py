@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
     """
-    Injects Missing Completely At Random (MCAR) faults into time-series data.
+    Inject Missing Completely At Random (MCAR) faults into time-series data.
 
     This transform simulates data quality issues—such as sensor failures, packet loss,
     or transmission outages—by artificially introducing ``NaN`` values into the input
@@ -23,6 +23,22 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
     The transform operates on 3D arrays of shape ``(Batch, Time, Channels)`` or 2D
     arrays of shape ``(Time, Channels)``. It handles channel-specific corruption
     ratios, allowing for heterogeneous sensor reliability simulations.
+
+    Parameters
+    ----------
+    ratios : list[float]
+        Target missingness ratio for each channel.
+    mode : str, default="block"
+        Corruption mode, either ``"point"`` or ``"block"``.
+    block_params : dict[str, int | float], optional
+        Block-size configuration used when ``mode="block"``.
+    seed : int, default=42
+        Seed for the NumPy random number generator.
+    apply_to : list[str], optional
+        Keys in the input dictionary to corrupt. When omitted, all keys are
+        processed.
+    **kwargs : Any
+        Additional keyword arguments forwarded to the parent class.
 
     Attributes
     ----------
@@ -87,27 +103,27 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         **kwargs,
     ):
         """
-        Initializes the MCARCorruptorTransform with specific corruption parameters.
+        Initialize the MCARCorruptorTransform with corruption parameters.
 
         Parameters
         ----------
-        ratios : list
+        ratios : list[float]
             A list of floats defining the target missingness ratio for each
             channel (e.g., ``[0.1, 0.5]``).
         mode : str
             The corruption mode, either ``"point"`` or ``"block"``.
             Defaults to ``"block"``.
-        block_params : dict, optional
+        block_params : dict[str, int | float], optional
             A dictionary defining ``"min_size"`` and ``"max_size"``
             for block outages. Values can be integers (absolute length) or
             floats (proportion of signal length). Required only if ``mode="block"``.
             Defaults to ``None``.
         seed : int
             Random seed for reproducibility. Defaults to 42.
-        apply_to : list, optional
+        apply_to : list[str], optional
             List of dictionary keys to transform. If ``None``, all keys
             are transformed. Defaults to ``None``.
-        **kwargs
+        **kwargs : Any
             Additional keyword arguments passed to the parent class.
 
         Raises
@@ -157,7 +173,7 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         self, size_param: Union[int, float], total_length: int
     ) -> int:
         """
-        Resolves the block size parameter to an absolute integer length.
+        Resolve the block size parameter to an absolute integer length.
 
         This handles the logic for proportional sizing (float inputs) vs
         absolute sizing (integer inputs).
@@ -190,7 +206,7 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _corrupt_array(self, X: np.ndarray) -> np.ndarray:
         """
-        Applies the configured corruption logic to a single NumPy array.
+        Apply the configured corruption logic to a single NumPy array.
 
         This method standardizes the input dimensions to 3D, ensures the data type
         supports NaNs, and iterates through channels/batches to apply the specific
@@ -343,7 +359,7 @@ class MCARCorruptorTransform(NoFitPerSegmentMixin, DenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> Dict[str, np.ndarray]:
         """
-        Executes the transformation on the provided data dictionary.
+        Execute the transformation on the provided data dictionary.
 
         Parameters
         ----------

@@ -3,7 +3,8 @@ import torch.nn as nn
 
 
 class DriftModelBaseline(nn.Module):
-    """Drift baseline model for time series forecasting.
+    """
+    Drift baseline model for time series forecasting.
 
     This model implements linear extrapolation based on the average change
     between the first and last point in the input sequence.
@@ -13,7 +14,7 @@ class DriftModelBaseline(nn.Module):
     ----------
     pred_len : int
         Number of time steps to forecast ahead.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments for compatibility.
     """
 
@@ -22,17 +23,18 @@ class DriftModelBaseline(nn.Module):
         self.forecast_horizon = pred_len
 
     def forward(self, x):
-        """Forward pass for the drift baseline model.
+        """
+        Forward pass for the drift baseline model.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, sequence_length, num_features)
+            Input tensor of shape (batch_size, sequence_length, num_features).
 
         Returns
         -------
         torch.Tensor
-            Predicted values of shape (batch_size, forecast_horizon, num_features)
+            Predicted values of shape (batch_size, forecast_horizon, num_features).
         """
         # x shape: (batch_size, sequence_length, num_features)
         batch_size, sequence_length, num_features = x.shape

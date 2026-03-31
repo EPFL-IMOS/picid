@@ -15,10 +15,62 @@ from .tide import Model as TiDE
 
 class TiDE_Forecaster(TransformerForecaster):
     """
-    Forecaster wrapper for TiDE (Time-series Dense Encoder).
+    Wrap the TiDE forecaster with the project training interface.
 
-    Supports regression, classification, state forecasting, and long-term
-    forecasting. Maps batch (x_c, y_c, x_t, y_t) to TiDE model inputs.
+    Parameters
+    ----------
+    optimizer_factory : Callable[..., torch.optim.Optimizer]
+        Factory for optimizer instantiation.
+    scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
+        Factory for learning-rate scheduler instantiation.
+    d_x : int
+        Exogenous input dimension.
+    d_yc : int
+        Context target dimension.
+    d_yt : int
+        Forecast target dimension.
+    ts_in : int
+        Input sequence length.
+    ts_out : int
+        Output sequence length.
+    task_type : str
+        Task name used to select the TiDE configuration.
+    dropout : float, default=0.1
+        Dropout probability.
+    e_layers : int, default=3
+        Number of encoder layers.
+    d_layers : int, default=3
+        Number of decoder layers.
+    d_ff : int, default=64
+        Feed-forward hidden dimension.
+    freq : str, default="h"
+        Time frequency used for feature encoding.
+    use_x_dim : bool, default=False
+        Whether to derive the feature dimension from ``d_x``.
+    include_x_t : bool, default=True
+        Whether to include target-side exogenous features.
+    loss : str, default="mse"
+        Loss function name.
+    linear_window : int, default=0
+        Linear window size.
+    d_model : int, default=64
+        Model hidden dimension.
+    use_revin : bool, default=False
+        Whether to enable RevIN normalization.
+    use_seasonal_decomp : bool, default=False
+        Whether to enable seasonal decomposition.
+    linear_shared_weights : bool, default=False
+        Whether to share linear layer weights.
+    time_emb_dim : int, default=0
+        Time embedding dimension.
+    transformer_args : dict | None, optional
+        Extra transformer arguments.
+    d_x_mask : list[int] | None, optional
+        Mask for exogenous dimensions.
+    mask_y_c : bool, default=False
+        Whether to mask context targets.
+    **kwargs
+        Extra compatibility keywords forwarded to the parent class.
     """
 
     def __init__(
@@ -54,13 +106,13 @@ class TiDE_Forecaster(TransformerForecaster):
         **kwargs,
     ):
         """
-        Initialize TiDE forecaster.
+        Initialize the TiDE forecaster wrapper.
 
         Parameters
         ----------
-        optimizer_factory : Callable
+        optimizer_factory : Callable[..., torch.optim.Optimizer]
             Factory for optimizer instantiation.
-        scheduler_factory : Callable
+        scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
             Factory for learning rate scheduler.
         d_x : int
             Exogenous input dimension.
@@ -73,43 +125,43 @@ class TiDE_Forecaster(TransformerForecaster):
         ts_out : int
             Output (prediction) length.
         task_type : str
-            One of classification, regression, state_forecasting, long_term_forecast.
-        dropout : float, optional
+            Task name used to select the TiDE configuration.
+        dropout : float, default=0.1
             Dropout probability.
-        e_layers : int, optional
+        e_layers : int, default=3
             Number of encoder layers.
-        d_layers : int, optional
+        d_layers : int, default=3
             Number of decoder layers.
-        d_ff : int, optional
+        d_ff : int, default=64
             Feed-forward hidden dimension.
-        freq : str, optional
-            Time frequency for feature encoding ('h', 't', 's', etc.).
-        use_x_dim : bool, optional
-            Use d_x as feature_dim instead of freq-based mapping.
-        include_x_t : bool, optional
-            Include exogenous features in encoder.
-        loss : str, optional
+        freq : str, default="h"
+            Time frequency for feature encoding.
+        use_x_dim : bool, default=False
+            Use ``d_x`` as the feature dimension.
+        include_x_t : bool, default=True
+            Include exogenous features in the encoder.
+        loss : str, default="mse"
             Loss function name.
-        linear_window : int, optional
+        linear_window : int, default=0
             Linear window size.
-        d_model : int, optional
+        d_model : int, default=64
             Model hidden dimension.
-        use_revin : bool, optional
+        use_revin : bool, default=False
             Use RevIN normalization.
-        use_seasonal_decomp : bool, optional
+        use_seasonal_decomp : bool, default=False
             Use seasonal decomposition.
-        linear_shared_weights : bool, optional
+        linear_shared_weights : bool, default=False
             Share linear layer weights.
-        time_emb_dim : int, optional
-            Time embedding (feature_encode_dim) dimension.
-        transformer_args : dict, optional
+        time_emb_dim : int, default=0
+            Time embedding dimension.
+        transformer_args : dict | None, optional
             Extra transformer arguments.
-        d_x_mask : list of int, optional
+        d_x_mask : list[int] | None, optional
             Mask for exogenous dimensions.
-        mask_y_c : bool, optional
+        mask_y_c : bool, default=False
             Mask context targets.
         **kwargs
-            Passed to TransformerForecaster (e.g. evaluators).
+            Extra compatibility keywords forwarded to the parent class.
         """
         super().__init__(
             optimizer_factory=optimizer_factory,

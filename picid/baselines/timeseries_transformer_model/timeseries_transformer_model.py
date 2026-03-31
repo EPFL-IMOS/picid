@@ -14,7 +14,8 @@ from .timeseries_transformer import Model as Transformer
 
 
 class Timeseries_Transformer_Forecaster(TransformerForecaster):
-    """Forecaster wrapping a vanilla Transformer for forecasting, regression, and classification.
+    """
+    Forecaster wrapping a vanilla Transformer for forecasting, regression, and classification.
 
     Uses decoder-only mode for regression/classification/state_forecasting tasks,
     and full encoder-decoder for forecasting. Supports ContextEmbedding (embed_type 5/6)
@@ -136,18 +137,33 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
 
     @property
     def train_step_forward_kwargs(self):
-        """Forward kwargs for training (output_attn=False)."""
+        """
+        Forward kwargs for training.
+
+        Returns
+        -------
+        dict
+            Forward keyword arguments with attention output disabled.
+        """
         return {"output_attn": False}
 
     @property
     def eval_step_forward_kwargs(self):
-        """Forward kwargs for evaluation (output_attn=False)."""
+        """
+        Forward kwargs for evaluation.
+
+        Returns
+        -------
+        dict
+            Forward keyword arguments with attention output disabled.
+        """
         return {"output_attn": False}
 
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
-        """Run a single forward pass through the transformer.
+        """
+        Run a single forward pass through the transformer.
 
         Parameters
         ----------
@@ -234,7 +250,8 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         return (output,)
 
     def step(self, batch: Tuple[torch.Tensor], train: bool):
-        """Execute one training or evaluation step.
+        """
+        Execute one training or evaluation step.
 
         Parameters
         ----------
@@ -279,7 +296,8 @@ class Timeseries_Transformer_Forecaster(TransformerForecaster):
         return stats
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-        """Compute forecast loss for a batch.
+        """
+        Compute forecast loss for a batch.
 
         Parameters
         ----------

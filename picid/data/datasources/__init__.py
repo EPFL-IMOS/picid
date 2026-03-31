@@ -1,4 +1,7 @@
-"""Datasource implementations."""
+"""
+Expose datasource helpers for the datasources package.
+
+"""
 
 from importlib import import_module
 

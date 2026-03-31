@@ -9,8 +9,14 @@ logger = logging.getLogger(__name__)
 
 class StreamCache(BaseCache):
     """
-    Cache pipeline where objects are read from a stream,
-    transformed, and written to a file.
+    Cache streamed objects after transforming them.
+
+    Parameters
+    ----------
+    transform_fn : callable
+        Function that transforms the incoming stream before caching.
+    output_dir : str | pathlib.Path
+        Directory where serialized objects are stored.
     """
 
     def __init__(self, transform_fn, output_dir):

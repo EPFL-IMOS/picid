@@ -15,7 +15,8 @@ def _flatten(cfg: dict, prefix: str = "") -> dict:
 
 
 def diff_configs(path_a: str, path_b: str) -> dict:
-    """Diff two YAML config files and return a structured report.
+    """
+    Diff two YAML config files and return a structured report.
 
     Parameters
     ----------

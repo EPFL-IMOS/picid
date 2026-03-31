@@ -12,7 +12,8 @@ TORCH_SCHEDULERS = torch.optim.lr_scheduler.__dict__
 
 
 class DefaultOptimizer(AbstractOptimizer):
-    """Optimizer class that manage both optimizer and scheduler, fully compatible with `torch.optim` classes.
+    """
+    Optimizer wrapper that manages both optimizer and scheduler.
 
     Parameters
     ----------
@@ -46,7 +47,8 @@ class DefaultOptimizer(AbstractOptimizer):
             return f"{self.__class__.__name__}(optimizer={self.optimizer.__name__})"
 
     def configure_optimizer(self, model_parameters) -> dict[str:Any]:
-        """Configure the optimizer and scheduler.
+        """
+        Configure the optimizer and scheduler.
 
         Act as a wrapper to provide the choosen pipeline module with the required config dict
         when it calls 's `configure_optimizers()` method.

@@ -6,8 +6,18 @@ def _populate_summary(
     module: nn.Module, name: str, depth: int, summary_list: List[Dict[str, Any]]
 ):
     """
-    Recursively populates a list with summary information for each module,
-    using class names for layers within nn.Sequential.
+    Populate a hierarchical summary with module parameter counts.
+
+    Parameters
+    ----------
+    module : nn.Module
+        Module to inspect.
+    name : str
+        Display name for the current module.
+    depth : int
+        Nesting depth used for indentation.
+    summary_list : list[dict[str, Any]]
+        Accumulator that stores the summary rows.
     """
     children = list(module.named_children())
     total_params = sum(p.numel() for p in module.parameters())
@@ -59,7 +69,17 @@ def _populate_summary(
 
 def get_model_summary(model: nn.Module) -> List[Dict[str, Any]]:
     """
-    Generates a clean, hierarchical summary of model parameters.
+    Generate a hierarchical parameter summary for a model.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Model to summarize.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Summary rows describing each module and the total parameter count.
     """
     summary_list = []
     for name, module in model.named_children():
@@ -79,7 +99,14 @@ def get_model_summary(model: nn.Module) -> List[Dict[str, Any]]:
 
 
 def print_model_summary(summary_list: List[Dict[str, Any]]):
-    """Prints a formatted hierarchical summary table."""
+    """
+    Print a formatted hierarchical summary table.
+
+    Parameters
+    ----------
+    summary_list : list[dict[str, Any]]
+        Summary rows produced by :func:`get_model_summary`.
+    """
     name_width = 45
     total_width = 20
     trainable_width = 25

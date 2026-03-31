@@ -163,19 +163,18 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
         **kwargs,
     ):
         """
+        Initialize the concatenated dataset.
+
         Parameters
         ----------
-        dataset_cfg
-            The dataset configuration.
-        data_dict : dict[str, list[ndarray]]
-            Dictionary of data.
-            {
-                "features":  list[ndarray],
-                "target":  list[ndarray],
-                "other_named_tensor": list[ndarray],
-            }
-        meta_data_dict : dict
+        dataset_cfg : omegaconf.DictConfig
+            Configuration for the child dataset to instantiate for each unit.
+        data_dict : dict[str, list[numpy.ndarray]]
+            Split-aligned data payloads with one entry per unit.
+        meta_data_dict : dict[str, Any]
             Metadata shared across all units.
+        **kwargs
+            Compatibility keywords passed through to the base class.
         """
         self.meta_data_dict = meta_data_dict
         datasets = initialize_datasets(dataset_cfg, data_dict, meta_data_dict)
@@ -202,8 +201,18 @@ class HydraConcatDataset(BaseVectorizedConcatDataset):
 
 class NonVectorizedHydraConcatDataset(ConcatDataset):
     """
-    Deprecated: Use HydraConcatDataset instead.
-    Retained for backward compatibility during migration.
+    Deprecated compatibility wrapper kept for migration only.
+
+    Parameters
+    ----------
+    dataset_cfg : omegaconf.DictConfig
+        Configuration for the child dataset to instantiate for each unit.
+    data_dict : dict[str, numpy.ndarray | list[numpy.ndarray]]
+        Split-aligned data payloads with one entry per unit.
+    meta_data_dict : dict[str, Any]
+        Metadata shared across all units.
+    **kwargs
+        Compatibility keywords passed through to the base class.
     """
 
     def __init__(
@@ -214,19 +223,18 @@ class NonVectorizedHydraConcatDataset(ConcatDataset):
         **kwargs,
     ):
         """
+        Initialize the deprecated concatenated dataset wrapper.
+
         Parameters
         ----------
-        dataset_cfg
-            The dataset configuration.
-        data_dict : dict[str, list[ndarray]]
-            Dictionary of data.
-            {
-                "features":  list[ndarray],
-                "target":  list[ndarray],
-                "other_named_tensor": list[ndarray],
-            }
-        meta_data_dict : dict
+        dataset_cfg : omegaconf.DictConfig
+            Configuration for the child dataset to instantiate for each unit.
+        data_dict : dict[str, numpy.ndarray | list[numpy.ndarray]]
+            Split-aligned data payloads with one entry per unit.
+        meta_data_dict : dict[str, Any]
             Metadata shared across all units.
+        **kwargs
+            Compatibility keywords passed through to the base class.
         """
         self.meta_data_dict = meta_data_dict
         datasets = initialize_datasets(dataset_cfg, data_dict, meta_data_dict)

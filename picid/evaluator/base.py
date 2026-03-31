@@ -14,7 +14,19 @@ logger = logging.getLogger(__name__)
 class AbstractEvaluator(ABC):
     """
     Abstract base class for all evaluators.
-    Handles scaling strategy selection and standardizes the interface.
+
+    Parameters
+    ----------
+    paths : dict[str, str] | None, default=None
+        File-system paths required by some evaluators.
+    inverse_transform : InverseTransformMixin | None, default=None
+        Optional inverse transform used for scaling-aware evaluation.
+    apply_inverse_scaling : bool, default=False
+        Whether inverse scaling should be applied before metric computation.
+    task_mode : Any | None, default=None
+        Task mode used to select the scaling wrapper implementation.
+    **kwargs
+        Additional evaluator-specific keyword arguments.
     """
 
     def __init__(
@@ -51,12 +63,35 @@ class AbstractEvaluator(ABC):
 
     @abstractmethod
     def update(self, model_out: dict) -> None:
-        """Update internal state/metrics with batch output."""
+        """
+        Update internal state and metrics with batch output.
+
+        Parameters
+        ----------
+        model_out : dict
+            Model output dictionary containing predictions and targets.
+        """
         pass
 
     @abstractmethod
     def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
-        """Compute final metrics."""
+        """
+        Compute final metrics.
+
+        Parameters
+        ----------
+        mode : str
+            Evaluation mode.
+        epoch : int
+            Current epoch index.
+        step : int
+            Current step index.
+
+        Returns
+        -------
+        Dict[str, float]
+            Computed metrics.
+        """
         pass
 
     @abstractmethod

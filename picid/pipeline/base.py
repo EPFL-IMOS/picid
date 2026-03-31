@@ -19,7 +19,8 @@ class CustomEvaluatorInterface(ABC):
 
     @abstractmethod
     def _training_step(self, batch, batch_idx: int) -> dict[str, torch.Tensor]:
-        """Perform a single training step on a batch of data.
+        """
+        Perform a single training step on a batch of data.
 
         Parameters
         ----------
@@ -37,7 +38,8 @@ class CustomEvaluatorInterface(ABC):
 
     @abstractmethod
     def _validation_step(self, batch, batch_idx: int) -> dict[str, torch.Tensor]:
-        """Perform a single validation step on a batch of data.
+        """
+        Perform a single validation step on a batch of data.
 
         Parameters
         ----------
@@ -55,7 +57,8 @@ class CustomEvaluatorInterface(ABC):
 
     @abstractmethod
     def _test_step(self, batch, batch_idx: int) -> dict[str, torch.Tensor]:
-        """Perform a single test step on a batch of data.
+        """
+        Perform a single test step on a batch of data.
 
         Parameters
         ----------
@@ -84,12 +87,17 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             self.effective_pred_len = getattr(evaluator, "effective_pred_len", None)
 
     def log_epoch_metrics(self, mode=None, step=None, epoch=None):
-        """Log metrics.
+        """
+        Log metrics for the requested evaluation split.
 
         Parameters
         ----------
         mode : str, optional
-            The mode of the model, either "train", "val", or "test" (default: None).
+            The mode of the model, either "train", "val", or "test".
+        step : int, optional
+            Global step recorded for the log message.
+        epoch : int, optional
+            Current epoch recorded for the evaluator compute call.
         """
         metrics_dict = self.evaluators[mode].compute(mode=mode, epoch=epoch, step=step)
 
@@ -108,7 +116,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
     def training_step(
         self, batch, batch_idx: int, _evaluate: bool = True
     ) -> torch.Tensor:
-        """Perform a single training step on a batch of data.
+        """
+        Perform a single training step on a batch of data.
 
         Parameters
         ----------
@@ -116,6 +125,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
             Batch object containing the batched data.
         batch_idx : int
             The index of the current batch.
+        _evaluate : bool, default=True
+            Whether to update the evaluator during this step.
 
         Returns
         -------
@@ -140,7 +151,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         return model_outs["loss"]
 
     def validation_step(self, batch, batch_idx: int) -> None:
-        """Perform a single validation step on a batch of data.
+        """
+        Perform a single validation step on a batch of data.
 
         Parameters
         ----------
@@ -162,7 +174,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         )
 
     def test_step(self, batch, batch_idx: int) -> None:
-        """Perform a single test step on a batch of data.
+        """
+        Perform a single test step on a batch of data.
 
         Parameters
         ----------
@@ -184,42 +197,43 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         )
 
     def on_validation_epoch_start(self) -> None:
-        """Hook called when a validation epoch begins.
+        """
+        Reset validation metrics at the start of a validation epoch.
 
-        According pytorch lightning documentation this hook is called at the
-        beginning of the validation epoch.
+        According to PyTorch Lightning, this hook is called at the beginning
+        of the validation epoch.
 
         https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#hooks
 
-        Note that the validation step is within the train epoch. Hence here we have to log the train metrics
-        before we reset the evaluator to start the validation loop.
+        Note that the validation step is within the train epoch. Hence here we
+        reset the validation evaluator before the validation loop starts.
         """
         # Log train metrics and reset evaluator
         self.evaluators["val"].reset()
 
     def on_train_epoch_start(self) -> None:
-        """Lightning hook that is called when a train epoch begins.
+        """
+        Reset train metrics at the start of a train epoch.
 
         This hook is used to reset the train metrics.
         """
         self.evaluators["train"].reset()
 
     def on_test_epoch_start(self) -> None:
-        """Lightning hook that is called when a test epoch begins.
+        """
+        Reset test metrics at the start of a test epoch.
 
         This hook is used to reset the test metrics.
         """
         self.evaluators["test"].reset()
 
     def on_train_epoch_end(self) -> None:
-        """Lightning hook that is called when a train epoch ends.
-
-        This hook is used to log the train metrics.
-        """
+        """Called when a train epoch ends."""
         # Don't log train metrics due to compute error with no predictions
 
     def on_validation_epoch_end(self) -> None:
-        """Lightning hook that is called when a validation epoch ends.
+        """
+        Log validation metrics at the end of a validation epoch.
 
         This hook is used to log the validation metrics.
         """
@@ -229,7 +243,8 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
         )
 
     def on_test_epoch_end(self) -> None:
-        """Lightning hook that is called when a test epoch ends.
+        """
+        Log test metrics at the end of a test epoch.
 
         This hook is used to log the test metrics.
         """
@@ -239,10 +254,22 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
 
     def _to_numpy(self, data: Union[torch.Tensor, np.ndarray], name: str) -> np.ndarray:
         """
-        Converts a PyTorch Tensor or NumPy array to a NumPy array.
+        Convert a PyTorch tensor or NumPy array to a NumPy array.
 
         This helper function centralizes the conversion logic, detaching a tensor
         from the computation graph and moving it to the CPU.
+
+        Parameters
+        ----------
+        data : torch.Tensor or np.ndarray
+            Input value to convert.
+        name : str
+            Human-readable name used in the error message.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy view or copy of the input data.
         """
         if isinstance(data, torch.Tensor):
             return data.detach().cpu().numpy()
@@ -296,24 +323,23 @@ class CustomEvaluatorLightningModule(LightningModule, CustomEvaluatorInterface):
 
 
 class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
-    """A `LightningModule` to define a network.
+    """
+    Lightning module for standard backbone training.
 
     Parameters
     ----------
     backbone : torch.nn.Module
         The backbone model to train.
-    readout : torch.nn.Module
-        The readout class.
     loss : torch.nn.Module
-        The loss class.
-    feature_encoder : torch.nn.Module, optional
-        The feature encoder (default: None).
-    evaluator : Any, optional
-        The evaluator class (default: None).
-    optimizer : Any, optional
-        The optimizer class (default: None).
-    **kwargs : Any
-        Additional keyword arguments.
+        Loss module used during training.
+    evaluators : dict[str, AbstractEvaluator]
+        Mapping from split name to evaluator instance.
+    optimizer_factory : Callable[..., torch.optim.Optimizer]
+        Factory used to create the optimizer.
+    scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
+        Factory used to create the scheduler.
+    **kwargs
+        Additional keyword arguments forwarded to the parent class.
     """
 
     def __init__(
@@ -342,7 +368,8 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return f"{self.__class__.__name__}(backbone={self.backbone}, loss={self.loss}"
 
     def forward(self, batch) -> dict:
-        """Perform a forward pass through the model `self.backbone`.
+        """
+        Perform a forward pass through the model ``self.backbone``.
 
         Parameters
         ----------
@@ -357,12 +384,15 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return self.backbone(batch)
 
     def model_step(self, batch, stage: str) -> dict:
-        """Perform a single model step on a batch of data.
+        """
+        Perform a single model step on a batch of data.
 
         Parameters
         ----------
         batch : dict
             Batch object containing the batched data.
+        stage : str
+            Current training stage, such as ``"train"`` or ``"val"``.
 
         Returns
         -------
@@ -376,7 +406,8 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return model_out
 
     def _training_step(self, batch, batch_idx: int) -> torch.Tensor:
-        """Perform a single training step on a batch of data.
+        """
+        Perform a single training step on a batch of data.
 
         Parameters
         ----------
@@ -394,7 +425,8 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
         return model_out
 
     def _validation_step(self, batch, batch_idx: int) -> None:
-        """Perform a single validation step on a batch of data.
+        """
+        Perform a single validation step on a batch of data.
 
         Parameters
         ----------
@@ -402,12 +434,18 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
             Batch object containing the batched data.
         batch_idx : int
             The index of the current batch.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
         """
         model_out = self.model_step(batch, stage="val")
         return model_out
 
     def _test_step(self, batch, batch_idx: int) -> None:
-        """Perform a single test step on a batch of data.
+        """
+        Perform a single test step on a batch of data.
 
         Parameters
         ----------
@@ -415,12 +453,18 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
             Batch object containing the batched data.
         batch_idx : int
             The index of the current batch.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
         """
         model_out = self.model_step(batch, stage="test")
         return model_out
 
     def setup(self, stage: str) -> None:
-        """Hook to call torch.compile.
+        """
+        Hook to call ``torch.compile``.
 
         Lightning hook that is called at the beginning of fit (train +
         validate), validate, test, or predict.
@@ -440,24 +484,21 @@ class BackboneWrapperLightningModule(CustomEvaluatorLightningModule):
 
 
 class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
-    """A `LightningModule` to evaluate fit-predict (sklearn style models).
+    """
+    Lightning module wrapper for fit-predict style backbones.
 
     Parameters
     ----------
-    backbone : torch.nn.Module
-        The backbone model to train.
-    readout : torch.nn.Module
-        The readout class.
-    loss : torch.nn.Module
-        The loss class.
-    feature_encoder : torch.nn.Module, optional
-        The feature encoder (default: None).
-    evaluator : Any, optional
-        The evaluator class (default: None).
-    optimizer : Any, optional
-        The optimizer class (default: None).
-    **kwargs : Any
-        Additional keyword arguments.
+    backbone : AbstractFitPredictWrapper
+        The wrapped fit-predict model.
+    evaluators : dict[str, AbstractEvaluator]
+        Mapping from split name to evaluator instance.
+    predict_after_training : bool, default=False
+        Whether to run prediction immediately after fitting.
+    debug : bool, default=False
+        Enable verbose debug logging.
+    **kwargs
+        Additional keyword arguments forwarded to the parent class.
     """
 
     def __init__(
@@ -508,7 +549,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return f"{task_desc}"
 
     def model_step_fit(self, batch) -> dict:
-        """Perform a single model step on a batch of data.
+        """
+        Perform a single model step that fits the wrapped model.
 
         Parameters
         ----------
@@ -563,7 +605,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             return model_out
 
     def model_step_predict(self, batch) -> dict:
-        """Perform a single model step on a batch of data.
+        """
+        Perform a single model step that loads and predicts with the wrapped model.
 
         Parameters
         ----------
@@ -619,7 +662,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return super().training_step(batch, batch_idx, _evaluate=False)
 
     def _training_step(self, batch, batch_idx: int) -> torch.Tensor:
-        """Perform a single training step on a batch of data.
+        """
+        Perform a single training step on a batch of data.
 
         Parameters
         ----------
@@ -637,7 +681,8 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
         return model_out
 
     def _validation_step(self, batch, batch_idx: int) -> None:
-        """Perform a single validation step on a batch of data.
+        """
+        Perform a single validation step on a batch of data.
 
         Parameters
         ----------
@@ -645,12 +690,18 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             Batch object containing the batched data.
         batch_idx : int
             The index of the current batch.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
         """
         model_out = self.model_step_predict(batch)
         return model_out
 
     def _test_step(self, batch, batch_idx: int) -> None:
-        """Perform a single test step on a batch of data.
+        """
+        Perform a single test step on a batch of data.
 
         Parameters
         ----------
@@ -658,6 +709,11 @@ class FitPredictWrapperLightningModule(CustomEvaluatorLightningModule):
             Batch object containing the batched data.
         batch_idx : int
             The index of the current batch.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the model output and the loss.
         """
         model_out = self.model_step_predict(batch)
         return model_out
@@ -722,12 +778,15 @@ class TrainingLightningModule(BackboneWrapperLightningModule):
 
     # TODO: I should not rewrite the whole model_step
     def model_step(self, batch, stage: str) -> dict:
-        """Perform a single model step on a batch of data.
+        """
+        Perform a single model step on a batch of data and compute the loss.
 
         Parameters
         ----------
         batch : dict
             Batch object containing the batched data.
+        stage : str
+            Current training stage.
 
         Returns
         -------
@@ -742,19 +801,21 @@ class TrainingLightningModule(BackboneWrapperLightningModule):
         return model_out
 
     def configure_optimizers(self) -> dict[str, Any]:
-        r"""Configure optimizers and learning-rate schedulers.
+        """
+        Configure optimizers and learning-rate schedulers.
 
         Choose what optimizers and learning-rate schedulers to use in your
         optimization. Normally you'd need one. But in the case of GANs or
         similar you might have multiple.
 
-        Examples:
-            https://lightning.ai/docs/pytorch/latest/common/lightning_module.html#configure-optimizers
-
         Returns
         -------
-        dict:
+        dict
             A dict containing the configured optimizers and learning-rate schedulers to be used for training.
+
+        Examples
+        --------
+        https://lightning.ai/docs/pytorch/latest/common/lightning_module.html#configure-optimizers
         """
         optimizer = self.optimizer_factory(list(self.backbone.parameters()))
 

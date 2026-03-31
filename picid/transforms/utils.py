@@ -6,7 +6,19 @@ from typing import Any, Tuple, Type
 
 # --- Utility for Type Conversion ---
 def _convert_to_numpy(data: Any) -> Tuple[np.ndarray, Type]:
-    """Converts input data to numpy.ndarray and returns its original type."""
+    """
+    Convert input data to ``numpy.ndarray`` and remember its original type.
+
+    Parameters
+    ----------
+    data : Any
+        Input object to convert.
+
+    Returns
+    -------
+    tuple[numpy.ndarray, type]
+        Converted array and the original container type.
+    """
     original_type = type(data)
 
     if isinstance(data, np.ndarray):
@@ -30,7 +42,23 @@ def _convert_to_numpy(data: Any) -> Tuple[np.ndarray, Type]:
 def _convert_from_numpy(
     numpy_data: np.ndarray, original_type: Type, original_data: Any
 ) -> Any:
-    """Converts numpy.ndarray back to the original data type."""
+    """
+    Convert a NumPy array back to the original container type.
+
+    Parameters
+    ----------
+    numpy_data : numpy.ndarray
+        Array to convert back.
+    original_type : type
+        Type of the original input container.
+    original_data : Any
+        Original object used to preserve index, name, or device information.
+
+    Returns
+    -------
+    Any
+        Data converted back to the original container representation.
+    """
     if original_type is np.ndarray:
         return numpy_data
     elif original_type is pd.DataFrame:

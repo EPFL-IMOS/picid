@@ -21,10 +21,132 @@ from ..utils.masking import TriangularCausalMask
 
 
 class Spacetimeformer(nn.Module):
-    """Encoder-decoder or decoder-only spatio-temporal transformer.
+    """
+    Encoder-decoder or decoder-only spatio-temporal transformer.
 
     Supports forecasting (encoder-decoder) and regression/classification
     (decoder-only). Uses Performer, full, or ProbSparse attention.
+
+    Parameters
+    ----------
+    d_yc : int, default=1
+        Context target dimension.
+    d_yt : int, default=1
+        Target output dimension.
+    d_x : int, default=4
+        Covariate dimension.
+    max_seq_len : int, optional
+        Maximum sequence length.
+    attn_factor : int, default=5
+        ProbSparse attention factor.
+    d_model : int, default=200
+        Model dimension.
+    d_queries_keys : int, default=30
+        Query/key dimension.
+    d_values : int, default=30
+        Value dimension.
+    n_heads : int, default=8
+        Number of attention heads.
+    e_layers : int, default=2
+        Number of encoder layers.
+    d_layers : int, default=3
+        Number of decoder layers.
+    d_ff : int, default=800
+        Feed-forward dimension.
+    start_token_len : int, default=0
+        Start token length.
+    time_emb_dim : int, default=6
+        Time embedding dimension.
+    dropout_emb : float, default=0.1
+        Embedding dropout.
+    dropout_attn_matrix : float, default=0.0
+        Attention matrix dropout.
+    dropout_attn_out : float, default=0.0
+        Attention output dropout.
+    dropout_ff : float, default=0.2
+        Feed-forward dropout.
+    dropout_qkv : float, default=0.0
+        QKV dropout.
+    pos_emb_type : str, default="abs"
+        Positional embedding type.
+    timetable_emb_enc_type : str or None, default="abs"
+        Encoder timetable embedding type.
+    timetable_emb_dec_type : str or None, default="abs"
+        Decoder timetable embedding type.
+    time_emb_type : str, default="t2v"
+        Time embedding type.
+    inverted_encoder : bool, default=False
+        Use an inverted encoder layout.
+    variable_emb_type : str or None, default=None
+        Variable embedding type.
+    global_self_attn : str, default="performer"
+        Global self-attention type.
+    local_self_attn : str, default="performer"
+        Local self-attention type.
+    global_cross_attn : str, default="performer"
+        Global cross-attention type.
+    local_cross_attn : str, default="performer"
+        Local cross-attention type.
+    performer_attn_kernel : str, default="relu"
+        Performer kernel name.
+    performer_redraw_interval : int, default=1000
+        Performer redraw interval.
+    attn_time_windows : int, default=1
+        Number of attention time windows.
+    use_shifted_time_windows : bool, default=True
+        Use shifted time windows.
+    embed_method : str, default="spatio-temporal"
+        Embedding method.
+    attention_method : str, default="non-causual"
+        Attention method.
+    d_x_embedding_router : torch.Tensor or None, optional
+        Router for d_x embedding.
+    activation : str, default="gelu"
+        Activation function.
+    head_f : str, default="linear"
+        Head function type.
+    norm : str, default="batch"
+        Normalization type.
+    use_final_norm : bool, default=True
+        Use final normalization.
+    initial_downsample_convs : int, default=0
+        Initial downsampling convolutions.
+    intermediate_downsample_convs : int, default=0
+        Intermediate downsampling convolutions.
+    null_value : float or None, optional
+        Null value for masking.
+    pad_value : float or None, optional
+        Padding value.
+    out_dim : int or None, optional
+        Output dimension.
+    use_val_enc : bool, default=True
+        Use value embedding in encoder.
+    use_val_dec : bool, default=True
+        Use value embedding in decoder.
+    use_tt_enc : bool, default=True
+        Use timetable in encoder.
+    use_tt_dec : bool, default=True
+        Use timetable in decoder.
+    use_time : bool, default=True
+        Use time embedding.
+    use_space : bool, default=True
+        Use space embedding.
+    use_given : bool, default=True
+        Use given embedding.
+    recon_mask_skip_all : float, default=1.0
+        Reconstruction mask skip probability.
+    recon_mask_max_seq_len : int, default=5
+        Max sequence length for reconstruction masking.
+    recon_mask_drop_seq : float, default=0.1
+        Sequence drop probability.
+    recon_mask_drop_standard : float, default=0.2
+        Standard drop probability.
+    recon_mask_drop_full : float, default=0.05
+        Full drop probability.
+    decoder_only : bool, default=False
+        Decoder-only mode.
+    verbose : bool, default=True
+        Verbosity flag.
     """
 
     def __init__(
@@ -89,7 +211,8 @@ class Spacetimeformer(nn.Module):
         decoder_only: bool = False,
         verbose: bool = True,
     ):
-        """Initialize Spacetimeformer.
+        """
+        Initialize Spacetimeformer.
 
         Parameters
         ----------
@@ -414,7 +537,8 @@ class Spacetimeformer(nn.Module):
         dec_y,
         output_attention=False,
     ):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------
@@ -523,7 +647,8 @@ class Spacetimeformer(nn.Module):
         performer_attn_kernel: str,
         performer_redraw_interval: int,
     ):
-        """Return attention layer for given type (full, prob, performer, none).
+        """
+        Return attention layer for given type (full, prob, performer, none).
 
         Parameters
         ----------

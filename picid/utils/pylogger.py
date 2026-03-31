@@ -10,7 +10,8 @@ from lightning_utilities.core.rank_zero import (
 
 
 class RankedLogger(logging.LoggerAdapter):
-    r"""Initialize a multi-GPU-friendly python command line logger.
+    r"""
+    Initialize a multi-GPU-friendly python command line logger.
 
     The logger logs on all processes with their rank prefixed in the log message.
 
@@ -40,7 +41,8 @@ class RankedLogger(logging.LoggerAdapter):
     def log(
         self, level: int, msg: str, rank: int | None = None, *args, **kwargs
     ) -> None:
-        r"""Delegate a log call to the underlying logger.
+        r"""
+        Delegate a log call to the underlying logger.
 
         The function first prefixes the message with the rank of the process it's being logged from and then logs the message. If `'rank'` is provided, then the log will only occur on that rank/process.
 

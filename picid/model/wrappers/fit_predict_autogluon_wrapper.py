@@ -11,9 +11,19 @@ from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 
 class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
-    """Wrapper for the TimePFN model.
+    """
+    Wrapper for the TimePFN model.
 
     This wrapper defines the forward pass of the TimePFN model.
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    model_cache_path : str, optional
+        Directory used to cache serialized models.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the AutoGluon backbone.
     """
 
     def __init__(self, task_type: str, model_cache_path: str = None, **kwargs):
@@ -34,12 +44,18 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def serialize_model(self, task_id: str | None = None):
-        """Serialize the model to a file.
+        """
+        Serialize the model to a file.
 
-        The method prefers `self.kwargs['model_path']`. If that's not set and
-        `task_id` is provided, it will write to `models/{task_id}.joblib`.
-        Uses joblib.dump to persist the sklearn-style estimator (TabPFNRegressor).
-        Returns the path written to.
+        Parameters
+        ----------
+        task_id : str, optional
+            Task identifier used to derive the output filename.
+
+        Returns
+        -------
+        str
+            Path to the serialized model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -58,12 +74,18 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
         return model_path
 
     def load_model(self, task_id: str | None = None):
-        """Load the model from a file.
+        """
+        Load the model from a file.
 
-        The method prefers `self.kwargs['model_path']`. If that's not set and
-        `task_id` is provided, it will attempt to load `models/{task_id}.joblib`.
-        Uses joblib.load and replaces `self.backbone` with the loaded estimator.
-        Returns the path loaded from.
+        Parameters
+        ----------
+        task_id : str, optional
+            Task identifier used to derive the input filename.
+
+        Returns
+        -------
+        str
+            Path to the loaded model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:

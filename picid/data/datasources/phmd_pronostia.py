@@ -1,4 +1,7 @@
-"""Pronostia PHMD datasource wrapper."""
+"""
+Provide datasource helpers for phmd pronostia.
+
+"""
 
 from __future__ import annotations
 

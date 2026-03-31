@@ -21,7 +21,8 @@ from picid.baselines.shared_layers.Embed_DLinear import (
 
 
 class Model(nn.Module):
-    """Vanilla Transformer with O(L^2) complexity.
+    """
+    Vanilla Transformer with O(L^2) complexity.
 
     Supports encoder-decoder or decoder-only modes. Embedding type is selected
     via configs.embed_type: 0=DataEmbedding, 1=DataEmbedding, 2=DataEmbedding_wo_pos,
@@ -243,7 +244,8 @@ class Model(nn.Module):
         dec_self_mask=None,
         dec_enc_mask=None,
     ):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------

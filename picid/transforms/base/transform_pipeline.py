@@ -85,34 +85,66 @@ class TransformSequenceProtocol(Protocol):
     @property
     def config(self) -> Any:
         """
-        Serialisable representation of the full transform configuration.
-        Used by CachingPipelineRunner to compute the preprocessed cache key.
-        Must be stable (same pipeline definition → same config).
+        Return a serializable representation of the full transform config.
+
+        Returns
+        -------
+        Any
+            Stable transform configuration used for cache key computation.
         """
         ...
 
     def get_transforms(self) -> OrderedDict[str, DataTransform]:
-        """Return all transforms as an ordered {name: DataTransform} dict."""
+        """
+        Return all transforms in pipeline order.
+
+        Returns
+        -------
+        OrderedDict
+            Ordered mapping of transform names to `DataTransform` objects.
+        """
         ...
 
     def get_cache_point_names(self) -> List[str]:
         """
-        Return transform names that are cache boundaries, in pipeline order.
-        A transform is a cache point when its metadata contains cache_point=True.
+        Return transform names that are cache boundaries.
+
+        Returns
+        -------
+        list of str
+            Transform names marked as cache points, in pipeline order.
         """
         ...
 
     def get_transform_names_after(self, transform_name: str) -> List[str]:
         """
-        Return transform names that come *after* transform_name in pipeline
-        order (exclusive).  Used to resume after restoring a boundary cache.
+        Return transform names that come after a named transform.
+
+        Parameters
+        ----------
+        transform_name : str
+            Boundary transform name.
+
+        Returns
+        -------
+        list of str
+            Transform names after the provided boundary.
         """
         ...
 
     def get_config_up_to_and_including(self, transform_name: str) -> Dict:
         """
-        Return a serialisable config dict covering only transforms up to and
-        including transform_name.  Used to compute boundary cache keys.
+        Return a serializable config slice up to a named transform.
+
+        Parameters
+        ----------
+        transform_name : str
+            Last transform name to include.
+
+        Returns
+        -------
+        dict
+            Serializable configuration slice used for boundary cache keys.
         """
         ...
 
@@ -180,11 +212,25 @@ class TransformPipeline:
         return self._config
 
     def get_transforms(self) -> OrderedDict[str, DataTransform]:
-        """Return all transforms as an ordered {name: DataTransform} dict."""
+        """
+        Return all transforms in pipeline order.
+
+        Returns
+        -------
+        OrderedDict
+            Ordered mapping of transform names to `DataTransform` objects.
+        """
         return self._transforms.copy()
 
     def get_cache_point_names(self) -> List[str]:
-        """Return names of transforms with metadata.cache_point=True, in order."""
+        """
+        Return names of transforms marked as cache points.
+
+        Returns
+        -------
+        list of str
+            Cache boundary transform names in pipeline order.
+        """
         return [
             name
             for name, dt in self._transforms.items()
@@ -192,7 +238,19 @@ class TransformPipeline:
         ]
 
     def get_transform_names_after(self, transform_name: str) -> List[str]:
-        """Return transform names that come after transform_name (exclusive)."""
+        """
+        Return transform names that come after a named transform.
+
+        Parameters
+        ----------
+        transform_name : str
+            Boundary transform name.
+
+        Returns
+        -------
+        list of str
+            Transform names after the boundary.
+        """
         names = list(self._transforms.keys())
         try:
             idx = names.index(transform_name)
@@ -202,8 +260,17 @@ class TransformPipeline:
 
     def get_config_up_to_and_including(self, transform_name: str) -> Dict:
         """
-        Return a serialisable config dict covering transforms up to and
-        including transform_name.  Used for boundary cache key computation.
+        Return a serializable config slice up to a named transform.
+
+        Parameters
+        ----------
+        transform_name : str
+            Last transform name to include.
+
+        Returns
+        -------
+        dict
+            Serializable config slice used for boundary cache keys.
         """
         names = list(self._transforms.keys())
         try:
@@ -230,6 +297,7 @@ class TransformPipeline:
         Parameters
         ----------
         data : SplitDatasetContainer
+            Input split container to transform.
 
         Returns
         -------
@@ -269,10 +337,17 @@ class TransformPipeline:
         transforms: OrderedDict[str, DataTransform],
     ) -> Dict[str, Any]:
         """
-        Build a serialisable config dict from the DataTransform objects.
+        Build a serializable config dict from `DataTransform` objects.
 
-        Includes the transform class name so that swapping the underlying
-        implementation invalidates the cache key even when the name is the same.
+        Parameters
+        ----------
+        transforms : OrderedDict
+            Ordered mapping of transform names to `DataTransform` objects.
+
+        Returns
+        -------
+        dict
+            Serializable pipeline config used for cache key computation.
         """
         config: Dict[str, Any] = {}
         for name, dt in transforms.items():

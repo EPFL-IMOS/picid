@@ -14,7 +14,28 @@ logger = logging.getLogger(__name__)
 
 class MLPWrapper(AbstractFeedForwardTrainingWrapper):
     """
-    Wrapper specifically for the MLP Baseline model.
+    Wrap the MLP baseline in the training-oriented model interface.
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    seq_len : int
+        Input sequence length.
+    input_channels : int
+        Number of input channels.
+    num_targets : int, optional
+        Number of regression targets.
+    num_classes : int, optional
+        Number of classes for classification tasks.
+    output_dim : int, optional
+        Deprecated regression target dimension alias.
+    hidden_dim : int, default=64
+        Hidden feature size used by the MLP.
+    num_layers : int, default=2
+        Number of linear blocks in the MLP.
+    **kwargs : Any
+        Additional wrapper arguments retained by the base wrapper.
     """
 
     def __init__(
@@ -31,24 +52,28 @@ class MLPWrapper(AbstractFeedForwardTrainingWrapper):
         **kwargs: Any,
     ):
         """
+        Create the MLP wrapper and select the correct target dimension.
+
         Parameters
         ----------
-        task_type :
-            Task name.
-        seq_len :
+        task_type : str
+            Project task identifier.
+        seq_len : int
             Input sequence length.
-        input_channels :
-            Number of input channels (required).
-        num_targets :
-            Output dimension for regression (optional, default 1).
-        num_classes :
-            Number of classes for classification (required for classification).
-        output_dim :
-            Deprecated. Use num_targets for regression.
-        hidden_dim :
-            Hidden layer size (default 64).
-        num_layers :
-            Number of layers (default 2).
+        input_channels : int
+            Number of input channels.
+        num_targets : int, optional
+            Number of regression targets.
+        num_classes : int, optional
+            Number of classes for classification tasks.
+        output_dim : int, optional
+            Deprecated regression target dimension alias.
+        hidden_dim : int, default=64
+            Hidden feature size used by the MLP.
+        num_layers : int, default=2
+            Number of linear blocks in the MLP.
+        **kwargs : Any
+            Additional wrapper arguments retained by the base wrapper.
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS

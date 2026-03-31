@@ -14,7 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def correct_state_dict_keys(state_dict: Dict[str, Any]) -> OrderedDict:
-    """Removes an extraneous 'backbone.' prefix from state_dict keys."""
+    """
+    Remove an extraneous ``backbone.`` prefix from checkpoint keys.
+
+    Parameters
+    ----------
+    state_dict : Dict[str, Any]
+        Serialized state dictionary loaded from a checkpoint.
+
+    Returns
+    -------
+    OrderedDict
+        State dictionary with normalized keys.
+    """
     new_state_dict = OrderedDict()
     for key, value in state_dict.items():
         # Use removeprefix for a clean and explicit operation
@@ -24,7 +36,21 @@ def correct_state_dict_keys(state_dict: Dict[str, Any]) -> OrderedDict:
 
 
 def load_model_from_checkpoint(path: Path, device: torch.device) -> nn.Module:
-    """Loads a model from a checkpoint file."""
+    """
+    Load a model from a checkpoint file.
+
+    Parameters
+    ----------
+    path : Path
+        Path to the checkpoint file.
+    device : torch.device
+        Target device used when loading the checkpoint tensor payload.
+
+    Returns
+    -------
+    nn.Module
+        Instantiated model with checkpoint weights loaded.
+    """
 
     config_path = find_config_file(
         path.parent.parent.parent,

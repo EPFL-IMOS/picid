@@ -23,8 +23,15 @@ logger = logging.getLogger(__name__)
 
 class ConfigTransformManager:
     """
-    Improved configuration-driven transform manager.
-    Instantiates DataTransform objects eagerly by default and provides efficient access.
+    Manage transform configs and instantiated `DataTransform` objects.
+
+    Parameters
+    ----------
+    transforms_config : dict or DictConfig, optional
+        Mapping of transform names to transform configuration entries.
+    lazy_instantiation : bool, default=False
+        Whether to delay Hydra instantiation until the transforms are first
+        requested.
     """
 
     def __init__(
@@ -33,14 +40,14 @@ class ConfigTransformManager:
         lazy_instantiation: bool = False,
     ):
         """
-        Initialize transform manager with configuration.
+        Initialize the transform manager from configuration.
 
         Parameters
         ----------
         transforms_config : dict or DictConfig, optional
-            Transforms configuration dictionary or DictConfig
+            Transforms configuration dictionary or DictConfig.
         lazy_instantiation : bool
-            If False (default), instantiate transforms immediately
+            If False (default), instantiate transforms immediately.
         """
         self.config = self._ensure_dict_config(transforms_config or {})
         self.lazy_instantiation = lazy_instantiation
@@ -54,13 +61,25 @@ class ConfigTransformManager:
             self._instantiate_all()
 
     def _ensure_dict_config(self, config: Union[Dict, DictConfig]) -> DictConfig:
-        """Ensure config is a DictConfig."""
+        """
+        Convert plain dictionaries to `DictConfig`.
+
+        Parameters
+        ----------
+        config : dict or DictConfig
+            Input configuration to normalize.
+
+        Returns
+        -------
+        DictConfig
+            Normalized OmegaConf dictionary configuration.
+        """
         if isinstance(config, dict):
             return OmegaConf.create(config)
         return config
 
     def _instantiate_all(self) -> None:
-        """Instantiate all DataTransform objects from configuration."""
+        """Instantiate all configured `DataTransform` objects."""
         if self._is_instantiated:
             return
 
@@ -113,7 +132,7 @@ class ConfigTransformManager:
         Parameters
         ----------
         transforms_config : dict or DictConfig
-            Configuration dictionary with transform definitions
+            Configuration dictionary with transform definitions.
 
         Raises
         ------
@@ -151,7 +170,7 @@ class ConfigTransformManager:
         Parameters
         ----------
         transforms_config : dict or DictConfig
-            New transforms configuration
+            New transforms configuration.
 
         Raises
         ------
@@ -171,15 +190,41 @@ class ConfigTransformManager:
             self._instantiate_all()
 
     def has_transform(self, name: str) -> bool:
-        """Check if transform name exists in configuration."""
+        """
+        Check whether a named transform exists.
+
+        Parameters
+        ----------
+        name : str
+            Transform name to look up.
+
+        Returns
+        -------
+        bool
+            Whether the transform exists in the stored configuration.
+        """
         return name in self.config
 
     def get_transform_names(self) -> List[str]:
-        """Get list of all transform names in configuration order."""
+        """
+        Return all transform names in configuration order.
+
+        Returns
+        -------
+        list of str
+            Transform names in their configured pipeline order.
+        """
         return list(self.config.keys())
 
     def get_transforms_config(self) -> DictConfig:
-        """Get the transforms configuration."""
+        """
+        Return the stored transforms configuration.
+
+        Returns
+        -------
+        DictConfig
+            Full transform configuration.
+        """
         return self.config
 
     def get_transform_config(self, name: str) -> DictConfig:
@@ -189,12 +234,12 @@ class ConfigTransformManager:
         Parameters
         ----------
         name : str
-            Transform name
+            Transform name.
 
         Returns
         -------
         DictConfig
-            Transform configuration
+            Transform configuration.
         """
         if name not in self.config:
             raise KeyError(f"Transform '{name}' not found")
@@ -218,18 +263,17 @@ class ConfigTransformManager:
 
     def get_data_transform(self, name: str) -> DataTransform:
         """
-        Get specific instantiated DataTransform object by name.
-        Efficient - no re-instantiation, direct access from memory.
+        Return one instantiated `DataTransform` by name.
 
         Parameters
         ----------
         name : str
-            Transform name
+            Transform name.
 
         Returns
         -------
         DataTransform
-            DataTransform object
+            Instantiated transform wrapper.
         """
         if not self._is_instantiated:
             self._instantiate_all()
@@ -241,30 +285,29 @@ class ConfigTransformManager:
 
     def prepare_transforms(self) -> List[DataTransform]:
         """
-        Get DataTransform objects as list.
-        Efficient - returns from already instantiated DataTransform objects.
+        Return instantiated transforms as a list.
 
         Returns
         -------
-        list
-            List of DataTransform objects
+        list of DataTransform
+            Instantiated transforms in pipeline order.
         """
         data_transforms = self.get_data_transforms()
         return list(data_transforms.values())
 
     def get_transforms_by_apply_to(self, apply_to: str) -> List[DataTransform]:
         """
-        Get DataTransform objects that apply to a specific data type.
+        Return transforms that write to a specific data key.
 
         Parameters
         ----------
         apply_to : str
-            Data type (e.g., 'features', 'target', 'timestamps')
+            Data type (for example, ``features`` or ``target``).
 
         Returns
         -------
         OrderedDict
-            DataTransform objects filtered by apply_to
+            DataTransform objects filtered by ``apply_to``.
         """
         data_transforms = self.get_data_transforms()
         return OrderedDict(
@@ -275,17 +318,17 @@ class ConfigTransformManager:
 
     def get_transforms_by_fit_on(self, fit_on: str) -> List[DataTransform]:
         """
-        Get DataTransform objects that should be fit on specific split.
+        Return transforms that should be fit on a specific split.
 
         Parameters
         ----------
         fit_on : str
-            Split name (e.g., 'train', 'val')
+            Split name (for example, ``train`` or ``val``).
 
         Returns
         -------
         OrderedDict
-            DataTransform objects filtered by fit_on
+            DataTransform objects filtered by ``fit_on``.
         """
         data_transforms = self.get_data_transforms()
         return OrderedDict(
@@ -295,18 +338,24 @@ class ConfigTransformManager:
         )
 
     def _pipeline_order(self) -> List[str]:
-        """Transform names in pipeline order (excludes keys starting with __)."""
+        """
+        Return transform names in pipeline order.
+
+        Returns
+        -------
+        list of str
+            Configured transform names excluding private ``__`` keys.
+        """
         return [n for n in self.config.keys() if not str(n).startswith("__")]
 
     def get_cache_point_names(self) -> List[str]:
         """
-        Return transform names that are cache points (metadata.cache_point is True),
-        in pipeline order. Used for boundary caching.
+        Return transform names marked as boundary cache points.
 
         Returns
         -------
-        list
-            List of transform names that are marked as cache_point.
+        list of str
+            Transform names marked with ``metadata.cache_point = True``.
         """
         order = self._pipeline_order()
         cache_points = []
@@ -321,8 +370,7 @@ class ConfigTransformManager:
 
     def get_transform_names_after(self, transform_name: str) -> List[str]:
         """
-        Return transform names that come after the given name in pipeline order
-        (exclusive). Used to resume from a boundary cache.
+        Return transform names that follow a named transform.
 
         Parameters
         ----------
@@ -331,8 +379,8 @@ class ConfigTransformManager:
 
         Returns
         -------
-        list
-            List of transform names to run after this boundary.
+        list of str
+            Transform names to run after this boundary.
         """
         order = self._pipeline_order()
         try:
@@ -343,9 +391,7 @@ class ConfigTransformManager:
 
     def get_config_up_to_and_including(self, transform_name: str) -> Dict:
         """
-        Return serializable transforms config containing only entries up to and
-        including the given transform name (pipeline order). Used to compute
-        boundary cache keys.
+        Return a serializable config slice up to a named transform.
 
         Parameters
         ----------
@@ -372,7 +418,7 @@ class ConfigTransformManager:
         Parameters
         ----------
         name : str
-            Transform name to remove
+            Transform name to remove.
 
         Raises
         ------
@@ -409,43 +455,76 @@ class ConfigTransformManager:
 
     @property
     def is_instantiated(self) -> bool:
-        """Check if transforms have been instantiated."""
+        """
+        Check whether transforms have already been instantiated.
+
+        Returns
+        -------
+        bool
+            Whether the manager currently has instantiated transforms cached.
+        """
         return self._is_instantiated
 
     # Backward compatibility methods
     def instantiate_transforms(self) -> OrderedDict[str, DataTransform]:
-        """Alias for get_data_transforms() for backward compatibility."""
+        """
+        Return all instantiated transforms.
+
+        Returns
+        -------
+        OrderedDict
+            Alias for :meth:`get_data_transforms`.
+        """
         return self.get_data_transforms()
 
     def get_transforms(self) -> OrderedDict[str, DataTransform]:
-        """Alias for get_data_transforms() for backward compatibility."""
+        """
+        Return all instantiated transforms.
+
+        Returns
+        -------
+        OrderedDict
+            Alias for :meth:`get_data_transforms`.
+        """
         return self.get_data_transforms()
 
     def get_transform(self, name: str) -> DataTransform:
-        """Alias for get_data_transform() for backward compatibility."""
+        """
+        Return one instantiated transform by name.
+
+        Parameters
+        ----------
+        name : str
+            Transform name.
+
+        Returns
+        -------
+        DataTransform
+            Alias for :meth:`get_data_transform`.
+        """
         return self.get_data_transform(name)
 
     def get_inverter_for_key(
         self, key: str, which: str = "last"
     ) -> Optional[InverseTransformMixin]:
         """
-        Return a transform that implements InverseTransformMixin and writes to the given key.
+        Return an inverse-capable transform for a given output key.
 
-        When several transforms assign to the same key and implement inverse, pipeline
-        order is used: "last" (default) returns the one that last wrote to the key
-        (typical for inverse scaling); "first" returns the first such transform.
+        When several transforms assign to the same key and implement inverse,
+        pipeline order is used: ``"last"`` returns the last writer and
+        ``"first"`` returns the first writer.
 
         Parameters
         ----------
         key : str
             Data key the transform assigns to (e.g. "target", "features").
         which : str
-            "last" (default) or "first" — which matching transform in pipeline order.
+            ``"last"`` (default) or ``"first"`` in pipeline order.
 
         Returns
         -------
         InverseTransformMixin or None
-            The transform instance implementing InverseTransformMixin, or None if no match.
+            Matching inverse transform instance, or ``None`` if no match.
         """
         if which not in ("first", "last"):
             raise ValueError(
@@ -473,12 +552,20 @@ class ConfigTransformManager:
         self, key: str, which: str = "last"
     ) -> Tuple[Optional[InverseTransformMixin], Optional[str]]:
         """
-        Like get_inverter_for_key but also returns the transform config name (for logging).
+        Return an inverse-capable transform and its config name.
+
+        Parameters
+        ----------
+        key : str
+            Data key the transform assigns to.
+        which : str
+            ``"last"`` (default) or ``"first"`` in pipeline order.
 
         Returns
         -------
         tuple
-            (transform_instance, transform_name); (None, None) if no match.
+            ``(transform_instance, transform_name)``, or ``(None, None)`` if
+            no match exists.
         """
         if which not in ("first", "last"):
             raise ValueError(
@@ -505,11 +592,30 @@ class ConfigTransformManager:
         return inverter, inverter_name
 
     def __len__(self) -> int:
-        """Return total number of transforms."""
+        """
+        Return the number of configured transforms.
+
+        Returns
+        -------
+        int
+            Number of configured transforms.
+        """
         return len(self.config)
 
     def __contains__(self, name: str) -> bool:
-        """Check if transform exists using 'in' operator."""
+        """
+        Check whether a transform exists.
+
+        Parameters
+        ----------
+        name : str
+            Transform name.
+
+        Returns
+        -------
+        bool
+            Whether the transform exists.
+        """
         return self.has_transform(name)
 
     def __repr__(self) -> str:
@@ -530,16 +636,16 @@ def create_transform_manager_from_config(
     Parameters
     ----------
     config_path : str, optional
-        Path to YAML configuration file
+        Path to YAML configuration file.
     config_dict : dict, optional
-        Configuration dictionary
+        Configuration dictionary.
     lazy_instantiation : bool
-        If False (default), instantiate transforms immediately
+        If False (default), instantiate transforms immediately.
 
     Returns
     -------
     ConfigTransformManager
-        ConfigTransformManager instance
+        ConfigTransformManager instance.
     """
     if config_path:
         config = OmegaConf.load(config_path)

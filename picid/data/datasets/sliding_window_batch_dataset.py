@@ -28,8 +28,13 @@ logger = logging.getLogger(__name__)
 class SlidingWindowBatchDataset(BaseDataset):
     """
     Sliding-window dataset that builds one sequencer per key in ``data_dict``.
-    Time features are not required. Supports dense and ragged (variable-length)
-    arrays; length formulas below apply to a single dense time series.
+
+    Time features are not required. The dataset supports dense and ragged
+    (variable-length) arrays. Each value in ``data_dict`` may be a NumPy
+    array, PyTorch tensor, or Awkward array, and a separate sequencer is
+    created per key. All sequencers must expose the same number of windows so
+    multi-key batches stay aligned. The length formulas below apply to a
+    single dense time series.
 
     Parameters
     ----------
@@ -67,8 +72,10 @@ class SlidingWindowBatchDataset(BaseDataset):
     **kwargs
         Passed through to the base class.
 
-    Dataset length (dense single time series of length T)
-    -----------------------------------------------------
+    Notes
+    -----
+    Dataset length for a dense single time series of length ``T``:
+
     Let required_len = seq_len + pred_len + pred_offset. Valid window start
     indices form range(min_start, max_start, stride) with
     max_start = T - required_len + 1 (exclusive end). Then
@@ -166,7 +173,23 @@ class SlidingWindowBatchDataset(BaseDataset):
                 )
 
     def _create_sequencer(self, arr, sequencer_params, key):
-        """Create the sequencer object for an array based on the array type."""
+        """
+        Create the sequencer object for an array based on the array type.
+
+        Parameters
+        ----------
+        arr : np.ndarray | torch.Tensor | ak.Array
+            Input array to wrap in a sequencer.
+        sequencer_params : dict[str, Any]
+            Shared sequencer keyword arguments.
+        key : str
+            Feature key used for error reporting.
+
+        Returns
+        -------
+        BaseSequencer
+            Dense or ragged sequencer matching the input array type.
+        """
         if isinstance(arr, (np.ndarray, torch.Tensor)):
             driver = DenseArraySequencer(arr, **sequencer_params)
 
@@ -187,8 +210,12 @@ class SlidingWindowBatchDataset(BaseDataset):
 
     def __len__(self):
         """
-        The length of this dataset is determined either by the number of sequences,
-        or if subset, by the length of that subset.
+        Return the number of available sequences.
+
+        Returns
+        -------
+        int
+            Number of available sequences or sampled subset size.
         """
         if self._seq_idx is None:
             return self._length or 0
@@ -218,8 +245,18 @@ class SlidingWindowBatchDataset(BaseDataset):
 
     def __getitem__(self, idx: Union[int, List[int]]) -> Dict[str, tuple]:
         """
-        Returns a dict of {key: (x, y)}.
-        For drivers without time features the last two entries are None.
+        Return the sequenced tensors for the requested indices.
+
+        Parameters
+        ----------
+        idx : int | list[int]
+            Window index or list of window indices.
+
+        Returns
+        -------
+        dict[str, torch.Tensor]
+            Dictionary containing ``<key>_seq_x`` and ``<key>_seq_y`` entries
+            for every sequenced input key.
         """
         # Potential improvement: Ensure idx is always a list so the sequencer treats it as a batch
         # If idx is int, wrap it. If list, keep it.

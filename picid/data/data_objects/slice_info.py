@@ -45,7 +45,19 @@ class SliceInfo:
     index_map: Optional[Dict[str, Any]] = None
 
     def copy(self, deep: bool = True) -> "SliceInfo":
-        """Return a copy. If deep, list/dict fields are deep-copied."""
+        """
+        Return a copy of the slice description.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            Whether nested list and dictionary fields should be deep-copied.
+
+        Returns
+        -------
+        SliceInfo
+            Copied slice description.
+        """
         if deep:
             return SliceInfo(
                 split=self.split,

@@ -14,21 +14,22 @@ from .base import AbstractLoss
 
 class MSELoss(AbstractLoss):
     """
-    Mean Squared Error loss for time series regression tasks.
+    Mean squared error loss for time-series regression.
 
-    This is the most common loss function for time series forecasting,
-    penalizing squared differences between predictions and targets.
+    Parameters
+    ----------
+    reduction : str, default="mean"
+        Reduction passed to :class:`torch.nn.MSELoss`.
     """
 
     def __init__(self, reduction: str = "mean") -> None:
         """
-        Initialize MSE loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        reduction : str, default="mean"
+            Reduction passed to :class:`torch.nn.MSELoss`.
         """
         super().__init__()
         self.mse_loss = nn.MSELoss(reduction=reduction)
@@ -37,19 +38,19 @@ class MSELoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute MSE loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = model_out["targets"]
@@ -63,21 +64,22 @@ class MSELoss(AbstractLoss):
 
 class MAELoss(AbstractLoss):
     """
-    Mean Absolute Error loss for time series regression tasks.
+    Mean absolute error loss for time-series regression.
 
-    More robust to outliers compared to MSE loss, penalizing
-    absolute differences between predictions and targets.
+    Parameters
+    ----------
+    reduction : str, default="mean"
+        Reduction passed to :class:`torch.nn.L1Loss`.
     """
 
     def __init__(self, reduction: str = "mean") -> None:
         """
-        Initialize MAE loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        reduction : str, default="mean"
+            Reduction passed to :class:`torch.nn.L1Loss`.
         """
         super().__init__()
         self.mae_loss = nn.L1Loss(reduction=reduction)
@@ -86,19 +88,19 @@ class MAELoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute MAE loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -112,23 +114,26 @@ class MAELoss(AbstractLoss):
 
 class HuberLoss(AbstractLoss):
     """
-    Huber loss for time series regression tasks.
+    Huber loss for time-series regression.
 
-    Combines the best properties of MSE and MAE losses.
-    Less sensitive to outliers than MSE while being smoother than MAE.
+    Parameters
+    ----------
+    delta : float, default=1.0
+        Threshold that switches between quadratic and linear penalties.
+    reduction : str, default="mean"
+        Reduction passed to :class:`torch.nn.HuberLoss`.
     """
 
     def __init__(self, delta: float = 1.0, reduction: str = "mean") -> None:
         """
-        Initialize Huber loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        delta :
-            Threshold for switching between MSE and MAE behavior
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        delta : float, default=1.0
+            Threshold that switches between quadratic and linear penalties.
+        reduction : str, default="mean"
+            Reduction passed to :class:`torch.nn.HuberLoss`.
         """
         super().__init__()
         self.huber_loss = nn.HuberLoss(delta=delta, reduction=reduction)
@@ -137,19 +142,19 @@ class HuberLoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute Huber loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -163,23 +168,26 @@ class HuberLoss(AbstractLoss):
 
 class QuantileLoss(AbstractLoss):
     """
-    Quantile loss for probabilistic time series forecasting.
+    Quantile loss for probabilistic forecasting.
 
-    Useful for generating prediction intervals and handling
-    uncertainty in time series predictions.
+    Parameters
+    ----------
+    quantile : float, default=0.5
+        Target quantile in the open interval ``(0, 1)``.
+    reduction : str, default="mean"
+        Reduction to apply after computing pointwise quantile penalties.
     """
 
     def __init__(self, quantile: float = 0.5, reduction: str = "mean") -> None:
         """
-        Initialize Quantile loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        quantile :
-            Target quantile (between 0 and 1)
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        quantile : float, default=0.5
+            Target quantile in the open interval ``(0, 1)``.
+        reduction : str, default="mean"
+            Reduction to apply after computing pointwise quantile penalties.
         """
         super().__init__()
         self.quantile = quantile
@@ -192,19 +200,19 @@ class QuantileLoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute Quantile loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -224,23 +232,26 @@ class QuantileLoss(AbstractLoss):
 
 class MAPELoss(AbstractLoss):
     """
-    Mean Absolute Percentage Error loss for time series regression.
+    Mean absolute percentage error loss.
 
-    Useful when the scale of errors should be relative to the magnitude
-    of the target values. Handles percentage-based error measurement.
+    Parameters
+    ----------
+    epsilon : float, default=1e-8
+        Small denominator floor used to avoid division by zero.
+    reduction : str, default="mean"
+        Reduction to apply after computing pointwise percentage errors.
     """
 
     def __init__(self, epsilon: float = 1e-8, reduction: str = "mean") -> None:
         """
-        Initialize MAPE loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        epsilon :
-            Small value to avoid division by zero
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        epsilon : float, default=1e-8
+            Small denominator floor used to avoid division by zero.
+        reduction : str, default="mean"
+            Reduction to apply after computing pointwise percentage errors.
         """
         super().__init__()
         self.epsilon = epsilon
@@ -250,19 +261,19 @@ class MAPELoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute MAPE loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -288,23 +299,26 @@ class MAPELoss(AbstractLoss):
 
 class SMAPELoss(AbstractLoss):
     """
-    Symmetric Mean Absolute Percentage Error loss.
+    Symmetric mean absolute percentage error loss.
 
-    A symmetric version of MAPE that treats over-prediction and
-    under-prediction equally, more suitable for time series forecasting.
+    Parameters
+    ----------
+    epsilon : float, default=1e-8
+        Small denominator floor used to avoid division by zero.
+    reduction : str, default="mean"
+        Reduction to apply after computing pointwise symmetric percentage errors.
     """
 
     def __init__(self, epsilon: float = 1e-8, reduction: str = "mean") -> None:
         """
-        Initialize SMAPE loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        epsilon :
-            Small value to avoid division by zero
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        epsilon : float, default=1e-8
+            Small denominator floor used to avoid division by zero.
+        reduction : str, default="mean"
+            Reduction to apply after computing pointwise symmetric percentage errors.
         """
         super().__init__()
         self.epsilon = epsilon
@@ -314,19 +328,19 @@ class SMAPELoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute SMAPE loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the ``targets`` tensor.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -356,13 +370,12 @@ class WeightedMSELoss(AbstractLoss):
 
     def __init__(self, reduction: str = "mean") -> None:
         """
-        Initialize Weighted MSE loss.
+        Initialize the loss wrapper.
 
         Parameters
         ----------
-        reduction :
-            Specifies the reduction to apply to the output.
-            Options: 'mean', 'sum', 'none'
+        reduction : str, default="mean"
+            Reduction to apply after weighting squared errors.
         """
         super().__init__()
         self.reduction = reduction
@@ -371,19 +384,19 @@ class WeightedMSELoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute weighted MSE loss between predictions and targets.
+        Compute the batch loss and return it inside ``model_out``.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' and optionally 'weights' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the ``predictions`` tensor.
+        batch : dict[str, torch.Tensor]
+            Batch data containing ``targets`` and optionally ``weights``.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with an added ``loss`` entry.
         """
         predictions = model_out["predictions"]
         targets = batch["targets"]
@@ -406,10 +419,15 @@ class WeightedMSELoss(AbstractLoss):
 
 class CombinedLoss(AbstractLoss):
     """
-    Combined loss that allows mixing multiple loss functions.
+    Combine multiple loss functions into a weighted objective.
 
-    Useful for multi-objective optimization or when you want to
-    balance different aspects of the prediction quality.
+    Parameters
+    ----------
+    losses : dict[str, AbstractLoss]
+        Mapping from loss names to loss instances.
+    weights : dict[str, float] | None, default=None
+        Optional dictionary mapping loss names to weights.
+        If None, all losses are weighted equally.
     """
 
     def __init__(
@@ -418,13 +436,13 @@ class CombinedLoss(AbstractLoss):
         weights: Optional[Dict[str, float]] = None,
     ) -> None:
         """
-        Initialize Combined loss.
+        Initialize the composite loss wrapper.
 
         Parameters
         ----------
-        losses :
-            Dictionary mapping loss names to loss instances
-        weights :
+        losses : dict[str, AbstractLoss]
+            Mapping from loss names to loss instances.
+        weights : dict[str, float] | None, default=None
             Optional dictionary mapping loss names to weights.
             If None, all losses are weighted equally.
         """
@@ -440,19 +458,19 @@ class CombinedLoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute combined loss from multiple loss functions.
+        Compute the weighted sum of the configured losses.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing 'predictions' tensor
-        batch :
-            Dictionary containing 'targets' tensor
+        model_out : dict[str, torch.Tensor]
+            Model outputs containing the tensors required by each loss.
+        batch : dict[str, torch.Tensor]
+            Batch data containing the tensors required by each loss.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            Dictionary with original model output plus 'loss' key and individual losses
+        dict[str, torch.Tensor]
+            Copy of ``model_out`` with the total ``loss`` and individual losses.
         """
         total_loss = 0.0
         individual_losses = {}

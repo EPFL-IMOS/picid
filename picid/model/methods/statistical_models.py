@@ -62,12 +62,12 @@ class LinearBaseline(nn.Module):
 
     def _init_weights(self, m: nn.Module):
         """
-        Applies Kaiming Normal initialization to Linear layers.
+        Initialize linear layers with Kaiming normal weights.
 
         Parameters
         ----------
         m : nn.Module
-            The module to initialize.
+            Module instance inspected during recursive initialization.
         """
         if isinstance(m, nn.Linear):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="linear")
@@ -76,17 +76,17 @@ class LinearBaseline(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Performs the forward pass.
+        Flatten the input sequence and apply the linear layer.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (Batch, Channels, Seq_Len).
+            Input tensor of shape ``(batch, channels, seq_len)``.
 
         Returns
         -------
         torch.Tensor
-            Prediction tensor of shape (Batch, num_targets).
+            Prediction tensor.
         """
         # x: (Batch, Channels, Seq_Len) -> Flatten to (Batch, Features)
         b = x.size(0)
@@ -148,7 +148,14 @@ class PolynomialBaseline(nn.Module):
         self.apply(self._init_weights)
 
     def _init_weights(self, m: nn.Module):
-        """Applies Kaiming Normal initialization."""
+        """
+        Initialize linear layers with Kaiming normal weights.
+
+        Parameters
+        ----------
+        m : nn.Module
+            Module instance inspected during recursive initialization.
+        """
         if isinstance(m, nn.Linear):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="linear")
             if m.bias is not None:
@@ -156,17 +163,17 @@ class PolynomialBaseline(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Performs the forward pass with polynomial expansion.
+        Expand flattened features with powers and apply the linear head.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (Batch, Channels, Seq_Len).
+            Input tensor of shape ``(batch, channels, seq_len)``.
 
         Returns
         -------
         torch.Tensor
-            Prediction tensor of shape (Batch, num_targets).
+            Prediction tensor.
         """
         b = x.size(0)
         x_flat = x.reshape(b, -1)
@@ -181,16 +188,16 @@ class PolynomialBaseline(nn.Module):
 
 class ExponentialBaseline(nn.Module):
     """
-    An Exponential regression baseline for physics-informed degradation modeling.
+    Fit an exponential regression baseline on flattened features.
 
-    This model assumes the target variable follows an exponential growth law,
-    typical of crack propagation or Arrhenius-type thermal aging.
-
-    Equation:
-        y = exp(Wx + b)
-
-    Constraint:
-        This model strictly supports Regression tasks where targets are positive.
+    Parameters
+    ----------
+    config : Dict[str, int]
+        Input-shape configuration.
+    task_type : str
+        Project task identifier.
+    num_targets : int, default=1
+        Number of output targets.
     """
 
     def __init__(self, config: Dict[str, int], task_type: str, num_targets: int = 1):
@@ -229,10 +236,12 @@ class ExponentialBaseline(nn.Module):
 
     def _init_weights(self, m: nn.Module):
         """
-        Applies Xavier Normal initialization.
+        Initialize linear layers with Xavier normal weights.
 
-        Note: We use Xavier here because the exponential activation is sensitive
-        to large initial values (potential explosion).
+        Parameters
+        ----------
+        m : nn.Module
+            Module instance inspected during recursive initialization.
         """
         if isinstance(m, nn.Linear):
             nn.init.xavier_normal_(m.weight)
@@ -241,17 +250,17 @@ class ExponentialBaseline(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Performs the forward pass with exponential activation.
+        Apply the linear head and map outputs through ``exp``.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (Batch, Channels, Seq_Len).
+            Input tensor of shape ``(batch, channels, seq_len)``.
 
         Returns
         -------
         torch.Tensor
-            Positive prediction tensor of shape (Batch, num_targets).
+            Prediction tensor.
         """
         b = x.size(0)
         x_flat = x.reshape(b, -1)

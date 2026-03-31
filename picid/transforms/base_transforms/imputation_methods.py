@@ -16,9 +16,16 @@ logger = logging.getLogger(__name__)
 
 class SpectralExtrapolationImputation:
     """
-    Helper class for Causal Spectral Extrapolation.
-    Models the signal as a sum of sinusoids derived from the immediate past.
-    Optionally matches the noise texture (variance) of the history.
+    Impute gaps by extrapolating dominant spectral components.
+
+    Parameters
+    ----------
+    window_len : int, default=64
+        Number of historical samples used to estimate the local spectrum.
+    top_k : int, default=3
+        Number of dominant frequency components to reconstruct.
+    match_variance : bool, default=False
+        Whether to rescale the generated gap to match historical variance.
     """
 
     def __init__(
@@ -30,8 +37,17 @@ class SpectralExtrapolationImputation:
 
     def impute(self, X: np.ndarray) -> np.ndarray:
         """
-        Performs spectral imputation on a 3D array (Batch, Time, Channels).
-        Returns a copy of the array with gaps filled.
+        Impute missing values in a 3D array using spectral extrapolation.
+
+        Parameters
+        ----------
+        X : numpy.ndarray
+            Input array with shape ``(batch, time, channels)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Copy of ``X`` with NaN gaps filled.
         """
         X_imp = X.copy()
         B, T, C = X_imp.shape
@@ -129,11 +145,10 @@ class SpectralExtrapolationImputation:
 
 class BlockwisePastCopyImputation:
     """
-    Robust Blockwise Past Copy Imputation.
-    Hierarchical strategy:
-    1. Causal Pattern Match (for small/medium gaps)
-    2. Periodic Mirroring (for large gaps/exhausted history)
-    3. Stochastic Drift Fallback (for start-of-signal gaps)
+    Impute gaps by copying or mirroring past signal blocks.
+
+    The strategy first tries to reuse a historical pattern, then falls back to
+    a mirrored block, and finally uses a simple causal mean for very early gaps.
     """
 
     def __init__(self):
@@ -339,22 +354,22 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         **kwargs,
     ):
         """
-        Initializes the ImputationTransform with a specific strategy.
+        Initialize the imputation transform with a specific strategy.
 
         Parameters
         ----------
-        strategy : str or list
-            The name of the imputation strategy or a list of strategies per channel.
-            Defaults to ``"linear"``.
-        apply_to : list, optional
-            List of dictionary keys to transform. If ``None``, all keys
-            are transformed. Defaults to ``None``.
-        spectral_window_len : int
-            Number of past time steps to analyze for "spectral" imputation.
-        spectral_top_k : int
-            Number of frequency components to synthesize for "spectral" imputation.
+        strategy : str | list[str], default="linear"
+            Imputation strategy or per-channel strategy list.
+        apply_to : list[str] | None, optional
+            Dictionary keys to transform. If ``None``, all keys are processed.
+        spectral_window_len : int, default=64
+            History length used by the spectral helper.
+        spectral_top_k : int, default=3
+            Number of dominant frequencies used by the spectral helper.
+        spectral_match_variance : bool, default=False
+            Whether the spectral helper should match historical variance.
         **kwargs
-            Additional keyword arguments passed to the parent class.
+            Extra compatibility keywords passed to the parent transform.
 
         Raises
         ------
@@ -393,7 +408,7 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
 
     def fit_data(self, data: NamedTransformInput, metadata: Dict):
         """
-        Fits the transform to the data.
+        Fit the transform to the data.
 
         Calculates necessary statistics based on the selected strategies:
         - ``"mean"``: Computes global mean per channel.
@@ -466,7 +481,14 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         return self
 
     def _get_spectral_imputer(self) -> SpectralExtrapolationImputation:
-        """Lazy loader for the spectral helper class."""
+        """
+        Return the spectral helper instance.
+
+        Returns
+        -------
+        SpectralExtrapolationImputation
+            Lazily constructed spectral helper.
+        """
         if self._spectral_imputer is None:
             self._spectral_imputer = SpectralExtrapolationImputation(
                 window_len=self.spectral_window_len,
@@ -476,17 +498,33 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         return self._spectral_imputer
 
     def _get_pattern_imputer(self) -> BlockwisePastCopyImputation:
-        """Lazy loader for the pattern matching helper class."""
+        """
+        Return the pattern-matching helper instance.
+
+        Returns
+        -------
+        BlockwisePastCopyImputation
+            Lazily constructed blockwise copy helper.
+        """
         if self._pattern_imputer is None:
             self._pattern_imputer = BlockwisePastCopyImputation()
         return self._pattern_imputer
 
     def _impute_array(self, X: np.ndarray, key: str) -> np.ndarray:
         """
-        Applies the configured imputation strategy to a single NumPy array.
+        Impute a single NumPy array with the configured strategy.
 
-        This method standardizes input to 3D, applies the strategy per channel,
-        and restores original shape.
+        Parameters
+        ----------
+        X : numpy.ndarray
+            Array to impute.
+        key : str
+            Payload key used to look up fitted statistics.
+
+        Returns
+        -------
+        numpy.ndarray
+            Imputed array with the original dimensionality restored.
         """
         # Standardize input to (Batch, Time, Channels)
         original_shape = X.shape
@@ -631,7 +669,7 @@ class ImputationTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> Dict[str, np.ndarray]:
         """
-        Executes the imputation on the provided data dictionary.
+        Transform the selected payloads by imputing missing values.
 
         Parameters
         ----------

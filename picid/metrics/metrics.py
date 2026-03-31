@@ -15,7 +15,14 @@ from .base import AbstractFileSystemMetric, AbstractMetric
 
 
 class NormalizedMAEMetricRailway(AbstractFileSystemMetric):
-    """Normalized Mean Absolute Error metric for Railvay."""
+    """
+    Normalized mean absolute error for the railway dataset.
+
+    Parameters
+    ----------
+    paths : dict, default=None
+        File-system paths required to load the railway normalization factor.
+    """
 
     def __init__(self, paths: dict = None):
         super().__init__("mae", paths)
@@ -39,7 +46,14 @@ class NormalizedMAEMetricRailway(AbstractFileSystemMetric):
 
 
 class NormalizedMSEMetricRailway(AbstractFileSystemMetric):
-    """ "Normalized Mean Squared Error metric for Railvay."""
+    """
+    Normalized mean squared error for the railway dataset.
+
+    Parameters
+    ----------
+    paths : dict, default=None
+        File-system paths required to load the railway normalization factor.
+    """
 
     def __init__(self, paths: dict = None):
         super().__init__("mse", paths)
@@ -63,20 +77,27 @@ class NormalizedMSEMetricRailway(AbstractFileSystemMetric):
 
 
 class MAEMetric(AbstractMetric):
-    """Mean Absolute Error metric with proper batch accumulation."""
+    """Mean absolute error metric with batch accumulation."""
 
     def __init__(self):
         super().__init__("mae")
         self.reset()
 
     def reset(self):
-        """Resets the accumulators to zero."""
+        """Reset the accumulators to zero."""
         self.total_absolute_error = 0.0
         self.total_count = 0
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
         """
-        Updates the metric's state with a new batch of predictions and targets.
+        Update the metric state with a new batch of predictions and targets.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Model predictions.
+        targets : np.ndarray
+            Ground-truth targets.
         """
         # 1. Calculate the absolute errors for every element in the batch
         abs_errors = np.abs(predictions - targets)
@@ -87,7 +108,12 @@ class MAEMetric(AbstractMetric):
 
     def compute(self) -> float:
         """
-        Computes the final MAE from the accumulated values.
+        Compute the final MAE from the accumulated values.
+
+        Returns
+        -------
+        float
+            Final mean absolute error.
         """
         if self.total_count == 0:
             raise ValueError("No data available for computation")
@@ -127,7 +153,7 @@ class MSEMetric(AbstractMetric):
 
 
 class RMSEMetric(AbstractMetric):
-    """Root Mean Squared Error metric with batch-wise accumulation for (B, L, 1) shapes."""
+    """Root mean squared error metric with batch-wise accumulation."""
 
     def __init__(self):
         super().__init__("rmse")
@@ -157,7 +183,7 @@ class RMSEMetric(AbstractMetric):
 
 
 class MAPEMetric(AbstractMetric):
-    """Mean Absolute Percentage Error metric."""
+    """Mean absolute percentage error metric."""
 
     def __init__(self):
         super().__init__("mape")
@@ -181,7 +207,7 @@ class MAPEMetric(AbstractMetric):
 
 
 class MSPEMetric(AbstractMetric):
-    """Mean Squared Percentage Error metric."""
+    """Mean squared percentage error metric."""
 
     def __init__(self):
         super().__init__("mspe")
@@ -205,7 +231,7 @@ class MSPEMetric(AbstractMetric):
 
 
 class RSEMetric(AbstractMetric):
-    """Relative Squared Error metric."""
+    """Relative squared error metric."""
 
     def __init__(self):
         super().__init__("rse")
@@ -241,7 +267,7 @@ class CORRMetric(AbstractMetric):
         self.reset()
 
     def reset(self):
-        """Initializes the accumulators for the online algorithm."""
+        """Initialize the accumulators for the online algorithm."""
         self.n = 0
         self.sum_x = 0.0  # Sum of targets
         self.sum_y = 0.0  # Sum of predictions
@@ -250,7 +276,16 @@ class CORRMetric(AbstractMetric):
         self.sum_xy = 0.0  # Sum of the product of targets and predictions
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        """Updates the metric's state with a new batch."""
+        """
+        Update the metric state with a new batch of predictions and targets.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Model predictions.
+        targets : np.ndarray
+            Ground-truth targets.
+        """
         x = targets.flatten()
         y = predictions.flatten()
 
@@ -263,7 +298,14 @@ class CORRMetric(AbstractMetric):
         self.sum_xy += np.sum(x * y)
 
     def compute(self) -> float:
-        """Computes the final correlation coefficient from the accumulated values."""
+        """
+        Compute the final correlation coefficient from the accumulated values.
+
+        Returns
+        -------
+        float
+            Final Pearson correlation coefficient.
+        """
         if self.n == 0:
             raise ValueError("No data available for computation")
 
@@ -304,22 +346,32 @@ class NASAScoreMetric(AbstractMetric):
 
 
 class MASEMetric(AbstractMetric):
-    """Mean Absolute Scaled Error (MASE) metric supporting multi-feature inputs.
+    """
+    Mean absolute scaled error metric supporting multi-feature inputs.
 
     Reference:
         Hyndman, R. J., & Koehler, A. B. (2006).
         Another look at measures of forecast accuracy.
         International Journal of Forecasting, 22(4), 679–688.
+
+    Parameters
+    ----------
+    training_series : np.ndarray, default=None
+        Historical values used for scaling.
+    seasonality : int, default=1
+        Periodicity used for the naive forecast baseline.
     """
 
     def __init__(self, training_series: np.ndarray = None, seasonality: int = 1):
         """
+        Initialize the MASE metric.
+
         Parameters
         ----------
-        training_series :
-            Array of historical values used for scaling (T, F) or (T,) shape.
-        seasonality :
-            Periodicity used for the naive forecast (default=1 for non-seasonal data).
+        training_series : np.ndarray, default=None
+            Historical values used for scaling.
+        seasonality : int, default=1
+            Periodicity used for the naive forecast baseline.
         """
         super().__init__("mase")
         self.training_series = training_series
@@ -332,7 +384,21 @@ class MASEMetric(AbstractMetric):
             self.scale = None
 
     def _compute_scale(self, series: np.ndarray, m: int) -> float:
-        """Computes scaling factor as mean absolute naive forecast error."""
+        """
+        Compute the scaling factor as the mean absolute naive forecast error.
+
+        Parameters
+        ----------
+        series : np.ndarray
+            Historical training series.
+        m : int
+            Seasonality used for the naive forecast baseline.
+
+        Returns
+        -------
+        float
+            Scaling factor for the MASE denominator.
+        """
         series = np.asarray(series)
         if series.ndim == 1:
             diffs = np.abs(series[m:] - series[:-m])
@@ -346,12 +412,21 @@ class MASEMetric(AbstractMetric):
         return scale
 
     def reset(self):
-        """Resets accumulated errors."""
+        """Reset the accumulated errors."""
         self.total_absolute_error = 0.0
         self.total_count = 0
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
-        """Accumulates absolute errors for batched data."""
+        """
+        Accumulate absolute errors for batched data.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Model predictions.
+        targets : np.ndarray
+            Ground-truth targets.
+        """
         if self.scale is None:
             raise ValueError(
                 "Scale not initialized. Provide a training_series during initialization."
@@ -369,7 +444,14 @@ class MASEMetric(AbstractMetric):
         self.total_count += np.prod(targets.shape)
 
     def compute(self) -> float:
-        """Computes final Mean Absolute Scaled Error."""
+        """
+        Compute the final mean absolute scaled error.
+
+        Returns
+        -------
+        float
+            Final MASE value.
+        """
         if self.total_count == 0:
             raise ValueError("No data available for computation")
 

@@ -39,7 +39,15 @@ def get_capability(transform_instance: Any) -> TransformCapability:
     """
     Infer transform capability from the transform instance's marker classes.
 
-    Uses DenseTransform, RaggedTransform, RaggedOrDenseTransform (from base_transform).
+    Parameters
+    ----------
+    transform_instance : Any
+        Transform instance whose class hierarchy is inspected.
+
+    Returns
+    -------
+    TransformCapability
+        Capability label used by the handler registry.
     """
     cls = transform_instance.__class__
     from picid.transforms.base.base_transform import (
@@ -66,13 +74,19 @@ def infer_data_kind(
     """
     Infer the data kind from a list of segments and the keys we apply to.
 
-    Uses get_instance_cls() and find_singular_ragged_dim (passed in to avoid
-    circular import with multisource).
+    Parameters
+    ----------
+    segments : list[NamedTransformInput]
+        Split-local segments used to inspect the payload shape.
+    apply_to_keys : str or list[str]
+        Keys considered when determining the data kind.
+    find_singular_ragged_dim : Callable[[NamedTransformInput], Optional[int]]
+        Helper used to detect whether ragged data is structurally regular.
 
     Returns
     -------
     DataKind
-        DATA_KIND_DENSE, DATA_KIND_RAGGED, or DATA_KIND_RAGGED_REGULAR.
+        One of ``dense``, ``ragged``, or ``ragged_regular``.
     """
     if not segments:
         return DATA_KIND_DENSE

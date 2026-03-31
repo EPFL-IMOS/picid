@@ -1,4 +1,5 @@
-"""UNIBO21 datasource loader with predefined battery splits.
+"""
+UNIBO21 datasource loader with predefined battery splits.
 
 The loader follows the same high-level pattern as NB14, but it operates on the
 UNIBO Powertools battery data. The split membership is encoded through the
@@ -134,7 +135,19 @@ test_names = [
 
 
 class UNIBO21Loader(PredefinedSplitLoaderBase):
-    """Load the UNIBO21 battery dataset and expose predefined split payloads.
+    """
+    Load the UNIBO21 battery dataset and expose predefined split payloads.
+
+    Parameters
+    ----------
+    rul_anomaly_threshold : float | None, default=None
+        Absolute RUL threshold used for anomaly detection targets.
+    rul_anomaly_fraction : float | None, default=None
+        Relative fraction of the battery lifetime used as the anomaly
+        threshold.
+    **kwargs
+        Additional loader configuration forwarded to the predefined-split base
+        class.
 
     Notes
     -----
@@ -178,7 +191,8 @@ class UNIBO21Loader(PredefinedSplitLoaderBase):
         return self.multisource_data_splitter
 
     def _load_data(self) -> dict:
-        """Read the dataset and assemble the predefined split container.
+        """
+        Read the dataset and assemble the predefined split container.
 
         Returns
         -------
@@ -243,7 +257,8 @@ class UNIBO21Loader(PredefinedSplitLoaderBase):
     def read_data(
         self,
     ):
-        """Read the raw UNIBO battery files and prepare split-wise unit payloads.
+        """
+        Read the raw UNIBO battery files and prepare split-wise unit payloads.
 
         Returns
         -------
@@ -380,27 +395,27 @@ class UNIBO21Loader(PredefinedSplitLoaderBase):
         self, x, y, battery_range, names, valid_lengths=None, flatten=False
     ):
         """
-        Process one split (train/test/val).
+        Create per-unit payloads for one split.
 
         Parameters
         ----------
-        x
-            np.ndarray of features (n_samples, ...)
-        y
-            np.ndarray of labels
-        battery_range
-            iterable of right indices per unit
-        names
-            iterable of unit names
-        valid_lengths
-            list of lists with valid cycle lengths (only for train)
-        flatten
-            whether to unpad and flatten cycles
+        x : np.ndarray
+            Feature tensor for the whole split.
+        y : np.ndarray
+            Label tensor for the whole split.
+        battery_range : collections.abc.Iterable[int]
+            Right indices delimiting the unit ranges inside the split tensors.
+        names : collections.abc.Iterable[str]
+            Unit names aligned with ``battery_range``.
+        valid_lengths : list[list[int]] | None, default=None
+            Valid cycle lengths used to unpad and flatten cycles.
+        flatten : bool, default=False
+            Whether to unpad and flatten cycles.
 
         Returns
         -------
-        list
-            list of dicts with keys: features, target, metadata
+        list[dict]
+            List of per-unit payload dictionaries.
         """
         data_split = []
         left_idx = 0

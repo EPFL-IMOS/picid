@@ -26,7 +26,8 @@ class ConvLayer(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    """Single encoder layer with self-attention and feed-forward network.
+    """
+    Single encoder layer with self-attention and feed-forward network.
 
     Parameters
     ----------
@@ -54,7 +55,8 @@ class EncoderLayer(nn.Module):
         self.activation = F.relu if activation == "relu" else F.gelu
 
     def forward(self, x, attn_mask=None):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------
@@ -81,7 +83,8 @@ class EncoderLayer(nn.Module):
 
 
 class Encoder(nn.Module):
-    """Stack of encoder layers with optional conv layers and normalization.
+    """
+    Stack of encoder layers with optional conv layers and normalization.
 
     Parameters
     ----------
@@ -102,7 +105,8 @@ class Encoder(nn.Module):
         self.norm = norm_layer
 
     def forward(self, x, attn_mask=None):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------
@@ -139,7 +143,8 @@ class Encoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    """Single decoder layer with self-attention, cross-attention, and feed-forward.
+    """
+    Single decoder layer with self-attention, cross-attention, and feed-forward.
 
     Parameters
     ----------
@@ -179,7 +184,8 @@ class DecoderLayer(nn.Module):
         self.activation = F.relu if activation == "relu" else F.gelu
 
     def forward(self, x, cross, x_mask=None, cross_mask=None):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------
@@ -212,7 +218,8 @@ class DecoderLayer(nn.Module):
 
 
 class Decoder(nn.Module):
-    """Stack of decoder layers with optional normalization and projection.
+    """
+    Stack of decoder layers with optional normalization and projection.
 
     Parameters
     ----------
@@ -231,7 +238,8 @@ class Decoder(nn.Module):
         self.projection = projection
 
     def forward(self, x, cross, x_mask=None, cross_mask=None):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------

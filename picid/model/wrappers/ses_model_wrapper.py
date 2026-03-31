@@ -1,4 +1,4 @@
-"""Wrapper for the LinearRegression model."""
+"""Wrapper for the simple exponential smoothing baseline."""
 
 from .base import AbstractFeedForwardWrapper
 
@@ -7,9 +7,15 @@ from ...baselines.definitions import FORECASTING_TASKS
 
 
 class SESModelWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the SESModel baseline.
+    """
+    Wrap the SES baseline in the model interface.
 
-    This wrapper defines the forward pass of the SESModel baseline.
+    Parameters
+    ----------
+    task_type : str
+        Forecasting task identifier.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the baseline.
     """
 
     def __init__(self, task_type: str, **kwargs):
@@ -27,7 +33,8 @@ class SESModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        """Forward pass for the SES wrapper.
+        """
+        Run the SES baseline on one batch.
 
         Parameters
         ----------

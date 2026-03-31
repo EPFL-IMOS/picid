@@ -4,7 +4,8 @@ import math
 
 
 class PositionalEmbedding(nn.Module):
-    """Sinusoidal positional embedding (fixed, non-trainable).
+    """
+    Sinusoidal positional embedding (fixed, non-trainable).
 
     Parameters
     ----------
@@ -32,7 +33,8 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        """Return positional embeddings for the sequence length of x.
+        """
+        Return positional embeddings for the sequence length of ``x``.
 
         Parameters
         ----------
@@ -137,7 +139,8 @@ class TimeFeatureEmbedding(nn.Module):
 
 
 class DataEmbedding(nn.Module):
-    """Combines value, positional, and temporal embeddings for time series.
+    """
+    Combine value, positional, and temporal embeddings for time series.
 
     Parameters
     ----------
@@ -166,7 +169,8 @@ class DataEmbedding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------
@@ -189,7 +193,8 @@ class DataEmbedding(nn.Module):
 
 
 class ContextEmbedding(nn.Module):
-    """Embedding that combines value, context, positional, and temporal features.
+    """
+    Embed value, context, positional, and temporal features.
 
     Parameters
     ----------
@@ -234,7 +239,8 @@ class ContextEmbedding(nn.Module):
         self.d_x_embedding_router = d_x_embedding_router
 
     def forward(self, x, x_mark):
-        """Forward pass.
+        """
+        Forward pass.
 
         Parameters
         ----------

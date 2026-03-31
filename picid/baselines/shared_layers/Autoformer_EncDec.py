@@ -5,7 +5,12 @@ import torch.nn.functional as F
 
 class my_Layernorm(nn.Module):
     """
-    Special designed layernorm for the seasonal part
+    Layer normalization variant for the seasonal branch.
+
+    Parameters
+    ----------
+    channels : int
+        Number of channels normalized by the layer.
     """
 
     def __init__(self, channels):
@@ -20,7 +25,14 @@ class my_Layernorm(nn.Module):
 
 class moving_avg(nn.Module):
     """
-    Moving average block to highlight the trend of time series
+    Centered moving-average filter used to extract the trend.
+
+    Parameters
+    ----------
+    kernel_size : int
+        Window width for the average pool.
+    stride : int
+        Stride used by the average pool.
     """
 
     def __init__(self, kernel_size, stride):
@@ -40,7 +52,12 @@ class moving_avg(nn.Module):
 
 class series_decomp(nn.Module):
     """
-    Series decomposition block
+    Series decomposition into residual and moving-average trend.
+
+    Parameters
+    ----------
+    kernel_size : int
+        Window width used by the moving average.
     """
 
     def __init__(self, kernel_size):
@@ -55,7 +72,22 @@ class series_decomp(nn.Module):
 
 class EncoderLayer(nn.Module):
     """
-    Autoformer encoder layer with the progressive decomposition architecture
+    Autoformer encoder layer with progressive decomposition.
+
+    Parameters
+    ----------
+    attention : nn.Module
+        Attention module.
+    d_model : int
+        Model dimension.
+    d_ff : int, optional
+        Feed-forward hidden dimension. Defaults to ``4 * d_model``.
+    moving_avg : int, optional
+        Decomposition window size.
+    dropout : float, optional
+        Dropout probability.
+    activation : str, optional
+        Activation name, either ``"relu"`` or ``"gelu"``.
     """
 
     def __init__(
@@ -94,7 +126,16 @@ class EncoderLayer(nn.Module):
 
 class Encoder(nn.Module):
     """
-    Autoformer encoder
+    Stack of Autoformer encoder layers.
+
+    Parameters
+    ----------
+    attn_layers : list of nn.Module
+        Encoder attention layers.
+    conv_layers : list of nn.Module, optional
+        Optional convolution layers between attention layers.
+    norm_layer : nn.Module, optional
+        Final normalization layer.
     """
 
     def __init__(self, attn_layers, conv_layers=None, norm_layer=None):
@@ -127,7 +168,26 @@ class Encoder(nn.Module):
 
 class DecoderLayer(nn.Module):
     """
-    Autoformer decoder layer with the progressive decomposition architecture
+    Autoformer decoder layer with decomposition and trend projection.
+
+    Parameters
+    ----------
+    self_attention : nn.Module
+        Decoder self-attention module.
+    cross_attention : nn.Module
+        Encoder-decoder attention module.
+    d_model : int
+        Model dimension.
+    c_out : int
+        Output channel count for the trend projection.
+    d_ff : int, optional
+        Feed-forward hidden dimension.
+    moving_avg : int, optional
+        Decomposition window size.
+    dropout : float, optional
+        Dropout probability.
+    activation : str, optional
+        Activation name, either ``"relu"`` or ``"gelu"``.
     """
 
     def __init__(
@@ -187,7 +247,16 @@ class DecoderLayer(nn.Module):
 
 class Decoder(nn.Module):
     """
-    Autoformer encoder
+    Stack of Autoformer decoder layers.
+
+    Parameters
+    ----------
+    layers : list of nn.Module
+        Decoder layers.
+    norm_layer : nn.Module, optional
+        Final normalization layer.
+    projection : nn.Module, optional
+        Optional output projection layer.
     """
 
     def __init__(self, layers, norm_layer=None, projection=None):

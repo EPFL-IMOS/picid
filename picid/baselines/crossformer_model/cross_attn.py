@@ -7,7 +7,14 @@ from math import sqrt
 
 class FullAttention(nn.Module):
     """
-    The Attention operation
+    Standard scaled dot-product attention used by Crossformer.
+
+    Parameters
+    ----------
+    scale : float or None, optional
+        Optional scale factor applied to the attention scores.
+    attention_dropout : float, optional
+        Dropout probability applied after the softmax.
     """
 
     def __init__(self, scale=None, attention_dropout=0.1):
@@ -29,7 +36,20 @@ class FullAttention(nn.Module):
 
 class AttentionLayer(nn.Module):
     """
-    The Multi-head Self-Attention (MSA) Layer
+    Wrap ``FullAttention`` with learned projections for each head.
+
+    Parameters
+    ----------
+    d_model : int
+        Input and output model dimension.
+    n_heads : int
+        Number of attention heads.
+    d_keys : int, optional
+        Per-head key dimension.
+    d_values : int, optional
+        Per-head value dimension.
+    dropout : float, optional
+        Dropout probability applied inside the attention block.
     """
 
     def __init__(self, d_model, n_heads, d_keys=None, d_values=None, dropout=0.1):
@@ -67,8 +87,22 @@ class AttentionLayer(nn.Module):
 
 class TwoStageAttentionLayer(nn.Module):
     """
-    The Two Stage Attention (TSA) Layer
-    input/output shape: [batch_size, Data_dim(D), Seg_num(L), d_model]
+    Apply Crossformer's time and dimension attention stages.
+
+    Parameters
+    ----------
+    seg_num : int
+        Number of segments per variable.
+    factor : int
+        Router width multiplier.
+    d_model : int
+        Hidden dimension.
+    n_heads : int
+        Number of attention heads.
+    d_ff : int, optional
+        Feed-forward hidden width.
+    dropout : float, optional
+        Dropout probability.
     """
 
     def __init__(self, seg_num, factor, d_model, n_heads, d_ff=None, dropout=0.1):

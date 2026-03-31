@@ -29,14 +29,30 @@ _default_hooks_registered = False
 
 
 def register_hook(event: str, callback: HookCallback) -> None:
-    """Register a callback for the given pipeline event. Callbacks receive (event, context)."""
+    """
+    Register a callback for the given pipeline event.
+
+    Parameters
+    ----------
+    event : str
+        Lifecycle event name.
+    callback : HookCallback
+        Callback invoked with ``(event, context)``.
+    """
     if event not in _HOOK_REGISTRY:
         _HOOK_REGISTRY[event] = []
     _HOOK_REGISTRY[event].append(callback)
 
 
 def clear_hooks(event: Optional[str] = None) -> None:
-    """Remove all callbacks for the given event, or for all events if event is None."""
+    """
+    Remove callbacks for one event or for all events.
+
+    Parameters
+    ----------
+    event : str, optional
+        Event name to clear. When omitted, all hooks are removed.
+    """
     if event is None:
         for k in _HOOK_REGISTRY:
             _HOOK_REGISTRY[k] = []
@@ -45,7 +61,7 @@ def clear_hooks(event: Optional[str] = None) -> None:
 
 
 def _register_default_hooks() -> None:
-    """Import and register default hooks from base/hooks. Called once on first _emit()."""
+    """Import and register the default hooks from ``picid.transforms.base``."""
     from picid.transforms.base import hooks
 
     hooks.register_defaults()
@@ -55,6 +71,15 @@ def _emit(event: str, context: TransformContext) -> None:
     """
     Emit a pipeline lifecycle event to all registered callbacks.
 
+    Parameters
+    ----------
+    event : str
+        Lifecycle event name.
+    context : TransformContext
+        Shared pipeline context.
+
+    Notes
+    -----
     Default hooks are registered on first call to avoid circular imports.
     Exceptions in callbacks are swallowed so hooks never break the pipeline.
     """

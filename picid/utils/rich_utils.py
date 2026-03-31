@@ -1,4 +1,4 @@
-"""This module contains utility functions for printing and saving Hydra configs."""
+"""Utility functions for printing and saving Hydra configs."""
 
 from collections.abc import Sequence
 from pathlib import Path
@@ -31,7 +31,8 @@ def print_config_tree(
     resolve: bool = False,
     save_to_file: bool = False,
 ) -> None:
-    r"""Print the contents of a DictConfig using the Rich library.
+    """
+    Print the contents of a DictConfig using the Rich library.
 
     Parameters
     ----------
@@ -88,7 +89,8 @@ def print_config_tree(
 
 @rank_zero_only
 def enforce_tags(cfg: DictConfig, save_to_file: bool = False) -> None:
-    r"""Prompt user to input tags from terminal if no tags are provided in config.
+    """
+    Prompt the user for tags when the config does not provide any.
 
     Parameters
     ----------

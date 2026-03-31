@@ -1,4 +1,4 @@
-"""Wrapper for the TimePFN model."""
+"""AutoGluon wrapper for multi-target tabular prediction."""
 
 from typing import Optional, Any
 
@@ -21,9 +21,36 @@ from picid.model.autogluon.multi_label_predictor import MultilabelTabularPredict
 
 
 class AutoGluonWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the AutoGluon model.
+    """
+    Wrap AutoGluon tabular predictors for the project model API.
 
-    This wrapper defines the forward pass of the Aut model.
+    The wrapper builds either a single ``TabularPredictor`` or a
+    ``MultilabelTabularPredictor`` depending on the number of targets.
+
+    Parameters
+    ----------
+    presets : str, default="best"
+        AutoGluon preset bundle to use.
+    task_type : str, default="regression"
+        Project task identifier.
+    holdout_frac : float, optional
+        Validation split fraction passed to AutoGluon.
+    num_bag_folds : int, default=0
+        Number of bagging folds for AutoGluon.
+    num_stack_levels : int, default=0
+        Number of stacking levels for AutoGluon.
+    hyperparameter_tune_kwargs : dict[str, float], optional
+        Hyperparameter tuning configuration.
+    model_dict : dict[str, dict], optional
+        AutoGluon hyperparameters container.
+    generator_list : list[Any], optional
+        Feature generator classes to instantiate.
+    save_space : bool, default=False
+        Whether to ask AutoGluon to free intermediate artifacts.
+    output_dir : str, default="testwdir/autogluon"
+        Output directory for the AutoGluon run.
+    **kwargs : Any
+        Additional wrapper arguments.
     """
 
     def __init__(

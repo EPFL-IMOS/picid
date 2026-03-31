@@ -21,7 +21,21 @@ class ConstantScaler(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform
         self.factor = factor
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
-        """This transform do not require fitting."""
+        """
+        Return ``self`` because this transform does not require fitting.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the transform.
+        metadata : dict
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        ConstantScaler
+            The current instance.
+        """
         return self
 
     def transform_data(
@@ -59,7 +73,16 @@ class MinMaxScalerSklearn(
         self.scaler = MinMaxScaler()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
-        """Fits the internal MinMaxScaler on a single NumPy array."""
+        """
+        Fit the internal scaler on the single input segment.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the transform.
+        metadata : dict
+            Auxiliary transform metadata.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1
@@ -78,7 +101,21 @@ class MinMaxScalerSklearn(
         data: NamedTransformInput,
         metadata: dict,
     ) -> Any:
-        """Transforms a single data segment using the internal MinMaxScaler."""
+        """
+        Transform the single input segment with min-max scaling.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the transform.
+        metadata : dict
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        Any
+            The min-max scaled segment.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1
@@ -98,7 +135,21 @@ class MinMaxScalerSklearn(
         data: NamedTransformInput,
         metadata: dict = None,
     ) -> Any:
-        """Inverse transforms a single data segment using the internal MinMaxScaler."""
+        """
+        Invert the min-max scaling for the single input segment.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the inverse transform.
+        metadata : dict, optional
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        Any
+            The recovered single input segment.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1
@@ -128,7 +179,16 @@ class StandardScalerSklearn(
         self.scaler = StandardScaler()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
-        """Fits the internal StandardScaler on a single NumPy array."""
+        """
+        Fit the internal scaler on the single input segment.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the transform.
+        metadata : dict
+            Auxiliary transform metadata.
+        """
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
 
@@ -141,7 +201,21 @@ class StandardScalerSklearn(
         self.scaler.fit(np_data)
 
     def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
-        """Transforms a single data segment using the internal StandardScaler."""
+        """
+        Transform the single input segment with standard scaling.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the transform.
+        metadata : dict
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        Any
+            The standardized segment.
+        """
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
 
@@ -161,7 +235,21 @@ class StandardScalerSklearn(
     def inverse_transform(
         self, data: NamedTransformInput, metadata: dict = None
     ) -> Any:
-        """Inverse transforms a single data segment using the internal StandardScaler."""
+        """
+        Invert the standard scaling for the single input segment.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segments for the inverse transform.
+        metadata : dict, optional
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        Any
+            The recovered single input segment.
+        """
         keys = list(data.keys())
         assert len(keys) == 1, "StandardScaler only supports single key data_segment."
 

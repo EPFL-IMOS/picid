@@ -46,12 +46,34 @@ def find_singular_ragged_dim(nti: NamedTransformInput) -> Optional[int]:
     Find the single variable-length (ragged) dimension in a NamedTransformInput.
 
     Delegates to picid.utils.awkward_utils.find_singular_ragged_dim(nti.values()).
+
+    Parameters
+    ----------
+    nti : NamedTransformInput
+        Input mapping whose values are inspected for raggedness.
+
+    Returns
+    -------
+    int or None
+        The singular ragged dimension, or ``None`` if the input is not ragged.
     """
     return find_singular_ragged_dim_from_arrays(nti.values())
 
 
 def tolist(d):
-    """Recursively convert a nested dict (including SortedDict) to nested lists with sorted keys."""
+    """
+    Recursively convert a nested dict into nested lists with sorted keys.
+
+    Parameters
+    ----------
+    d : Any
+        Nested mapping or scalar value to convert.
+
+    Returns
+    -------
+    Any
+        The recursively converted structure.
+    """
     if isinstance(d, SortedDict):
         return [tolist(v) for v in d.values()]
     if isinstance(d, dict):
@@ -60,14 +82,33 @@ def tolist(d):
 
 
 def _normalize_keys(apply_to_keys) -> List[str]:
-    """Ensure apply_to_keys is a list (single key becomes [key])."""
+    """
+    Ensure ``apply_to_keys`` is represented as a list.
+
+    Parameters
+    ----------
+    apply_to_keys : Any
+        A single key or a list of keys.
+
+    Returns
+    -------
+    list[str]
+        Normalized list of keys.
+    """
     if isinstance(apply_to_keys, list):
         return apply_to_keys
     return [apply_to_keys]
 
 
 def _assert_uniform_data_types(data_segments: List[NamedTransformInput]) -> None:
-    """Require all segments to have the same get_instance_cls() (e.g. all ak.Array or all np.ndarray)."""
+    """
+    Require all segments to share the same data type.
+
+    Parameters
+    ----------
+    data_segments : list[NamedTransformInput]
+        Segments to validate.
+    """
     data_types = {
         v for chunk in data_segments for v in chunk.get_instance_cls().values()
     }
@@ -78,7 +119,14 @@ def _assert_uniform_data_types(data_segments: List[NamedTransformInput]) -> None
 
 
 def _assert_uniform_key_count(data_segments: List[NamedTransformInput]) -> None:
-    """Require all segments to have the same number of keys."""
+    """
+    Require all segments to have the same number of keys.
+
+    Parameters
+    ----------
+    data_segments : list[NamedTransformInput]
+        Segments to validate.
+    """
     lengths = [len(chunk.keys()) for chunk in data_segments]
     if len(set(lengths)) != 1:
         raise ValueError(
@@ -87,7 +135,21 @@ def _assert_uniform_key_count(data_segments: List[NamedTransformInput]) -> None:
 
 
 def _build_flags(data_kind: str, capability: str) -> Dict[str, bool]:
-    """Build a small dict of data_kind/capability flags for logging and manifest."""
+    """
+    Build a small dict of data_kind/capability flags for logging and manifests.
+
+    Parameters
+    ----------
+    data_kind : str
+        Inferred data kind for the current transform call.
+    capability : str
+        Capability reported by the transform instance.
+
+    Returns
+    -------
+    dict[str, bool]
+        Boolean flags summarizing the data kind and capability.
+    """
     return {
         "data_is_ragged": data_kind == DATA_KIND_RAGGED,
         "data_is_ragged_but_regular": data_kind == DATA_KIND_RAGGED_REGULAR,
@@ -103,7 +165,22 @@ def _log_transform_error(
     data_kind: str,
     capability: str,
 ) -> None:
-    """Log detailed diagnostics when transform_multi_source raises (data kind, flags, first segment)."""
+    """
+    Log detailed diagnostics when ``transform_multi_source`` fails.
+
+    Parameters
+    ----------
+    transform_instance : Any
+        Transform instance that raised the error.
+    data_segments : list[NamedTransformInput]
+        Input segments passed to the transform.
+    metadata : dict[str, Any]
+        Pipeline metadata for the current transform call.
+    data_kind : str
+        Inferred data kind for the current transform call.
+    capability : str
+        Capability reported by the transform instance.
+    """
     t_name = transform_instance.__class__.__name__
     flags = _build_flags(data_kind, capability)
     _seg = data_segments[0] if data_segments else None
@@ -171,6 +248,20 @@ def _concatenate_segments(
     transform_data once. Keys in apply_to_keys must have consistent dtypes
     across segments (ak.Array or np.ndarray); other keys are taken from the
     first segment. Validates that concatenated lengths on axis agree across keys.
+
+    Parameters
+    ----------
+    data_segments : list[NamedTransformInput]
+        Segments to concatenate.
+    apply_to_keys : list[str]
+        Keys whose values should be concatenated.
+    axis : int
+        Axis along which concatenation is performed.
+
+    Returns
+    -------
+    NamedTransformInput
+        A single merged input structure.
     """
     if not data_segments:
         raise ValueError("_concatenate_segments requires at least one segment.")

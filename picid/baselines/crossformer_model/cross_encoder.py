@@ -6,10 +6,16 @@ from math import ceil
 
 class SegMerging(nn.Module):
     """
-    Segment Merging Layer.
-    The adjacent `win_size' segments in each dimension will be merged into one segment to
-    get representation of a coarser scale
-    we set win_size = 2 in our paper
+    Merge adjacent segments to build a coarser Crossformer scale.
+
+    Parameters
+    ----------
+    d_model : int
+        Embedding dimension of each segment.
+    win_size : int
+        Number of adjacent segments merged into one coarser segment.
+    norm_layer : callable, optional
+        Normalization layer applied before the linear projection.
     """
 
     def __init__(self, d_model, win_size, norm_layer=nn.LayerNorm):
@@ -21,7 +27,17 @@ class SegMerging(nn.Module):
 
     def forward(self, x):
         """
-        x: B, ts_d, L, d_model
+        Merge the segment axis while preserving batch and channel axes.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape ``[B, ts_d, seg_num, d_model]``.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor with merged segments.
         """
         batch_size, ts_d, seg_num, d_model = x.shape
         pad_num = seg_num % self.win_size
@@ -42,9 +58,26 @@ class SegMerging(nn.Module):
 
 class scale_block(nn.Module):
     """
-    We can use one segment merging layer followed by multiple TSA layers in each scale
-    the parameter `depth' determines the number of TSA layers used in each scale
-    We set depth = 1 in the paper
+    Apply optional merging and then a stack of two-stage attention layers.
+
+    Parameters
+    ----------
+    win_size : int
+        Merge window size. A value of ``1`` disables merging.
+    d_model : int
+        Hidden dimension used by the attention stack.
+    n_heads : int
+        Number of attention heads.
+    d_ff : int
+        Feed-forward hidden dimension.
+    depth : int
+        Number of two-stage attention layers.
+    dropout : float
+        Dropout probability.
+    seg_num : int, optional
+        Number of input segments at this scale.
+    factor : int, optional
+        Router width multiplier used by the attention block.
     """
 
     def __init__(
@@ -78,7 +111,28 @@ class scale_block(nn.Module):
 
 class Encoder(nn.Module):
     """
-    The Encoder of Crossformer.
+    Stack Crossformer scale blocks into the encoder tower.
+
+    Parameters
+    ----------
+    e_blocks : int
+        Number of encoder scales.
+    win_size : int
+        Merge window size for the coarser scales.
+    d_model : int
+        Hidden dimension used by the attention stack.
+    n_heads : int
+        Number of attention heads.
+    d_ff : int
+        Feed-forward hidden dimension.
+    block_depth : int
+        Number of two-stage attention layers per scale.
+    dropout : float
+        Dropout probability.
+    in_seg_num : int, optional
+        Number of input segments at the finest scale.
+    factor : int, optional
+        Router width multiplier used by the attention block.
     """
 
     def __init__(

@@ -21,17 +21,44 @@ from picid.transforms.base.pipeline import TransformContext, register_hook
 
 
 def set_transform_started_at(event: str, context: TransformContext) -> None:
-    """Record pipeline start time for manifest timing (before_transform)."""
+    """
+    Record the pipeline start time for manifest timing.
+
+    Parameters
+    ----------
+    event : str
+        Hook event name.
+    context : TransformContext
+        Shared pipeline context.
+    """
     context.started_at = time.time()
 
 
 def set_transform_finished_at(event: str, context: TransformContext) -> None:
-    """Record pipeline end time for manifest timing (after_transform)."""
+    """
+    Record the pipeline end time for manifest timing.
+
+    Parameters
+    ----------
+    event : str
+        Hook event name.
+    context : TransformContext
+        Shared pipeline context.
+    """
     context.finished_at = time.time()
 
 
 def on_transform_error_enrich(event: str, context: TransformContext) -> None:
-    """Replace context.error with a TransformError so later hooks and the strategy see it."""
+    """
+    Replace ``context.error`` with a ``TransformError`` for later hooks.
+
+    Parameters
+    ----------
+    event : str
+        Hook event name.
+    context : TransformContext
+        Shared pipeline context.
+    """
     if context.error is None:
         return
     if context.finished_at is None:
@@ -40,7 +67,16 @@ def on_transform_error_enrich(event: str, context: TransformContext) -> None:
 
 
 def on_transform_error_log(event: str, context: TransformContext) -> None:
-    """Log pipeline failures with rich context (Rich table + logger). Expects enrich hook to run first."""
+    """
+    Log pipeline failures with rich context.
+
+    Parameters
+    ----------
+    event : str
+        Hook event name.
+    context : TransformContext
+        Shared pipeline context.
+    """
     if context.error is None:
         return
     err = context.error

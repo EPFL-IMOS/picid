@@ -34,56 +34,56 @@ class TimeFeature:
 
 
 class SecondOfMinute(TimeFeature):
-    """Minute of hour encoded as value between [-0.5, 0.5]"""
+    """Second of minute encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.second / 59.0 - 0.5
 
 
 class MinuteOfHour(TimeFeature):
-    """Minute of hour encoded as value between [-0.5, 0.5]"""
+    """Minute of hour encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.minute / 59.0 - 0.5
 
 
 class HourOfDay(TimeFeature):
-    """Hour of day encoded as value between [-0.5, 0.5]"""
+    """Hour of day encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.hour / 23.0 - 0.5
 
 
 class DayOfWeek(TimeFeature):
-    """Hour of day encoded as value between [-0.5, 0.5]"""
+    """Day of week encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return index.dayofweek / 6.0 - 0.5
 
 
 class DayOfMonth(TimeFeature):
-    """Day of month encoded as value between [-0.5, 0.5]"""
+    """Day of month encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return (index.day - 1) / 30.0 - 0.5
 
 
 class DayOfYear(TimeFeature):
-    """Day of year encoded as value between [-0.5, 0.5]"""
+    """Day of year encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return (index.dayofyear - 1) / 365.0 - 0.5
 
 
 class MonthOfYear(TimeFeature):
-    """Month of year encoded as value between [-0.5, 0.5]"""
+    """Month of year encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return (index.month - 1) / 11.0 - 0.5
 
 
 class WeekOfYear(TimeFeature):
-    """Week of year encoded as value between [-0.5, 0.5]"""
+    """Week of year encoded as value between ``[-0.5, 0.5]``."""
 
     def __call__(self, index: pd.DatetimeIndex) -> np.ndarray:
         return (index.isocalendar().week - 1) / 52.0 - 0.5
@@ -91,11 +91,18 @@ class WeekOfYear(TimeFeature):
 
 def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     """
-    Returns a list of time features that will be appropriate for the given frequency string.
+    Return time features appropriate for a given frequency string.
+
     Parameters
     ----------
-    freq_str
-        Frequency string of the form [multiple][granularity] such as "12H", "5min", "1D" etc.
+    freq_str : str
+        Frequency string of the form ``[multiple][granularity]`` such as
+        ``"12H"``, ``"5min"``, or ``"1D"``.
+
+    Returns
+    -------
+    list of TimeFeature
+        Time feature classes appropriate for the frequency.
     """
 
     features_by_offsets = {

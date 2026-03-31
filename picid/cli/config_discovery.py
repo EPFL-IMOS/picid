@@ -30,7 +30,14 @@ class ModelInfo(NamedTuple):
 
 
 def list_task_definitions() -> list[TaskInfo]:
-    """Scan configs/task_definition/ and return TaskInfo for each YAML file."""
+    """
+    Scan ``configs/task_definition`` and return entries for each YAML file.
+
+    Returns
+    -------
+    list[TaskInfo]
+        Task definitions discovered on disk.
+    """
     root = CONFIGS_ROOT / "task_definition"
     if not root.exists():
         return []
@@ -45,9 +52,18 @@ def list_task_definitions() -> list[TaskInfo]:
 
 
 def list_model_configs(task_type: str | None = None) -> list[ModelInfo]:
-    """Scan configs/model_configs/ and return ModelInfo for each YAML file.
+    """
+    Scan ``configs/model_configs`` and return entries for each YAML file.
 
-    If task_type is given, only return configs under that task type.
+    Parameters
+    ----------
+    task_type : str | None, default=None
+        Optional task type filter.
+
+    Returns
+    -------
+    list[ModelInfo]
+        Model configs discovered on disk.
     """
     root = CONFIGS_ROOT / "model_configs"
     if not root.exists():
@@ -65,7 +81,14 @@ def list_model_configs(task_type: str | None = None) -> list[ModelInfo]:
 
 
 def list_experiment_groups() -> list[DatasetGroupInfo]:
-    """Return top-level dirs in configs/experiment/."""
+    """
+    Return top-level directories in ``configs/experiment``.
+
+    Returns
+    -------
+    list[DatasetGroupInfo]
+        Experiment groups discovered on disk.
+    """
     root = CONFIGS_ROOT / "experiment"
     if not root.exists():
         return []
@@ -77,9 +100,20 @@ def list_experiment_groups() -> list[DatasetGroupInfo]:
 
 
 def list_experiments_for_group_task(group: str, task_type: str) -> list[str]:
-    """List experiment keys under experiment/<group>/<task_type>/.
+    """
+    List experiment keys under ``experiment/<group>/<task_type>``.
 
-    experiment_key is the full path including group, e.g. unibo/prognostics/raw/cnn_1d.
+    Parameters
+    ----------
+    group : str
+        Dataset group name.
+    task_type : str
+        Task type directory name.
+
+    Returns
+    -------
+    list[str]
+        Experiment keys rooted at the given group and task type.
     """
     exp_root = CONFIGS_ROOT / "experiment" / group
     if not exp_root.exists():
@@ -96,7 +130,14 @@ def list_experiments_for_group_task(group: str, task_type: str) -> list[str]:
 
 
 def list_paths_configs() -> list[str]:
-    """Return stem of each YAML in configs/paths/."""
+    """
+    Return the stem of each YAML file in ``configs/paths``.
+
+    Returns
+    -------
+    list[str]
+        Available path config names.
+    """
     root = CONFIGS_ROOT / "paths"
     if not root.exists():
         return []
@@ -104,7 +145,14 @@ def list_paths_configs() -> list[str]:
 
 
 def list_debug_configs() -> list[str]:
-    """Return stem of each YAML in configs/debug/."""
+    """
+    Return the stem of each YAML file in ``configs/debug``.
+
+    Returns
+    -------
+    list[str]
+        Available debug config names.
+    """
     root = CONFIGS_ROOT / "debug"
     if not root.exists():
         return []
@@ -112,10 +160,18 @@ def list_debug_configs() -> list[str]:
 
 
 def get_task_type_from_experiment(experiment_key: str) -> str | None:
-    """Extract task type from experiment key.
+    """
+    Extract the task type segment from an experiment key.
 
-    experiment_key format: group/task_type/... (e.g. unibo/prognostics/raw/cnn_1d).
-    Returns the task_type segment (e.g. prognostics).
+    Parameters
+    ----------
+    experiment_key : str
+        Experiment key in ``group/task_type/...`` format.
+
+    Returns
+    -------
+    str | None
+        Task type segment, or ``None`` when the key is malformed.
     """
     parts = experiment_key.split("/")
     if len(parts) < 2:

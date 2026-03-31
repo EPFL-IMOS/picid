@@ -8,7 +8,13 @@ class BaseEvalHook(ABC):
     def on_update_end(self, batch: Dict[str, Any], evaluator: Any) -> None:
         """
         Called after each batch is processed.
-        Useful for live streaming or partial accumulation.
+
+        Parameters
+        ----------
+        batch : Dict[str, Any]
+            Current batch payload.
+        evaluator : Any
+            Evaluator instance calling the hook.
         """
 
     @abstractmethod
@@ -22,5 +28,17 @@ class BaseEvalHook(ABC):
     ) -> None:
         """
         Called after all metrics are computed.
-        Primary entry point for saving and plotting.
+
+        Parameters
+        ----------
+        results : Dict[str, float]
+            Final computed metrics.
+        evaluator : Any
+            Evaluator instance calling the hook.
+        mode : str
+            Evaluation mode.
+        epoch : int
+            Current epoch index.
+        step : int
+            Current step index.
         """

@@ -9,22 +9,21 @@ logger = logging.getLogger(__name__)
 
 class PadToLength(NoFitPerSegmentMixin, DenseTransform):
     """
-    Pads a numpy array along a chosen axis to reach at least `target_length`.
-    Useful when sequences are shorter than a required sliding-window size.
+    Pad a NumPy array along one axis to reach a minimum length.
 
-    Examples
-    --------
-    Input shape:  (time, channels)   axis=0 -> pad time steps
-    Input shape:  (batch, time, ch)  axis=1 -> pad time steps
-
-    Args
-    ----
+    Parameters
+    ----------
     target_length : int
         Minimum length along the specified axis after padding.
     axis : int, default=0
-        Axis along which to pad (supports negative indexing).
+        Axis along which to pad, supporting negative indexing.
     pad_value : float, default=0.0
         Value used for padding.
+
+    Examples
+    --------
+    Input shape: ``(time, channels)``, ``axis=0`` pads time steps.
+    Input shape: ``(batch, time, ch)``, ``axis=1`` pads time steps.
     """
 
     def __init__(self, target_length: int, axis: int = 0, pad_value: float = 0.0):
@@ -35,7 +34,19 @@ class PadToLength(NoFitPerSegmentMixin, DenseTransform):
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:
         """
-        Pads the array in `data["features"]` along `axis` if needed.
+        Pad the array in ``data["features"]`` along the configured axis.
+
+        Parameters
+        ----------
+        data : Any
+            Input mapping containing a ``"features"`` NumPy array.
+        metadata : Dict
+            Auxiliary transform metadata.
+
+        Returns
+        -------
+        Any
+            The original or padded NumPy array.
         """
         arr = data["features"]
 
@@ -71,5 +82,14 @@ class PadToLength(NoFitPerSegmentMixin, DenseTransform):
         return padded
 
     def fit_data(self, data: Any, metadata: Dict):
-        """Stateless transform, no fitting needed."""
+        """
+        Skip fitting because this is a stateless transform.
+
+        Parameters
+        ----------
+        data : Any
+            Input data provided by the pipeline.
+        metadata : Dict
+            Auxiliary transform metadata.
+        """
         pass

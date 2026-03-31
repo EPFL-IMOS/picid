@@ -102,25 +102,37 @@ AnyTransformSequence = Union[ConfigTransformManager, TransformPipeline]
 
 class PreProcessor(PreProcessorInterface):
     """
-    Orchestrates loading, splitting, transformation, and caching of datasets.
+    Orchestrate loading, splitting, transformation, and caching.
 
-    The `mode` ("per_unit" / "cross_unit") parameter has been removed.
-    If split mode is needed for logging or evaluator config selection,
-    read it from the datasource before constructing PreProcessor:
-        split_mode = datasource.get_split_mode()
-        preprocessor = PreProcessor(datasource=datasource, transforms=manager)
+    The class accepts either a Hydra-driven transform manager or a pure Python
+    transform pipeline. Both satisfy the same transform-sequence protocol, so
+    the runner logic can stay agnostic to the concrete implementation.
 
-    Accepts either a ConfigTransformManager (framework path, YAML-driven) or a
-    TransformPipeline (library path, Python-only) as the transforms argument.
-    Both satisfy TransformSequenceProtocol and are handled identically by the
-    pipeline runners.
+    Parameters
+    ----------
+    datasource : DatasourceProtocol
+        Datasource object that materializes the raw and split dataset.
+    transforms : ConfigTransformManager | TransformPipeline | None, optional
+        Transform sequence to apply. When omitted, an empty transform manager
+        is created so callers can still run the pipeline.
+    **kwargs : Any
+        Forwarded for compatibility with the interface base class.
 
     Attributes
     ----------
-    datasource : AbstractDataSourceLoader
+    datasource : DatasourceProtocol
+        Datasource object that materializes the raw and split dataset.
     transforms : ConfigTransformManager | TransformPipeline
-    data : Optional[DatasetContainer]
-        None until pipeline() or fetch_data() + apply_transforms() is called.
+        Ordered transform sequence applied to the loaded dataset.
+    data : DatasetContainer | None
+        Final processed dataset container after ``pipeline()`` completes.
+
+    Notes
+    -----
+    The legacy ``mode`` parameter (``"per_unit"`` / ``"cross_unit"``) has
+    been removed. If split mode is needed for logging or evaluator
+    configuration, read it from the datasource before constructing the
+    preprocessor, for example ``split_mode = datasource.get_split_mode()``.
     """
 
     def __init__(
@@ -154,7 +166,14 @@ class PreProcessor(PreProcessorInterface):
         return self.meta_data
 
     def get_processed_data_container(self) -> DatasetContainer:
-        """Return the final processed dataset container."""
+        """
+        Return the final processed dataset container.
+
+        Returns
+        -------
+        DatasetContainer
+            Fully processed dataset container produced by ``pipeline()``.
+        """
         if not self._is_preprocessed or self.data is None:
             raise RuntimeError("Data has not been preprocessed. Run pipeline() first.")
         return self.data
@@ -163,13 +182,32 @@ class PreProcessor(PreProcessorInterface):
         self,
         view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
     ) -> Dict[str, Any]:
-        """Return the final processed data as a split-first dictionary view."""
+        """
+        Return the processed data as a split-first dictionary view.
+
+        Parameters
+        ----------
+        view_policy : SplitViewPolicy, default=SplitViewPolicy.KEEP_UNIT_LISTS
+            Controls how unit lists are exposed in the returned split view.
+
+        Returns
+        -------
+        dict[str, Any]
+            Split-first representation of the processed dataset.
+        """
         container = self.get_processed_data_container()
         container.validate()
         return container.to_split_dict(view_policy=view_policy)
 
     def get_cached_transform_manager(self) -> AnyTransformSequence:
-        """Return the (possibly restored-from-cache) transform sequence."""
+        """
+        Return the current transform sequence, cached or original.
+
+        Returns
+        -------
+        ConfigTransformManager | TransformPipeline
+            Transform sequence used by the preprocessor.
+        """
         return self.transforms
 
     # ------------------------------------------------------------------
@@ -177,7 +215,8 @@ class PreProcessor(PreProcessorInterface):
     # ------------------------------------------------------------------
 
     def fetch_data(self) -> None:
-        """Load data from the datasource and attach a manifest entry.
+        """
+        Load data from the datasource and attach a manifest entry.
 
         Raises
         ------
@@ -204,7 +243,8 @@ class PreProcessor(PreProcessorInterface):
         stage: str,
         operation: Callable[[], Any],
     ) -> Any:
-        """Execute one datasource operation with preprocessing-stage context.
+        """
+        Execute one datasource operation with preprocessing-stage context.
 
         Parameters
         ----------
@@ -238,7 +278,13 @@ class PreProcessor(PreProcessorInterface):
             ) from exc
 
     def _add_datasource_manifest_entry(self) -> None:
-        """Append a datasource provenance entry to self.data.manifest if present."""
+        """
+        Append a datasource provenance entry to ``self.data.manifest``.
+
+        The manifest entry is only added when the processed container exposes a
+        metadata manifest. This keeps the provenance behavior a no-op for
+        containers that do not use the manifest subsystem.
+        """
         if self.data is None:
             return
         manifest = getattr(self.data, "manifest", None)
@@ -268,8 +314,18 @@ class PreProcessor(PreProcessorInterface):
     @staticmethod
     def _resolve_datasource_name(ds: Any) -> Optional[Any]:
         """
-        Extract a data_name from a datasource using attribute/method precedence.
-        Returns the name (str or list of str), or None if not found.
+        Return the datasource name exposed by the most specific accessor.
+
+        Parameters
+        ----------
+        ds : Any
+            Datasource object to inspect.
+
+        Returns
+        -------
+        str | list[str] | None
+            Name reported by ``data_name``, ``get_data_names()``, or
+            ``get_data_name()``, preferring the most explicit accessor.
         """
         if hasattr(ds, "data_name"):
             val = getattr(ds, "data_name", None)
@@ -313,20 +369,21 @@ class PreProcessor(PreProcessorInterface):
         ] = None,
     ) -> DatasetContainer:
         """
-        Apply an ordered dict of DataTransform objects to data sequentially.
+        Apply an ordered transform mapping to a dataset container.
 
         Parameters
         ----------
         data : DatasetContainer
+            Container to transform in place.
         transforms : OrderedDict[str, DataTransform]
-            Already-resolved DataTransform objects (from get_transforms()).
+            Already-resolved transforms returned by ``get_transforms()``.
         after_each_transform_callback : callable, optional
-            Called as callback(data, transform_name) after each successful
-            transform.  Used internally for boundary cache saves.
+            Optional callback invoked after each successful transform.
 
         Returns
         -------
         DatasetContainer
+            Transformed dataset container.
 
         Raises
         ------
@@ -415,9 +472,17 @@ class PreProcessor(PreProcessorInterface):
     @staticmethod
     def _extract_log_string(transform_log: Any) -> str:
         """
-        Extract a human-readable string from a transform log dict.
+        Extract a human-readable summary from a transform log payload.
 
-        Prefers "train", falls back to "test", then the first available key.
+        Parameters
+        ----------
+        transform_log : Any
+            Log payload returned by a transform.
+
+        Returns
+        -------
+        str
+            Human-readable log summary.
         """
         if not transform_log:
             return "No additional transform log."
@@ -469,6 +534,7 @@ class PreProcessor(PreProcessorInterface):
         Returns
         -------
         DatasetContainer
+            Final processed dataset container.
 
         Raises
         ------

@@ -5,7 +5,18 @@ from picid.metrics.manager import MetricManager
 
 
 class MultiUnitEvaluator(DefaultEvaluator):
-    """Evaluator that calculates metrics individually per Unit ID."""
+    """
+    Evaluator that calculates metrics individually per unit ID.
+
+    Parameters
+    ----------
+    metric_names : List[str]
+        Metrics to track.
+    log_per_unit_metrics : bool, default=True
+        Whether to log metrics per unit ID.
+    **kwargs : Any
+        Additional evaluator keyword arguments.
+    """
 
     def __init__(
         self,
@@ -18,7 +29,14 @@ class MultiUnitEvaluator(DefaultEvaluator):
         self.unit_managers: Dict[Any, MetricManager] = {}
 
     def update(self, model_out: Dict[str, Any]) -> None:
-        """Update global metrics and per-unit trackers."""
+        """
+        Update global metrics and per-unit trackers.
+
+        Parameters
+        ----------
+        model_out : Dict[str, Any]
+            Dictionary containing predictions, targets, and unit IDs.
+        """
         if not self._validate_input(model_out):
             return
         super().update(model_out)
@@ -48,7 +66,14 @@ class MultiUnitEvaluator(DefaultEvaluator):
             )
 
     def _create_configured_manager(self) -> MetricManager:
-        """Creates a manager mimicking the primary manager's configuration."""
+        """
+        Create a manager that mirrors the primary manager configuration.
+
+        Returns
+        -------
+        MetricManager
+            Configured metric manager for a single unit.
+        """
         return MetricManager(
             metric_names=self.metric_manager.metric_names,
             task_type=self.task_type,
@@ -58,7 +83,23 @@ class MultiUnitEvaluator(DefaultEvaluator):
         )
 
     def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
-        """Aggregate unit-level metrics into a global result set."""
+        """
+        Aggregate unit-level metrics into a global result set.
+
+        Parameters
+        ----------
+        mode : str
+            Evaluation mode.
+        epoch : int
+            Current epoch index.
+        step : int
+            Current step index.
+
+        Returns
+        -------
+        Dict[str, float]
+            Aggregated metric values.
+        """
         res = super().compute(mode, epoch, step)
         from collections import defaultdict
 
@@ -75,7 +116,19 @@ class MultiUnitEvaluator(DefaultEvaluator):
         return res
 
     def _get_unit_iteration_tools(self, u_ids: np.ndarray) -> Any:
-        """Internal helper for handling 1D/2D unit identifiers."""
+        """
+        Build helpers for iterating over 1D or 2D unit identifiers.
+
+        Parameters
+        ----------
+        u_ids : np.ndarray
+            Array of unit identifiers.
+
+        Returns
+        -------
+        Any
+            Unique identifiers, index lookup function, and key conversion function.
+        """
         if u_ids.ndim == 1:
             return np.unique(u_ids), lambda u: np.where(u_ids == u)[0], lambda u: int(u)
         return (

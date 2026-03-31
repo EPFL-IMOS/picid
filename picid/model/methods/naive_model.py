@@ -2,7 +2,8 @@ import torch.nn as nn
 
 
 class NaiveModelBaseline(nn.Module):
-    """Naive baseline model for time series forecasting.
+    """
+    Naive baseline model for time series forecasting.
 
     This model implements a flexible baseline where predictions can be based on:
     - The last observed value (window_size=1): y_{t+1} = y_t
@@ -16,6 +17,8 @@ class NaiveModelBaseline(nn.Module):
     window_size_to_average : int, optional
         Number of previous observations to average. If 1, uses the last value only.
         If > 1, uses the mean of the last window_size observations. Default is 1.
+    **kwargs : Any
+        Additional compatibility arguments.
     """
 
     def __init__(self, pred_len, window_size_to_average, **kwargs):
@@ -24,17 +27,18 @@ class NaiveModelBaseline(nn.Module):
         self.window_size = window_size_to_average
 
     def forward(self, x):
-        """Forward pass for the naive baseline model.
+        """
+        Forward pass for the naive baseline model.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, sequence_length, num_features)
+            Input tensor of shape (batch_size, sequence_length, num_features).
 
         Returns
         -------
         torch.Tensor
-            Predicted values of shape (batch_size, forecast_horizon, out_channels)
+            Predicted values of shape (batch_size, forecast_horizon, out_channels).
         """
         # x shape: (batch_size, sequence_length, num_features)
         batch_size, sequence_length, num_features = x.shape

@@ -1,4 +1,5 @@
-"""NB14 datasource loader with predefined train/validation/test battery splits.
+"""
+NB14 datasource loader with predefined train/validation/test battery splits.
 
 The loader wraps the NASA randomized battery data helpers already used in the
 project and preserves the Bosello-style split definition encoded in the module
@@ -29,7 +30,18 @@ logger = logging.getLogger(__name__)
 
 
 def convert_outer_list_to_inner(data_list):
-    """Convert a list of per-unit dictionaries into a dict of per-field lists.
+    """
+    Convert a list of per-unit dictionaries into a dict of per-field lists.
+
+    Parameters
+    ----------
+    data_list : list[dict]
+        Per-unit payload represented as one dictionary per unit.
+
+    Returns
+    -------
+    dict
+        Columnar payload where each field maps to the list of unit values.
 
     Examples
     --------
@@ -128,7 +140,15 @@ UNIT_NAMES_TO_ID = {
 
 
 class NB14Loader(PredefinedSplitLoaderBase):
-    """Load the NB14 battery dataset and expose predefined battery splits.
+    """
+    Load the NB14 battery dataset and expose predefined battery splits.
+
+    Parameters
+    ----------
+    **kwargs
+        Loader configuration forwarded to
+        :class:`PredefinedSplitLoaderBase`. The ``data_dir`` entry is reused as
+        the raw NB14 data location.
 
     Notes
     -----
@@ -144,7 +164,8 @@ class NB14Loader(PredefinedSplitLoaderBase):
         self.meta_data = {}
 
     def _load_data(self) -> dict:
-        """Read the dataset and assemble the predefined split container.
+        """
+        Read the dataset and assemble the predefined split container.
 
         Returns
         -------
@@ -207,7 +228,8 @@ class NB14Loader(PredefinedSplitLoaderBase):
         return out_dict
 
     def read_data(self):
-        """Read the raw NB14 battery files and prepare split-wise unit payloads.
+        """
+        Read the raw NB14 battery files and prepare split-wise unit payloads.
 
         Returns
         -------
@@ -315,27 +337,27 @@ class NB14Loader(PredefinedSplitLoaderBase):
         self, x, y, battery_range, names, valid_lengths=None, flatten=False
     ):
         """
-        Process one split (train/test/val).
+        Create per-unit payloads for one split.
 
         Parameters
         ----------
-        x
-            np.ndarray of features (n_samples, ...)
-        y
-            np.ndarray of labels
-        battery_range
-            iterable of right indices per unit
-        names
-            iterable of unit names
-        valid_lengths
-            list of lists with valid cycle lengths (only for train)
-        flatten
-            whether to unpad and flatten cycles
+        x : np.ndarray
+            Feature tensor for the whole split.
+        y : np.ndarray
+            Label tensor for the whole split.
+        battery_range : collections.abc.Iterable[int]
+            Right indices delimiting the unit ranges inside the split tensors.
+        names : collections.abc.Iterable[str]
+            Unit names aligned with ``battery_range``.
+        valid_lengths : list[list[int]] | None, default=None
+            Valid cycle lengths used to unpad and flatten cycles.
+        flatten : bool, default=False
+            Whether to unpad and flatten cycles.
 
         Returns
         -------
-        list
-            list of dicts with keys: features, target, metadata
+        list[dict]
+            List of per-unit payload dictionaries.
         """
         data_split = []
         left_idx = 0
@@ -387,5 +409,12 @@ class NB14Loader(PredefinedSplitLoaderBase):
         return data_split
 
     def get_multisource_data_splitter(self):
-        """Return multisource data splitter."""
+        """
+        Return the multisource data splitter configured on the loader.
+
+        Returns
+        -------
+        object | None
+            Multisource data splitter instance, if configured.
+        """
         return self.multisource_data_splitter

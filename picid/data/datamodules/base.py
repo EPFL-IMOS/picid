@@ -26,8 +26,48 @@ logger = logging.getLogger(__name__)
 
 class BaseDataModule(LightningDataModule):
     """
-    Data module for the RUL datasets.
-    This is a similar module to the one in rul_datasets but simplified.
+    Lightning data module for split-aware RUL datasets.
+
+    Parameters
+    ----------
+    dataset_train : BaseDataset | BaseConcatDataset
+        Training split dataset.
+    dataset_val : BaseDataset | BaseConcatDataset
+        Validation split dataset.
+    dataset_test : BaseDataset | BaseConcatDataset
+        Test split dataset.
+    train_batch_size : int | str
+        Training batch size or ``"full"``.
+    val_batch_size : int | str
+        Validation batch size or ``"full"``.
+    test_batch_size : int | str
+        Test batch size or ``"full"``.
+    shuffle_train : bool, default=True
+        Whether to shuffle the training loader.
+    shuffle_val : bool, default=False
+        Whether to shuffle the validation loader.
+    shuffle_test : bool, default=False
+        Whether to shuffle the test loader.
+    num_workers : int, default=0
+        Number of loader workers.
+    prefetch_factor : int, default=2
+        Prefetch factor for loader workers.
+    pin_memory : bool, default=True
+        Whether to pin host memory.
+    use_batch_sampler : bool, default=True
+        Whether to use a batch sampler instead of direct batching.
+    subset_range : tuple[int, int, int] | None, optional
+        Optional debugging subset range.
+    train_subset_ratio : float | None, optional
+        Fractional subset for the training split.
+    val_subset_ratio : float | None, optional
+        Fractional subset for the validation split.
+    test_subset_ratio : float | None, optional
+        Fractional subset for the test split.
+    subset_seed : int, default=42
+        Random seed used for subsetting.
+    profiler_cfg : Any, optional
+        Optional profiler configuration.
     """
 
     _data: Dict[str, Tuple[List[np.ndarray], List[np.ndarray]]]
@@ -204,7 +244,7 @@ class BaseDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         """
-        Load all splits as tensors into memory and optionally apply feature extractor.
+        Load all splits into memory and optionally apply feature extraction.
 
         The splits are placed inside the [data][rul_datasets.core.RulDataModule.data]
         property. If a split is empty, a tuple of empty tensors with the correct
@@ -217,8 +257,8 @@ class BaseDataModule(LightningDataModule):
 
         Parameters
         ----------
-        stage
-            Ignored. Only for adhering to parent class interface.
+        stage : str | None
+            Ignored; kept for the Lightning interface.
         """
         pass
 
@@ -283,7 +323,7 @@ class BaseDataModule(LightningDataModule):
 
     def train_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for the training split.
+        Create a [data loader][torch.utils.data.DataLoader] for training.
 
         The data loader is configured to shuffle the data. The `pin_memory` option is
         activated to achieve maximum transfer speed to the GPU. The data loader is also
@@ -302,7 +342,8 @@ class BaseDataModule(LightningDataModule):
 
         Returns
         -------
-        The training data loader
+        DataLoader
+            Training data loader.
         """
 
         if self.hparams.train_batch_size == "full":
@@ -330,7 +371,7 @@ class BaseDataModule(LightningDataModule):
 
     def val_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for the validation split.
+        Create a [data loader][torch.utils.data.DataLoader] for validation.
 
         The data loader is configured to leave the data unshuffled. The `pin_memory`
         option is activated to achieve maximum transfer speed to the GPU.
@@ -347,7 +388,8 @@ class BaseDataModule(LightningDataModule):
 
         Returns
         -------
-        The validation data loader
+        DataLoader
+            Validation data loader.
         """
 
         if self.hparams.val_batch_size == "full":
@@ -372,7 +414,7 @@ class BaseDataModule(LightningDataModule):
 
     def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for the test split.
+        Create a [data loader][torch.utils.data.DataLoader] for testing.
 
         The data loader is configured to leave the data unshuffled. The `pin_memory`
         option is activated to achieve maximum transfer speed to the GPU.
@@ -389,7 +431,8 @@ class BaseDataModule(LightningDataModule):
 
         Returns
         -------
-        The test data loader
+        DataLoader
+            Test data loader.
         """
         if self.hparams.test_batch_size == "full":
             batch_size = len(self.dataset_test)

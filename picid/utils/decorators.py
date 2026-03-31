@@ -8,14 +8,21 @@ logger = logging.getLogger(__name__)
 
 def inject_transform_context_to_strategy_apply(func):
     """
-    A decorator specifically designed for methods like TransformStrategy.apply.
+    Decorate transform strategy calls with better error context.
 
-    It catches exceptions during the transformation process and injects critical
-    debugging context (Transform Name and the apply_to key/s) into the
-    RuntimeError, while preserving the original traceback via Exception Chaining.
+    The wrapper adds transform name and ``apply_to`` information to any
+    exception raised by the wrapped function so debugging failures in
+    transformation pipelines stays practical.
 
-    Parameters are extracted via keyword arguments: 'transform_instance' and
-    'apply_to_keys'.
+    Parameters
+    ----------
+    func : Callable
+        Callable that implements the actual strategy method.
+
+    Returns
+    -------
+    Callable
+        Decorator that returns the wrapped strategy call.
     """
 
     @functools.wraps(func)
@@ -62,13 +69,21 @@ def inject_transform_context_to_strategy_apply(func):
 
 def check_transform_output_consistency(transform_func):
     """
-    Decorator for methods like BaseTransform.transform_data.
+    Validate that a transform output contains the expected mapping keys.
 
-    It verifies if the output returned by the transform is compatible with the
-    assigned key mapping defined in the metadata. This guards against KeyErrors
-    later in the strategy's merge step by ensuring the key specified in
-    metadata.assign_to_map is present in the output dictionary (if the output
-    is a dictionary).
+    The wrapper checks the returned mapping against the assignment metadata so
+    the later merge step fails early with an actionable message when a required
+    output key is missing.
+
+    Parameters
+    ----------
+    transform_func : Callable
+        Callable implementing the underlying transform method.
+
+    Returns
+    -------
+    Callable
+        Decorator that checks the wrapped transform output.
     """
 
     @functools.wraps(transform_func)

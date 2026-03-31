@@ -1,4 +1,5 @@
-"""Abstract preprocessing contract.
+"""
+Abstract preprocessing contract.
 
 This module defines the interface that concrete preprocessors must implement
 when orchestrating datasource loading, transform application, and manifest
@@ -16,7 +17,8 @@ from picid.transforms.base.transform_pipeline import TransformSequenceProtocol
 
 
 class PreProcessorInterface(ABC):
-    """Abstract preprocessing entry point.
+    """
+    Abstract preprocessing entry point.
 
     Parameters
     ----------
@@ -35,13 +37,26 @@ class PreProcessorInterface(ABC):
         transforms: TransformSequenceProtocol,
         **kwargs,
     ):
-        """Store the datasource and transform sequence for later execution."""
+        """
+        Store the datasource and transform sequence for later execution.
+
+        Parameters
+        ----------
+        datasource : DatasourceProtocol
+            Datasource implementation used to load and split the raw dataset.
+        transforms : TransformSequenceProtocol
+            Ordered transform sequence applied after the datasource has been
+            materialized.
+        **kwargs : dict[str, object]
+            Reserved for concrete preprocessors that need additional options.
+        """
         self.datasource = datasource
         self.transforms = transforms
 
     @abstractmethod
     def get_processed_data_container(self) -> DatasetContainer:
-        """Return the processed dataset container.
+        """
+        Return the processed dataset container.
 
         Returns
         -------
@@ -58,7 +73,8 @@ class PreProcessorInterface(ABC):
         self,
         view_policy: SplitViewPolicy = SplitViewPolicy.KEEP_UNIT_LISTS,
     ) -> dict[str, dict[str, ndarray | list[ndarray]]]:
-        """Return the processed dataset as a nested split dictionary.
+        """
+        Return the processed dataset as a nested split dictionary.
 
         Parameters
         ----------

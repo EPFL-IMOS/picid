@@ -14,5 +14,16 @@ class BaseCache(ABC):
 
     @abstractmethod
     def handle(self, name: str, build_fn, config: dict = None):
-        """Load if valid, otherwise build and save."""
+        """
+        Load if valid, otherwise build and save.
+
+        Parameters
+        ----------
+        name : str
+            Cache entry identifier.
+        build_fn : callable
+            Factory used to build a new cached object when needed.
+        config : dict, optional
+            Cache-specific configuration payload.
+        """
         pass

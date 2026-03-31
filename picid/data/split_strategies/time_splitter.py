@@ -159,24 +159,19 @@ class TimeSplitter(TimeSeriesSplitter):
         self, data_dict: Dict[str, Any], split_variable: str
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Splitting function.
+        Split one payload into train, validation, and test slices.
 
-        Inputs
-        ------
-        data_dict: Dict[str, Any]
+        Parameters
+        ----------
+        data_dict : dict[str, Any]
             Dictionary containing the data.
-
-        split_variable: str
+        split_variable : str
             Name of the variable to split.
 
         Returns
         -------
-        splitted_data: Dict[str, np.ndarray]
-            Dictionary containing the splitted data.
-
-        split_masks: Dict[str, np.ndarray]
-            Dictionary containing the mask of the splits
-
+        tuple[dict[str, Any], dict[str, Any]]
+            Split payloads and the associated boolean masks.
         """
         data = data_dict[split_variable]
 

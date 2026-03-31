@@ -8,11 +8,26 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ResidualBlock(nn.Module):
     """
-    A residual block for the encoder, composed of Conv1d, GroupNorm, Dropout,
-    and a skip connection.
+    Build a 1D residual block with optional normalization and activation.
 
-    This "clever" version allows for configurable normalization and activation
-    layers and uses nn.Identity() for disabled components.
+    Parameters
+    ----------
+    in_channels : int
+        Number of input channels.
+    out_channels : int
+        Number of output channels.
+    kernel_size : int
+        Convolution kernel size.
+    stride : int, default=1
+        Convolution stride.
+    dilation : int, default=1
+        Convolution dilation.
+    dropout_prob : float, default=0.0
+        Dropout probability applied after the activation.
+    norm_type : str, default="group"
+        Normalization type used in the residual path.
+    activation : str, default="relu"
+        Activation type used in the residual path.
     """
 
     def __init__(
@@ -105,9 +120,26 @@ class ResidualBlock(nn.Module):
 
 class ResidualTransposeBlock(nn.Module):
     """
-    A symmetrical residual block for the decoder, using ConvTranspose1d.
-    This "clever" version is robust to all kernel sizes and strides
-    and supports configurable normalization and activation.
+    Build a transpose-convolution residual block for decoding.
+
+    Parameters
+    ----------
+    in_channels : int
+        Number of input channels.
+    out_channels : int
+        Number of output channels.
+    kernel_size : int
+        Convolution kernel size.
+    stride : int
+        Transposed convolution stride.
+    dropout_prob : float
+        Dropout probability applied after the activation.
+    dilation : int
+        Convolution dilation.
+    norm_type : str, default="group"
+        Normalization type used in the residual path.
+    activation : str, default="relu"
+        Activation type used in the residual path.
     """
 
     def __init__(
@@ -209,8 +241,12 @@ class ResidualTransposeBlock(nn.Module):
 
 class SymmetricalAutoencoder(nn.Module):
     """
-    A symmetrical convolutional autoencoder built from residual blocks.
-    The architecture is defined by a configuration dictionary.
+    Build a symmetric convolutional autoencoder from residual blocks.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary defining the encoder and decoder blocks.
     """
 
     def __init__(self, config):
@@ -296,7 +332,7 @@ class SymmetricalAutoencoder(nn.Module):
         self.decoder_conv = nn.Sequential(*decoder_blocks)
 
     def _calculate_flattened_size(self):
-        """Passes a dummy tensor through the conv encoder to determine the flattened size."""
+        """Calculate the flattened latent size from a dummy forward pass."""
         dummy_input = torch.randn(
             1, int(self.config["input_channels"]), int(self.config["input_seq_len"])
         )

@@ -18,25 +18,10 @@ class AkwardJaggedAutoregressiveSequencer:
     """
     Autoregressive sequencer for *ragged* (variable-length) Awkward Arrays.
 
-    This class generates overlapping input/output sliding windows from time-series data.
-    It is designed to handle **Multi-Unit (Jagged)** data where each unit (e.g., an engine,
-    a battery cycle) has a different temporal length. It can also handle **Dense**
-    (single time-series) arrays.
-
-    Key Features:
-    -------------
-    1.  **Jagged Support**: Iterates over the first dimension (Units) and slices time
-        windows relative to the start of each unit.
-    2.  **Strict Windowing**: Ensures input sequences consist entirely of
-        real data. Short units are dropped.
-    3.  **Left Padding (Warmup - Default)**: Allows predictions to start earlier in the time
-        series by padding the input history with zeros or edge values.
-
-    Sequence Structure:
-    -------------------
-    For a given time step ``t`` (the anchor point):
-    - **Input (seq_x)**:  ``[t - seq_len : t]``
-    - **Target (seq_y)**: ``[t + pred_offset : t + pred_offset + label_len + pred_len]``
+    This class generates overlapping input/output sliding windows from
+    time-series data. It is designed to handle multi-unit jagged data, where
+    each unit (for example an engine or a battery cycle) has a different
+    temporal length, and can also handle dense single-series arrays.
 
     Parameters
     ----------
@@ -75,8 +60,25 @@ class AkwardJaggedAutoregressiveSequencer:
         - **If padding_left_flag=False**: Represents the **index offset** for the start of the first sequence.
           - Default: ``0``. This means the window starts at index 0 (capturing the first full valid sequence `0:seq_len`).
 
-    Examples:
-    ---------
+    Notes
+    -----
+    Key features:
+
+    1. Iterates over the first dimension for jagged multi-unit data and slices
+       windows relative to the start of each unit.
+    2. Supports strict windowing where input sequences consist entirely of
+       real data and short units are dropped.
+    3. Supports left padding so predictions can start earlier in the time
+       series with zeros or edge values.
+
+    For a given anchor time step ``t``:
+
+    - Input ``seq_x`` is ``[t - seq_len : t]``.
+    - Target ``seq_y`` is
+      ``[t + pred_offset : t + pred_offset + label_len + pred_len]``.
+
+    Examples
+    --------
     **Scenario 1: Default Padding (Edge)**
     Data: ``[A, B, C, D]``, ``seq_len=3``
     Default ``warmup_steps = seq_len - 1 = 2``.
@@ -172,7 +174,12 @@ class AkwardJaggedAutoregressiveSequencer:
 
     def _build_indices(self) -> List[tuple]:
         """
-        Computation of valid (...prefix..., t) tuples.
+        Compute valid prefix/time index tuples for all windows.
+
+        Returns
+        -------
+        list[tuple]
+            Valid index tuples for all windows.
         """
         required_len = self.seq_len + self.pred_len + self.pred_offset
         stride = int(self.stride)

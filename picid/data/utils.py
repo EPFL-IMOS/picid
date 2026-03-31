@@ -4,19 +4,19 @@ import torch
 
 def to_torch_tensor(data, device=None):
     """
-    Convert input data (list, numpy array, or tensor) to a torch.Tensor
-    with float32 if floating type, long if integer type.
+    Convert input data to a ``torch.Tensor`` with a dtype chosen from the input kind.
 
     Parameters
     ----------
-    data
-        list, numpy.ndarray, or torch.Tensor
+    data : Any
+        List, NumPy array, or tensor to convert.
     device : torch.device or str, optional
-        target device ('cpu', 'cuda', etc.)
+        Target device (``"cpu"``, ``"cuda"``, etc.).
 
     Returns
     -------
     torch.Tensor
+        Tensor on the requested device.
     """
     if torch.is_tensor(data):
         # If already a tensor, just cast

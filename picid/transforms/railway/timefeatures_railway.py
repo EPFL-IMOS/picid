@@ -11,18 +11,18 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 
 class RailwayTimeFeaturesTransform(NoFitPerSegmentMixin, DenseTransform):
-    r"""Extracts time features from the input data.
-
-    This transform processes time-series data to generate additional features
-    based on the timestamp, using the `time_features` utility.
+    """
+    Extract calendar features from a timestamp column.
 
     Parameters
     ----------
-    freq : str
-        The frequency string (e.g., 'h' for hourly, 'd' for daily)
-        to be used by the `time_features` function.
-    **kwargs : optional
-        Additional parameters for the base transform.
+    use_features : list[str]
+        Ordered list of timestamp components to emit.
+    normalize_time_features : bool
+        Whether to scale the extracted calendar features into a bounded
+        numeric range.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(
@@ -164,14 +164,19 @@ def reconstruct_datetime_from_features(
     data: Union[np.ndarray, pd.DataFrame], columns: list[str]
 ) -> pd.Series:
     """
-    Reconstruct datetime from features (either DataFrame or NumPy array).
+    Reconstruct datetimes from calendar feature columns.
 
-    Parameters:
-    - data: pd.DataFrame or np.ndarray containing time components
-    - columns: List of column names corresponding to the input
+    Parameters
+    ----------
+    data : numpy.ndarray or pandas.DataFrame
+        Calendar feature values to convert back into timestamps.
+    columns : list[str]
+        Column names describing the provided calendar components.
 
-    Returns:
-    - pd.Series of datetime64[ns]
+    Returns
+    -------
+    pandas.Series
+        Reconstructed timestamp series.
     """
 
     # Convert float columns to int if necessary

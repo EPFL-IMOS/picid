@@ -23,8 +23,10 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
 
         Parameters
         ----------
+        dim : int, optional
+            Axis along which to concatenate arrays.
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments.
         """
         self.dim = dim
         assert dim in (
@@ -34,7 +36,21 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         super().__init__(**kwargs)
 
     def _convert_to_numpy(self, value: Any, key: str) -> np.ndarray:
-        """Convert value to numpy array if it isn't already."""
+        """
+        Convert a value to :class:`numpy.ndarray` if it is not already one.
+
+        Parameters
+        ----------
+        value : Any
+            Input value to convert.
+        key : str
+            Name of the source key, used only for error reporting.
+
+        Returns
+        -------
+        numpy.ndarray
+            Converted array.
+        """
         if not isinstance(value, np.ndarray):
             try:
                 value = np.array(value)
@@ -44,7 +60,21 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         return value
 
     def _ensure_2d(self, value: np.ndarray, key: str) -> np.ndarray:
-        """Ensure array is 2D for concatenation."""
+        """
+        Ensure an array is 2D for concatenation.
+
+        Parameters
+        ----------
+        value : numpy.ndarray
+            Array to reshape if required.
+        key : str
+            Name of the source key, used only for error reporting.
+
+        Returns
+        -------
+        numpy.ndarray
+            A 2D array suitable for concatenation.
+        """
         if value.ndim == 1:
             value = value.reshape(-1, 1)
             logger.info(f"Reshaped 1D array '{key}' to 2D: {value.shape}")
@@ -56,7 +86,21 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         return value
 
     def _ensure_3d(self, value: np.ndarray, key: str) -> np.ndarray:
-        """Ensure array is 3D for concatenation."""
+        """
+        Ensure an array is 3D for concatenation.
+
+        Parameters
+        ----------
+        value : numpy.ndarray
+            Array to reshape if required.
+        key : str
+            Name of the source key, used only for error reporting.
+
+        Returns
+        -------
+        numpy.ndarray
+            A 3D array suitable for concatenation.
+        """
         if value.ndim == 1:
             value = value.reshape(-1, 1, 1)
             logger.info(f"Reshaped 1D array '{key}' to 3D: {value.shape}")
@@ -73,7 +117,23 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
     def _check_shape_consistency(
         self, arrays: List[np.ndarray], keys: List[str], concat_dim: int
     ) -> Tuple[int, Tuple[int, ...]]:
-        """Check that all arrays have matching shapes in non-concatenation dimensions."""
+        """
+        Check that all arrays match in every non-concatenated dimension.
+
+        Parameters
+        ----------
+        arrays : list[numpy.ndarray]
+            Arrays to validate.
+        keys : list[str]
+            Source keys corresponding to ``arrays``.
+        concat_dim : int
+            Axis that is allowed to differ.
+
+        Returns
+        -------
+        tuple[int, tuple[int, ...]]
+            The concatenation length along ``concat_dim`` and the reference shape.
+        """
         if not arrays:
             raise ValueError("No arrays to concatenate")
 
@@ -93,26 +153,35 @@ class ConcatenateTransform(NoFitPerSegmentMixin, DenseTransform):
         return ref_shape[concat_dim], ref_shape
 
     def _check_for_nans(self, arrays: List[np.ndarray], keys: List[str]) -> None:
-        """Check for NaN values and raise error if found."""
+        """
+        Check for NaN values and raise an error if any are found.
+
+        Parameters
+        ----------
+        arrays : list[numpy.ndarray]
+            Arrays to inspect.
+        keys : list[str]
+            Source keys corresponding to ``arrays``.
+        """
         for arr, key in zip(arrays, keys):
             if np.any(np.isnan(arr)):
                 raise ValueError(f"NaN values found in array '{key}'")
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Concatenate all data arrays horizontally.
+        Concatenate all input arrays along the configured axis.
 
         Parameters
         ----------
         data : dict
-            Dictionary containing numpy arrays to concatenate
+            Mapping of keys to arrays to concatenate.
         metadata : dict
-            Dictionary containing auxiliary metadata (unused in this transform)
+            Auxiliary metadata passed through by the pipeline.
 
         Returns
         -------
         np.ndarray
-            Concatenated numpy array
+            Concatenated numpy array.
         """
         if not data:
             raise ValueError("No data provided for concatenation")
@@ -172,13 +241,25 @@ class RuggedToDenseTransform(NoFitPerSegmentMixin, RaggedTransform):
         Parameters
         ----------
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments.
         """
         super().__init__(**kwargs)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Concatenate ragged arrays along a single ragged dimension
+        Concatenate ragged arrays along their single ragged dimension.
+
+        Parameters
+        ----------
+        data : dict
+            Mapping of keys to ragged arrays.
+        metadata : dict
+            Auxiliary metadata passed through by the pipeline.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dense arrays created from the ragged inputs.
         """
         for key, value in data.items():
             assert isinstance(value, ak.Array), f"Key '{key}' is not an awkward array."
@@ -202,16 +283,28 @@ class MultiDatasetRuggedToDenseTransform(NoFitConcatAlongAxisMixin, RaggedTransf
         Parameters
         ----------
         axis : int
-            The axis along which to concatenate ragged arrays
+            The axis along which to concatenate ragged arrays.
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments.
         """
         RaggedTransform.__init__(self)
         NoFitConcatAlongAxisMixin.__init__(self, axis=axis, **kwargs)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Concatenate ragged arrays along a single ragged dimension
+        Convert the selected ragged arrays to NumPy arrays.
+
+        Parameters
+        ----------
+        data : dict
+            Mapping of keys to ragged arrays.
+        metadata : dict
+            Pipeline metadata containing ``apply_to_keys``.
+
+        Returns
+        -------
+        dict
+            Mapping of the selected keys to NumPy arrays.
         """
 
         apply_to_keys = metadata["apply_to_keys"]

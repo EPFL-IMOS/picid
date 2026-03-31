@@ -1,7 +1,8 @@
-"""Generate config_map.json for the Experiment Generator web UI.
+"""
+Generate ``config_map.json`` for the Experiment Generator web UI.
 
-Uses config_discovery (same as picid-assemble) so the web generator stays
-in sync with the config tree. Run before mkdocs build.
+The script reuses the same config discovery helpers as ``picid-assemble`` so
+the generated web metadata stays aligned with the repository config tree.
 """
 
 from __future__ import annotations
@@ -11,7 +12,16 @@ from pathlib import Path
 
 
 def main(output_dir: Path | None = None) -> None:
-    """Generate config_map.json from configs/ using config_discovery."""
+    """
+    Generate ``config_map.json`` from the config tree.
+
+    Parameters
+    ----------
+    output_dir : Path | None, default=None
+        Destination directory for the generated JSON file. When omitted, the
+        file is written under ``docs/experiment-generator`` inside the project
+        root.
+    """
     from picid.cli.config_discovery import (
         list_debug_configs,
         list_experiment_groups,

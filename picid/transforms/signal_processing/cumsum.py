@@ -14,7 +14,19 @@ class CumSumTransform(NoFitPerSegmentMixin, RaggedTransform):
     @override
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Apply cumulative sum to all signals in the input.
+        Apply a cumulative squared sum to the single ragged input array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Mapping containing exactly one ragged array.
+        metadata : dict
+            Unused metadata dictionary, kept for the transform contract.
+
+        Returns
+        -------
+        numpy.ndarray
+            Ragged array with the same unit structure and cumulative power values.
         """
         assert len(data) == 1, "Data dictionary must contain exactly one entry."
         _, x = next(iter(data.items()))

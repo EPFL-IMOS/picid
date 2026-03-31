@@ -5,10 +5,20 @@ import math
 
 class AutoCorrelation(nn.Module):
     """
-    AutoCorrelation Mechanism with the following two phases:
-    (1) period-based dependencies discovery
-    (2) time delay aggregation
-    This block can replace the self-attention family mechanism seamlessly.
+    AutoCorrelation attention with period discovery and delay aggregation.
+
+    Parameters
+    ----------
+    mask_flag : bool, optional
+        Whether to use causal masking.
+    factor : int, optional
+        Multiplicative factor used to select the top delays.
+    scale : float or None, optional
+        Optional scaling value applied to the correlation map.
+    attention_dropout : float, optional
+        Dropout probability applied after the softmax.
+    output_attention : bool, optional
+        Whether to return the correlation map alongside the values.
     """
 
     def __init__(
@@ -28,8 +38,19 @@ class AutoCorrelation(nn.Module):
 
     def time_delay_agg_training(self, values, corr):
         """
-        SpeedUp version of Autocorrelation (a batch-normalization style design)
-        This is for the training phase.
+        Aggregate value tensors during training using the top delays.
+
+        Parameters
+        ----------
+        values : torch.Tensor
+            Tensor of shape ``[batch, head, channel, length]``.
+        corr : torch.Tensor
+            Correlation tensor computed from the query and key FFTs.
+
+        Returns
+        -------
+        torch.Tensor
+            Aggregated values with the same shape as ``values``.
         """
         head = values.shape[1]
         channel = values.shape[2]
@@ -57,8 +78,19 @@ class AutoCorrelation(nn.Module):
 
     def time_delay_agg_inference(self, values, corr):
         """
-        SpeedUp version of Autocorrelation (a batch-normalization style design)
-        This is for the inference phase.
+        Aggregate value tensors during inference using the top delays.
+
+        Parameters
+        ----------
+        values : torch.Tensor
+            Tensor of shape ``[batch, head, channel, length]``.
+        corr : torch.Tensor
+            Correlation tensor computed from the query and key FFTs.
+
+        Returns
+        -------
+        torch.Tensor
+            Aggregated values with the same shape as ``values``.
         """
         batch = values.shape[0]
         head = values.shape[1]
@@ -99,7 +131,19 @@ class AutoCorrelation(nn.Module):
 
     def time_delay_agg_full(self, values, corr):
         """
-        Standard version of Autocorrelation
+        Aggregate value tensors using the full correlation map.
+
+        Parameters
+        ----------
+        values : torch.Tensor
+            Tensor of shape ``[batch, head, channel, length]``.
+        corr : torch.Tensor
+            Full correlation tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Aggregated values with the same shape as ``values``.
         """
         batch = values.shape[0]
         head = values.shape[1]

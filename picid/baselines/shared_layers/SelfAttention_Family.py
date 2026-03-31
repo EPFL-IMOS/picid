@@ -8,7 +8,8 @@ from .masking import TriangularCausalMask, ProbMask
 
 
 class FullAttention(nn.Module):
-    """Full (dense) scaled dot-product attention.
+    """
+    Full (dense) scaled dot-product attention.
 
     Parameters
     ----------
@@ -39,7 +40,8 @@ class FullAttention(nn.Module):
         self.dropout = nn.Dropout(attention_dropout)
 
     def forward(self, queries, keys, values, attn_mask):
-        """Forward pass.
+        """
+        Run the dense attention computation.
 
         Parameters
         ----------
@@ -182,7 +184,8 @@ class ProbAttention(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    """Multi-head attention wrapper with Q/K/V projections.
+    """
+    Multi-head attention wrapper with Q/K/V projections.
 
     Parameters
     ----------
@@ -212,7 +215,8 @@ class AttentionLayer(nn.Module):
         self.n_heads = n_heads
 
     def forward(self, queries, keys, values, attn_mask):
-        """Forward pass.
+        """
+        Run the multi-head attention wrapper.
 
         Parameters
         ----------

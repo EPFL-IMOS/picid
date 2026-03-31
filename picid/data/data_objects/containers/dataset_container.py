@@ -1,4 +1,6 @@
-"""Canonical dataset containers for split-aware pipeline payloads."""
+"""
+Canonical dataset containers for split-aware pipeline payloads.
+"""
 
 from __future__ import annotations
 
@@ -26,6 +28,23 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     It stores data grouped by type (e.g., features, targets), automatically
     normalizes single-unit data into lists, and provides methods for validation
     and transformation.
+
+    Parameters
+    ----------
+    *args : tuple
+        Positional arguments reserved for future compatibility.
+    manifest : MetadataManifest | None, optional
+        Metadata manifest attached to the container.
+    slice_info : SliceInfo | None, optional
+        Optional slice metadata describing the current payload window.
+    container_metadata : dict[str, Any] | None, optional
+        Canonical container-level metadata dictionary.
+    unit_metadata : dict[str, Any] | None, optional
+        Canonical split-aware unit metadata dictionary.
+    metadata : dict[str, Any] | None, optional
+        Legacy metadata alias preserved for compatibility.
+    **kwargs : Any
+        Split-keyed payloads stored under data keys such as ``features``.
     """
 
     def __init__(
@@ -39,7 +58,7 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize the chunk, normalizing all split data to be a list of units.
+        Initialize the container and normalize split payloads.
 
         Parameters
         ----------
@@ -49,6 +68,12 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
             Metadata manifest attached to the container.
         slice_info : SliceInfo | None, default=None
             Optional slice metadata describing the current payload window.
+        container_metadata : dict[str, Any] | None, optional
+            Canonical container-level metadata dictionary.
+        unit_metadata : dict[str, Any] | None, optional
+            Canonical split-aware unit metadata dictionary.
+        metadata : dict[str, Any] | None, optional
+            Legacy metadata alias preserved for compatibility.
         **kwargs : Any
             Split-keyed payloads stored under data keys such as ``features``.
         """
@@ -75,7 +100,20 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     @staticmethod
     def _is_split_mapping(value: Any) -> bool:
-        """Return True when ``value`` looks like a split-keyed mapping."""
+        """
+        Return ``True`` when ``value`` looks like a split-keyed mapping.
+
+        Parameters
+        ----------
+        value : Any
+            Object to inspect.
+
+        Returns
+        -------
+        bool
+            ``True`` when the value has only ``train``, ``val``, or ``test``
+            keys.
+        """
         if not isinstance(value, Mapping):
             return False
         split_keys = set(value.keys())
@@ -87,7 +125,21 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         metadata: Optional[dict[str, Any]],
         container_metadata: Optional[dict[str, Any]],
     ) -> dict[str, Any]:
-        """Resolve the canonical container-level metadata dictionary."""
+        """
+        Resolve the canonical container-level metadata dictionary.
+
+        Parameters
+        ----------
+        metadata : dict[str, Any] | None
+            Legacy metadata dictionary.
+        container_metadata : dict[str, Any] | None
+            Canonical metadata dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Normalized container metadata.
+        """
         if metadata is not None and container_metadata is not None:
             raise ValueError(
                 "Pass either legacy 'metadata' or canonical 'container_metadata', "
@@ -109,7 +161,19 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     def _normalize_unit_metadata(
         cls, unit_metadata: Optional[dict[str, Any]]
     ) -> dict[str, list[dict[str, Any]]]:
-        """Normalize explicit or legacy split-aware unit metadata."""
+        """
+        Normalize explicit or legacy split-aware unit metadata.
+
+        Parameters
+        ----------
+        unit_metadata : dict[str, Any] | None
+            Split-keyed mapping of unit metadata entries.
+
+        Returns
+        -------
+        dict[str, list[dict[str, Any]]]
+            Canonical split-aware metadata mapping.
+        """
         if unit_metadata is None:
             return {}
 
@@ -143,7 +207,25 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         container_metadata: Optional[dict[str, Any]],
         unit_metadata: Optional[dict[str, Any]],
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, list[dict[str, Any]]]]:
-        """Split payload kwargs from canonical container/unit metadata."""
+        """
+        Split payload kwargs from canonical container and unit metadata.
+
+        Parameters
+        ----------
+        kwargs : dict[str, Any]
+            Raw constructor keyword arguments.
+        metadata : dict[str, Any] | None
+            Legacy metadata alias.
+        container_metadata : dict[str, Any] | None
+            Canonical container metadata.
+        unit_metadata : dict[str, Any] | None
+            Canonical unit metadata.
+
+        Returns
+        -------
+        tuple[dict[str, Any], dict[str, Any], dict[str, list[dict[str, Any]]]]
+            Payloads plus normalized container and unit metadata.
+        """
         payloads = dict(kwargs)
         legacy_metadata = metadata
         if "metadata" in payloads:
@@ -181,7 +263,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     @staticmethod
     def _normalize_split_payloads(kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Normalize split payloads so every split stores a list of units.
+        """
+        Normalize split payloads so every split stores a list of units.
 
         Parameters
         ----------
@@ -213,7 +296,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
     def _iter_split_payloads(
         self, *, include_metadata: bool = True
     ) -> list[tuple[str, Mapping[str, list[Any]]]]:
-        """Return top-level payloads that expose split-keyed mappings.
+        """
+        Return top-level payloads that expose split-keyed mappings.
 
         Parameters
         ----------
@@ -235,11 +319,25 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     @property
     def unit_metadata(self) -> dict[str, list[dict[str, Any]]]:
-        """Return per-split metadata aligned with stored units."""
+        """
+        Return per-split metadata aligned with stored units.
+
+        Returns
+        -------
+        dict[str, list[dict[str, Any]]]
+            Canonical split-aware unit metadata mapping.
+        """
         return self._unit_metadata
 
     def _get_all_split_names(self) -> list[str]:
-        """Return the union of split names known to payloads and unit metadata."""
+        """
+        Return the union of split names known to payloads and unit metadata.
+
+        Returns
+        -------
+        list[str]
+            Sorted split names present in payloads or unit metadata.
+        """
         split_names = {
             split
             for _, splits_data in self._iter_split_payloads(include_metadata=False)
@@ -249,11 +347,25 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         return sorted(split_names)
 
     def _unit_metadata_for_split(self, split: str) -> list[dict[str, Any]]:
-        """Return the stored unit metadata for one split, or an empty list."""
+        """
+        Return the stored unit metadata for one split.
+
+        Parameters
+        ----------
+        split : str
+            Split name to query.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Metadata entries for the requested split.
+        """
         return self._unit_metadata.get(split, [])
 
     def _assert_internal_list_storage(self) -> None:
-        """Assert that every split payload is stored as a list of units."""
+        """
+        Assert that every split payload is stored as a list of units.
+        """
         for data_key, splits_data in self._iter_split_payloads():
             for split, unit_list in splits_data.items():
                 assert isinstance(unit_list, list), (
@@ -262,7 +374,9 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
                 )
 
     def _assert_unit_metadata_storage(self) -> None:
-        """Assert canonical split-aware storage for unit metadata."""
+        """
+        Assert canonical split-aware storage for unit metadata.
+        """
         for split, unit_list in self._unit_metadata.items():
             assert isinstance(unit_list, list), (
                 f"Expected unit_metadata/{split} to be stored as a list, "
@@ -275,7 +389,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
                 )
 
     def _get_unit_counts_by_split(self) -> dict[str, int]:
-        """Return one unit count per split after verifying structural alignment.
+        """
+        Return one unit count per split after verifying structural alignment.
 
         Returns
         -------
@@ -311,7 +426,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
 
     @property
     def unit_cardinality(self) -> SplitUnitCardinality:
-        """Describe how many units each populated split contains.
+        """
+        Describe how many units each populated split contains.
 
         Returns
         -------
@@ -343,7 +459,19 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         self._get_unit_counts_by_split()
 
     def copy(self: "DatasetContainer[T]", deep: bool = True) -> "DatasetContainer[T]":
-        """Return a shallow or deep copy of the container."""
+        """
+        Return a shallow or deep copy of the container.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            Whether to deep-copy nested payloads and metadata.
+
+        Returns
+        -------
+        DatasetContainer[T]
+            Copied container.
+        """
         new = super().copy(deep=deep)
         manifest_src = getattr(self, "manifest", None)
         if manifest_src is not None:
@@ -362,7 +490,8 @@ class DatasetContainer(BaseDataObjectWithMetadata, Generic[T]):
         return new
 
     def _repr_summary(self) -> str:
-        """Build a compact summary of keys, splits, and unit counts.
+        """
+        Build a compact summary of keys, splits, and unit counts.
 
         Returns
         -------

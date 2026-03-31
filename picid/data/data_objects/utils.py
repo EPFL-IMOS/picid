@@ -6,7 +6,19 @@ import awkward as ak
 
 
 def get_length(value: Any) -> Optional[int]:
-    """Helper to safely get the length of different array-like types."""
+    """
+    Return the leading dimension length for a value.
+
+    Parameters
+    ----------
+    value : Any
+        Array-like object to inspect.
+
+    Returns
+    -------
+    int | None
+        Leading dimension length, or ``None`` when the value has no length.
+    """
     if hasattr(value, "shape") and hasattr(value.shape, "__len__") and value.shape:
         return value.shape[0]
     if isinstance(value, (list, tuple)):
@@ -17,7 +29,18 @@ def get_length(value: Any) -> Optional[int]:
 def check_length_consistency(
     values: List[Any], keys: List[str], raise_on_error: bool = True
 ) -> None:
-    """Checks that all provided array-like items have the same length."""
+    """
+    Check that all provided array-like items have the same length.
+
+    Parameters
+    ----------
+    values : list[Any]
+        Array-like values to compare.
+    keys : list[str]
+        Names used in the error message.
+    raise_on_error : bool, default=True
+        Whether to raise an exception instead of emitting a warning.
+    """
     lengths = {get_length(v) for v in values if get_length(v) is not None}
     if len(lengths) > 1:
         length_info = {k: get_length(v) for k, v in zip(keys, values)}
@@ -32,17 +55,16 @@ def check_for_nans(
     values: List[Any], keys: List[str], raise_on_error: bool = True
 ) -> None:
     """
-    Checks for NaN values in various raw data types (DataFrame, Series, ndarray, ak.Array).
+    Check for NaN values in common array-like containers.
 
     Parameters
     ----------
-    values
-        A list of data objects to check.
-    keys
-        A list of names corresponding to the data objects (for error messages).
-    raise_on_error
-        If True, raises ValueError when NaNs are found.
-        If False, issues a warning instead.
+    values : list[Any]
+        Data objects to inspect.
+    keys : list[str]
+        Names corresponding to the data objects.
+    raise_on_error : bool, default=True
+        Whether to raise an exception instead of emitting a warning.
 
     Raises
     ------
@@ -94,10 +116,19 @@ def convert_to_numpy(
     value: Any, ensure_2d: bool = True
 ) -> Union[np.ndarray, pd.Series]:
     """
-    Converts array-like data into a NumPy array.
+    Convert array-like data into a NumPy array.
 
-    If a non-numeric pandas Series is provided, it issues a warning and
-    returns the original Series unconverted.
+    Parameters
+    ----------
+    value : Any
+        Value to convert.
+    ensure_2d : bool, default=True
+        Whether to reshape 1D arrays into a column vector.
+
+    Returns
+    -------
+    numpy.ndarray | pandas.Series
+        Converted array, or the original Series when non-numeric.
     """
     if isinstance(value, np.ndarray):
         array = value

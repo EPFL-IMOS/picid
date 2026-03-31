@@ -15,6 +15,15 @@ class CrossEntropyLoss(AbstractLoss):
 
     This loss combines LogSoftmax and NLLLoss in one single class.
     It expects raw logits from the model (unnormalized scores).
+
+    Parameters
+    ----------
+    reduction : str, default="mean"
+        Specifies the reduction to apply to the output: ``"none"``, ``"mean"``, or ``"sum"``.
+    ignore_index : int, default=-100
+        Specifies a target value that is ignored and does not contribute to the gradient.
+    label_smoothing : float, default=0.0
+        Specifies the amount of smoothing in ``[0.0, 1.0]``.
     """
 
     def __init__(
@@ -24,16 +33,16 @@ class CrossEntropyLoss(AbstractLoss):
         label_smoothing: float = 0.0,
     ) -> None:
         """
-        Initialize CrossEntropyLoss.
+        Initialize the cross-entropy loss wrapper.
 
         Parameters
         ----------
-        reduction :
-            Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
-        ignore_index :
+        reduction : str, default="mean"
+            Specifies the reduction to apply to the output: ``"none"``, ``"mean"``, or ``"sum"``.
+        ignore_index : int, default=-100
             Specifies a target value that is ignored and does not contribute to the gradient.
-        label_smoothing :
-            A float in [0.0, 1.0]. Specifies the amount of smoothing.
+        label_smoothing : float, default=0.0
+            Specifies the amount of smoothing in ``[0.0, 1.0]``.
         """
         super().__init__()
         self.loss_fn = nn.CrossEntropyLoss(
@@ -46,19 +55,19 @@ class CrossEntropyLoss(AbstractLoss):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute Cross Entropy loss.
+        Compute the cross-entropy loss for classification outputs.
 
         Parameters
         ----------
-        model_out :
-            Dict with 'predictions' of shape (Batch, Seq, Num_Classes) or (Batch, 1, Num_Classes)
-        batch :
-            Dict with 'targets' of shape (Batch, Seq) or (Batch, Seq, 1) or (Batch, 1, 1)
+        model_out : Dict[str, torch.Tensor]
+            Dictionary with ``"predictions"`` of shape ``(batch, seq, num_classes)``.
+        batch : Dict[str, torch.Tensor]
+            Dictionary with ``"targets"`` of shape ``(batch, seq)`` or ``(batch, seq, 1)``.
 
         Returns
         -------
         Dict[str, torch.Tensor]
-            Dict with original model output plus 'loss' key.
+            Dictionary with the original model output plus a ``"loss"`` key.
         """
         # Predictions: (Batch, Seq, Classes)
         predictions = model_out["predictions"]

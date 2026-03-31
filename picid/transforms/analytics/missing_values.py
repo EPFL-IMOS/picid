@@ -15,15 +15,26 @@ logger = logging.getLogger(__name__)
 
 class MissingValuesStatsLogger(NoFitPerSegmentMixin, DenseTransform):
     """
-    Analyzes and logs missing value (NaN) statistics for time-series data.
-    Supports both Dense (NumPy) and Ragged (Awkward) arrays.
+    Log missing-value statistics without modifying the input data.
 
-    This transform acts as a pass-through inspector. It does not modify the data.
-    It calculates:
-    1. Per-Unit statistics: NaN count and percentage relative to unit length.
-    2. Global statistics: Total NaN count and percentage across the entire dataset.
+    Parameters
+    ----------
+    saving_path : str
+        Root directory where the report will be written.
+    apply_to : list[str], optional
+        Optional subset of keys to inspect.
+    filename : str, default="missing_values_stats.txt"
+        Name of the output report file.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
 
-    Results are printed to the console and saved to a text file in the specified logs directory.
+    Notes
+    -----
+    This transform is a pass-through inspector. It does not modify the data.
+    It records both per-unit statistics, where the NaN count is related to the
+    individual unit length, and global statistics aggregated across the full
+    dataset. Results are printed to the console and saved to a text report
+    under the configured logs directory.
     """
 
     def __init__(
@@ -46,7 +57,19 @@ class MissingValuesStatsLogger(NoFitPerSegmentMixin, DenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> NamedTransformInput:
         """
-        Required by abstract base class. Logic is handled in transform_multi_source.
+        Return the input unchanged for single-source execution.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input mapping to pass through unchanged.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        NamedTransformInput
+            The input mapping, unchanged.
         """
         return data
 
@@ -56,8 +79,19 @@ class MissingValuesStatsLogger(NoFitPerSegmentMixin, DenseTransform):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> tuple[list[NamedTransformInput], dict[str, Any]]:
         """
-        Iterates over all data segments to calculate statistics, logs them,
-        and returns the original data unmodified.
+        Compute and persist missing-value statistics for each segment.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            Segment list to inspect.
+        metadata : dict, optional
+            Optional pipeline metadata.
+
+        Returns
+        -------
+        tuple[list[NamedTransformInput], dict[str, Any]]
+            The original segments and an empty metadata update.
         """
 
         # 1. Setup Logging Buffer

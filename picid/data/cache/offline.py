@@ -14,19 +14,11 @@ logger = logging.getLogger(__name__)
 
 class FileSystemCache:
     """
-    Stage-aware file-based cache with hash validation.
-    Uses joblib for serialization, JSON for config, and plain text for hash.
+    Stage-aware file cache with hash validation.
 
-    Layout:
-        {cache_dir}/{dataset_name}/{stage}/data.pkl
-        {cache_dir}/{dataset_name}/{stage}/meta.json
-        {cache_dir}/{dataset_name}/{stage}/hash.txt
-
-    Special case:
-        "preprocessed" stage → nested by hash:
-        {cache_dir}/{dataset_name}/preprocessed/{hash}/data.pkl
-        {cache_dir}/{dataset_name}/preprocessed/{hash}/meta.json
-        {cache_dir}/{dataset_name}/preprocessed/{hash}/hash.txt
+    The cache stores data, metadata, and a hash separately so preprocessing can
+    validate whether the serialized artifacts still match the current code and
+    configuration.
     """
 
     def __init__(self):
@@ -34,8 +26,21 @@ class FileSystemCache:
 
     def _paths(self, cache_dir: str, stage: str, cache_key: str = None):
         """
-        Return paths for cache artifacts for a given dataset and stage.
-        If stage == "preprocessed", requires cache_key and nests under it.
+        Return cache artifact paths for the given stage.
+
+        Parameters
+        ----------
+        cache_dir : str
+            Root cache directory.
+        stage : str
+            Cache stage name.
+        cache_key : str | None, optional
+            Nested cache key used by ``preprocessed`` and ``boundary`` stages.
+
+        Returns
+        -------
+        tuple[pathlib.Path, pathlib.Path, pathlib.Path, pathlib.Path]
+            Paths for data, metadata JSON, hash text, and metadata pickle.
         """
         base_dir = Path(cache_dir).expanduser()
 
@@ -57,8 +62,21 @@ class FileSystemCache:
 
     def load_metadata(self, cache_dir: str, stage: str, cache_key: str = None):
         """
-        Load only the config + hash, without loading the data.
-        Returns (config, stored_hash) or None if missing.
+        Load only the config and hash without loading the data.
+
+        Parameters
+        ----------
+        cache_dir : str
+            Root cache directory.
+        stage : str
+            Cache stage name.
+        cache_key : str | None, optional
+            Nested cache key used by ``preprocessed`` and ``boundary`` stages.
+
+        Returns
+        -------
+        tuple[dict, str] | None
+            Loaded configuration and stored hash, or ``None`` when missing.
         """
         _, meta_file, hash_file, _ = self._paths(cache_dir, stage, cache_key)
         if not meta_file.exists() or not hash_file.exists():
@@ -74,7 +92,21 @@ class FileSystemCache:
 
     def load_data(self, cache_dir: str, stage: str, cache_key: str = None):
         """
-        Load only the data.pkl (assumes hash was already validated).
+        Load the cached data and metadata payloads.
+
+        Parameters
+        ----------
+        cache_dir : str
+            Root cache directory.
+        stage : str
+            Cache stage name.
+        cache_key : str | None, optional
+            Nested cache key used by ``preprocessed`` and ``boundary`` stages.
+
+        Returns
+        -------
+        tuple[Any, Any] | None
+            Cached data and metadata objects, or ``None`` when absent.
         """
         pkl_file, _, _, metadata_file = self._paths(cache_dir, stage, cache_key)
         if not pkl_file.exists() and not metadata_file.exists():
@@ -122,7 +154,28 @@ class FileSystemCache:
         extensions=None,
         cache_key: str = None,
     ):
-        """Save data, config, and hash separately."""
+        """
+        Save data, config, and hash separately.
+
+        Parameters
+        ----------
+        cache_dir : str
+            Root cache directory.
+        stage : str
+            Cache stage name.
+        data : Any
+            Serialized data payload.
+        metadata : Any
+            Serialized metadata payload.
+        config : dict
+            Configuration used to derive the cache hash.
+        library_dir : str | None, optional
+            Source library path used to derive a deterministic cache key.
+        extensions : iterable[str] | None, optional
+            File extensions included in the cache key fingerprint.
+        cache_key : str | None, optional
+            Explicit cache key override.
+        """
         if library_dir:
             cache_key = compute_cache_key(config, library_dir, extensions)
         elif cache_key is None:
@@ -152,7 +205,27 @@ class FileSystemCache:
         extensions=None,
     ):
         """
-        Load cached data if hash is valid, otherwise rebuild and save.
+        Load cached data when valid, otherwise rebuild and save.
+
+        Parameters
+        ----------
+        cache_dir : str
+            Root cache directory.
+        stage : str
+            Cache stage name.
+        build_fn : callable
+            Function that rebuilds the data and metadata payloads.
+        config : dict
+            Configuration used to derive the cache hash.
+        library_dir : str | None, optional
+            Source library path used to derive a deterministic cache key.
+        extensions : iterable[str] | None, optional
+            File extensions included in the cache key fingerprint.
+
+        Returns
+        -------
+        tuple[Any, Any]
+            Cached or freshly built data and metadata payloads.
         """
         cache_key = (
             compute_cache_key(config, library_dir, extensions)

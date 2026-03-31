@@ -20,11 +20,35 @@ class ClassLabelLookup:
         self.counter = 1
 
     def get(self, key):
-        """Return the integer ID for the key, or None if not present."""
+        """
+        Return the integer label for a key, or ``None`` if missing.
+
+        Parameters
+        ----------
+        key : Any
+            Lookup key.
+
+        Returns
+        -------
+        int or None
+            Assigned label if the key exists.
+        """
         return self.table.get(key, None)
 
     def set(self, key):
-        """Assign next integer if key not present, return its ID."""
+        """
+        Assign the next integer label to a new key and return it.
+
+        Parameters
+        ----------
+        key : Any
+            Lookup key to register.
+
+        Returns
+        -------
+        int
+            Assigned label.
+        """
         if key not in self.table:
             self.table[key] = self.counter
             self.counter += 1

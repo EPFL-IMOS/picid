@@ -49,7 +49,19 @@ logger = logging.getLogger(__name__)
 def _slice_info_to_metadata(
     slice_info: Optional[SliceInfo],
 ) -> Optional[Dict[str, Any]]:
-    """Serialize SliceInfo to a dict for inclusion in transform metadata."""
+    """
+    Serialize :class:`SliceInfo` to a dict for inclusion in transform metadata.
+
+    Parameters
+    ----------
+    slice_info : SliceInfo or None
+        Slice descriptor to serialize.
+
+    Returns
+    -------
+    dict[str, Any] or None
+        Serialized metadata, or ``None`` when ``slice_info`` is absent.
+    """
     if slice_info is None:
         return None
     return {
@@ -122,7 +134,19 @@ class CopyStep:
 
     @staticmethod
     def _first_leaf(val: Any) -> Any:
-        """Drill down split -> ... -> first non-container value to detect ak.Array vs rest."""
+        """
+        Drill down until the first non-container value is found.
+
+        Parameters
+        ----------
+        val : Any
+            Potentially nested split mapping or list.
+
+        Returns
+        -------
+        Any
+            First scalar-like leaf value used to detect array container type.
+        """
         while isinstance(val, (Mapping, list)):
             val = next(iter(val.values())) if isinstance(val, Mapping) else val[0]
         return val
@@ -418,7 +442,15 @@ class MergeStep:
 
     @staticmethod
     def _propagate_unit_metadata(context: TransformContext) -> None:
-        """Let the transform decide how unit metadata should follow the output."""
+        """
+        Let the transform decide how unit metadata should follow the output.
+
+        Parameters
+        ----------
+        context : TransformContext
+            Pipeline context that holds the transformed payload and raw
+            transformed results.
+        """
         transformed_data = context.transformed_data
         if transformed_data is None:
             return
@@ -476,7 +508,14 @@ class MergeStep:
 
     @staticmethod
     def _warn_on_changes(context: TransformContext) -> None:
-        """Log warnings when an assign_to key's type or length changes vs original data."""
+        """
+        Log warnings when an assign_to key's type or length changes.
+
+        Parameters
+        ----------
+        context : TransformContext
+            Pipeline context with both original and transformed payloads.
+        """
         transform_name = type(context.transform_instance).__name__
         for assign_to_key in context.transformed_results_for_new_key:
             if assign_to_key not in context.data:
@@ -511,7 +550,14 @@ class MergeStep:
 
     @staticmethod
     def _assert_unit_metadata_alignment(context: TransformContext) -> None:
-        """Raise when transformed output can no longer align with unit metadata."""
+        """
+        Raise when transformed output can no longer align with unit metadata.
+
+        Parameters
+        ----------
+        context : TransformContext
+            Pipeline context holding transformed results and unit metadata.
+        """
         transformed_data = context.transformed_data
         if transformed_data is None:
             return
@@ -588,7 +634,14 @@ class IntegrityCheckAfterStep:
 
 
 def _get_producer_version() -> str:
-    """Return picid package version for manifest entries; fallback '0.0.0' on failure."""
+    """
+    Return the picid package version for manifest entries.
+
+    Returns
+    -------
+    str
+        Installed picid package version, or ``"0.0.0"`` if metadata lookup fails.
+    """
     try:
         import importlib.metadata
 

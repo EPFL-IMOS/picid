@@ -12,21 +12,25 @@ logger = logging.getLogger(__name__)
 
 class SavePredictionsHook(BaseEvalHook):
     """
-    Handles NetCDF saving with standardized dimension naming.
+    Save buffered predictions and targets to NetCDF.
 
-    This hook ensures that 3D model outputs are saved with a consistent schema.
-    It resolves dimension size conflicts (e.g., in classification) by dynamically
-    renaming target dimensions if they differ from prediction dimensions.
+    The hook standardizes dimension names, resolves label-size conflicts for
+    classification outputs, and writes the result as a NetCDF file.
+
+    Parameters
+    ----------
+    dims : list[str] | None
+        Explicit dimension names for 3D tensors.
     """
 
     def __init__(self, dims: Optional[List[str]] = None):
         """
+        Initialize the NetCDF export hook.
+
         Parameters
         ----------
-        dims :
+        dims : list[str] | None, default=None
             Explicit dimension names for 3D tensors.
-            Required to be set, usually: ["sample", "time", "feature"].
-            If not provided, a ValueError is raised during formatting.
         """
         self.dims = dims
 
@@ -77,7 +81,19 @@ class SavePredictionsHook(BaseEvalHook):
         self, data: Dict[str, np.ndarray], evaluator: Any
     ) -> Dict[str, Any]:
         """
-        Maps raw buffer arrays to xarray-compatible tuples with standardized dims.
+        Map buffered arrays to xarray-compatible tuples.
+
+        Parameters
+        ----------
+        data : dict[str, np.ndarray]
+            Buffered data arrays from the evaluator.
+        evaluator : Any
+            Evaluator instance owning the buffer.
+
+        Returns
+        -------
+        dict[str, Any]
+            Mapping from variable names to ``(dims, values)`` tuples.
         """
         if self.dims is None:
             raise ValueError(

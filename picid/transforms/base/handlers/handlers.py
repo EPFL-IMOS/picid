@@ -1,8 +1,9 @@
 """
-Transform handler protocol and registry for dispatch (data_kind × capability).
+Transform handler protocol and registry for dispatch.
 
-Handlers encapsulate fit/transform logic that was in multisource mixins.
-Registry: (DataKind, TransformCapability) -> TransformHandler.
+Handlers encapsulate fit and transform logic that was previously spread
+across multisource mixins. The registry maps ``(data_kind, capability)``
+pairs to concrete handler implementations.
 """
 
 from __future__ import annotations
@@ -31,7 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 class TransformHandler(Protocol):
-    """Protocol for (data_kind, capability) handlers: fit preparation and transform apply."""
+    """
+    Protocol for handlers that prepare fit input and apply transforms.
+    """
 
     def fit_prepare(
         self,
@@ -40,7 +43,20 @@ class TransformHandler(Protocol):
         metadata: Dict[str, Any],
         fit_func: Callable[..., None],
     ) -> None:
-        """Prepare concatenated data from segments and call fit_func. No return."""
+        """
+        Prepare fit input from segments and call ``fit_func``.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            Split-local segments that should be combined for fitting.
+        apply_to_keys : list[str]
+            Keys whose arrays are concatenated into the fit payload.
+        metadata : dict[str, Any]
+            Transform metadata passed through to the fit function.
+        fit_func : Callable[..., None]
+            Callable invoked with the prepared fit payload.
+        """
         ...
 
     def transform_apply(
@@ -50,7 +66,25 @@ class TransformHandler(Protocol):
         metadata: Dict[str, Any],
         transform_name: str,
     ) -> Tuple[List[Any], Dict[str, Any]]:
-        """Apply transform to segments; return (list of results, transform_log)."""
+        """
+        Apply a transform to the provided segments.
+
+        Parameters
+        ----------
+        data_segments : list[NamedTransformInput]
+            Split-local segments to transform.
+        transform_func : Callable[..., Any]
+            Callable that applies the actual transform logic.
+        metadata : dict[str, Any]
+            Transform metadata passed through to the transform function.
+        transform_name : str
+            Human-readable transform name used in warnings and logs.
+
+        Returns
+        -------
+        list[Any], dict[str, Any]
+            The transformed outputs and a small transform log.
+        """
         ...
 
 
@@ -94,7 +128,12 @@ def _ak_utils():
 
 
 class DenseDenseHandler:
-    """Handler for dense data and for ragged_regular (to_numpy then wrap back to ak)."""
+    """
+    Handler for dense data and ragged-regular data.
+
+    Ragged-regular inputs are converted to NumPy before the transform is
+    applied and wrapped back into Awkward arrays afterward.
+    """
 
     def fit_prepare(
         self,
@@ -163,7 +202,12 @@ class DenseDenseHandler:
 
 
 class RaggedDenseHandler:
-    """Handler for ragged data with dense-only transform."""
+    """
+    Handler for ragged data with a dense-only transform.
+
+    Ragged segments are flattened into dense arrays before the transform is
+    applied, then reconstructed back into ragged form.
+    """
 
     def fit_prepare(
         self,
@@ -308,7 +352,9 @@ class RaggedDenseHandler:
 
 
 class RaggedRaggedHandler:
-    """Handler for ragged data with ragged-supporting transform."""
+    """
+    Handler for ragged data with a ragged-supporting transform.
+    """
 
     def fit_prepare(
         self,
@@ -366,7 +412,26 @@ def _build_registry() -> Dict[Tuple[str, str], TransformHandler]:
 
 
 def get_handler(data_kind: str, capability: str) -> TransformHandler:
-    """Return the handler for (data_kind, capability). Raises KeyError if no handler."""
+    """
+    Return the handler registered for a ``(data_kind, capability)`` pair.
+
+    Parameters
+    ----------
+    data_kind : str
+        Data-kind label used to select the handler family.
+    capability : str
+        Transform capability label used to select the handler implementation.
+
+    Returns
+    -------
+    TransformHandler
+        The handler associated with the requested pair.
+
+    Raises
+    ------
+    KeyError
+        If no handler is registered for the requested pair.
+    """
     if not _TRANSFORM_HANDLER_REGISTRY:
         _TRANSFORM_HANDLER_REGISTRY.update(_build_registry())
     key = (data_kind, capability)

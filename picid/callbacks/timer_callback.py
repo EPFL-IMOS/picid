@@ -1,4 +1,4 @@
-"""TopoBench: A library for benchmarking topological models."""
+"""Timing callback for logging batch and epoch durations."""
 
 import time
 
@@ -7,10 +7,15 @@ import numpy as np
 
 
 class PipelineTimer(pl.Callback):
-    """Measures and logs average execution times of training, validation, and testing stages."""
+    """
+    Measure and log average execution times across training and evaluation.
+
+    The callback keeps per-stage timing lists so the end-of-run summary can
+    report stable averages after skipping the warmup batches.
+    """
 
     def __init__(self):
-        """Initialize dictionaries to store accumulated times and counts."""
+        """Initialize the timer bookkeeping structures."""
         self.sums = {
             "train_batch": [],
             "train_epoch": [],
@@ -24,7 +29,8 @@ class PipelineTimer(pl.Callback):
         self.skip_first_n = 10
 
     def _start_timer(self, stage: str):
-        """Start a timer for the given stage.
+        """
+        Start a timer for the given stage.
 
         Parameters
         ----------
@@ -34,7 +40,8 @@ class PipelineTimer(pl.Callback):
         self.times[stage] = time.time()
 
     def _end_timer(self, stage: str):
-        """End the timer for the given stage and accumulate elapsed time.
+        """
+        End the timer for the given stage and accumulate elapsed time.
 
         Parameters
         ----------
@@ -47,7 +54,8 @@ class PipelineTimer(pl.Callback):
             self.counts[stage] += 1
 
     def _log_averages(self, trainer):
-        """Compute and log average times for all tracked stages.
+        """
+        Compute and log average times for all tracked stages.
 
         Parameters
         ----------
@@ -73,7 +81,8 @@ class PipelineTimer(pl.Callback):
 
     # Training Timing
     def on_train_batch_start(self, *args):
-        """Start timing a training batch.
+        """
+        Start timing a training batch.
 
         Parameters
         ----------
@@ -83,7 +92,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("train_batch")
 
     def on_train_batch_end(self, *args):
-        """End timing a training batch.
+        """
+        End timing a training batch.
 
         Parameters
         ----------
@@ -93,7 +103,8 @@ class PipelineTimer(pl.Callback):
         self._end_timer("train_batch")
 
     def on_train_epoch_start(self, *args):
-        """Start timing a training epoch.
+        """
+        Start timing a training epoch.
 
         Parameters
         ----------
@@ -103,7 +114,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("train_epoch")
 
     def on_train_epoch_end(self, *args):
-        """End timing a training epoch.
+        """
+        End timing a training epoch.
 
         Parameters
         ----------
@@ -114,7 +126,8 @@ class PipelineTimer(pl.Callback):
 
     # Validation Timing
     def on_validation_batch_start(self, *args):
-        """Start timing a validation batch.
+        """
+        Start timing a validation batch.
 
         Parameters
         ----------
@@ -124,7 +137,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("val_batch")
 
     def on_validation_batch_end(self, *args):
-        """End timing a validation batch.
+        """
+        End timing a validation batch.
 
         Parameters
         ----------
@@ -134,7 +148,8 @@ class PipelineTimer(pl.Callback):
         self._end_timer("val_batch")
 
     def on_validation_epoch_start(self, *args):
-        """Start timing a validation epoch.
+        """
+        Start timing a validation epoch.
 
         Parameters
         ----------
@@ -144,7 +159,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("val_epoch")
 
     def on_validation_epoch_end(self, *args):
-        """End timing a validation epoch.
+        """
+        End timing a validation epoch.
 
         Parameters
         ----------
@@ -155,7 +171,8 @@ class PipelineTimer(pl.Callback):
 
     # Testing Timing
     def on_test_batch_start(self, *args):
-        """Start timing a test batch.
+        """
+        Start timing a test batch.
 
         Parameters
         ----------
@@ -165,7 +182,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("test_batch")
 
     def on_test_batch_end(self, *args):
-        """End timing a test batch.
+        """
+        End timing a test batch.
 
         Parameters
         ----------
@@ -175,7 +193,8 @@ class PipelineTimer(pl.Callback):
         self._end_timer("test_batch")
 
     def on_test_epoch_start(self, *args):
-        """Start timing a test epoch.
+        """
+        Start timing a test epoch.
 
         Parameters
         ----------
@@ -185,7 +204,8 @@ class PipelineTimer(pl.Callback):
         self._start_timer("test_epoch")
 
     def on_test_epoch_end(self, *args):
-        """End timing a test epoch.
+        """
+        End timing a test epoch.
 
         Parameters
         ----------
@@ -195,7 +215,8 @@ class PipelineTimer(pl.Callback):
         self._end_timer("test_epoch")
 
     def on_train_end(self, trainer, *args):
-        """Log the average times at the end of training.
+        """
+        Log the average times at the end of training.
 
         Parameters
         ----------

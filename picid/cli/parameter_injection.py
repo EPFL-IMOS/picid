@@ -11,13 +11,37 @@ from picid.cli.config_discovery import CONFIGS_ROOT
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML file and return its contents as a dict."""
+    """
+    Load a YAML file and return its contents as a dict.
+
+    Parameters
+    ----------
+    path : Path
+        YAML file path.
+
+    Returns
+    -------
+    dict[str, Any]
+        Parsed YAML content.
+    """
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
 def _extract_optimization_from_defaults(defaults: list[Any]) -> str | None:
-    """Extract optimization config name from a defaults list."""
+    """
+    Extract the optimization config name from a defaults list.
+
+    Parameters
+    ----------
+    defaults : list[Any]
+        Hydra defaults list.
+
+    Returns
+    -------
+    str | None
+        Optimization config name if one is referenced.
+    """
     for item in defaults:
         if isinstance(item, dict) and "override /optimization" in item:
             opt_val = item["override /optimization"]
@@ -31,9 +55,20 @@ def _extract_optimization_from_defaults(defaults: list[Any]) -> str | None:
 
 
 def get_model_specific_params(model_name: str, task_type: str) -> dict[str, Any]:
-    """Load configs/model_configs/<task_type>/<model_name>.yaml, return the loaded dict.
+    """
+    Load a model-specific config and return the parsed dictionary.
 
-    Returns {} if the file does not exist.
+    Parameters
+    ----------
+    model_name : str
+        Name of the model config to load.
+    task_type : str
+        Task type subdirectory containing the model config.
+
+    Returns
+    -------
+    dict[str, Any]
+        Parsed model config, or an empty dict when the file is missing.
     """
     path = CONFIGS_ROOT / "model_configs" / task_type / f"{model_name}.yaml"
     if not path.exists():
@@ -42,11 +77,18 @@ def get_model_specific_params(model_name: str, task_type: str) -> dict[str, Any]
 
 
 def get_overridable_from_experiment(experiment_key: str) -> dict[str, Any]:
-    """Parse experiment YAML defaults to find base and model_configs.
+    """
+    Parse experiment defaults to discover overridable parameters.
 
-    Returns dict with:
-        - optimization: str, the effective optimization config name (e.g. default, sgd, reduce_on_plateau)
-        - model_params: dict with overridable params (e.g. lr from optimization config)
+    Parameters
+    ----------
+    experiment_key : str
+        Experiment key under ``configs/experiment``.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary containing the selected optimization config and model params.
     """
     exp_path = CONFIGS_ROOT / "experiment" / f"{experiment_key}.yaml"
     if not exp_path.exists():

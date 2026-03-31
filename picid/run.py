@@ -157,7 +157,20 @@ OmegaConf.register_new_resolver("quot", lambda a, b: safe_div(a, b))
 def _write_metrics_to_eval_details(
     cfg: DictConfig, stage: str, split: str, metrics: dict[str, Any]
 ) -> None:
-    """Write metrics to eval_details/{stage}/{split}/metrics.json when paths exist."""
+    """
+    Write metrics to ``eval_details/{stage}/{split}/metrics.json`` when enabled.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Runtime configuration carrying output paths.
+    stage : str
+        Evaluation stage, such as ``"best_epoch"``.
+    split : str
+        Split name, such as ``"val"`` or ``"test"``.
+    metrics : dict[str, Any]
+        Metrics dictionary returned by Lightning.
+    """
     p_dir = getattr(cfg.paths, "eval_details", None)
     if not p_dir or not metrics:
         return
@@ -189,7 +202,8 @@ def _json_default(o: Any) -> Any:
 
 
 def _log_preprocessing_datasource_error(exc: PreprocessingDatasourceError) -> None:
-    """Render datasource preprocessing failures with explicit top-level context.
+    """
+    Render datasource preprocessing failures with explicit top-level context.
 
     Parameters
     ----------
@@ -296,7 +310,8 @@ def _uuid(kind: str) -> str:
 
 
 def initialize_hydra() -> DictConfig:
-    """Initialize Hydra when main is not an option (e.g. tests).
+    """
+    Initialize Hydra when ``@hydra.main`` is not available, such as in tests.
 
     Returns
     -------
@@ -553,13 +568,12 @@ def rerun_best_model_checkpoint(
 
 @task_wrapper
 def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Train the model.
+    """
+    Train the model and optionally evaluate the best checkpoint on the test set.
 
-    Can additionally evaluate on a testset, using best weights obtained during training.
-
-    This method is wrapped in optional @task_wrapper decorator, that controls
-    the behavior during failure. Useful for multiruns, saving info about the
-    crash, etc.
+    This method is wrapped in the optional ``@task_wrapper`` decorator, which
+    controls failure handling. That makes it suitable for multiruns and crash
+    reporting.
 
     Parameters
     ----------
@@ -928,7 +942,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="run.yaml")
 def main(cfg: DictConfig) -> float | None:
-    """Main entry point for training.
+    """
+    Main entry point for training.
 
     Parameters
     ----------

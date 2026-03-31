@@ -22,7 +22,8 @@ def get_hydra_override(key: str):
 
 @rank_zero_only
 def log_hyperparameters(object_dict: dict[str, Any]) -> None:
-    r"""Control which config parts are saved by Lightning loggers.
+    r"""
+    Control which config parts are saved by Lightning loggers.
 
     Additionally saves:
         - Number of model parameters

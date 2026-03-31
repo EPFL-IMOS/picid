@@ -6,11 +6,17 @@ contract failures without relying on generic assertions.
 
 
 class DatasourceError(Exception):
-    """Base exception for datasource-layer failures."""
+    """
+    Define the Datasource Error helper.
+
+    """
 
 
 class DatasourceConfigurationError(DatasourceError):
-    """Raised when datasource configuration is invalid."""
+    """
+    Define the Datasource Configuration Error helper.
+
+    """
 
 
 class DatasourceStateError(DatasourceError):
@@ -18,16 +24,28 @@ class DatasourceStateError(DatasourceError):
 
 
 class DatasourceLoadError(DatasourceError):
-    """Raised when a datasource fails during load."""
+    """
+    Define the Datasource Load Error helper.
+
+    """
 
 
 class DatasourceSplitError(DatasourceError):
-    """Raised when a datasource fails during split."""
+    """
+    Define the Datasource Split Error helper.
+
+    """
 
 
 class DatasourceContractError(DatasourceError):
-    """Raised when a datasource violates the expected contract."""
+    """
+    Define the Datasource Contract Error helper.
+
+    """
 
 
 class DatasourceCompositionError(DatasourceError):
-    """Raised when datasource composition rules are violated."""
+    """
+    Define the Datasource Composition Error helper.
+
+    """

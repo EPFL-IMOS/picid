@@ -13,7 +13,23 @@ logger = logging.getLogger(__name__)
 
 
 def hankel_svdvals(data, hankel_window_size, slice_window_size):
-    """Slices data in 'slice_window_size' and compute hankel matrix singular values with 'hankel_window_size'"""
+    """
+    Compute mean Hankel singular values over fixed-size signal slices.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        One-dimensional input signal.
+    hankel_window_size : int
+        Window size used to construct the Hankel matrix.
+    slice_window_size : int
+        Slice length used before averaging singular values.
+
+    Returns
+    -------
+    np.ndarray
+        Mean singular values across all slices.
+    """
 
     n_slices = len(data) // slice_window_size
     hankel_svd = []
@@ -38,6 +54,19 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
     All statistics from all signals are concatenated into a single
     2D array of shape (1, n_signals * n_stats).
+
+    Parameters
+    ----------
+    stats_to_compute : list of str
+        Statistic names to compute.
+    apply_to_columns : bool, default=True
+        Whether each column should be treated as one signal.
+    hankel_window_size : int, optional
+        Hankel window size used by the ``hankel_svd`` statistic.
+    slice_window_size : int, optional
+        Slice size used by the ``hankel_svd`` statistic.
+    **kwargs
+        Additional keyword arguments passed to the parent transform classes.
     """
 
     # Define the set of all valid statistical function names
@@ -73,14 +102,17 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
         Parameters
         ----------
-        stats_to_compute : list
-            A list of statistic names to compute.
-            Must be members of TimeStatsTransform.VALID_STATS.
+        stats_to_compute : list of str
+            Statistic names to compute. Each name must be in
+            ``TimeStatsTransform.VALID_STATS``.
         apply_to_columns : bool
-            If True (default), apply to columns (each column
-            is a signal). If False, apply to rows (each row is a signal).
+            If True (default), apply to columns. If False, apply to rows.
+        hankel_window_size : int, optional
+            Hankel window size used by the ``hankel_svd`` statistic.
+        slice_window_size : int, optional
+            Slice size used by the ``hankel_svd`` statistic.
         **kwargs
-            Additional arguments for BaseTransform.
+            Additional arguments for the parent transform classes.
         """
         super().__init__(**kwargs)
         self.apply_to_columns = apply_to_columns
@@ -106,8 +138,7 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _compute_stat(self, signal: np.ndarray, stat_name: str) -> float:
         """
-        Dispatcher function to compute a single named statistic
-        on a given 1D time-domain signal.
+        Compute one named statistic on a one-dimensional signal.
 
         Parameters
         ----------
@@ -196,7 +227,21 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
             raise ValueError(f"Unknown statistic handler: {stat_name}")
 
     def _validate_input(self, data: np.ndarray, key: str) -> np.ndarray:
-        """Validate input data."""
+        """
+        Validate one dense input array before feature extraction.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Dense input array to validate.
+        key : str
+            Input key associated with the array.
+
+        Returns
+        -------
+        np.ndarray
+            Validated input array.
+        """
         if data.ndim != 2:
             raise ValueError(
                 f"Key '{key}' must be a 2D array (n_rows, n_columns), "
@@ -219,9 +264,9 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         Parameters
         ----------
         data : dict
-            Dictionary containing 2D numpy arrays (n_rows, n_columns)
+            Dictionary containing 2D numpy arrays ``(n_rows, n_columns)``.
         metadata : dict
-            Dictionary containing auxiliary metadata (unused)
+            Dictionary containing auxiliary metadata (unused).
 
         Returns
         -------
@@ -280,7 +325,19 @@ class TimeStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         self, input_keys: List[str], input_shapes: Dict[str, Tuple[int, int]]
     ) -> List[str]:
         """
-        Generate feature names for the time-domain statistics output.
+        Generate output feature names for the statistics vector.
+
+        Parameters
+        ----------
+        input_keys : list of str
+            Input keys seen by the transform.
+        input_shapes : dict
+            Mapping from key to ``(rows, columns)`` input shape tuples.
+
+        Returns
+        -------
+        list of str
+            Generated feature names in output order.
         """
         feature_names = []
         if not input_keys:

@@ -1,6 +1,7 @@
-"""Base transforms, pipeline, and data transforms.
+"""
+Base transforms, pipeline, and data transforms.
 
-Re-exports the main public API for mkdocstrings and direct imports.
+Re-export the main public API for mkdocstrings and direct imports.
 """
 
 from picid.transforms.base.base_transform import (

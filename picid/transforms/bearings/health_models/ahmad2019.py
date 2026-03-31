@@ -15,11 +15,37 @@ logger = logging.getLogger(__name__)
 
 class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
     """
+    Cut arrays at the Ahmad et al. first prediction time.
+
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "Alarm bound technique" from Ahmad et al. 2019.
 
-    If `gain_threshold` is a float, FPT is the first point to cross it.
-    If `gain_threshold` is None, an automatic strategy is used.
+    Parameters
+    ----------
+    signal_key : str
+        Key for the 1D/2D signal array to find the FPT.
+    features_keys : list[str]
+        List of keys for arrays to be sliced.
+    normal_period_end : int, default=100
+        End index of the normal operation period.
+    window_size : int, default=70
+        Size of the sliding window used for regression.
+    gain_threshold : float, optional
+        Threshold to trigger FPT.
+    regression_stride : int, default=1
+        Step size for the regression window.
+    auto_fpt_strategy : str, default="robust_threshold"
+        Strategy used when ``gain_threshold`` is not provided.
+    auto_fpt_top_k : int, default=5
+        Number of top ratios used by the automatic strategy.
+    dataset_name : str, default="UnknownDataset"
+        Dataset name used for logging.
+    unit_id_key : str, optional
+        Optional key used to find the unit identifier.
+    fpt_indexes_strategy : str, default="min"
+        Strategy used when multiple FPT candidates are found.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(
@@ -38,39 +64,34 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         **kwargs,
     ):
         """
-        Initialize the Ahmad2019FPTCutTransform.
+        Store the FPT search configuration for later slicing.
 
         Parameters
         ----------
         signal_key : str
             Key for the 1D/2D signal array to find the FPT.
-        features_keys : list
+        features_keys : list[str]
             List of keys for arrays to be sliced.
-        normal_period_end : int
-            End index of the "normal" operation period.
-        window_size : int
-            Size of the sliding window for regression.
+        normal_period_end : int, default=100
+            End index of the normal operation period.
+        window_size : int, default=70
+            Size of the sliding window used for regression.
         gain_threshold : float, optional
-            Threshold to trigger FPT. If None,
-            `auto_fpt_strategy` is used.
-        regression_stride : int
-            The step size for the regression window.
-        auto_fpt_strategy : str
-            Strategy if `gain_threshold` is None.
-            - "max_ratio": FPT is the index of the max ratio.
-            - "robust_threshold": FPT is the *first* index to cross
-              the minimum ratio of the top 'k' ratios.
-        auto_fpt_top_k : int
-            The 'k' value for "robust_threshold" strategy.
-        dataset_name : str
-            Optional name of the dataset for logging.
+            Threshold to trigger FPT.
+        regression_stride : int, default=1
+            Step size for the regression window.
+        auto_fpt_strategy : str, default="robust_threshold"
+            Strategy used when ``gain_threshold`` is not provided.
+        auto_fpt_top_k : int, default=5
+            Number of top ratios used by the automatic strategy.
+        dataset_name : str, default="UnknownDataset"
+            Dataset name used for logging.
         unit_id_key : str, optional
-            Optional key to find the unit ID for logging.
-        fpt_indexes_strategy : str
-            Strategy ('min', 'max', 'mean') to
-            use if `signal_key` provides multiple signal columns.
+            Optional key used to find the unit identifier.
+        fpt_indexes_strategy : str, default="min"
+            Strategy used when multiple FPT candidates are found.
         **kwargs
-            Additional arguments for BaseTransform.
+            Additional keyword arguments forwarded to the base transform.
         """
         super().__init__(**kwargs)
         self.signal_key = signal_key
@@ -96,7 +117,17 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _linear_rectification_technique(self, signal: np.ndarray) -> np.ndarray:
         """
-        NumPy-based implementation of the Linear Rectification Technique.
+        Apply the linear rectification smoothing used by the paper.
+
+        Parameters
+        ----------
+        signal : numpy.ndarray
+            One-dimensional signal to rectify.
+
+        Returns
+        -------
+        numpy.ndarray
+            Rectified signal.
         """
         n = len(signal)
         if n < 2:
@@ -119,7 +150,19 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _find_fpt(self, signal_vector: np.ndarray, unit_id: str) -> int:
         """
-        Finds the FPT for a single 1D signal vector.
+        Find the first prediction time for a one-dimensional signal.
+
+        Parameters
+        ----------
+        signal_vector : numpy.ndarray
+            Signal values for a single column.
+        unit_id : str
+            Unit identifier used in log messages.
+
+        Returns
+        -------
+        int
+            Detected first prediction time.
         """
         if signal_vector.ndim != 1:
             raise ValueError("Signal vector provided to _find_fpt must be 1D.")
@@ -247,7 +290,21 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
             )
 
     def _get_unit_id(self, data: NamedTransformInput, metadata: Dict) -> str:
-        """Helper to safely extract the unit ID for logging."""
+        """
+        Extract a printable unit identifier for logging.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input data dictionary.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        str
+            Printable unit identifier.
+        """
         if self.unit_id_key:
             if self.unit_id_key in data:
                 # Handle array or scalar unit_id
@@ -260,7 +317,19 @@ class Ahmad2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> Dict[str, np.ndarray]:
         """
-        Finds FPT, slices all feature arrays, and returns them in a dict.
+        Find the FPT and slice every configured feature array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input data dictionary.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        dict[str, numpy.ndarray]
+            Sliced feature arrays.
         """
         unit_id = self._get_unit_id(data, metadata)
 

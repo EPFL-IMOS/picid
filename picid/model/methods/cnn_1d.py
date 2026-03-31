@@ -7,7 +7,16 @@ from picid.model.autoencoder.residual_1d import ResidualBlock
 
 class EncoderModel(nn.Module):
     """
-    (Docstring unchanged...)
+    Build the convolutional encoder and task-specific output head.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary defining the encoder blocks.
+    task_type : str
+        Project task identifier.
+    num_classes : int, default=1
+        Number of output classes used for classification tasks.
     """
 
     def __init__(self, config, task_type: str, num_classes: int = 1):
@@ -94,7 +103,12 @@ class EncoderModel(nn.Module):
 
     def _init_weights(self, m):
         """
-        Applies Kaiming and Zero-initialization to the model.
+        Initialize convolutional and dense layers.
+
+        Parameters
+        ----------
+        m : torch.nn.Module
+            Module instance inspected during recursive initialization.
         """
         if isinstance(m, (nn.Conv1d, nn.Linear)):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")

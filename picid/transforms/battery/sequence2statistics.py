@@ -9,11 +9,12 @@ logger = logging.getLogger(__name__)
 
 class Sequence2Statistics(NoFitPerSegmentMixin, DenseTransform):
     """
-    Transforms sequence data by computing the mean and standard deviation
-    for each cycle, ignoring a specified padding value and np.nan.
+    Summarize each input cycle with per-channel mean and standard deviation.
 
-    Input shape: (N_cycles, cycle_len (var), channels)
-    Output shape: (N_cycles, channels * 2)
+    Parameters
+    ----------
+    padding_value : float, optional
+        Value that should be treated as padding and ignored.
     """
 
     def __init__(
@@ -21,18 +22,32 @@ class Sequence2Statistics(NoFitPerSegmentMixin, DenseTransform):
         padding_value: Optional[float] = None,
     ):
         """
+        Remember the optional padding marker used during aggregation.
+
         Parameters
         ----------
         padding_value : float, optional
-            A numerical value to be treated
-            as padding and ignored during calculations. np.nan is always ignored.
+            Value that should be treated as padding and ignored.
         """
         super().__init__()
         self.padding_value = padding_value
 
     def transform_data(self, data: Any, metadata: Dict) -> Any:
         """
-        Transforms a single data segment by calculating statistics.
+        Collapse a single sequence into mean and standard deviation values.
+
+        Parameters
+        ----------
+        data : Any
+            Mapping containing exactly one sequence-like entry.
+        metadata : dict
+            Metadata dictionary preserved by the interface.
+
+        Returns
+        -------
+        numpy.ndarray
+            One-dimensional vector containing mean and standard deviation
+            summaries.
         """
         # (N, win_len, channels)
         assert len(data) == 1, "Data dictionary must contain exactly one entry."
@@ -79,5 +94,14 @@ class Sequence2Statistics(NoFitPerSegmentMixin, DenseTransform):
         return statistical_features
 
     def fit_data(self, data: Any, metadata: Dict):
-        """This transform is stateless and does not require fitting."""
+        """
+        Skip fitting because the transform is stateless.
+
+        Parameters
+        ----------
+        data : Any
+            Training data, ignored.
+        metadata : dict
+            Metadata dictionary, ignored.
+        """
         pass

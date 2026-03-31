@@ -29,15 +29,16 @@ class MLP(nn.Module):
 
     def __init__(self, config: Dict[str, Any], task_type: str, num_targets: int):
         """
+        Create the MLP backbone from the provided configuration.
+
         Parameters
         ----------
-        config : Dict
-            Must contain 'seq_len', 'input_channels'.
-            Optional 'hidden_dim' (default 64) and 'num_layers' (default 2).
+        config : dict[str, Any]
+            Input-shape configuration.
         task_type : str
-            'regression' or 'classification'.
+            Project task identifier.
         num_targets : int
-            Output dimension.
+            Number of regression targets or classification classes.
         """
         super().__init__()
 
@@ -87,7 +88,7 @@ class MLP(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        """Applies Kaiming init to Linear and standard init to LayerNorm."""
+        """Initialize linear layers with Kaiming normal weights."""
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")

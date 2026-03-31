@@ -17,8 +17,10 @@ class ReshapeTransform(NoFitPerSegmentMixin, DenseTransform):
 
         Parameters
         ----------
+        pattern : str
+            Einops rearrangement pattern.
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments.
         """
         super().__init__(**kwargs)
         self.pattern = pattern
@@ -30,14 +32,14 @@ class ReshapeTransform(NoFitPerSegmentMixin, DenseTransform):
         Parameters
         ----------
         data : dict
-            Dictionary containing numpy arrays to concatenate
+            Dictionary containing the input array to reshape.
         metadata : dict
-            Dictionary containing auxiliary metadata (unused in this transform)
+            Dictionary containing auxiliary metadata (unused in this transform).
 
         Returns
         -------
         np.ndarray
-            Concatenated numpy array
+            Reshaped numpy array.
         """
 
         assert len(data) == 1, "Data dictionary must contain exactly one entry."

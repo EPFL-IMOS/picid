@@ -1,4 +1,5 @@
-"""Helpers for transform-level unit_metadata propagation.
+"""
+Helpers for transform-level unit_metadata propagation.
 
 The pipeline treats ``unit_metadata`` as split-scoped, so transforms that keep
 the same unit cardinality can leave it untouched, while transforms that change
@@ -28,7 +29,19 @@ UnitMetadataBySplit = dict[str, list[dict[str, Any]]]
 def preserve_unit_metadata(
     *, unit_metadata_by_split: Mapping[str, list[dict[str, Any]]]
 ) -> UnitMetadataBySplit:
-    """Return a deep-copied metadata mapping without changing its semantics."""
+    """
+    Return a deep-copied metadata mapping without changing its semantics.
+
+    Parameters
+    ----------
+    unit_metadata_by_split : Mapping[str, list[dict[str, Any]]]
+        Current metadata grouped by split.
+
+    Returns
+    -------
+    dict[str, list[dict[str, Any]]]
+        A deep copy of the provided mapping.
+    """
     # Deep-copy here so transforms can safely reuse this helper without sharing
     # mutable metadata objects with the input container.
     return copy.deepcopy(dict(unit_metadata_by_split))
@@ -37,7 +50,19 @@ def preserve_unit_metadata(
 def drop_unit_metadata(
     *, unit_metadata_by_split: Mapping[str, list[dict[str, Any]]]
 ) -> UnitMetadataBySplit:
-    """Intentionally remove all unit metadata from the transformed payload."""
+    """
+    Intentionally remove all unit metadata from the transformed payload.
+
+    Parameters
+    ----------
+    unit_metadata_by_split : Mapping[str, list[dict[str, Any]]]
+        Current metadata grouped by split.
+
+    Returns
+    -------
+    dict[str, list[dict[str, Any]]]
+        An empty mapping, signalling that unit metadata should be discarded.
+    """
     # Returning an empty mapping makes the pipeline treat unit_metadata as absent.
     # This should be used only when unit identity is genuinely no longer
     # meaningful after the transform, not merely as a shortcut around alignment.
@@ -50,11 +75,27 @@ def aggregate_unit_metadata(
     transformed_results_for_new_key: Mapping[str, Mapping[str, list[Any]]],
     metadata: Mapping[str, Any] | None = None,
 ) -> UnitMetadataBySplit:
-    """Collapse per-unit metadata into one summary entry per transformed split.
+    """
+    Collapse per-unit metadata into one summary entry per transformed split.
 
     This is the expected strategy for transforms that turn many units into one
     split-level dense output. The helper keeps untouched splits unchanged and
     only rewrites the splits that appear in ``transformed_results_for_new_key``.
+
+    Parameters
+    ----------
+    unit_metadata_by_split : Mapping[str, list[dict[str, Any]]]
+        Current metadata grouped by split before propagation.
+    transformed_results_for_new_key : Mapping[str, Mapping[str, list[Any]]]
+        Postprocessed transformed values grouped by assign-to key and split.
+    metadata : Mapping[str, Any], optional
+        Pipeline metadata that can be threaded into the aggregated entry for
+        provenance.
+
+    Returns
+    -------
+    dict[str, list[dict[str, Any]]]
+        A split-keyed mapping with one aggregated metadata entry per transformed split.
     """
     propagated: UnitMetadataBySplit = copy.deepcopy(dict(unit_metadata_by_split))
     metadata = dict(metadata or {})

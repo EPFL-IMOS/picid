@@ -10,7 +10,24 @@ from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 
 class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
-    """Wrapper for the XGboost model for regression and classification."""
+    """
+    Wrap gradient-boosted tree baselines for regression and classification.
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    n_estimators : int, default=1000
+        Number of boosting stages.
+    model_cache_path : str, optional
+        Directory used to cache serialized models.
+    random_state : int, optional
+        Random seed for the underlying estimator.
+    num_classes : int, optional
+        Number of output classes for classification tasks.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the backbone.
+    """
 
     def __init__(
         self,
@@ -66,7 +83,16 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     def serialize_model(self, task_id):
         """
         Serialize the model to a file using joblib.
-        depending on task_id and self.kwargs['model_path'].
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier used to derive the output filename.
+
+        Returns
+        -------
+        str
+            Path to the serialized model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -88,6 +114,16 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     def load_model(self, task_id):
         """
         Load the model from a file using joblib.
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier used to derive the input filename.
+
+        Returns
+        -------
+        object
+            Deserialized model object.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -103,5 +139,12 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
     @property
     @override
     def allows_multi_target(self) -> bool:
-        """Indicates whether the model supports multi-target prediction."""
+        """
+        Return whether the model supports multi-target prediction.
+
+        Returns
+        -------
+        bool
+            ``False`` because the wrapper returns a single prediction stream.
+        """
         return False

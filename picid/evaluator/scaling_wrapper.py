@@ -10,7 +10,18 @@ from picid.transforms.base.multisource import InverseTransformMixin
 
 
 class ScalingWrapper:
-    """Wrapper class to handle inverse scaling operations."""
+    """
+    Wrapper class to handle inverse scaling operations.
+
+    Parameters
+    ----------
+    inverse_transform : Optional[InverseTransformMixin], default=None
+        Transformer object providing ``inverse_transform``.
+    apply_inverse_scaling : bool, default=False
+        Whether to apply inverse scaling.
+    task_mode : bool, default=False
+        Task mode used to validate expected tensor shapes.
+    """
 
     def __init__(
         self,
@@ -23,10 +34,12 @@ class ScalingWrapper:
 
         Parameters
         ----------
-        inverse_transform : Optional[Any]
-            The scaler object with inverse_transform method
-        apply_inverse : bool
-            Whether to apply inverse scaling
+        inverse_transform : Optional[InverseTransformMixin], default=None
+            Transformer object providing ``inverse_transform``.
+        apply_inverse_scaling : bool, default=False
+            Whether to apply inverse scaling.
+        task_mode : bool, default=False
+            Task mode used to validate expected tensor shapes.
         """
         self.inverse_transform = inverse_transform
         self.apply_inverse = apply_inverse_scaling
@@ -43,15 +56,17 @@ class ScalingWrapper:
 
         Parameters
         ----------
-        predictions : np.ndarray or torch.Tensor
-            Model predictions
-        targets : np.ndarray or torch.Tensor
-            Ground truth targets
+        predictions : Tuple[torch.Tensor, np.ndarray]
+            Model predictions.
+        targets : Tuple[torch.Tensor, np.ndarray]
+            Ground-truth targets.
+        **kwargs : dict
+            Optional metadata forwarded to the inverse transform.
 
         Returns
         -------
         tuple
-            (transformed_predictions, transformed_targets)
+            Tuple of transformed predictions and targets.
         """
         metadata = kwargs.get("metadata", {})
         if not (self.inverse_transform and self.apply_inverse):
@@ -113,7 +128,18 @@ class ScalingWrapper:
 
 
 class MultivariateTimeseriesScalingWrapper:
-    """Wrapper class to handle inverse scaling operations."""
+    """
+    Wrapper class to handle inverse scaling operations.
+
+    Parameters
+    ----------
+    inverse_transform : Optional[InverseTransformMixin], default=None
+        Transformer object providing ``inverse_transform``.
+    apply_inverse_scaling : bool, default=False
+        Whether to apply inverse scaling.
+    task_mode : bool, default=False
+        Task mode used to validate expected tensor shapes.
+    """
 
     def __init__(
         self,
@@ -126,10 +152,12 @@ class MultivariateTimeseriesScalingWrapper:
 
         Parameters
         ----------
-        inverse_transform : Optional[Any]
-            The scaler object with inverse_transform method
-        apply_inverse : bool
-            Whether to apply inverse scaling
+        inverse_transform : Optional[InverseTransformMixin], default=None
+            Transformer object providing ``inverse_transform``.
+        apply_inverse_scaling : bool, default=False
+            Whether to apply inverse scaling.
+        task_mode : bool, default=False
+            Task mode used to validate expected tensor shapes.
         """
         self.inverse_transform = inverse_transform
         self.apply_inverse = apply_inverse_scaling
@@ -149,15 +177,15 @@ class MultivariateTimeseriesScalingWrapper:
 
         Parameters
         ----------
-        predictions : np.ndarray or torch.Tensor
-            Model predictions
-        targets : np.ndarray or torch.Tensor
-            Ground truth targets
+        predictions : Tuple[torch.Tensor, np.ndarray]
+            Model predictions.
+        targets : Tuple[torch.Tensor, np.ndarray]
+            Ground-truth targets.
 
         Returns
         -------
         tuple
-            (transformed_predictions, transformed_targets)
+            Tuple of transformed predictions and targets.
         """
         if not (self.inverse_transform and self.apply_inverse):
             return predictions, targets

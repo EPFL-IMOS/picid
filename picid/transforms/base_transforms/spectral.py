@@ -15,14 +15,27 @@ logger = logging.getLogger(__name__)
 
 class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     """
-    Computes global statistical features from the frequency spectrum of signals.
+    Compute global statistical features from the frequency spectrum of signals.
 
-    This transform applies an FFT to each signal (column or row) and then
-    computes a set of scalar statistics (e.g., mean, kurtosis, spectral_entropy)
-    from the resulting amplitude spectrum.
+    The transform applies an FFT to each signal and then computes scalar
+    statistics from the resulting amplitude spectrum.
 
-    All statistics from all signals are concatenated into a single
-    2D array of shape (1, n_signals * n_stats).
+    Parameters
+    ----------
+    stats_to_compute : list[str]
+        Statistic names to compute. Each value must be present in
+        :attr:`VALID_STATS`.
+    fs : float, default=1.0
+        Sampling frequency in Hz used for the spectrum calculation.
+    apply_to_columns : bool, default=True
+        Whether to treat columns as signals. The row-wise mode is not
+        implemented.
+    pe_dim : int, default=5
+        Embedding dimension used for permutation entropy.
+    pe_tau : int, default=10
+        Delay used for permutation entropy.
+    **kwargs
+        Extra compatibility keywords passed to the parent transform.
     """
 
     # Define the set of all valid statistical function names
@@ -57,24 +70,22 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
         **kwargs,
     ):
         """
-        Initialize the SpectralStatsTransform.
+        Initialize the spectral-statistics transform.
 
         Parameters
         ----------
-        stats_to_compute : list
-            A list of statistic names to compute.
-            Must be members of SpectralStatsTransform.VALID_STATS.
-        fs : float
-            Sampling frequency in Hz, used for spectrum calculation.
-        apply_to_columns : bool
-            If True (default), apply to columns (each column
-            is a signal). If False, apply to rows (each row is a signal).
-        pe_dim : int
-            Dimension (window size) for permutation entropy.
-        pe_tau : int
-            Tau (step size) for permutation entropy.
+        stats_to_compute : list[str]
+            Statistic names to compute.
+        fs : float, default=1.0
+            Sampling frequency in Hz used for the spectrum calculation.
+        apply_to_columns : bool, default=True
+            Whether to treat columns as signals.
+        pe_dim : int, default=5
+            Embedding dimension used for permutation entropy.
+        pe_tau : int, default=10
+            Delay used for permutation entropy.
         **kwargs
-            Additional arguments for BaseTransform.
+            Extra compatibility keywords passed to the parent transform.
         """
         super().__init__(**kwargs)
         self.fs = fs
@@ -101,7 +112,17 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _compute_fft_spectrum(self, signal: np.ndarray) -> np.ndarray:
         """
-        Computes the single-sided amplitude spectrum of a 1D signal.
+        Compute the single-sided amplitude spectrum of a 1D signal.
+
+        Parameters
+        ----------
+        signal : numpy.ndarray
+            One-dimensional input signal.
+
+        Returns
+        -------
+        numpy.ndarray
+            Single-sided amplitude spectrum.
         """
         n = len(signal)
         if n == 0:
@@ -113,7 +134,17 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _compute_spectral_entropy(self, spectrum: np.ndarray) -> float:
         """
-        Computes the Shannon entropy of the normalized power spectrum.
+        Compute the Shannon entropy of the normalized power spectrum.
+
+        Parameters
+        ----------
+        spectrum : numpy.ndarray
+            Amplitude spectrum.
+
+        Returns
+        -------
+        float
+            Spectral entropy in bits.
         """
         # 1. Calculate Power Spectrum (Power = Amplitude^2)
         power_spectrum = spectrum**2
@@ -132,7 +163,20 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     def _compute_permutation_entropy(self, x: np.ndarray, dim: int, tau: int) -> float:
         """
         Compute permutation entropy on a 1D NumPy array.
-        This is a standalone implementation and does not require tsfresh.
+
+        Parameters
+        ----------
+        x : numpy.ndarray
+            One-dimensional signal.
+        dim : int
+            Embedding dimension.
+        tau : int
+            Delay between embedded samples.
+
+        Returns
+        -------
+        float
+            Permutation entropy, or NaN when the signal is too short.
         """
         x = np.array(x)
         n = len(x)
@@ -175,8 +219,19 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _compute_stat(self, spectrum: np.ndarray, stat_name: str) -> float:
         """
-        Dispatcher function to compute a single named statistic
-        on a given spectrum.
+        Compute a single named statistic on a given spectrum.
+
+        Parameters
+        ----------
+        spectrum : numpy.ndarray
+            Amplitude spectrum.
+        stat_name : str
+            Name of the statistic to compute.
+
+        Returns
+        -------
+        float
+            Computed statistic value.
         """
         if spectrum.size == 0:
             return np.nan
@@ -232,7 +287,21 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
             raise ValueError(f"Unknown statistic handler: {stat_name}")
 
     def _validate_input(self, data: np.ndarray, key: str) -> np.ndarray:
-        """Validate input data."""
+        """
+        Validate input data.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+            Input array to validate.
+        key : str
+            Payload key used in error messages.
+
+        Returns
+        -------
+        numpy.ndarray
+            Validated input array.
+        """
         if data.ndim != 2:
             raise ValueError(
                 f"Key '{key}' must be a 2D array (n_rows, n_columns), "
@@ -253,6 +322,18 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
         Apply spectral statistics computation to all signals in the input.
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            Input payload dictionary.
+        metadata : dict
+            Transform metadata.
+
+        Returns
+        -------
+        numpy.ndarray
+            Concatenated spectral-statistics feature vector.
         """
         if not data:
             raise ValueError("No data provided for SpectralStatsTransform")
@@ -305,6 +386,18 @@ class SpectralStatsTransform(NoFitPerSegmentMixin, DenseTransform):
     ) -> List[str]:
         """
         Generate feature names for the spectral statistics output.
+
+        Parameters
+        ----------
+        input_keys : list[str]
+            Ordered list of input keys.
+        input_shapes : dict[str, tuple[int, int]]
+            Mapping from input key to 2D shape.
+
+        Returns
+        -------
+        list[str]
+            Ordered feature names matching the transform output.
         """
         feature_names = []
         if not input_keys:

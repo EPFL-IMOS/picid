@@ -6,22 +6,56 @@ from picid.transforms.base.multisource import NoFitPerSegmentMixin
 
 class IdentityPassThrough(NoFitPerSegmentMixin, DenseTransform):
     """
-    An identity transform that passes the input data straight through
-    without modification in both the fit and transform stages.
+    Pass input data through unchanged.
+
+    Parameters
+    ----------
+    *args : tuple
+        Ignored positional compatibility arguments.
+    **kwargs : dict
+        Ignored keyword compatibility arguments.
     """
 
     def __init__(self, *args, **kwargs):
-        """Initializes the transform. Accepts any arguments but ignores them."""
+        """
+        Initialize the identity transform.
+
+        Parameters
+        ----------
+        *args : tuple
+            Ignored positional compatibility arguments.
+        **kwargs : dict
+            Ignored keyword compatibility arguments.
+        """
         super().__init__()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
         """
-        Does nothing, as no state needs to be learned for an identity operation.
+        Do nothing because the transform has no learned state.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input payload dictionary.
+        metadata : dict
+            Transform metadata.
         """
         pass
 
     def transform_data(self, data: NamedTransformInput, metadata: dict) -> Any:
         """
-        Returns the input data object without any transformation.
+        Return the input data object unchanged.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input payload dictionary.
+        metadata : dict
+            Transform metadata.
+
+        Returns
+        -------
+        Any
+            The input payload unchanged.
         """
         return data

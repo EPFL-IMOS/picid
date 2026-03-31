@@ -75,8 +75,19 @@ class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
         self, shifted_target: np.ndarray, mode: str
     ) -> List[np.ndarray]:
         """
-        Calculate polynomial-based statistics to capture seasonal patterns without explicit seasonality.
-        Uses polynomial fitting on historical data to derive trend and pattern features.
+        Compute polynomial trend statistics for the shifted target.
+
+        Parameters
+        ----------
+        shifted_target : numpy.ndarray
+            Target values after the lag has been applied.
+        mode : str
+            Pipeline mode used to decide whether history is updated.
+
+        Returns
+        -------
+        list[numpy.ndarray]
+            Rolling mean and rolling standard deviation arrays.
         """
         n_samples, n_features = shifted_target.shape
 
@@ -176,7 +187,14 @@ class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _update_value_history(self, shifted_target: np.ndarray, mode: str):
         """
-        Update the value history with new observations for future polynomial fitting.
+        Extend the rolling history with the current non-padded values.
+
+        Parameters
+        ----------
+        shifted_target : numpy.ndarray
+            Target values after the lag has been applied.
+        mode : str
+            Pipeline mode, kept for interface symmetry.
         """
 
         # Add non-zero values to history (skip the initial shift period)
@@ -190,7 +208,12 @@ class BatteryTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def get_polynomial_history_summary(self):
         """
-        Get a summary of the polynomial fitting history for debugging/validation.
+        Summarize the retained polynomial fitting history.
+
+        Returns
+        -------
+        dict
+            Compact summary of the internal history buffers.
         """
         return {
             "history_length": len(self.value_history),

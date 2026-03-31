@@ -28,20 +28,22 @@ from .lr_scheduler import LearningRateScheduler
 
 class ReduceLROnPlateauScheduler(LearningRateScheduler):
     r"""
-    Reduce learning rate when a metric has stopped improving. Models often benefit from reducing the learning rate by
-    a factor of 2-10 once learning stagnates. This scheduler reads a metrics quantity and if no improvement is seen
-    for a ‘patience’ number of epochs, the learning rate is reduced.
+    Reduce the learning rate when a metric has stopped improving.
 
     Parameters
     ----------
     optimizer : Optimizer
-        Optimizer.
+        Wrapped optimizer.
     lr : float
         Initial learning rate.
     patience : int
         Number of epochs with no improvement after which learning rate will be reduced.
     factor : float
-        Factor by which the learning rate will be reduced. new_lr = lr * factor.
+        Multiplicative factor used when reducing the learning rate.
+    min_lr : float, default=1e-8
+        Lower bound for the learning rate.
+    apply_init_lr_to_scheduler : bool, default=True
+        Whether to immediately apply the initial learning rate to the optimizer.
     """
 
     def __init__(

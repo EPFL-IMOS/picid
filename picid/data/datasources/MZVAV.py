@@ -1,4 +1,5 @@
-"""MZVAV datasource loader with predefined day-level splits.
+"""
+MZVAV datasource loader with predefined day-level splits.
 
 The raw CSV contains timestamped HVAC measurements and sparse fault labels.
 This loader reconstructs the same day-level split logic used historically in
@@ -32,7 +33,24 @@ logger = logging.getLogger(__name__)
 
 
 class MZVAVLoader(PredefinedSplitLoaderBase):
-    """Load the MZVAV dataset and expose train/validation/test day splits.
+    """
+    Load the MZVAV dataset and expose train/validation/test day splits.
+
+    Parameters
+    ----------
+    data_path : str
+        Path to the raw CSV file.
+    timestamp_name : str
+        Name of the timestamp column used as the dataframe index.
+    target_name : str
+        Name of the sparse fault-label column.
+    random_state : int
+        Random seed used to keep the day split reproducible.
+    group_by_days : bool, default=False
+        Whether to regroup each split into ragged day-level sequences.
+    **kwargs
+        Additional predefined-split loader configuration forwarded to the base
+        class.
 
     Examples
     --------
@@ -63,7 +81,8 @@ class MZVAVLoader(PredefinedSplitLoaderBase):
         )
 
     def _load_data(self):
-        """Read the CSV data and derive day-based predefined splits.
+        """
+        Read the CSV data and derive day-based predefined splits.
 
         Returns
         -------
@@ -128,7 +147,8 @@ class MZVAVLoader(PredefinedSplitLoaderBase):
             return out_dict
 
     def read_data(self):
-        """Read the raw CSV and derive the day-level fault labels.
+        """
+        Read the raw CSV and derive the day-level fault labels.
 
         Returns
         -------

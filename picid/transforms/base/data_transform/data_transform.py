@@ -42,7 +42,20 @@ logger = logging.getLogger(__name__)
 
 
 def is_sequence(obj):
-    """Return True for list/tuple/array-like, but False for str/bytes."""
+    """
+    Return whether an object should be treated as a non-string sequence.
+
+    Parameters
+    ----------
+    obj : Any
+        Object to inspect.
+
+    Returns
+    -------
+    bool
+        ``True`` for list/tuple/array-like objects, but ``False`` for
+        ``str`` and ``bytes``.
+    """
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes))
 
 
@@ -84,9 +97,54 @@ class DataTransform:
     """
     Facade that configures a transform and delegates to TransformStrategy.
 
-    Structural validation is now owned entirely by the pipeline
-    (IntegrityCheckAfterStep) when validate_output=True. DataTransform
-    contains no post-pipeline validation logic.
+    Structural validation is owned entirely by the pipeline
+    (IntegrityCheckAfterStep) when ``validate_output=True``. This facade keeps
+    configuration parsing and runtime delegation in one place.
+
+    Parameters
+    ----------
+    transform_name : str
+        Unique name for this transformation step.
+    transform : BaseTransform or DictConfig
+        Transform instance or Hydra config used to instantiate one.
+    metadata : dict
+        Configuration dictionary controlling apply/assign keys, fitting,
+        validation, and optional custom integrity checks.
+
+    Attributes
+    ----------
+    transform_name : str
+        Unique name for this transformation step.
+    transform_instance : BaseTransform
+        Instantiated transform object.
+    metadata : dict
+        Configuration metadata for the transform.
+    apply_to : list[str]
+        Keys read from the container.
+    apply_to_map : list[str] or None
+        Optional mapping-style view of ``apply_to``.
+    assign_to : list[str]
+        Keys written by the transform.
+    assign_to_map : list[str]
+        Mapping-style output key list used by the postprocess step.
+    fit_on_split : str or None
+        Split used for fitting when applicable.
+    fit_on_key : str or None
+        Key used for fitting when applicable.
+    transform_on_keys : list[str] or None
+        Splits processed during transformation when restricted.
+    multi_source_fit : bool
+        Whether the transform should use multi-source fitting.
+    validate_output : bool
+        Whether the default integrity checks run.
+    include_slice_info_in_metadata : bool
+        Whether slice information is injected into metadata.
+    integrity_checks_before : list[tuple] or None
+        Custom before-checks, if provided.
+    integrity_checks_after : list[tuple] or None
+        Custom after-checks, if provided.
+    strategy : TransformStrategy
+        Strategy responsible for executing the transform.
     """
 
     # ------------------------------------------------------------------

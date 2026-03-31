@@ -1,4 +1,4 @@
-"""Wrapper for the TimePFN model."""
+"""Wrapper for the CARTE regression model."""
 
 import logging
 from pathlib import Path
@@ -18,9 +18,35 @@ logger = logging.getLogger(__name__)
 
 
 class FitPredictCarteWrapper(AbstractFitPredictWrapper):
-    """Wrapper for the TimePFN model.
+    """
+    Wrap CARTE in the fit/predict model interface.
 
-    This wrapper defines the forward pass of the TimePFN model.
+    Parameters
+    ----------
+    num_model : int
+        Number of CARTE submodels.
+    disable_pbar : bool
+        Disable CARTE progress bars.
+    random_state : int
+        Random seed for CARTE.
+    device : str
+        Device specifier used by CARTE.
+    n_jobs : int
+        Parallel worker count.
+    task_type : str
+        Project task identifier.
+    max_epoch : int, default=500
+        Maximum CARTE training epochs.
+    pretrained_model_path : str, optional
+        Optional pretrained CARTE checkpoint path.
+    model_cache_path : str, optional
+        Directory used to cache serialized models.
+    yield_strategy : bool, default=False
+        Whether batched prediction is enabled.
+    yield_batch_size : int, default=128
+        Batch size for the batched prediction path.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the backbone.
     """
 
     def __init__(
@@ -98,12 +124,18 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
 
     @override
     def serialize_model(self, task_id: str | None = None):
-        """Serialize the model to a file.
+        """
+        Serialize the fitted CARTE model to disk.
 
-        The method prefers `self.kwargs['model_path']`. If that's not set and
-        `task_id` is provided, it will write to `models/{task_id}.joblib`.
-        Uses joblib.dump to persist the sklearn-style estimator (TabPFNRegressor).
-        Returns the path written to.
+        Parameters
+        ----------
+        task_id : str, optional
+            Task identifier used to derive the output filename.
+
+        Returns
+        -------
+        str
+            Path to the serialized model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -124,12 +156,18 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
 
     @override
     def load_model(self, task_id: str | None = None):
-        """Load the model from a file.
+        """
+        Load a previously serialized CARTE model from disk.
 
-        The method prefers `self.kwargs['model_path']`. If that's not set and
-        `task_id` is provided, it will attempt to load `models/{task_id}.joblib`.
-        Uses joblib.load and replaces `self.backbone` with the loaded estimator.
-        Returns the path loaded from.
+        Parameters
+        ----------
+        task_id : str, optional
+            Task identifier used to derive the input filename.
+
+        Returns
+        -------
+        str
+            Path to the loaded model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:

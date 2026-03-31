@@ -1,4 +1,4 @@
-"""Wrapper for the LinearRegression model."""
+"""Wrapper for the linear-regression forecasting baseline."""
 
 from .base import AbstractFeedForwardWrapper
 
@@ -7,9 +7,15 @@ from ...baselines.definitions import FORECASTING_TASKS
 
 
 class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the LinearRegressionModel baseline.
+    """
+    Wrap the linear-regression baseline in the model interface.
 
-    This wrapper defines the forward pass of the LinearRegressionModel baseline.
+    Parameters
+    ----------
+    task_type : str
+        Forecasting task identifier.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the baseline.
     """
 
     def __init__(self, task_type: str, **kwargs):
@@ -28,7 +34,8 @@ class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        """Forward pass for the LinearRegression wrapper.
+        """
+        Run the linear-regression baseline on one batch.
 
         Parameters
         ----------

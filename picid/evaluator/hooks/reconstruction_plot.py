@@ -7,7 +7,7 @@ from picid.evaluator.hooks.base import BaseEvalHook
 
 
 class ReconstructionPlotHook(BaseEvalHook):
-    """Hook for signal reconstruction comparison plots (e.g. Autoencoders)."""
+    """Plot reconstruction versus target signals for inspection."""
 
     def on_compute_end(
         self,

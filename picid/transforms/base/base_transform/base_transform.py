@@ -1,10 +1,9 @@
 """
 Base transform interface and data-type markers.
 
-BaseTransform is the abstract base for all transforms: it defines
-transform_data (and optional fit_data). Subclasses combine with multisource
-mixins (e.g. ConcatFitAndPerSegmentTransformMixin) and optionally with RaggedTransform /
-DenseTransform / RaggedOrDenseTransform to declare capability for handler dispatch.
+This module defines the abstract transform contract together with lightweight
+marker classes that advertise whether a transform works on ragged, dense, or
+mixed array representations.
 """
 
 from abc import ABC, abstractmethod
@@ -16,8 +15,14 @@ from picid.utils.decorators import check_transform_output_consistency
 
 class BaseTransform(ABC):
     """
-    Simplified base transform interface. Transforms only need to implement
-    the core transformation logic, not the fitting strategies.
+    Abstract base class for all transforms.
+
+    Parameters
+    ----------
+    exclude_keys : list[str], optional
+        Keys that should be skipped by the transform.
+    **kwargs
+        Extra constructor arguments kept for introspection and logging.
     """
 
     def __init__(self, exclude_keys: list[str] = None, **kwargs):
@@ -47,7 +52,7 @@ class BaseTransform(ABC):
         Parameters
         ----------
         data : Any
-            The data to transform
+            The data to transform.
         metadata : Dict[str, Any]
             Additional data needed for transformation. May contain:
             mode : str
@@ -92,8 +97,7 @@ class BaseTransform(ABC):
 
     def fit_data(self, data: NamedTransformInput, metadata: Dict[str, Any]) -> Any:
         """
-        Fit the transform on data. Default implementation does nothing (for stateless transforms).
-        Override this method for transforms that need fitting.
+        Fit the transform on data.
 
         Parameters
         ----------
@@ -112,18 +116,34 @@ class BaseTransform(ABC):
         transformed_results_for_new_key: Dict[str, Dict[str, List[Any]]],
         metadata: Dict[str, Any],
     ) -> Optional[Dict[str, List[Dict[str, Any]]]]:
-        """Optionally return replacement unit metadata after a transform runs.
+        """
+        Optionally return replacement unit metadata after a transform runs.
 
         Default behaviour is a no-op: return ``None`` and let the pipeline keep
         the existing ``unit_metadata`` unchanged. Transforms that change unit
         cardinality can override this hook and return a replacement split-keyed
         mapping.
 
-        Why this hook lives on the transform:
-        a cardinality change is part of the transform's semantics, not a global
-        pipeline concern. The transform knows whether it preserved one unit per
-        output item, collapsed many units into one, or intentionally destroyed
-        unit identity altogether.
+        Parameters
+        ----------
+        unit_metadata_by_split : dict[str, list[dict[str, Any]]]
+            Current metadata grouped by split before the transform result is merged.
+        transformed_results_for_new_key : dict[str, dict[str, list[Any]]]
+            Postprocessed transformed values grouped by assign-to key and split.
+        metadata : dict[str, Any]
+            The per-transform metadata dictionary built by the pipeline.
+
+        Returns
+        -------
+        dict[str, list[dict[str, Any]]] or None
+            Replacement unit metadata, or ``None`` to preserve the current mapping.
+
+        Notes
+        -----
+        The hook lives on the transform because a cardinality change is part of
+        the transform's semantics, not a global pipeline concern. The transform
+        knows whether it preserved one unit per output item, collapsed many units
+        into one, or intentionally destroyed unit identity altogether.
         """
         return None
 

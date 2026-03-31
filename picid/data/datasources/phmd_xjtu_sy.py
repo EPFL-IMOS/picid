@@ -1,4 +1,7 @@
-"""XJTU-SY PHMD datasource wrapper."""
+"""
+Provide datasource helpers for phmd xjtu sy.
+
+"""
 
 from __future__ import annotations
 

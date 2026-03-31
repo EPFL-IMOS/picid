@@ -1,4 +1,4 @@
-"""Wrapper for the TimePFN model."""
+"""Wrapper for the TabPFN forecasting and classification models."""
 
 import torch
 from .base import AbstractFeedForwardWrapper
@@ -8,9 +8,15 @@ from ...baselines.definitions import CLASSIFICATION_TASKS, FORECASTING_TASKS
 
 
 class TabPFNWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the TimePFN model.
+    """
+    Wrap TabPFN in the project model interface.
 
-    This wrapper defines the forward pass of the TimePFN model.
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the backbone.
     """
 
     def __init__(self, task_type: str, **kwargs):
@@ -53,17 +59,18 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
             return torch.Tensor(self.backbone.predict(X.numpy()))
 
     def forward(self, batch):
-        """Forward pass for the Tune wrapper.
+        """
+        Run the TabPFN wrapper on one batch.
 
         Parameters
-        ----------self.backbone.fit(batch_x, batch_y)
+        ----------
         batch : dict
-            Batch object containing the batched data.
+            Batch dictionary containing context and target tensors.
 
         Returns
         -------
         dict
-            Dictionary containing the updated model output.
+            Predictions and targets for the training loop.
         """
 
         context_fit = batch["context"]["x"].squeeze(0)

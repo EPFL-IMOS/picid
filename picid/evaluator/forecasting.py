@@ -3,7 +3,22 @@ from picid.evaluator.default import DefaultEvaluator
 
 
 class ForecastingEvaluator(DefaultEvaluator):
-    """Forecasting evaluator with horizon slicing logic."""
+    """
+    Forecasting evaluator with horizon slicing logic.
+
+    Parameters
+    ----------
+    target_dim_position : Optional[int]
+        Target feature index for univariate forecasting.
+    metric_names : List[str]
+        Metrics to track.
+    effective_pred_len : Optional[int], default=None
+        Tail length used for metric computation.
+    model_pred_len : Optional[int], default=None
+        Full prediction horizon produced by the model.
+    **kwargs : Any
+        Additional evaluator keyword arguments.
+    """
 
     def __init__(
         self,

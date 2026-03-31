@@ -3,7 +3,7 @@ import numpy as np
 
 
 class PredictionBuffer:
-    """Handles raw data accumulation for saving and plotting."""
+    """Store batched predictions, targets, and optional unit identifiers."""
 
     def __init__(self) -> None:
         self.data: Dict[str, List[np.ndarray]] = {
@@ -16,23 +16,53 @@ class PredictionBuffer:
 
     @property
     def preds(self) -> List[np.ndarray]:
-        """Backward compatibility for existing tests."""
+        """
+        Return buffered predictions.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Buffered prediction arrays.
+        """
         return self.data["preds"]
 
     @property
     def targets(self) -> List[np.ndarray]:
-        """Backward compatibility for existing tests."""
+        """
+        Return buffered targets.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Buffered target arrays.
+        """
         return self.data["targets"]
 
     @property
     def unit_ids(self) -> List[np.ndarray]:
-        """Backward compatibility for existing tests."""
+        """
+        Return buffered unit identifiers.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Buffered unit-id arrays.
+        """
         return self.data["unit_ids"]
 
     def accumulate(
         self, batch: Dict[str, Any], unit_id: Optional[np.ndarray] = None
     ) -> None:
-        """Adds a batch of data to internal storage lists."""
+        """
+        Append one batch of outputs to the internal storage.
+
+        Parameters
+        ----------
+        batch : dict[str, Any]
+            Batch payload containing predictions and targets.
+        unit_id : np.ndarray | None, default=None
+            Optional unit identifier array aligned with the batch.
+        """
         self.data["preds"].append(batch["preds"].copy())
         self.data["targets"].append(batch["targets"].copy())
         if batch.get("is_dual"):
@@ -42,7 +72,14 @@ class PredictionBuffer:
             self.data["unit_ids"].append(unit_id.copy())
 
     def get_all(self) -> Dict[str, np.ndarray]:
-        """Concatenates all buffered lists into numpy arrays."""
+        """
+        Concatenate buffered lists into numpy arrays.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            Concatenated buffered arrays keyed by field name.
+        """
         if not self.data["preds"]:
             return {}
         return {k: np.concatenate(v, axis=0) for k, v in self.data.items() if v}

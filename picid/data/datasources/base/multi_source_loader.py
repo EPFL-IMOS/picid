@@ -45,7 +45,9 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         When omitted, each child loader is expected to split itself.
     **kwargs : dict[str, Any]
         Additional datasource configuration, including one config entry for each
-        source alias in ``source_list``.
+        source alias in ``source_list``. Each entry may be a plain ``dict`` or an
+        OmegaConf ``DictConfig``; plain dicts are wrapped before
+        ``OmegaConf.to_container`` and Hydra ``instantiate``.
 
     Notes
     -----

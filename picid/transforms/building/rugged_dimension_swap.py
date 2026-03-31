@@ -13,7 +13,16 @@ logger = logging.getLogger(__name__)
 
 class RuggedDimensionSwap(NoFitPerSegmentMixin, RaggedTransform):
     """
-    Swap rugged dimension
+    Swap one regular axis with one ragged axis in each input array.
+
+    Parameters
+    ----------
+    axis_to_regularize : int
+        Axis that should become regular.
+    axis_to_irregularize : int
+        Axis that should become ragged.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(self, axis_to_regularize, axis_to_irregularize, **kwargs):
@@ -26,7 +35,21 @@ class RuggedDimensionSwap(NoFitPerSegmentMixin, RaggedTransform):
         data: NamedTransformInput,
         metadata: dict,
     ) -> Any:
-        """Transforms a single data segment using the internal MinMaxScaler."""
+        """
+        Convert the configured axis pair between regular and ragged form.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input mapping containing Awkward arrays.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        Any
+            Input mapping with the requested axes converted.
+        """
         for key, value in data.items():
             regularized = ak.to_regular(value, axis=self.axis_to_regularize)
             irregularized = ak.from_regular(regularized, axis=self.axis_to_irregularize)

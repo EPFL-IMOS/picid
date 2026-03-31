@@ -1,4 +1,4 @@
-"""Data utilities."""
+"""Hashing helpers for configs and directories."""
 
 from typing import Union, List
 import hashlib
@@ -26,9 +26,18 @@ from omegaconf import OmegaConf, DictConfig, ListConfig
 
 
 def ensure_serializable(obj):
-    """Recursively convert config objects to JSON-serializable types.
+    """
+    Recursively convert config objects to JSON-serializable types.
 
-    Ensures full resolution of interpolations and safe JSON encoding.
+    Parameters
+    ----------
+    obj : Any
+        Object to convert.
+
+    Returns
+    -------
+    Any
+        A JSON-serializable representation of ``obj``.
     """
     # Flatten Hydra configs first
     if isinstance(obj, (DictConfig, ListConfig)):
@@ -69,8 +78,19 @@ def hash_config(cfg):
 
 def hash_directory(directory: str, extensions=None) -> str:
     """
-    Compute a hash of all files in a directory (recursively).
-    Optionally filter by extensions (e.g. ['.py']).
+    Compute a hash of files in a directory, optionally filtered by suffix.
+
+    Parameters
+    ----------
+    directory : str
+        Directory to hash recursively.
+    extensions : list[str] | None, default=None
+        Optional suffix filter such as ``[".py"]``.
+
+    Returns
+    -------
+    str
+        SHA256 hex digest of the selected files.
     """
     sha = hashlib.sha256()
     directory = Path(directory)
@@ -88,7 +108,23 @@ def hash_directory(directory: str, extensions=None) -> str:
 def compute_cache_key(
     config: dict, library_dir: Union[str, List[str], Path], extensions=None
 ) -> str:
-    """Combine config hash and library hash into one cache key."""
+    """
+    Combine config and library hashes into one cache key.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration object to hash.
+    library_dir : str | list[str] | Path
+        Directory or list of directories to hash.
+    extensions : list[str] | None, default=None
+        Optional suffix filter used when hashing directories.
+
+    Returns
+    -------
+    str
+        Combined cache key.
+    """
     config_hash = hash_config(config)
 
     # Handle both a single directory string and a list of directory strings

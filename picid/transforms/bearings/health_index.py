@@ -64,8 +64,19 @@ DECREASE_PERIOD = {"PRONOSTIA": 2560, "XJTU-SY": 32768}
 
 def diff_at_step_n(vector, n):
     """
-    Calculates the difference between elements (i + n) and (i)
-    for i = 0, n, 2n, ...
+    Compute the difference between samples separated by a fixed step.
+
+    Parameters
+    ----------
+    vector : numpy.ndarray
+        One-dimensional sequence to compare.
+    n : int
+        Step size used to build the two aligned slices.
+
+    Returns
+    -------
+    numpy.ndarray
+        Difference between the forward-shifted and base slices.
     """
 
     # This slices the vector into:
@@ -83,16 +94,31 @@ def diff_at_step_n(vector, n):
 
 class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTransform):
     """
-    Calculates a Health Index (HI) based on a runtime channel and a
-    predefined total life for a *specific unit* in a dataset.
+    Convert a runtime channel into a unit-specific health index.
 
-    The HI is calculated as: HI = 1 - (Runtime / Total_Life)
-    The inverse is: Runtime = (1 - HI) * Total_Life
+    The transform uses a dataset/unit lifetime lookup to map runtime values
+    into a normalized health index and exposes the inverse mapping for
+    downstream inspection or reconstruction.
 
-    It outputs a single-column (n_rows, 1) numpy array containing the HI.
+    Parameters
+    ----------
+    runtime_key : str
+        Key used to read the runtime vector from ``data``.
+    unit_key : str
+        Key used to read the unit identifier from ``metadata``.
+    dataset_name : str
+        Dataset name used to select the correct lifetime table.
+    total_life_lookup : dict, optional
+        Nested mapping of dataset name to unit lifetime values.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
 
-    This transform validates that the calculated HI is within [0.0, 1.0]
-    and raises a ValueError if it is not.
+    Notes
+    -----
+    The forward mapping is ``HI = Runtime / Total_Life`` and the inverse
+    mapping implemented here is ``Runtime = HI * Total_Life``. The transform
+    emits a single-column array of shape ``(n_rows, 1)`` and validates that
+    the computed health index stays within the ``[0, 1]`` range.
     """
 
     def __init__(
@@ -104,25 +130,20 @@ class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTra
         **kwargs,
     ):
         """
-        Initialize the HealthIndexTransform.
+        Initialize the lifetime lookup and runtime key mapping.
 
         Parameters
         ----------
         runtime_key : str
-            The key in the `data` dict to find the 1D
-            runtime vector (e.g., 'cycle').
+            Key used to read the runtime vector from ``data``.
         unit_key : str
-            The key in the `metadata` dict to find the
-            unit identifier (e.g., 'unit_id'). This is required
-            in metadata to enable inverse_transform.
+            Key used to read the unit identifier from ``metadata``.
         dataset_name : str
-            The name of the current dataset (e.g., "PRONOSTIA").
+            Dataset name used to select the correct lifetime table.
         total_life_lookup : dict, optional
-            A nested dictionary.
-            Format: {dataset_name: {unit_key: total_life_float, ...}}
-            If None, defaults to `DEFAULT_TOTAL_LIFE_LOOKUP`.
+            Nested mapping of dataset name to unit lifetime values.
         **kwargs
-            Additional arguments for BaseTransform.
+            Additional keyword arguments forwarded to the base transform.
         """
         super().__init__(**kwargs)
         self.runtime_key = runtime_key
@@ -175,8 +196,17 @@ class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTra
         self, unit_id: Union[np.ndarray, List, Tuple]
     ) -> Union[float, np.ndarray]:
         """
-        Safely extracts unit_id and gets Total_Life.
-        Handles both single unit_id (tuple/list) and vectorized unit_id (2D numpy array).
+        Resolve the lifetime value for one unit or a batch of units.
+
+        Parameters
+        ----------
+        unit_id : numpy.ndarray or list or tuple
+            Single unit identifier or a vectorized 2D array of identifiers.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Lifetime for the requested unit(s).
         """
 
         # --- VECTORIZED CASE (2D NumPy Array) ---
@@ -226,20 +256,19 @@ class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTra
     @override
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Calculates the HI vector for the unit specified in the metadata.
+        Map the runtime channel to a column vector of health index values.
 
         Parameters
         ----------
-        data : dict
-            Dictionary containing 1D runtime vector
-            at data[self.runtime_key].
+        data : NamedTransformInput
+            Container holding the runtime vector.
         metadata : dict
-            Dictionary containing unit ID at metadata[self.unit_key].
+            Metadata that identifies the unit being processed.
 
         Returns
         -------
-        np.ndarray
-            A 2D numpy array of shape (n_rows, 1) containing the HI.
+        numpy.ndarray
+            Two-dimensional array with shape ``(n_rows, 1)``.
         """
         # 1. Get Runtime vector from data
         if self.runtime_key not in data:
@@ -328,23 +357,21 @@ class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTra
         metadata: dict = None,
     ) -> np.ndarray:
         """
-        Reverses the HI calculation to estimate the Runtime.
-        Formula: Runtime = (1 - HI) * Total_Life
+        Reconstruct runtime values from the health index output.
+
+        The inverse mapping is ``Runtime = HI * Total_Life``.
 
         Parameters
         ----------
-        data : dict
-            Input data dictionary. Assumed to be the output of
-            transform_data, e.g., {'features': hi_vector}.
-        metadata : dict
-            Dictionary containing the unit ID at
-            metadata[self.unit_key]. This is required.
+        data : NamedTransformInput
+            Output of :meth:`transform_data`.
+        metadata : dict, optional
+            Metadata containing the unit identifier needed for the lookup.
 
         Returns
         -------
-        np.ndarray
-            A 2D numpy array of shape (n_rows, 1) containing the
-            reconstructed Runtime.
+        numpy.ndarray
+            Reconstructed runtime as a two-dimensional column vector.
         """
         if self.unit_key not in metadata:
             raise ValueError(
@@ -387,6 +414,18 @@ class HealthIndexTransform(NoFitPerSegmentMixin, InverseTransformMixin, DenseTra
         self, input_keys: List[str], input_shapes: Dict[str, Tuple[int, int]]
     ) -> List[str]:
         """
-        Returns the feature name for the new HI column.
+        Return the generated feature name for the health index column.
+
+        Parameters
+        ----------
+        input_keys : list[str]
+            Input feature names, preserved for interface compatibility.
+        input_shapes : dict[str, tuple[int, int]]
+            Input shapes, preserved for interface compatibility.
+
+        Returns
+        -------
+        list[str]
+            Generated output feature name.
         """
         return [f"HI_ds_{self.dataset_name}_from_{self.runtime_key}"]

@@ -30,12 +30,12 @@ from .lr_scheduler import LearningRateScheduler
 
 class TransformerLRScheduler(LearningRateScheduler):
     r"""
-    Transformer Learning Rate Scheduler proposed in "Attention Is All You Need"
+    Transformer learning-rate scheduler proposed in "Attention Is All You Need".
 
     Parameters
     ----------
     optimizer : Optimizer
-        Optimizer.
+        Wrapped optimizer.
     init_lr : float
         Initial learning rate.
     peak_lr : float
@@ -43,11 +43,11 @@ class TransformerLRScheduler(LearningRateScheduler):
     final_lr : float
         Final learning rate.
     final_lr_scale : float
-        Final learning rate scale
+        Final learning rate scale.
     warmup_steps : int
-        Warmup the learning rate linearly for the first N updates
+        Warmup the learning rate linearly for the first N updates.
     decay_steps : int
-        Steps in decay stages
+        Number of decay steps.
     """
 
     def __init__(

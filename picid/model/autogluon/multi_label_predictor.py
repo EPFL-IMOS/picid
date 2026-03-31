@@ -59,14 +59,17 @@ class MultilabelTabularPredictor:
             )
 
     def fit(self, train_data, tuning_data=None, **kwargs):
-        """Fits a separate TabularPredictor to predict each of the labels.
+        """
+        Fit one predictor per label.
 
         Parameters
         ----------
-        train_data, tuning_data : str or pd.DataFrame
-            See documentation for `TabularPredictor.fit()`.
-        kwargs :
-            Arguments passed into the `fit()` call for each TabularPredictor.
+        train_data : str or pandas.DataFrame
+            Training data passed to the underlying predictors.
+        tuning_data : str or pandas.DataFrame, optional
+            Optional tuning data passed to the underlying predictors.
+        **kwargs : Any
+            Additional arguments forwarded to each `fit()` call.
         """
         if isinstance(train_data, str):
             train_data = TabularDataset(train_data)
@@ -98,14 +101,20 @@ class MultilabelTabularPredictor:
         self.save()
 
     def predict(self, data, **kwargs):
-        """Returns DataFrame with label columns containing predictions for each label.
+        """
+        Predict all labels and return them as a data frame.
 
         Parameters
         ----------
-        data : str or autogluon.tabular.TabularDataset or pd.DataFrame
-            Data to make predictions for. If label columns are present in this data, they will be ignored. See documentation for `TabularPredictor.predict()`.
-        kwargs :
-            Arguments passed into the predict() call for each TabularPredictor.
+        data : str or autogluon.tabular.TabularDataset or pandas.DataFrame
+            Input data for prediction.
+        **kwargs : Any
+            Additional arguments forwarded to each predictor.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Predictions for every configured label.
         """
         return self._predict(data, as_proba=False, **kwargs)
 
@@ -142,7 +151,7 @@ class MultilabelTabularPredictor:
         return eval_dict
 
     def save(self):
-        """Save MultilabelPredictor to disk."""
+        """Save the multilabel predictor bundle to disk."""
         for label in self.labels:
             if not isinstance(self.predictors[label], str):
                 self.predictors[label] = self.predictors[label].path
@@ -155,12 +164,36 @@ class MultilabelTabularPredictor:
 
     @classmethod
     def load(cls, path):
-        """Load MultilabelPredictor from disk `path` previously specified when creating this MultilabelPredictor."""
+        """
+        Load a saved multilabel predictor bundle.
+
+        Parameters
+        ----------
+        path : str
+            Directory containing the saved bundle.
+
+        Returns
+        -------
+        MultilabelTabularPredictor
+            Restored multilabel predictor instance.
+        """
         path = os.path.expanduser(path)
         return load_pkl.load(path=os.path.join(path, cls.multi_predictor_file))
 
     def get_predictor(self, label):
-        """Returns TabularPredictor which is used to predict this label."""
+        """
+        Return the predictor associated with one label.
+
+        Parameters
+        ----------
+        label : str
+            Label name.
+
+        Returns
+        -------
+        autogluon.tabular.TabularPredictor
+            Predictor for the requested label.
+        """
         predictor = self.predictors[label]
         if isinstance(predictor, str):
             return TabularPredictor.load(path=predictor)

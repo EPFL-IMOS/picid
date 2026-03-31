@@ -1,4 +1,6 @@
-"""Timestamp-based time-series splitter strategy."""
+"""
+Timestamp-based time-series splitter strategy for forecasting datasets.
+"""
 
 from typing import Any, Dict, Optional, Tuple
 
@@ -23,6 +25,8 @@ class TimeStampSplitter(TimeSeriesSplitter):
         **kwargs,
     ):
         """
+        Create a timestamp splitter with optional lookback handling.
+
         Parameters
         ----------
         test_start : str
@@ -43,6 +47,8 @@ class TimeStampSplitter(TimeSeriesSplitter):
             Frequency for aligning split ends, e.g., 'D' for day.
         apply_lookback : bool
             Whether to shift val/test start index back by seq_len.
+        **kwargs : Any
+            Compatibility keyword arguments.
         """
         self.test_start = pd.Timestamp(test_start)
         self.test_end = pd.Timestamp(test_end) if test_end else None
@@ -63,7 +69,21 @@ class TimeStampSplitter(TimeSeriesSplitter):
             raise ValueError("train_ratio + val_ratio must equal 1.0")
 
     def _round_to_period_end(self, dates: pd.Series, index: int) -> int:
-        """Snap index to the next full period boundary (e.g., next day)."""
+        """
+        Snap an index to the next full period boundary.
+
+        Parameters
+        ----------
+        dates : pandas.Series
+            Timestamp series used for boundary alignment.
+        index : int
+            Position to round forward.
+
+        Returns
+        -------
+        int
+            Search index for the next period boundary.
+        """
         ts = dates.iloc[index]
         rounded = ts.floor(self.frequency) + pd.tseries.frequencies.to_offset(
             self.frequency
@@ -142,24 +162,19 @@ class TimeStampSplitter(TimeSeriesSplitter):
         self, data_dict: Dict[str, Any], split_variable: str
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Splitting method.
+        Split one payload into train, validation, and test slices.
 
-        Inputs
-        ------
-        data_dict: Dict[str, Any]
-            Dictionary containing the data.
-
-        split_variable: str
+        Parameters
+        ----------
+        data_dict : Dict[str, Any]
+            Dictionary containing the data to split.
+        split_variable : str
             Name of the variable to split.
 
         Returns
         -------
-        splitted_data: Dict[str, np.ndarray]
-            Dictionary containing the splitted data.
-
-        split_masks: Dict[str, np.ndarray]
-            Dictionary containing the mask of the splits
-
+        tuple[dict[str, Any], dict[str, Any]]
+            Split payloads and the associated boolean masks.
         """
         data = data_dict[split_variable]
         timestamps = data_dict["timestamps"]

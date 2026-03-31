@@ -30,7 +30,16 @@ class MinMaxScalerMZVAV(
         self.scaler = MinMaxScaler()
 
     def fit_data(self, data: NamedTransformInput, metadata: dict):
-        """Fits the internal MinMaxScaler on a single NumPy array."""
+        """
+        Fit the internal scaler on the single provided array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input container with exactly one array-like entry.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1
@@ -46,7 +55,21 @@ class MinMaxScalerMZVAV(
         data: NamedTransformInput,
         metadata: dict,
     ) -> Any:
-        """Transforms a single data segment using the internal MinMaxScaler."""
+        """
+        Scale the single array and return it in Awkward form.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input container with exactly one array-like entry.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        Any
+            Scaled array converted back to Awkward form.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1
@@ -68,7 +91,21 @@ class MinMaxScalerMZVAV(
         data: NamedTransformInput,
         metadata: dict = None,
     ) -> Any:
-        """Inverse transforms a single data segment using the internal MinMaxScaler."""
+        """
+        Invert the min-max scaling for the single provided array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input container with exactly one array-like entry.
+        metadata : dict, optional
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        Any
+            Inverse-transformed array converted back to Awkward form.
+        """
         keys = list(data.keys())
         assert (
             len(keys) == 1

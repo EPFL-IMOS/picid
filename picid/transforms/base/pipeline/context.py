@@ -41,28 +41,70 @@ class TransformContext:
     """
     Shared state threaded through the transform pipeline.
 
-    Inputs (set by TransformStrategy.apply before the pipeline runs)
-    ---------------------------------------------------------------
-    data, transform_instance, apply_to_keys, assign_to_keys,
-    assign_to_keys_map, fit_on_split, fit_on_key, transform_on_keys,
-    include_slice_info_in_metadata, strategy, postprocess_fn, slice_info,
-    integrity_checks_before, integrity_checks_after.
-    When include_slice_info_in_metadata is True, FitStep and TransformStep
-    add slice_info (serialized to a dict) to the metadata passed to the transform.
-
-    Chunk builders (set by RegisterChunkBuilderStep)
-    ------------------------------------------------
-    build_fit_chunks, build_transform_chunks.
-
-    Mutable pipeline state (set by steps in order)
-    -----------------------------------------------
-    transformed_data, available_splits, transformed_results_for_new_key,
-    _raw_transformed_by_split, log.
-
-    Integrity run state (set by integrity steps; read by RecordManifestStep)
-    -------------------------------------------------------------------------
-    integrity_before_ran, integrity_before_check_names,
-    integrity_after_ran, integrity_after_check_names.
+    Attributes
+    ----------
+    data : SplitDatasetContainer
+        Input data container being transformed.
+    transform_instance : Any
+        Transform object executed by the pipeline.
+    apply_to_keys : list[str]
+        Keys consumed by the transform.
+    assign_to_keys : list[str]
+        Keys populated by the transform output.
+    assign_to_keys_map : list[str]
+        Mapping used by the postprocess step.
+    fit_on_split : str, optional
+        Split used for fitting when applicable.
+    fit_on_key : str, optional
+        Key used for fitting when applicable.
+    transform_on_keys : list[str], optional
+        Keys processed during the transform stage.
+    include_slice_info_in_metadata : bool
+        Whether slice information should be injected into metadata.
+    strategy : Any, optional
+        Strategy object orchestrating the pipeline.
+    postprocess_fn : callable, optional
+        Function that normalizes raw transform outputs.
+    slice_info : SliceInfo, optional
+        Slice metadata passed through the pipeline when available.
+    step_id : str, optional
+        Optional transform identifier used in errors and logs.
+    integrity_checks_before : list[BeforeCheck], optional
+        Before-checks scheduled by the strategy.
+    integrity_checks_after : list[AfterCheck], optional
+        After-checks scheduled by the strategy.
+    integrity_checks : list[tuple[str, Callable[[], None], str]], optional
+        Legacy combined integrity-check list.
+    build_fit_chunks : callable, optional
+        Closure that builds fit-time chunks.
+    build_transform_chunks : callable, optional
+        Closure that builds transform-time chunks.
+    log : dict[str, Any]
+        Mutable pipeline log collected during execution.
+    transformed_data : SplitDatasetContainer, optional
+        Output container being assembled by the pipeline.
+    available_splits : list[str], optional
+        Splits currently available for the transform output.
+    transformed_results_for_new_key : dict[str, dict[str, list[Any]]], optional
+        Intermediate results for newly created output keys.
+    _raw_transformed_by_split : dict[str, Any]
+        Internal split-local raw outputs before merge.
+    integrity_before_ran : bool
+        Whether before-checks ran.
+    integrity_before_check_names : list[str]
+        Names of before-checks that ran.
+    integrity_after_ran : bool
+        Whether after-checks ran.
+    integrity_after_check_names : list[str]
+        Names of after-checks that ran.
+    started_at : float, optional
+        Pipeline start timestamp.
+    finished_at : float, optional
+        Pipeline end timestamp.
+    cache_status : str, optional
+        Cache-related status if the pipeline records one.
+    error : BaseException, optional
+        Captured pipeline error, if any.
     """
 
     # --- Inputs ---
@@ -122,5 +164,17 @@ class PipelineStep(Protocol):
     """
 
     def run(self, context: TransformContext) -> TransformContext:
-        """Execute this step; may mutate context. Returns context for chaining."""
+        """
+        Execute this step and return the updated context.
+
+        Parameters
+        ----------
+        context : TransformContext
+            Shared pipeline context.
+
+        Returns
+        -------
+        TransformContext
+            The updated pipeline context.
+        """
         ...

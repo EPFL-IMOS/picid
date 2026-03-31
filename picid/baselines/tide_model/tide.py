@@ -5,17 +5,18 @@ import torch.nn.functional as F
 
 class LayerNorm(nn.Module):
     """
-    LayerNorm with optional bias.
+    Layer normalization with optional bias.
 
-    PyTorch's built-in LayerNorm does not support bias=False; this module
-    allows disabling the bias term.
+    PyTorch's built-in :class:`~torch.nn.LayerNorm` always includes a bias
+    parameter. This small wrapper keeps the same runtime behavior while allowing
+    bias-free checkpoints and configs to be represented explicitly.
 
     Parameters
     ----------
     ndim : int
-        Number of normalized dimensions (feature size).
+        Number of normalized dimensions, i.e. the feature width.
     bias : bool
-        If True, use a learnable bias; if False, no bias.
+        If ``True``, allocate a learnable bias parameter.
     """
 
     def __init__(self, ndim, bias):
@@ -30,12 +31,12 @@ class LayerNorm(nn.Module):
         Parameters
         ----------
         input : torch.Tensor
-            Input tensor of shape (..., ndim).
+            Input tensor of shape ``(..., ndim)``.
 
         Returns
         -------
         torch.Tensor
-            Normalized tensor, same shape as input.
+            Normalized tensor with the same shape as ``input``.
         """
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-2)
 
@@ -44,7 +45,10 @@ class ResBlock(nn.Module):
     """
     Residual block with two linear layers and a skip connection.
 
-    Computes: LayerNorm(ReLU(Linear(x)) -> Linear -> Dropout + Linear_skip(x)).
+    The block mirrors the TiDE residual MLP pattern: a first projection expands
+    the input, a second projection contracts it to the output width, and a
+    direct skip path preserves the original signal geometry.
+
     Parameters
     ----------
     input_dim : int
@@ -54,9 +58,9 @@ class ResBlock(nn.Module):
     output_dim : int
         Output feature dimension.
     dropout : float, optional
-        Dropout probability.
+        Dropout probability applied between the two projections.
     bias : bool, optional
-        Whether to use bias in linear layers.
+        Whether to use bias in the linear layers.
     """
 
     def __init__(self, input_dim, hidden_dim, output_dim, dropout=0.1, bias=True):
@@ -98,16 +102,16 @@ class Model(nn.Module):
     """
     TiDE: Time-series Dense Encoder.
 
-    MLP-based encoder for time series forecasting and related tasks.
-    Paper: https://arxiv.org/pdf/2304.08424.pdf
+    This module exposes the baseline TiDE architecture used for forecasting,
+    imputation, regression, and classification tasks.
 
     Parameters
     ----------
     configs : object
-        Configuration with attributes: task_name, seq_len, pred_len, freq,
-        feature_dim, feature_encode_dim, d_model, e_layers, d_layers, d_ff,
-        dropout, c_out, num_class (optional). Either freq or feature_dim must
-        be None.
+        Configuration with attributes such as ``task_name``, ``seq_len``,
+        ``pred_len``, ``freq``, ``feature_dim``, ``feature_encode_dim``,
+        ``d_model``, ``e_layers``, ``d_layers``, ``d_ff``, ``dropout``,
+        ``c_out``, and optionally ``num_class``.
     bias : bool, optional
         Whether to use bias in linear layers.
     """

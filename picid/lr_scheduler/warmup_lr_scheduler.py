@@ -29,13 +29,20 @@ from .lr_scheduler import LearningRateScheduler
 
 class WarmupLRScheduler(LearningRateScheduler):
     """
-    Warmup learning rate until `total_steps`
+    Warm up the optimizer learning rate over a fixed number of steps.
 
     Parameters
     ----------
     optimizer : Optimizer
-        wrapped optimizer.
-
+        Wrapped optimizer whose parameter groups will be updated in place.
+    init_lr : float
+        Learning rate used before warmup starts.
+    peak_lr : float
+        Target learning rate reached at the end of warmup.
+    warmup_steps : int
+        Number of scheduler steps used for linear warmup.
+    apply_init_lr_to_scheduler : bool, default=True
+        Whether to apply ``init_lr`` immediately when the scheduler is created.
     """
 
     def __init__(

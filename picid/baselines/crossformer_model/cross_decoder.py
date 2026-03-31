@@ -5,7 +5,24 @@ from .cross_attn import AttentionLayer, TwoStageAttentionLayer
 
 class DecoderLayer(nn.Module):
     """
-    The decoder layer of Crossformer, each layer will make a prediction at its scale
+    Decode one Crossformer scale and emit a scale-specific prediction.
+
+    Parameters
+    ----------
+    seg_len : int
+        Length of the segment predicted by this layer.
+    d_model : int
+        Hidden dimension of the decoder state.
+    n_heads : int
+        Number of attention heads.
+    d_ff : int, optional
+        Feed-forward hidden width.
+    dropout : float, optional
+        Dropout probability.
+    out_seg_num : int, optional
+        Number of output segments processed by the self-attention block.
+    factor : int, optional
+        Router width multiplier used by the two-stage attention block.
     """
 
     def __init__(
@@ -33,8 +50,19 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x, cross):
         """
-        x: the output of last decoder layer
-        cross: the output of the corresponding encoder layer
+        Decode one scale using the previous decoder state and encoder skip.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Decoder state from the previous layer.
+        cross : torch.Tensor
+            Encoder features for the same scale.
+
+        Returns
+        -------
+        tuple of torch.Tensor
+            Updated decoder state and the scale prediction.
         """
 
         batch = x.shape[0]
@@ -69,7 +97,28 @@ class DecoderLayer(nn.Module):
 
 class Decoder(nn.Module):
     """
-    The decoder of Crossformer, making the final prediction by adding up predictions at each scale
+    Aggregate the scale-wise decoder predictions into the final output.
+
+    Parameters
+    ----------
+    seg_len : int
+        Length of the segment predicted by each decoder layer.
+    d_layers : int
+        Number of stacked decoder layers.
+    d_model : int
+        Hidden dimension of the decoder state.
+    n_heads : int
+        Number of attention heads.
+    d_ff : int
+        Feed-forward hidden width.
+    dropout : float
+        Dropout probability.
+    router : bool, optional
+        Compatibility flag kept from the upstream implementation.
+    out_seg_num : int, optional
+        Number of output segments processed by the self-attention block.
+    factor : int, optional
+        Router width multiplier used by the two-stage attention block.
     """
 
     def __init__(

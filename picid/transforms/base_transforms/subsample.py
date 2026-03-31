@@ -48,7 +48,20 @@ class SubsampleTransform(NoFitPerSegmentMixin, DenseTransform):
 
 class WindowedAggregationTransform(NoFitPerSegmentMixin, DenseTransform):
     """
-    Applies a non-overlapping window aggregation to the input data.
+    Apply non-overlapping window aggregation to each input segment.
+
+    Parameters
+    ----------
+    window_size : int or str
+        Window size or ``"full"`` to aggregate over the entire axis.
+    step : int
+        Sliding step between windows.
+    agg : str, default="mean"
+        Aggregation method.
+    dim : int, default=0
+        Axis along which to build windows.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(

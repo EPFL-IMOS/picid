@@ -11,7 +11,24 @@ from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 
 class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
-    """Wrapper for the Isolation Forest model for anomaly detection."""
+    """
+    Wrap Isolation Forest in the fit/predict model interface.
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    n_estimators : int, default=100
+        Number of trees in the forest.
+    contamination : float or str, default="auto"
+        Expected contamination level passed to scikit-learn.
+    model_cache_path : str, optional
+        Directory used to cache serialized models.
+    random_state : int, optional
+        Random seed for scikit-learn.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the backbone.
+    """
 
     def __init__(
         self,
@@ -48,8 +65,14 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
         """
-        Override fit to explicitly ignore target labels 'y',
-        as Isolation Forest is unsupervised.
+        Fit Isolation Forest while ignoring target labels.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input batch in tensor form.
+        y : torch.Tensor
+            Target batch in tensor form. The values are ignored.
         """
         if self.reinit_on_fit:
             self._reinit_backbone()
@@ -61,11 +84,17 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
         """
-        Returns 'logits' for a binary classification task.
-        Shape: (N_samples, 2)
+        Return anomaly scores shaped like binary classification logits.
 
-        Column 0: Score for Class 0 (Normal)
-        Column 1: Score for Class 1 (Anomaly)
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input batch in tensor form.
+
+        Returns
+        -------
+        torch.Tensor
+            Two-column tensor of normal/anomaly scores.
         """
         # 1. Get raw scores from Isolation Forest
         # Sklearn rule: > 0 is Normal (Inlier), < 0 is Anomaly (Outlier)
@@ -85,8 +114,17 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @override
     def serialize_model(self, task_id):
         """
-        Serialize the model to a file using joblib.
-        Matches the logic in FitPredictXGBoostWrapper.
+        Serialize the fitted Isolation Forest model to disk.
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier used to derive the output filename.
+
+        Returns
+        -------
+        str
+            Path to the serialized model file.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -107,8 +145,17 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @override
     def load_model(self, task_id):
         """
-        Load the model from a file using joblib.
-        Matches the logic in FitPredictXGBoostWrapper.
+        Load a previously serialized Isolation Forest model.
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier used to derive the input filename.
+
+        Returns
+        -------
+        object
+            Deserialized Isolation Forest estimator.
         """
         model_path = self.model_cache_path
         if model_path is None and task_id is not None:
@@ -124,5 +171,13 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
     @property
     @override
     def allows_multi_target(self) -> bool:
-        """Indicates whether the model supports multi-target prediction."""
+        """
+        Return whether the model supports multi-target prediction.
+
+        Returns
+        -------
+        bool
+            ``False`` because Isolation Forest only predicts a single target
+            stream in this wrapper.
+        """
         return False

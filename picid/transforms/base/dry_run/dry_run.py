@@ -36,7 +36,19 @@ class DryRunResult:
 
 
 def _normalize_keys(keys: Any) -> List[str]:
-    """Return keys as a list (str -> [str], list as-is)."""
+    """
+    Normalize a key specification into a list.
+
+    Parameters
+    ----------
+    keys : Any
+        Key specification that may be ``None``, a string, or an iterable.
+
+    Returns
+    -------
+    list[str]
+        The normalized key list.
+    """
     if keys is None:
         return []
     if isinstance(keys, str):
@@ -48,7 +60,22 @@ def _get_first_segment(
     container: SplitDatasetContainer,
     apply_to_keys: List[str],
 ) -> Optional[NamedTransformInput]:
-    """Build one segment from container for the first split and first unit (for data_kind inference)."""
+    """
+    Build one segment for the first split and first unit.
+
+    Parameters
+    ----------
+    container : SplitDatasetContainer
+        Input container used to extract a representative segment.
+    apply_to_keys : list[str]
+        Keys used to gather the segment payload.
+
+    Returns
+    -------
+    NamedTransformInput or None
+        A representative segment for data-kind inference, or ``None`` if it
+        cannot be constructed.
+    """
     if not apply_to_keys:
         return None
     first_key = apply_to_keys[0]
@@ -82,12 +109,12 @@ def dry_run_transforms(
     container: SplitDatasetContainer,
 ) -> List[DryRunResult]:
     """
-    Validate that each transform in the manager can be applied given the container
-    and the keys produced by earlier transforms (assign_to).
+    Validate that each transform can be applied to the current container.
 
-    Keys that appear only after an earlier transform (e.g. target -> rul) are
-    considered available for later transforms; handler check is skipped when
-    apply_to keys are not yet in the initial container (no segment to build).
+    Keys produced by earlier transforms are treated as available to later
+    transforms. Handler checks are skipped when the apply_to keys are not yet
+    present in the initial container, because no representative segment can be
+    built for data-kind inference.
 
     Parameters
     ----------
@@ -99,7 +126,7 @@ def dry_run_transforms(
     Returns
     -------
     List[DryRunResult]
-        One result per transform (transform_name, success, list of issue messages).
+        One result per transform with its validation status and issues.
     """
     from picid.transforms.base.multisource import find_singular_ragged_dim
 

@@ -7,7 +7,20 @@ from picid.evaluator.hooks.base import BaseEvalHook
 
 
 class UnitTrendPlotHook(BaseEvalHook):
-    """Hook for plotting degradation trends split by Unit ID."""
+    """
+    Plot unit-wise prediction-versus-target trends.
+
+    Parameters
+    ----------
+    log_every_n_epochs : int, default=10
+        Logging cadence for validation epochs.
+    enable_subsampling : bool, default=True
+        Whether to downsample very long sequences before plotting.
+    subsample_threshold : int, default=2000
+        Sequence length threshold after which subsampling is enabled.
+    subsample_factor : int, default=10
+        Step size used when subsampling is active.
+    """
 
     def __init__(
         self,

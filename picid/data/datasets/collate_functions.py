@@ -5,9 +5,17 @@ from typing import List, Dict, Any
 
 def collate_key_value_batch(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Collate function that merges a list of dictionaries into a single dictionary.
-    Each key in the resulting dictionary maps to a list of values collected from
-    the corresponding keys in the input dictionaries.
+    Collate a list of dictionaries into a single dictionary.
+
+    Parameters
+    ----------
+    batch : list[dict[str, Any]]
+        Samples to merge into a single batch.
+
+    Returns
+    -------
+    dict[str, Any]
+        Collated batch keyed by sample field name.
     """
 
     simple_keys_dict: Dict[str, List[Any]] = defaultdict(list)
@@ -34,9 +42,17 @@ def collate_key_value_batch(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def collate_identity(batch):
     """
-    Collate function that returns the batch as is.
-    Useful when each item in the batch is already a complete batch.
-    E.g., when using a BatchSampler that groups indices.
+    Return the first already-batched item unchanged.
+
+    Parameters
+    ----------
+    batch : list[Any]
+        Already batched samples produced by a batch sampler.
+
+    Returns
+    -------
+    Any
+        First batch element.
     """
     # batch is a list of batch-returns
     # each element is already the full batch from dataset

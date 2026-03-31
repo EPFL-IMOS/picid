@@ -15,7 +15,8 @@ from .nn import Spacetimeformer
 
 
 def find_ckpt(path):
-    """Find first checkpoint file in path/checkpoints (excluding 'last').
+    """
+    Find first checkpoint file in ``path/checkpoints`` (excluding ``last``).
 
     Parameters
     ----------
@@ -37,11 +38,155 @@ def find_ckpt(path):
 
 
 class Spacetimeformer_Forecaster(TransformerForecaster):
-    """Spacetimeformer forecaster for regression, classification, and state forecasting.
+    """
+    Spacetimeformer forecaster for regression, classification, and state forecasting.
 
     Supports decoder-only mode (regression/classification) and encoder-decoder mode
     (forecasting). Uses spatio-temporal or temporal embeddings with optional
     Performer attention.
+
+    Parameters
+    ----------
+    optimizer_factory : Callable[..., torch.optim.Optimizer]
+        Factory used to create the optimizer.
+    scheduler_factory : Callable[..., torch.optim.lr_scheduler._LRScheduler]
+        Factory used to create the learning-rate scheduler.
+    d_yc : int
+        Context target dimension.
+    d_yt : int
+        Target output dimension.
+    d_x : int
+        Covariate dimension.
+    task_type : str
+        Task family handled by the forecaster.
+    n_timefeatures : int, default=0
+        Number of time features in ``d_x``.
+    max_seq_len : int | None, default=None
+        Maximum sequence length.
+    start_token_len : int, default=64
+        Number of decoder start tokens.
+    attn_factor : int, default=5
+        Attention factor for sparse attention.
+    d_model : int, default=200
+        Model width.
+    d_queries_keys : int, default=50
+        Query/key width.
+    d_values : int, default=50
+        Value width.
+    n_heads : int, default=4
+        Number of attention heads.
+    e_layers : int, default=2
+        Number of encoder layers.
+    d_layers : int, default=2
+        Number of decoder layers.
+    d_ff : int, default=800
+        Feed-forward width.
+    dropout_emb : float, default=0.1
+        Embedding dropout.
+    dropout_qkv : float, default=0.0
+        QKV dropout.
+    dropout_ff : float, default=0.2
+        Feed-forward dropout.
+    dropout_attn_out : float, default=0.0
+        Attention-output dropout.
+    dropout_attn_matrix : float, default=0.0
+        Attention-matrix dropout.
+    pos_emb_type : str, default="abs"
+        Positional embedding type.
+    timetable_emb_type : str | None, default=None
+        Timetable embedding type.
+    time_emb_type : str, default="t2v"
+        Time embedding type.
+    variable_emb_type : str | None, default=None
+        Variable embedding type.
+    inverted_encoder : bool, default=False
+        Whether to use an inverted encoder.
+    global_self_attn : str, default="performer"
+        Global self-attention type.
+    local_self_attn : str, default="performer"
+        Local self-attention type.
+    global_cross_attn : str, default="performer"
+        Global cross-attention type.
+    local_cross_attn : str, default="performer"
+        Local cross-attention type.
+    performer_kernel : str, default="relu"
+        Performer kernel name.
+    embed_method : str, default="spatio-temporal"
+        Embedding method name.
+    attention_method : str, default="non-causual"
+        Attention strategy name.
+    performer_relu : bool, default=True
+        Whether to use ReLU features in Performer.
+    performer_redraw_interval : int, default=1000
+        Performer projection redraw interval.
+    attn_time_windows : int, default=1
+        Number of attention time windows.
+    use_shifted_time_windows : bool, default=True
+        Whether to use shifted time windows.
+    activation : str, default="gelu"
+        Activation function name.
+    head_f : str, default="linear"
+        Head function name.
+    norm : str, default="batch"
+        Normalization strategy.
+    use_final_norm : bool, default=True
+        Whether to apply final normalization.
+    initial_downsample_convs : int, default=0
+        Number of initial downsampling convolutions.
+    intermediate_downsample_convs : int, default=0
+        Number of intermediate downsampling convolutions.
+    loss : str, default="mse"
+        Loss name.
+    class_loss_imp : float, default=1e-3
+        Weight for classification loss.
+    recon_loss_imp : float, default=0
+        Weight for reconstruction loss.
+    time_emb_dim : int, default=6
+        Time embedding dimension.
+    null_value : float | None, default=None
+        Null value used for masking.
+    pad_value : float | None, default=None
+        Padding value.
+    linear_window : int, default=0
+        Linear window size.
+    linear_shared_weights : bool, default=False
+        Whether the linear head shares weights.
+    use_revin : bool, default=False
+        Whether to use RevIN.
+    use_seasonal_decomp : bool, default=False
+        Whether to use seasonal decomposition.
+    use_val_enc : bool, default=True
+        Whether to use value embeddings in the encoder.
+    use_val_dec : bool, default=True
+        Whether to use value embeddings in the decoder.
+    use_tt_enc : bool, default=True
+        Whether to use timetable embeddings in the encoder.
+    use_tt_dec : bool, default=True
+        Whether to use timetable embeddings in the decoder.
+    use_time : bool, default=True
+        Whether to use time embeddings.
+    use_space : bool, default=True
+        Whether to use space embeddings.
+    use_given : bool, default=True
+        Whether to use given embeddings.
+    recon_mask_skip_all : float, default=1.0
+        Reconstruction-mask skip probability.
+    recon_mask_max_seq_len : int, default=5
+        Maximum sequence length for reconstruction masking.
+    recon_mask_drop_seq : float, default=0.1
+        Sequence-drop probability.
+    recon_mask_drop_standard : float, default=0.2
+        Standard-drop probability.
+    recon_mask_drop_full : float, default=0.05
+        Full-drop probability.
+    verbose : bool, default=True
+        Whether to enable verbose logging.
+    target_mask : Any, default=None
+        Optional target mask for multi-output training.
+    mask_y_c : bool, default=False
+        Whether to zero out the context targets.
+    **kwargs
+        Additional keyword arguments forwarded to the parent class.
     """
 
     def __init__(
@@ -121,7 +266,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         mask_y_c: bool = False,
         **kwargs,
     ):
-        """Initialize Spacetimeformer forecaster.
+        """
+        Initialize the Spacetimeformer forecaster.
 
         Parameters
         ----------
@@ -404,7 +550,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         return kwargs
 
     def step(self, batch: Tuple[torch.Tensor], train: bool) -> dict[str, torch.Tensor]:
-        """Execute one training or evaluation step.
+        """
+        Execute one training or evaluation step.
 
         Parameters
         ----------
@@ -456,7 +603,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
     def classification_loss(
         self, logits: torch.Tensor, labels: torch.Tensor
     ) -> Tuple[torch.Tensor]:
-        """Compute cross-entropy classification loss and accuracy.
+        """
+        Compute cross-entropy classification loss and accuracy.
 
         Parameters
         ----------
@@ -497,7 +645,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         return class_loss, acc
 
     def compute_loss(self, batch, time_mask=None, forward_kwargs={}):
-        """Compute forecast, reconstruction, and optional classification loss.
+        """
+        Compute forecast, reconstruction, and optional classification loss.
 
         Parameters
         ----------
@@ -511,8 +660,7 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
         Returns
         -------
         dict
-            forecast_loss, class_loss, acc, forecast_out, forecast_mask,
-            recon_out, recon_loss, recon_mask.
+            Forecast, reconstruction, and classification loss outputs.
         """
         x_c, y_c, x_t, y_t = batch
 
@@ -558,7 +706,8 @@ class Spacetimeformer_Forecaster(TransformerForecaster):
     def forward_model_pass(
         self, x_c, y_c, x_t, y_t, output_attn=False, target_mask=None
     ):
-        """Run forward pass through the Spacetimeformer model.
+        """
+        Run the forward pass through the Spacetimeformer model.
 
         Parameters
         ----------

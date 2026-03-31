@@ -1,4 +1,4 @@
-"""Utility functions for the TopoBenchMark library."""
+"""Utility functions for project setup, reproducibility, and task wrapping."""
 
 import json
 import shutil
@@ -17,7 +17,14 @@ log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 
 def _get_hydra_overrides() -> list[str]:
-    """Return Hydra command-line overrides if Hydra is initialized."""
+    """
+    Return Hydra command-line overrides if Hydra is initialized.
+
+    Returns
+    -------
+    list[str]
+        Hydra task overrides, or an empty list when Hydra is unavailable.
+    """
     try:
         from hydra.core.hydra_config import HydraConfig
 
@@ -29,7 +36,14 @@ def _get_hydra_overrides() -> list[str]:
 
 
 def _write_reproduce_guide(cfg: DictConfig) -> None:
-    """Write REPRODUCE.md to output_dir with env setup, run command, and debug config."""
+    """
+    Write a reproduction guide into the run output directory.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration for the current run.
+    """
     if "paths" not in cfg or "output_dir" not in cfg.paths:
         return
     out_dir = Path(cfg.paths.output_dir).expanduser().resolve()
@@ -167,7 +181,19 @@ def _write_reproduce_guide(cfg: DictConfig) -> None:
 
 
 def _get_git_info(root: Path) -> dict[str, str | bool]:
-    """Return git commit, branch, and dirty flag for reproducibility."""
+    """
+    Return git commit, branch, and dirty flag for reproducibility.
+
+    Parameters
+    ----------
+    root : Path
+        Repository root used as the git working directory.
+
+    Returns
+    -------
+    dict[str, str | bool]
+        Git metadata suitable for persistence.
+    """
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -202,7 +228,14 @@ def _get_git_info(root: Path) -> dict[str, str | bool]:
 
 
 def _save_git_info_to_run(cfg: DictConfig) -> None:
-    """Save git commit/branch/dirty to run_metadata.yaml for reproducibility."""
+    """
+    Save git commit, branch, and dirty state to run metadata.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration for the current run.
+    """
     if "paths" not in cfg or "output_dir" not in cfg.paths:
         return
     root_raw = cfg.paths.get("root_dir", ".")
@@ -221,7 +254,14 @@ def _save_git_info_to_run(cfg: DictConfig) -> None:
 
 
 def _save_uv_lock_to_run(cfg: DictConfig) -> None:
-    """Copy uv.lock to run output dir for reproducibility. Run can be reproduced with logs present."""
+    """
+    Copy ``uv.lock`` into the run output directory for reproducibility.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration for the current run.
+    """
     if "paths" not in cfg or "output_dir" not in cfg.paths:
         return
     root = Path(cfg.paths.get("root_dir", ".")).expanduser().resolve()
@@ -239,7 +279,8 @@ def _save_uv_lock_to_run(cfg: DictConfig) -> None:
 
 
 def extras(cfg: DictConfig) -> None:
-    r"""Apply optional utilities before the task is started.
+    """
+    Apply optional utilities before the task is started.
 
     Utilities:
         - Ignoring python warnings.
@@ -273,7 +314,8 @@ def extras(cfg: DictConfig) -> None:
 
 
 def task_wrapper(task_func: Callable) -> Callable:
-    r"""Optional decorator that controls the failure behavior when executing the task function.
+    """
+    Decorate a task function with reproducibility and cleanup helpers.
 
     This wrapper can be used to:
     - make sure loggers are closed even if the task function raises an exception (prevents multirun failure).
@@ -301,7 +343,8 @@ def task_wrapper(task_func: Callable) -> Callable:
     """
 
     def wrap(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Wrapper function that executes the task function.
+        """
+        Execute the wrapped task function with run bookkeeping.
 
         Parameters
         ----------
@@ -360,7 +403,8 @@ def task_wrapper(task_func: Callable) -> Callable:
 def get_metric_value(
     metric_dict: dict[str, Any], metric_name: str | None
 ) -> float | None:
-    r"""Safely retrieves value of the metric logged in LightningModule.
+    """
+    Safely retrieve the value of a named metric.
 
     Parameters
     ----------

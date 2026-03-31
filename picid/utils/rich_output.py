@@ -56,8 +56,19 @@ def display_targets(cfg):
 
 def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:
     """
-    Analyzes a list of awkward arrays and formats the stats in a compact,
-    single-line-per-dimension tree.
+    Analyze a list of Awkward Arrays and format compact shape statistics.
+
+    Parameters
+    ----------
+    obj : list[ak.Array]
+        List of arrays to describe.
+    calculate_stat : bool, default=False
+        Whether to compute per-dimension min/max/mean statistics.
+
+    Returns
+    -------
+    str
+        Human-readable description of the list contents.
     """
     if not obj:
         return "list<ak.Array> x 0"
@@ -114,7 +125,21 @@ def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> st
 
 
 def describe_data_type(obj, calculate_stat=False) -> str:
-    """Describes a single data object."""
+    """
+    Describe a single data object.
+
+    Parameters
+    ----------
+    obj : Any
+        Object to describe.
+    calculate_stat : bool, default=False
+        Whether to compute list statistics when applicable.
+
+    Returns
+    -------
+    str
+        Human-readable description of the object.
+    """
     if isinstance(obj, dict):
         return "{...}"
     elif isinstance(obj, np.ndarray):
@@ -146,7 +171,21 @@ def describe_data_type(obj, calculate_stat=False) -> str:
 
 
 def to_descriptive_dict(d, calculate_stat=True):
-    """Convert a (possibly nested) dictionary to a descriptive dictionary showing data types and shapes."""
+    """
+    Convert nested data into a descriptive dictionary of shapes and types.
+
+    Parameters
+    ----------
+    d : Any
+        Object or mapping to describe.
+    calculate_stat : bool, default=True
+        Whether to include statistics for list-like arrays.
+
+    Returns
+    -------
+    dict
+        Nested dictionary of shape/type descriptions.
+    """
     if isinstance(d, dict) or isinstance(d, BaseDataObject):
         return {k: to_descriptive_dict(v) for k, v in d.items()}
     else:
@@ -290,7 +329,29 @@ def build_transform_error_renderables(
     ],  # (key, type_name, describe_data_type)
     case_analysis_line: str,
 ) -> list:
-    """Build list of Rich renderables for transform_multi_source error diagnostics."""
+    """
+    Build Rich renderables for transform error diagnostics.
+
+    Parameters
+    ----------
+    transform_name : str
+        Name of the failing transform.
+    flags : dict
+        Data-type flags used in the diagnostic table.
+    metadata : dict
+        Metadata payload to display.
+    first_segment_keys : list | None
+        Optional keys for the first segment.
+    first_segment_rows : list[tuple[str, str, str]]
+        Rows describing the first segment contents.
+    case_analysis_line : str
+        Human-readable case-analysis summary.
+
+    Returns
+    -------
+    list
+        Rich renderables describing the failure.
+    """
     out = []
     out.append(
         Rule(

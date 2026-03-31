@@ -1,4 +1,4 @@
-"""Utils for awkward arrays."""
+"""Utilities for working with Awkward Arrays."""
 
 import awkward as ak
 import numpy as np
@@ -9,13 +9,19 @@ def ak_unflatten_discontinous_groups(
     values: ak.Array, groups_index: ak.Array
 ) -> ak.Array:
     """
-    Reshape `values` into a nested array based on `groups`,
-    where `groups` may be discontinous.
+    Reshape values into a nested array based on group labels.
 
-    This adds one dimension to values where
-    groups_index indicates the group membership of each value
-    which is the rugged axis.
+    Parameters
+    ----------
+    values : ak.Array
+        Flat Awkward Array containing the values to regroup.
+    groups_index : ak.Array
+        Group labels aligned with ``values``.
 
+    Returns
+    -------
+    ak.Array
+        Nested Awkward Array grouped by the sorted group labels.
     """
     assert len(values) == len(
         groups_index
@@ -32,8 +38,18 @@ def ak_unflatten_discontinous_groups(
 def ak_find_var_dims(arr: ak.Array) -> List[int]:
     """
     Find variable-length dimensions in an Awkward Array.
-    in 4 * var * var * 3 it would return [1, 2]
 
+    In ``4 * var * var * 3`` this returns ``[1, 2]``.
+
+    Parameters
+    ----------
+    arr : ak.Array
+        Input Awkward Array.
+
+    Returns
+    -------
+    List[int]
+        Indices of the variable-length dimensions.
     """
     assert isinstance(arr, ak.Array)
 
@@ -60,6 +76,16 @@ def find_singular_ragged_dim(
     Returns None if all arrays are regular; returns the unique ragged axis index
     if exactly one; raises ValueError if more than one variable-length dimension
     is present across the arrays.
+
+    Parameters
+    ----------
+    arrays : Union[ak.Array, Iterable[ak.Array]]
+        One array or a collection of arrays to inspect.
+
+    Returns
+    -------
+    Optional[int]
+        The unique ragged axis, or ``None`` if the structure is fully regular.
     """
     if isinstance(arrays, ak.Array):
         arrays = [arrays]
@@ -79,14 +105,19 @@ def find_singular_ragged_dim(
 
 def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
     """
-    This is for indexing regular subarrays of a ragged array.
-    it gives index touples
+    Return index tuples for the leading ragged axes of an array.
 
-    (e.g. (0,1), (0,2), (1,0) for a 4D ragged array)
-    where the last 2d are the regular tail.
+    Parameters
+    ----------
+    arr : ak.Array
+        Input Awkward Array.
+    ragged_dims : int
+        Number of leading ragged dimensions to index.
 
-    Return index tuples for the first `ragged_dims` axes of `arr`.
-    Each tuple corresponds to one selection into the regular tail.
+    Returns
+    -------
+    list[tuple]
+        Tuple indices for the ragged axes.
     """
     # get local indices at each ragged axis
     indices = [ak.local_index(arr, axis=ax) for ax in range(ragged_dims)]
@@ -97,7 +128,21 @@ def ragged_index_tuples(arr: ak.Array, ragged_dims: int) -> list[tuple]:
 
 
 def iterate_ragged_sub_blocks(arr: ak.Array, ragged_dims: int):
-    """Iterate over sub-blocks of a ragged array."""
+    """
+    Iterate over sub-blocks of a ragged array.
+
+    Parameters
+    ----------
+    arr : ak.Array
+        Input Awkward Array.
+    ragged_dims : int
+        Number of ragged dimensions to iterate over.
+
+    Yields
+    ------
+    tuple
+        A pair of index tuple and sub-array view.
+    """
     idx_tuples = ragged_index_tuples(arr, ragged_dims)
     for idx in idx_tuples:
         yield idx, arr[idx]
@@ -105,8 +150,19 @@ def iterate_ragged_sub_blocks(arr: ak.Array, ragged_dims: int):
 
 def blocks_to_ragged_array(coords: list[tuple], blocks: np.ndarray) -> ak.Array:
     """
-    Construct a ragged Awkward Array from blocks of regular arrays
-    and their coordinates.
+    Construct a ragged Awkward Array from blocks of regular arrays.
+
+    Parameters
+    ----------
+    coords : list[tuple]
+        Coordinate tuples for each block.
+    blocks : np.ndarray
+        Regular block values to assemble.
+
+    Returns
+    -------
+    ak.Array
+        Ragged Awkward Array built from the supplied blocks.
     """
 
     root = {}
@@ -156,12 +212,17 @@ def ak_regularize_regular_axes(arr: ak.Array) -> ak.Array:
 
 def get_ak_shape(arr: ak.Array) -> List[Union[int, str]]:
     """
-    Gets the shape of an Awkward Array, representing ragged dimensions with 'var'.
+    Get the shape of an Awkward Array, representing ragged dimensions as ``"var"``.
 
-    This function traverses the array's type structure to determine the
-    shape. Regular (fixed-size) dimensions are represented by their integer
-    length, while ragged (variable-size) dimensions are represented by the
-    string 'var'.
+    Parameters
+    ----------
+    arr : ak.Array
+        Input Awkward Array.
+
+    Returns
+    -------
+    List[Union[int, str]]
+        Shape description with ragged axes marked as ``"var"``.
     """
     t = ak.type(arr)
     shape = []

@@ -8,7 +8,21 @@ from picid.data.datasources.base.exceptions import DatasourceError
 
 
 def build_transform_error(context: Any, e: BaseException) -> TransformError:
-    """Build a TransformError from a pipeline context and the caught exception."""
+    """
+    Build a TransformError from a pipeline context and the caught exception.
+
+    Parameters
+    ----------
+    context : Any
+        Pipeline context that carries transform metadata.
+    e : BaseException
+        Original exception raised by the transform.
+
+    Returns
+    -------
+    TransformError
+        Exception enriched with transform identity and original cause.
+    """
     ti = getattr(context, "transform_instance", None)
     step_id = getattr(context, "step_id", None) or (
         getattr(ti, "__class__", None) and getattr(ti.__class__, "__name__", None)
@@ -36,7 +50,8 @@ def build_transform_error(context: Any, e: BaseException) -> TransformError:
 def build_preprocessing_datasource_error(
     stage: str, datasource: Any, e: DatasourceError
 ) -> PreprocessingDatasourceError:
-    """Build a preprocessing wrapper around a datasource-layer exception.
+    """
+    Build a preprocessing wrapper around a datasource-layer exception.
 
     Parameters
     ----------
@@ -71,7 +86,8 @@ def build_preprocessing_datasource_error(
 
 
 def _resolve_datasource_name(datasource: Any) -> str | list[str] | None:
-    """Resolve a human-readable datasource name for error reporting.
+    """
+    Resolve a human-readable datasource name for error reporting.
 
     Parameters
     ----------
@@ -118,7 +134,22 @@ def _resolve_datasource_name(datasource: Any) -> str | list[str] | None:
 
 
 class TransformError(Exception):
-    """Raised when a data transform fails, with context about which transform and why."""
+    """
+    Raised when a data transform fails.
+
+    Parameters
+    ----------
+    message : str
+        Human-readable error summary.
+    step_id : str | None, optional
+        Transform config name or step identifier.
+    transform_class : str | None, optional
+        Concrete transform class name.
+    apply_to_keys : list | None, optional
+        Keys that the transform was applied to.
+    cause : BaseException | None, optional
+        Original exception raised by the transform.
+    """
 
     def __init__(
         self,
@@ -162,7 +193,8 @@ class TransformError(Exception):
 
 
 class PreprocessingDatasourceError(Exception):
-    """Raised when preprocessing fails while interacting with a datasource.
+    """
+    Raised when preprocessing fails while interacting with a datasource.
 
     Parameters
     ----------

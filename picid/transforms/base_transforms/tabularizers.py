@@ -37,18 +37,45 @@ logger = logging.getLogger(__name__)
 
 
 class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
-    r"""Extracts time features from the input data.
+    r"""
+    Tabularize selected history, present, and horizon features.
 
-    This transform processes time-series data to generate additional features
-    based on the timestamp, using the `time_features` utility.
+    This transform can be used to extract time-based features alongside the
+    existing forecasting inputs. In earlier configs the ``freq`` keyword was
+    commonly passed through to the underlying ``time_features`` utility (for
+    example hourly ``"h"`` or daily ``"d"`` data); that pass-through remains
+    available through ``**kwargs`` when the downstream transform stack expects
+    it.
 
     Parameters
     ----------
-    freq : str
-        The frequency string (e.g., 'h' for hourly, 'd' for daily)
-        to be used by the `time_features` function.
-    **kwargs : optional
-        Additional parameters for the base transform.
+    select_features : dict[str, str]
+        Mapping from input key to selection mode.
+    timestep_dimension : int
+        Timestep dimension used by downstream consumers.
+    seq_len : int
+        Input history length.
+    label_len : int
+        Decoder label length.
+    pred_len : int
+        Prediction horizon length.
+    stride : int
+        Sliding-window stride.
+    subset_ratio : float, optional
+        Fraction of sequences to keep when subsetting.
+    subset_seed : int, default=42
+        Random seed used for deterministic subsetting.
+    subset_blocks : int, optional
+        Number of subset blocks for grouped sampling.
+    pred_offset : int, default=0
+        Forecast offset applied when building sequences.
+    padding_left_flag : bool, default=True
+        Whether sequence padding should be left-aligned.
+    warmup_steps : int, optional
+        Number of warmup steps passed to the sequencer.
+    **kwargs
+        Extra keyword arguments accepted for API compatibility and forwarded to
+        the broader transform setup, including optional ``freq`` configuration.
     """
 
     def __init__(
@@ -118,7 +145,23 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         return f"{self.__class__.__name__}({args})"
 
     def _create_sequencer(self, arr, sequencer_params, key):
-        """Create the sequencer object for an array based on the array type."""
+        """
+        Create the right sequencer implementation for one array.
+
+        Parameters
+        ----------
+        arr : Any
+            Input array to sequence.
+        sequencer_params : dict
+            Keyword arguments forwarded to the sequencer.
+        key : str
+            Input key associated with ``arr``.
+
+        Returns
+        -------
+        DenseArraySequencer or RaggedArraySequencer
+            Sequencer matching the input array type.
+        """
         if isinstance(arr, (np.ndarray, torch.Tensor)):
             seq = DenseArraySequencer(arr, **sequencer_params)
 
@@ -144,13 +187,16 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
 
         Parameters
         ----------
-        data_segment : Any
+        data : NamedTransformInput
             The input data segment to be tabularized.
+        metadata : dict
+            Split-specific metadata used during sequencing.
 
         Returns
         -------
         np.ndarray
-            A NumPy array containing the extracted time features.
+            A NumPy array containing the extracted time features and other
+            tabularized selections.
         """
         data_segment = data
         N_samples = None

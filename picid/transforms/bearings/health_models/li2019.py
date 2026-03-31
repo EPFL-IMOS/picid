@@ -31,15 +31,35 @@ TEST_RULS = {
 
 class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
     """
+    Cut arrays at the Li et al. first prediction time.
+
     Slices multiple data arrays to the First Prediction Time (FPT) based on
     the "2*sigma interval of kurtosis" method from Li et al. 2019.
 
-    This transform finds the FPT using one or more columns from a
-    `signal_key` array. It then applies a strategy (e.g., 'min')
-    to get a single FPT index.
-
-    Finally, it slices all arrays listed in `features_keys` from that
-    FPT index onward and returns a dictionary of the sliced arrays.
+    Parameters
+    ----------
+    signal_key : str
+        Key for the 1D/2D signal array used to find the FPT.
+    features_keys : list[str]
+        List of keys for arrays to be sliced.
+    normal_period_start : int, default=50
+        Start index of the normal operation period.
+    normal_period_end : int, default=150
+        End index of the normal operation period.
+    sigma_interval : float, default=2.0
+        Number of standard deviations used to set the threshold.
+    scan_start_index : int, default=150
+        Index from which to start scanning for the FPT.
+    dataset_name : str, default="UnknownDataset"
+        Dataset name used for logging.
+    unit_id_key : str, optional
+        Optional key used to find the unit identifier.
+    fpt_indexes_strategy : str, default="min"
+        Strategy used when multiple FPT candidates are found.
+    use_predefined_test : bool, default=False
+        Whether to fall back to predefined test RUL values.
+    **kwargs
+        Additional keyword arguments forwarded to the base transform.
     """
 
     def __init__(
@@ -57,38 +77,32 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         **kwargs,
     ):
         """
-        Initialize the Li2019FPTCutTransform.
+        Store the FPT search configuration and slicing keys.
 
         Parameters
         ----------
         signal_key : str
-            The key in the `data` dict for the 1D/2D signal
-            array (e.g., 'kurtosis') used to find the FPT.
-        features_keys : list
-            A list of keys in the `data` dict for the
-            arrays to be sliced (e.g., ['features', 'target']).
-        normal_period_start : int
-            The start index of the "normal"
-            operation period.
-        normal_period_end : int
-            The end index of the "normal"
-            operation period.
-        sigma_interval : float
-            The number of standard deviations (sigma)
-            to use for the threshold.
-        scan_start_index : int
-            The index from which to start scanning
-            for the FPT.
-        dataset_name : str
-            Optional name of the dataset for logging.
+            Key for the 1D/2D signal array used to find the FPT.
+        features_keys : list[str]
+            List of keys for arrays to be sliced.
+        normal_period_start : int, default=50
+            Start index of the normal operation period.
+        normal_period_end : int, default=150
+            End index of the normal operation period.
+        sigma_interval : float, default=2.0
+            Number of standard deviations used to set the threshold.
+        scan_start_index : int, default=150
+            Index from which to start scanning for the FPT.
+        dataset_name : str, default="UnknownDataset"
+            Dataset name used for logging.
         unit_id_key : str, optional
-            Optional key to find the unit ID in `data` or
-            `metadata` for logging.
-        fpt_indexes_strategy : str
-            Strategy ('min', 'max', 'mean') to
-            use if `signal_key` provides multiple signal columns.
+            Optional key used to find the unit identifier.
+        fpt_indexes_strategy : str, default="min"
+            Strategy used when multiple FPT candidates are found.
+        use_predefined_test : bool, default=False
+            Whether to fall back to predefined test RUL values.
         **kwargs
-            Additional arguments for BaseTransform.
+            Additional keyword arguments forwarded to the base transform.
         """
         super().__init__(**kwargs)
         self.signal_key = signal_key
@@ -110,7 +124,21 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
             )
 
     def _get_unit_id(self, data: NamedTransformInput, metadata: Dict) -> str:
-        """Helper to safely extract the unit ID for logging."""
+        """
+        Extract a printable unit identifier for logging.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input data dictionary.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        str
+            Printable unit identifier.
+        """
         if self.unit_id_key:
             if self.unit_id_key in data:
                 # Handle array or scalar unit_id
@@ -119,7 +147,21 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         return "UnknownUnit"
 
     def _find_fpt(self, signal_vector: np.ndarray, unit_id: str) -> int:
-        """NumPy-based implementation of li_et_al_2019."""
+        """
+        Find the first prediction time for a one-dimensional signal.
+
+        Parameters
+        ----------
+        signal_vector : numpy.ndarray
+            Signal values for a single column.
+        unit_id : str
+            Unit identifier used in the error message.
+
+        Returns
+        -------
+        int
+            Detected first prediction time.
+        """
 
         if signal_vector.ndim != 1:
             raise ValueError("Signal vector provided to _find_fpt must be 1D.")
@@ -169,7 +211,19 @@ class Li2019FPTCutTransform(NoFitPerSegmentMixin, DenseTransform):
         self, data: NamedTransformInput, metadata: Dict
     ) -> Dict[str, np.ndarray]:
         """
-        Finds FPT, slices all feature arrays, and returns them in a dict.
+        Find the FPT and slice every configured feature array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input data dictionary.
+        metadata : dict
+            Metadata dictionary, preserved for interface compatibility.
+
+        Returns
+        -------
+        dict[str, numpy.ndarray]
+            Sliced feature arrays.
         """
         unit_id = self._get_unit_id(data, metadata)
 

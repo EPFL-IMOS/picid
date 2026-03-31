@@ -20,6 +20,11 @@ class FileLock:
     using the filesystem. It's useful for coordinating access to shared resources
     across multiple processes.
 
+    Parameters
+    ----------
+    path : str, optional
+        The filesystem path where the lock file will be created.
+
     Attributes
     ----------
     path : str

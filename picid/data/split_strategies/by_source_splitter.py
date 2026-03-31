@@ -10,7 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 class BySourceSplitter:
-    """Assign whole datasource payloads to train/val/test splits."""
+    """
+    Assign whole datasource payloads to train/val/test splits.
+
+    Parameters
+    ----------
+    sources_train : list[str] | None, optional
+        Source names assigned to the training split.
+    sources_val : list[str] | None, optional
+        Source names assigned to the validation split.
+    sources_test : list[str] | None, optional
+        Source names assigned to the test split.
+    """
 
     def __init__(
         self,
@@ -18,7 +29,8 @@ class BySourceSplitter:
         sources_val: List[str] = None,
         sources_test: List[str] = None,
     ):
-        """Initialize the source-level split assignment.
+        """
+        Initialize the source-level split assignment.
 
         Parameters
         ----------
@@ -48,7 +60,8 @@ class BySourceSplitter:
     def split_data(
         self, data_list: List[DatasetContainer], source_name_lst: List[str]
     ) -> Dict[str, Dict[str, Any]]:
-        """Split source payloads into a split-aware dataset mapping.
+        """
+        Split source payloads into a split-aware dataset mapping.
 
         Parameters
         ----------
@@ -103,7 +116,8 @@ class BySourceSplitter:
     def __call__(
         self, data_list: List[Dict[str, Any]], source_name_lst: List[str]
     ) -> Tuple[Dict[str, Dict[str, Any]], str]:
-        """Split data and return the corresponding human-readable tree view.
+        """
+        Split data and return the corresponding human-readable tree view.
 
         Parameters
         ----------
@@ -128,7 +142,8 @@ class BySourceSplitter:
         )
 
     def get_split_tree_view(self, sources_by_split: dict[str, list[str]]) -> str:
-        """Render the source assignment tree for logging and debugging.
+        """
+        Render the source assignment tree for logging and debugging.
 
         Parameters
         ----------
@@ -151,7 +166,8 @@ class BySourceSplitter:
 def convert_outer_list_to_inner(
     data_list: list[dict[str, Any]],
 ) -> dict[str, list[Any]]:
-    """Convert a list of keyed payloads into a keyed list-of-payloads mapping.
+    """
+    Convert a list of keyed payloads into a keyed list-of-payloads mapping.
 
     Parameters
     ----------

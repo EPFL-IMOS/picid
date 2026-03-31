@@ -7,8 +7,10 @@ from .base import AbstractMetric
 # This class calculates the mean percentage error using the requested API.
 class MeanPercentageErrorMetric(AbstractMetric):
     """
-    Mean Percentage Error metric with batch-wise accumulation.
-    Calculates: mean((targets - predictions) / targets) * 100
+    Mean percentage error metric with batch-wise accumulation.
+
+    The metric computes ``mean((targets - predictions) / targets) * 100``
+    over all accumulated batches.
     """
 
     def __init__(self):
@@ -16,13 +18,13 @@ class MeanPercentageErrorMetric(AbstractMetric):
         self.reset()
 
     def reset(self):
-        """Resets the running sum and count to zero."""
+        """Reset the running sum and count to zero."""
         self.running_sum_of_errors = 0.0
         self.total_count = 0
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
         """
-        Processes a batch of predictions and targets to update the metric's state.
+        Update the metric state with a batch of predictions and targets.
 
         Parameters
         ----------
@@ -47,7 +49,7 @@ class MeanPercentageErrorMetric(AbstractMetric):
 
     def compute(self) -> float:
         """
-        Computes the final mean percentage error over all updated batches.
+        Compute the final mean percentage error over all updated batches.
 
         Returns
         -------
@@ -63,11 +65,13 @@ class MeanPercentageErrorMetric(AbstractMetric):
 
 class PHMScoreMetric(AbstractMetric):
     """
-    Calculates the scoring function from the IEEE 2012 PHM Data Challenge competition.
-    The score is an average of an asymmetric function A_i, which depends
-    on the percentage error of the RUL prediction.
+    Calculate the scoring function from the IEEE 2012 PHM Data Challenge.
 
-    Ref: H.Dhungana et al., "Bearing Prognostics Using the PRONOSTIA Data A Comparative Study" (Eq. 1,2 & 3).
+    The score is an average of an asymmetric function ``A_i`` that depends on
+    the percentage error of the RUL prediction.
+
+    Ref: H. Dhungana et al., "Bearing Prognostics Using the PRONOSTIA Data:
+    A Comparative Study" (Eq. 1, 2, and 3).
     """
 
     def __init__(self):
@@ -77,13 +81,20 @@ class PHMScoreMetric(AbstractMetric):
         self._ln_half = np.log(0.5)
 
     def reset(self):
-        """Resets the running sum of scores and the total count."""
+        """Reset the running sum of scores and the total count."""
         self.total_sum_of_A = 0.0
         self.total_count = 0
 
     def update(self, predictions: np.ndarray, targets: np.ndarray):
         """
-        Processes a batch to update the metric's state.
+        Update the metric state with a batch of predictions and targets.
+
+        Parameters
+        ----------
+        predictions : np.ndarray
+            Model predictions.
+        targets : np.ndarray
+            Ground-truth targets.
         """
         assert (
             predictions.shape == targets.shape
@@ -107,7 +118,12 @@ class PHMScoreMetric(AbstractMetric):
 
     def compute(self) -> float:
         """
-        Computes the final mean score over all updated batches.
+        Compute the final mean score over all updated batches.
+
+        Returns
+        -------
+        float
+            The final metric value.
         """
         if self.total_count == 0:
             raise ValueError("Metric has not been updated with any data.")

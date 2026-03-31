@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 
 class SourceSplitter(ABC):
-    """Interface for splitters that partition whole datasource sources.
+    """
+    Interface for splitters that partition whole datasource sources.
 
     The splitter contract stays structural so preprocessing can work with any
     datasource implementation that satisfies the shared protocol.
@@ -20,7 +21,8 @@ class SourceSplitter(ABC):
     def split_data(
         self, sources: Dict[str, "DatasourceProtocol"]
     ) -> Dict[str, Dict[str, "DatasourceProtocol"]]:
-        """Split datasource loaders into train/val/test source groups.
+        """
+        Split datasource loaders into train/val/test source groups.
 
         Parameters
         ----------
@@ -36,11 +38,14 @@ class SourceSplitter(ABC):
 
 
 class TimeSeriesSplitter(ABC):
-    """Interface for splitters that partition one time-series payload."""
+    """
+    Interface for splitters that partition one time-series payload.
+    """
 
     @abstractmethod
     def split_data(self, data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Split one array into train, validation, and test partitions.
+        """
+        Split one array into train, validation, and test partitions.
 
         Parameters
         ----------

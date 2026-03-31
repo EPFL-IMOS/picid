@@ -1,4 +1,4 @@
-"""Wrapper for the NaiveModel model."""
+"""Wrapper for the naive forecasting baseline."""
 
 from .base import AbstractFeedForwardWrapper
 from picid.model.methods.naive_model import NaiveModelBaseline
@@ -6,9 +6,15 @@ from ...baselines.definitions import FORECASTING_TASKS
 
 
 class NaiveModelWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the NaiveModel model.
+    """
+    Wrap the naive forecasting baseline in the model interface.
 
-    This wrapper defines the forward pass of the NaiveModel model.
+    Parameters
+    ----------
+    task_type : str
+        Forecasting task identifier.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the baseline.
     """
 
     def __init__(self, task_type: str, **kwargs):
@@ -26,7 +32,8 @@ class NaiveModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        """Forward pass for the Tune wrapper.
+        """
+        Run the naive forecasting baseline on one batch.
 
         Parameters
         ----------

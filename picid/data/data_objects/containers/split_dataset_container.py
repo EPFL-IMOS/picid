@@ -22,7 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 class SplitDatasetContainer(DatasetContainer, Generic[T]):
-    """Specialize :class:`DatasetContainer` with split-first export helpers."""
+    """
+    Specialize :class:`DatasetContainer` with split-first export helpers.
+
+    Parameters
+    ----------
+    *args : tuple
+        Positional arguments forwarded to :class:`DatasetContainer`.
+    **kwargs : Any
+        Split-keyed payloads forwarded to :class:`DatasetContainer`.
+    """
 
     def __init__(self, *args, **kwargs: Any):
         """
@@ -39,7 +48,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         super().__init__(*args, **kwargs)
 
     def _collect_split_alignment_report(self) -> dict[str, Any]:
-        """Collect a non-strict report about split-key alignment and unit scales.
+        """
+        Collect a non-strict report about split-key alignment and unit scales.
 
         Returns
         -------
@@ -51,7 +61,14 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         )
 
     def _collect_unit_metadata_alignment(self) -> dict[str, Any]:
-        """Collect split/count alignment diagnostics for canonical unit metadata."""
+        """
+        Collect split/count alignment diagnostics for canonical unit metadata.
+
+        Returns
+        -------
+        dict[str, Any]
+            Structured report describing whether unit metadata is aligned.
+        """
         if not self.unit_metadata:
             return {
                 "unit_metadata_match": True,
@@ -93,7 +110,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         }
 
     def _format_split_alignment_report(self, report: dict[str, Any]) -> str:
-        """Format a compact ASCII table for split alignment diagnostics.
+        """
+        Format a compact ASCII table for split alignment diagnostics.
 
         Parameters
         ----------
@@ -110,7 +128,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
 
     @property
     def unit_cardinality(self) -> SplitUnitCardinality:
-        """Describe per-split unit cardinality without requiring cross-key alignment.
+        """
+        Describe per-split unit cardinality without requiring cross-key alignment.
 
         Returns
         -------
@@ -134,7 +153,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         return SplitUnitCardinality.MIXED
 
     def validate(self, strict: bool = False) -> dict[str, Any]:
-        """Validate split payloads and report post-transform heterogeneity.
+        """
+        Validate split payloads and report post-transform heterogeneity.
 
         Parameters
         ----------
@@ -181,7 +201,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         return report
 
     def _get_aligned_unit_counts_by_split(self) -> dict[str, int]:
-        """Return strict split counts for operations that require aligned keys.
+        """
+        Return strict split counts for operations that require aligned keys.
 
         Returns
         -------
@@ -193,13 +214,27 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
         return split_counts
 
     def _get_aligned_unit_counts_by_split_payload_only(self) -> dict[str, int]:
-        """Return strict split counts across payload keys, ignoring unit metadata."""
+        """
+        Return strict split counts across payload keys, ignoring unit metadata.
+
+        Returns
+        -------
+        dict[str, int]
+            Per-split unit counts inferred directly from payload keys.
+        """
         return DatasetContainer._get_unit_counts_by_split(self)
 
     def _assert_unit_metadata_alignment(
         self, split_counts: dict[str, int] | None = None
     ) -> None:
-        """Raise when unit metadata is not aligned with split unit counts."""
+        """
+        Raise when unit metadata is not aligned with split unit counts.
+
+        Parameters
+        ----------
+        split_counts : dict[str, int] | None, optional
+            Optional precomputed split counts used to avoid recomputation.
+        """
         if not self.unit_metadata:
             return
         if split_counts is None:
@@ -223,7 +258,8 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
             )
 
     def validate_strict(self) -> dict[str, Any]:
-        """Validate split payloads with strict cross-key alignment enabled.
+        """
+        Validate split payloads with strict cross-key alignment enabled.
 
         Returns
         -------

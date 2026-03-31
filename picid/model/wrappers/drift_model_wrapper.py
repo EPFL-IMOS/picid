@@ -1,4 +1,4 @@
-"""Wrapper for the LinearRegression model."""
+"""Wrapper for the drift forecasting baseline."""
 
 from .base import AbstractFeedForwardWrapper
 
@@ -7,9 +7,15 @@ from ...baselines.definitions import FORECASTING_TASKS
 
 
 class DriftModelWrapper(AbstractFeedForwardWrapper):
-    """Wrapper for the DriftModel baseline.
+    """
+    Wrap the drift baseline in the model interface.
 
-    This wrapper defines the forward pass of the DriftModel baseline.
+    Parameters
+    ----------
+    task_type : str
+        Forecasting task identifier.
+    **kwargs : Any
+        Additional wrapper arguments forwarded to the baseline.
     """
 
     def __init__(self, task_type: str, **kwargs):
@@ -28,7 +34,8 @@ class DriftModelWrapper(AbstractFeedForwardWrapper):
         super().__init__(backbone=backbone, **kwargs)
 
     def forward(self, batch):
-        """Forward pass for the Drift wrapper.
+        """
+        Run the drift baseline on one batch.
 
         Parameters
         ----------

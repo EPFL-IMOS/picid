@@ -1,6 +1,4 @@
-"""
-PowerNorm code from https://github.com/sIncerass/powernorm/blob/master/fairseq/modules/norms/mask_powernorm.py
-"""
+"""PowerNorm layers adapted from the upstream Spacetimeformer implementation."""
 
 import torch
 import torch.nn as nn
@@ -9,12 +7,33 @@ __all__ = ["MaskPowerNorm"]
 
 
 def _sum_ft(tensor):
-    """sum over the first and last dimention"""
+    """
+    Sum over the first and last dimensions.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Input tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        Tensor reduced over the first and last axes.
+    """
     return tensor.sum(dim=0).sum(dim=-1)
 
 
 class GroupScaling1D(nn.Module):
-    r"""Scales inputs by the second moment for the entire layer."""
+    """
+    Scale inputs by the second moment within each feature group.
+
+    Parameters
+    ----------
+    eps : float, optional
+        Numerical stability constant added before the square root.
+    group_num : int, optional
+        Number of feature groups used to compute the second moment.
+    """
 
     def __init__(self, eps=1e-5, group_num=4):
         super(GroupScaling1D, self).__init__()
@@ -42,7 +61,19 @@ class GroupScaling1D(nn.Module):
 
 
 def _unsqueeze_ft(tensor):
-    """add new dimensions at the front and the tail"""
+    """
+    Add new dimensions at the front and the tail.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Input tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        Tensor with a leading and trailing singleton dimension.
+    """
     return tensor.unsqueeze(0).unsqueeze(-1)
 
 
@@ -138,8 +169,24 @@ class PowerFunction(torch.autograd.Function):
 
 class MaskPowerNorm(nn.Module):
     """
-    An implementation of masked batch normalization, used for testing the numerical
-    stability.
+    Masked power normalization used for testing numerical stability.
+
+    Parameters
+    ----------
+    num_features : int
+        Number of feature channels in the normalization layer.
+    eps : float, optional
+        Numerical stability constant added before the square root.
+    alpha_fwd : float, optional
+        Forward exponential moving-average coefficient.
+    alpha_bkw : float, optional
+        Backward exponential moving-average coefficient.
+    affine : bool, optional
+        Whether to learn a scale and bias.
+    warmup_iters : int, optional
+        Number of warmup iterations before using the running statistic.
+    group_num : int, optional
+        Number of feature groups used by the helper scaler.
     """
 
     def __init__(
@@ -183,9 +230,22 @@ class MaskPowerNorm(nn.Module):
 
     def forward(self, input, pad_mask=None, is_encoder=False):
         """
-        input:  T x B x C -> B x C x T
-             :  B x C x T -> T x B x C
-        pad_mask: B x T (padding is True)
+        Normalize a sequence while respecting optional padding.
+
+        Parameters
+        ----------
+        input : torch.Tensor
+            Input tensor shaped either ``(T, B, C)`` or ``(B, C)``.
+        pad_mask : torch.Tensor or None, optional
+            Boolean padding mask with shape ``(B, T)`` where padding entries
+            are ``True``.
+        is_encoder : bool, optional
+            Compatibility flag kept for the upstream API.
+
+        Returns
+        -------
+        torch.Tensor
+            Normalized tensor in the original input shape.
         """
         shaped_input = len(input.shape) == 2
         if shaped_input:

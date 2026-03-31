@@ -28,22 +28,23 @@ class AbstractLoss(ABC):
         self, model_out: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute loss based on model output and batch data.
+        Compute the loss for a single model batch.
 
-        This method serves as the main entry point for loss computation.
-        It delegates to the forward method which must be implemented by subclasses.
+        This wrapper keeps the public loss interface uniform and delegates the
+        actual implementation to :meth:`forward` so subclasses only need to
+        define the task-specific loss logic.
 
         Parameters
         ----------
-        model_out :
-            Dictionary containing the model output tensors
-        batch :
-            Dictionary containing the batch data tensors
+        model_out : Dict[str, torch.Tensor]
+            Dictionary containing the model output tensors.
+        batch : Dict[str, torch.Tensor]
+            Dictionary containing the batch data tensors.
 
         Returns
         -------
         Dict[str, torch.Tensor]
-            Dictionary containing the model output with computed loss
+            Dictionary containing the original model output with the computed loss.
         """
         return self.forward(model_out, batch)
 

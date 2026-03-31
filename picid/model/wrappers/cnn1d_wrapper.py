@@ -28,7 +28,34 @@ def _calculate_receptive_field(
 
 class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
     """
-    Wrapper for the EncoderModel, handling both regression and classification tasks.
+    Wrap the CNN encoder for regression and classification tasks.
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    seq_len : int
+        Input sequence length.
+    input_channels : int
+        Number of input channels.
+    latent_dim : int
+        Latent representation size.
+    dropout_prob : float
+        Dropout probability used inside the encoder blocks.
+    output_channels : int
+        Number of channels in the final encoder block.
+    kernels : list[int]
+        Convolution kernel sizes for each encoder block.
+    strides : list[int]
+        Convolution strides for each encoder block.
+    dilations : list[int]
+        Convolution dilations for each encoder block.
+    num_classes : int, optional
+        Number of classes for classification tasks.
+    cls_head : Any, optional
+        Legacy classification head argument kept for compatibility.
+    **kwargs : Any
+        Additional wrapper arguments retained by the base wrapper.
     """
 
     def __init__(
@@ -108,7 +135,17 @@ class CNN1D_Wrapper(AbstractFeedForwardTrainingWrapper):
 
     def forward(self, batch):
         """
-        Perform a forward pass, now handling both regression and classification.
+        Run the CNN wrapper on one batch.
+
+        Parameters
+        ----------
+        batch : dict
+            Batch dictionary containing features and targets.
+
+        Returns
+        -------
+        dict
+            Dictionary containing predictions and targets.
         """
         # (batch_size, seq_len, in_channels) -> (batch_size, in_channels, seq_len)
         batch_x = batch["features"].permute(0, 2, 1)

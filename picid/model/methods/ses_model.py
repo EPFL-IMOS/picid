@@ -2,7 +2,8 @@ import torch.nn as nn
 
 
 class SESModelBaseline(nn.Module):
-    """Simple Exponential Smoothing (SES) baseline model for time series forecasting.
+    """
+    Simple Exponential Smoothing (SES) baseline model for time series forecasting.
 
     This model implements exponential smoothing where recent observations are
     weighted more heavily using a smoothing parameter alpha.
@@ -15,7 +16,7 @@ class SESModelBaseline(nn.Module):
     alpha : float, optional
         Smoothing parameter (0 < alpha <= 1). Higher values give more weight
         to recent observations. Default is 0.3.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments for compatibility.
     """
 
@@ -25,17 +26,18 @@ class SESModelBaseline(nn.Module):
         self.alpha = alpha
 
     def forward(self, x):
-        """Forward pass for the SES baseline model.
+        """
+        Forward pass for the SES baseline model.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, sequence_length, num_features)
+            Input tensor of shape (batch_size, sequence_length, num_features).
 
         Returns
         -------
         torch.Tensor
-            Predicted values of shape (batch_size, forecast_horizon, num_features)
+            Predicted values of shape (batch_size, forecast_horizon, num_features).
         """
         # x shape: (batch_size, sequence_length, num_features)
         batch_size, sequence_length, num_features = x.shape

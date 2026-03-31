@@ -14,7 +14,32 @@ logger = logging.getLogger(__name__)
 
 class DefaultEvaluator(AbstractEvaluator):
     """
-    Orchestrates data flow between a Buffer, a MetricManager, and pluggable Hooks.
+    Orchestrate buffering, metric computation, and hook execution.
+
+    Parameters
+    ----------
+    metric_names : list[str]
+        Metric names tracked by the evaluator.
+    task_type : str, default="regression"
+        High-level task family used to configure metric handling.
+    save_predictions : bool, default=False
+        Whether predictions should be buffered for saving.
+    collect_predictions : bool | None, default=None
+        Explicit override for prediction buffering.
+    num_classes : int | None, default=None
+        Number of classes for classification tasks.
+    paths : Any | None, default=None
+        Path container used by downstream logging and export code.
+    remote_logger : Any | None, default=None
+        External logger used for figures.
+    hooks : list[BaseEvalHook] | None, default=None
+        Hooks executed after update and compute steps.
+    metric_manager : MetricManager | None, default=None
+        Optional prebuilt metric manager.
+    buffer : PredictionBuffer | None, default=None
+        Optional prebuilt prediction buffer.
+    **kwargs : Any
+        Additional evaluator keyword arguments.
     """
 
     def __init__(
@@ -64,7 +89,14 @@ class DefaultEvaluator(AbstractEvaluator):
         self.buffer = buffer or PredictionBuffer()
 
     def add_hook(self, hook: BaseEvalHook) -> None:
-        """Register a new hook and potentially re-evaluate data collection."""
+        """
+        Register a new hook and enable prediction collection if needed.
+
+        Parameters
+        ----------
+        hook : BaseEvalHook
+            Hook to append to the evaluator.
+        """
         self.hooks.append(hook)
         if not self.collect_predictions:
             logger.info(
@@ -73,7 +105,14 @@ class DefaultEvaluator(AbstractEvaluator):
             self.collect_predictions = True
 
     def update(self, model_out: Dict[str, Any]) -> None:
-        """Update metrics and buffer with batch data."""
+        """
+        Update the evaluator with one batch of model outputs.
+
+        Parameters
+        ----------
+        model_out : dict[str, Any]
+            Batch output containing predictions, targets, and optional unit ids.
+        """
         if not self._validate_input(model_out):
             return
 
@@ -94,7 +133,23 @@ class DefaultEvaluator(AbstractEvaluator):
             hook.on_update_end(batch, self)
 
     def compute(self, mode: str, epoch: int, step: int) -> Dict[str, float]:
-        """Compute metrics and trigger end-of-stage hooks."""
+        """
+        Compute metrics and trigger end-of-stage hooks.
+
+        Parameters
+        ----------
+        mode : str
+            Evaluation mode.
+        epoch : int
+            Current epoch index.
+        step : int
+            Current step index.
+
+        Returns
+        -------
+        dict[str, float]
+            Computed metric values.
+        """
         results = self.metric_manager.compute()
         for hook in self.hooks:
             hook.on_compute_end(results, self, mode, epoch, step)
@@ -108,7 +163,22 @@ class DefaultEvaluator(AbstractEvaluator):
     def log_plot(
         self, fig: plt.Figure, title: str, mode: str, epoch: int, step: int
     ) -> None:
-        """Helper for hooks to log figures to remote trackers."""
+        """
+        Log a plot through the configured remote logger.
+
+        Parameters
+        ----------
+        fig : plt.Figure
+            Figure to log.
+        title : str
+            Human-readable plot title.
+        mode : str
+            Evaluation mode.
+        epoch : int
+            Current epoch index.
+        step : int
+            Current step index.
+        """
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
 

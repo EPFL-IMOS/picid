@@ -3,7 +3,8 @@ import torch.nn as nn
 
 
 class LinearRegressionModelBaseline(nn.Module):
-    """Linear Regression baseline model for time series forecasting.
+    """
+    Linear Regression baseline model for time series forecasting.
 
     This model uses the last k values as features to predict future values
     using linear regression. Each feature (channel) is modeled independently.
@@ -14,7 +15,7 @@ class LinearRegressionModelBaseline(nn.Module):
         Number of time steps to forecast ahead.
     lag_features : int, optional
         Number of lagged values to use as features. Default is 5.
-    **kwargs : dict
+    **kwargs : Any
         Additional arguments for compatibility.
     """
 
@@ -27,17 +28,18 @@ class LinearRegressionModelBaseline(nn.Module):
         # since we don't have a separate training phase in this baseline setup
 
     def forward(self, x):
-        """Forward pass for the linear regression baseline model.
+        """
+        Forward pass for the linear regression baseline model.
 
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, sequence_length, num_features)
+            Input tensor of shape (batch_size, sequence_length, num_features).
 
         Returns
         -------
         torch.Tensor
-            Predicted values of shape (batch_size, forecast_horizon, num_features)
+            Predicted values of shape (batch_size, forecast_horizon, num_features).
         """
         # x shape: (batch_size, sequence_length, num_features)
         batch_size, sequence_length, num_features = x.shape

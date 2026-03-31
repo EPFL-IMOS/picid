@@ -17,19 +17,30 @@ logger = logging.getLogger(__name__)
 class RegularizeRaggedDataTransform(NoFitPerSegmentMixin, RaggedTransform):
     def __init__(self, **kwargs):
         """
-        This transform regularizes ragged arrays to have uniform length.
-        It is use
+        Initialize the transform.
 
         Parameters
         ----------
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments passed to the parent class.
         """
         super().__init__(**kwargs)
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Concatenate ragged arrays along a single ragged dimension
+        Regularize a ragged array to a dense regular array.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segment containing the ragged array.
+        metadata : dict
+            Transform metadata. Unused here but required by the interface.
+
+        Returns
+        -------
+        numpy.ndarray
+            The regularized array.
         """
         keys = list(data.keys())
         assert (
@@ -47,8 +58,7 @@ class ExpandScalarToReferenceFeatureSize(NoFitPerSegmentMixin, DenseTransform):
         Parameters
         ----------
         scalar_key : str
-            The key in the input data that holds the scalar value
-            (or N-D array) to be expanded.
+            Key in the input data holding the scalar value or array to expand.
         **kwargs
             Additional keyword arguments passed to the parent class.
         """
@@ -59,12 +69,22 @@ class ExpandScalarToReferenceFeatureSize(NoFitPerSegmentMixin, DenseTransform):
         """
         Expand a scalar/array to match a reference feature, ensuring 2D output.
 
-        This transform takes a value from `scalar_key` and repeats it to create
-        a new array. The length of the new array's first dimension is
-        determined by the size of the first dimension (shape[0]) of a
-        "reference" feature.
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segment containing the scalar and reference feature.
+        metadata : dict
+            Transform metadata containing ``apply_to_keys``.
 
-        The output is guaranteed to be at least 2-dimensional.
+        Returns
+        -------
+        numpy.ndarray
+            Expanded array with at least two dimensions.
+
+        Notes
+        -----
+        The value from ``scalar_key`` is repeated to match the first dimension
+        of the reference feature.
 
         Examples
         --------
@@ -117,7 +137,19 @@ class ExpandScalarToReferenceFeatureSize(NoFitPerSegmentMixin, DenseTransform):
 class RaggedToDenseTransform(NoFitPerSegmentMixin, RaggedTransform):
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> np.ndarray:
         """
-        Concatenate ragged arrays along a single ragged dimension
+        Convert ragged arrays to dense NumPy arrays.
+
+        Parameters
+        ----------
+        data : NamedTransformInput
+            Input segment containing ragged arrays.
+        metadata : dict
+            Transform metadata containing ``apply_to_keys``.
+
+        Returns
+        -------
+        dict[str, numpy.ndarray]
+            Dictionary of dense arrays keyed by ``apply_to_keys``.
         """
 
         apply_to_keys = metadata["apply_to_keys"]

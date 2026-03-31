@@ -3,7 +3,18 @@ from picid.evaluator.default import DefaultEvaluator
 
 
 class ClassificationEvaluator(DefaultEvaluator):
-    """Specialized classification evaluator."""
+    """
+    Specialized classification evaluator.
+
+    Parameters
+    ----------
+    num_classes : int
+        Number of classes.
+    metric_names : List[str]
+        Metrics to track.
+    **kwargs : Any
+        Additional evaluator keyword arguments.
+    """
 
     def __init__(self, num_classes: int, metric_names: List[str], **kwargs: Any):
         if num_classes is None or num_classes < 1:

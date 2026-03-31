@@ -18,13 +18,34 @@ logger = logging.getLogger(__name__)
 
 class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
     """
-    A unified wrapper for training statistical baselines within the PICID framework.
+    Wrap statistical baselines within the PICID framework.
 
     This wrapper orchestrates the initialization of Linear, Polynomial, and
     Exponential baselines and handles the necessary data reshaping to support:
     1. Univariate Regression
     2. Multivariate Regression
     3. Classification
+
+    Parameters
+    ----------
+    task_type : str
+        Project task identifier.
+    seq_len : int
+        Input sequence length.
+    model_type : str, default="linear"
+        Statistical backbone to instantiate.
+    input_channels : int
+        Number of input channels.
+    num_targets : int, optional
+        Number of regression targets.
+    num_classes : int, optional
+        Number of classes for classification tasks.
+    output_dim : int, optional
+        Deprecated regression target dimension alias.
+    poly_degree : int, default=2
+        Polynomial expansion degree for the polynomial baseline.
+    **kwargs : Any
+        Additional wrapper arguments retained by the base wrapper.
     """
 
     def __init__(
@@ -41,26 +62,28 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
         **kwargs: Any,
     ):
         """
-        Initializes the wrapper and the underlying statistical backbone.
+        Initialize the wrapper and the underlying statistical backbone.
 
         Parameters
         ----------
-        task_type :
-            The specific task name (e.g., 'rul_regression', 'fault_classification').
-        seq_len :
-            The length of the input time series.
-        model_type :
-            The type of baseline to use ('linear', 'polynomial', 'exponential').
-        input_channels :
-            Number of input channels (required).
-        num_targets :
-            Output dimension for regression (optional, default 1).
-        num_classes :
-            Number of classes for classification (required for classification).
-        output_dim :
-            Deprecated. Use num_targets for regression.
-        poly_degree :
-            Polynomial degree for polynomial model (default 2).
+        task_type : str
+            Project task identifier.
+        seq_len : int
+            Input sequence length.
+        model_type : str
+            Statistical backbone to instantiate.
+        input_channels : int
+            Number of input channels.
+        num_targets : int, optional
+            Number of regression targets.
+        num_classes : int, optional
+            Number of classes for classification tasks.
+        output_dim : int, optional
+            Deprecated regression target dimension alias.
+        poly_degree : int, default=2
+            Polynomial expansion degree for the polynomial baseline.
+        **kwargs : Any
+            Additional wrapper arguments retained by the base wrapper.
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -135,21 +158,20 @@ class StatisticalBaselineWrapper(AbstractFeedForwardTrainingWrapper):
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Performs the forward pass and reshapes outputs to match framework expectations.
+        Perform the forward pass and reshape outputs to match framework expectations.
 
         Parameters
         ----------
-        batch : Dict[str, torch.Tensor]
-            A dictionary containing:
-            - 'features': Tensor of shape (Batch, Seq_Len, Channels).
-            - '{task_type}': Target tensor.
+        batch : dict[str, torch.Tensor]
+            Batch dictionary containing features and the task target.
 
         Returns
         -------
-        Dict[str, torch.Tensor]
-            A dictionary with 'predictions' and 'targets'.
-            - Regression Predictions: (Batch, 1, num_targets)
-            - Classification Predictions: (Batch, 1, num_classes)
+        dict[str, torch.Tensor]
+            Dictionary with ``predictions`` and ``targets``.
+
+            - Regression predictions have shape ``(batch, 1, num_targets)``.
+            - Classification predictions have shape ``(batch, 1, num_classes)``.
         """
         # (batch_size, seq_len, in_channels) -> (batch_size, in_channels, seq_len)
         batch_x = batch["features"].permute(0, 2, 1)

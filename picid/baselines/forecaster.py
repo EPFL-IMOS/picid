@@ -141,20 +141,21 @@ class Forecaster(CustomEvaluatorLightningModule):
         self, outputs: torch.Tensor, y_t: torch.Tensor, mask: torch.Tensor
     ) -> torch.Tensor:
         """
-        Cross-entropy loss for batched sequence classification with masking.
+        Compute masked cross-entropy for batched sequence classification.
 
         Parameters
         ----------
-        outputs
-            (B, T, C) unbounded logits
-        y_t
-            (B, T) integer class labels
-        mask
-            (B, T) binary mask (1 for valid, 0 for padded positions)
+        outputs : torch.Tensor
+            ``(B, T, C)`` unbounded logits.
+        y_t : torch.Tensor
+            ``(B, T)`` integer class labels.
+        mask : torch.Tensor or None
+            ``(B, T)`` binary mask with ``1`` for valid positions.
 
         Returns
         -------
-        Scalar masked mean loss
+        torch.Tensor
+            Scalar masked mean loss.
         """
 
         b, t, c = outputs.shape

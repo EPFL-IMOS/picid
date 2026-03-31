@@ -13,7 +13,8 @@ from picid.data.data_objects.core.metadata_data_object import BaseDataObjectWith
 
 
 def describe_unit_payload(unit_list: list[Any]) -> str:
-    """Summarize the first payload stored for one split.
+    """
+    Summarize the first payload stored for one split.
 
     Parameters
     ----------
@@ -52,7 +53,8 @@ def describe_unit_payload(unit_list: list[Any]) -> str:
 
 
 def payload_schema_signature(payload: Any) -> Any:
-    """Build a comparable schema signature for one unit payload.
+    """
+    Build a comparable schema signature for one unit payload.
 
     Parameters
     ----------
@@ -76,7 +78,8 @@ def payload_schema_signature(payload: Any) -> Any:
 
 
 def format_schema_signature(signature: Any) -> str:
-    """Render a compact string representation of a schema signature.
+    """
+    Render a compact string representation of a schema signature.
 
     Parameters
     ----------
@@ -99,7 +102,8 @@ def format_schema_signature(signature: Any) -> str:
 def collect_split_alignment_report(
     payloads: list[tuple[str, Mapping[str, list[Any]]]],
 ) -> dict[str, Any]:
-    """Collect a non-strict report about split-key alignment and unit scales.
+    """
+    Collect a non-strict report about split-key alignment and unit scales.
 
     Parameters
     ----------
@@ -204,7 +208,8 @@ def collect_split_alignment_report(
 
 
 def format_split_alignment_report(report: dict[str, Any]) -> str:
-    """Format a compact ASCII table for split alignment diagnostics.
+    """
+    Format a compact ASCII table for split alignment diagnostics.
 
     Parameters
     ----------
@@ -260,7 +265,19 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
     ]
 
     def _format_row(values: list[str]) -> str:
-        """Render one row of the ASCII report table."""
+        """
+        Render one row of the ASCII report table.
+
+        Parameters
+        ----------
+        values : list[str]
+            Row values to format.
+
+        Returns
+        -------
+        str
+            Formatted row string.
+        """
         return " | ".join(
             str(value).ljust(widths[idx]) for idx, value in enumerate(values)
         )

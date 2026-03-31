@@ -27,7 +27,16 @@ console = Console()
 
 
 def _show_tree_navigation(paths: list[str], title: str = "Configs read") -> None:
-    """Show which config paths are being read using rich.tree.Tree."""
+    """
+    Show which config paths are being read using a Rich tree.
+
+    Parameters
+    ----------
+    paths : list[str]
+        Config paths being traversed.
+    title : str, default="Configs read"
+        Tree title to display.
+    """
     tree = Tree(title)
     # Build tree from path segments: "a/b/c.yaml" -> a -> b -> c.yaml
     roots: dict[str, Tree] = {}
@@ -45,7 +54,7 @@ def _show_tree_navigation(paths: list[str], title: str = "Configs read") -> None
 
 
 def main() -> None:
-    """Entry point for picid-assemble CLI."""
+    """Entry point for the ``picid-assemble`` CLI."""
     run_assemble()
 
 
@@ -88,7 +97,14 @@ def run_assemble() -> None:
 
 
 def _funnel_task_first(tier: str) -> None:
-    """Task → experiments for that task → select experiment → show command."""
+    """
+    Walk the task-first assembly path.
+
+    Parameters
+    ----------
+    tier : str
+        Requested assembly tier.
+    """
     import questionary
 
     tasks = list_task_definitions()
@@ -128,7 +144,14 @@ def _funnel_task_first(tier: str) -> None:
 
 
 def _funnel_dataset_first(tier: str) -> None:
-    """Group → task (subdirs under experiment/group/) → experiment → show command."""
+    """
+    Walk the dataset-first assembly path.
+
+    Parameters
+    ----------
+    tier : str
+        Requested assembly tier.
+    """
     import questionary
 
     groups = list_experiment_groups()
@@ -175,7 +198,14 @@ def _funnel_dataset_first(tier: str) -> None:
 
 
 def _funnel_model_first(tier: str) -> None:
-    """Model → filter experiments using that model → select experiment → show command."""
+    """
+    Walk the model-first assembly path.
+
+    Parameters
+    ----------
+    tier : str
+        Requested assembly tier.
+    """
     import questionary
 
     models = list_model_configs()
@@ -213,10 +243,20 @@ def _funnel_model_first(tier: str) -> None:
 
 
 def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
-    """Prompt for parameter overrides based on tier. Return override strings.
+    """
+    Prompt for parameter overrides based on the selected tier.
 
-    Medium: paths, debug (optional).
-    Hard: optimizer, learning rate, trainer.max_epochs.
+    Parameters
+    ----------
+    experiment_key : str
+        Selected experiment key.
+    tier : str
+        Requested assembly tier.
+
+    Returns
+    -------
+    list[str]
+        Hydra override strings.
     """
     import questionary
 
@@ -293,7 +333,14 @@ def _parameter_injection_phase(experiment_key: str, tier: str) -> list[str]:
 
 
 def _preview_config(experiment_key: str) -> None:
-    """Compose config with Hydra (without running) and show task_definition, model, datasource."""
+    """
+    Compose a config preview without running the experiment.
+
+    Parameters
+    ----------
+    experiment_key : str
+        Selected experiment key.
+    """
     import hydra
     from hydra.core.global_hydra import GlobalHydra
     from omegaconf import OmegaConf
@@ -326,7 +373,16 @@ def _preview_config(experiment_key: str) -> None:
 def _show_final_command(
     experiment_key: str, tier: str = "Easy: Use defaults only"
 ) -> None:
-    """Print the run command for the selected experiment."""
+    """
+    Print the run command for the selected experiment.
+
+    Parameters
+    ----------
+    experiment_key : str
+        Selected experiment key.
+    tier : str, default="Easy: Use defaults only"
+        Requested assembly tier.
+    """
     _preview_config(experiment_key)
     overrides = _parameter_injection_phase(experiment_key, tier)
     cmd_parts = ["uv run python picid/run.py", f"experiment={experiment_key}"]
@@ -344,5 +400,12 @@ def _show_final_command(
 
 
 def _no_data(msg: str) -> None:
-    """Print a message when no data is available."""
+    """
+    Print a message when no data is available.
+
+    Parameters
+    ----------
+    msg : str
+        Short description of the missing data category.
+    """
     print(f"No {msg} found.")

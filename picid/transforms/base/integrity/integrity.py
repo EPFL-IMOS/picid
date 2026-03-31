@@ -1,10 +1,8 @@
 """
-Integrity guards — policy-driven invariants and validators.
+Integrity guards for policy-driven invariants and validators.
 
-IntegrityPolicy controls whether a check violation fails, warns, or is allowed.
-Checks can be injected into the pipeline via IntegrityCheckStep (optional).
-NaN check remains available as a built-in check; mandatory-by-default is achieved
-by using policy "fail" when the check is registered.
+IntegrityPolicy controls whether a check violation fails, warns, or is
+allowed. Checks can be injected into the pipeline via an integrity check step.
 """
 
 from __future__ import annotations
@@ -24,9 +22,20 @@ def run_check(
     """
     Run a single integrity check; apply policy on violation (when check_fn raises).
 
-    - fail: re-raise the exception.
-    - warn: issue a warning with the exception message, then continue.
-    - allow: suppress the exception and continue.
+    Parameters
+    ----------
+    name : str
+        Human-readable check name used in warnings and errors.
+    check_fn : CHECK_FN
+        No-argument callable that performs the check.
+    policy : IntegrityPolicy
+        Handling policy for exceptions raised by ``check_fn``.
+
+    Notes
+    -----
+    * ``fail`` re-raises the exception.
+    * ``warn`` issues a warning with the exception message, then continues.
+    * ``allow`` suppresses the exception and continues.
     """
     try:
         check_fn()
@@ -45,6 +54,13 @@ def run_check(
 def run_checks(
     checks: List[Tuple[str, CHECK_FN, IntegrityPolicy]],
 ) -> None:
-    """Run a list of (name, check_fn, policy) in order. Stops on first 'fail' raise."""
+    """
+    Run a list of checks in order.
+
+    Parameters
+    ----------
+    checks : list[tuple[str, CHECK_FN, IntegrityPolicy]]
+        Checks to execute in sequence.
+    """
     for name, check_fn, policy in checks:
         run_check(name, check_fn, policy)

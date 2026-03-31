@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class PHMDNCMAPSSLoader(PHMDMultiSourceLoader):
-    """PHMD N-CMAPSS Data Loader"""
+    """
+    Load the PHMDNCMAPSS datasource.
+
+    """
 
     def _get_features_columns(self):
         return self.meta_data["features"]

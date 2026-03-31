@@ -17,12 +17,15 @@ logger = logging.getLogger(__name__)
 
 
 class BaseDataObjectWithMetadata(BaseDataObject[T], ToNumpyMixin, ToDataFrameMixin):
-    """Store payloads together with optional metadata such as column mappings.
+    """
+    Store payloads together with optional metadata such as column mappings.
 
     Parameters
     ----------
     metadata : dict[str, Any] | None, default=None
         Optional metadata dictionary stored alongside the payloads.
+    container_metadata : dict[str, Any] | None, default=None
+        Canonical alias for ``metadata``.
     **kwargs : Any
         Initial payload key-value pairs.
     """
@@ -40,6 +43,8 @@ class BaseDataObjectWithMetadata(BaseDataObject[T], ToNumpyMixin, ToDataFrameMix
         ----------
         metadata : dict[str, Any] | None, default=None
             Optional metadata dictionary stored alongside the payloads.
+        container_metadata : dict[str, Any] | None, default=None
+            Canonical alias for ``metadata``.
         **kwargs : Any
             Initial payload key-value pairs.
         """
@@ -64,15 +69,26 @@ class BaseDataObjectWithMetadata(BaseDataObject[T], ToNumpyMixin, ToDataFrameMix
             self._metadata = {}
 
     def __getitem__(self, key: str) -> T:
-        """Return payload values and expose metadata under the ``metadata`` key."""
+        """
+        Return payload values and expose metadata under the ``metadata`` key.
+
+        Parameters
+        ----------
+        key : str
+            Payload key or ``"metadata"``.
+
+        Returns
+        -------
+        T
+            Stored payload or metadata view.
+        """
         if key == "metadata":
             return self.metadata  # type: ignore[return-value]
         return self._data[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
         """
-        Set an item, storing it in its original format and intelligently
-        updating the column_map.
+        Set an item, storing it in its original format and intelligently updating the column_map.
 
         Parameters
         ----------
@@ -95,7 +111,19 @@ class BaseDataObjectWithMetadata(BaseDataObject[T], ToNumpyMixin, ToDataFrameMix
     def copy(
         self: "BaseDataObjectWithMetadata[T]", deep: bool = True
     ) -> "BaseDataObjectWithMetadata[T]":
-        """Return a shallow or deep copy, including metadata."""
+        """
+        Return a shallow or deep copy, including metadata.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            Whether to deep-copy the payload and metadata dictionaries.
+
+        Returns
+        -------
+        BaseDataObjectWithMetadata[T]
+            Copied data object.
+        """
         new = super().copy(deep=deep)
         if self._metadata is None:
             new._metadata = None
@@ -119,7 +147,14 @@ class BaseDataObjectWithMetadata(BaseDataObject[T], ToNumpyMixin, ToDataFrameMix
 
     @property
     def container_metadata(self) -> Optional[dict[str, Any]]:
-        """Compatibility alias for object-level metadata storage."""
+        """
+        Compatibility alias for object-level metadata storage.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Stored metadata dictionary, if present.
+        """
         return self.metadata
 
     def validate(self, keys_to_validate: Optional[list[str]] = None) -> None:

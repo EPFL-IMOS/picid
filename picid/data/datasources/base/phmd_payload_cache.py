@@ -1,4 +1,7 @@
-"""Optional disk cache for PHMD loader in-memory payload (data_dict + meta_data)."""
+"""
+Provide datasource helpers for phmd payload cache.
+
+"""
 
 from __future__ import annotations
 

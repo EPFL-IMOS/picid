@@ -25,10 +25,14 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 class LearningRateScheduler(_LRScheduler):
     r"""
-    Provides inteface of learning rate scheduler.
+    Provide a minimal learning-rate scheduler interface.
 
-    Note:
-        Do not use this class directly, use one of the sub classes.
+    Parameters
+    ----------
+    optimizer : torch.optim.Optimizer
+        Wrapped optimizer.
+    lr : float
+        Initial learning rate.
     """
 
     def __init__(self, optimizer, lr):

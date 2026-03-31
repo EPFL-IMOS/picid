@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
     def __init__(self, shift: int, seq_len: int = 168, **kwargs):
         """
-        Initialize the seasonal dummy transform.
+        Store the shift length and seasonal period used by the transform.
 
         Parameters
         ----------
         shift : int
-            Number of time steps to shift the target (e.g., 168 for weekly)
-        seq_len : int
-            Sequence length that defines the seasonal period
+            Number of time steps used to shift the target channel.
+        seq_len : int, default=168
+            Seasonal period length used to index the history buffer.
         **kwargs
-            Additional keyword arguments
+            Additional keyword arguments forwarded to the base transform.
         """
         self._init_kwargs = kwargs
         self.shift = shift
@@ -37,18 +37,19 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         """
-        Transform data by adding shifted target values and seasonal statistics.
-        All seasonal history management happens here.
+        Append the shifted target and seasonal summaries to each sample.
 
         Parameters
         ----------
-        data_segment : dict
-            The main data segment (dict)
+        data : NamedTransformInput
+            Input mapping containing ``features`` and ``target`` arrays.
+        metadata : dict
+            Metadata dictionary, expected to contain a ``mode`` entry.
 
         Returns
         -------
-        np.ndarray
-            Concatenated data with shifted targets and seasonal statistics
+        numpy.ndarray
+            Concatenated feature matrix with lagged target and statistics.
         """
         data_segment = data
 
@@ -115,7 +116,19 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
         self, shifted_target: np.ndarray, mode: str
     ) -> List[np.ndarray]:
         """
-        Highly optimized vectorized version of seasonal statistics calculation.
+        Compute per-position seasonal mean and standard deviation.
+
+        Parameters
+        ----------
+        shifted_target : numpy.ndarray
+            Target channel after the shift has been applied.
+        mode : str
+            Pipeline mode used to decide whether history is updated.
+
+        Returns
+        -------
+        list[numpy.ndarray]
+            Seasonal summary arrays aligned with ``shifted_target``.
         """
         n_samples, n_features = shifted_target.shape
         seasonal_mean = np.zeros_like(shifted_target)
@@ -185,14 +198,14 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def _update_seasonal_history(self, shifted_target: np.ndarray, mode: str):
         """
-        Update the seasonal history with new values from the current data segment.
+        Record the current segment in the seasonal history buffer.
 
         Parameters
         ----------
-        shifted_target : np.ndarray
-            The shifted target values
+        shifted_target : numpy.ndarray
+            Target values after the lag has been applied.
         mode : str
-            The transformation mode ('train', 'val', 'test')
+            Pipeline mode controlling whether history is extended.
         """
         # Determine which values to add to history
         if mode == "train":
@@ -215,7 +228,12 @@ class SeasonalDummyTransform(NoFitPerSegmentMixin, DenseTransform):
 
     def get_seasonal_history_summary(self):
         """
-        Get a summary of the seasonal history for debugging/validation.
+        Summarize the buffered seasonal history for inspection.
+
+        Returns
+        -------
+        dict
+            Per-period counts and recent values from the history buffer.
         """
         summary = {}
         for pos in range(self.seq_len):

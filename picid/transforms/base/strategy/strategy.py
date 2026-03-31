@@ -68,7 +68,20 @@ from picid.utils.decorators import inject_transform_context_to_strategy_apply
 
 
 def is_sequence(obj):
-    """Return True for list/tuple/array-like, but False for str/bytes."""
+    """
+    Return whether an object behaves like a sequence for this module.
+
+    Parameters
+    ----------
+    obj : Any
+        Object to inspect.
+
+    Returns
+    -------
+    bool
+        ``True`` for list/tuple/array-like inputs, but ``False`` for
+        ``str`` and ``bytes``.
+    """
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes))
 
 
@@ -77,15 +90,33 @@ def postprocess_transformed_data(
     metadata: Dict[str, Any],
 ) -> List[Union[SimpleReturnObject, NamedDictReturnObject]]:
     """
-    Standardize raw transform output into a list of objects with assign_to_map keys.
+    Standardize raw transform output into return objects with mapping keys.
 
-    Called by PostprocessStep for each split. Normalises the three shapes a
+    Parameters
+    ----------
+    data : list[numpy.ndarray | NamedTransformInput] | ReturnObject
+        The raw output produced by a transform for a single split.
+    metadata : dict[str, Any]
+        Transform metadata containing ``assign_to_map``.
+
+    Returns
+    -------
+    list[SimpleReturnObject | NamedDictReturnObject]
+        Normalized outputs that expose the expected ``assign_to_map`` keys.
+
+    Raises
+    ------
+    ValueError
+        If the output shape cannot be normalized into a supported form.
+
+    Notes
+    -----
+    ``PostprocessStep`` uses this helper to normalize the three output shapes a
     transform may return:
-        1. Single array (one unit, single assign key).
-        2. List of raw arrays (one per unit, single assign key).
-        3. List of dict-like objects (one per unit, multiple assign keys).
 
-    Raises ValueError if the format is not recognised.
+    1. Single array (one unit, single assign key).
+    2. List of raw arrays (one per unit, single assign key).
+    3. List of dict-like objects (one per unit, multiple assign keys).
     """
     assign_to_map = metadata.get("assign_to_map")
     assert is_sequence(
@@ -120,12 +151,12 @@ def postprocess_transformed_data(
 
 class TransformStrategy:
     """
-    Orchestrates the transform pipeline and provides chunk/merge helpers.
+    Orchestrate the transform pipeline and expose chunk/merge helpers.
 
     The strategy is the single entry point for applying a transform to a
-    SplitDatasetContainer. It builds a TransformContext, injects default
-    integrity checks when validate_output=True, runs the pipeline steps,
-    and returns (transformed_data, log).
+    ``SplitDatasetContainer``. It builds a ``TransformContext``, injects
+    default integrity checks when ``validate_output=True``, runs the pipeline
+    steps, and returns ``(transformed_data, log)``.
     """
 
     @inject_transform_context_to_strategy_apply
@@ -222,7 +253,16 @@ class TransformStrategy:
     # ------------------------------------------------------------------
 
     def _raise_transform_error(self, context: TransformContext, e: Exception) -> None:
-        """Build and raise TransformError from pipeline context and caught exception."""
+        """
+        Build and raise a ``TransformError`` from the pipeline context.
+
+        Parameters
+        ----------
+        context : TransformContext
+            Pipeline context that captured the failure.
+        e : Exception
+            Original exception raised by the pipeline.
+        """
         err = build_transform_error(context, e)
         raise err from e
 
@@ -233,19 +273,33 @@ class TransformStrategy:
         unit_metadata_by_split: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     ) -> List[NamedTransformInput]:
         """
-        Build one NamedTransformInput per unit for the given split.
+        Build one ``NamedTransformInput`` per unit for a split.
 
-        Returns lightweight wrappers holding *references* to the underlying
-        arrays — no array data is copied. The caller is responsible for
-        letting the returned list go out of scope when done so the wrappers
-        can be GC'd.
+        Parameters
+        ----------
+        data_to_prepare : dict[str, Any]
+            Split-keyed transform payload that still holds lists of units.
+        split : str
+            Split name to materialize into chunk wrappers.
+        unit_metadata_by_split : dict[str, list[dict[str, Any]]], optional
+            Optional per-split metadata aligned with the unit lists.
 
-        No sanitization is performed here; that is IntegrityCheckBeforeStep's
-        responsibility.
+        Returns
+        -------
+        list[NamedTransformInput]
+            Lightweight wrappers that keep references to the underlying arrays.
 
-        Called by RegisterChunkBuilderStep's closures (primary path) and
-        directly by FitStep/TransformStep as a fallback for test contexts
-        where RegisterChunkBuilderStep did not run.
+        Notes
+        -----
+        No sanitization is performed here; that is
+        ``IntegrityCheckBeforeStep``'s responsibility. The caller is
+        responsible for letting the returned list go out of scope when done so
+        the wrappers can be garbage collected.
+
+        This helper is called by ``RegisterChunkBuilderStep`` closures
+        (primary path) and directly by ``FitStep`` / ``TransformStep`` as a
+        fallback for test contexts where ``RegisterChunkBuilderStep`` did not
+        run.
         """
         keys, num_units, unit_metadata_for_split = self._validate_chunk_alignment(
             data_to_prepare=data_to_prepare,
@@ -271,7 +325,23 @@ class TransformStrategy:
         split: str,
         unit_metadata_by_split: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     ) -> Tuple[List[str], int, List[Dict[str, Any]]]:
-        """Validate split-local payload counts before chunk materialization."""
+        """
+        Validate split-local payload counts before chunk materialization.
+
+        Parameters
+        ----------
+        data_to_prepare : dict[str, Any]
+            Split-keyed payload with unit lists for each transform input.
+        split : str
+            Split name that is being materialized.
+        unit_metadata_by_split : dict[str, list[dict[str, Any]]], optional
+            Optional metadata aligned with each unit list.
+
+        Returns
+        -------
+        tuple[list[str], int, list[dict[str, Any]]]
+            The keys, number of units, and aligned metadata for the split.
+        """
         keys = list(data_to_prepare.keys())
         if not keys:
             return [], 0, []
@@ -322,9 +392,20 @@ class TransformStrategy:
         """
         Write transformed results into the container in place.
 
-        Existing keys: overwrite per split.
-        New keys: create with entries for all available splits.
-        Missing splits for new keys are stored as None (structure is consistent).
+        Parameters
+        ----------
+        base_data : SplitDatasetContainer
+            Container that receives the transformed results.
+        transformed_results : dict[str, dict[str, list[Any]]]
+            Nested mapping of assign-to keys and their split-local outputs.
+        available_splits : list[str]
+            Splits used to fill missing entries for newly created keys.
+
+        Notes
+        -----
+        Existing keys are overwritten per split. New keys are created with
+        entries for all available splits. Missing splits for new keys are
+        stored as ``None`` so the container structure remains consistent.
         """
         for assign_to_key, split_results in transformed_results.items():
             if assign_to_key in base_data:

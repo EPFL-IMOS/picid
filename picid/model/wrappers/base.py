@@ -1,4 +1,4 @@
-"""Abstract class that provides an interface to handle the network output."""
+"""Shared wrapper base classes for feed-forward and fit/predict models."""
 
 import sys
 import logging
@@ -111,7 +111,7 @@ class AbstractFitPredictWrapper(ABC):
             ), "Only one of profile_fit or profile_predict can be set."
 
     def _reinit_backbone(self):
-        """Re-instantiate backbone from the provided factory (if any)."""
+        """Re-instantiate the backbone from the captured factory."""
         if self.backbone_factory is None:
             raise RuntimeError(
                 "No backbone factory available to re-initialize the model."
@@ -125,18 +125,48 @@ class AbstractFitPredictWrapper(ABC):
             )
 
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
-        """Inner fit call to be potentially overridden by subclasses."""
+        """
+        Fit the wrapped backbone, optionally after reinitialization.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input tensor moved to CPU before fitting.
+        y : torch.Tensor
+            Target tensor moved to CPU before fitting.
+        """
         if self.reinit_on_fit:
             self._reinit_backbone()
 
         self.backbone.fit(X, y)
 
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
-        """Inner predict call to be potentially overridden by subclasses."""
+        """
+        Predict with the wrapped backbone.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input tensor moved to CPU before prediction.
+
+        Returns
+        -------
+        torch.Tensor
+            Raw prediction tensor returned by the wrapped model.
+        """
         return self.backbone.predict(X)
 
     def fit(self, X: torch.Tensor, y: torch.Tensor):
-        """Fits the backbone model to the provided data."""
+        """
+        Fit the backbone model on CPU tensors.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input tensor used for fitting.
+        y : torch.Tensor
+            Target tensor used for fitting.
+        """
         if self.profile_fit_cfg is not None:
             from torch.profiler import record_function
 
@@ -151,7 +181,19 @@ class AbstractFitPredictWrapper(ABC):
             self._call_fit(X.cpu(), y.cpu())
 
     def _iterate_batches(self, X: torch.Tensor):
-        """Yields preprocessed batches of X."""
+        """
+        Yield CPU batches for the optional batched prediction path.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input tensor that will be split into batches.
+
+        Yields
+        ------
+        torch.Tensor
+            A CPU batch with shape ``(batch_size, ...)``.
+        """
         X = X.cpu()  # preprocessing step
         batch_size = self.yield_batch_size
         n_samples = X.shape[0]
@@ -162,7 +204,19 @@ class AbstractFitPredictWrapper(ABC):
             yield batch_X
 
     def predict(self, X: torch.Tensor) -> torch.Tensor:
-        """Predicts outputs for the given input data."""
+        """
+        Predict outputs for the given input tensor.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input tensor used for prediction.
+
+        Returns
+        -------
+        torch.Tensor
+            Two-dimensional tensor containing the predictions.
+        """
         X = X.cpu()
         if self.yield_strategy:
             outputs_list = []
@@ -210,18 +264,42 @@ class AbstractFitPredictWrapper(ABC):
 
     @abstractmethod
     def serialize_model(self, task_id):
-        """Serialize the model to a file."""
+        """
+        Serialize the wrapped model to a file.
+
+        Parameters
+        ----------
+        task_id : str
+            Identifier used to derive the output path.
+
+        Returns
+        -------
+        object
+            Serialized model reference or path.
+        """
         pass
 
     @abstractmethod
     def load_model(self, task_id):
-        """Load the model from a file."""
+        """
+        Load the wrapped model from a file.
+
+        Parameters
+        ----------
+        task_id : str
+            Identifier used to derive the input path.
+
+        Returns
+        -------
+        object
+            Restored model object.
+        """
         pass
 
     @property
     @abstractmethod
     def allows_multi_target(self) -> bool:
-        """Indicates whether the model supports multi-target prediction."""
+        """Return whether the wrapper supports multi-target prediction."""
         pass
 
     def _setup_profiler(self, cfg: OmegaConf):
@@ -299,13 +377,12 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
         )
 
     def __call__(self, batch):
-        """Forward pass for the model.
-
-        This method calls the forward method and adds the residual connection.
+        """
+        Call ``forward`` and return its model output.
 
         Parameters
         ----------
-        batch : torch_geometric.data.Data
+        batch : dict
             Batch object containing the batched data.
 
         Returns
@@ -319,7 +396,8 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
 
     @abstractmethod
     def forward(self, batch):
-        """Forward pass for the model.
+        """
+        Run the forward pass for one batch.
 
         Parameters
         ----------
@@ -350,13 +428,12 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
         return f"{self.__class__.__name__}(backbone={self.backbone}"
 
     def __call__(self, batch):
-        """Forward pass for the model.
-
-        This method calls the forward method and adds the residual connection.
+        """
+        Call ``forward`` and return its model output.
 
         Parameters
         ----------
-        batch : torch_geometric.data.Data
+        batch : dict
             Batch object containing the batched data.
 
         Returns
@@ -370,7 +447,8 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
 
     @abstractmethod
     def forward(self, batch):
-        """Forward pass for the model.
+        """
+        Run the forward pass for one batch.
 
         Parameters
         ----------

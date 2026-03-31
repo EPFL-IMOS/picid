@@ -17,12 +17,12 @@ except ImportError:
 
 class ResourceTracker(pl.Callback):
     """
-    All-in-one Research Logger.
+    Track compute resources and timing statistics during a run.
 
-    Tracks:
-    1. Efficiency: FLOPs, Peak VRAM, GPU Load (%), Inference Latency.
-    2. Speed: Smoothed Throughput (Samples/Sec).
-    3. Timing: Average Batch & Epoch times for Train/Val.
+    Parameters
+    ----------
+    skip_first_n : int, default=10
+        Number of initial batches to ignore when computing timing statistics.
     """
 
     def __init__(self, skip_first_n=10):
@@ -54,7 +54,14 @@ class ResourceTracker(pl.Callback):
         return 0.0
 
     def _get_gpu_load(self):
-        """Returns the current GPU Compute Utilization %."""
+        """
+        Return the current GPU compute utilization percentage.
+
+        Returns
+        -------
+        float
+            Current GPU utilization in percent.
+        """
         if not HAS_NVML or not torch.cuda.is_available():
             return 0.0
         try:
@@ -68,7 +75,19 @@ class ResourceTracker(pl.Callback):
             return 0.0
 
     def _extract_features(self, batch):
-        """Robustly extracts input tensor from dict/list/tuple."""
+        """
+        Extract the input tensor from a batch structure.
+
+        Parameters
+        ----------
+        batch : Any
+            Batch structure supplied by the dataloader.
+
+        Returns
+        -------
+        Any
+            Extracted input tensor or the original batch fallback.
+        """
         if isinstance(batch, dict):
             if "features" in batch:
                 return batch["features"]
@@ -232,7 +251,16 @@ class ResourceTracker(pl.Callback):
         self._log_inference_summary(trainer)
 
     def on_fit_end(self, trainer, pl_module):
-        """Final Summary including GPU Load."""
+        """
+        Log the final summary, including GPU load statistics.
+
+        Parameters
+        ----------
+        trainer : lightning.pytorch.Trainer
+            Active trainer instance.
+        pl_module : lightning.pytorch.LightningModule
+            Active Lightning module.
+        """
         summary = {}
         if self.stats["train_batch_times"]:
             summary["AvgTime/train_batch_mean_ms"] = (
