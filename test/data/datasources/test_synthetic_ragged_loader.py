@@ -46,7 +46,7 @@ class TestSyntheticRaggedFromFileLoader:
         loader.split_data()
         container = loader.get_data()
 
-        from picid.data.data_objects.data import SplitDatasetContainer
+        from picid.data.data_objects import SplitDatasetContainer
 
         assert isinstance(container, SplitDatasetContainer)
         assert "features" in container
