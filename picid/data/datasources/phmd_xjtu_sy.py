@@ -40,7 +40,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         return "bearing"  # TODO: self.meta_data["identifier"] do not work correctly for fault
 
     def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
-        if self._init_kwargs["task_mode"] == "fault":
+        if self.task_mode == "fault":
             assert (
                 "rul" in list(auxiliary_tasks_fold_dict.keys())
             ), "When using fault as main task, please provide rul as auxiliary task in the datasource"
@@ -109,7 +109,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
         # --- 2. Handle Ragged Array Processing (if enabled) ---
 
-        if self._init_kwargs["use_ragged"]:
+        if self.use_ragged:
             # For ragged mode, we reshape the flat time-series data into sequences
             # of a fixed length (SAMPLE_RANGE_SIZE).
 

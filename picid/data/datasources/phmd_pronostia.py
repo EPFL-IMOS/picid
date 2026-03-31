@@ -103,7 +103,7 @@ class PronostiaLoader(PHMDMultiSourceLoader):
 
         # --- 2. Handle Ragged Array Processing (if enabled) ---
 
-        if self._init_kwargs["use_ragged"]:
+        if self.use_ragged:
             # Check if the total number of samples can be evenly divided into sequences.
             if len(features) % SAMPLE_RANGE_SIZE != 0:
                 raise ValueError(
