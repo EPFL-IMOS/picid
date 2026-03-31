@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from picid.data.data_objects.data import SplitDatasetContainer, SplitUnitCardinality
+from picid.data.data_objects.data import SplitDatasetContainer
 from picid.data.datasources.base.exceptions import (
     DatasourceConfigurationError,
     DatasourceStateError,
@@ -85,15 +85,14 @@ def test_predefined_split_loader_load_get_and_noop_split():
 
 
 def test_predefined_split_loader_get_data_is_stable_across_repeated_calls():
-    """Repeated get_data() calls must preserve multi-unit semantics."""
+    """Repeated get_data() calls must preserve split payload list storage."""
     loader = InMemoryPredefinedSplitLoader()
     loader.load_data()
 
     first = loader.get_data()
     second = loader.get_data()
 
-    assert first.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
-    assert second.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    assert len(first.to_split_dict()["train"]["features"]) == 1
     assert len(second.to_split_dict()["train"]["features"]) == 1
 
 
@@ -105,8 +104,7 @@ def test_predefined_split_loader_one_unit_per_split_is_stable_across_repeated_ca
     first = loader.get_data()
     second = loader.get_data()
 
-    assert first.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
-    assert second.unit_cardinality == SplitUnitCardinality.SINGLE_UNIT_PER_SPLIT
+    assert len(first.to_split_dict()["train"]["features"]) == 1
     split_dict = second.to_split_dict()
     assert len(split_dict["train"]["features"]) == 1
     assert split_dict["train"]["features"][0].shape == (3, 2)
