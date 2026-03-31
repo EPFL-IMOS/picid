@@ -82,6 +82,35 @@ class FileSystemCache:
             return None
         return joblib.load(pkl_file), joblib.load(metadata_file)
 
+    def write_meta(
+        self,
+        cache_dir: str,
+        stage: str,
+        config: dict,
+        cache_key: str = None,
+        library_dir=None,
+        extensions=None,
+    ) -> str:
+        """
+        Write meta_pending.json before data computation starts.
+
+        Acts as a tombstone so that if the process crashes during data creation,
+        the file exists on disk to record what was being computed. A subsequent
+        run will find no meta.json (only meta_pending.json) and rebuild normally.
+        Once save() completes it writes the canonical meta.json alongside the data.
+
+        Returns the cache_key used (computed if not provided).
+        """
+        if library_dir:
+            cache_key = compute_cache_key(config, library_dir, extensions)
+        elif cache_key is None:
+            cache_key = hash_config(config)
+        _, meta_file, _, _ = self._paths(cache_dir, stage, cache_key)
+        pending_file = meta_file.with_name("meta_pending.json")
+        with open(pending_file, "w") as f:
+            json.dump(ensure_serializable(config), f, indent=2)
+        return cache_key
+
     def save(
         self,
         cache_dir: str,
@@ -143,6 +172,7 @@ class FileSystemCache:
                 )
 
         # ❌ no cache or invalid hash → rebuild
+        self.write_meta(cache_dir, stage, config, cache_key=cache_key)
         data, metadata = build_fn()
         self.save(
             cache_dir, stage, data, metadata, config, library_dir, extensions, cache_key

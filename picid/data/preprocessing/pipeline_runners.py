@@ -123,10 +123,18 @@ class CachingPipelineRunner:
         if result is not None:
             return result
 
-        # 4. Full run: all transforms, optionally saving at each cache point.
+        # 4. Pre-write preprocessed tombstone before heavy transforms begin.
+        self._pp.cache.write_meta(
+            cache_dir=self._cache_dir,
+            stage="preprocessed",
+            config=self._preprocessed_config,
+            cache_key=self._preprocessed_key,
+        )
+
+        # 5. Full run: all transforms, optionally saving at each cache point.
         self._run_all_transforms()
 
-        # 5. Save final preprocessed cache.
+        # 6. Save final preprocessed cache.
         self._save_preprocessed()
 
         return self._pp.data
@@ -219,6 +227,12 @@ class CachingPipelineRunner:
                 boundary_name,
                 len(names_after),
             )
+            pp.cache.write_meta(
+                cache_dir=self._cache_dir,
+                stage="preprocessed",
+                config=self._preprocessed_config,
+                cache_key=self._preprocessed_key,
+            )
             self._save_preprocessed()
             return pp.data
 
@@ -233,6 +247,22 @@ class CachingPipelineRunner:
         cache_point_names = pp.transforms.get_cache_point_names()
 
         if cache_point_names and self._save_boundaries:
+            # Pre-write boundary tombstones for all cache points before any
+            # transform runs, so a crash leaves a meta.json on disk.
+            for boundary_name in cache_point_names:
+                boundary_config = {
+                    "datasource": self._datasource_config,
+                    "transforms": pp.transforms.get_config_up_to_and_including(
+                        boundary_name
+                    ),
+                }
+                pp.cache.write_meta(
+                    cache_dir=self._cache_dir,
+                    stage="boundary",
+                    config=boundary_config,
+                    library_dir=self._combined_paths,
+                    extensions=[".py"],
+                )
 
             def _boundary_callback(data: DatasetContainer, transform_name: str):
                 if transform_name not in cache_point_names:
