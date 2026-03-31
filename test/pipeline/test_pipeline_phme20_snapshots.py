@@ -19,6 +19,7 @@ Then commit test/data/fixtures/pipeline_snapshots/.
 
 from __future__ import annotations
 
+from functools import lru_cache
 import os
 import time
 from pathlib import Path
@@ -37,6 +38,23 @@ SNAPSHOTS_ROOT = (
 CONFIG_KEYS = {
     "phme20": ["features", "rul"],
 }
+
+
+@lru_cache(maxsize=1)
+def _ensure_phme20_downloaded(data_dir: str) -> None:
+    """
+    Ensure the PHME20 dataset is available under ``data_dir/phmd_cache``.
+
+    Parameters
+    ----------
+    data_dir : str
+        Root data directory whose ``phmd_cache`` subdirectory stores PHMD assets.
+    """
+    from phmd.download import download
+
+    cache_dir = Path(data_dir) / "phmd_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    download("PHME20", cache_dir=str(cache_dir), unzip=True)
 
 
 def _snapshot_dir(name: str, stage: str) -> Path:
@@ -129,6 +147,7 @@ def test_loaded_slices_match_saved(config_name: str):
     }
     project_root = Path(__file__).resolve().parents[2]
     data_dir = project_root / "datasets"
+    _ensure_phme20_downloaded(str(data_dir))
     ds_path, _ = CONFIGS[config_name]
     ds_cfg = OmegaConf.load(project_root / ds_path)
     ds_cfg = OmegaConf.merge(
@@ -210,6 +229,7 @@ def test_transformed_slices_match_saved(config_name: str):
     }
     project_root = Path(__file__).resolve().parents[2]
     data_dir = project_root / "datasets"
+    _ensure_phme20_downloaded(str(data_dir))
     ds_path, tf_path = CONFIGS[config_name]
     keys = CONFIG_KEYS.get(config_name, ["features", "target"])
     ds_cfg = OmegaConf.load(project_root / ds_path)
