@@ -551,7 +551,6 @@ def rerun_best_model_checkpoint(
     if test_results:
         _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
         _write_pipeline_regression_output(test_results[0])
-        _write_pipeline_regression_output(test_results[0])
         logged = {}
         for k, v in test_results[0].items():
             suffix = k.split("/", 1)[1] if "/" in k else k
@@ -910,6 +909,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
 
     if test_results:
         _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
+        _write_pipeline_regression_output(test_results[0])
 
     # We want to avoid running this for pfn models where there is no training
     # and thus no checkpoint and rerunning pfn model would take significant time.
