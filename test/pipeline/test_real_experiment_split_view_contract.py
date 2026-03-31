@@ -27,12 +27,22 @@ CONFIG_DIR = PROJECT_ROOT / "configs"
         "concepts_n_cmapss/prognostics/lstm",
         "mzvav/diagnostics/lstm",
         "airbus_helicopter/anomaly_detection/isolation_forest",
+        "threew/anomaly_detection/isolation_forest",
     ],
 )
 def test_real_experiment_processed_split_dict_keeps_unit_lists(
     experiment_name: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The run.py handoff should receive list-per-unit payloads for real experiments."""
+    """
+    Verify run.py handoff keeps list-per-unit payloads.
+
+    Parameters
+    ----------
+    experiment_name : str
+        Experiment config path to compose and run through preprocessing.
+    monkeypatch : pytest.MonkeyPatch
+        Fixture used to set the project root for Hydra path resolution.
+    """
     monkeypatch.setenv("PROJECT_ROOT", str(PROJECT_ROOT))
 
     GlobalHydra.instance().clear()

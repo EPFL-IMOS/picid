@@ -42,6 +42,11 @@ airbus_helicopter:
   required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
   description: "Airbus helicopter – anomaly detection dataset"
 
+threew:
+  experiment_key_pattern: "threew/*"
+  required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md, uv.lock]
+  description: "3W – offshore oil well anomaly detection dataset"
+
 snapshot:
   experiment_key_pattern: "snapshot/*"
   required_files: [config_resolved.yaml, run_metadata.yaml, REPRODUCE.md]

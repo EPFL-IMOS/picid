@@ -1,6 +1,7 @@
 {
   "experiment_keys": [
     "airbus_helicopter/anomaly_detection/isolation_forest",
+    "threew/anomaly_detection/isolation_forest",
     "concepts_n_cmapss/prognostics/cnn_1d",
     "concepts_n_cmapss/prognostics/crossformer",
     "concepts_n_cmapss/prognostics/exponential_regression",
