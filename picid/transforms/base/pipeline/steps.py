@@ -21,6 +21,7 @@ per split; they hold references to underlying arrays (no copy of array data).
 
 from __future__ import annotations
 
+import copy
 import datetime
 import logging
 from collections import defaultdict
@@ -30,6 +31,7 @@ from typing import Any, Dict, List, Optional
 import awkward as ak
 
 from picid.data.data_objects import NamedTransformInput
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.data_objects.slice_info import SliceInfo
 from picid.data.data_objects.manifest import (
     MANIFEST_SCHEMA_VERSION,
@@ -403,6 +405,7 @@ class MergeStep:
         ):
             return context
 
+        self._propagate_unit_metadata(context)
         self._warn_on_changes(context)
         self._assert_unit_metadata_alignment(context)
 
@@ -412,6 +415,64 @@ class MergeStep:
             available_splits=context.available_splits,
         )
         return context
+
+    @staticmethod
+    def _propagate_unit_metadata(context: TransformContext) -> None:
+        """Let the transform decide how unit metadata should follow the output."""
+        transformed_data = context.transformed_data
+        if transformed_data is None:
+            return
+
+        unit_metadata = getattr(transformed_data, "unit_metadata", {})
+        if not unit_metadata:
+            return
+
+        transform = context.transform_instance
+        propagate_hook = getattr(transform, "propagate_unit_metadata", None)
+        if propagate_hook is None:
+            return
+
+        # The hook runs before the alignment assertion on purpose. At this point
+        # we already know the transformed payload shape, but we have not yet
+        # rejected mismatched metadata. This is the one place where a
+        # cardinality-changing transform can replace stale per-unit metadata with
+        # metadata that truthfully describes the transformed output.
+        hook_metadata = {
+            "transform_name": context.step_id or type(transform).__name__,
+            "apply_to_keys": context.apply_to_keys,
+            "assign_to_keys": context.assign_to_keys,
+            "assign_to_map": context.assign_to_keys_map,
+            "available_splits": context.available_splits,
+            "container_metadata": getattr(context.data, "container_metadata", {}),
+        }
+
+        propagated = propagate_hook(
+            unit_metadata_by_split=unit_metadata,
+            transformed_results_for_new_key=context.transformed_results_for_new_key,
+            metadata=hook_metadata,
+        )
+
+        if propagated is None:
+            return
+        if not isinstance(propagated, Mapping):
+            raise TypeError(
+                f"Transform '{type(transform).__name__}' returned invalid "
+                f"unit_metadata propagation output of type {type(propagated).__name__}; "
+                "expected a split-keyed mapping or None."
+            )
+
+        if propagated:
+            normalized = SplitDatasetContainer._normalize_unit_metadata(
+                dict(propagated)
+            )
+        else:
+            normalized = {}
+
+        # The transformed container is a shallow copy of the input container,
+        # so replacing the private storage here is safe and keeps the source
+        # container untouched. We intentionally mutate only the copied
+        # ``transformed_data`` view that continues through the pipeline.
+        transformed_data._unit_metadata = copy.deepcopy(normalized)
 
     @staticmethod
     def _warn_on_changes(context: TransformContext) -> None:
@@ -481,6 +542,13 @@ class MergeStep:
             raise ValueError(
                 "Transform output cannot preserve unit_metadata alignment: "
                 + "; ".join(mismatches)
+                + ". If this transform changes unit cardinality, implement "
+                "`propagate_unit_metadata(...)` on the transform and return one of "
+                "`preserve_unit_metadata(...)`, `aggregate_unit_metadata(...)`, or "
+                "`drop_unit_metadata(...)` before this merge step. Preserve is the "
+                "default for unit-preserving transforms; aggregate and drop are "
+                "the escape hatches for transforms that intentionally reshape "
+                "unit identity."
             )
 
 

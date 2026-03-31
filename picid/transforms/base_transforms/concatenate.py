@@ -10,6 +10,7 @@ from picid.transforms.base.multisource import (
     NoFitPerSegmentMixin,
     NoFitConcatAlongAxisMixin,
 )
+from picid.transforms.base.pipeline.unit_metadata import aggregate_unit_metadata
 from picid.utils.awkward_utils import ak_find_var_dims
 
 logger = logging.getLogger(__name__)
@@ -220,3 +221,26 @@ class MultiDatasetRuggedToDenseTransform(NoFitConcatAlongAxisMixin, RaggedTransf
             out[key] = ak.to_numpy(data[key])
 
         return out
+
+    def propagate_unit_metadata(
+        self,
+        *,
+        unit_metadata_by_split: Dict[str, List[Dict[str, Any]]],
+        transformed_results_for_new_key: Dict[str, Dict[str, List[Any]]],
+        metadata: Dict[str, Any],
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        # This transform intentionally collapses many units into a single dense
+        # block per split. We therefore aggregate the original unit metadata
+        # into one summary record so the pipeline's 1:1 alignment check stays
+        # truthful after the collapse.
+        #
+        # In practice this is the behavior needed by configurations such as the
+        # Airbus statistics pipeline: multiple per-unit ragged arrays are
+        # concatenated into one split-level dense matrix, so preserving the
+        # original per-unit metadata would leave the container lying about how
+        # many output units now exist.
+        return aggregate_unit_metadata(
+            unit_metadata_by_split=unit_metadata_by_split,
+            transformed_results_for_new_key=transformed_results_for_new_key,
+            metadata=metadata,
+        )

@@ -25,6 +25,11 @@ from picid.transforms.base.pipeline.hooks_registry import (
     clear_hooks,
     register_hook,
 )
+from picid.transforms.base.pipeline.unit_metadata import (
+    aggregate_unit_metadata,
+    drop_unit_metadata,
+    preserve_unit_metadata,
+)
 from picid.transforms.base.pipeline.steps import (
     CopyStep,
     FitStep,
@@ -58,8 +63,11 @@ __all__ = [
     "TransformStep",
     "_emit",
     "_get_producer_version",
+    "aggregate_unit_metadata",
     "build_default_after_checks",
     "build_default_before_checks",
+    "drop_unit_metadata",
     "clear_hooks",
+    "preserve_unit_metadata",
     "register_hook",
 ]

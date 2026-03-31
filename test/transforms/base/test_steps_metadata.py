@@ -209,3 +209,23 @@ def test_transform_raises_when_output_cannot_preserve_unit_metadata_alignment():
 
     with pytest.raises(TransformError, match="unit metadata|unit_metadata"):
         dt.forward(container)
+
+
+def test_transform_raises_actionable_error_for_unit_metadata_hook():
+    """The alignment error should point users to transform-level propagation hooks."""
+    from test.transforms.base.conftest import ConcatenateUnitsTransform
+
+    container = _container_with_metadata()
+    dt = DataTransform(
+        "concat-units",
+        ConcatenateUnitsTransform(axis=0),
+        {"apply_to": "features", "assign_to": "features"},
+    )
+
+    with pytest.raises(TransformError) as exc_info:
+        dt.forward(container)
+
+    msg = str(exc_info.value)
+    assert "propagate_unit_metadata" in msg
+    assert "aggregate_unit_metadata" in msg
+    assert "drop_unit_metadata" in msg

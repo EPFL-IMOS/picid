@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import hydra
 from pathlib import Path
 import subprocess
 import tempfile
 
 import awkward as ak
 from hydra import compose
+from hydra.core.global_hydra import GlobalHydra
 import numpy as np
 import pytest
 
@@ -20,6 +22,7 @@ from picid.data.datasources.pronostia_ieee2012 import (
 
 
 SAMPLE_RANGE_SIZE = 4
+CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"
 LEARNING_UNITS = ("1_1", "1_2", "2_1", "2_2", "3_1", "3_2")
 FULL_TEST_UNITS = (
     "1_3",
@@ -167,7 +170,19 @@ def _make_loader(data_dir: Path, **overrides):
     return PronostiaIEEE2012Loader(**kwargs)
 
 
-def _assert_disjoint_and_cover_all(split_table: dict[str, list[str]], expected_units: set[str]) -> None:
+@pytest.fixture(autouse=True)
+def hydra_initialized():
+    """Re-initialize Hydra for each test so compose() is order-independent."""
+
+    GlobalHydra.instance().clear()
+    with hydra.initialize_config_dir(version_base="1.3", config_dir=str(CONFIGS_DIR)):
+        yield
+    GlobalHydra.instance().clear()
+
+
+def _assert_disjoint_and_cover_all(
+    split_table: dict[str, list[str]], expected_units: set[str]
+) -> None:
     seen: set[str] = set()
     for split_name in ("train", "val", "test"):
         split_units = set(split_table[split_name])
@@ -578,8 +593,14 @@ def test_pronostia_ieee2012_configs_and_experiment_bases_compose() -> None:
     )
     assert cfg.datasource.split_mode == "in_domain"
     assert cfg.datasource.fold_id == 1
-    assert dict(cfg.datasource.split_assignments_by_mode.in_domain.fold_1) == PRONOSTIA_IN_DOMAIN_FOLDS["fold_1"]
-    assert dict(cfg.datasource.split_assignments_by_mode.domain_shift.fold_5) == PRONOSTIA_DOMAIN_SHIFT_FOLDS["fold_5"]
+    assert (
+        dict(cfg.datasource.split_assignments_by_mode.in_domain.fold_1)
+        == PRONOSTIA_IN_DOMAIN_FOLDS["fold_1"]
+    )
+    assert (
+        dict(cfg.datasource.split_assignments_by_mode.domain_shift.fold_5)
+        == PRONOSTIA_DOMAIN_SHIFT_FOLDS["fold_5"]
+    )
 
     cfg = compose(
         config_name="run",

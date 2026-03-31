@@ -8,7 +8,7 @@ DenseTransform / RaggedOrDenseTransform to declare capability for handler dispat
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from picid.data.data_objects import NamedTransformInput
 from picid.utils.decorators import check_transform_output_consistency
@@ -104,6 +104,28 @@ class BaseTransform(ABC):
             and optionally slice_info when metadata.include_slice_info_in_metadata is true).
         """
         pass
+
+    def propagate_unit_metadata(
+        self,
+        *,
+        unit_metadata_by_split: Dict[str, List[Dict[str, Any]]],
+        transformed_results_for_new_key: Dict[str, Dict[str, List[Any]]],
+        metadata: Dict[str, Any],
+    ) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """Optionally return replacement unit metadata after a transform runs.
+
+        Default behaviour is a no-op: return ``None`` and let the pipeline keep
+        the existing ``unit_metadata`` unchanged. Transforms that change unit
+        cardinality can override this hook and return a replacement split-keyed
+        mapping.
+
+        Why this hook lives on the transform:
+        a cardinality change is part of the transform's semantics, not a global
+        pipeline concern. The transform knows whether it preserved one unit per
+        output item, collapsed many units into one, or intentionally destroyed
+        unit identity altogether.
+        """
+        return None
 
     def __call__(self, data: Any) -> Any:
         return self.transform_data(data, None)
