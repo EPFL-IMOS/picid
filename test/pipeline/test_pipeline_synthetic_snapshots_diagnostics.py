@@ -34,6 +34,14 @@ FLOAT_ABS_TOL = 0.001
 FLOAT_REL_TOL = 0.005
 
 
+def _metrics_from_eval_details(run_dir: Path) -> dict:
+    """Read metrics from eval_details/best_epoch/test/metrics.json, add test/ prefix to match ref."""
+    raw = json.loads(
+        (run_dir / "eval_details" / "best_epoch" / "test" / "metrics.json").read_text()
+    )
+    return {"test/" + k: v for k, v in raw.items()}
+
+
 def round_metrics(obj):
     if isinstance(obj, dict):
         return {k: round_metrics(v) for k, v in obj.items()}
@@ -55,15 +63,12 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     import tempfile
 
     key = f"{task_type}/{model}"
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
-        out_path = f.name
-    try:
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp) / "run"
+        run_dir.mkdir()
         env = os.environ.copy()
-        env["PIPELINE_REGRESSION_OUTPUT"] = out_path
         env["PROJECT_ROOT"] = str(PROJECT_ROOT)
-        env["PYTHONPATH"] = str(
-            PROJECT_ROOT
-        )  # Ensure test.data importable (not stdlib test)
+        env["PYTHONPATH"] = str(PROJECT_ROOT)
         env["HYDRA_FULL_ERROR"] = "1"
         root = str(PROJECT_ROOT).replace("\\", "/")
         searchpath = f"file://{root}/test/configs,file://{root}/configs"
@@ -76,13 +81,12 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
             "trainer.max_epochs=10",
             "num_threads=1",
             "seed=42",
+            f"hydra.run.dir={run_dir}",
             f"hydra.searchpath=[{searchpath}]",
         ]
         r = subprocess.run(cmd, env=env, cwd=PROJECT_ROOT)
         assert r.returncode == 0, f"Pipeline failed for {key}"
-        current = round_metrics(json.loads(Path(out_path).read_text()))
-    finally:
-        Path(out_path).unlink(missing_ok=True)
+        current = round_metrics(_metrics_from_eval_details(run_dir))
 
     ref_all = json.loads(REF_PATH.read_text())
     ref = ref_all[key]
