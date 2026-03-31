@@ -175,6 +175,7 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+    cache_point: True
 
 # plot_features_final:
 #   transform:
