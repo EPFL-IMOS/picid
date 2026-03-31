@@ -109,7 +109,7 @@ for dataset in "${datasets[@]}"; do
                             trainer.max_epochs=${max_epochs} \
                             trainer.devices=[${device}] \
                             logger=csv \
-                            debug=nox_testing \
+                            debug=dataset_caching \
                             cache.use_cache_after_loading=True \
                             cache.use_cache_after_transfroms=True \
                             cache.use_preprocessing_file_lock=${use_preprocessing_file_lock} \
