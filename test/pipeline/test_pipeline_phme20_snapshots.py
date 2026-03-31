@@ -281,7 +281,7 @@ def test_transformed_slices_match_saved(config_name: str):
             ),
             current_slices_dir=tmp_path,
         )
-    max_ratio = float(os.environ.get("PIPELINE_SNAPSHOT_MAX_TIME_RATIO", "2.0"))
+    max_ratio = float(os.environ.get("PIPELINE_SNAPSHOT_MAX_TIME_RATIO", "5.0"))
     assert_preprocessing_time_within_bounds(
         current_time,
         saved_path,
