@@ -477,25 +477,19 @@ def test_pronostia_ieee2012_configs_and_experiment_bases_compose() -> None:
         == "picid.data.datasources.phmd_pronostia.PronostiaLoader"
     )
 
-    for experiment_name, split_mode, expected_transform_key in (
+    for experiment_name, expected_target, expected_transform_key in (
         (
-            "pronostia/prognostics/in_domain/combined/base",
-            "in_domain",
+            "pronostia/prognostics/combined/lstm",
+            "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader",
             "concatenate_features",
         ),
-        ("pronostia/prognostics/in_domain/raw/base", "in_domain", "reshape_x"),
         (
-            "pronostia/prognostics/domain_shift/combined/base",
-            "domain_shift",
-            "concatenate_features",
+            "pronostia/prognostics/raw/lstm",
+            "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader",
+            "reshape_x",
         ),
-        ("pronostia/prognostics/domain_shift/raw/base", "domain_shift", "reshape_x"),
     ):
         cfg = compose(config_name="run", overrides=[f"experiment={experiment_name}"])
-        assert (
-            cfg.datasource._target_
-            == "picid.data.datasources.pronostia_ieee2012.PronostiaIEEE2012Loader"
-        )
-        assert cfg.datasource.split_mode == split_mode
+        assert cfg.datasource._target_ == expected_target
         assert cfg.datasource.task_mode == "rul"
         assert expected_transform_key in cfg.transforms
