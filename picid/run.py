@@ -551,6 +551,7 @@ def rerun_best_model_checkpoint(
     if test_results:
         _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
         _write_pipeline_regression_output(test_results[0])
+        _write_pipeline_regression_output(test_results[0])
         logged = {}
         for k, v in test_results[0].items():
             suffix = k.split("/", 1)[1] if "/" in k else k
