@@ -165,24 +165,38 @@ def _write_metrics_to_eval_details(
     # Strip "val/" or "test/" prefix from keys
     clean = {k.split("/", 1)[1] if "/" in k else k: v for k, v in metrics.items()}
 
-    def _json_default(o: Any) -> Any:
-        if isinstance(o, torch.Tensor):
-            v = o.detach().cpu().item()
-            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-                return str(v)
-            return v
-        if isinstance(o, (np.floating, np.integer)):
-            v = float(o) if isinstance(o, np.floating) else int(o)
-            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-                return str(v)
-            return v
-        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
-            return str(o)
-        raise TypeError(f"Object of type {type(o)} is not JSON serializable")
-
     with open(out, "w", encoding="utf-8") as f:
         json.dump(clean, f, indent=2, default=_json_default)
     log.info("Saved metrics to %s", out)
+
+
+def _json_default(o: Any) -> Any:
+    """Serialize common tensor and NumPy scalar metric values to JSON."""
+    if isinstance(o, torch.Tensor):
+        v = o.detach().cpu().item()
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return str(v)
+        return v
+    if isinstance(o, (np.floating, np.integer)):
+        v = float(o) if isinstance(o, np.floating) else int(o)
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return str(v)
+        return v
+    if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+        return str(o)
+    raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+
+
+def _write_pipeline_regression_output(metrics: dict[str, Any]) -> None:
+    """Write test metrics to the legacy snapshot-output file when requested."""
+    out_path = os.environ.get("PIPELINE_REGRESSION_OUTPUT")
+    if not out_path or not metrics:
+        return
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=2, default=_json_default)
+    log.info("Saved pipeline regression metrics to %s", out)
 
 
 def _log_preprocessing_datasource_error(exc: PreprocessingDatasourceError) -> None:
@@ -536,6 +550,8 @@ def rerun_best_model_checkpoint(
     )
     if test_results:
         _write_metrics_to_eval_details(cfg, "best_epoch", "test", test_results[0])
+        _write_pipeline_regression_output(test_results[0])
+        _write_pipeline_regression_output(test_results[0])
         logged = {}
         for k, v in test_results[0].items():
             suffix = k.split("/", 1)[1] if "/" in k else k
