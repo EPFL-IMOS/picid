@@ -1,0 +1,18 @@
+#@package _global_
+
+defaults:
+  # Disable wandb logger to avoid unnecessary network calls during debugging.
+  - override /logger: csv
+
+datamodule:
+  num_workers: 0
+  subset_range: [0, 64, 1]
+
+trainer:
+  accelerator: cpu
+  devices: 1
+
+# This will raise the original exception instead of a generic one.
+# Making the debugger stop at the error, instead of the wrapper that we have for WANDB termination.
+debug:
+  raise_inner_exception: true
