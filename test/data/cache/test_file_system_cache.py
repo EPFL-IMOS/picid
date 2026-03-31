@@ -528,6 +528,61 @@ class TestFileSystemCacheHandle:
         assert len(subdirs) >= 1
 
 
+class TestFileSystemCacheWriteMeta:
+    """Tests for the write_meta tombstone method."""
+
+    def test_write_meta_creates_only_pending_file(self, tmp_path):
+        """write_meta writes meta_pending.json but not meta.json, hash.txt, or data.pkl."""
+        cache = FileSystemCache()
+        config = {"param": "value"}
+        cache.write_meta(str(tmp_path), stage="loaded", config=config)
+
+        stage_dir = tmp_path / "loaded"
+        assert (stage_dir / "meta_pending.json").exists()
+        assert not (stage_dir / "meta.json").exists()
+        assert not (stage_dir / "hash.txt").exists()
+        assert not (stage_dir / "data.pkl").exists()
+        assert not (stage_dir / "metadata.pkl").exists()
+
+    def test_write_meta_returns_cache_key(self, tmp_path):
+        """write_meta returns the computed cache key."""
+        from picid.utils.hash_utils import hash_config
+
+        cache = FileSystemCache()
+        config = {"param": "value"}
+        key = cache.write_meta(str(tmp_path), stage="loaded", config=config)
+        assert key == hash_config(config)
+
+    def test_handle_unaffected_by_pending_tombstone(self, tmp_path):
+        """handle() treats a pending tombstone as a cache miss and rebuilds normally."""
+        cache = FileSystemCache()
+        config = {"param": "value"}
+
+        # Simulate a crashed run: tombstone written but data never saved.
+        cache.write_meta(str(tmp_path), stage="loaded", config=config)
+
+        # Only meta_pending.json exists — no meta.json, so load_metadata returns None.
+        stage_dir = tmp_path / "loaded"
+        assert (stage_dir / "meta_pending.json").exists()
+        assert not (stage_dir / "meta.json").exists()
+
+        call_count = [0]
+
+        def build_fn():
+            call_count[0] += 1
+            return {"features": np.array([1, 2, 3])}, {"source": "rebuilt"}
+
+        data, metadata = cache.handle(
+            cache_dir=str(tmp_path), stage="loaded", build_fn=build_fn, config=config
+        )
+
+        assert call_count[0] == 1
+        np.testing.assert_array_equal(data["features"], [1, 2, 3])
+        # After rebuild, the canonical meta.json and data.pkl now exist.
+        assert (stage_dir / "meta.json").exists()
+        assert (stage_dir / "data.pkl").exists()
+
+
 class TestFileSystemCacheEdgeCases:
     """Edge case tests for FileSystemCache."""
 
