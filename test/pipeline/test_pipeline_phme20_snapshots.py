@@ -156,7 +156,40 @@ def test_loaded_slices_match_saved(config_name: str):
     datasource = instantiate(ds_cfg)
     datasource.load_data()
     datasource.split_data()
+
+    # --- Debug: inspect raw data_dict before container creation ---
+    from collections.abc import Mapping as _Mapping
+
+    _dd = datasource.data_dict
+    print(f"\n[DEBUG] data_dict is None: {_dd is None}")
+    if _dd is not None:
+        print(f"[DEBUG] data_dict keys: {list(_dd.keys())}")
+        for _k in list(_dd.keys())[:5]:
+            _v = _dd[_k]
+            print(f"[DEBUG]   data_dict[{_k!r}] type={type(_v).__name__}")
+            if isinstance(_v, dict):
+                for _s in ("train", "val", "test"):
+                    _sv = _v.get(_s)
+                    print(
+                        f"[DEBUG]     [{_s}] type={type(_sv).__name__}, "
+                        f"len={len(_sv) if _sv is not None else 'N/A'}"
+                    )
+
     container = datasource.get_data()
+
+    print(f"[DEBUG] container type: {type(container).__name__}")
+    print(f"[DEBUG] container bool: {bool(container)}")
+    print(f"[DEBUG] container._data keys: {list(container._data.keys())}")
+    for _k in list(container._data.keys())[:5]:
+        _v = container._data[_k]
+        _is_map = isinstance(_v, _Mapping)
+        print(
+            f"[DEBUG]   _data[{_k!r}] type={type(_v).__name__}, "
+            f"is_Mapping={_is_map}"
+        )
+        if _is_map:
+            print(f"[DEBUG]     sub-keys: {list(_v.keys())}")
+    # --- End debug ---
 
     loaded_dir = _snapshot_dir(config_name, "loaded")
     saved_path = _manifest_path(config_name, "loaded")
@@ -164,6 +197,14 @@ def test_loaded_slices_match_saved(config_name: str):
     split_dict = (
         container.to_split_dict() if hasattr(container, "to_split_dict") else {}
     )
+
+    # --- Debug: inspect split_dict ---
+    print(f"[DEBUG] split_dict keys: {list(split_dict.keys())}")
+    for _s in ("train", "val", "test"):
+        if _s in split_dict:
+            print(f"[DEBUG]   split_dict[{_s!r}] keys: {list(split_dict[_s].keys())}")
+    # --- End debug ---
+
     missing = [
         k
         for k in keys
