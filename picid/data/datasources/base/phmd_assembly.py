@@ -172,6 +172,9 @@ def build_split_payloads(
             "test": test.get(key, []),
         }
 
+    if "metadata" in out_dict and "unit_metadata" not in out_dict:
+        out_dict["unit_metadata"] = out_dict.pop("metadata")
+
     extra_meta: dict[str, Any] = {}
     if additional_metadata_unit_name:
         extra_meta["unit_names"] = additional_metadata_unit_name
