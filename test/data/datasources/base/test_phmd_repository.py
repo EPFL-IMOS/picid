@@ -213,10 +213,10 @@ def test_build_split_payloads_returns_split_container_and_unit_metadata():
         process_unit=_process_unit,
     )
 
-    assert set(payload) == {"features", "target", "metadata"}
+    assert set(payload) == {"features", "target", "unit_metadata"}
     assert len(payload["features"]["train"]) == 1
     assert len(payload["target"]["test"]) == 1
-    assert len(payload["metadata"]["train"]) == 1
+    assert len(payload["unit_metadata"]["train"]) == 1
     assert extra_meta["unit_names"]["train"] == ["unit-1"]
     assert extra_meta["unit_ids"]["val"] == [2]
 
