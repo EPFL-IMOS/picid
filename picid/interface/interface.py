@@ -550,16 +550,30 @@ class EntryInterface:
         overrides.append('trainer=trainer_cfg')
 
         # FOR NOW, ONLY ALREADY DEFINED EVALUATORS ARE AVAILABLE
-        if evaluators is None:
-            evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
-            log.info('Using default evaluators.')
-        else:
-            assert isinstance(evaluators, str), f'evaluators must be a string. {type(evaluators)} given.'
+
+        assert isinstance(evaluators, str) or isinstance(evaluators, AbsEvalConfig), \
+            f'Evaluators can be a string or a list of AbsEvalConfig. {type(evaluators)} where given'
+
+        if isinstance(evaluators, str):
             available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
 
             assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
 
             evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
+        else:
+
+            evaluators_cfg = evaluators.model_dump(by_alias=True)
+
+        # if evaluators is None:
+        #     evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
+        #     log.info('Using default evaluators.')
+        # else:
+        #     assert isinstance(evaluators, str), f'evaluators must be a string. {type(evaluators)} given.'
+        #     available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
+        #
+        #     assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
+        #
+        #     evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
 
             # # TODO: FIX AND TEST
             # if evaluators is not None or isinstance(evaluators, dict):
@@ -571,10 +585,10 @@ class EntryInterface:
             #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
             #         log.info('Using default evaluators.')
 
-            cs.store(group="evaluator",
-                     name="evaluator_cfg",
-                     node=evaluators_cfg)
-            overrides.append('evaluator=evaluator_cfg')
+        cs.store(group="evaluator",
+                 name="evaluator_cfg",
+                 node=evaluators_cfg)
+        overrides.append('evaluator=evaluator_cfg')
 
         cs.store(group="paths",
                  name="paths_cfg",

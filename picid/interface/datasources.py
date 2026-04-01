@@ -1,5 +1,5 @@
 import logging
-from typing import Literal, Callable, Any
+from typing import Literal, Callable, Any, Union
 
 import numpy as np
 from pandas import DataFrame
@@ -48,11 +48,20 @@ class CustomSingleSourceLoader(SingleSourceLoader):
             task_mode=task_mode,
             **kwargs)
 
+        if isinstance(data, dict):
+            assert all(k in data for k in ['train', 'val', 'test']), ("all splits ['train', 'val', 'test'] "
+                                                                      f"must be in data, but {list(data.keys())} are given.)")
+
+            self._is_splitted = True
+
         if loading_type == 'csv':
             self._loading_function = self._load_csv
         elif loading_type == 'numpy':
             if target_column < 0:
-                target_column = np.arange(data.shape[1])[target_column]
+                if isinstance(data, dict):
+                    target_column = np.arange(data['train'].shape[1])[target_column]
+                else:
+                    target_column = np.arange(data.shape[1])[target_column]
             self._loading_function = self._load_numpy
         else:
             assert False, 'loading_type must be either "csv" or "numpy".'
@@ -63,38 +72,46 @@ class CustomSingleSourceLoader(SingleSourceLoader):
 
         log.info(f'Created {data_name} datasource from {loading_type} with target column {target_column}.')
 
-    def _load_csv(self):
+    def _load_csv(self, split: str = None):
         """
                 Internal method to extract features and targets from a pandas DataFrame.
 
                 Returns:
                     tuple: A tuple containing (features_dataframe, target_series).
         """
+        if split is not None:
+            current_data = self._inner_data[split]
+        else:
+            current_data = self._inner_data
 
         if isinstance(self._target_column, str):
-            df_target = self._inner_data[self._target_column].to_frame().copy()
-            data = self._inner_data.drop(columns=[self._target_column], inplace=False)
+            df_target = current_data[self._target_column].to_frame().copy()
+            data = current_data.drop(columns=[self._target_column], inplace=False)
         else:
-            df_target = self._inner_data.iloc[:, self._target_column].to_frame().copy()
-            data = self._inner_data.drop(self._inner_data.columns[self._target_column], axis=1, inplace=False)
+            df_target = current_data.iloc[:, self._target_column].to_frame().copy()
+            data = current_data.drop(current_data.columns[self._target_column], axis=1, inplace=False)
 
         return data.to_numpy(), df_target.to_numpy()
 
-    def _load_numpy(self):
+    def _load_numpy(self, split: str = None):
         """
                 Internal method to extract features and targets from a NumPy array.
 
                 Returns:
                     tuple: A tuple containing (features_ndarray, target_ndarray).
         """
+        if split is not None:
+            current_data = self._inner_data[split]
+        else:
+            current_data = self._inner_data
 
-        cols = self._inner_data.shape[-1]
-        target = self._inner_data[:, self._target_column]
+        cols = current_data.shape[-1]
+        target = current_data[:, self._target_column]
 
         idx = list(range(cols))
         idx.pop(self._target_column)
 
-        data = self._inner_data[:, idx]
+        data = current_data[:, idx]
 
         return data, target
 
@@ -106,7 +123,18 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     dict: The data dictionary containing 'features', the 'task_mode' target, and 'timestamps'.
         """
 
-        data, target = self._loading_function()
+        if isinstance(self._inner_data, dict):
+            dd = {}
+            dt = {}
+            for k, v in self._inner_data.items():
+                a, b = self._loading_function(split=k)
+                dd[k] = a
+                dt[k] = b
+            data = dd
+            target = dt
+        else:
+            data, target = self._loading_function()
+
         data_dict = {
             "features": data,
             self._task_mode: target,
@@ -116,13 +144,21 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         self.data_dict = data_dict
         self._is_loaded = True
 
-        log.info(f'Loaded {self.data_name} datasource resulting in data shape {data.shape} for task {self._task_mode} '
-                 f'with target shape {target.shape}.')
+        if isinstance(self._inner_data, dict):
+            log.info(
+                f'Loaded {self.data_name} already spitted datasource resulting following split:')
+            for k, v in data_dict['features'].items():
+                # print()
+                log.info(f'{k}: {v.shape}')
+
+        else:
+            log.info(f'Loaded {self.data_name} datasource resulting in data shape {data.shape} for task {self._task_mode} '
+                     f'with target shape {target.shape}.')
 
         return self.data_dict
 
     @classmethod
-    def load_from_csv(cls, source: DataFrame, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_csv(cls, source: Union[DataFrame, dict[str, DataFrame]], target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a CSV DataFrame.
 
@@ -141,7 +177,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         return cls(source, target_column, data_splitter=data_splitter, loading_type='csv', task_mode=task_mode, **kwargs)
 
     @classmethod
-    def load_from_numpy(cls, source: np.ndarray, target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
+    def load_from_numpy(cls, source: Union[np.ndarray, dict[str, np.ndarray]], target_column: int | str, task_mode: str, data_splitter=None, **kwargs):
         """
                 Alternative constructor to initialize the source specifically from a NumPy array.
 

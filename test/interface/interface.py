@@ -43,3 +43,12 @@ def test_pydantic_minimal_interface_asserts():
                         datasource='phme20',
                         overrides='trainer.max_epochs=1',
                         transforms=transforms)
+
+    with pytest.raises(AssertionError):
+        interface.train(run_name='test', task_definition=('prognostics', 'rul'),
+                        model='lstm',
+                        evaluators='prova',
+                        datasource=('phme20', 'raw'),
+                        overrides='trainer.max_epochs=1')
+
+
