@@ -150,11 +150,36 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
             lists for ``train``, ``val``, and ``test``.
         """
         self.meta_data = {}
+
+        # --- Debug: trace data loading on CI ---
+        import sys
+
+        print(f"[LOAD_DEBUG] cache_dir={self.cache_dir}", file=sys.stderr)
+        print(f"[LOAD_DEBUG] data_name={self.data_name}", file=sys.stderr)
+        print(f"[LOAD_DEBUG] task_mode={self.task_mode}", file=sys.stderr)
+        print(f"[LOAD_DEBUG] fold={self.fold}", file=sys.stderr)
+        # --- End debug ---
+
         tasks_fold_dict = self._init_phmd_dataset(
             self.auxiliary_tasks + [self.task_mode]
         )
 
         main_fold = tasks_fold_dict[self.task_mode]
+
+        # --- Debug: inspect main_fold ---
+        print(f"[LOAD_DEBUG] main_fold keys: {list(main_fold.keys())}", file=sys.stderr)
+        for _sn in ("train", "val", "test"):
+            _df = main_fold.get(_sn)
+            if _df is not None:
+                print(
+                    f"[LOAD_DEBUG]   main_fold[{_sn}] shape={_df.shape}, "
+                    f"cols={list(_df.columns)[:10]}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[LOAD_DEBUG]   main_fold[{_sn}] = None", file=sys.stderr)
+        # --- End debug ---
+
         auxiliary_tasks_fold_dict = tasks_fold_dict.copy()
         auxiliary_tasks_fold_dict.pop(self.task_mode, None)
 
@@ -176,6 +201,10 @@ class PHMDMultiSourceLoader(PredefinedSplitLoaderBase, ABC):
         )
         if extra_meta:
             self.meta_data.update(extra_meta)
+
+        # --- Debug: inspect out_dict ---
+        print(f"[LOAD_DEBUG] out_dict keys: {list(out_dict.keys())}", file=sys.stderr)
+        # --- End debug ---
 
         features_splits = out_dict.get("features", {})
         logger.info(f"Number of train units: {len(features_splits.get('train', []))}")
