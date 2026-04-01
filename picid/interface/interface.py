@@ -33,6 +33,7 @@ from picid.interface.schemas.loggers import BaseLogger
 from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
 from picid.interface.schemas.trainer import TrainerConfig
+from picid.interface.schemas.evaluators import AbsEvalConfig
 from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
     create_lightning_module, get_inverter_for_key_with_name
 from picid.transforms.base.data_transform import DataTransform
@@ -551,18 +552,19 @@ class EntryInterface:
 
         # FOR NOW, ONLY ALREADY DEFINED EVALUATORS ARE AVAILABLE
 
-        assert isinstance(evaluators, str) or isinstance(evaluators, AbsEvalConfig), \
-            f'Evaluators can be a string or a list of AbsEvalConfig. {type(evaluators)} where given'
+        assert isinstance(evaluators, str) or isinstance(evaluators, AbsEvalConfig) or evaluators is None, \
+            f'Evaluators can be a string or a list of AbsEvalConfig or None. {type(evaluators)} where given'
 
-        if isinstance(evaluators, str):
-            available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
+        if evaluators is not None:
+            if isinstance(evaluators, str):
+                available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
 
-            assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
+                assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
 
-            evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
-        else:
+                evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
+            else:
 
-            evaluators_cfg = evaluators.model_dump(by_alias=True)
+                evaluators_cfg = evaluators.model_dump(by_alias=True)
 
         # if evaluators is None:
         #     evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
@@ -585,10 +587,10 @@ class EntryInterface:
             #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
             #         log.info('Using default evaluators.')
 
-        cs.store(group="evaluator",
-                 name="evaluator_cfg",
-                 node=evaluators_cfg)
-        overrides.append('evaluator=evaluator_cfg')
+            cs.store(group="evaluator",
+                     name="evaluator_cfg",
+                     node=evaluators_cfg)
+            overrides.append('evaluator=evaluator_cfg')
 
         cs.store(group="paths",
                  name="paths_cfg",
