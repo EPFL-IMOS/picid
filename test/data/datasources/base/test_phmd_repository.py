@@ -3,18 +3,13 @@
 from __future__ import annotations
 
 import pickle
-import sys
 from dataclasses import dataclass
-from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
 
-sys.modules["phmd"] = MagicMock()
-sys.modules["phmd.datasets"] = MagicMock()
-
-from picid.data.datasources.base.phmd_assembly import build_split_payloads  # noqa: E402
-from picid.data.datasources.base.phmd_repository import PHMDRepository  # noqa: E402
+from picid.data.datasources.base.phmd_assembly import build_split_payloads
+from picid.data.datasources.base.phmd_repository import PHMDRepository
 
 
 @dataclass

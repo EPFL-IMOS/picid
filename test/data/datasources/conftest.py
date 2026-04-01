@@ -4,23 +4,9 @@ Shared fixtures and mocks for datasource tests (I/O mocked).
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock
-
 import numpy as np
 import pandas as pd
 import pytest
-
-# Mock phmd so modules that import phmd.download (nb14, unibo) or phmd.datasets (phmd_loader)
-# can be collected and run without the real phmd package.
-if "phmd" not in sys.modules:
-    _phmd = MagicMock()
-    _phmd.download = MagicMock()
-    _phmd.download.download = MagicMock(return_value=None)
-    _phmd.datasets = MagicMock()
-    sys.modules["phmd"] = _phmd
-    sys.modules["phmd.download"] = _phmd.download
-    sys.modules["phmd.datasets"] = _phmd.datasets
 
 
 @pytest.fixture

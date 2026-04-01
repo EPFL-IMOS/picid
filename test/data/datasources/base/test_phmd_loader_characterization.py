@@ -10,13 +10,6 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-# Mock phmd before importing phmd_loader so tests run without PHMD data
-import sys
-from unittest.mock import MagicMock
-
-sys.modules["phmd"] = MagicMock()
-sys.modules["phmd.datasets"] = MagicMock()
-
 from picid.data.datasources.base.phmd_loader import (
     convert_outer_list_to_inner,
     PHMDMultiSourceLoader,

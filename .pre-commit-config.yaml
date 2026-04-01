@@ -29,4 +29,4 @@ repos:
     rev: v1.8.0
     hooks:
       - id: numpydoc-validation
-        exclude: ^(local_packages|_archive|test/|tutorials/|picid/data/datasources/picasso)/
+        exclude: ^(local_packages|_archive|test|tutorials|picid/data/datasources/picasso)/

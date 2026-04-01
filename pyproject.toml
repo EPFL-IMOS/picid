@@ -126,7 +126,6 @@ exclude = ["local_packages", "scripts", "_archive", "**/*.ipynb"]
 # Test files: conftests need late imports; some tests need class before imports
 "test/**/conftest.py" = ["E402"]
 "test/data/data_objects/test_property_based_utils.py" = ["E402"]
-"test/data/datasources/base/test_phmd_loader_characterization.py" = ["E402"]
 "test/baselines/test_timeseries_transformer_model.py" = ["E402"]
 
 [tool.mypy]
