@@ -53,6 +53,7 @@ SPECIAL_COLUMNS = [
     "task_definition.subset_seed",
     "datamodule.subset_seed",
     "seed",
+    "model.random_state",  # TabPFN/TabDPT set this to ${seed}, not a true HP
 ]
 
 # Column name filters for columns to be dropped entirely during data loading.
