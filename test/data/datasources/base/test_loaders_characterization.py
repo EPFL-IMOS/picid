@@ -4,6 +4,8 @@ Characterization tests for SingleSourceLoader and MultiSourceLoader (Phase 0).
 Covers: standalone single (load → split → get_data → SplitDatasetContainer),
 multi without multisource splitter, multi with BySourceSplitter, and edge cases
 (metadata normalization, ragged/empty splits).
+
+UMAR multisource wiring is covered in ``test/data/datasources/test_umar.py`` (stack 09).
 """
 
 import pytest
@@ -480,3 +482,10 @@ def test_multi_source_loader_get_split_mode_with_splitter(
     """MultiSourceLoader with BySourceSplitter uses the canonical between-units mode."""
     loader = MultiSourceLoader(**two_sources_config_with_by_source_splitter)
     assert loader.get_split_mode() == "between_units"
+
+
+def test_umar_loader_import_for_multisource_stack09():
+    """Regression: UMAR concrete loader stays importable alongside MultiSourceLoader."""
+    from picid.data.datasources.umar import UMARLoader, UMAR_BUILDING_ROOM_ORDER
+
+    assert UMARLoader.DEFAULT_ROOM_ORDER == UMAR_BUILDING_ROOM_ORDER

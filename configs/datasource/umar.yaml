@@ -1,0 +1,58 @@
+_target_: picid.data.datasources.base.multi_source_loader.MultiSourceLoader
+_recursive_: false
+
+data_name: "umar"
+task_mode: "multivariate"
+
+# Common arguments pushed down to all rooms
+_loader_args: &loader_args
+  data_name: "umar"
+  task_mode: "multivariate"
+  data_path: ${paths.data_dir}/UMAR/inputs.pkl
+  target_path: ${paths.data_dir}/UMAR/targets.pkl
+  timestamp_name: "datetime"
+  data_splitter:
+    _target_: picid.data.split_strategies.time_splitter.TimeSplitter
+    train: 0.7
+    val: 0.1
+    seq_len: ${oc.select:task_definition.seq_len,null}
+    pred_len: ${oc.select:task_definition.pred_len,null}
+    create_splits_for:
+      - features_local
+      - features_global
+      - features_local_schema_mask
+      - features_static
+      - target
+      - timestamps
+
+source_list:
+  R272: ${..R272}
+  R273: ${..R273}
+  R274: ${..R274}
+  R275: ${..R275}
+  R276: ${..R276}
+
+R272:
+  _target_: picid.data.datasources.umar.UMARLoader
+  room_id: "R272"
+  <<: *loader_args
+
+R273:
+  _target_: picid.data.datasources.umar.UMARLoader
+  room_id: "R273"
+  <<: *loader_args
+
+R274:
+  _target_: picid.data.datasources.umar.UMARLoader
+  room_id: "R274"
+  <<: *loader_args
+
+R275:
+  _target_: picid.data.datasources.umar.UMARLoader
+  room_id: "R275"
+  <<: *loader_args
+
+R276:
+  _target_: picid.data.datasources.umar.UMARLoader
+  room_id: "R276"
+  <<: *loader_args

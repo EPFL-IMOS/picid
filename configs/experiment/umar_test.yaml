@@ -1,0 +1,8 @@
+# @package _global_
+# Minimal experiment defaults for UMAR-focused tests (seq_len / pred_len for TimeSplitter).
+defaults:
+  - _self_
+
+task_definition:
+  seq_len: 10
+  pred_len: 5

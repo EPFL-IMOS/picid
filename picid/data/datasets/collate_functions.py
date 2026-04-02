@@ -1,4 +1,7 @@
+"""Collation helpers for batched model inputs."""
+
 import torch
+import numpy as np
 from collections import defaultdict
 from typing import List, Dict, Any
 
@@ -27,6 +30,10 @@ def collate_key_value_batch(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
                 zip_keys_dict[key].append(value)
             elif torch.is_tensor(value):
                 simple_keys_dict[key].append(value)
+            elif isinstance(value, np.ndarray):
+                simple_keys_dict[key].append(
+                    torch.from_numpy(np.ascontiguousarray(value))
+                )
             else:
                 raise ValueError(f"Unsupported value type in sample: {type(value)}")
 
