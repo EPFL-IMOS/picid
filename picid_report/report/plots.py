@@ -116,7 +116,7 @@ def plot_best_metric_bars(
                     continue
                 human_readable_model = model.split(".")[-1]
                 datasets_seen.add(dataset)
-                labels.append(human_readable_model)
+                labels.append((human_readable_model, dataset))
                 means.append(float(mean))
                 std_val = float(std) if std is not None and not pd.isna(std) else 0.0
                 stds.append(std_val)
@@ -126,10 +126,8 @@ def plot_best_metric_bars(
         if not labels:
             return None
 
-        if len(datasets_seen) != 1:
-            raise AssertionError(
-                "plot_best_metric_bars expects results from a single dataset"
-            )
+        multi_dataset = len(datasets_seen) > 1
+        tick_labels = [f"{m}\n{d}" if multi_dataset else m for m, d in labels]
         dataset_name = next(iter(datasets_seen))
 
         if figsize is None:
@@ -144,11 +142,11 @@ def plot_best_metric_bars(
             means,
             yerr=stds if any_std else None,
             capsize=4 if any_std else 0,
-            tick_label=labels,
         )
+        ax.set_xticks(list(x))
+        ax.set_xticklabels(tick_labels, rotation=45, ha="right")
         ax.set_ylabel(metric_key)
         ax.set_title(f"Best {metric_key} on {dataset_name}")
-        plt.xticks(rotation=45, ha="right")
         text_offset = max(max(stds, default=0), max(means) * 0.02)
         for bar, std_val, cnt_val in zip(bar_container, stds, counts):
             height = bar.get_height()
