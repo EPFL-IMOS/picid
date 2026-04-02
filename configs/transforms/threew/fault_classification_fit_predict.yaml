@@ -1,0 +1,67 @@
+# ThreeW fault_classification: tabularize features + class labels, then dense concat for fit-predict.
+
+__tabularize_x_transform: &__tabularize_x_transform
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
+  timestep_dimension: 1
+  select_features:
+    - features: history
+
+__tabularize_y_transform: &__tabularize_y_transform
+  _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
+  seq_len: ${task_definition.seq_len}
+  label_len: ${task_definition.label_len}
+  pred_len: ${task_definition.pred_len}
+  timestep_dimension: 1
+  select_features:
+    - fault_classification: present
+
+__tabularize_x_metadata: &__tabularize_x_metadata
+  apply_to: ["features"]
+  assign_to: features
+
+__tabularize_y_metadata: &__tabularize_y_metadata
+  apply_to: ["fault_classification"]
+  assign_to: fault_classification
+
+tabularize_x_train:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride_train}
+  metadata:
+    <<: *__tabularize_x_metadata
+    transform_on_keys: ["train"]
+
+tabularize_y_train:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride_train}
+  metadata:
+    <<: *__tabularize_y_metadata
+    transform_on_keys: ["train"]
+
+tabularize_x_val_test:
+  transform:
+    <<: *__tabularize_x_transform
+    stride: ${task_definition.stride}
+  metadata:
+    <<: *__tabularize_x_metadata
+    transform_on_keys: ["val", "test"]
+
+tabularize_y_val_test:
+  transform:
+    <<: *__tabularize_y_transform
+    stride: ${task_definition.stride}
+  metadata:
+    <<: *__tabularize_y_metadata
+    transform_on_keys: ["val", "test"]
+
+concatenate_units_and_ragged2numpy:
+  transform:
+    _target_: picid.transforms.base_transforms.concatenate.MultiDatasetRuggedToDenseTransform
+    axis: 1
+  metadata:
+    apply_to: ["features", "fault_classification"]
+    assign_to: ["features", "fault_classification"]

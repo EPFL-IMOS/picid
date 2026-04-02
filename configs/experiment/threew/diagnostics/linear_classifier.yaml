@@ -1,0 +1,6 @@
+#@package _global_
+
+defaults:
+  - threew/diagnostics/base
+  - /model_configs/diagnostics/linear_classifier
+  - override /transforms: threew/fault_classification_default

@@ -1,0 +1,18 @@
+#@package _global_
+
+defaults:
+  - override /datasource: threew
+  - override /evaluator: classification
+  - override /task_definition: diagnostics/threew
+
+evaluator:
+  train:
+    apply_inverse_scaling: false
+  val:
+    apply_inverse_scaling: false
+  test:
+    apply_inverse_scaling: false
+
+datasource:
+  include_ova: true
+  task_mode: fault_classification

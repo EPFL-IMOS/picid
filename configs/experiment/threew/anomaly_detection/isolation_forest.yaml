@@ -3,4 +3,4 @@
 defaults:
   - threew/base
   - /model_configs/anomaly_detection/isolation_forest
-  - override /transforms: airbus_helicopter/statistics_fit_predict
+  - override /transforms: threew/anomaly_detection_fit_predict

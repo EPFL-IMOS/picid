@@ -4,17 +4,17 @@ task_mode: anomaly_detection
 data_dir: ${paths.data_dir}
 
 # 3W predefined fold file.
-folds_file: dataset/folds/folds_clf_02.csv
+folds_file: threew_dataset/folds/folds_clf_02.csv
 validation_fold: 0
 test_fold: 1
 
-# Keep the original OVA subset disabled by default for the baseline.
-include_ova: false
+# Include OVA rows so anomaly labels contain both normal and anomalous timesteps.
+include_ova: true
 include_simulated_train: true
 
 # Binary anomaly target is produced in `target`; event classes are optional.
 export_event_class: true
 num_classes: 2
-num_event_classes: 10
+num_event_classes: 9
 
-download: false
+download: true

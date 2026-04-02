@@ -14,3 +14,7 @@ evaluator:
   test:
     apply_inverse_scaling: false
     save_predictions: true
+
+datasource:
+  include_ova: true
+  task_mode: anomaly_detection
