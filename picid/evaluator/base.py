@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 from abc import ABC, abstractmethod
 from typing import Optional, Any, Dict
 import logging
@@ -25,11 +26,13 @@ class AbstractEvaluator(ABC):
         Whether inverse scaling should be applied before metric computation.
     task_mode : Any | None, default=None
         Task mode used to select the scaling wrapper implementation.
+        Use ``"multivariate"`` for multi-channel series (e.g. UMAR forecasting)
+        so inverse scaling uses :class:`~picid.evaluator.scaling_wrapper.MultivariateTimeseriesScalingWrapper`.
     **kwargs
         Additional evaluator-specific keyword arguments.
     """
 
-    def __init__(
+    def __init__(  # numpydoc ignore=GL08
         self,
         paths: Optional[Dict[str, str]] = None,
         inverse_transform: Optional[InverseTransformMixin] = None,

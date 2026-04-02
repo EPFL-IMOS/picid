@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 from typing import Any, Dict, List, Optional
 from picid.evaluator.default import DefaultEvaluator
 
@@ -9,7 +10,7 @@ class ForecastingEvaluator(DefaultEvaluator):
     Parameters
     ----------
     target_dim_position : Optional[int]
-        Target feature index for univariate forecasting.
+        Target feature index for univariate forecasting (ignored when ``task_mode`` is ``"multivariate"``).
     metric_names : List[str]
         Metrics to track.
     effective_pred_len : Optional[int], default=None
@@ -20,7 +21,7 @@ class ForecastingEvaluator(DefaultEvaluator):
         Additional evaluator keyword arguments.
     """
 
-    def __init__(
+    def __init__(  # numpydoc ignore=GL08
         self,
         target_dim_position: Optional[int],
         metric_names: List[str],
@@ -45,7 +46,7 @@ class ForecastingEvaluator(DefaultEvaluator):
 
         super().__init__(metric_names=metric_names, task_type="forecasting", **kwargs)
 
-    def update(self, model_out: Dict[str, Any]) -> None:
+    def update(self, model_out: Dict[str, Any]) -> None:  # numpydoc ignore=GL08
         p, t = model_out.get("predictions"), model_out.get("targets")
 
         # Test compatibility: Shape mismatch check

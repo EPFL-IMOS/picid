@@ -670,3 +670,20 @@ class TestMultivariateTimeseriesScalingWrapper:
         expected = np.ones((1, 10, 4)) * 50.0
         assert_array_almost_equal(result_preds, expected, decimal=5)
         assert result_preds.shape == (1, 10, 4)
+
+    def test_inverse_transform_with_metadata(self):
+        """Metadata (e.g. unit_id) is forwarded like :class:`ScalingWrapper`."""
+        mock_transform = MockInverseTransformWithMetadata()
+        wrapper = MultivariateTimeseriesScalingWrapper(
+            inverse_transform=mock_transform,
+            apply_inverse_scaling=True,
+            task_mode="multivariate",
+        )
+
+        preds = np.ones((1, 2, 3))
+        targets = preds.copy()
+
+        result_preds, _ = wrapper.inverse_transform_if_needed(
+            preds, targets, metadata={"unit_id": 1}
+        )
+        assert_array_almost_equal(result_preds, np.ones((1, 2, 3)) * 50.0, decimal=5)

@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -19,7 +20,8 @@ class MetricManager:
     metric_names : List[str]
         Metric names to manage.
     task_type : str
-        Task type, typically ``"regression"`` or ``"classification"``.
+        Task type: ``"classification"`` or a regression-style task (``"regression"``,
+        ``"rul"``, ``"forecasting"``, etc.). Forecasting is aggregated like regression.
     paths : Optional[Dict[str, str]], default=None
         File-system paths required by filesystem-backed metrics.
     num_classes : Optional[int], default=None
@@ -44,7 +46,7 @@ class MetricManager:
         metric_names : List[str]
             Metric names to manage.
         task_type : str
-            Task type, typically ``"regression"`` or ``"classification"``.
+            Task type: ``"classification"`` or regression-style (including ``"forecasting"``).
         paths : Optional[Dict[str, str]], default=None
             File-system paths required by filesystem-backed metrics.
         num_classes : Optional[int], default=None
@@ -85,7 +87,7 @@ class MetricManager:
                     name, self.num_classes
                 )
             else:
-                # Passes paths for regression/railway metrics
+                # Regression, railway, forecasting, etc.
                 res[name] = MetricFactory.create_metric(name, self.paths or {})
         return res
 
@@ -134,7 +136,7 @@ class MetricManager:
         if self.task_type == "classification":
             return {name: metric.compute() for name, metric in self.metrics.items()}
 
-        # Regression / PHM results with dual-scaling suffixes
+        # Regression / RUL / forecasting: dual-suffix semantics match PHM evaluators
         suffix = "denormalized" if self.is_dual else "normalized"
         for name, metric in self.metrics.items():
             results[f"{name}_{suffix}"] = metric.compute()

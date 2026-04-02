@@ -1,5 +1,7 @@
 """Utilities for handling data scaling and inverse scaling."""
 
+# numpydoc ignore=GL08
+
 from einops import rearrange
 import torch
 import numpy as np
@@ -171,6 +173,7 @@ class MultivariateTimeseriesScalingWrapper:
         self,
         predictions: Tuple[torch.Tensor, np.ndarray],
         targets: Tuple[torch.Tensor, np.ndarray],
+        **kwargs,
     ) -> tuple:
         """
         Apply inverse transform to predictions and targets if needed.
@@ -181,12 +184,15 @@ class MultivariateTimeseriesScalingWrapper:
             Model predictions.
         targets : Tuple[torch.Tensor, np.ndarray]
             Ground-truth targets.
+        **kwargs : dict
+            Optional ``metadata`` dict forwarded to ``inverse_transform`` (e.g. ``unit_id``).
 
         Returns
         -------
         tuple
             Tuple of transformed predictions and targets.
         """
+        metadata = kwargs.get("metadata", {})
         if not (self.inverse_transform and self.apply_inverse):
             return predictions, targets
 
@@ -211,11 +217,12 @@ class MultivariateTimeseriesScalingWrapper:
             # Apply inverse transform (assuming scaler expects 2D input)
             predictions_transformed = self.inverse_transform.inverse_transform(
                 NamedTransformInput(**dict(predictions=preds_flattened)),
-                metadata={},
+                metadata=metadata,
             )
 
             targets_transformed = self.inverse_transform.inverse_transform(
-                NamedTransformInput(**dict(targets=targets_flattened)), metadata={}
+                NamedTransformInput(**dict(targets=targets_flattened)),
+                metadata=metadata,
             )
 
             targets_unflattened = rearrange(

@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -15,7 +16,8 @@ class SavePredictionsHook(BaseEvalHook):
     Save buffered predictions and targets to NetCDF.
 
     The hook standardizes dimension names, resolves label-size conflicts for
-    classification outputs, and writes the result as a NetCDF file.
+    classification outputs, and writes the result as a NetCDF file. Multivariate
+    forecasting buffers (C>1) use the same 3D ``(sample, time, feature)`` layout.
 
     Parameters
     ----------
@@ -34,7 +36,7 @@ class SavePredictionsHook(BaseEvalHook):
         """
         self.dims = dims
 
-    def on_compute_end(
+    def on_compute_end(  # numpydoc ignore=GL08
         self,
         results: Dict[str, float],
         evaluator: Any,

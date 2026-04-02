@@ -197,6 +197,29 @@ def test_update_no_dimension_selection_multivariate(
     )
 
 
+def test_update_multivariate_full_stack_no_mock(mocker, forecasting_data_multivariate):
+    """Multivariate (N, T, C) must pass DefaultEvaluator validation and reach metrics."""
+    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
+
+    evaluator = ForecastingEvaluator(
+        target_dim_position=1,
+        metric_names=["mse"],
+        model_seq_len=10,
+        model_label_len=5,
+        effective_pred_len=None,
+        model_pred_len=forecasting_data_multivariate["predictions"].shape[1],
+        inverse_transform=None,
+        apply_inverse_scaling=False,
+        save_predictions=False,
+        paths={},
+        task_mode="multivariate",
+    )
+
+    evaluator.update(forecasting_data_multivariate)
+
+    assert evaluator.metric_manager.metrics["mse"].update.called
+
+
 def test_update_no_effective_pred_len_slicing(mocker, forecasting_data_multi_step):
     mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
     mocker.patch("picid.evaluator.default.DefaultEvaluator.update")

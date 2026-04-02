@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -42,7 +43,7 @@ class DefaultEvaluator(AbstractEvaluator):
         Additional evaluator keyword arguments.
     """
 
-    def __init__(
+    def __init__(  # numpydoc ignore=GL08
         self,
         metric_names: List[str],
         task_type: str = "regression",
@@ -182,16 +183,24 @@ class DefaultEvaluator(AbstractEvaluator):
         if self.remote_logger:
             self.remote_logger.experiment.log({f"plots/{mode}/{title}": fig})
 
-    def _validate_input(self, model_out: Dict[str, Any]) -> bool:
+    def _validate_input(  # numpydoc ignore=GL08
+        self, model_out: Dict[str, Any]
+    ) -> bool:
         p, t = model_out.get("predictions"), model_out.get("targets")
         if p is None or t is None or p.shape[0] == 0:
             return False
-        assert (
-            t.ndim == 3 and t.shape[-1] == 1
-        ), "PHM Constraint: Targets must be (N, T, 1)"
+        assert t.ndim == 3, "Targets must be 3D (N, T, C)."
+        if self.task_type == "forecasting":
+            assert (
+                p.ndim == 3 and p.shape == t.shape
+            ), "Forecasting requires matching (N, T, C) predictions and targets."
+            return True
+        assert t.shape[-1] == 1, "PHM Constraint: Targets must be (N, T, 1)"
         return True
 
-    def _prepare_batch_data(self, model_out: Dict[str, Any]) -> Dict[str, Any]:
+    def _prepare_batch_data(  # numpydoc ignore=GL08
+        self, model_out: Dict[str, Any]
+    ) -> Dict[str, Any]:
         preds, targets = model_out["predictions"], model_out["targets"]
         is_dual = self.scaling_wrapper.apply_inverse
         res = {
