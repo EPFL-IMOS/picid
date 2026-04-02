@@ -67,13 +67,13 @@ def test_init_smart_activation(mocker):
 
 @patch("picid.evaluator.hooks.reconstruction_plot.plt")
 def test_validation_enforces_phm_shape(mock_plt, reconstruction_evaluator_fixture):
-    """Verifies that 2D inputs FAIL validation due to the (N, T, 1) constraint."""
+    """Verifies that 2D inputs fail validation before PHM channel-width checks."""
     evaluator = reconstruction_evaluator_fixture
 
-    # 2D data triggers the PHM assertion
+    # 2D data fails the (N, T, C) requirement first
     bad_data = {"predictions": np.zeros((5, 10)), "targets": np.zeros((5, 10))}
 
-    with pytest.raises(AssertionError, match="PHM Constraint"):
+    with pytest.raises(AssertionError, match="Targets must be 3D"):
         evaluator.update(bad_data)
 
 

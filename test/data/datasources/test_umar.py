@@ -6,10 +6,12 @@ import importlib.util
 from pathlib import Path
 from unittest.mock import patch
 
+import hydra
 import numpy as np
 import pandas as pd
 import pytest
 import torch
+from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -23,6 +25,8 @@ from picid.data.datasources.umar import (
     UMARLoader,
 )
 from picid.data.preprocessing import TimeSplitter
+
+CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"
 
 
 def _collate_key_value_batch():
@@ -611,31 +615,31 @@ def test_umar_building_loader_uses_stable_room_order(mock_umar_data):
 
 def test_umar_multisource_yaml_config_instantiates(mock_umar_data):
     """configs/datasource/umar.yaml composes with run.yaml when task lengths are set."""
-    import hydra
-
     df_inputs, df_targets = mock_umar_data
-    cfg = hydra.compose(
-        config_name="run",
-        overrides=[
-            "datasource=umar",
-            "experiment=umar_test",
-            "paths.data_dir=/tmp",
-            "hydra/hydra_logging=default",
-            "hydra/job_logging=default",
-        ],
-    )
-    ds = instantiate(cfg.datasource)
-    assert isinstance(ds, MultiSourceLoader)
-    assert ds.get_source_names() == ("R272", "R273", "R274", "R275", "R276")
+    GlobalHydra.instance().clear()
+    with hydra.initialize_config_dir(version_base="1.3", config_dir=str(CONFIGS_DIR)):
+        cfg = hydra.compose(
+            config_name="run",
+            overrides=[
+                "datasource=umar",
+                "experiment=umar_test",
+                "paths.data_dir=/tmp",
+                "hydra/hydra_logging=default",
+                "hydra/job_logging=default",
+            ],
+        )
+        ds = instantiate(cfg.datasource)
+        assert isinstance(ds, MultiSourceLoader)
+        assert ds.get_source_names() == ("R272", "R273", "R274", "R275", "R276")
 
-    with (
-        patch("builtins.open"),
-        patch(
-            "pickle.load",
-            side_effect=[df_inputs, df_targets] * 5,
-        ),
-    ):
-        ds.load_data()
-        ds.split_data()
-        out = ds.get_data()
-        assert len(out["features_local"]["train"]) == 5
+        with (
+            patch("builtins.open"),
+            patch(
+                "pickle.load",
+                side_effect=[df_inputs, df_targets] * 5,
+            ),
+        ):
+            ds.load_data()
+            ds.split_data()
+            out = ds.get_data()
+            assert len(out["features_local"]["train"]) == 5
