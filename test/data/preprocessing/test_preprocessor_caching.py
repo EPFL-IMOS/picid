@@ -151,6 +151,47 @@ _TRANSFORM_CONFIG_LIGHT_CHANGED = {
     },
 }
 
+# heavy is the LAST transform in Run 1 (cache_point at end of chain).
+# This is the scenario that triggers the boundary-restore bug: after restoring
+# the boundary cache, the saved transforms object has no transforms after "heavy",
+# so get_transform_names_after("heavy") would return [] without the fix.
+_TRANSFORM_CONFIG_HEAVY_IS_LAST = {
+    "t1": {
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+    "heavy": {
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {
+            "apply_to": "features",
+            "assign_to": "features",
+            "cache_point": True,
+        },
+    },
+}
+
+# Run 2: same t1 + heavy, then two new trailing transforms added after the boundary.
+_TRANSFORM_CONFIG_HEAVY_IS_LAST_EXTENDED = {
+    "t1": _TRANSFORM_CONFIG_HEAVY_IS_LAST["t1"],
+    "heavy": _TRANSFORM_CONFIG_HEAVY_IS_LAST["heavy"],
+    "light": {
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+    "extra": {
+        "transform": {
+            "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+        },
+        "metadata": {"apply_to": "features", "assign_to": "features"},
+    },
+}
+
 
 # -----------------------------------------------------------------------------
 # Fixtures
@@ -467,6 +508,107 @@ class TestPipelineBoundaryCache:
             assert not (
                 subdir / "data.pkl"
             ).exists(), "save_boundary_caches=False should not write boundary data"
+
+    def test_extended_chain_restores_from_boundary_and_runs_new_trailing_transforms(
+        self, cache_dir, library_dir, datasource
+    ):
+        """
+        Regression test for the boundary-restore bug: when the cache_point is the
+        last transform in Run 1 and Run 2 adds new trailing transforms, those new
+        transforms must be applied after restoring from the boundary cache.
+
+        Without the fix, get_transform_names_after(boundary_name) is called on the
+        saved (N-transform) object, which has no transforms after the boundary, so
+        the tail is empty and the new transforms are silently skipped.
+        """
+        manager_short = ConfigTransformManager(
+            transforms_config=_TRANSFORM_CONFIG_HEAVY_IS_LAST
+        )
+        manager_extended = ConfigTransformManager(
+            transforms_config=_TRANSFORM_CONFIG_HEAVY_IS_LAST_EXTENDED
+        )
+
+        # Run 1: 2 transforms (t1, heavy). Writes boundary after "heavy" + preprocessed.
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager_short)
+        preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Run 2: 4 transforms (t1, heavy, light, extra). Boundary valid for t1+heavy;
+        # must run light + extra afterward.
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager_extended)
+        result = preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        assert result is not None
+        assert set(result.keys()) == {"features", "target"}
+        for key in result.keys():
+            assert set(result[key].keys()) == {"train", "val", "test"}
+
+    def test_extended_chain_preprocessed_cache_stores_full_transforms(
+        self, cache_dir, library_dir, datasource
+    ):
+        """
+        Regression test for the secondary bug: after a boundary restore with a
+        longer current chain, the preprocessed cache must store the full (M-transform)
+        manager, not the truncated (N-transform) boundary snapshot.
+        """
+        manager_short = ConfigTransformManager(
+            transforms_config=_TRANSFORM_CONFIG_HEAVY_IS_LAST
+        )
+        manager_extended = ConfigTransformManager(
+            transforms_config=_TRANSFORM_CONFIG_HEAVY_IS_LAST_EXTENDED
+        )
+
+        # Run 1: writes boundary + preprocessed with 2-transform chain.
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager_short)
+        preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Run 2: restores from boundary, runs light+extra, writes preprocessed.
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager_extended)
+        preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Verify the preprocessed cache stores the full 4-transform manager.
+        preprocessed_config = {
+            "datasource": ensure_serializable(datasource._init_kwargs),
+            "transforms": ensure_serializable(manager_extended.config),
+        }
+        preprocessed_key = compute_cache_key(
+            config=preprocessed_config,
+            library_dir=[library_dir, library_dir],
+            extensions=[".py"],
+        )
+        cache = FileSystemCache()
+        _, saved = cache.load_data(
+            cache_dir, stage="preprocessed", cache_key=preprocessed_key
+        )
+        assert set(saved["transforms"].get_transform_names()) == {
+            "t1",
+            "heavy",
+            "light",
+            "extra",
+        }
 
 
 # -----------------------------------------------------------------------------

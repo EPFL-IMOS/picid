@@ -119,11 +119,11 @@ class CachingPipelineRunner:
         self._load_and_split()
 
         # 3. Try to restore from a boundary cache.
-        result = self._try_restore_from_boundary()
-        if result is not None:
-            return result
+        #    Returns the tail OrderedDict of remaining transforms if a boundary
+        #    was hit (possibly empty), or None if no boundary matched.
+        tail = self._try_restore_from_boundary()
 
-        # 4. Pre-write preprocessed tombstone before heavy transforms begin.
+        # 4. Pre-write preprocessed tombstone before any transforms run.
         self._pp.cache.write_meta(
             cache_dir=self._cache_dir,
             stage="preprocessed",
@@ -131,8 +131,10 @@ class CachingPipelineRunner:
             cache_key=self._preprocessed_key,
         )
 
-        # 5. Full run: all transforms, optionally saving at each cache point.
-        self._run_all_transforms()
+        # 5. Run transforms: full chain, or only the tail after a boundary restore.
+        #    Passing `tail` lets _run_all_transforms handle any new cache points
+        #    that may appear among the remaining transforms.
+        self._run_all_transforms(transforms=tail)
 
         # 6. Save final preprocessed cache.
         self._save_preprocessed()
@@ -180,22 +182,30 @@ class CachingPipelineRunner:
         )
         pp.fetch_data()
 
-    def _try_restore_from_boundary(self) -> Optional[DatasetContainer]:
+    def _try_restore_from_boundary(self) -> Optional[OrderedDict]:
         """
         Try to restore from the latest valid boundary cache (reverse order).
 
-        Returns the final DatasetContainer if a boundary was restored and the
-        remaining transforms were applied, or None if no boundary matched.
+        Returns an OrderedDict of the remaining (not-yet-applied) transforms if a
+        boundary was successfully restored, or None if no boundary matched.  The
+        returned dict may be empty when the boundary was the last transform in the
+        current chain.
+
+        The caller is responsible for running the returned tail transforms via
+        _run_all_transforms so that any new cache points among them are handled
+        correctly.
         """
         pp = self._pp
         cache_point_names = pp.transforms.get_cache_point_names()
         if not cache_point_names:
             return None
 
+        full_transforms = pp.transforms
+
         for boundary_name in reversed(cache_point_names):
             boundary_config = {
                 "datasource": self._datasource_config,
-                "transforms": pp.transforms.get_config_up_to_and_including(
+                "transforms": full_transforms.get_config_up_to_and_including(
                     boundary_name
                 ),
             }
@@ -213,43 +223,48 @@ class CachingPipelineRunner:
             pp.data, saved = pp.cache.load_data(
                 self._cache_dir, stage="boundary", cache_key=boundary_key
             )
-            pp.transforms = saved["transforms"]
             pp.meta_data = saved["meta_data"]
 
-            names_after = pp.transforms.get_transform_names_after(boundary_name)
-            if names_after:
-                all_dt = pp.transforms.get_transforms()
-                tail = OrderedDict((n, all_dt[n]) for n in names_after if n in all_dt)
-                pp.data = pp.apply_transforms(pp.data, tail)
+            names_after = full_transforms.get_transform_names_after(boundary_name)
+            all_dt = full_transforms.get_transforms()
+            tail = OrderedDict((n, all_dt[n]) for n in names_after if n in all_dt)
 
             logger.info(
-                "Restored from boundary cache after %r; ran %d remaining transform(s).",
+                "Restored from boundary cache after %r; %d remaining transform(s) to run.",
                 boundary_name,
-                len(names_after),
+                len(tail),
             )
-            pp.cache.write_meta(
-                cache_dir=self._cache_dir,
-                stage="preprocessed",
-                config=self._preprocessed_config,
-                cache_key=self._preprocessed_key,
-            )
-            self._save_preprocessed()
-            return pp.data
+            return tail
 
         return None
 
-    def _run_all_transforms(self) -> None:
+    def _run_all_transforms(
+        self, transforms: Optional[OrderedDict] = None
+    ) -> None:
         """
-        Apply all transforms, optionally saving a boundary cache after each
-        transform marked as a cache point.
+        Apply transforms, optionally saving a boundary cache after each cache point.
+
+        Parameters
+        ----------
+        transforms:
+            OrderedDict of DataTransform objects to apply.  When None (the default),
+            the full transform chain from pp.transforms is used.  Pass the tail dict
+            returned by _try_restore_from_boundary to run only the remaining transforms
+            after a boundary restore; boundary callbacks are still applied correctly
+            for any cache points present in the tail.
         """
         pp = self._pp
-        cache_point_names = pp.transforms.get_cache_point_names()
+        if transforms is None:
+            transforms = pp.transforms.get_transforms()
 
-        if cache_point_names and self._save_boundaries:
-            # Pre-write boundary tombstones for all cache points before any
+        cache_point_names = pp.transforms.get_cache_point_names()
+        # Only consider cache points that are actually in the transforms to be run.
+        active_cache_points = [n for n in cache_point_names if n in transforms]
+
+        if active_cache_points and self._save_boundaries:
+            # Pre-write boundary tombstones for active cache points before any
             # transform runs, so a crash leaves a meta.json on disk.
-            for boundary_name in cache_point_names:
+            for boundary_name in active_cache_points:
                 boundary_config = {
                     "datasource": self._datasource_config,
                     "transforms": pp.transforms.get_config_up_to_and_including(
@@ -265,7 +280,7 @@ class CachingPipelineRunner:
                 )
 
             def _boundary_callback(data: DatasetContainer, transform_name: str):
-                if transform_name not in cache_point_names:
+                if transform_name not in active_cache_points:
                     return
                 boundary_config = {
                     "datasource": self._datasource_config,
@@ -286,11 +301,11 @@ class CachingPipelineRunner:
 
             pp.data = pp.apply_transforms(
                 pp.data,
-                pp.transforms.get_transforms(),
+                transforms,
                 after_each_transform_callback=_boundary_callback,
             )
         else:
-            pp.data = pp.apply_transforms(pp.data, pp.transforms.get_transforms())
+            pp.data = pp.apply_transforms(pp.data, transforms)
 
     def _save_preprocessed(self) -> None:
         """Save the fully transformed container to the preprocessed cache."""
