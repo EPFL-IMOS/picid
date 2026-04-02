@@ -225,6 +225,19 @@ class TestMinMaxScalerSklearn:
         assert np.all(result >= 0)
         assert np.all(result <= 1)
 
+    def test_transform_data_tolerates_pipeline_metadata_keys(self):
+        """MinMax must accept the same metadata keys pipelines pass for other scalers."""
+        transform = MinMaxScalerSklearn()
+        fit_data = NamedTransformInput(
+            features=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        )
+        transform.fit_data(fit_data, {})
+        data = NamedTransformInput(features=np.array([[2.0, 3.0], [4.0, 5.0]]))
+        metadata = {"assign_to_map": ["features"], "apply_to_keys": ["features"]}
+        result = transform.transform_data(data, metadata)
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (2, 2)
+
     def test_transform_data_1d(self):
         """Test transform_data with 1D array."""
         transform = MinMaxScalerSklearn()

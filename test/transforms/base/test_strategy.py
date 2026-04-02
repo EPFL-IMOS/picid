@@ -27,6 +27,7 @@ from picid.data.data_objects import (
 from test.transforms.base.conftest import (
     DummyStatelessTransform,
     DummyFittableTransform,
+    DummyRaggedOrDenseTransform,
     create_dummy_split_container,
     create_dummy_single_unit_container,
 )
@@ -85,6 +86,23 @@ class TestTransformStrategy:
         )
 
         assert transform.fitted
+
+    def test_strategy_apply_ragged_or_dense_on_dense_handler_compat(self):
+        """CAPABILITY_BOTH transform on numpy data must dispatch through dense handler."""
+        strategy = TransformStrategy()
+        transform = DummyRaggedOrDenseTransform()
+        container = create_dummy_single_unit_container(n_samples=4, n_features=2)
+
+        result, log = strategy.apply(
+            transform_instance=transform,
+            data=container,
+            apply_to_keys="features",
+            assign_to_keys="features",
+            assign_to_keys_map=["features"],
+        )
+
+        orig = container.features.train[0]
+        np.testing.assert_array_equal(result.features.train[0], orig * 2)
 
     def test_strategy_apply_missing_apply_to_key_error(self):
         """Test that missing apply_to key raises error (wrapped in TransformError)."""

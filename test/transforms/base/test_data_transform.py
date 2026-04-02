@@ -22,6 +22,7 @@ from test.transforms.base.conftest import (
     DummyStatelessTransform,
     DummyFittableTransform,
     DummyMultiKeyTransform,
+    DummyRaggedOrDenseTransform,
     NamedParameterTransform,
     MultiNamedParameterTransform,
     BadSignatureTransform,
@@ -149,6 +150,16 @@ class TestDataTransform:
         original = container.features.train[0]
         transformed = result.features.train[0]
         np.testing.assert_array_equal(transformed, original * 2)
+
+    def test_data_transform_forward_ragged_or_dense_on_dense_compat(self):
+        """RaggedOrDense (CAPABILITY_BOTH) on dense SplitDatasetContainer uses dense path."""
+        transform = DummyRaggedOrDenseTransform()
+        metadata = {"apply_to": "features", "assign_to": "features"}
+        dt = DataTransform("rod_dense", transform, metadata)
+        container = create_dummy_single_unit_container(n_samples=5, n_features=2)
+        result, _ = dt.forward(container)
+        original = container.features.train[0]
+        np.testing.assert_array_equal(result.features.train[0], original * 2)
 
     def test_data_transform_forward_with_fitting(self):
         """Test forward pass with fitting."""

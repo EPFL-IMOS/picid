@@ -8,6 +8,7 @@ from picid.transforms.base.data_kind import (
     DATA_KIND_DENSE,
     DATA_KIND_RAGGED,
     DATA_KIND_RAGGED_REGULAR,
+    CAPABILITY_BOTH,
     CAPABILITY_DENSE,
     CAPABILITY_RAGGED,
 )
@@ -46,6 +47,21 @@ class TestHandlerRegistry:
     def test_get_handler_unknown_raises(self):
         with pytest.raises(KeyError, match="No handler registered"):
             get_handler("unknown_kind", CAPABILITY_DENSE)
+
+    def test_get_handler_dense_capability_both_uses_dense_dense(self):
+        """Registry: CAPABILITY_BOTH on dense data must stay mapped to DenseDenseHandler."""
+        h = get_handler(DATA_KIND_DENSE, CAPABILITY_BOTH)
+        assert isinstance(h, DenseDenseHandler)
+
+    def test_get_handler_ragged_regular_capability_both_uses_dense_dense(self):
+        """Registry: regular ragged + BOTH capability uses dense path (structural compat)."""
+        h = get_handler(DATA_KIND_RAGGED_REGULAR, CAPABILITY_BOTH)
+        assert isinstance(h, DenseDenseHandler)
+
+    def test_get_handler_ragged_capability_both_uses_ragged_ragged(self):
+        """Registry: irregular ragged + BOTH capability uses RaggedRaggedHandler."""
+        h = get_handler(DATA_KIND_RAGGED, CAPABILITY_BOTH)
+        assert isinstance(h, RaggedRaggedHandler)
 
 
 class TestDenseDenseHandler:
