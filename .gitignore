@@ -1,4 +1,5 @@
 testwdir
+.pytest_tmp
 test/.pytest_tmp
 .pytest_tmp/
 test/.pytest_tmp_task2/

@@ -1,4 +1,5 @@
 # Important to set the environment variable PROJECT_ROOT to the root of the project, hence always import picid first!
+# Run tests from repo root with: uv run pytest (see docs/testing/test-entrypoints.md).
 import picid  # noqa: F401
 import sys
 import os

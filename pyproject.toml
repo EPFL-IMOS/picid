@@ -98,13 +98,17 @@ checks = ["all", "EX01", "SA01", "ES01"]
 exclude = ['__repr__$']
 
 [tool.pytest.ini_options]
-# All test temp dirs (plot_dir, eval_details, etc.) go under test/ and are cleaned after runs
-addopts = "--basetemp=test/.pytest_tmp"
+# When run from repo root with `uv run pytest`, basetemp stays outside `test/` and out of the source-test tree
+addopts = "--basetemp=.pytest_tmp"
 norecursedirs = ["_archive"]
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
-    "requires_snapshots: skip when pipeline snapshot fixtures are missing; regenerate with: uv run python test/scripts/snapshot/generate_pipeline_snapshots.py",
-    "slow: slow benchmarks (e.g. __getitem__ timing); skip with -m 'not slow'",
+    "optional_dep: needs optional dependencies, extras, or non-default environment",
+    "integration: crosses subsystem boundaries (I/O, full pipeline slices, external services)",
+    "tutorial: tutorial-style or walkthrough tests (often heavier or narrative)",
+    "benchmark: timing or throughput checks (not correctness-only)",
+    "slow: slow tests (e.g. __getitem__ timing); skip with -m 'not slow'",
+    "requires_snapshots: verification-only against committed snapshot fixtures; skip when fixtures are missing and do not regenerate snapshots from test runs",
 ]
 
 [tool.pylint."messages control"]
