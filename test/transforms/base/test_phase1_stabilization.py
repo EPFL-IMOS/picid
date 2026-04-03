@@ -363,14 +363,13 @@ class TestTransformOnKeysCharacterization:
     """Lock transform_on_keys: only listed splits are transformed."""
 
     def test_strategy_transform_on_keys_omits_test_split(self):
-        """When transform_on_keys=['train','val'], test split is not in available_splits."""
+        """transform_on_keys=['train','val']: train/val are transformed (x2); test data unchanged."""
         strategy = TransformStrategy()
         transform = DummyStatelessTransform()
         container = create_dummy_split_container(n_units=2)
-        # Container has train, val, test
-        assert "train" in container.features
-        assert "val" in container.features
-        assert "test" in container.features
+        orig_train0 = container.features.train[0].copy()
+        orig_val0 = container.features.val[0].copy()
+        orig_test0 = container.features.test[0].copy()
         result, _ = strategy.apply(
             transform_instance=transform,
             data=container,
@@ -379,13 +378,10 @@ class TestTransformOnKeysCharacterization:
             assign_to_keys_map=["features"],
             transform_on_keys=["train", "val"],
         )
-        # Result should still have all splits (merge only overwrites transformed)
         assert "features" in result
-        # Train and val should be transformed (x2); test may be untransformed or absent in merge
-        assert "train" in result.features
-        assert "val" in result.features
-        # If test was not in transform_on_keys, it may remain from initial shallow copy
-        assert "test" in result.features
+        np.testing.assert_array_equal(result.features.train[0], orig_train0 * 2)
+        np.testing.assert_array_equal(result.features.val[0], orig_val0 * 2)
+        np.testing.assert_array_equal(result.features.test[0], orig_test0)
 
 
 # -----------------------------------------------------------------------------

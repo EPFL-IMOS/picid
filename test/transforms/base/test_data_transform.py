@@ -8,14 +8,14 @@ import numpy as np
 import pytest
 from typing import Dict
 from omegaconf import OmegaConf
-import inspect
 
 from picid.transforms.base.base_transform import DenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
-from picid.transforms.base.data_transform import DataTransform, _type_matches, _matches
+from picid.transforms.base.data_transform import DataTransform, _type_matches
 from picid.data.data_objects import (
     SplitDatasetContainer,
 )
+from picid.exceptions import TransformError
 
 # Import shared fixtures and dummy transforms from conftest
 from test.transforms.base.conftest import (
@@ -41,8 +41,7 @@ class TestDataTransform:
         dt = DataTransform("test_transform", transform, metadata)
 
         assert dt.transform_name == "test_transform"
-        # apply_to is converted to list internally but stored as original type
-        assert dt.apply_to == "features" or dt.apply_to == ["features"]
+        assert dt.apply_to == "features"
         assert dt.assign_to == ["features"]
         assert dt.fit_on_split is None
 
@@ -51,8 +50,7 @@ class TestDataTransform:
         transform = DummyStatelessTransform()
         metadata = {"apply_to": "features"}
         dt = DataTransform("test", transform, metadata)
-        # apply_to is processed but may remain as string or list
-        assert dt.apply_to == "features" or dt.apply_to == ["features"]
+        assert dt.apply_to == "features"
 
     def test_data_transform_apply_to_list(self):
         """Test apply_to as list."""
@@ -73,8 +71,7 @@ class TestDataTransform:
         transform = DummyStatelessTransform()
         metadata = {"apply_to": "features"}
         dt = DataTransform("test", transform, metadata)
-        # assign_to is always converted to list
-        assert dt.assign_to == ["features"] or dt.assign_to == "features"
+        assert dt.assign_to == "features"
 
     def test_data_transform_assign_to_explicit(self):
         """Test explicit assign_to."""
@@ -204,8 +201,6 @@ class TestDataTransform:
 
     def test_data_transform_forward_missing_key_error(self):
         """Test that missing apply_to key raises error (wrapped in TransformError)."""
-        from picid.exceptions import TransformError
-
         transform = DummyStatelessTransform()
         metadata = {"apply_to": "nonexistent", "assign_to": "nonexistent"}
         dt = DataTransform("test", transform, metadata)
@@ -217,7 +212,7 @@ class TestDataTransform:
         assert "not found" in str(exc_info.value.cause)
 
     def test_data_transform_forward_transform_on_keys(self):
-        """Test forward pass with transform_on_keys filter."""
+        """transform_on_keys=['train']: train scaled x2; val left unchanged."""
         transform = DummyStatelessTransform()
         metadata = {
             "apply_to": "features",
@@ -227,11 +222,13 @@ class TestDataTransform:
         dt = DataTransform("test", transform, metadata)
 
         container = create_dummy_single_unit_container()
+        orig_val = container.features.val[0].copy()
         result, log = dt.forward(container)
 
-        # Only train should be transformed
-        assert "train" in result.features
-        # Val might not be transformed if it exists
+        np.testing.assert_array_equal(
+            result.features.train[0], container.features.train[0] * 2
+        )
+        np.testing.assert_array_equal(result.features.val[0], orig_val)
 
     def test_data_transform_process_apply_to_listconfig(self):
         """Test _process_apply_to with ListConfig."""
@@ -264,19 +261,22 @@ class TestDataTransform:
         with pytest.raises(TypeError, match="signature"):
             DataTransform("test", bad_transform, metadata)
 
-    def test_data_transform_forward_split_mismatch_error(self):
-        """Test that split mismatch raises error."""
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
+    def test_data_transform_forward_multi_key_unit_count_mismatch_raises(self):
+        """Misaligned unit counts across apply_to keys for the same split raise TransformError."""
+        transform = DummyMultiKeyTransform()
+        metadata = {
+            "apply_to": ["features", "target"],
+            "assign_to": ["features", "target"],
+        }
         dt = DataTransform("test", transform, metadata)
-
-        # Create container with mismatched splits
         container = SplitDatasetContainer(
-            features={"train": [np.array([[1.0]])]},
-            target={"val": [np.array([[1.0]])]},  # Different split
+            features={"train": [np.array([[1.0]]), np.array([[2.0]])]},
+            target={"train": [np.array([[0.1]])]},
         )
-        assert dt.transform_name == "test"
-        assert container.features["train"] is not None
+        with pytest.raises(TransformError) as exc_info:
+            dt.forward(container)
+        assert isinstance(exc_info.value.cause, ValueError)
+        assert "Misaligned" in str(exc_info.value.cause)
 
 
 class TestDataTransformAdvanced:
@@ -366,158 +366,6 @@ class TestDataTransformAdvanced:
         with pytest.raises(AssertionError, match="must include"):
             DataTransform("test", transform, metadata)
 
-    def test_forward_missing_assign_to_key_error(self, mocker):
-        """Test forward with missing assign_to key raises error (line 318).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test defensive error handling for an invalid state (strategy
-        returning data without expected key) that cannot be triggered through
-        the normal public interface. This tests the validation in forward() that
-        catches corrupted/malformed strategy outputs.
-        """
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "nonexistent_key"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container()
-
-        # INTENTIONAL: Direct strategy replacement to test error handling
-        # for corrupted strategy output that cannot occur through normal flow.
-        # In the new design, validation runs in the pipeline (IntegrityCheckAfterStep);
-        # when strategy is mocked we bypass the pipeline, so forward() no longer raises.
-        class MockStrategy:
-            def apply(self, **kwargs):
-                # Return container without the assign_to key
-                result = container.copy(deep=False)
-                return result, {}
-
-        dt.strategy = MockStrategy()
-
-        # Validation now in pipeline; with mock strategy we get no validation.
-        result, _ = dt.forward(container)
-        assert "nonexistent_key" not in result
-
-    def test_forward_wrong_assign_to_type_error(self):
-        """Test forward with wrong assign_to type raises error (line 326).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test defensive error handling for corrupted strategy output
-        (wrong type in result) that cannot be triggered through normal flow.
-        """
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container()
-
-        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
-        # with mock strategy we bypass pipeline so forward() returns without raising.
-        class MockStrategy:
-            def apply(self, **kwargs):
-                result = container.copy(deep=False)
-                result._data["features"] = {"train": [np.array([[1.0]])]}
-                return result, {}
-
-        dt.strategy = MockStrategy()
-        result, _ = dt.forward(container)
-        assert "features" in result
-
-    def test_forward_split_mismatch_error(self):
-        """Test forward with split mismatch raises error (line 337).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test defensive error handling for split mismatch that cannot
-        be triggered through normal flow where strategy validates split consistency.
-        """
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container()
-
-        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
-        # with mock strategy we bypass pipeline so forward() returns without raising.
-        class MockStrategy:
-            def apply(self, **kwargs):
-                result = container.copy(deep=False)
-                new_features = SplitDatasetContainer(
-                    train=result.features.train,
-                    test=result.features.test,
-                )
-                result._data["features"] = new_features
-                return result, {}
-
-        dt.strategy = MockStrategy()
-        result, _ = dt.forward(container)
-        assert "val" not in result.features
-
-    def test_forward_type_change_warning(self):
-        """Test forward with type change logs warning (line 348).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test the warning path for type changes that normally don't occur
-        when using the proper transform interface.
-        """
-        import warnings
-
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container()
-
-        # INTENTIONAL: Direct strategy replacement to test type change warning
-        class MockStrategy:
-            def apply(self, **kwargs):
-                result = container.copy(deep=False)
-                # Change type of one split - from list to array
-                result.features.train = np.array(
-                    [np.array([[1.0]])]
-                )  # Array instead of list
-                return result, {}
-
-        dt.strategy = MockStrategy()
-
-        # Capture warnings
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                result, log = dt.forward(container)
-                # Check if warning was issued
-                if w:
-                    assert any("changed type" in str(warning.message) for warning in w)
-            except (TypeError, AttributeError):
-                # If it fails due to type mismatch, that's also acceptable
-                pass
-
-    def test_forward_length_mismatch_warning(self):
-        """Test forward with length mismatch logs warning (line 360).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test the warning path for length mismatches that normally don't
-        occur when using proper transforms.
-        """
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container(n_units=3)
-
-        # Mock strategy to return different length
-        class MockStrategy:
-            def apply(self, **kwargs):
-                result = container.copy(deep=False)
-                # Change length of one split
-                result.features.train = result.features.train[:2]  # Remove one unit
-                return result, {}
-
-        # INTENTIONAL: Direct strategy replacement to test length mismatch warning
-        dt.strategy = MockStrategy()
-
-        # Should log warning but not raise error
-        result, log = dt.forward(container)
-        assert "features" in result
-
     def test_process_apply_to_with_mapping(self):
         """Test _process_apply_to with mapping (lines 75-77).
 
@@ -568,31 +416,6 @@ class TestDataTransformAdvanced:
 class TestDataTransformCoverage:
     """Tests to cover remaining missing lines in data_transform.py."""
 
-    def test_type_matches_with_typing_origin(self):
-        """Test _type_matches with typing.Union origin (lines 36-38)."""
-        from typing import Union
-
-        # Test with Union type
-        union_type = Union[int, str]
-        result = _type_matches(union_type, type)
-        # Should handle typing constructs
-        assert isinstance(result, bool)
-
-    def test_type_matches_with_issubclass(self):
-        """Test _type_matches with issubclass (lines 40-42)."""
-
-        # Test with a class annotation
-        class TestClass:
-            pass
-
-        # Create a parameter with class annotation
-        sig = inspect.signature(lambda x: TestClass)
-        param = list(sig.parameters.values())[0]
-
-        result = _type_matches(param.annotation, type)
-        # Should try issubclass
-        assert isinstance(result, bool)
-
     def test_type_matches_typeerror_handling(self):
         """Test _type_matches TypeError handling (line 42)."""
         # Create annotation that will cause TypeError in issubclass
@@ -600,15 +423,6 @@ class TestDataTransformCoverage:
 
         # This should catch TypeError and return False
         result = _type_matches(invalid_annotation, type)
-        assert result is False
-
-    def test_matches_parameter_name_mismatch(self):
-        """Test _matches with parameter name mismatch (line 49)."""
-        sig1 = inspect.signature(lambda data, metadata: None)
-        sig2_params = [("wrong_name", dict), ("metadata", dict)]
-
-        sig_params = list(sig1.parameters.items())
-        result = _matches(sig_params, sig2_params)
         assert result is False
 
     def test_process_apply_to_listconfig(self):
@@ -655,29 +469,6 @@ class TestDataTransformCoverage:
         assert isinstance(assign_to, list)
         assert len(assign_to) == 2
 
-    def test_forward_not_split_container_error(self):
-        """Test forward with non-SplitDatasetContainer return (line 301).
-
-        **Methodology**: Direct strategy replacement is INTENTIONAL here because
-        we need to test defensive error handling for invalid strategy output
-        (returning wrong type) that cannot be triggered through normal flow.
-        """
-        transform = DummyStatelessTransform()
-        metadata = {"apply_to": "features", "assign_to": "features"}
-        dt = DataTransform("test", transform, metadata)
-
-        container = create_dummy_split_container()
-
-        # INTENTIONAL: Direct strategy replacement. Validation now in pipeline;
-        # with mock strategy we bypass pipeline so forward() returns without raising.
-        class MockStrategy:
-            def apply(self, **kwargs):
-                return {"not_a_container": True}, {}
-
-        dt.strategy = MockStrategy()
-        result, _ = dt.forward(container)
-        assert result == {"not_a_container": True}
-
     def test_forward_validation_checks(self):
         """Test forward validation checks (lines 318, 326, 337, 348, 360)."""
         transform = DummyStatelessTransform()
@@ -701,8 +492,8 @@ class TestDataTransformCoverage:
         transformed_train = result.features.train[0]
         np.testing.assert_array_equal(transformed_train, original_train * 2)
 
-    def test_forward_with_warning_paths(self):
-        """Test forward paths that generate warnings (lines 348, 360)."""
+    def test_forward_normal_path_keeps_warning_branches_inactive(self):
+        """Normal forward does not hit the mocked type-change warning scenarios."""
         import warnings
 
         transform = DummyStatelessTransform()

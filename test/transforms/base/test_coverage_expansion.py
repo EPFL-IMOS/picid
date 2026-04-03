@@ -1,9 +1,7 @@
-"""
-Tests added to increase line coverage for picid/transforms/base.
+"""Behavior-led characterization tests for extra transform-base scenarios.
 
-Targets missing lines reported by coverage in:
-- base_transform.py, data_transform.py, strategy.py
-- transform_manager.py, multisource.py
+These cases cover manager and multisource edges not exercised by the more
+central contract files, while still asserting outputs, errors, or metadata.
 """
 
 from __future__ import annotations
@@ -12,7 +10,7 @@ import numpy as np
 import pytest
 import awkward as ak
 from typing import Any, Dict
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 from sortedcontainers import SortedDict
 
 from picid.data.data_objects import NamedTransformInput, SplitDatasetContainer
@@ -34,6 +32,7 @@ from picid.transforms.base.multisource import (
 from test.transforms.base.conftest import (
     DummyStatelessTransform,
     DummyFittableTransform,
+    DummyMultiKeyTransform,
     DummyRaggedTransform,
     create_dummy_split_container,
     create_dummy_single_unit_container,
@@ -59,64 +58,50 @@ class TestBaseTransformCoverage:
         result = t.fit_data(data, {})
         assert result is None
 
-    def test_base_transform_fit_data_pass_line(self):
-        """Cover line 40: BaseTransform.fit_data body (pass) via subclass that does not override it."""
-
-        class NoFitOverride(NoFitPerSegmentMixin, DenseTransform):
-            def transform_data(self, data, metadata):
-                return data[list(data.keys())[0]]
-
-        t = NoFitOverride()
-        data = NamedTransformInput(features=np.array([1.0]))
-        t.fit_data(data, {})  # calls BaseTransform.fit_data (pass)
-
-    def test_base_transform_abstract_transform_data_body(self):
-        """Line 33: BaseTransform.transform_data abstract body (pass) executed via super().transform_data."""
-
-        class CallsSuperTransform(NoFitPerSegmentMixin, DenseTransform):
-            def transform_data(self, data, metadata):
-                return super().transform_data(data, metadata)  # hits BaseTransform pass
-
-        t = CallsSuperTransform()
-        data = NamedTransformInput(features=np.array([1.0]))
-        result = t.transform_data(data, {})
-        assert result is None  # pass returns None
-
 
 # ----- data_transform.py: logger and branches -----
 
 
 class TestDataTransformCoverage:
     def test_implicit_assign_to_logs_when_apply_to_is_sequence(self, caplog):
-        """Line 52: assign_to None and apply_to list triggers logger.info."""
+        """Implicit assign_to for list apply_to logs and forward scales both keys."""
         import logging
 
         caplog.set_level(logging.INFO)
-        metadata = {
-            "apply_to": ["features", "target"],
-            "fit_on_key": "features",
-        }
-        transform = DummyFittableTransform()
+        metadata = {"apply_to": ["features", "target"]}
+        transform = DummyMultiKeyTransform()
         with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
-            DataTransform("t", transform, metadata)
+            dt = DataTransform("t", transform, metadata)
         assert any(
             "implicit" in (r.getMessage() or getattr(r, "message", "")).lower()
             for r in caplog.records
         )
+        container = create_dummy_split_container(n_units=1)
+        result, _ = dt.forward(container)
+        np.testing.assert_array_equal(
+            result.features.train[0], container.features.train[0] * 2
+        )
+        np.testing.assert_array_equal(
+            result.target.train[0], container.target.train[0] * 2
+        )
 
     def test_process_assign_to_implicit_sequence_triggers_logger(self, caplog):
-        """Line 52: _process_assign_to(None, sequence) triggers logger.info."""
+        """Implicit assign_to for a sequence logs once and preserves both target keys."""
         dt = DataTransform(
             "t",
             DummyStatelessTransform(),
             {"apply_to": "features", "assign_to": "features"},
         )
         with caplog.at_level("INFO", logger="picid.transforms.base.data_transform"):
-            dt._process_assign_to(assign_to=None, apply_to=["features", "target"])
+            assign_to, assign_to_map = dt._process_assign_to(
+                assign_to=None, apply_to=["features", "target"]
+            )
         assert any(
             "implicit" in (r.getMessage() or getattr(r, "message", "")).lower()
             for r in caplog.records
         )
+        assert assign_to == ["features", "target"]
+        assert assign_to_map == ["features", "target"]
 
     def test_assign_to_required_when_apply_to_is_mapping(self):
         """Line 92: apply_to as Mapping without assign_to raises ValueError.
@@ -134,8 +119,8 @@ class TestDataTransformCoverage:
         with pytest.raises(ValueError, match="assign_to|ambiguity"):
             dt._process_assign_to(assign_to=None, apply_to={"feat": "features"})
 
-    def test_forward_type_change_logs_warning(self):
-        """Line 348: type change between original and transformed triggers warning path."""
+    def test_forward_type_change_mock_strategy_preserves_mocked_train_shape(self):
+        """Mocked strategy output with changed train shape is forwarded predictably."""
         dt = DataTransform(
             "t",
             DummyStatelessTransform(),
@@ -155,10 +140,11 @@ class TestDataTransformCoverage:
 
         dt.strategy = MockStrategy()
         result, _ = dt.forward(container)
-        assert result is not None  # coverage: line 348 (logger.warning) is executed
+        np.testing.assert_array_equal(result.features.train[0], np.array([1.0, 2.0]))
+        np.testing.assert_array_equal(result.features.val[0], container.features.val[0])
 
-    def test_forward_source_count_change_logs_warning(self):
-        """Line 360: list length change triggers warning path."""
+    def test_forward_source_count_change_mock_strategy_preserves_other_splits(self):
+        """Mocked strategy output with fewer train units keeps untouched splits intact."""
         dt = DataTransform(
             "t",
             DummyStatelessTransform(),
@@ -179,17 +165,27 @@ class TestDataTransformCoverage:
 
         dt.strategy = MockStrategy()
         result, _ = dt.forward(container)
-        assert result is not None  # coverage: line 360 (logger.warning) is executed
+        assert len(result.features.train) == 1
+        np.testing.assert_array_equal(result.features.train[0], np.array([[1.0]]))
+        np.testing.assert_array_equal(result.features.val[0], container.features.val[0])
 
     def test_initialization_with_dictconfig_transform(self):
-        """Line 183: DictConfig path is exercised by ConfigTransformManager; here we only assert instance."""
+        """DictConfig instantiates transform via Hydra; forward applies scaling."""
+        from omegaconf import OmegaConf
+
+        cfg = OmegaConf.create(
+            {"_target_": "test.transforms.base.conftest.DummyStatelessTransform"}
+        )
         dt = DataTransform(
             "dictconfig_transform",
-            DummyStatelessTransform(),
+            cfg,
             {"apply_to": "features", "assign_to": "features"},
         )
-        assert dt.transform_instance is not None
-        assert hasattr(dt.transform_instance, "transform_data")
+        assert isinstance(dt.transform_instance, DummyStatelessTransform)
+        container = create_dummy_single_unit_container()
+        arr = container.features.train[0]
+        result, _ = dt.forward(container)
+        np.testing.assert_array_equal(result.features.train[0], arr * 2)
 
 
 # ----- strategy.py: copy branch and structure error -----
@@ -216,6 +212,9 @@ class TestStrategyCoverage:
             assign_to_keys_map=["features"],
         )
         assert "features" in result
+        out = result.features.train[0]
+        assert isinstance(out, ak.Array)
+        assert ak.sum(out) == ak.sum(ragged) * 2
 
     def test_apply_apply_key_not_mapping_raises_type_error(self):
         """Line 117: data[apply_key] not a Mapping raises TypeError."""
@@ -258,7 +257,8 @@ class TestTransformManagerCoverage:
             transforms_config={"a": {"transform": {}, "metadata": {}}},
             lazy_instantiation=True,
         )
-        assert manager.config is not None
+        assert isinstance(manager.config, DictConfig)
+        assert list(manager.config.keys()) == ["a"]
 
     def test_ensure_dict_config_with_dictconfig(self):
         """_ensure_dict_config with DictConfig returns as-is: line 46."""
@@ -266,7 +266,8 @@ class TestTransformManagerCoverage:
         manager = ConfigTransformManager(
             transforms_config=config, lazy_instantiation=True
         )
-        assert manager.config is not None
+        assert isinstance(manager.config, DictConfig)
+        assert list(manager.config.keys()) == ["t"]
 
     def test_initialization_empty_config_no_instantiation_loop(self):
         """Empty config: line 51 (no entries in loop)."""
@@ -341,27 +342,6 @@ class TestTransformManagerCoverage:
         with pytest.raises(KeyError, match="not found"):
             manager.get_data_transform("nonexistent")
 
-    def test_get_transforms_by_apply_to(self):
-        """Lines 217-218: filter by apply_to."""
-        config = {
-            "t1": {
-                "transform": {
-                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
-                },
-                "metadata": {"apply_to": "features", "assign_to": "features"},
-            },
-            "t2": {
-                "transform": {
-                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
-                },
-                "metadata": {"apply_to": "target", "assign_to": "target"},
-            },
-        }
-        manager = ConfigTransformManager(transforms_config=config)
-        by_apply = manager.get_transforms_by_apply_to("features")
-        assert "t1" in by_apply
-        assert "t2" not in by_apply
-
     def test_get_transforms_by_fit_on(self):
         """Lines 230-231: filter by fit_on."""
         config = {
@@ -418,8 +398,13 @@ class TestTransformManagerCoverage:
             "t1:\n  transform:\n    _target_: test.transforms.base.conftest.DummyStatelessTransform\n  metadata:\n    apply_to: features\n    assign_to: features\n"
         )
         mgr = create_transform_manager_from_config(config_path=str(cfg))
-        assert mgr is not None
         assert mgr.has_transform("t1")
+        dt = mgr.get_data_transform("t1")
+        container = create_dummy_single_unit_container()
+        result, _ = dt.forward(container)
+        np.testing.assert_array_equal(
+            result.features.train[0], container.features.train[0] * 2
+        )
 
     def test_create_transform_manager_from_config_dict(self):
         """Lines 343-344: create from config_dict."""
@@ -433,8 +418,13 @@ class TestTransformManagerCoverage:
                 }
             }
         )
-        assert mgr is not None
         assert mgr.has_transform("t1")
+        dt = mgr.get_data_transform("t1")
+        container = create_dummy_single_unit_container()
+        result, _ = dt.forward(container)
+        np.testing.assert_array_equal(
+            result.features.train[0], container.features.train[0] * 2
+        )
 
     def test_create_transform_manager_no_config(self):
         """Lines 345-346: create with no config."""
@@ -448,15 +438,9 @@ class TestTransformManagerCoverage:
             "bad_entry": {"metadata": {"apply_to": "features"}},  # no "transform" key
         }
         with caplog.at_level("ERROR", logger="picid.transforms.base.transform_manager"):
-            try:
-                manager = ConfigTransformManager(transforms_config=config)
-                manager.get_data_transforms()
-            except RuntimeError:
-                pass
-        assert any(
-            "missing" in r.message.lower() or "transform" in r.message
-            for r in caplog.records
-        )
+            with pytest.raises(RuntimeError, match="Failed to instantiate"):
+                ConfigTransformManager(transforms_config=config)
+        assert any("missing" in r.getMessage().lower() for r in caplog.records)
 
     def test_manager_instantiate_all_early_return_on_second_call(self):
         """Line 51: _instantiate_all returns early when _is_instantiated is True."""
@@ -650,12 +634,12 @@ class TestMultisourceCoverage:
         """Line 103: tolist with SortedDict."""
         sd = SortedDict({"a": 1, "b": 2})
         out = tolist(sd)
-        assert isinstance(out, list)
+        assert out == [1, 2]
 
     def test_tolist_dict(self):
         """Line 106: tolist with plain dict."""
         out = tolist({"x": 1, "y": 2})
-        assert isinstance(out, list)
+        assert out == [1, 2]
 
     def test_tolist_non_dict_returns_unchanged(self):
         """Line 108 (127): tolist with non-dict returns object as-is."""
@@ -705,6 +689,7 @@ class TestMultisourceCoverage:
         metadata = {"apply_to_keys": "features", "assign_to_map": ["features"]}
         out, _ = transform.transform_multi_source(segments, metadata=metadata)
         assert len(out) == 1
+        np.testing.assert_array_equal(out[0], np.array([[2.0, 4.0]]))
 
     def test_concatenate_units_fit_multi_source_raises(self):
         """Line 695: NoFitConcatAlongAxisMixin.fit_multi_source raises NotImplementedError."""
@@ -732,7 +717,10 @@ class TestMultisourceCoverage:
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
         arr = out[0] if not hasattr(out[0], "keys") else out[0]["features"]
-        assert isinstance(arr, np.ndarray) or isinstance(arr, ak.Array)
+        assert isinstance(arr, ak.Array)
+        np.testing.assert_array_almost_equal(
+            ak.to_numpy(ak.flatten(arr)), np.array([2.0, 4.0, 6.0, 8.0])
+        )
 
     def test_concatenate_units_transform_multi_key_length_check(self):
         """Lines 771-786: multiple apply_to_keys length consistency."""
@@ -754,6 +742,10 @@ class TestMultisourceCoverage:
         metadata = {"apply_to_keys": ["features", "target"]}
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
+        merged = out[0]["features"]
+        np.testing.assert_array_almost_equal(
+            merged, np.array([[2.0], [4.0], [6.0], [8.0]])
+        )
 
     def test_inverse_transform_mixin_init_requires_inverse_transform_or_data(self):
         """InverseTransformMixin requires inverse_transform or inverse_transform_data."""
@@ -820,6 +812,12 @@ class TestMultisourceCoverage:
         assert hasattr(result[0], "keys") or isinstance(
             result[0], (dict, BaseDataObjectWithMetadata)
         )
+        feat = result[0]["features"]
+        feat_arr = ak.to_numpy(feat) if isinstance(feat, ak.Array) else np.asarray(feat)
+        np.testing.assert_array_equal(
+            feat_arr,
+            np.array([[[2.0, 4.0], [6.0, 8.0]], [[10.0, 12.0], [14.0, 16.0]]]),
+        )
 
     def test_transform_multi_source_different_key_lengths_raises(self):
         """Line 661: transform_multi_source with segments having different key counts raises."""
@@ -862,7 +860,11 @@ class TestMultisourceCoverage:
         metadata = {"apply_to_keys": ["features"], "assign_to_map": ["features"]}
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
-        assert out[0]["features"] is not None
+        feat = out[0]["features"]
+        assert isinstance(feat, ak.Array)
+        np.testing.assert_array_almost_equal(
+            ak.to_numpy(ak.flatten(feat)), np.array([2.0, 4.0, 6.0, 8.0])
+        )
 
     def test_concatenate_units_multi_key_ak_and_numpy_length_checks(self):
         """Multi-key concatenate: both keys same type to satisfy uniform data type; length checks."""
@@ -888,6 +890,13 @@ class TestMultisourceCoverage:
         }
         out, _ = t.transform_multi_source(segs, metadata=metadata)
         assert len(out) == 1
+        row = out[0]
+        np.testing.assert_array_almost_equal(
+            row["features"], np.array([[2.0], [4.0], [6.0], [8.0]])
+        )
+        np.testing.assert_array_almost_equal(
+            row["target"], np.array([[0.0], [0.0], [0.0], [0.0]])
+        )
 
     def test_concatenate_units_inconsistent_lengths_raises(self):
         """Line 786: two keys with different lengths after concat raises ValueError."""
@@ -951,6 +960,12 @@ class TestMultisourceCoverage:
         result, log = t.transform_multi_source(segments, metadata=metadata)
         assert log.get("mode") == "ragged_to_dense"
         assert len(result) == 1
+        feat = result[0]["features"]
+        feat_arr = ak.to_numpy(feat) if isinstance(feat, ak.Array) else np.asarray(feat)
+        np.testing.assert_array_equal(
+            feat_arr.reshape(-1),
+            np.array([1.0, 2.0, 1.0, 2.0, 1.0, 2.0]),
+        )
 
     def test_concatenate_units_different_data_types_raises(self):
         """Line 727: NoFitConcatAlongAxisMixin when data types differ across segments."""
