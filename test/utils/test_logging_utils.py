@@ -26,8 +26,10 @@ class TestGetHydraOverride:
 
 class TestLogHyperparameters:
     def test_skips_when_no_logger(self):
+        inner_logger = MagicMock()
         trainer = MagicMock()
         trainer.logger = None
+        trainer.loggers = [inner_logger]
         obj = {
             "cfg": {"a": 1},
             "model/params/total": 0,
@@ -40,8 +42,15 @@ class TestLogHyperparameters:
             with patch(
                 "picid.utils.logging_utils.OmegaConf.to_container",
                 return_value={"a": 1},
-            ):
-                log_hyperparameters(obj)
+            ) as mock_to_container:
+                with patch("picid.utils.logging_utils.log") as mock_log:
+                    log_hyperparameters(obj)
+
+        mock_to_container.assert_called_once()
+        mock_log.warning.assert_called_once_with(
+            "Logger not found! Skipping hyperparameter logging..."
+        )
+        inner_logger.log_hyperparams.assert_not_called()
 
     def test_logs_when_logger_present(self):
         mock_logger = MagicMock()

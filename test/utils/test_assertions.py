@@ -31,9 +31,9 @@ class TestAssertListOfNdarray:
 
         **PHM Logic**: Multi-unit data is often stored as list of arrays.
 
-        **Methodology**: Pass valid list of 2D arrays, verify no error.
+        **Methodology**: Pass valid list of 2D arrays; assert return is ``None``.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-1.1 - Valid 2D list validation
         """
@@ -43,33 +43,31 @@ class TestAssertListOfNdarray:
             np.random.randn(120, 5),
         ]
 
-        # Should not raise
-        assert_list_of_ndarray_or_nd_array_for_dims(arrays, dims=2)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(arrays, dims=2) is None
 
     def test_valid_single_2d_array(self):
         """Test validation of single 2D array.
 
         **PHM Logic**: Single-unit data is a single array.
 
-        **Methodology**: Pass single 2D array, verify no error.
+        **Methodology**: Pass single 2D array; assert return is ``None``.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-1.2 - Valid single array validation
         """
         array = np.random.randn(100, 5)
 
-        # Should not raise
-        assert_list_of_ndarray_or_nd_array_for_dims(array, dims=2)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(array, dims=2) is None
 
     def test_valid_list_of_3d_arrays(self):
         """Test validation of list of 3D arrays.
 
         **PHM Logic**: Time series with channels may be 3D (samples, time, channels).
 
-        **Methodology**: Pass valid list of 3D arrays, verify no error.
+        **Methodology**: Pass valid list of 3D arrays; assert return is ``None``.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-1.3 - Valid 3D list validation
         """
@@ -78,8 +76,7 @@ class TestAssertListOfNdarray:
             np.random.randn(80, 10, 3),
         ]
 
-        # Should not raise
-        assert_list_of_ndarray_or_nd_array_for_dims(arrays, dims=3)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(arrays, dims=3) is None
 
     def test_listconfig_not_supported_for_arrays(self):
         """Test that ListConfig cannot hold numpy arrays.
@@ -120,7 +117,7 @@ class TestAssertListOfNdarray:
             np.random.randn(80, 5),
         ]
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError, match="Element is not a numpy ndarray\\."):
             assert_list_of_ndarray_or_nd_array_for_dims(invalid_list, dims=2)
 
     def test_invalid_wrong_dimensions(self):
@@ -136,8 +133,8 @@ class TestAssertListOfNdarray:
         """
         array_2d = np.random.randn(100, 5)  # 2D
 
-        with pytest.raises(AssertionError):
-            assert_list_of_ndarray_or_nd_array_for_dims(array_2d, dims=3)  # Expect 3D
+        with pytest.raises(AssertionError, match=r"Array does not have 3 dimensions\."):
+            assert_list_of_ndarray_or_nd_array_for_dims(array_2d, dims=3)
 
     def test_invalid_mixed_dimensions(self):
         """Test that mixed dimensions in list raise error.
@@ -155,7 +152,7 @@ class TestAssertListOfNdarray:
             np.random.randn(80, 5, 3),  # 3D
         ]
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError, match=r"Array does not have 2 dimensions\."):
             assert_list_of_ndarray_or_nd_array_for_dims(mixed_list, dims=2)
 
     def test_invalid_unsupported_type(self):
@@ -171,7 +168,10 @@ class TestAssertListOfNdarray:
         """
         invalid_input = {"key": np.random.randn(100, 5)}
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(
+            AssertionError,
+            match="Input is neither a list/ListConfig nor a numpy ndarray\\.",
+        ):
             assert_list_of_ndarray_or_nd_array_for_dims(invalid_input, dims=2)
 
     def test_empty_list(self):
@@ -181,15 +181,19 @@ class TestAssertListOfNdarray:
 
         **Methodology**: Pass empty list.
 
-        **Expected**: No exception (empty is valid).
+        **Expected**: Empty list iterates zero elements and returns ``None``.
 
         Validates: Requirement ASS-1.9 - Empty list handling
         """
-        try:
-            assert_list_of_ndarray_or_nd_array_for_dims([], dims=2)
-        except AssertionError:
-            # Some implementations may reject empty lists
-            pass  # This is also acceptable behavior
+        assert assert_list_of_ndarray_or_nd_array_for_dims([], dims=2) is None
+
+    def test_empty_listconfig_returns_none(self):
+        """Empty ``ListConfig`` iterates zero elements; validation succeeds with ``None``.
+
+        **Contract**: Same branch as list; no elements means no ndarray checks run.
+        """
+        empty_cfg = ListConfig([])
+        assert assert_list_of_ndarray_or_nd_array_for_dims(empty_cfg, dims=2) is None
 
     def test_single_element_list(self):
         """Test validation of single-element list.
@@ -198,14 +202,13 @@ class TestAssertListOfNdarray:
 
         **Methodology**: Pass list with one array.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-1.10 - Single element handling
         """
         single_list = [np.random.randn(100, 5)]
 
-        # Should not raise
-        assert_list_of_ndarray_or_nd_array_for_dims(single_list, dims=2)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(single_list, dims=2) is None
 
 
 class TestAssertDimensions:
@@ -218,13 +221,13 @@ class TestAssertDimensions:
 
         **Methodology**: Pass 1D array, validate for dims=1.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-2.1 - 1D validation
         """
         array_1d = np.random.randn(100)
 
-        assert_list_of_ndarray_or_nd_array_for_dims(array_1d, dims=1)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(array_1d, dims=1) is None
 
     def test_4d_array_validation(self):
         """Test validation of 4D arrays (image-like data).
@@ -233,10 +236,10 @@ class TestAssertDimensions:
 
         **Methodology**: Pass 4D array, validate for dims=4.
 
-        **Expected**: No exception raised.
+        **Expected**: Returns ``None`` (validation success).
 
         Validates: Requirement ASS-2.2 - 4D validation
         """
         array_4d = np.random.randn(10, 32, 32, 3)
 
-        assert_list_of_ndarray_or_nd_array_for_dims(array_4d, dims=4)
+        assert assert_list_of_ndarray_or_nd_array_for_dims(array_4d, dims=4) is None
