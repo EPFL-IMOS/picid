@@ -9,18 +9,18 @@ def empty_function(r):
 class ModelWrapper(nn.Module):
     """
 
-        A transparent wrapper for PyTorch models that integrates optional
-        pre-processing and post-processing steps into the forward pass.
+    A transparent wrapper for PyTorch models that integrates optional
+    pre-processing and post-processing steps into the forward pass.
 
-        This class acts as a proxy for the underlying base model. Any attributes
-        or methods not explicitly defined in this wrapper will be delegated to
-        the base model, allowing it to be used as a drop-in replacement.
+    This class acts as a proxy for the underlying base model. Any attributes
+    or methods not explicitly defined in this wrapper will be delegated to
+    the base model, allowing it to be used as a drop-in replacement.
 
-        Attributes:
-            base_model (nn.Module): The underlying PyTorch model being wrapped.
-            _post_process_function (Callable): The function applied to the model's output.
-            _pre_process_function (Callable): The function applied to the input before
-                passing it to the model.
+    Attributes:
+        base_model (nn.Module): The underlying PyTorch model being wrapped.
+        _post_process_function (Callable): The function applied to the model's output.
+        _pre_process_function (Callable): The function applied to the input before
+            passing it to the model.
     """
 
     def __init__(self,

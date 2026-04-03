@@ -207,6 +207,39 @@ def create_lightning_module(
 
 
 class ProcessedDatasource:
+    """
+        A wrapper around a DatasetContainer that holds processed data along with
+        its metadata and task configuration.
+
+        Attribute lookups that are not found on this class are transparently
+        delegated to the underlying DatasetContainer instance, so callers can
+        treat a ProcessedDatasource as a drop-in replacement for the original
+        datasource while still accessing the processed state.
+
+        Args:
+            datasource (DatasetContainer): The original dataset container being wrapped.
+            task_mode (str): The mode describing the kind of task this data is prepared for
+                (e.g. "classification", "regression").
+            data_dict (dict): A dictionary containing the processed data splits or arrays
+                (e.g. {"train": ..., "val": ..., "test": ...}).
+            meta_data_dict (dict): A dictionary containing metadata about the processed data
+                (e.g. class counts, feature names, normalization statistics).
+
+        Attributes:
+            task_mode (str): Publicly accessible task mode string passed at construction.
+
+        Example:
+            >>> container = DatasetContainer(...)
+            >>> processed = ProcessedDatasource(
+            ...     datasource=container,
+            ...     task_mode="classification",
+            ...     data_dict={"train": X_train, "test": X_test},
+            ...     meta_data_dict={"n_classes": 10}
+            ... )
+            >>> processed.data_dict["train"]      # access processed training data
+            >>> processed.meta_data_dict          # access metadata
+            >>> processed.some_datasource_attr    # transparently forwarded to container
+    """
     def __init__(self,
                  datasource: DatasetContainer,
                  task_mode: str,
@@ -221,17 +254,37 @@ class ProcessedDatasource:
 
     @property
     def data_dict(self):
+        """dict: The processed data dictionary provided at construction."""
         return self._data_dict
 
     @property
     def meta_data_dict(self):
+        """dict: The metadata dictionary provided at construction."""
         return self._meta_data_dict
 
     @property
     def datasource(self):
+        """DatasetContainer: The original datasource this instance wraps."""
         return self._datasource
 
     def __getattr__(self, item):
+        """
+        Fall back to the wrapped DatasetContainer for unknown attribute lookups.
+
+        This is called only when normal attribute resolution fails, meaning the
+        attribute was not found on the ProcessedDatasource instance itself. In
+        that case the lookup is forwarded to `self._datasource`.
+
+        Args:
+            item (str): Name of the attribute being looked up.
+
+        Returns:
+            The value of the attribute on the underlying datasource.
+
+        Raises:
+            AttributeError: If the attribute is not found on either this instance
+                or the underlying datasource.
+        """
         try:
             return super().__getattr__(item)
         except AttributeError:
@@ -244,11 +297,11 @@ class InterfacePreProcessor:
         transformation, and management of datasources.
 
         See also:
-            - `lmetk.data.preprocessing.single_source_loader.SingleSourceLoader`:
+            - `pcid.data.preprocessing.single_source_loader.SingleSourceLoader`:
                     For preprocessing pipelines that operate on a single data source.
-            - `lmetk.data.preprocessing.multi_source_loader.MultiSourceLoader`:
+            - `pcid.data.preprocessing.multi_source_loader.MultiSourceLoader`:
                     For pipelines that handle multiple data sources simultaneously.
-            - `lmetk.data.preprocessing.phmd_loader.PHMDLoader`:
+            - `pcid.data.preprocessing.phmd_loader.PHMDLoader`:
                     For specialized loading of PHMD-formatted data sources.
 
         Attributes:

@@ -135,26 +135,21 @@ log = logging.getLogger(__name__)
 
 class EntryInterface:
     """
-        A high-level interface for managing machine learning experiments,
-        data source discovery, configuration composition, and model training.
+    A high-level interface for managing machine learning experiments.
+
+    This class provides a unified API for data source discovery, hierarchical
+    configuration composition using Hydra/OmegaConf, and managing the
+    end-to-end training lifecycle via PyTorch Lightning.
     """
-
-    def __init__(self):
-        """
-            Initializes the EntryInterface, sets up internal configuration tracking,
-            and populates the list of available data sources from the config path.
-        """
-        self._config_path = project_config.config_path
-
     def get_datasource(self, v: str):
         """
-                Loads and instantiates, using Hydra, a data source by its name.
+        Loads and instantiates a data source using Hydra.
 
-                Args:
-                    v (str): The name or path identifier of the source.
+            Args:
+                v (str): The name or path identifier of the data source.
 
-                Returns:
-                    AbstractDataSourceLoader: An instance of the requested data source, instantiated via Hydra.
+            Returns:
+                AbstractDataSourceLoader: An instantiated data source loader object.
         """
         datasource = self.load_resource(v, 'datasource')
         dataset_source = hydra.utils.instantiate(datasource)
@@ -164,17 +159,17 @@ class EntryInterface:
     def process_datasource(self, datasource: str | AbstractDataSourceLoader,
                            transforms: list[DataTransform]):
         """
-                Applies a sequence of data transformations to a data source using
-                a InterfacePreProcessor.
+        Applies a sequence of data transformations to a data source.
 
-                Args:
-                    datasource (str | AbstractDataSourceLoader): The datasource to process.
-                    transforms (list[DataTransform]): A list of transformation objects
-                        to apply to the data.
+            Args:
+                datasource (Union[str, AbstractDataSourceLoader]): The source to process.
+                    Can be a string identifier or an instantiated loader.
+                transforms (List[DataTransform]): A list of transformation objects
+                    defining the preprocessing pipeline.
 
-                Returns:
-                    ProcessedDatasource: The result of the preprocessing pipeline,
-                        typically containing features and targets.
+            Returns:
+                ProcessedDatasource: The result of the preprocessing pipeline containing
+                    the transformed data and metadata.
         """
 
         log.info('Processing datasource.')
@@ -189,27 +184,33 @@ class EntryInterface:
     @staticmethod
     @lru_cache
     def get_available_datasources():
+        """
+        Lists all data sources available in the configuration directory.
+
+            Returns:
+                List[str]: A list of available data source identifiers.
+        """
         return EntryInterface.get_available_resource('datasource')
 
     @staticmethod
     def load_resource(v: str | Path | dict = None,
                       resource_type: str = None):
         """
-            Resolves and loads a configuration resource (datasource, model, etc.)
-            from a dictionary, string name, or file path.
+        Resolves and loads a configuration resource from disk or memory.
 
             Args:
-                v (str | Path | dict): The resource definition or reference.
-                resource_type (str): The category of resource (e.g., 'datasource').
+                v (Union[str, Path, dict]): The resource definition. If a dict, it's
+                    converted to DictConfig. If a string/Path, it's loaded from the
+                    corresponding config directory.
+                resource_type (str): The category of resource (e.g., 'datasource', 'model').
 
             Returns:
                 DictConfig: The loaded OmegaConf configuration object.
 
             Raises:
-                AssertionError: If the resource name is not found in the
-                    available resources for that type.
+                AssertionError: If the input type is invalid or the resource path
+                    does not exist.
         """
-
         if isinstance(v, dict):
             cfg = OmegaConf.create(v)
         elif isinstance(v, (str, Path)):
@@ -288,6 +289,22 @@ class EntryInterface:
 
     def get_model_cfg(self, model: AbsModelConfig | CustomModelTrainer | str | dict, task: str) :
 
+        """
+        Resolves the model configuration based on provided input types.
+
+            Args:
+                model: The model definition. Can be a config object, a custom trainer
+                    instance, a string name, or a dictionary.
+                task (str): The task name used to locate the appropriate config folder.
+
+            Returns:
+                Tuple[Union[DictConfig, CustomModelTrainer], Optional[str]]:
+                    A tuple containing (config_or_instance, config_name).
+
+            Raises:
+                AssertionError: If the model name is not found in the task directory.
+        """
+
         if isinstance(model, dict):
             return model, None
         elif isinstance(model, CustomModelTrainer):
@@ -353,6 +370,19 @@ class EntryInterface:
                            task: str = None,
                            model: str = None):
 
+        """
+        Resolves the datasource configuration, supporting complex experiment lookups.
+
+                 Args:
+                    datasource: Identifier for the data. If a tuple (source, sub_folder),
+                        it attempts to load a complete experiment configuration.
+                    task (str, optional): Required if datasource is a tuple.
+                    model (str, optional): Required if datasource is a tuple.
+
+                Returns:
+                    DictConfig: The resolved datasource or experiment configuration.
+        """
+
         if isinstance(datasource, tuple):
             source, sub_folder = datasource
 
@@ -409,24 +439,25 @@ class EntryInterface:
                              overrides: List[str] | str = None
                              ) -> DictConfig:
 
+        """Assembles a unified Hydra configuration from various components.
+
+        This method merges model, task, datasource, evaluator, and trainer configs
+        into a single DictConfig object using the Hydra ConfigStore.
+
+        Args:
+            run_name (str): Name of the current run.
+            task_definition: Task config or identifier.
+            model: Model config or identifier.
+            datasource: Datasource config or identifier.
+            evaluators: Evaluation config.
+            callbacks: List or dict of callback configs.
+            trainer_config: Trainer parameters.
+            transforms: Data transformation configs.
+            overrides (List[str]): Manual Hydra override strings.
+
+        Returns:
+            DictConfig: The fully composed Hydra configuration.
         """
-            Assembles a full Hydra experiment configuration by merging model,
-            task, data, and callback configurations.
-
-            Args:
-                task_definition (BaseTaskDefinition | str): Definition of the learning task.
-                model (AbsModelConfig): Configuration for the architecture.
-                datasource (str | ProcessedDatasource): Data identifier or processed object.
-                callbacks: Configuration for training callbacks.
-                transforms: Data transformation configurations.
-                overrides (List[str]): Manual Hydra overrides (e.g., ['+params.lr=0.01']).
-
-            Returns:
-                DictConfig: A unified configuration object ready for Hydra instantiation.
-        """
-
-        # TODO: CHECK transforms
-        # TODO: CHECK evaluators
 
         log.info('Composing internal experiment components.')
 
@@ -461,9 +492,6 @@ class EntryInterface:
                 datasource_cfg = self.get_datasource_cfg(datasource,
                                                          task=task_yaml_name,
                                                          model=model_yaml_name)
-
-        # local_instance = GlobalHydra.instance()
-        # GlobalHydra.instance().clear()
 
         cs = ConfigStore.instance()
 
@@ -550,8 +578,6 @@ class EntryInterface:
                  node=trainer_cfg)
         overrides.append('trainer=trainer_cfg')
 
-        # FOR NOW, ONLY ALREADY DEFINED EVALUATORS ARE AVAILABLE
-
         assert isinstance(evaluators, str) or isinstance(evaluators, AbsEvalConfig) or evaluators is None, \
             f'Evaluators can be a string or a list of AbsEvalConfig or None. {type(evaluators)} where given'
 
@@ -565,27 +591,6 @@ class EntryInterface:
             else:
 
                 evaluators_cfg = evaluators.model_dump(by_alias=True)
-
-        # if evaluators is None:
-        #     evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
-        #     log.info('Using default evaluators.')
-        # else:
-        #     assert isinstance(evaluators, str), f'evaluators must be a string. {type(evaluators)} given.'
-        #     available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
-        #
-        #     assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
-        #
-        #     evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
-
-            # # TODO: FIX AND TEST
-            # if evaluators is not None or isinstance(evaluators, dict):
-            #     if isinstance(evaluators, dict):
-            #         evaluators_cfg = {s: v.model_dump(by_alias=True) for s, v in evaluators.items()}
-            #         log.info('Using custom evaluators.')
-            #     else:
-            #         # FIX IT
-            #         evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / 'rul.yaml')
-            #         log.info('Using default evaluators.')
 
             cs.store(group="evaluator",
                      name="evaluator_cfg",
@@ -612,10 +617,6 @@ class EntryInterface:
                             overrides=overrides,
                             return_hydra_config=True)
 
-        # display_targets(cfg)
-
-        # GlobalHydra.set_instance(local_instance)
-
         return cfg
 
     def train(self, *,
@@ -633,23 +634,34 @@ class EntryInterface:
               debug: bool = False,
               seed: int = None) -> None:
 
-        """
-            The main entry point for running an experiment. It handles data loading,
-            preprocessing, dataset instantiation, and PyTorch Lightning trainer execution.
+        """The main entry point for executing a training experiment.
+
+            This method orchestrates the entire pipeline:
+            1. Config composition via Hydra.
+            2. Data loading and preprocessing.
+            3. Dataset and DataModule instantiation.
+            4. Logger and Evaluator setup (including inverse scaling resolution).
+            5. Lightning Module and Trainer initialization.
+            6. Execution of `trainer.fit()` and `trainer.test()`.
 
             Args:
-                task_definition (BaseTaskDefinition | tuple[str, str]): Definition of the task and its metrics. it can be defined by the user using a BaseTaskDefinition config file or passed a tuple of string (task_name, task_type)
-                model (AbsModelConfig): The model configuration to use.
-                datasource: The source data identifier.
+                run_name (str): Unique name for the experiment run.
+                model: Model configuration or instance.
+                task_definition: Task configuration identifier.
+                training_config (TrainerConfig, optional): Trainer-specific overrides.
+                datasource: Identifier or ProcessedDatasource object.
                 callbacks: Training callbacks.
-                loggers (list): List of loggers for tracking metrics (e.g., TensorBoard, WandB).
-                transforms (list): Data transformations to apply before training. It is ignored if datasource isinstance of ProcessedDatasource.
-                overrides (list): Hydra configuration overrides. It must respect the Hydra overriding syntax.
-                enable_progress_bar (bool): Whether to show the Lightning progress bar.
+                loggers (List): List of loggers (TensorBoard, WandB, etc.).
+                evaluators (str): Evaluator configuration name.
+                transforms (List[DataTransform]): Transformations to apply.
+                overrides (List[str]): Hydra syntax override strings.
+                enable_progress_bar (bool): Toggle for UI progress bar.
+                debug (bool): If True, skips actual training.
+                seed (int): Random seed for reproducibility.
 
             Returns:
-                None: This function initiates the `trainer.fit()` process.
-        """
+                Optional[List[dict]]: Results from the `trainer.test()` call.
+            """
 
         local_instance = GlobalHydra.instance()
         GlobalHydra.instance().clear()
