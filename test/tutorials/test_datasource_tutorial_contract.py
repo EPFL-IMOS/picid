@@ -9,6 +9,7 @@ from pathlib import Path
 import awkward as ak
 import numpy as np
 
+from test.fixtures.output_assertions import assert_markers_ordered
 from tutorials.datasources._tutorial_cli import (
     STANDARD_DATASOURCE_TUTORIAL_SCRIPTS,
     TUTORIAL_SCRIPTS_WITH_NO_DOWNLOAD,
@@ -61,8 +62,11 @@ def test_standard_report_includes_all_section_headers() -> None:
         target_stats_body="target stats placeholder",
         dataset_specific_notes_body="No extra notes.",
     )
-    for title in STANDARD_SECTIONS:
-        assert f"\n{title}\n" in report, f"missing section header: {title!r}"
+    assert_markers_ordered(
+        report,
+        [f"\n{title}\n" for title in STANDARD_SECTIONS],
+        msg="standard report section headers",
+    )
 
 
 def test_build_standard_report_has_no_leading_or_trailing_newlines() -> None:

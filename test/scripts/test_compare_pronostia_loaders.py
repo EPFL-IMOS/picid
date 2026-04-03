@@ -9,6 +9,7 @@ import awkward as ak
 import numpy as np
 
 from scripts import compare_pronostia_loaders
+from test.fixtures.output_assertions import assert_markers_ordered
 
 
 def _make_unit(features_value: float, target_value: float):
@@ -139,10 +140,16 @@ def test_compare_pronostia_loaders_prints_notebook_style_tables(
     captured = capsys.readouterr()
 
     assert exit_code == 0
-    assert "=== Raw PRONOSTIA IEEE 2012 split statistics ===" in captured.out
-    assert "=== PHMD split membership ===" in captured.out
-    assert "=== Raw IEEE 2012 in-domain split membership ===" in captured.out
-    assert "=== PHMD vs raw IEEE 2012 comparison ===" in captured.out
-    assert "=== Expected-behavior summary ===" in captured.out
+    assert_markers_ordered(
+        captured.out,
+        [
+            "=== Raw PRONOSTIA IEEE 2012 split statistics ===",
+            "=== PHMD split membership ===",
+            "=== Raw IEEE 2012 in-domain split membership ===",
+            "=== PHMD vs raw IEEE 2012 comparison ===",
+            "=== Expected-behavior summary ===",
+        ],
+        msg="compare_pronostia_loaders banners",
+    )
     assert "Bearing 1_2" in captured.out
     assert "Bearing 1_3" in captured.out

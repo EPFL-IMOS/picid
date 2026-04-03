@@ -10,6 +10,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from test.fixtures.output_assertions import (
+    assert_markers_ordered,
+    kv_line_value,
+    slice_between_markers,
+)
 from tutorials.datasources import threew_loader as threew_tutorial
 
 
@@ -220,19 +225,23 @@ def test_loader_unit_metadata_and_tasks(
     threew_tutorial.main()
     out = capsys.readouterr().out
 
-    assert "CURRENT TASK AND AVAILABLE TASKS" in out
-    assert "current_task: anomaly_detection" in out
-    assert "available_tasks: ['anomaly_detection']" in out
+    assert_markers_ordered(
+        out,
+        [
+            "LOADER METADATA",
+            "UNIT METADATA EXAMPLES (ONE PER SPLIT)",
+            "CURRENT TASK AND AVAILABLE TASKS",
+            "BASELINE-STYLE CLASS DISTRIBUTION (INSTANCES)",
+        ],
+    )
+    assert kv_line_value(out, "current_task") == "anomaly_detection"
+    assert kv_line_value(out, "available_tasks") == "['anomaly_detection']"
 
-    assert "LOADER METADATA" in out
-    assert "UNIT METADATA EXAMPLES (ONE PER SPLIT)" in out
-    l_start = out.find("LOADER METADATA")
-    u_start = out.find("UNIT METADATA EXAMPLES (ONE PER SPLIT)")
-    t_start = out.find("CURRENT TASK AND AVAILABLE TASKS")
-    c_start = out.find("BASELINE-STYLE CLASS DISTRIBUTION (INSTANCES)")
-    assert t_start != -1 and l_start != -1 and u_start != -1 and c_start != -1
-    assert l_start < u_start < t_start < c_start
-    unit_block = out[u_start:c_start]
+    unit_block = slice_between_markers(
+        out,
+        "UNIT METADATA EXAMPLES (ONE PER SPLIT)",
+        "BASELINE-STYLE CLASS DISTRIBUTION (INSTANCES)",
+    )
     assert "train" in unit_block
     assert "val" in unit_block
     assert "test" in unit_block
