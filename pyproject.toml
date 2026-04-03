@@ -101,13 +101,16 @@ exclude = ['__repr__$']
 # When run from repo root with `uv run pytest`, basetemp stays outside `test/` and out of the source-test tree
 addopts = "--basetemp=.pytest_tmp"
 norecursedirs = ["_archive"]
+# Default focused local runs should omit timing/benchmark checks unless you ask for them explicitly, e.g.:
+#   uv run pytest test -q -m "not benchmark and not slow"
+# To run only benchmark/slow timing tests: -m benchmark (or -m slow)
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
     "optional_dep: needs optional dependencies, extras, or non-default environment",
     "integration: crosses subsystem boundaries (I/O, full pipeline slices, external services)",
     "tutorial: tutorial-style or walkthrough tests (often heavier or narrative)",
     "benchmark: timing or throughput checks (not correctness-only)",
-    "slow: slow tests (e.g. __getitem__ timing); skip with -m 'not slow'",
+    "slow: slow tests (e.g. __getitem__ timing); exclude from focused runs with -m 'not benchmark and not slow'",
     "requires_snapshots: verification-only against committed snapshot fixtures; skip when fixtures are missing and do not regenerate snapshots from test runs",
 ]
 
