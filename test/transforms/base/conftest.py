@@ -25,6 +25,11 @@ from picid.data.data_objects import (
     SplitDatasetContainer,
 )
 
+from test.fixtures.builders import (
+    make_standard_normal_2d,
+    split_container_unit_seed,
+)
+
 
 # ============================================================================
 # DUMMY TRANSFORMS FOR TESTING
@@ -213,9 +218,9 @@ class ConcatenateUnitsTransform(NoFitConcatAlongAxisMixin, DenseTransform):
 # ============================================================================
 
 
-def create_dummy_dense_data(n_samples=10, n_features=3):
-    """Create dummy dense numpy array."""
-    return np.random.randn(n_samples, n_features)
+def create_dummy_dense_data(n_samples=10, n_features=3, seed=42):
+    """Create dummy dense numpy array (deterministic unless ``seed`` is overridden)."""
+    return make_standard_normal_2d(seed=seed, n_rows=n_samples, n_cols=n_features)
 
 
 def create_dummy_ragged_data():
@@ -229,37 +234,72 @@ def create_dummy_ragged_data():
     )
 
 
-def create_dummy_split_container(n_units=3, n_samples_per_unit=10, n_features=3):
+def create_dummy_split_container(
+    n_units=3, n_samples_per_unit=10, n_features=3, base_seed=42
+):
     """Create a dummy SplitDatasetContainer."""
     return SplitDatasetContainer(
         features={
             "train": [
-                create_dummy_dense_data(n_samples_per_unit, n_features)
-                for _ in range(n_units)
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "train", i, 0),
+                    n_rows=n_samples_per_unit,
+                    n_cols=n_features,
+                )
+                for i in range(n_units)
             ],
             "val": [
-                create_dummy_dense_data(n_samples_per_unit, n_features)
-                for _ in range(n_units)
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "val", i, 0),
+                    n_rows=n_samples_per_unit,
+                    n_cols=n_features,
+                )
+                for i in range(n_units)
             ],
             "test": [
-                create_dummy_dense_data(n_samples_per_unit, n_features)
-                for _ in range(n_units)
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "test", i, 0),
+                    n_rows=n_samples_per_unit,
+                    n_cols=n_features,
+                )
+                for i in range(n_units)
             ],
         },
         target={
-            "train": [np.random.randn(n_samples_per_unit, 1) for _ in range(n_units)],
-            "val": [np.random.randn(n_samples_per_unit, 1) for _ in range(n_units)],
-            "test": [np.random.randn(n_samples_per_unit, 1) for _ in range(n_units)],
+            "train": [
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "train", i, 1),
+                    n_rows=n_samples_per_unit,
+                    n_cols=1,
+                )
+                for i in range(n_units)
+            ],
+            "val": [
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "val", i, 1),
+                    n_rows=n_samples_per_unit,
+                    n_cols=1,
+                )
+                for i in range(n_units)
+            ],
+            "test": [
+                make_standard_normal_2d(
+                    seed=split_container_unit_seed(base_seed, "test", i, 1),
+                    n_rows=n_samples_per_unit,
+                    n_cols=1,
+                )
+                for i in range(n_units)
+            ],
         },
     )
 
 
-def create_dummy_single_unit_container(n_samples=10, n_features=3):
+def create_dummy_single_unit_container(n_samples=10, n_features=3, base_seed=42):
     """Create a single-unit SplitDatasetContainer."""
     return SplitDatasetContainer(
         features={
-            "train": [create_dummy_dense_data(n_samples, n_features)],
-            "val": [create_dummy_dense_data(n_samples, n_features)],
+            "train": [create_dummy_dense_data(n_samples, n_features, seed=base_seed)],
+            "val": [create_dummy_dense_data(n_samples, n_features, seed=base_seed + 1)],
         },
     )
 

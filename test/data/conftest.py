@@ -12,6 +12,15 @@ import numpy as np
 import pytest
 import torch
 
+from test.fixtures.builders import (
+    make_fault_classification_targets_continuing_features,
+    make_forecasting_target_continuing_features,
+    make_synthetic_features_float32,
+    make_synthetic_fit_predict_3d,
+    make_synthetic_image_like_uint8,
+    make_synthetic_normalized_float32,
+)
+
 # Optional: for ragged/sliding-window tests
 try:
     import awkward as ak
@@ -46,9 +55,9 @@ def fixed_seed():
 @pytest.fixture
 def synthetic_features_float32(fixed_seed):
     """Dense float32 feature matrix: (T, F). Values in [0, 1] for normalized pipelines."""
-    T, F = 100, 8
-    x = np.random.rand(T, F).astype(np.float32)
-    return x
+    return make_synthetic_features_float32(
+        seed=fixed_seed, time_steps=100, n_features=8
+    )
 
 
 @pytest.fixture
@@ -68,20 +77,19 @@ def synthetic_data_dict_rul(synthetic_features_float32, synthetic_target_rul):
 
 
 @pytest.fixture
-def synthetic_data_dict_forecasting(synthetic_features_float32):
+def synthetic_data_dict_forecasting(synthetic_features_float32, fixed_seed):
     """Data dict for forecasting task: features + target (same length)."""
-    T, F = synthetic_features_float32.shape
-    target = np.random.randn(T, 1).astype(np.float32)
+    target = make_forecasting_target_continuing_features(
+        synthetic_features_float32, seed=fixed_seed
+    )
     return {"features": synthetic_features_float32, "target": target}
 
 
 @pytest.fixture
-def synthetic_data_dict_fault_classification(synthetic_features_float32):
+def synthetic_data_dict_fault_classification(synthetic_features_float32, fixed_seed):
     """Data dict for fault_classification: features + fault_class (int-like float)."""
-    T = synthetic_features_float32.shape[0]
-    n_classes = 5
-    fault_class = np.random.randint(0, n_classes, size=(T, 1), dtype=np.int32).astype(
-        np.float32
+    fault_class = make_fault_classification_targets_continuing_features(
+        synthetic_features_float32, seed=fixed_seed, n_classes=5
     )
     return {"features": synthetic_features_float32, "fault_classification": fault_class}
 
@@ -112,11 +120,7 @@ def synthetic_multi_unit_rul(synthetic_data_dict_rul):
 @pytest.fixture
 def synthetic_fit_predict_3d(fixed_seed):
     """X: (n_tasks, n_samples, n_features), y: (n_tasks, n_samples, n_targets)."""
-    n_tasks, n_samples, n_features = 4, 50, 6
-    n_targets = 1
-    X = np.random.randn(n_tasks, n_samples, n_features).astype(np.float32)
-    y = np.random.randn(n_tasks, n_samples, n_targets).astype(np.float32)
-    return {"X": X, "y": y}
+    return make_synthetic_fit_predict_3d(seed=fixed_seed)
 
 
 # ---------------------------------------------------------------------------
@@ -127,13 +131,13 @@ def synthetic_fit_predict_3d(fixed_seed):
 @pytest.fixture
 def synthetic_image_like_uint8(fixed_seed):
     """Synthetic 'image' data in uint8 [0, 255] for dtype/range tests."""
-    return np.random.randint(0, 256, size=(10, 32, 32, 3), dtype=np.uint8)
+    return make_synthetic_image_like_uint8(seed=fixed_seed)
 
 
 @pytest.fixture
 def synthetic_normalized_float32(fixed_seed):
     """Float32 in [0, 1] for normalized pipeline assertions."""
-    return np.random.rand(20, 5).astype(np.float32)
+    return make_synthetic_normalized_float32(seed=fixed_seed)
 
 
 # ---------------------------------------------------------------------------

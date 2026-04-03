@@ -17,6 +17,8 @@ import pytest
 import numpy as np
 from typing import Dict, Any, Optional
 
+from test.fixtures.builders import make_regression_batch
+
 
 # =============================================================================
 # === REGRESSION/FORECASTING DATA FIXTURES ===
@@ -36,15 +38,7 @@ def regression_data_basic():
     - Single timestep (typical RUL prediction)
     - Values span full normalized range [0, 1]
     """
-    batch_size = 5
-    preds = np.linspace(0.9, 0.1, batch_size).reshape(batch_size, 1, 1)
-    targets = preds + np.random.RandomState(42).randn(batch_size, 1, 1) * 0.05
-    targets = np.clip(targets, 0.0, 1.0)  # Keep in valid range
-
-    return {
-        "predictions": preds.astype(np.float32),
-        "targets": targets.astype(np.float32),
-    }
+    return make_regression_batch(seed=42, batch_size=5)
 
 
 @pytest.fixture
