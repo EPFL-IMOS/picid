@@ -74,64 +74,6 @@ def umar_kwargs():
     }
 
 
-@pytest.fixture
-def mock_umar_data():
-    idx = pd.date_range("2019-01-01", periods=100, freq="15min")
-
-    inputs_dict = {
-        "AC_mode": np.ones(100, dtype=np.float32),
-        "DewPoint_Temperature": np.linspace(0.0, 1.0, 100, dtype=np.float32),
-        "Diffuse_SolarRadiation": np.linspace(1.0, 2.0, 100, dtype=np.float32),
-        "Direct_SolarRadiation": np.linspace(2.0, 3.0, 100, dtype=np.float32),
-        "DistrictCooling_Flow": np.linspace(3.0, 4.0, 100, dtype=np.float32),
-        "DistrictHeating_Flow": np.linspace(4.0, 5.0, 100, dtype=np.float32),
-        "District_Network_Temperature": np.linspace(5.0, 6.0, 100, dtype=np.float32),
-        "DryBulb_Temperature": np.linspace(6.0, 7.0, 100, dtype=np.float32),
-        "Relative_Humidity": np.linspace(7.0, 8.0, 100, dtype=np.float32),
-        "Wind_Direction": np.linspace(8.0, 9.0, 100, dtype=np.float32),
-        "Wind_Speed": np.linspace(9.0, 10.0, 100, dtype=np.float32),
-        "R272_Flow": np.full(100, 10.0, dtype=np.float32),
-        "R272_Occupancy": np.full(100, 11.0, dtype=np.float32),
-        "R272_Setpoint_Temperature": np.full(100, 12.0, dtype=np.float32),
-        "R272_Shade": np.full(100, 13.0, dtype=np.float32),
-        "R272_Window": np.full(100, 14.0, dtype=np.float32),
-        "R273_Flow": np.full(100, 20.0, dtype=np.float32),
-        "R273_Occupancy": np.full(100, 21.0, dtype=np.float32),
-        "R273_Setpoint_Temperature": np.full(100, 22.0, dtype=np.float32),
-        "R273_Shade1": np.full(100, 23.0, dtype=np.float32),
-        "R273_Shade2": np.full(100, 24.0, dtype=np.float32),
-        "R273_Shade3": np.full(100, 25.0, dtype=np.float32),
-        "R273_Window1": np.full(100, 26.0, dtype=np.float32),
-        "R273_Window2": np.full(100, 27.0, dtype=np.float32),
-        "R274_Flow": np.full(100, 30.0, dtype=np.float32),
-        "R274_Occupancy": np.full(100, 31.0, dtype=np.float32),
-        "R274_Setpoint_Temperature": np.full(100, 32.0, dtype=np.float32),
-        "R274_Shade": np.full(100, 33.0, dtype=np.float32),
-        "R274_Window": np.full(100, 34.0, dtype=np.float32),
-        "R275_Flow": np.full(100, 40.0, dtype=np.float32),
-        "R275_Setpoint_Temperature": np.full(100, 41.0, dtype=np.float32),
-        "R276_Flow": np.full(100, 50.0, dtype=np.float32),
-        "R276_Setpoint_Temperature": np.full(100, 51.0, dtype=np.float32),
-    }
-    df_inputs = pd.DataFrame(inputs_dict, index=idx)
-    df_inputs.index.name = "Datetime"
-
-    targets_dict = {
-        "Electric_Energy_Consumption [kW]": np.linspace(
-            100.0, 200.0, 100, dtype=np.float32
-        ),
-        "R272_Air_Temperature [C]": np.full(100, 18.0, dtype=np.float32),
-        "R273_Air_Temperature [C]": np.full(100, 19.0, dtype=np.float32),
-        "R274_Air_Temperature [C]": np.full(100, 20.0, dtype=np.float32),
-        "R275_Air_Temperature [C]": np.full(100, 21.0, dtype=np.float32),
-        "R276_Air_Temperature [C]": np.full(100, 22.0, dtype=np.float32),
-    }
-    df_targets = pd.DataFrame(targets_dict, index=idx)
-    df_targets.index.name = "datetime"
-
-    return df_inputs, df_targets
-
-
 def _mask_row(data_dict):
     return data_dict["features_local_schema_mask"][0]
 

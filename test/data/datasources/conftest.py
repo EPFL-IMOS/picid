@@ -8,6 +8,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from test.fixtures.datasource_layouts import (
+    build_mock_umar_multivariate_pickles_dataframes,
+)
+
+
+@pytest.fixture
+def mock_umar_data():
+    """Pickle-shaped UMAR inputs/targets DataFrames for loader unit tests."""
+    return build_mock_umar_multivariate_pickles_dataframes()
+
 
 @pytest.fixture
 def mock_csv_df_etth():
