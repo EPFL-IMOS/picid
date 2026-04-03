@@ -10,6 +10,9 @@ import torch
 from typing import Dict
 
 from picid.evaluator.base import AbstractEvaluator
+from picid.evaluator.default import DefaultEvaluator
+from picid.metrics.metric_factory import MetricFactory
+from picid.metrics.metrics import MSEMetric
 from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 
@@ -117,6 +120,33 @@ def mock_evaluators():
         "val": MockEvaluator(),
         "test": MockEvaluator(),
     }
+
+
+@pytest.fixture
+def phm_default_evaluators(mocker):
+    """
+    Train/val/test :class:`~picid.evaluator.default.DefaultEvaluator` with real MSE.
+
+    Uses a single MetricFactory patch so each evaluator gets its own metric state.
+    """
+    mocker.patch.object(
+        MetricFactory, "create_metric", lambda name, paths=None: MSEMetric()
+    )
+
+    def _make() -> DefaultEvaluator:
+        return DefaultEvaluator(
+            metric_names=["mse"],
+            task_type="regression",
+            num_classes=None,
+            inverse_transform=None,
+            apply_inverse_scaling=False,
+            save_predictions=False,
+            paths={},
+            remote_logger=None,
+            collect_predictions=True,
+        )
+
+    return {"train": _make(), "val": _make(), "test": _make()}
 
 
 # -----------------------------------------------------------------------------

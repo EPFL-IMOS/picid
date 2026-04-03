@@ -23,10 +23,37 @@ from picid.evaluator.scaling_wrapper import (
     MultivariateTimeseriesScalingWrapper,
 )
 from picid.data.data_objects import NamedTransformInput
+from sklearn.preprocessing import MinMaxScaler
 
 
 # =============================================================================
-# === Mock Inverse Transform ===
+# === Inverse adapters (sklearn + simple mocks) ===
+# =============================================================================
+
+
+class MinMaxScalerNamedAdapter:
+    """
+    Wraps sklearn MinMaxScaler with the NamedTransformInput contract used by
+    :class:`~picid.evaluator.scaling_wrapper.ScalingWrapper`.
+    """
+
+    def __init__(self, feature_min: float = 0.0, feature_max: float = 10.0):
+        self._scaler = MinMaxScaler(feature_range=(0.0, 1.0))
+        self._scaler.fit(np.array([[feature_min], [feature_max]], dtype=np.float64))
+
+    def inverse_transform(self, data: NamedTransformInput, metadata=None):
+        if getattr(data, "predictions", None) is not None:
+            arr = np.asarray(data.predictions, dtype=np.float64)
+        else:
+            arr = np.asarray(data.targets, dtype=np.float64)
+        orig_shape = arr.shape
+        flat = arr.reshape(-1, orig_shape[-1])
+        out = self._scaler.inverse_transform(flat).astype(arr.dtype)
+        return out.reshape(orig_shape)
+
+
+# =============================================================================
+# === Mock Inverse Transform (simple closed form) ===
 # =============================================================================
 
 
@@ -355,6 +382,21 @@ class TestScalingWrapper:
             preds, targets, metadata={"unit_id": 2}
         )
         assert_array_almost_equal(result_preds_u2, np.array([[[200.0]]]), decimal=5)
+
+    def test_inverse_transform_real_sklearn_minmax_matches_closed_form(self):
+        """Inverse path through sklearn scaler matches manual (feature_range 0–1, train 0–10)."""
+        adapter = MinMaxScalerNamedAdapter(feature_min=0.0, feature_max=10.0)
+        wrapper = ScalingWrapper(
+            inverse_transform=adapter,
+            apply_inverse_scaling=True,
+            task_mode="regression",
+        )
+        preds = np.array([[[0.5]], [[0.1]]], dtype=np.float64)
+        targets = np.array([[[0.3]], [[0.9]]], dtype=np.float64)
+        got_p, got_t = wrapper.inverse_transform_if_needed(preds, targets)
+        # 0.5 in [0,1] maps back to 5.0 on [0,10]; 0.1 -> 1.0, etc.
+        assert_array_almost_equal(got_p, np.array([[[5.0]], [[1.0]]]), decimal=5)
+        assert_array_almost_equal(got_t, np.array([[[3.0]], [[9.0]]]), decimal=5)
 
     def test_inverse_transform_invalid_shape(self):
         """Test inverse transform raises error for invalid shapes.

@@ -10,7 +10,7 @@ Aligned with docs/dataobject.md, docs/datasets.md, docs/evaluators/index.md.
 import pytest
 import numpy as np
 import torch
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from picid.pipeline.base import (
     CustomEvaluatorInterface,
@@ -52,6 +52,18 @@ class ConcreteEvaluatorLightningModule(CustomEvaluatorLightningModule):
             "predictions": torch.rand(B, 1, 1),
             "targets": torch.rand(B, 1, 1),
             "loss": torch.tensor(0.5),
+        }
+
+
+class DeterministicValCustomModule(ConcreteEvaluatorLightningModule):
+    """Validation outputs are constant tensors so MSE on a real evaluator is predictable."""
+
+    def _validation_step(self, batch, batch_idx):
+        B = batch["features"].shape[0]
+        return {
+            "predictions": torch.ones(B, 1, 1),
+            "targets": torch.zeros(B, 1, 1),
+            "loss": torch.tensor(0.25),
         }
 
 
@@ -217,15 +229,49 @@ class TestCustomEvaluatorLightningModuleSteps:
         module.on_test_epoch_start()
         assert mock_evaluators["test"]._reset_count >= 1
 
-    def test_on_validation_epoch_end_logs_metrics(self, mock_evaluators):
-        """Doc: pipeline/base.py - on_validation_epoch_end calls log_epoch_metrics(mode=val)."""
+    def test_on_validation_epoch_end_logs_metrics(self, mock_evaluators, phm_batch_rul):
+        """Epoch end runs compute, logs val/* keys, and resets the val evaluator."""
         module = ConcreteEvaluatorLightningModule(evaluators=mock_evaluators)
-        module.on_validation_epoch_end()
+        module.validation_step(phm_batch_rul, 0)
+        resets_before = mock_evaluators["val"]._reset_count
+        with patch.object(module, "log") as mock_log:
+            module.on_validation_epoch_end()
+        names = [c.args[0] for c in mock_log.call_args_list]
+        assert "val/mock_metric" in names
+        assert mock_evaluators["val"]._compute_count >= 1
+        assert mock_evaluators["val"]._reset_count == resets_before + 1
 
-    def test_on_test_epoch_end_logs_metrics(self, mock_evaluators):
-        """Doc: pipeline/base.py - on_test_epoch_end calls log_epoch_metrics(mode=test)."""
+    def test_on_test_epoch_end_logs_metrics(self, mock_evaluators, phm_batch_rul):
+        """Epoch end runs compute, logs test/* keys, and resets the test evaluator."""
         module = ConcreteEvaluatorLightningModule(evaluators=mock_evaluators)
-        module.on_test_epoch_end()
+        module.test_step(phm_batch_rul, 0)
+        resets_before = mock_evaluators["test"]._reset_count
+        with patch.object(module, "log") as mock_log:
+            module.on_test_epoch_end()
+        names = [c.args[0] for c in mock_log.call_args_list]
+        assert "test/mock_metric" in names
+        assert mock_evaluators["test"]._reset_count == resets_before + 1
+
+    def test_on_validation_epoch_end_with_default_evaluator_resets_and_logs_mse(
+        self, phm_batch_rul, phm_default_evaluators
+    ):
+        """Integration-leaning: real DefaultEvaluator MSE is logged then cleared after epoch end."""
+        val_ev = phm_default_evaluators["val"]
+        module = DeterministicValCustomModule(evaluators=phm_default_evaluators)
+        module.validation_step(phm_batch_rul, 0)
+        assert val_ev.metric_manager.metrics["mse"].total_count > 0
+
+        with patch.object(module, "log") as mock_log:
+            module.on_validation_epoch_end()
+
+        assert val_ev.metric_manager.metrics["mse"].total_count == 0
+        mse_calls = [
+            c
+            for c in mock_log.call_args_list
+            if c.args and c.args[0] == "val/mse_normalized"
+        ]
+        assert len(mse_calls) == 1
+        assert mse_calls[0].args[1] == pytest.approx(1.0)
 
     def test_log_epoch_metrics_calls_compute_and_reset(self, mock_evaluators):
         """Doc: pipeline/base.py - log_epoch_metrics calls evaluators[mode].compute then reset."""
@@ -244,43 +290,43 @@ class TestBackboneWrapperLightningModule:
     """Validates backbone forward, model_step, and step delegation."""
 
     def test_forward_returns_backbone_output(
-        self, mock_evaluators, mock_backbone, phm_batch_rul
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
     ):
         """Doc: pipeline/base.py - forward(batch) returns backbone(batch)."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
-            loss=MagicMock(),
+            loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         out = module.forward(phm_batch_rul)
         assert "predictions" in out
         assert "targets" in out
 
     def test_model_step_sets_model_state_and_returns_forward(
-        self, mock_evaluators, mock_backbone, phm_batch_rul
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
     ):
         """Doc: pipeline/base.py - model_step sets batch['model_state'] and returns forward(batch)."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
-            loss=MagicMock(),
+            loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         out = module.model_step(phm_batch_rul, stage="val")
         assert phm_batch_rul["model_state"] == "val"
         assert "predictions" in out
 
-    def test_setup_no_op(self, mock_evaluators, mock_backbone):
+    def test_setup_no_op(self, mock_evaluators, mock_backbone, mock_loss):
         """Doc: pipeline/base.py - setup(stage) is pass."""
         module = BackboneWrapperLightningModule(
             backbone=mock_backbone,
-            loss=MagicMock(),
+            loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         module.setup("fit")
 
@@ -292,8 +338,8 @@ class TestBackboneWrapperLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         module.validation_step(phm_batch_rul, 0)
         assert phm_batch_rul["model_state"] == "val"
@@ -306,8 +352,8 @@ class TestBackboneWrapperLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         module.test_step(phm_batch_rul, 0)
         assert phm_batch_rul["model_state"] == "test"
@@ -320,8 +366,8 @@ class TestBackboneWrapperLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         r = repr(module)
         assert "BackboneWrapperLightningModule" in r
@@ -573,8 +619,8 @@ class TestConstantLossLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         out = module.model_step(phm_batch_rul, stage="train")
         assert out["loss"].item() == 1
@@ -587,8 +633,8 @@ class TestConstantLossLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         assert module.automatic_optimization is False
 
@@ -600,8 +646,8 @@ class TestConstantLossLightningModule:
             backbone=mock_backbone,
             loss=mock_loss,
             evaluators=mock_evaluators,
-            optimizer_factory=MagicMock(),
-            scheduler_factory=MagicMock(),
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
         )
         assert module.configure_optimizers() is None
 

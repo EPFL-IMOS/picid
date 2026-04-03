@@ -6,10 +6,10 @@ import pytest
 
 # --- Adjust these imports to match your project structure ---
 from picid.evaluator.default import DefaultEvaluator
+from picid.evaluator.hooks.base import BaseEvalHook
 from picid.evaluator.hooks.save_predictions import (
     SavePredictionsHook,
 )  # ADDED: For testing decoupled logic
-from picid.transforms.base.multisource import InverseTransformMixin
 from picid.metrics.metrics import MSEMetric, RMSEMetric
 from picid.metrics.metric_factory import MetricFactory
 
@@ -18,52 +18,43 @@ from picid.metrics.metric_factory import MetricFactory
 # =========================================================================
 
 
-class MockMinMaxScaler:
-    """Mock the sklearn MinMaxScaler for predictable behavior."""
+class _DoubleInverseTransform:
+    """Real inverse hook used by ScalingWrapper tests (2x scale, legacy mock parity)."""
 
-    def transform(self, data):
-        return data * 0.5
-
-    def inverse_transform(self, data):
-        return data * 2.0
-
-
-@pytest.fixture
-def mock_external_dependencies(mocker):
-    """Mocks external library dependencies (Sklearn, internal helpers)."""
-    mocker.patch(
-        "picid.transforms.base_transforms.scaler.MinMaxScaler", MockMinMaxScaler
-    )
-
-    def mock_convert_to_numpy(data):
-        return data, None
-
-    mocker.patch(
-        "picid.transforms.base_transforms.scaler._convert_to_numpy",
-        mock_convert_to_numpy,
-    )
+    def inverse_transform(self, data, metadata=None):
+        if getattr(data, "predictions", None) is not None:
+            arr = data.predictions
+        else:
+            arr = data.targets
+        return arr * 2.0
 
 
-@pytest.fixture
-def mock_inverse_transform_mixin(mock_external_dependencies):
-    """
-    Mocks the InverseTransformMixin instance used by the Evaluator.
-    """
-    mock_transform = MagicMock(spec=InverseTransformMixin)
+class _HundredXInverseTransform:
+    """Simple inverse hook that multiplies predictions/targets by 100."""
 
-    def mock_inverse_transform_if_needed(predictions, targets, **kwargs):
-        """Simulates the evaluator calling the wrapper logic (2x scaling)."""
-        if mock_transform.apply_inverse:
-            return predictions * 2.0, targets * 2.0
-        return predictions, targets
+    def inverse_transform(self, data, metadata=None):
+        if getattr(data, "predictions", None) is not None:
+            arr = data.predictions
+        else:
+            arr = data.targets
+        return arr * 100.0
 
-    # Attach the mocked function to the attribute
-    mock_transform.inverse_transform_if_needed = MagicMock(
-        side_effect=mock_inverse_transform_if_needed
-    )
-    mock_transform.apply_inverse = False
 
-    return mock_transform
+class _RecordingComputeHook(BaseEvalHook):
+    """Minimal hook that records compute-end payloads (no MagicMock chains)."""
+
+    def __init__(self):
+        self.compute_end_calls: list[dict] = []
+
+    def on_compute_end(self, results, evaluator, mode, epoch, step):
+        self.compute_end_calls.append(
+            {
+                "results": dict(results),
+                "mode": mode,
+                "epoch": epoch,
+                "step": step,
+            }
+        )
 
 
 @pytest.fixture
@@ -81,7 +72,7 @@ def mock_path_obj():
 
 # --- Evaluator Fixtures ---
 @pytest.fixture
-def default_evaluator_regression_fixture(mocker, mock_inverse_transform_mixin):
+def default_evaluator_regression_fixture(mocker):
     """
     Provides a DefaultEvaluator configured with real metric classes (MSE, RMSE).
     """
@@ -97,16 +88,13 @@ def default_evaluator_regression_fixture(mocker, mock_inverse_transform_mixin):
         metric_names=["mse", "rmse"],
         task_type="regression",
         num_classes=None,
-        inverse_transform=mock_inverse_transform_mixin,
+        inverse_transform=None,
         apply_inverse_scaling=False,
         save_predictions=False,
-        paths=MagicMock(),
+        paths={},
         remote_logger=None,
         collect_predictions=False,
     )
-    # Note: scaling_wrapper assignment is needed to override the real ScalingWrapper
-    # created during init with our mock.
-    evaluator.scaling_wrapper = mock_inverse_transform_mixin
 
     return evaluator
 
@@ -129,35 +117,23 @@ def default_evaluator_with_scaling_fixture(mocker):
         MetricFactory, "create_metric", side_effect=create_metric_factory
     )
 
-    # Create mock that simulates 2x scaling
-    mock_scaler = MagicMock()
-    mock_scaler.apply_inverse = True
-
-    def mock_inverse_transform_if_needed(preds, targets, **kwargs):
-        return preds * 2.0, targets * 2.0
-
-    mock_scaler.inverse_transform_if_needed = MagicMock(
-        side_effect=mock_inverse_transform_if_needed
-    )
-
     evaluator = DefaultEvaluator(
         metric_names=["mse", "rmse"],
         task_type="regression",
         num_classes=None,
-        inverse_transform=mock_scaler,
+        inverse_transform=_DoubleInverseTransform(),
         apply_inverse_scaling=True,
         save_predictions=True,
-        paths=MagicMock(),
+        paths={},
         remote_logger=None,
         collect_predictions=True,
     )
-    evaluator.scaling_wrapper = mock_scaler
 
     return evaluator
 
 
 @pytest.fixture
-def default_evaluator_regression_fixture_saving(mocker, mock_inverse_transform_mixin):
+def default_evaluator_regression_fixture_saving(mocker):
     """
     DefaultEvaluator fixture with saving and collection enabled (no scaling).
     """
@@ -172,14 +148,13 @@ def default_evaluator_regression_fixture_saving(mocker, mock_inverse_transform_m
         metric_names=["mse", "rmse"],
         task_type="regression",
         num_classes=None,
-        inverse_transform=mock_inverse_transform_mixin,
+        inverse_transform=None,
         apply_inverse_scaling=False,
         save_predictions=True,
         paths=mock_paths,
         remote_logger=None,
         collect_predictions=True,
     )
-    evaluator.scaling_wrapper = mock_inverse_transform_mixin
 
     return evaluator
 
@@ -203,17 +178,16 @@ def _update_evaluator(evaluator: DefaultEvaluator, predictions, targets):
 # =========================================================================
 
 
-def test_evaluator_init_initializes_collections_and_secondary_metrics(
-    mocker, mock_inverse_transform_mixin
-):
+def test_evaluator_init_initializes_collections_and_secondary_metrics(mocker):
     """Tests if collections and secondary metric dicts are initialized correctly."""
+    mocker.patch.object(MetricFactory, "create_metric", lambda name, paths: MSEMetric())
 
     # Case A: Scaling OFF
     evaluator_a = DefaultEvaluator(
         metric_names=["mse"],
         task_type="regression",
         num_classes=None,
-        inverse_transform=mock_inverse_transform_mixin,
+        inverse_transform=None,
         apply_inverse_scaling=False,
         save_predictions=False,
         paths={},
@@ -230,7 +204,7 @@ def test_evaluator_init_initializes_collections_and_secondary_metrics(
         metric_names=["mse"],
         task_type="regression",
         num_classes=None,
-        inverse_transform=mock_inverse_transform_mixin,
+        inverse_transform=_DoubleInverseTransform(),
         apply_inverse_scaling=True,
         save_predictions=False,
         paths={},
@@ -453,16 +427,10 @@ def test_save_predictions_to_file_orchestration(
 # =========================================================================
 
 
-def test_update_classification_task(
-    mocker, mock_inverse_transform_mixin, classification_data_balanced
-):
+def test_update_classification_task(classification_data_balanced):
     """
     Tests update with classification task type.
     """
-    mocker.patch.object(
-        MetricFactory, "create_classification_metric", return_value=MagicMock()
-    )
-
     evaluator = DefaultEvaluator(
         metric_names=["accuracy"],
         task_type="classification",
@@ -488,27 +456,25 @@ def test_update_classification_task(
     # Verify targets are integers (converted internally)
     assert evaluator.buffer.data["targets"][0].dtype in [np.int32, np.int64, int]
 
+    acc = evaluator.metric_manager.compute()["accuracy"]
+    assert 0.0 <= acc <= 1.0
 
-def test_update_forecasting_task(
-    mocker, mock_inverse_transform_mixin, forecasting_data_multi_step
-):
+
+def test_update_forecasting_task(forecasting_data_multi_step):
     """
     Tests update with forecasting task type.
     """
-    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
         task_type="forecasting",
         num_classes=None,
-        inverse_transform=mock_inverse_transform_mixin,
+        inverse_transform=None,
         apply_inverse_scaling=False,
         save_predictions=True,
         paths={},
         remote_logger=None,
         collect_predictions=True,
     )
-    evaluator.scaling_wrapper = mock_inverse_transform_mixin
 
     # ACT: Use realistic multi-step forecasting fixture data
     evaluator.update(forecasting_data_multi_step)
@@ -525,13 +491,14 @@ def test_update_forecasting_task(
         == forecasting_data_multi_step["targets"].shape
     )
 
+    mse = evaluator.metric_manager.compute()["mse_normalized"]
+    assert mse >= 0.0
 
-def test_update_unsupported_task_raises_error(mocker, mock_inverse_transform_mixin):
+
+def test_update_unsupported_task_raises_error():
     """
     Tests unsupported task types.
     """
-    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-
     # FIX: Regex match updated to "Unsupported task:"
     with pytest.raises(AssertionError, match="Unsupported task:"):
         DefaultEvaluator(
@@ -547,12 +514,10 @@ def test_update_unsupported_task_raises_error(mocker, mock_inverse_transform_mix
         )
 
 
-def test_log_plot_with_remote_logger(mocker, mock_inverse_transform_mixin):
+def test_log_plot_with_remote_logger():
     """
     Tests log_plot calls remote logger experiment.
     """
-    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-
     mock_logger = MagicMock()
 
     evaluator = DefaultEvaluator(
@@ -574,12 +539,10 @@ def test_log_plot_with_remote_logger(mocker, mock_inverse_transform_mixin):
     mock_logger.experiment.log.assert_called_once()
 
 
-def test_log_plot_without_remote_logger(mocker, mock_inverse_transform_mixin):
+def test_log_plot_without_remote_logger():
     """
     Tests log_plot does nothing without remote logger.
     """
-    mocker.patch.object(MetricFactory, "create_metric", return_value=MagicMock())
-
     evaluator = DefaultEvaluator(
         metric_names=["mse"],
         task_type="regression",
@@ -598,16 +561,10 @@ def test_log_plot_without_remote_logger(mocker, mock_inverse_transform_mixin):
     evaluator.log_plot(mock_fig, "test_plot", "val", epoch=1, step=10)
 
 
-def test_prepare_predictions_classification_argmax(
-    mocker, mock_inverse_transform_mixin
-):
+def test_prepare_predictions_classification_preserves_logits_shape_and_values():
     """
-    Tests buffer preparation applies argmax for classification via Hook logic.
+    Save-prediction formatting keeps classification logits intact for downstream consumers.
     """
-    mocker.patch.object(
-        MetricFactory, "create_classification_metric", return_value=MagicMock()
-    )
-
     evaluator = DefaultEvaluator(
         metric_names=["accuracy"],
         task_type="classification",
@@ -626,13 +583,15 @@ def test_prepare_predictions_classification_argmax(
 
     evaluator.update({"predictions": preds, "targets": targets})
 
-    # FIX: Logic tested via the hook's formatting helper
     hook = SavePredictionsHook(dims=["sample", "time", "feature"])
     result = hook._format_xarray(evaluator.buffer.get_all(), evaluator)
 
-    # Predictions should have last dim = 3 (logits preserved in formatting)
-    # Target dim remains 1.
-    assert result["preds"][1].ndim == 3
+    pred_dims, pred_values = result["preds"]
+    target_dims, target_values = result["targets"]
+    assert pred_dims == ["sample", "time", "feature"]
+    assert target_dims == ["sample", "time", "feature_label"]
+    np.testing.assert_array_equal(pred_values, preds)
+    np.testing.assert_array_equal(target_values, targets)
 
 
 def test_save_predictions_empty_dict(default_evaluator_regression_fixture_saving):
@@ -647,22 +606,56 @@ def test_save_predictions_empty_dict(default_evaluator_regression_fixture_saving
     hook.on_compute_end({}, evaluator, mode="test", epoch=1, step=1)
 
 
-def test_compute_orchestrates_all_steps(
-    default_evaluator_regression_fixture_saving, mock_path_obj
+def test_compute_invokes_hooks_and_returns_metric_values(
+    default_evaluator_regression_fixture_saving,
 ):
     """
-    Tests compute orchestrates hooks and metrics computation.
+    Tests compute runs real metric aggregation and passes the same dict to hooks.
     """
     evaluator = default_evaluator_regression_fixture_saving
+    hook = _RecordingComputeHook()
+    evaluator.hooks = [hook]
 
-    # Mock hooks and manager
-    mock_hook = MagicMock(spec=SavePredictionsHook)
-    evaluator.hooks = [mock_hook]
-    evaluator.metric_manager.compute = MagicMock(return_value={"mse": 0.5})
+    preds = np.array([[[1.0]], [[0.0]]], dtype=np.float32)
+    tgts = np.array([[[2.0]], [[0.0]]], dtype=np.float32)
+    evaluator.update({"predictions": preds, "targets": tgts})
 
     result = evaluator.compute(mode="test", epoch=1, step=10)
 
-    # ASSERT
-    mock_hook.on_compute_end.assert_called_once()
-    evaluator.metric_manager.compute.assert_called_once()
-    assert result == {"mse": 0.5}
+    # MSE = mean([(1-2)^2, (0-0)^2]) over 2 elements = 0.5
+    assert result["mse_normalized"] == pytest.approx(0.5)
+    assert len(hook.compute_end_calls) == 1
+    assert hook.compute_end_calls[0]["results"]["mse_normalized"] == pytest.approx(0.5)
+    assert hook.compute_end_calls[0]["mode"] == "test"
+    assert hook.compute_end_calls[0]["epoch"] == 1
+    assert hook.compute_end_calls[0]["step"] == 10
+
+
+def test_default_evaluator_uses_real_scaling_wrapper_and_multiply_inverse(mocker):
+    """
+    End-to-end path: built-in ScalingWrapper + inverse transform (no wrapper override).
+    """
+    mocker.patch.object(MetricFactory, "create_metric", lambda name, paths: MSEMetric())
+
+    evaluator = DefaultEvaluator(
+        metric_names=["mse"],
+        task_type="regression",
+        num_classes=None,
+        inverse_transform=_HundredXInverseTransform(),
+        apply_inverse_scaling=True,
+        save_predictions=False,
+        paths={},
+        remote_logger=None,
+        collect_predictions=False,
+    )
+
+    preds = np.array([[[0.5]], [[0.3]]], dtype=np.float32)
+    targets = np.array([[[0.4]], [[0.2]]], dtype=np.float32)
+    evaluator.update({"predictions": preds, "targets": targets})
+
+    results = evaluator.metric_manager.compute()
+    assert results["mse_denormalized"] > results["mse_normalized"]
+
+    evaluator.reset()
+    assert evaluator.metric_manager.metrics["mse"].total_count == 0
+    assert evaluator.metric_manager.normalized_metrics["mse"].total_count == 0
