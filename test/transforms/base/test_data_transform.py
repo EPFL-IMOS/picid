@@ -170,6 +170,37 @@ class TestDataTransform:
         assert "features" in result
         assert transform.fitted
 
+    def test_fittable_transform_uses_train_fit_state_for_non_train_splits(self):
+        """Non-train splits are transformed with train-fitted parameters, not refit per split.
+
+        **Bug sentinel**: ``DummyFittableTransform`` scales by the mean learned at fit time.
+        Train mean is 10; val mean is 2 and test mean is 3. Correct behavior uses factor
+        10 for both non-train splits. Refitting per split would produce 4 and 9 instead.
+        """
+        transform = DummyFittableTransform()
+        metadata = {"apply_to": "features", "assign_to": "features", "fit_on": "train"}
+        dt = DataTransform("fit_sentinel", transform, metadata)
+
+        container = SplitDatasetContainer(
+            features={
+                "train": [np.full((4, 2), 10.0, dtype=np.float64)],
+                "val": [np.full((4, 2), 2.0, dtype=np.float64)],
+                "test": [np.full((4, 2), 3.0, dtype=np.float64)],
+            },
+        )
+        result, _ = dt.forward(container)
+
+        expected_val = np.full((4, 2), 20.0, dtype=np.float64)
+        expected_test = np.full((4, 2), 30.0, dtype=np.float64)
+        np.testing.assert_array_equal(result.features.val[0], expected_val)
+        np.testing.assert_array_equal(result.features.test[0], expected_test)
+        assert not np.allclose(
+            result.features.val[0], np.full((4, 2), 4.0, dtype=np.float64)
+        )
+        assert not np.allclose(
+            result.features.test[0], np.full((4, 2), 9.0, dtype=np.float64)
+        )
+
     def test_data_transform_forward_new_key(self):
         """Test forward pass assigning to new key."""
         transform = DummyStatelessTransform()

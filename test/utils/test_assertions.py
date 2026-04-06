@@ -174,6 +174,20 @@ class TestAssertListOfNdarray:
         ):
             assert_list_of_ndarray_or_nd_array_for_dims(invalid_input, dims=2)
 
+    def test_tuple_of_ndarrays_rejected_not_list_like_contract(self):
+        """Tuple of ndarrays must not be accepted as a list/ListConfig stand-in.
+
+        **Bug sentinel**: ``tuple`` is iterable like ``list`` but must stay unsupported so
+        callers do not silently pass a non-contract container type.
+        """
+        tuple_input = (np.random.randn(100, 5), np.random.randn(80, 5))
+
+        with pytest.raises(
+            AssertionError,
+            match="Input is neither a list/ListConfig nor a numpy ndarray\\.",
+        ):
+            assert_list_of_ndarray_or_nd_array_for_dims(tuple_input, dims=2)
+
     def test_empty_list(self):
         """Test handling of empty list.
 

@@ -221,6 +221,31 @@ class TestSplitAssignmentAndContainerContract:
         assert meta["class_labels"]["val"] == [0]
         assert meta["class_labels"]["test"] == [3]
 
+    def test_fold_minus_one_simulated_instance_stays_in_train(
+        self,
+        threew_kwargs: dict,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Fold ``-1`` must map to train (default ``include_simulated_train``), not be dropped."""
+        root = Path(threew_kwargs["data_dir"])
+        instance_by_name = _layout_predefined_splits_and_labels(root)
+
+        def _fake_reader(self, path: Path) -> pd.DataFrame:
+            return instance_by_name[path.stem].copy()
+
+        monkeypatch.setattr(ThreeWLoader, "_read_instance_frame", _fake_reader)
+
+        loader = ThreeWLoader(**threew_kwargs)
+        loader.load_data()
+
+        meta = loader.get_meta_data()
+        train_names = meta["unit_names"]["train"]
+        assert any(
+            "SIMULATED_0001" in name for name in train_names
+        ), "fold -1 simulated row must remain in train split"
+        assert not any("SIMULATED_0001" in name for name in meta["unit_names"]["val"])
+        assert not any("SIMULATED_0001" in name for name in meta["unit_names"]["test"])
+
 
 class TestOvaFiltering:
     """Rows marked OVA in folds are excluded when ``include_ova`` is false."""
