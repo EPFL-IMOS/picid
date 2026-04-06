@@ -73,3 +73,40 @@ def test_serialization_and_loading_uses_model_cache(tmp_path):
 def test_invalid_task_type_is_rejected():
     with pytest.raises(ValueError):
         FitPredictXGBoostWrapper(task_type="forecasting")
+
+
+def test_allows_multi_target_is_false():
+    w = FitPredictXGBoostWrapper(task_type="regression", n_estimators=3, random_state=0)
+    assert w.allows_multi_target is False
+
+
+def test_serialize_model_task_id_none_raises():
+    w = FitPredictXGBoostWrapper(task_type="regression", n_estimators=3, random_state=0)
+    with pytest.raises(ValueError, match="no task_id"):
+        w.serialize_model(None)
+
+
+def test_load_model_task_id_none_raises():
+    w = FitPredictXGBoostWrapper(task_type="regression", n_estimators=3, random_state=0)
+    with pytest.raises(ValueError, match="no task_id"):
+        w.load_model(None)
+
+
+def test_relative_model_cache_path_is_not_duplicated(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    relative_cache = Path("xgb-rel-cache")
+    X, y = _build_linear_dataset(num_samples=8, num_features=2, seed=3)
+    w = FitPredictXGBoostWrapper(
+        task_type="regression",
+        n_estimators=4,
+        random_state=0,
+        model_cache_path=str(relative_cache),
+    )
+    w.fit(X, y)
+    path = w.serialize_model("xgb-task")
+    expected = relative_cache / "xgb-task.joblib"
+    assert Path(path) == expected
+    assert expected.exists()
+    assert not (relative_cache / "xgb-rel-cache" / "xgb-task.joblib").exists()
+    loaded = w.load_model("xgb-task")
+    assert hasattr(loaded, "predict")

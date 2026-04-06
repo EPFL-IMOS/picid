@@ -64,6 +64,36 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         yield_batch_size: int = 128,
         **kwargs,
     ):
+        """
+        Create the CARTE wrapper and its preprocessing bridge.
+
+        Parameters
+        ----------
+        num_model : int
+            Number of CARTE submodels.
+        disable_pbar : bool
+            Whether to disable CARTE progress bars.
+        random_state : int
+            Random seed for CARTE.
+        device : str
+            Device specifier used by CARTE.
+        n_jobs : int
+            Parallel worker count.
+        task_type : str
+            Project task identifier.
+        max_epoch : int, default=500
+            Maximum CARTE training epochs.
+        pretrained_model_path : str, optional
+            Optional pretrained checkpoint path.
+        model_cache_path : str, optional
+            Directory used to cache serialized models.
+        yield_strategy : bool, default=False
+            Whether batched prediction is enabled.
+        yield_batch_size : int, default=128
+            Batch size for the batched prediction path.
+        **kwargs : Any
+            Additional wrapper arguments forwarded to the backbone.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -109,6 +139,16 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
+        """
+        Convert tensor inputs to tabular form and fit the CARTE backbone.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature tensor to fit on.
+        y : torch.Tensor
+            Target tensor aligned with ``X``.
+        """
         X_train = pd.DataFrame(X.numpy())
         y_train = y.squeeze(1).numpy()  # Ensure y is 1
         X_train = self.preprocessor.fit_transform(X_train, y=y_train)
@@ -116,6 +156,19 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Transform tensor features and delegate prediction to CARTE.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature tensor to score.
+
+        Returns
+        -------
+        torch.Tensor
+            Prediction tensor returned by the wrapped CARTE model.
+        """
         X_test = pd.DataFrame(X.numpy())
         # Transform the test data
         X_test = self.preprocessor.transform(X_test)
@@ -137,14 +190,14 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         str
             Path to the serialized model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.tabpfn_fit")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.tabpfn_fit")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.tabpfn_fit")
 
         # Ensure parent directory exists
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -169,14 +222,14 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
         str
             Path to the loaded model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.tabpfn_fit")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.tabpfn_fit")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.tabpfn_fit")
 
         if not Path(model_path).exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -188,4 +241,12 @@ class FitPredictCarteWrapper(AbstractFitPredictWrapper):
     @property
     @override
     def allows_multi_target(self) -> bool:
+        """
+        Return whether the CARTE wrapper supports multi-target prediction.
+
+        Returns
+        -------
+        bool
+            ``False`` because this wrapper exposes a single prediction stream.
+        """
         return False

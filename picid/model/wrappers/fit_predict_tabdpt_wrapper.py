@@ -1,4 +1,4 @@
-"""Wrapper for the TimePFN model."""
+"""Fit/predict wrapper for TabDPT models."""
 
 from functools import partial
 import logging
@@ -46,6 +46,24 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         yield_batch_size: int = 128,
         **kwargs,
     ):
+        """
+        Create the TabDPT wrapper and deferred backbone factory.
+
+        Parameters
+        ----------
+        device : str
+            Device specifier used by TabDPT.
+        task_type : str
+            Project task identifier.
+        model_cache_path : str, optional
+            Directory used to cache serialized models.
+        yield_strategy : bool, default=False
+            Whether batched prediction is enabled.
+        yield_batch_size : int, default=128
+            Batch size used by the deferred backbone factory.
+        **kwargs : Any
+            Additional wrapper arguments forwarded to the backbone.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -87,6 +105,16 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_fit(self, X: torch.Tensor, y: torch.Tensor):
+        """
+        Recreate the TabDPT backbone when needed and fit it on numpy arrays.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature tensor used for fitting.
+        y : torch.Tensor
+            Target tensor aligned with ``X``.
+        """
         if self.reinit_on_fit:
             self._reinit_backbone()
 
@@ -94,6 +122,19 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Predict regression values or class probabilities with TabDPT.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature tensor to score.
+
+        Returns
+        -------
+        torch.Tensor
+            Regression predictions or class probabilities.
+        """
         if self.task_type in CLASSIFICATION_TASKS:
             return torch.Tensor(self.backbone.predict_proba(X.numpy()))
         else:
@@ -114,14 +155,14 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         str
             Path to the serialized model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.cloudpickle")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.cloudpickle")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.cloudpickle")
 
         # Ensure parent directory exists
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -149,14 +190,14 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         str
             Path to the loaded model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.cloudpickle")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.cloudpickle")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.cloudpickle")
 
         if not Path(model_path).exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -170,4 +211,12 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
     @property
     @override
     def allows_multi_target(self) -> bool:
+        """
+        Return whether the TabDPT wrapper supports multi-target prediction.
+
+        Returns
+        -------
+        bool
+            ``False`` because this wrapper exposes a single prediction stream.
+        """
         return False

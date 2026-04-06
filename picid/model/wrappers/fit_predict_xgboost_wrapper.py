@@ -1,3 +1,5 @@
+"""Fit/predict wrapper for gradient-boosted sklearn estimators."""
+
 from pathlib import Path
 from typing import Optional, override
 import joblib
@@ -38,6 +40,24 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         num_classes: Optional[int] = None,
         **kwargs,
     ):
+        """
+        Create the boosted-tree wrapper for regression or classification tasks.
+
+        Parameters
+        ----------
+        task_type : str
+            Project task identifier.
+        n_estimators : int, default=1000
+            Number of boosting stages.
+        model_cache_path : str, optional
+            Directory used to cache serialized models.
+        random_state : int, optional
+            Random seed for the underlying estimator.
+        num_classes : int, optional
+            Number of output classes for classification tasks.
+        **kwargs : Any
+            Additional wrapper arguments retained by the base class.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -70,6 +90,19 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Return regression predictions or class probabilities as tensors.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature tensor to score.
+
+        Returns
+        -------
+        torch.Tensor
+            Regression predictions or class probabilities.
+        """
         if self.task_type in CLASSIFICATION_TASKS:
             result = torch.Tensor(self.backbone.predict_proba(X.numpy()))
             assert (
@@ -94,14 +127,14 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         str
             Path to the serialized model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         # Ensure parent directory exists
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -125,14 +158,14 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         object
             Deserialized model object.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         return joblib.load(model_path)
 

@@ -1,3 +1,5 @@
+"""Fit/predict wrapper for anomaly scoring with Isolation Forest."""
+
 from pathlib import Path
 from typing import Optional, override
 import joblib
@@ -39,6 +41,24 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
         random_state: Optional[int] = 42,
         **kwargs,
     ):
+        """
+        Create the Isolation Forest wrapper for anomaly-detection tasks.
+
+        Parameters
+        ----------
+        task_type : str
+            Project task identifier.
+        n_estimators : int, default=100
+            Number of trees in the forest.
+        contamination : float or str, default="auto"
+            Contamination passed to the sklearn backbone.
+        model_cache_path : str, optional
+            Directory used to cache serialized models.
+        random_state : int, optional
+            Random seed for sklearn.
+        **kwargs : Any
+            Additional wrapper arguments retained by the base class.
+        """
         # --- Task Validation ---
         self.supported_tasks = CLASSIFICATION_TASKS
         self.task_type = task_type
@@ -126,14 +146,14 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
         str
             Path to the serialized model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         # Ensure parent directory exists
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -157,14 +177,14 @@ class FitPredictIsolationForestWrapper(AbstractFitPredictWrapper):
         object
             Deserialized Isolation Forest estimator.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         return joblib.load(model_path)
 

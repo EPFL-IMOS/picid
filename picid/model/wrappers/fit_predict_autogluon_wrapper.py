@@ -1,4 +1,4 @@
-"""Wrapper for the TimePFN model."""
+"""Fit/predict wrapper for AutoGluon-backed tabular models."""
 
 from pathlib import Path
 from typing import override
@@ -27,6 +27,18 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
     """
 
     def __init__(self, task_type: str, model_cache_path: str = None, **kwargs):
+        """
+        Create the AutoGluon fit/predict wrapper for the selected task.
+
+        Parameters
+        ----------
+        task_type : str
+            Project task identifier.
+        model_cache_path : str, optional
+            Directory used to cache serialized models.
+        **kwargs : Any
+            Additional wrapper arguments forwarded to the AutoGluon backbone.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -57,14 +69,14 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
         str
             Path to the serialized model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         # Ensure parent directory exists
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
@@ -87,14 +99,14 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
         str
             Path to the loaded model file.
         """
-        model_path = self.model_cache_path
-        if model_path is None and task_id is not None:
-            model_path = str(Path(".model_cache") / f"{task_id}.joblib")
-        else:
-            model_path = str(Path(model_path) / model_path / f"{task_id}.joblib")
-
-        if model_path is None:
+        if task_id is None:
             raise ValueError("No model_path provided in kwargs and no task_id given.")
+        model_dir = (
+            Path(".model_cache")
+            if self.model_cache_path is None
+            else Path(self.model_cache_path)
+        )
+        model_path = str(model_dir / f"{task_id}.joblib")
 
         if not Path(model_path).exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -105,4 +117,12 @@ class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
     @property
     @override
     def allows_multi_target(self) -> bool:
+        """
+        Return whether the wrapped AutoGluon model supports multi-target outputs.
+
+        Returns
+        -------
+        bool
+            ``True`` because this wrapper can surface multi-target predictions.
+        """
         return True
