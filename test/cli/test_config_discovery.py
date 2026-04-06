@@ -11,6 +11,98 @@ from picid.cli.config_discovery import (
 )
 
 
+def test_list_task_definitions_returns_empty_when_root_missing(tmp_path, monkeypatch):
+    """Missing task_definition roots return an empty list."""
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", tmp_path / "configs")
+
+    assert list_task_definitions() == []
+
+
+def test_list_task_definitions_ignores_non_directory_entries(tmp_path, monkeypatch):
+    """Only task-type directories are scanned for task definitions."""
+    configs = tmp_path / "configs"
+    task_root = configs / "task_definition"
+    task_root.mkdir(parents=True)
+    (task_root / "README.md").write_text("ignore me", encoding="utf-8")
+    prognostics = task_root / "prognostics"
+    prognostics.mkdir()
+    (prognostics / "rul.yaml").write_text("", encoding="utf-8")
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", configs)
+
+    result = list_task_definitions()
+
+    assert result == [
+        ("prognostics", "rul", prognostics / "rul.yaml"),
+    ]
+
+
+def test_list_model_configs_returns_empty_when_root_missing(tmp_path, monkeypatch):
+    """Missing model_configs roots return an empty list."""
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", tmp_path / "configs")
+
+    assert list_model_configs() == []
+
+
+def test_list_model_configs_filters_task_type_in_isolated_tree(tmp_path, monkeypatch):
+    """Task-type filtering works on a synthetic config tree."""
+    configs = tmp_path / "configs"
+    prognostics = configs / "model_configs" / "prognostics"
+    forecasting = configs / "model_configs" / "forecasting"
+    prognostics.mkdir(parents=True)
+    forecasting.mkdir(parents=True)
+    (prognostics / "cnn_1d.yaml").write_text("", encoding="utf-8")
+    (forecasting / "linear.yaml").write_text("", encoding="utf-8")
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", configs)
+
+    result = list_model_configs(task_type="forecasting")
+
+    assert result == [
+        ("forecasting", "linear", forecasting / "linear.yaml"),
+    ]
+
+
+def test_list_experiment_groups_ignores_files(tmp_path, monkeypatch):
+    """Only directories under experiment/ are returned as groups."""
+    configs = tmp_path / "configs"
+    experiment_root = configs / "experiment"
+    experiment_root.mkdir(parents=True)
+    (experiment_root / "notes.txt").write_text("ignore me", encoding="utf-8")
+    group_dir = experiment_root / "demo"
+    group_dir.mkdir()
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", configs)
+
+    result = list_experiment_groups()
+
+    assert result == [("demo", group_dir)]
+
+
+def test_list_experiments_for_group_task_builds_nested_keys(tmp_path, monkeypatch):
+    """Nested experiment directories are normalized into slash-separated keys."""
+    configs = tmp_path / "configs"
+    target = configs / "experiment" / "demo" / "forecasting" / "nested"
+    target.mkdir(parents=True)
+    (target / "model.yaml").write_text("", encoding="utf-8")
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", configs)
+
+    result = list_experiments_for_group_task("demo", "forecasting")
+
+    assert result == ["demo/forecasting/nested/model"]
+
+
+def test_list_paths_configs_returns_empty_when_root_missing(tmp_path, monkeypatch):
+    """Missing paths config roots return an empty list."""
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", tmp_path / "configs")
+
+    assert list_paths_configs() == []
+
+
+def test_list_debug_configs_returns_empty_when_root_missing(tmp_path, monkeypatch):
+    """Missing debug config roots return an empty list."""
+    monkeypatch.setattr("picid.cli.config_discovery.CONFIGS_ROOT", tmp_path / "configs")
+
+    assert list_debug_configs() == []
+
+
 def test_list_task_definitions_returns_tasks():
     """list_task_definitions returns TaskInfo entries for each task definition."""
     tasks = list_task_definitions()
