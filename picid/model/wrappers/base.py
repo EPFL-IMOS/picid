@@ -16,44 +16,35 @@ logger = logging.getLogger(__name__)
 
 class AbstractFitPredictWrapper(ABC):
     """
-    AbstractFitPredictWrapper(ABC)
-    An abstract base class that provides a unified interface for
-    handling models that follow the scikit-learn API.
-    This wrapper ensures that the backbone model
-    implements both `fit` and `predict` methods, and provides batch
-    prediction capabilities with optional yield strategy.
+    Unified adapter for sklearn-style fit/predict backbones.
 
+    Parameters
+    ----------
     backbone : object
-        The backbone model, expected to implement `fit` and `predict`
-        methods (e.g., a scikit-learn estimator).
-    yield_strategy : bool, optional (default=False)
-        If True, enables batch-wise prediction to handle large datasets efficiently.
-    yield_batch_size : int, optional (default=128)
-        The batch size to use when `yield_strategy` is enabled.
+        Model instance or factory expected to expose ``fit`` and ``predict``.
+    yield_strategy : bool, default=False
+        Whether to run prediction in batches and concatenate the outputs.
+    yield_batch_size : int, default=128
+        Batch size used when ``yield_strategy`` is enabled.
+    profile_fit_cfg : OmegaConf, optional
+        Profiler configuration for the fit path.
+    profile_predict_cfg : OmegaConf, optional
+        Profiler configuration for the predict path.
+    reinit_on_fit : bool, default=False
+        Whether to rebuild the backbone from a stored factory before each fit.
+    verbose : bool, default=False
+        Whether to wrap batched prediction in a progress bar.
     **kwargs : dict
-        Additional keyword arguments to be stored in an AttributeDict.
-    Methods
-    -------
-    fit(X, y)
-        Fits the backbone model to the provided data.
-    predict(X)
-        Predicts outputs for the given input data, optionally in batches
-        if `yield_strategy` is enabled. Ensures output is a 2D torch.Tensor.
-    serialize_model(task_id)
-        Abstract method to serialize the model to a file, to be implemented by subclasses.
-    load_model(task_id)
-        Abstract method to load the model from a file, to be implemented by subclasses.
-    Properties
-    allows_multi_target : bool
-        Abstract property indicating whether the model supports multi-target prediction.
+        Additional keyword arguments stored on ``self.kwargs``.
+
     Raises
     ------
     ValueError
-        If the backbone model does not implement both `fit` and `predict` methods.
+        If the backbone model does not implement both ``fit`` and ``predict``.
     TypeError
-        If the predicted output is not convertible to a torch.Tensor or numpy.ndarray.
+        If the predicted output is not convertible to a torch tensor.
     AssertionError
-        If the predicted output is not 2-dimensional.
+        If the predicted output is not two-dimensional.
     """
 
     def __init__(
@@ -67,6 +58,28 @@ class AbstractFitPredictWrapper(ABC):
         verbose: bool = False,
         **kwargs,
     ):
+        """
+        Store the backbone and shared runtime configuration.
+
+        Parameters
+        ----------
+        backbone : object
+            Model instance or factory expected to expose ``fit`` and ``predict``.
+        yield_strategy : bool, default=False
+            Whether to run prediction in batches.
+        yield_batch_size : int, default=128
+            Batch size used for batched prediction.
+        profile_fit_cfg : OmegaConf, optional
+            Profiler configuration for the fit path.
+        profile_predict_cfg : OmegaConf, optional
+            Profiler configuration for the predict path.
+        reinit_on_fit : bool, default=False
+            Whether to rebuild the backbone from a factory before fitting.
+        verbose : bool, default=False
+            Whether to show a progress bar during batched prediction.
+        **kwargs : dict
+            Extra wrapper metadata stored in ``self.kwargs``.
+        """
         super().__init__()
 
         # Accept either a model instance or a callable factory (e.g., functools.partial)
@@ -303,6 +316,14 @@ class AbstractFitPredictWrapper(ABC):
         pass
 
     def _setup_profiler(self, cfg: OmegaConf):
+        """
+        Create and start a torch profiler from a Hydra-style config.
+
+        Parameters
+        ----------
+        cfg : OmegaConf
+            Profiler schedule and export configuration.
+        """
         from torch.profiler import (
             ProfilerActivity,
             profile,
@@ -331,6 +352,14 @@ class AbstractFitPredictWrapper(ABC):
         profiler.start()
 
     def _check_stop_profiler(self, cfg):
+        """
+        Stop and export the profiler once the configured schedule finishes.
+
+        Parameters
+        ----------
+        cfg : OmegaConf
+            Profiler configuration containing the trace export path.
+        """
         state = self.sched(self.profiler.step_num)
         from torch.profiler import ProfilerAction
 
@@ -351,7 +380,8 @@ class AbstractFitPredictWrapper(ABC):
 
 
 class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
-    """Abstract class that provides an interface to handle the network output.
+    """
+    Base wrapper for feed-forward models used in evaluator-style calls.
 
     Parameters
     ----------
@@ -364,6 +394,16 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
     """
 
     def __init__(self, backbone, **kwargs):
+        """
+        Store the backbone and wrapper kwargs for downstream access.
+
+        Parameters
+        ----------
+        backbone : torch.nn.Module
+            Wrapped backbone module.
+        **kwargs : dict
+            Extra wrapper metadata stored in ``self.kwargs``.
+        """
         super().__init__()
         self.backbone = backbone
         self.kwargs = AttributeDict(kwargs)
@@ -407,7 +447,8 @@ class AbstractFeedForwardWrapper(ABC, torch.nn.Module):
 
 
 class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
-    """Abstract class that provides an interface to handle the network output.
+    """
+    Base wrapper for training-oriented feed-forward model calls.
 
     Parameters
     ----------
@@ -420,12 +461,22 @@ class AbstractFeedForwardTrainingWrapper(ABC, torch.nn.Module):
     """
 
     def __init__(self, backbone, **kwargs):
+        """
+        Store the backbone and wrapper kwargs for training-time use.
+
+        Parameters
+        ----------
+        backbone : torch.nn.Module
+            Wrapped backbone module.
+        **kwargs : dict
+            Extra wrapper metadata stored in ``self.kwargs``.
+        """
         super().__init__()
         self.backbone = backbone
         self.kwargs = AttributeDict(kwargs)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(backbone={self.backbone}"
+        return f"{self.__class__.__name__}(backbone={self.backbone})"
 
     def __call__(self, batch):
         """
