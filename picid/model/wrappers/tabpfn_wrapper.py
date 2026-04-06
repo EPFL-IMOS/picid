@@ -20,6 +20,16 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
     """
 
     def __init__(self, task_type: str, **kwargs):
+        """
+        Create the wrapper and choose the TabPFN backbone for the task.
+
+        Parameters
+        ----------
+        task_type : str
+            Project task identifier.
+        **kwargs : Any
+            Additional arguments forwarded to the TabPFN constructor.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = FORECASTING_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -52,11 +62,47 @@ class TabPFNWrapper(AbstractFeedForwardWrapper):
         self.aux_context = None
         self.y_aux = None
 
+    def fit(self, X: torch.Tensor, y: torch.Tensor):
+        """
+        Fit the TabPFN backbone from torch tensors.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature matrix used to fit the wrapped backbone.
+        y : torch.Tensor
+            Target matrix paired with ``X`` during fitting.
+
+        Returns
+        -------
+        TabPFNWrapper
+            The current wrapper instance.
+        """
+        self.backbone.fit(
+            X.detach().cpu().numpy(),
+            y.detach().cpu().numpy(),
+        )
+        return self
+
     def predict(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Predict from a torch tensor using the wrapped TabPFN backbone.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Feature matrix to score.
+
+        Returns
+        -------
+        torch.Tensor
+            Model predictions or class probabilities.
+        """
+        X_numpy = X.detach().cpu().numpy()
         if self.task_type in CLASSIFICATION_TASKS:
-            return torch.Tensor(self.backbone.predict_proba(X.numpy()))
+            return torch.Tensor(self.backbone.predict_proba(X_numpy))
         else:
-            return torch.Tensor(self.backbone.predict(X.numpy()))
+            return torch.Tensor(self.backbone.predict(X_numpy))
 
     def forward(self, batch):
         """
@@ -106,9 +152,48 @@ def generate_and_fit_polynomial(
     num_context=20,
     skip=700,
 ):
+    """
+    Generate a synthetic polynomial series and fit rolling polynomial forecasts.
+
+    Parameters
+    ----------
+    total_points : int, default=1580
+        Number of points in the generated series.
+    desired_fit_degree : int, default=4
+        Polynomial degree used for the rolling fit.
+    periodicity : int, default=24
+        Frequency multiplier for the sinusoidal component.
+    noise_std : float, default=0.05
+        Standard deviation of the Gaussian noise added to the signal.
+    seed : int, default=42
+        Random seed for reproducible noise generation.
+    num_context : int, default=20
+        Number of rolling context windows to evaluate.
+    skip : int, default=700
+        Starting index for the first rolling fit.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        Raw x positions, noisy series values, fitted coefficients with errors,
+        and the held-out true values.
+    """
     np.random.seed(seed)
 
     def ground_truth_polynomial(x_scaled):
+        """
+        Construct the normalized nonlinear signal used for the toy series.
+
+        Parameters
+        ----------
+        x_scaled : np.ndarray
+            Input coordinates scaled to ``[-1, 1]``.
+
+        Returns
+        -------
+        np.ndarray
+            Normalized nonlinear signal evaluated at ``x_scaled``.
+        """
         # Higher-degree nonlinear structure
         p1 = 0.3 * x_scaled**4
         p2 = -0.2 * x_scaled**5
