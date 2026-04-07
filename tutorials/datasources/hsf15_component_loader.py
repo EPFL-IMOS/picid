@@ -214,8 +214,11 @@ def parse_component_args() -> argparse.Namespace:
     parser.add_argument(
         "--component",
         choices=sorted(COMPONENT_NUM_CLASSES.keys()),
-        required=True,
-        help="Subsystem task_mode (must match configs/datasource/hsf15_<component>.yaml).",
+        default="cooler",
+        help=(
+            "Subsystem task_mode (must match configs/datasource/hsf15_<component>.yaml). "
+            "Defaults to 'cooler' so the script is runnable with no extra flags."
+        ),
     )
     add_data_dir_argument(
         parser,
