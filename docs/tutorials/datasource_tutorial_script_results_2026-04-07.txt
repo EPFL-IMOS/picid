@@ -1,0 +1,144 @@
+Datasource Tutorial Script Run Results
+Date: 2026-04-07
+Workspace used for execution: /Users/leone/projects/TabPHM/.worktrees/ragged-standard-report-engine
+Command pattern: uv run python tutorials/datasources/<script>.py
+
+Legend:
+- STATUS=PASS means return code 0
+- STATUS=FAIL means non-zero return code
+
+============================================================
+SCRIPT: airbus_helicopter_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 5.16s
+FINDINGS:
+- Script executed and printed "AIRBUS HELICOPTER TUTORIAL".
+- Loader report sections were produced successfully.
+
+============================================================
+SCRIPT: concepts_n_cmapss_ds02_loader.py
+============================================================
+STATUS: FAIL (return_code=1)
+ELAPSED: 5.63s
+FINDINGS:
+- Raised FileNotFoundError.
+- Missing required dataset file:
+  /Users/leone/projects/TabPHM/.worktrees/ragged-standard-report-engine/datasets/N-CMAPSS/N-CMAPSS_DS02.h5
+
+============================================================
+SCRIPT: hsf15_accumulator_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 104.94s
+FINDINGS:
+- Script completed successfully.
+- Report indicated HSF15 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: hsf15_component_loader.py
+============================================================
+STATUS: FAIL (return_code=2)
+ELAPSED: 0.54s
+FINDINGS:
+- CLI usage error (required argument missing).
+- Script requires: --component {accumulator,cooler,pump,valve}
+
+============================================================
+SCRIPT: hsf15_cooler_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 105.97s
+FINDINGS:
+- Script completed successfully.
+- Report indicated HSF15 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: hsf15_pump_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 102.24s
+FINDINGS:
+- Script completed successfully.
+- Report indicated HSF15 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: hsf15_valve_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 106.73s
+FINDINGS:
+- Script completed successfully.
+- Report indicated HSF15 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: nb14_bosello_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 123.76s
+FINDINGS:
+- Script completed successfully.
+- Report indicated NB14 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: phme20_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 5.93s
+FINDINGS:
+- Script completed successfully.
+- Report indicated PHME20 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: threew_loader.py
+============================================================
+STATUS: FAIL (return_code=1)
+ELAPSED: 0.61s
+FINDINGS:
+- Automatic download is not implemented for 3W in this script path.
+- Raised FileNotFoundError for folds file:
+  /Users/leone/projects/TabPHM/.worktrees/ragged-standard-report-engine/datasets/threew_dataset/folds/folds_clf_02.csv
+
+============================================================
+SCRIPT: unibo21_bosello_loader.py
+============================================================
+STATUS: PASS (return_code=0)
+ELAPSED: 85.24s
+FINDINGS:
+- Script completed successfully.
+- Report indicated UNIBO21 dataset availability ("already downloaded and extracted").
+
+============================================================
+SCRIPT: xjtu_sy_loader.py
+============================================================
+STATUS: FAIL (return_code=1)
+ELAPSED: 89.44s
+FINDINGS:
+- Download/cache integrity failure detected for XJTU-SY zip.
+- Error message:
+  "File .../datasets/phmd_cache/datasets/XJTU-SY.zip not valid (invalid md5 hash), it might be corrupted. It will be removed."
+
+============================================================
+OVERALL SUMMARY
+============================================================
+Total scripts run: 12
+Passed: 8
+Failed: 4
+
+Failure breakdown:
+1) Missing required dataset file: concepts_n_cmapss_ds02_loader.py
+2) Required CLI argument not provided: hsf15_component_loader.py
+3) 3W local data not present / no auto-download support: threew_loader.py
+4) Corrupted cache/download artifact (MD5 mismatch): xjtu_sy_loader.py
+
+============================================================
+POST-FIX RERUN (targeted failed scripts)
+============================================================
+Date: 2026-04-07
+
+- hsf15_component_loader.py: PASS (component defaults to cooler when omitted)
+- concepts_n_cmapss_ds02_loader.py: PASS (adds data-dir fallback search for worktree/main datasets)
+- threew_loader.py: PASS (auto-resolves folds/layouts, supports best-effort auto-download and missing-instance fallback)
+
+Remaining failure from original batch not addressed in this pass:
+- xjtu_sy_loader.py: FAIL due corrupted/incomplete XJTU-SY zip (MD5 mismatch in cache)
