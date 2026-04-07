@@ -170,6 +170,26 @@ def _compose_ds02_config(*, paths_data_dir: str | None = None) -> DictConfig:
         )
 
 
+def _candidate_paths_data_dir_overrides(cli_data_dir: str | None) -> list[str | None]:
+    """Ordered candidate ``paths.data_dir`` roots for DS02 location fallback."""
+    normalized = normalize_data_dir_override(cli_data_dir)
+    if normalized:
+        return [normalized]
+
+    # Default first: keep existing behavior.
+    candidates: list[str | None] = [None]
+
+    # Worktree convenience: if running from `<repo>/.worktrees/<branch>`,
+    # also try `<repo>/datasets` where users typically stage heavy datasets once.
+    parts = _REPO_ROOT.parts
+    if ".worktrees" in parts:
+        idx = parts.index(".worktrees")
+        if idx >= 1:
+            main_repo_root = Path(*parts[:idx])
+            candidates.append(str((main_repo_root / "datasets").resolve()))
+    return candidates
+
+
 def _build_dataset_notes(
     loader: MultiSourceLoader,
     container: Any,
@@ -194,13 +214,27 @@ def _build_dataset_notes(
 def main() -> None:
     """Compose DS02 multisource datasource config, load, and print reports."""
     args = parse_args()
-    cfg = _compose_ds02_config(
-        paths_data_dir=normalize_data_dir_override(args.data_dir),
-    )
+    cfg: DictConfig | None = None
+    loader: MultiSourceLoader | None = None
+    last_error: Exception | None = None
+    for paths_data_dir in _candidate_paths_data_dir_overrides(args.data_dir):
+        cfg = _compose_ds02_config(paths_data_dir=paths_data_dir)
+        try:
+            loader = _build_multisource_loader(cfg)
+            loader.load_data()
+            loader.split_data()
+            break
+        except FileNotFoundError as exc:
+            last_error = exc
+            loader = None
+            continue
+
+    if loader is None or cfg is None:
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Failed to initialize DS02 loader.")
+
     try:
-        loader = _build_multisource_loader(cfg)
-        loader.load_data()
-        loader.split_data()
         container = loader.get_data()
         meta = loader.get_meta_data()
 
