@@ -56,6 +56,7 @@ STANDARD_DATASOURCE_TUTORIAL_SCRIPTS: tuple[str, ...] = (
     "hsf15_valve_loader.py",
     "nb14_bosello_loader.py",
     "phme20_loader.py",
+    "pronostia_loader.py",
     "threew_loader.py",
     "unibo21_bosello_loader.py",
     "xjtu_sy_loader.py",
@@ -65,6 +66,7 @@ STANDARD_DATASOURCE_TUTORIAL_SCRIPTS: tuple[str, ...] = (
 TUTORIAL_SCRIPTS_WITH_NO_DOWNLOAD: frozenset[str] = frozenset(
     {
         "airbus_helicopter_loader.py",
+        "pronostia_loader.py",
         "threew_loader.py",
     }
 )
