@@ -724,7 +724,11 @@ def main() -> None:
 
     print_section("CURRENT TASK AND AVAILABLE TASKS")
     print(f"current_task: {loader.task_mode}")
-    print(f"available_tasks: {loader.get_available_task_modes()}")
+    available_task_fn = getattr(loader, "get_available_task_modes", None)
+    if callable(available_task_fn):
+        print(f"available_tasks: {available_task_fn()}")
+    else:
+        print("available_tasks: [anomaly_detection]")
 
     print_section("BASELINE-STYLE CLASS DISTRIBUTION (INSTANCES)")
     print(
