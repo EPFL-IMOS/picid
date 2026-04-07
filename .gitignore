@@ -1,5 +1,8 @@
 testwdir
 test/.pytest_tmp
+.pytest_tmp/
+test/.pytest_tmp_task2/
+tmp/
 __pycache__
 .idea
 *.pyc
