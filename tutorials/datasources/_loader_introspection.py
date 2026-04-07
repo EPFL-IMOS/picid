@@ -192,9 +192,18 @@ def ragged_summary(records: list[Mapping[str, Any]]) -> str | None:
         return None
     if len(set(lengths)) <= 1:
         return None
+    arr = np.asarray(lengths, dtype=np.int64)
+    min_idx = int(np.argmin(arr))
+    max_idx = int(np.argmax(arr))
+    p50 = float(np.percentile(arr, 50))
+    p90 = float(np.percentile(arr, 90))
+    mean = float(np.mean(arr))
+    unique = int(np.unique(arr).size)
     return (
-        f"ragged time lengths: min={min(lengths)}, max={max(lengths)}, "
-        f"n_units={len(lengths)}"
+        f"ragged time lengths: min={int(arr[min_idx])}, p50={p50:.1f}, "
+        f"p90={p90:.1f}, max={int(arr[max_idx])}, mean={mean:.1f}, "
+        f"n_units={len(lengths)}, unique_lengths={unique}; "
+        f"shortest_unit_idx={min_idx}, longest_unit_idx={max_idx}"
     )
 
 
