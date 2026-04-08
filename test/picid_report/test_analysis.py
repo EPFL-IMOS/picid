@@ -273,6 +273,92 @@ class TestGetOptimizedMetric:
         result = analysis.get_optimized_metric(df, "M", "D")
         assert result == "test/accuracy"
 
+    # --- fit_predict model resolution (tabpfn / tabdpt / xgboost) ---
+    # These models log task_definition.target_metric = "val/loss" in their Hydra
+    # config, and val/loss exists as a column in W&B data, but its value is a
+    # constant placeholder (1.0) for every config because fit_predict models do
+    # not perform iterative training.  Sorting by a constant metric is
+    # meaningless, so the tests below document the currently-resolved metric for
+    # each model so that any future fix can be verified against them.
+
+    def _fit_predict_df(self, model_target: str) -> pd.DataFrame:
+        """
+        Build a minimal DataFrame matching what W&B produces for fit_predict
+        models: task_definition.target_metric = "val/loss", val/loss always 1.0,
+        real performance in test/mse_normalized and test/mae_normalized.
+        Two rows represent two HP configs (e.g. different seq_len / stride_train).
+        """
+        tc = config.COLUMN_CONFIG["target_metric"]
+        om = config.COLUMN_CONFIG["optimization_metric"]
+        return pd.DataFrame(
+            {
+                config.COLUMN_CONFIG["model_target"]: [model_target, model_target],
+                tc: ["val/loss", "val/loss"],          # Hydra default for fit_predict
+                om: ["val/loss", "val/loss"],          # early-stopping monitor
+                "val/loss": [1.0, 1.0],                # constant placeholder
+                "test/loss": [1.0, 1.0],               # constant placeholder
+                "test/mse_normalized": [0.08, 0.15],  # real metric, varies
+                "test/mae_normalized": [0.18, 0.27],  # real metric, varies
+                "task_definition.seq_len": [50, 1],
+                "task_definition.stride_train": [5, 1],
+            }
+        )
+
+    def test_tabpfn_resolves_to_val_loss(self):
+        """
+        fit_predict / tabpfn: task_definition.target_metric = "val/loss" and
+        val/loss column exists -> Priority 1 (metric_base in columns) returns
+        "val/loss".
+
+        NOTE: val/loss is a constant 1.0 for all configs, so this sort metric
+        does NOT differentiate HP configurations.  This test documents the
+        current (broken) behaviour.
+        """
+        model = "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper"
+        df = self._fit_predict_df(model)
+        result = analysis.get_optimized_metric(df, model, "XJTU-SY")
+        assert result == "val/loss"
+
+    def test_tabdpt_resolves_to_val_loss(self):
+        """
+        fit_predict / tabdpt: same Hydra config as tabpfn -> also resolves to
+        "val/loss" (constant placeholder).
+
+        NOTE: documents current (broken) behaviour.
+        """
+        model = "model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper"
+        df = self._fit_predict_df(model)
+        result = analysis.get_optimized_metric(df, model, "XJTU-SY")
+        assert result == "val/loss"
+
+    def test_xgboost_resolves_to_val_loss(self):
+        """
+        fit_predict / xgboost: same Hydra config pattern -> also resolves to
+        "val/loss" (constant placeholder).
+
+        NOTE: documents current (broken) behaviour.
+        """
+        model = "model.wrappers.fit_predict_xgboost_wrapper.FitPredictXGBoostWrapper"
+        df = self._fit_predict_df(model)
+        result = analysis.get_optimized_metric(df, model, "XJTU-SY")
+        assert result == "val/loss"
+
+    def test_fit_predict_val_loss_constant_does_not_differentiate_configs(self):
+        """
+        Confirm that val/loss is constant across all fit_predict HP configs
+        (value always 1.0), meaning sorting by it produces an arbitrary order.
+
+        This is the root cause of the mis-sorted HP tables for tabpfn/tabdpt/
+        xgboost.  A fix should resolve to a metric that actually varies, such
+        as test/mse_normalized or test/mae_normalized.
+        """
+        model = "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper"
+        df = self._fit_predict_df(model)
+        assert df["val/loss"].nunique() == 1, (
+            "val/loss must be constant (1.0) for fit_predict models — "
+            "sorting by it cannot rank HP configs."
+        )
+
 
 # --- get_varying_hyperparameters (analysis.get_varying_hyperparameters) ---
 

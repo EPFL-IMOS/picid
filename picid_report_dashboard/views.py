@@ -6,16 +6,14 @@ Each function takes a ResultsLoader and widget selections, returns a Panel objec
 
 from __future__ import annotations
 
-from typing import Optional
-
 import re
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 import panel as pn
-import param
 
-from .data import ResultsLoader
+from .data import ResultsLoader, is_alt_model
 
 
 # ---------------------------------------------------------------------------
@@ -74,76 +72,82 @@ def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
 # Heatmap (model × dataset)
 # ---------------------------------------------------------------------------
 
-_ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
-
-
-def _is_alt_model(name: str) -> bool:
-    lower = name.lower()
-    return any(p in lower for p in _ALT_METRIC_MODELS)
-
-
-def build_heatmap(
+def _selected_metric_frame(
     loader: ResultsLoader,
     metric_key: str,
-    mode: str = "min",
-    width: int = 900,
-    height: int = 400,
+    *,
+    sort_metric_key: str | None,
     alt_metric_key: str | None = None,
-    show_n: bool = True,
-    show_rank: bool = False,
-) -> pn.viewable.Viewable:
-    """Color-coded heatmap of mean metric values across datasets and models."""
-    import holoviews as hv
-    hv.extension("bokeh")
-
-    df = loader.metric_matrix(metric_key, "mean")
-    n_df = loader.metric_matrix(metric_key, "n")
-    # Melt to long form
-    long = df.reset_index().melt(id_vars="index", var_name="model", value_name="value")
-    long = long.rename(columns={"index": "dataset"})
-    n_long = n_df.reset_index().melt(id_vars="index", var_name="model", value_name="n")
-    n_long = n_long.rename(columns={"index": "dataset"})
-    long = long.merge(n_long, on=["dataset", "model"], how="left")
-
-    # Substitute alt metric values (and their n) before dropna so alt models aren't lost
-    if alt_metric_key:
-        alt_df = loader.metric_matrix(alt_metric_key, "mean")
-        alt_n_df = loader.metric_matrix(alt_metric_key, "n")
-        alt_long = alt_df.reset_index().melt(id_vars="index", var_name="model", value_name="alt_value")
-        alt_long = alt_long.rename(columns={"index": "dataset"})
-        alt_n_long = alt_n_df.reset_index().melt(id_vars="index", var_name="model", value_name="alt_n")
-        alt_n_long = alt_n_long.rename(columns={"index": "dataset"})
-        alt_map = alt_long.set_index(["dataset", "model"])["alt_value"]
-        alt_n_map = alt_n_long.set_index(["dataset", "model"])["alt_n"]
-        mask = long["model"].apply(_is_alt_model)
-        long.loc[mask, "value"] = long.loc[mask].apply(
-            lambda r: alt_map.get((r["dataset"], r["model"]), r["value"]), axis=1
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    dataset: str | None = None,
+) -> pd.DataFrame:
+    """Build a long-form frame of dynamic dashboard values."""
+    records = loader.selected_metric_records(
+        metric_key=metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+        dataset=dataset,
+    )
+    if not records:
+        return pd.DataFrame(
+            columns=[
+                "dataset",
+                "model",
+                "value",
+                "std",
+                "n",
+                "display_metric_key",
+                "requested_sort_metric_key",
+                "effective_sort_metric_key",
+            ]
         )
-        long.loc[mask, "n"] = long.loc[mask].apply(
-            lambda r: alt_n_map.get((r["dataset"], r["model"]), r["n"]), axis=1
-        )
+    return pd.DataFrame(records)
 
-    long = long.dropna(subset=["value"])
 
+def _build_heatmap_frame(
+    loader: ResultsLoader,
+    metric_key: str,
+    *,
+    sort_metric_key: str | None,
+    mode: str,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Build the heatmap frame including Average and Average rank summary columns."""
+    long = _selected_metric_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    long = long.dropna(subset=["value"]).copy()
     if long.empty:
-        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
-
-    # Shorten model and dataset names for readability
-    long["model"] = long["model"].map(_shorten_model_name)
-    long["dataset"] = long["dataset"].map(_shorten_dataset_name)
+        return long, [], []
 
     # Column-normalise: within each dataset, rank models 0→1
-    def _col_norm(x):
+    def _col_norm(x: pd.Series) -> pd.Series:
         lo, hi = x.min(), x.max()
         if hi == lo:
             return pd.Series(0.5, index=x.index)
         return (x - lo) / (hi - lo)
 
+    long["summary_kind"] = "dataset"
     long["color"] = long.groupby("dataset")["value"].transform(_col_norm)
     if mode == "min":
         long["color"] = 1.0 - long["color"]
 
-    # Average column: mean value per model, normalised independently across models
+    # Rank within each dataset (1 = best); computed before summary rows are added
+    long["rank"] = long.groupby("dataset")["value"].rank(
+        method="min", ascending=(mode == "min")
+    ).astype(float)
+
+    # Average metric-value column
     avg_val = long.groupby("model")["value"].mean()
     avg_n = long.groupby("model")["n"].mean()
     lo, hi = avg_val.min(), avg_val.max()
@@ -154,30 +158,100 @@ def build_heatmap(
     else:
         avg_color = pd.Series(0.5, index=avg_val.index)
 
-    # Sort models by average color (best at top)
-    model_order = avg_color.sort_values(ascending=False).index.tolist()
+    avg_rows = pd.DataFrame(
+        {
+            "dataset": "Average",
+            "model": avg_val.index,
+            "value": avg_val.values,
+            "n": avg_n.values,
+            "color": avg_color.reindex(avg_val.index).values,
+            "rank": np.nan,
+            "summary_kind": "average",
+        }
+    )
 
-    # Rank within each dataset (1 = best); computed before average rows are added
-    long["rank"] = long.groupby("dataset")["value"].rank(method="min", ascending=(mode == "min")).astype(int)
+    # Average-rank column: mean of per-dataset ranks, not rank(avg performance)
+    avg_rank = long.groupby("model")["rank"].mean()
+    rank_lo, rank_hi = avg_rank.min(), avg_rank.max()
+    if rank_hi > rank_lo:
+        avg_rank_color = 1.0 - ((avg_rank - rank_lo) / (rank_hi - rank_lo))
+    else:
+        avg_rank_color = pd.Series(0.5, index=avg_rank.index)
 
-    # Append average rows (placed last on x-axis); no rank for the average column
-    avg_rows = pd.DataFrame({
-        "dataset": "Average",
-        "model": avg_val.index,
-        "value": avg_val.values,
-        "n": avg_n.values,
-        "color": avg_color.reindex(avg_val.index).values,
-        "rank": pd.NA,
-    })
-    long = pd.concat([long, avg_rows], ignore_index=True)
+    avg_rank_rows = pd.DataFrame(
+        {
+            "dataset": "Average rank",
+            "model": avg_rank.index,
+            "value": avg_rank.values,
+            "n": np.nan,
+            "color": avg_rank_color.reindex(avg_rank.index).values,
+            "rank": np.nan,
+            "summary_kind": "average_rank",
+        }
+    )
 
-    dataset_order = [d for d in long["dataset"].unique() if d != "Average"] + ["Average"]
+    # Sort models by mean per-dataset rank (1 = best), not by average metric value.
+    # Break ties with the average-value color so the order stays deterministic.
+    model_order = (
+        pd.DataFrame({"avg_rank": avg_rank, "avg_color": avg_color})
+        .sort_values(["avg_rank", "avg_color"], ascending=[True, False])
+        .index.tolist()
+    )
+    long = pd.concat([long, avg_rows, avg_rank_rows], ignore_index=True)
+    dataset_order = [
+        dataset_name
+        for dataset_name in long["dataset"].unique()
+        if dataset_name not in ("Average", "Average rank")
+    ] + ["Average", "Average rank"]
+    return long, model_order, dataset_order
+
+
+def build_heatmap(
+    loader: ResultsLoader,
+    metric_key: str,
+    sort_metric_key: str | None = None,
+    mode: str = "min",
+    width: int = 900,
+    height: int = 400,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    show_n: bool = True,
+    show_rank: bool = False,
+) -> pn.viewable.Viewable:
+    """Color-coded heatmap of mean metric values across datasets and models."""
+    import holoviews as hv
+    hv.extension("bokeh")
+
+    long, model_order, dataset_order = _build_heatmap_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    if long.empty:
+        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
+
+    # Shorten model and dataset names for readability
+    long["model"] = long["model"].map(_shorten_model_name)
+    long["dataset"] = long["dataset"].map(_shorten_dataset_name)
+    model_order = [_shorten_model_name(model_name) for model_name in model_order]
+    dataset_label_map = {
+        dataset_name: _shorten_dataset_name(dataset_name) for dataset_name in dataset_order
+    }
+    dataset_order = [dataset_label_map[dataset_name] for dataset_name in dataset_order]
 
     n_models = len(model_order)
     row_height = max(30, min(60, 400 // max(n_models, 1)))
     plot_height = max(300, row_height * n_models)
 
     def _make_label(r):
+        if r.get("summary_kind") == "average_rank":
+            return f"{r['value']:.2f}"
         rank_str = f"#{int(r['rank'])} " if (show_rank and pd.notna(r.get("rank"))) else ""
         n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else (" (n=N/A)" if show_n else "")
         return f"{rank_str}{r['value']:.2f}{n_str}"
@@ -194,7 +268,7 @@ def build_heatmap(
         cmap="RdYlGn",
         tools=["hover"],
         xrotation=45,
-        title=f"{metric_key} (mean, col-normalised)",
+        title=f"{metric_key} (selected by active sort metric)",
         fontsize={"title": 13, "labels": 11, "ticks": 9},
         labelled=[],
         toolbar="above",
@@ -215,10 +289,13 @@ def build_bar_chart(
     loader: ResultsLoader,
     metric_key: str,
     dataset: str,
+    sort_metric_key: str | None = None,
     mode: str = "min",
     width: int = 700,
     height: int = 400,
     alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
 ) -> pn.viewable.Viewable:
     """Horizontal bar chart with error bars for a single dataset."""
     import holoviews as hv
@@ -227,17 +304,15 @@ def build_bar_chart(
     if dataset not in loader.datasets:
         return pn.pane.Markdown(f"Dataset **{dataset}** not found.")
 
-    mean_row = loader.metric_matrix(metric_key, "mean").loc[dataset]
-    std_row = loader.metric_matrix(metric_key, "std").loc[dataset]
-
-    df = pd.DataFrame({"model": mean_row.index, "mean": mean_row.values, "std": std_row.values})
-
-    if alt_metric_key:
-        alt_mean = loader.metric_matrix(alt_metric_key, "mean").loc[dataset]
-        alt_std = loader.metric_matrix(alt_metric_key, "std").loc[dataset]
-        alt_mask = df["model"].apply(_is_alt_model)
-        df.loc[alt_mask, "mean"] = alt_mean.reindex(df.loc[alt_mask, "model"]).values
-        df.loc[alt_mask, "std"] = alt_std.reindex(df.loc[alt_mask, "model"]).values
+    df = _selected_metric_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+        dataset=dataset,
+    ).rename(columns={"value": "mean"})
 
     df = df.dropna(subset=["mean"]).sort_values("mean", ascending=(mode == "min"))
     df["std"] = df["std"].fillna(0)
@@ -286,11 +361,29 @@ def _parse_dataset_filter(dataset: str) -> tuple[str, str | None]:
     return dataset, None
 
 
+def _effective_summary_metric(
+    model: str,
+    metric: str | None,
+    *,
+    alt_metric_key: str | None,
+    use_alt_metric: bool,
+) -> str | None:
+    """Resolve the metric row to show in the static summary table for one model."""
+    if metric is None:
+        return None
+    if use_alt_metric and alt_metric_key and is_alt_model(model):
+        return alt_metric_key
+    return metric
+
+
 def build_summary_table(
     loader: ResultsLoader,
     dataset: str | None = None,
     model: str | None = None,
     metric: str | None = None,
+    *,
+    alt_metric_key: str | None = None,
+    use_alt_metric: bool = True,
 ) -> pn.viewable.Viewable:
     df = loader.summary_df
     if df is None:
@@ -303,9 +396,17 @@ def build_summary_table(
     if model:
         df = df[df["Model"] == model]
     if metric:
-        df = df[df["Metric"] == metric]
+        expected_metric = df["Model"].map(
+            lambda model_name: _effective_summary_metric(
+                str(model_name),
+                metric,
+                alt_metric_key=alt_metric_key,
+                use_alt_metric=use_alt_metric,
+            )
+        )
+        df = df[df["Metric"] == expected_metric]
     return pn.widgets.Tabulator(
-        df,
+        df.reset_index(drop=True),
         pagination="local",
         page_size=25,
         show_index=False,
@@ -345,43 +446,138 @@ def build_stats_table(
 # HP impact table
 # ---------------------------------------------------------------------------
 
-def build_hp_impact_table(
+def _format_metric_cell(mean_v: float, std_v: float, count_v: float, precision: int) -> str:
+    """Format one HP impact metric cell."""
+    if np.isnan(mean_v):
+        return "-"
+    std_display = 0.0 if np.isnan(std_v) else std_v
+    count_display = 0 if np.isnan(count_v) else int(count_v)
+    return f"{mean_v:.{precision}f} ± {std_display:.{precision}f} (n={count_display})"
+
+
+def _css_attr_value(value: str) -> str:
+    """Escape a string for use in a CSS attribute selector."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _sort_metric_highlight_css(metric_name: str | None) -> str:
+    """Return CSS that highlights the active sort-metric column."""
+    if not metric_name:
+        return ""
+    escaped = _css_attr_value(metric_name)
+    return f"""
+    .tabulator .tabulator-col[tabulator-field="{escaped}"] {{
+        background: #ffe3bf;
+    }}
+    .tabulator .tabulator-cell[tabulator-field="{escaped}"] {{
+        background: #fff4e5;
+    }}
+    """
+
+
+def _prioritize_metric_columns(
+    metric_names: list[str],
+    display_metric_key: str | None,
+    sort_metric_key: str | None,
+) -> list[str]:
+    """Order metrics as display metric, sort metric, then all remaining metrics."""
+    prioritized: list[str] = []
+    for metric_name in (display_metric_key, sort_metric_key):
+        if metric_name and metric_name in metric_names and metric_name not in prioritized:
+            prioritized.append(metric_name)
+    return prioritized + [metric for metric in metric_names if metric not in prioritized]
+
+
+def _build_hp_impact_frame(
     loader: ResultsLoader,
     dataset: str,
     model: str,
+    *,
+    metric_key: str,
+    sort_metric_key: str | None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
     precision: int = 4,
-) -> pn.viewable.Viewable:
-    ds = loader.hp_impact_ds(dataset, model)
-    if ds is None:
-        return pn.pane.Markdown(
-            f"No HP config table found for **{dataset}** / **{model}**. "
-            f"Re-run the report pipeline to generate it."
-        )
+) -> tuple[pd.DataFrame | None, dict[str, object], list[str], list[str]]:
+    """Build the sorted HP impact DataFrame and selection metadata."""
+    ds, selection = loader.sorted_hp_configs(
+        dataset,
+        model,
+        metric_key=metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    if ds is None or ds.sizes.get("config", 0) == 0 or "metric" not in ds.coords:
+        return None, selection, [], []
 
     hp_coord_names = [c for c in ds.coords if c not in ("config", "metric")]
-    metric_names   = ds.coords["metric"].values.tolist()
+    metric_names = [str(metric) for metric in ds.coords["metric"].values.tolist()]
+    metric_names = _prioritize_metric_columns(
+        metric_names,
+        selection.get("display_metric_key") if isinstance(selection, dict) else None,
+        selection.get("effective_sort_metric_key") if isinstance(selection, dict) else None,
+    )
 
     rows = []
     for i in range(ds.sizes["config"]):
         cfg = ds.isel(config=i)
         row = {hp: cfg.coords[hp].item() for hp in hp_coord_names}
-        row["seeds"] = int(cfg["count"].values[0])
+        count_values = np.asarray(cfg["count"].values, dtype=float)
+        first_count = count_values[0] if count_values.size else np.nan
+        row["seeds"] = 0 if np.isnan(first_count) else int(first_count)
         for metric in metric_names:
-            m = cfg.sel(metric=metric)
-            mean_v = float(m["mean"].values)
-            std_v  = float(m["std"].values)
-            n      = int(m["count"].values)
-            row[metric] = f"{mean_v:.{precision}f} ± {std_v:.{precision}f} (n={n})"
+            metric_slice = cfg.sel(metric=metric)
+            mean_v = float(metric_slice["mean"].values)
+            std_v = float(metric_slice["std"].values)
+            count_v = float(metric_slice["count"].values)
+            row[metric] = _format_metric_cell(mean_v, std_v, count_v, precision)
         rows.append(row)
 
     df = pd.DataFrame(rows)
-    hp_cols     = hp_coord_names
-    metric_cols = metric_names
-    ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + metric_cols
+    ordered_cols = (
+        hp_coord_names
+        + metric_names
+        + (["seeds"] if "seeds" in df.columns else [])
+    )
+    return df[ordered_cols], selection, hp_coord_names, metric_names
+
+
+def build_hp_impact_table(
+    loader: ResultsLoader,
+    dataset: str,
+    model: str,
+    metric_key: str,
+    sort_metric_key: str | None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    precision: int = 4,
+) -> pn.viewable.Viewable:
+    df, selection, hp_cols, metric_cols = _build_hp_impact_frame(
+        loader,
+        dataset,
+        model,
+        metric_key=metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+        precision=precision,
+    )
+    if df is None:
+        return pn.pane.Markdown(
+            f"No HP config table found for **{dataset}** / **{model}**. "
+            f"Re-run the report pipeline to generate it."
+        )
+
+    ordered_cols = hp_cols + metric_cols + (["seeds"] if "seeds" in df.columns else [])
     df = df[ordered_cols]
 
     # Pre-select only varying HP columns (nunique > 1) + seeds + metric cols
-    stat_default = (["seeds"] if "seeds" in df.columns else []) + metric_cols
+    stat_default = metric_cols + (["seeds"] if "seeds" in df.columns else [])
     varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
     default_cols = (varying_hp or hp_cols) + stat_default
 
@@ -412,6 +608,11 @@ def build_hp_impact_table(
         transform: translateX(-50%);
     }
     """
+    highlight_css = _sort_metric_highlight_css(
+        selection.get("effective_sort_metric_key")
+        if isinstance(selection, dict)
+        else None
+    )
 
     def _table(cols):
         visible = cols if cols else ordered_cols
@@ -422,7 +623,7 @@ def build_hp_impact_table(
             show_index=False,
             sortable=True,
             sizing_mode="stretch_width",
-            stylesheets=[rotated_header_css],
+            stylesheets=[rotated_header_css, highlight_css],
         )
 
     return pn.Column(
@@ -433,35 +634,177 @@ def build_hp_impact_table(
 
 
 # ---------------------------------------------------------------------------
-# Metadata panel (opt metric, total runs, failures)
+# Metadata helpers and tables
 # ---------------------------------------------------------------------------
+
+def _display_metadata_value(value: object) -> str:
+    """Render metadata values consistently for metadata tables."""
+    if value is None:
+        return "—"
+    try:
+        missing = pd.isna(value)
+    except Exception:
+        missing = False
+    if isinstance(missing, (bool, np.bool_)) and missing:
+        return "—"
+    return str(value)
+
+
+_MODEL_LINK_STYLESHEET = """
+.tabulator .tabulator-cell[tabulator-field="Model"] {
+  color: #0d6efd;
+  text-decoration: underline;
+  cursor: pointer;
+}
+"""
+
+
+def _metadata_rows(
+    loader: ResultsLoader,
+    dataset: str,
+    model: str,
+    *,
+    metric_key: str,
+    sort_metric_key: str | None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+) -> dict[str, str]:
+    """Build the metadata property/value mapping for one dataset/model pair."""
+    if dataset not in loader.datasets or model not in loader.models:
+        return {}
+
+    selection = loader.resolve_metric_selection(
+        dataset,
+        model,
+        metric_key=metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    active_sort_metric = selection["effective_sort_metric_key"]
+    if selection["sort_metric_fell_back"]:
+        active_sort_metric = (
+            f"{active_sort_metric} "
+            f"(fallback from {selection['fallback_from_sort_metric_key']})"
+        )
+
+    return {
+        "Dashboard metric": _display_metadata_value(selection["display_metric_key"]),
+        "Dashboard sort metric": _display_metadata_value(active_sort_metric),
+        "Report sort metric": _display_metadata_value(
+            loader.metadata_value("sort_metric", dataset, model)
+        ),
+        "Opt metric": _display_metadata_value(
+            loader.metadata_value("opt_metric", dataset, model)
+        ),
+        "Opt mode": _display_metadata_value(loader.metadata_value("opt_mode", dataset, model)),
+        "Opt value": _display_metadata_value(
+            loader.metadata_value("opt_value", dataset, model)
+        ),
+        "Total runs": _display_metadata_value(
+            loader.metadata_value("total_runs", dataset, model)
+        ),
+        "Configs failed (seed)": _display_metadata_value(
+            loader.metadata_value("configs_failed_seed", dataset, model)
+        ),
+        "Configs failed (metric)": _display_metadata_value(
+            loader.metadata_value("configs_failed_metric", dataset, model)
+        ),
+    }
+
+
+def build_model_summary_table(
+    loader: ResultsLoader,
+    dataset: str | None,
+    *,
+    metric_key: str,
+    sort_metric_key: str | None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    on_model_click: Callable[[str], None] | None = None,
+) -> pn.viewable.Viewable:
+    """Build a model-summary table for one dataset using metadata-panel properties."""
+    if dataset is None:
+        return pn.pane.Markdown("Select a dataset to view model summary.")
+    if dataset not in loader.datasets:
+        return pn.pane.Markdown(f"Dataset **{dataset}** not found.")
+
+    rows = []
+    for model in loader.models:
+        metadata = _metadata_rows(
+            loader,
+            dataset,
+            model,
+            metric_key=metric_key,
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+        )
+        if not metadata:
+            continue
+
+        row = {"Model": _shorten_model_name(model), **metadata, "_model_key": model}
+        # Skip models that do not have any meaningful values for this dataset.
+        if all(value == "—" for key, value in row.items() if key not in {"Model", "_model_key"}):
+            continue
+        rows.append(row)
+
+    if not rows:
+        return pn.pane.Markdown(f"No model summary available for **{dataset}**.")
+
+    df = pd.DataFrame(rows).fillna("—")
+    table = pn.widgets.Tabulator(
+        df,
+        show_index=False,
+        pagination="local",
+        page_size=25,
+        sizing_mode="stretch_width",
+        hidden_columns=["_model_key"],
+        stylesheets=[_MODEL_LINK_STYLESHEET],
+    )
+    if on_model_click is not None:
+        def _handle_model_click(event: object) -> None:
+            row = getattr(event, "row", None)
+            if not isinstance(row, int) or row < 0 or row >= len(df):
+                return
+            model_key = df.iloc[row]["_model_key"]
+            if isinstance(model_key, str):
+                on_model_click(model_key)
+
+        table.on_click(_handle_model_click, column="Model")
+    return table
+
 
 def build_metadata_panel(
     loader: ResultsLoader,
     dataset: str,
     model: str,
+    *,
+    metric_key: str,
+    sort_metric_key: str | None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
 ) -> pn.viewable.Viewable:
-    ds = loader.xarray_dataset
-    if dataset not in loader.datasets or model not in loader.models:
+    metadata = _metadata_rows(
+        loader,
+        dataset,
+        model,
+        metric_key=metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    if not metadata:
         return pn.pane.Markdown("Select a valid dataset and model.")
 
-    def _val(var: str) -> str:
-        try:
-            v = ds[var].sel(dataset=dataset, model=model).item()
-            return "—" if (v is None or (isinstance(v, float) and np.isnan(v))) else str(v)
-        except Exception:
-            return "—"
-
-    rows = {
-        "Sort metric": _val("sort_metric"),
-        "Opt metric": _val("opt_metric"),
-        "Opt mode": _val("opt_mode"),
-        "Opt value": _val("opt_value"),
-        "Total runs": _val("total_runs"),
-        "Configs failed (seed)": _val("configs_failed_seed"),
-        "Configs failed (metric)": _val("configs_failed_metric"),
-    }
-    df = pd.DataFrame(list(rows.items()), columns=["Property", "Value"])
+    df = pd.DataFrame(list(metadata.items()), columns=["Property", "Value"])
     return pn.widgets.Tabulator(
         df,
         show_index=False,

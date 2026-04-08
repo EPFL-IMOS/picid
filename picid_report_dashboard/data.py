@@ -19,11 +19,98 @@ import glob
 import os
 import re
 from functools import cached_property
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+
+
+_ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
+
+
+def is_alt_model(name: str) -> bool:
+    """Return whether *name* should use the alternate metric selectors."""
+    lower = name.lower()
+    return any(pattern in lower for pattern in _ALT_METRIC_MODELS)
+
+
+def infer_metric_mode(metric_name: str | None) -> str:
+    """Infer whether a metric should be minimized or maximized."""
+    if not metric_name:
+        return "min"
+
+    metric_lower = metric_name.lower()
+    maximize_keywords = (
+        "accuracy",
+        "acc",
+        "f1",
+        "f1_score",
+        "f_score",
+        "auc",
+        "roc_auc",
+        "precision",
+        "recall",
+        "r2",
+        "r_squared",
+        "spearman",
+        "pearson",
+    )
+    minimize_keywords = (
+        "loss",
+        "error",
+        "mse",
+        "mean_squared_error",
+        "mae",
+        "mean_absolute_error",
+        "rmse",
+        "root_mean_squared_error",
+        "mape",
+        "mean_absolute_percentage_error",
+        "log_loss",
+        "cross_entropy",
+    )
+
+    if any(keyword in metric_lower for keyword in maximize_keywords):
+        return "max"
+    if any(keyword in metric_lower for keyword in minimize_keywords):
+        return "min"
+    return "min"
+
+
+def _split_dataset_label(dataset: str) -> tuple[str, str | None]:
+    """Split 'DatasetName [project_name]' into (base_name, project_name)."""
+    if " [" in dataset and dataset.endswith("]"):
+        base, project = dataset.rsplit(" [", 1)
+        return base, project.rstrip("]")
+    return dataset, None
+
+
+def _safe_path_fragment(value: str) -> str:
+    return re.sub(r"[^\w\-.]", "_", str(value))[:80]
+
+
+def _is_empty_hp_dataset(ds: xr.Dataset | None) -> bool:
+    """Return whether an HP config dataset has no sortable metric data."""
+    if ds is None or not isinstance(ds, xr.Dataset):
+        return True
+    if "metric" not in ds.coords:
+        return True
+    if ds.sizes.get("config", 0) == 0:
+        return True
+    return not bool(ds.data_vars)
+
+
+def _normalize_scalar(value: Any) -> Any:
+    """Convert xarray/numpy scalars to native Python values and map NaN -> None."""
+    if hasattr(value, "item"):
+        try:
+            value = value.item()
+        except Exception:
+            pass
+    if isinstance(value, (float, np.floating)) and np.isnan(value):
+        return None
+    return value
 
 
 class ResultsLoader:
@@ -31,6 +118,7 @@ class ResultsLoader:
 
     def __init__(self, base_dir: str) -> None:
         self.base_dir = os.path.abspath(base_dir)
+        self._hp_ds_cache: dict[tuple[str, str], xr.Dataset | None] = {}
         self._check_base_dir()
 
     def _check_base_dir(self) -> None:
@@ -219,18 +307,13 @@ class ResultsLoader:
         coordinate labelling. The suffix is stripped for filename lookup and
         used to restrict the search to the matching project directory.
         """
-        def _safe(s: str) -> str:
-            return re.sub(r"[^\w\-.]", "_", str(s))[:80]
+        cache_key = (dataset, model)
+        if cache_key in self._hp_ds_cache:
+            return self._hp_ds_cache[cache_key]
 
-        # Split 'DatasetName [project_name]' → (base_name, project_name)
-        if " [" in dataset and dataset.endswith("]"):
-            ds_base, project_name = dataset.rsplit(" [", 1)
-            project_name = project_name.rstrip("]")
-        else:
-            ds_base, project_name = dataset, None
-
-        ds_safe    = _safe(ds_base)
-        model_safe = _safe(model)
+        ds_base, project_name = _split_dataset_label(dataset)
+        ds_safe = _safe_path_fragment(ds_base)
+        model_safe = _safe_path_fragment(model)
 
         # Search only the matching project directory when we know the project
         search_dirs = [
@@ -241,5 +324,220 @@ class ResultsLoader:
         for d in search_dirs:
             p = os.path.join(d, "tables", "hp_configs", f"{ds_safe}_{model_safe}.nc")
             if os.path.isfile(p):
-                return xr.load_dataset(p)
+                loaded = xr.load_dataset(p)
+                self._hp_ds_cache[cache_key] = loaded
+                return loaded
+
+        self._hp_ds_cache[cache_key] = None
         return None
+
+    def metadata_value(self, variable: str, dataset: str, model: str) -> Any:
+        """Return a single metadata value from results.nc for one dataset/model."""
+        try:
+            value = self.xarray_dataset[variable].sel(dataset=dataset, model=model).values
+        except Exception:
+            return None
+        return _normalize_scalar(value)
+
+    def metric_in_hp_dataset(self, hp_ds: xr.Dataset | None, metric_key: str | None) -> bool:
+        """Return whether *metric_key* exists in the given HP config dataset."""
+        if metric_key is None or _is_empty_hp_dataset(hp_ds):
+            return False
+        return metric_key in {str(metric) for metric in hp_ds.coords["metric"].values}
+
+    def sort_config_indices(
+        self,
+        hp_ds: xr.Dataset | None,
+        sort_metric_key: str | None,
+        sort_mode: str,
+    ) -> np.ndarray:
+        """Return config indices sorted by *sort_metric_key* with NaNs placed last."""
+        if (
+            _is_empty_hp_dataset(hp_ds)
+            or sort_metric_key is None
+            or not self.metric_in_hp_dataset(hp_ds, sort_metric_key)
+        ):
+            size = 0 if hp_ds is None else hp_ds.sizes.get("config", 0)
+            return np.arange(size, dtype=int)
+
+        sort_values = np.asarray(hp_ds.sel(metric=sort_metric_key)["mean"].values, dtype=float)
+        valid_mask = np.isfinite(sort_values)
+        valid_indices = np.flatnonzero(valid_mask)
+        invalid_indices = np.flatnonzero(~valid_mask)
+
+        ordered_valid = valid_indices[np.argsort(sort_values[valid_indices])]
+        if sort_mode != "min":
+            ordered_valid = ordered_valid[::-1]
+        return np.concatenate([ordered_valid, invalid_indices]).astype(int, copy=False)
+
+    def resolve_metric_selection(
+        self,
+        dataset: str,
+        model: str,
+        *,
+        metric_key: str,
+        sort_metric_key: str | None,
+        alt_metric_key: str | None = None,
+        alt_sort_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+    ) -> dict[str, Any]:
+        """Resolve effective display/sort metrics for one dataset/model pair."""
+        use_alt = bool(use_alt_metric and is_alt_model(model))
+        display_metric_key = alt_metric_key if (use_alt and alt_metric_key) else metric_key
+        requested_sort_metric_key = (
+            alt_sort_metric_key if (use_alt and alt_sort_metric_key) else sort_metric_key
+        )
+
+        hp_ds = self.hp_impact_ds(dataset, model)
+        opt_metric_key = self.metadata_value("opt_metric", dataset, model)
+        stored_sort_metric_key = self.metadata_value("sort_metric", dataset, model)
+        effective_sort_metric_key = (
+            requested_sort_metric_key or opt_metric_key or stored_sort_metric_key
+        )
+        fallback_from_sort_metric_key = None
+
+        if not self.metric_in_hp_dataset(hp_ds, effective_sort_metric_key):
+            for candidate in (opt_metric_key, stored_sort_metric_key):
+                if self.metric_in_hp_dataset(hp_ds, candidate):
+                    fallback_from_sort_metric_key = effective_sort_metric_key
+                    effective_sort_metric_key = candidate
+                    break
+            else:
+                if not _is_empty_hp_dataset(hp_ds):
+                    available = [str(metric) for metric in hp_ds.coords["metric"].values]
+                    if available:
+                        fallback_from_sort_metric_key = effective_sort_metric_key
+                        effective_sort_metric_key = available[0]
+                    else:
+                        effective_sort_metric_key = None
+                else:
+                    effective_sort_metric_key = effective_sort_metric_key
+
+        return {
+            "dataset": dataset,
+            "model": model,
+            "uses_alt_metric": use_alt,
+            "display_metric_key": display_metric_key,
+            "requested_sort_metric_key": requested_sort_metric_key,
+            "effective_sort_metric_key": effective_sort_metric_key,
+            "sort_mode": infer_metric_mode(effective_sort_metric_key),
+            "sort_metric_fell_back": (
+                fallback_from_sort_metric_key is not None
+                and fallback_from_sort_metric_key != effective_sort_metric_key
+            ),
+            "fallback_from_sort_metric_key": fallback_from_sort_metric_key,
+            "opt_metric_key": opt_metric_key,
+            "stored_sort_metric_key": stored_sort_metric_key,
+            "hp_dataset_available": not _is_empty_hp_dataset(hp_ds),
+            "display_metric_available": self.metric_in_hp_dataset(hp_ds, display_metric_key),
+        }
+
+    def sorted_hp_configs(
+        self,
+        dataset: str,
+        model: str,
+        *,
+        metric_key: str,
+        sort_metric_key: str | None,
+        alt_metric_key: str | None = None,
+        alt_sort_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+    ) -> tuple[xr.Dataset | None, dict[str, Any]]:
+        """Return the HP dataset sorted by the active dashboard sort metric."""
+        hp_ds = self.hp_impact_ds(dataset, model)
+        selection = self.resolve_metric_selection(
+            dataset,
+            model,
+            metric_key=metric_key,
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+        )
+        if _is_empty_hp_dataset(hp_ds) or selection["effective_sort_metric_key"] is None:
+            return hp_ds, selection
+
+        sort_idx = self.sort_config_indices(
+            hp_ds,
+            selection["effective_sort_metric_key"],
+            selection["sort_mode"],
+        )
+        return hp_ds.isel(config=sort_idx.tolist()), selection
+
+    def selected_metric_record(
+        self,
+        dataset: str,
+        model: str,
+        *,
+        metric_key: str,
+        sort_metric_key: str | None,
+        alt_metric_key: str | None = None,
+        alt_sort_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+    ) -> dict[str, Any]:
+        """Return display metric stats from the best config under the active sort metric."""
+        sorted_hp_ds, selection = self.sorted_hp_configs(
+            dataset,
+            model,
+            metric_key=metric_key,
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+        )
+        record = {
+            **selection,
+            "value": np.nan,
+            "std": np.nan,
+            "n": np.nan,
+            "config_index": None,
+        }
+
+        if _is_empty_hp_dataset(sorted_hp_ds):
+            return record
+        if sorted_hp_ds.sizes.get("config", 0) == 0:
+            return record
+
+        best_cfg = sorted_hp_ds.isel(config=0)
+        record["config_index"] = int(best_cfg.coords["config"].item())
+        display_metric_key = selection["display_metric_key"]
+        if not self.metric_in_hp_dataset(sorted_hp_ds, display_metric_key):
+            return record
+
+        metric_slice = best_cfg.sel(metric=display_metric_key)
+        mean_value = float(metric_slice["mean"].values)
+        std_value = float(metric_slice["std"].values)
+        count_value = float(metric_slice["count"].values)
+
+        record["value"] = mean_value
+        record["std"] = np.nan if np.isnan(std_value) else std_value
+        record["n"] = np.nan if np.isnan(count_value) else count_value
+        return record
+
+    def selected_metric_records(
+        self,
+        *,
+        metric_key: str,
+        sort_metric_key: str | None,
+        alt_metric_key: str | None = None,
+        alt_sort_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+        dataset: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return dashboard display records for all dataset/model combinations."""
+        datasets = [dataset] if dataset is not None else self.datasets
+        records: list[dict[str, Any]] = []
+        for dataset_name in datasets:
+            for model_name in self.models:
+                records.append(
+                    self.selected_metric_record(
+                        dataset_name,
+                        model_name,
+                        metric_key=metric_key,
+                        sort_metric_key=sort_metric_key,
+                        alt_metric_key=alt_metric_key,
+                        alt_sort_metric_key=alt_sort_metric_key,
+                        use_alt_metric=use_alt_metric,
+                    )
+                )
+        return records

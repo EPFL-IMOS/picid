@@ -33,6 +33,7 @@ from picid_report_dashboard.views import (
     build_heatmap,
     build_hp_impact_table,
     build_metadata_panel,
+    build_model_summary_table,
     build_stats_table,
     build_summary_table,
 )
@@ -45,7 +46,7 @@ pn.extension("tabulator", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 1
+_PERSISTED_STATE_VERSION = 2
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -58,9 +59,11 @@ _MAIN_TAB_TITLES = (
 _PERSISTED_STATE_PARAMS = (
     "report_dir",
     "metric_key",
+    "sort_metric_key",
     "mode",
     "use_alt_metric",
     "alt_metric_key",
+    "alt_sort_metric_key",
     "show_n",
     "show_rank",
     "selected_dataset",
@@ -68,6 +71,23 @@ _PERSISTED_STATE_PARAMS = (
     "active_tab",
 )
 _UNSET = object()
+_ACTIVE_BUTTON_STYLESHEET = """
+:host(.solid) .bk-btn.bk-btn-default.bk-active {
+  background-color: var(--primary-color);
+  color: var(--button-primary-text-color);
+  border-color: var(--primary-color);
+  box-shadow: inset 0px 3px 5px rgb(0 0 0 / 25%);
+}
+"""
+
+
+def _selected_primary_button(widget: pn.widgets.Widget) -> pn.widgets.Widget:
+    """Keep default grey buttons but render the active state with the primary color."""
+    if hasattr(widget, "button_type"):
+        widget.button_type = "default"
+    if hasattr(widget, "stylesheets"):
+        widget.stylesheets = [*widget.stylesheets, _ACTIVE_BUTTON_STYLESHEET]
+    return widget
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +104,9 @@ class PiCIDDashboard(param.Parameterized):
     metric_key = param.Selector(
         default=_DEFAULT_METRIC, objects=[], doc="Metric to visualise"
     )
+    sort_metric_key = param.Selector(
+        default=_DEFAULT_METRIC, objects=[], doc="Metric used to select configs"
+    )
     mode = param.Selector(
         default="min", objects=["min", "max"], doc="Lower or higher is better"
     )
@@ -94,6 +117,11 @@ class PiCIDDashboard(param.Parameterized):
         default=_DEFAULT_METRIC,
         objects=[],
         doc="Alternate metric for fit-predict models",
+    )
+    alt_sort_metric_key = param.Selector(
+        default=_DEFAULT_METRIC,
+        objects=[],
+        doc="Alternate sort metric for fit-predict models",
     )
     show_n = param.Boolean(default=True, doc="Show n= run count in heatmap cells")
     show_rank = param.Boolean(
@@ -137,21 +165,46 @@ class PiCIDDashboard(param.Parameterized):
     def _on_report_dir_change(self) -> None:
         self._load_data()
         self._sync_selectors()
-        self.param.trigger("metric_key")  # force view refresh
+        self.param.trigger(
+            "metric_key",
+            "sort_metric_key",
+            "selected_dataset",
+            "selected_model",
+        )
 
-    def _derive_alt_metric(self, metric: str) -> str | None:
-        """If metric is under test_best_rerun/*, return the test/* equivalent if it exists."""
-        if not metric.startswith("test_best_rerun/"):
-            return None
-        candidate = "test/" + metric[len("test_best_rerun/") :]
-        available = self.param["alt_metric_key"].objects
-        return candidate if candidate in available else None
+    def _derive_alt_metric(
+        self,
+        metric: str,
+        selector_name: str,
+        *,
+        available: list[str] | None = None,
+    ) -> str | None:
+        """Map a primary metric choice to the alt-selector value to keep in sync."""
+        available_metrics = (
+            list(available)
+            if available is not None
+            else list(self.param[selector_name].objects)
+        )
+        for source_prefix, target_prefix in (
+            ("test_best_rerun/", "test/"),
+            ("val_best_rerun/", "val/"),
+        ):
+            if metric.startswith(source_prefix):
+                candidate = target_prefix + metric[len(source_prefix) :]
+                return candidate if candidate in available_metrics else None
+        return metric if metric in available_metrics else None
 
     @param.depends("metric_key", watch=True)
     def _on_metric_key_change(self) -> None:
-        derived = self._derive_alt_metric(self.metric_key)
+        derived = self._derive_alt_metric(self.metric_key, "alt_metric_key")
         if derived:
             self.alt_metric_key = derived
+
+    @param.depends("sort_metric_key", watch=True)
+    def _on_sort_metric_key_change(self) -> None:
+        derived = self._derive_alt_metric(self.sort_metric_key, "alt_sort_metric_key")
+        if derived:
+            self.alt_sort_metric_key = derived
 
     def _set_selector_value(
         self,
@@ -175,7 +228,9 @@ class PiCIDDashboard(param.Parameterized):
             return
         loader = self._loader
         current_metric = self.metric_key
+        current_sort_metric = self.sort_metric_key
         current_alt_metric = self.alt_metric_key
+        current_alt_sort_metric = self.alt_sort_metric_key
         current_dataset = self.selected_dataset
         current_model = self.selected_model
 
@@ -186,12 +241,31 @@ class PiCIDDashboard(param.Parameterized):
             preferred=current_metric,
             fallback=_DEFAULT_METRIC,
         )
-        derived = self._derive_alt_metric(self.metric_key)
+        self._set_selector_value(
+            "sort_metric_key",
+            metrics,
+            preferred=current_sort_metric,
+            fallback=self.metric_key,
+        )
+        derived = self._derive_alt_metric(
+            self.metric_key, "alt_metric_key", available=metrics
+        )
         self._set_selector_value(
             "alt_metric_key",
             metrics,
             preferred=current_alt_metric,
             fallback=derived if derived is not None else _DEFAULT_METRIC,
+        )
+        derived_sort = self._derive_alt_metric(
+            self.sort_metric_key,
+            "alt_sort_metric_key",
+            available=metrics,
+        )
+        self._set_selector_value(
+            "alt_sort_metric_key",
+            metrics,
+            preferred=current_alt_sort_metric,
+            fallback=derived_sort if derived_sort is not None else self.sort_metric_key,
         )
 
         datasets = loader.datasets or []
@@ -239,8 +313,10 @@ class PiCIDDashboard(param.Parameterized):
         string_fields = (
             "report_dir",
             "metric_key",
+            "sort_metric_key",
             "mode",
             "alt_metric_key",
+            "alt_sort_metric_key",
             "selected_dataset",
             "selected_model",
         )
@@ -288,7 +364,9 @@ class PiCIDDashboard(param.Parameterized):
             if self._loader is not None:
                 for name in (
                     "metric_key",
+                    "sort_metric_key",
                     "alt_metric_key",
+                    "alt_sort_metric_key",
                     "selected_dataset",
                     "selected_model",
                 ):
@@ -312,25 +390,64 @@ class PiCIDDashboard(param.Parameterized):
     def _active_alt_metric(self) -> str | None:
         return self.alt_metric_key if self.use_alt_metric else None
 
+    def _active_alt_sort_metric(self) -> str | None:
+        return self.alt_sort_metric_key if self.use_alt_metric else None
+
     @param.depends(
-        "metric_key", "mode", "use_alt_metric", "alt_metric_key", "show_n", "show_rank"
+        "metric_key",
+        "sort_metric_key",
+        "mode",
+        "selected_dataset",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+        "show_n",
+        "show_rank",
     )
     def _heatmap_view(self):
         if self._load_error:
             return pn.pane.Alert(
                 f"**Error loading data:** {self._load_error}", alert_type="danger"
             )
-        return build_heatmap(
-            self._loader,
-            self.metric_key,
-            self.mode,
-            alt_metric_key=self._active_alt_metric(),
-            show_n=self.show_n,
-            show_rank=self.show_rank,
+        return pn.Column(
+            build_heatmap(
+                self._loader,
+                self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                mode=self.mode,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+                show_n=self.show_n,
+                show_rank=self.show_rank,
+            ),
+            pn.layout.Divider(),
+            pn.pane.Markdown(
+                f"### View Configuration Summary for {self.selected_dataset}"
+                if self.selected_dataset is not None
+                else "### View Configuration Summary"
+            ),
+            build_model_summary_table(
+                self._loader,
+                self.selected_dataset,
+                metric_key=self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+                on_model_click=self._show_hp_impact_for_model,
+            ),
+            sizing_mode="stretch_width",
         )
 
     @param.depends(
-        "metric_key", "mode", "selected_dataset", "use_alt_metric", "alt_metric_key"
+        "metric_key",
+        "sort_metric_key",
+        "mode",
+        "selected_dataset",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
     )
     def _bar_chart_view(self):
         if self._load_error or self.selected_dataset is None:
@@ -339,8 +456,11 @@ class PiCIDDashboard(param.Parameterized):
             self._loader,
             self.metric_key,
             self.selected_dataset,
-            self.mode,
+            mode=self.mode,
+            sort_metric_key=self.sort_metric_key,
             alt_metric_key=self._active_alt_metric(),
+            alt_sort_metric_key=self._active_alt_sort_metric(),
+            use_alt_metric=self.use_alt_metric,
         )
 
     def _active_model(self) -> str | None:
@@ -348,23 +468,96 @@ class PiCIDDashboard(param.Parameterized):
         m = self.selected_model
         return None if (m is None or m == _ALL_MODELS_OPTION) else m
 
-    @param.depends("selected_dataset", "selected_model")
+    def _show_hp_impact_for_model(self, model: str) -> None:
+        """Select a model and switch to the HP Impact tab."""
+        if model in self.param["selected_model"].objects:
+            self.selected_model = model
+        self.active_tab = 2
+
+    @param.depends(
+        "selected_dataset",
+        "selected_model",
+        "metric_key",
+        "sort_metric_key",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+    )
     def _hp_impact_view(self):
         model = self._active_model()
         if self._load_error or self.selected_dataset is None or model is None:
             return pn.pane.Markdown("Select a dataset and model.")
         return pn.Column(
-            build_metadata_panel(self._loader, self.selected_dataset, model),
+            pn.pane.Markdown(f"### HP Impact for {model} on {self.selected_dataset}"),
+            build_metadata_panel(
+                self._loader,
+                self.selected_dataset,
+                model,
+                metric_key=self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+            ),
             pn.layout.Divider(),
-            build_hp_impact_table(self._loader, self.selected_dataset, model),
+            build_hp_impact_table(
+                self._loader,
+                self.selected_dataset,
+                model,
+                metric_key=self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+            ),
         )
 
-    @param.depends("report_dir", "selected_dataset", "selected_model", "metric_key")
+    @param.depends(
+        "report_dir",
+        "selected_dataset",
+        "selected_model",
+        "metric_key",
+        "sort_metric_key",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+    )
     def _summary_view(self):
         if self._load_error:
             return pn.pane.Alert(self._load_error, alert_type="danger")
-        return build_summary_table(
-            self._loader, self.selected_dataset, self._active_model(), self.metric_key
+        return pn.Column(
+            pn.pane.Markdown(
+                (
+                    f"### Summary Table for {self.metric_key} on {self.selected_dataset}"
+                    if self.selected_dataset is not None
+                    else f"### Summary Table for {self.metric_key}"
+                )
+            ),
+            build_summary_table(
+                self._loader,
+                self.selected_dataset,
+                self._active_model(),
+                self.metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                use_alt_metric=self.use_alt_metric,
+            ),
+            pn.layout.Divider(),
+            pn.pane.Markdown(
+                f"### View Configuration Summary for {self.selected_dataset}"
+                if self.selected_dataset is not None
+                else "### View Configuration Summary"
+            ),
+            build_model_summary_table(
+                self._loader,
+                self.selected_dataset,
+                metric_key=self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+                on_model_click=self._show_hp_impact_for_model,
+            ),
+            sizing_mode="stretch_width",
         )
 
     @param.depends("report_dir", "selected_dataset", "selected_model")
@@ -387,19 +580,33 @@ class PiCIDDashboard(param.Parameterized):
         metric_sel = pn.widgets.Select.from_param(
             self.param.metric_key, name="Metric", width=280
         )
-        mode_sel = pn.widgets.RadioButtonGroup.from_param(
-            self.param.mode, name="Optimise", width=140
+        sort_metric_sel = pn.widgets.Select.from_param(
+            self.param.sort_metric_key, name="Sort metric", width=280
         )
-        alt_toggle = pn.widgets.Toggle.from_param(
-            self.param.use_alt_metric,
-            name="Alt metric for XGBoost / TabPFN / TabDPT",
-            width=280,
+        mode_sel = _selected_primary_button(
+            pn.widgets.RadioButtonGroup.from_param(
+                self.param.mode, name="Optimise", width=140
+            )
+        )
+        alt_toggle = _selected_primary_button(
+            pn.widgets.Toggle.from_param(
+                self.param.use_alt_metric,
+                name="Alt metric for XGBoost / TabPFN / TabDPT",
+                width=280,
+            )
         )
         alt_metric_sel = pn.widgets.Select.from_param(
             self.param.alt_metric_key, name="Alt metric", width=280
         )
+        alt_sort_metric_sel = pn.widgets.Select.from_param(
+            self.param.alt_sort_metric_key, name="Alt sort metric", width=280
+        )
         alt_metric_panel = pn.bind(
             lambda use: alt_metric_sel if use else pn.layout.Spacer(height=0),
+            self.param.use_alt_metric,
+        )
+        alt_sort_metric_panel = pn.bind(
+            lambda use: alt_sort_metric_sel if use else pn.layout.Spacer(height=0),
             self.param.use_alt_metric,
         )
         dataset_sel = pn.widgets.Select.from_param(
@@ -447,7 +654,7 @@ class PiCIDDashboard(param.Parameterized):
             if (saved) {{
                 restore.value = saved;
             }}
-            """
+            """,
         )
 
         def _on_restore(event: param.parameterized.Event) -> None:
@@ -468,15 +675,21 @@ class PiCIDDashboard(param.Parameterized):
             pn.layout.Divider(),
             "**Visualisation**",
             metric_sel,
+            sort_metric_sel,
             "**Direction**",
             mode_sel,
             alt_toggle,
             alt_metric_panel,
-            pn.widgets.Toggle.from_param(
-                self.param.show_n, name="Show n= in heatmap", width=280
+            alt_sort_metric_panel,
+            _selected_primary_button(
+                pn.widgets.Toggle.from_param(
+                    self.param.show_n, name="Show n= in heatmap", width=280
+                )
             ),
-            pn.widgets.Toggle.from_param(
-                self.param.show_rank, name="Show rank in heatmap", width=280
+            _selected_primary_button(
+                pn.widgets.Toggle.from_param(
+                    self.param.show_rank, name="Show rank in heatmap", width=280
+                )
             ),
             pn.layout.Divider(),
             "**Focus**",
