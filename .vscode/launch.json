@@ -1496,5 +1496,16 @@
                 "report_output",
             ]
         },
+        {
+            "name": "unibo patchtst",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "experiment=unibo/prognostics/combined/patchtst",
+            ],
+        },
     ]
 }

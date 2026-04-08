@@ -67,3 +67,4 @@ lmetk_report_artifacts
 tasks/*
 .claude/worktrees/
 .claude
+tmp/
