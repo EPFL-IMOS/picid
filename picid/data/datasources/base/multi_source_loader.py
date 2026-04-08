@@ -1,4 +1,5 @@
-"""Concrete datasource loader for multi-source compositions.
+"""
+Concrete datasource loader for multi-source compositions.
 
 The multi-source loader orchestrates a set of child loaders and exposes the
 combined dataset as a single datasource to preprocessing. It supports two
@@ -14,7 +15,7 @@ from copy import deepcopy
 from typing import Any, Dict, Optional, override
 
 from hydra.utils import instantiate
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from picid.data.data_objects import DatasetContainer, SplitDatasetContainer
 from picid.data.datasources.base.exceptions import (
@@ -33,7 +34,8 @@ logger = logging.getLogger(__name__)
 
 
 class MultiSourceLoader(AbstractDataSourceLoader):
-    """Compose multiple child datasources into one datasource.
+    """
+    Compose multiple child datasources into one datasource.
 
     Parameters
     ----------
@@ -61,10 +63,28 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         multisource_data_splitter: Optional[dict] = None,
         **kwargs,
     ):
+        """
+        Initialize the composed loader and wire child datasources.
+
+        Parameters
+        ----------
+        source_list : dict | None, optional
+            Mapping from source alias to child config or loader instance.
+        multisource_data_splitter : dict | None, optional
+            Optional Hydra config or ``BySourceSplitter`` instance for
+            source-level splits.
+        **kwargs
+            Passed through to ``AbstractDataSourceLoader`` and must include
+            matching ``DictConfig``/dict entries for each config-driven source
+            alias when not passing pre-instantiated loaders.
+        """
         if source_list is None:
             source_list = {}
         kwargs.update(multisource_data_splitter=multisource_data_splitter)
         super().__init__(**kwargs)
+        self._validate_constructor_inputs(
+            source_list=source_list, multisource_data_splitter=multisource_data_splitter
+        )
 
         self.data_source_dict: dict[str, CompositionDatasourceProtocol] = {}
         self.source_params: list[dict] = []
@@ -79,19 +99,43 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         self._is_loaded = False
 
         # Instantiate multisource_data_splitter if is not none
-        self.multisource_data_splitter = (
-            instantiate(multisource_data_splitter)
-            if multisource_data_splitter is not None
-            else None
+        self.multisource_data_splitter = self._normalize_multisource_splitter(
+            multisource_data_splitter
         )
 
         for key in self.source_names:
-            src_params = OmegaConf.to_container(kwargs[key], resolve=True)
+            source_entry = source_list[key]
+            if isinstance(source_entry, AbstractDataSourceLoader):
+                datasource = source_entry
+                src_params = {
+                    "_kind": "instance",
+                    "class": type(source_entry).__name__,
+                    "data_name": source_entry.get_data_name(),
+                }
+                self.source_params.append(src_params)
+                self._source_config_by_name[key] = deepcopy(src_params)
+                self.data_source_dict[key] = datasource
+                continue
+
+            source_cfg = kwargs.get(key, source_entry)
+            if source_cfg is None:
+                raise DatasourceConfigurationError(
+                    f"Missing source config for source '{key}'."
+                )
+            if isinstance(source_cfg, dict):
+                source_cfg = OmegaConf.create(source_cfg)
+            if not isinstance(source_cfg, DictConfig):
+                raise DatasourceConfigurationError(
+                    f"Source '{key}' must be an instantiated loader, dict config, or DictConfig; "
+                    f"got {type(source_cfg).__name__}."
+                )
+
+            src_params = OmegaConf.to_container(source_cfg, resolve=True)
             self.source_params.append(src_params)
             self._source_config_by_name[key] = deepcopy(src_params)
 
             datasource = instantiate(
-                kwargs[key],
+                source_cfg,
                 is_part_of_multisource=(
                     True if self.multisource_data_splitter else False
                 ),
@@ -100,8 +144,66 @@ class MultiSourceLoader(AbstractDataSourceLoader):
 
         self._cache_config = self._build_cache_config(kwargs)
 
+    @staticmethod
+    def _normalize_multisource_splitter(multisource_data_splitter: Any):
+        """
+        Normalize splitter input from instance or Hydra config.
+
+        Parameters
+        ----------
+        multisource_data_splitter : Any
+            ``None``, an instantiated ``BySourceSplitter``, or a Hydra config
+            dict/DictConfig to instantiate.
+
+        Returns
+        -------
+        BySourceSplitter | None
+            Ready-to-use splitter, or ``None`` when no source-level split is
+            configured.
+        """
+        if multisource_data_splitter is None:
+            return None
+        if isinstance(multisource_data_splitter, BySourceSplitter):
+            return multisource_data_splitter
+        return instantiate(multisource_data_splitter)
+
+    def _validate_constructor_inputs(
+        self, source_list: dict[str, Any], multisource_data_splitter: Any
+    ) -> None:
+        """
+        Fail fast on invalid multisource constructor combinations.
+
+        Parameters
+        ----------
+        source_list : dict[str, Any]
+            Mapping from source alias to child config or loader instance.
+        multisource_data_splitter : Any
+            Optional splitter instance or Hydra config.
+        """
+        if not source_list:
+            raise DatasourceConfigurationError("source_list cannot be empty.")
+        if not isinstance(source_list, dict):
+            raise DatasourceConfigurationError("source_list must be a dictionary.")
+        for source_name in source_list.keys():
+            if not isinstance(source_name, str):
+                raise DatasourceConfigurationError(
+                    "source_list keys must all be strings."
+                )
+
+        if multisource_data_splitter is None:
+            return
+
+        if isinstance(multisource_data_splitter, BySourceSplitter):
+            return
+        if isinstance(multisource_data_splitter, (dict, DictConfig)):
+            return
+        raise DatasourceConfigurationError(
+            "multisource_data_splitter must be None, BySourceSplitter, dict, or DictConfig."
+        )
+
     def _build_cache_config(self, raw_kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Build the cache identity for the composed datasource.
+        """
+        Build the cache identity for the composed datasource.
 
         Parameters
         ----------
@@ -142,7 +244,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
 
     @override
     def load_data(self):
-        """Load every child datasource and reset parent orchestration state.
+        """
+        Load every child datasource and reset parent orchestration state.
 
         Returns
         -------
@@ -165,7 +268,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
             self._state = LoaderState.LOADED
 
     def split_data(self):
-        """Materialize the combined split container for all child datasources.
+        """
+        Materialize the combined split container for all child datasources.
 
         Raises
         ------
@@ -258,7 +362,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
 
     @override
     def get_data(self) -> SplitDatasetContainer:
-        """Return the combined split dataset container.
+        """
+        Return the combined split dataset container.
 
         Returns
         -------
@@ -276,7 +381,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         return self.container
 
     def get_meta_data(self) -> Dict[str, Any]:
-        """Return metadata about the composed datasource.
+        """
+        Return metadata about the composed datasource.
 
         Returns
         -------
@@ -292,7 +398,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         return {}
 
     def get_source_names(self) -> tuple[str, ...]:
-        """Return child datasource aliases in deterministic order.
+        """
+        Return child datasource aliases in deterministic order.
 
         Returns
         -------
@@ -303,7 +410,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         return tuple(self.source_names)
 
     def get_multisource_data_splitter(self):
-        """Return the instantiated multisource splitter, if any.
+        """
+        Return the instantiated multisource splitter, if any.
 
         Returns
         -------
@@ -314,7 +422,8 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         return self.multisource_data_splitter
 
     def get_cache_fingerprint(self) -> dict[str, Any]:
-        """Return the cache identity for the composed datasource.
+        """
+        Return the cache identity for the composed datasource.
 
         Returns
         -------
