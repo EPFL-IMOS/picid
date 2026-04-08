@@ -6,7 +6,7 @@ import torch.cuda
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import RichModelSummary
 
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter
 from picid.interface import CustomSingleSourceLoader, EntryInterface
 from picid.interface.schemas import TrainerConfig
@@ -18,7 +18,7 @@ from picid.transforms.base import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
-@pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
+@pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_single_source_loader_standalone_load_split_get_returns_split_container(
     get_sources,
 ):
@@ -34,15 +34,13 @@ def test_single_source_loader_standalone_load_split_get_returns_split_container(
 
     source = get_sources[0]
     if isinstance(source, np.ndarray):
-        loader = CustomSingleSourceLoader.load_from_numpy(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_numpy(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
     else:
-        loader = CustomSingleSourceLoader.load_from_csv(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_csv(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
 
     loader.load_data()
     loader.split_data()
@@ -55,7 +53,7 @@ def test_single_source_loader_standalone_load_split_get_returns_split_container(
     assert "test" in data["features"]
 
 
-@pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
+@pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_single_source_loader_get_data_before_load_raises(get_sources):
     """get_data() before load_data() raises AssertionError."""
     data_splitter = TimeSplitter(
@@ -69,21 +67,19 @@ def test_single_source_loader_get_data_before_load_raises(get_sources):
 
     source = get_sources[0]
     if isinstance(source, np.ndarray):
-        loader = CustomSingleSourceLoader.load_from_numpy(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_numpy(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
     else:
-        loader = CustomSingleSourceLoader.load_from_csv(source,
-                                                        target_column=-1,
-                                                        data_splitter=data_splitter,
-                                                        task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_csv(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
 
     with pytest.raises(AssertionError, match="must be loaded"):
         loader.get_data()
 
 
-@pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
+@pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_single_source_loader_get_data_before_split_raises(get_sources):
     """Standalone: get_data() before split_data() raises AssertionError."""
     data_splitter = TimeSplitter(
@@ -97,22 +93,20 @@ def test_single_source_loader_get_data_before_split_raises(get_sources):
 
     source = get_sources[0]
     if isinstance(source, np.ndarray):
-        loader = CustomSingleSourceLoader.load_from_numpy(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_numpy(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
     else:
-        loader = CustomSingleSourceLoader.load_from_csv(source,
-                                                        target_column=-1,
-                                                        data_splitter=data_splitter,
-                                                        task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_csv(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
 
     loader.load_data()
     with pytest.raises(AssertionError, match="must be splitted"):
         loader.get_data()
 
 
-@pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
+@pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_single_source_loader_get_meta_data_after_load(get_sources):
     """get_meta_data() after load returns dict (empty for CustomSingleSourceLoader)."""
     data_splitter = TimeSplitter(
@@ -126,15 +120,13 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
 
     source = get_sources[0]
     if isinstance(source, np.ndarray):
-        loader = CustomSingleSourceLoader.load_from_numpy(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_numpy(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
     else:
-        loader = CustomSingleSourceLoader.load_from_csv(source,
-                                                        target_column=-1,
-                                                        data_splitter=data_splitter,
-                                                        task_mode='target')
+        loader = CustomSingleSourceLoader.load_from_csv(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="target"
+        )
 
     loader.load_data()
     loader.load_data()
@@ -142,8 +134,10 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
     assert isinstance(meta, dict)
 
 
-@pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
-@pytest.mark.parametrize('get_sources', [[1, 'numpy'], [1, 'csv']], indirect=True)
+@pytest.mark.skipif(
+    os.environ.get("TEST_SKIP_TRAINING", True), reason="Not testing training right now."
+)
+@pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_training(get_sources):
     data_splitter = TimeSplitter(
         train=0.5,
@@ -156,20 +150,24 @@ def test_training(get_sources):
 
     source = get_sources[0]
     if isinstance(source, np.ndarray):
-        datasource = CustomSingleSourceLoader.load_from_numpy(source,
-                                                          target_column=-1,
-                                                          data_splitter=data_splitter,
-                                                          task_mode='rul')
+        datasource = CustomSingleSourceLoader.load_from_numpy(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="rul"
+        )
     else:
-        datasource = CustomSingleSourceLoader.load_from_csv(source,
-                                                        target_column=-1,
-                                                        data_splitter=data_splitter,
-                                                        task_mode='rul')
+        datasource = CustomSingleSourceLoader.load_from_csv(
+            source, target_column=-1, data_splitter=data_splitter, task_mode="rul"
+        )
 
-    scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
-                           metadata={'apply_to': 'features', 'fit_on': 'train'})
-    scaler_target = DataTransform(transform_name='scaler_targets', transform=MinMaxScalerSklearn(),
-                  metadata={'apply_to': 'rul', 'fit_on': 'train'})
+    scaler = DataTransform(
+        transform_name="scaler_features",
+        transform=MinMaxScalerSklearn(),
+        metadata={"apply_to": "features", "fit_on": "train"},
+    )
+    scaler_target = DataTransform(
+        transform_name="scaler_targets",
+        transform=MinMaxScalerSklearn(),
+        metadata={"apply_to": "rul", "fit_on": "train"},
+    )
 
     transforms = [scaler, scaler_target]
     interface = EntryInterface()
@@ -178,20 +176,27 @@ def test_training(get_sources):
 
     model = LSTMConfig(n_layers=8)
 
-    task_definition = Prognostic(task_type='rul')
+    task_definition = Prognostic(task_type="rul")
 
-    loggers = [CsvLogger(name='base_csv_logger', version='1')]
+    loggers = [CsvLogger(name="base_csv_logger", version="1")]
 
-    callbacks = [EarlyStopping(monitor='val/loss'),
-                 RichModelSummary()]
+    callbacks = [EarlyStopping(monitor="val/loss"), RichModelSummary()]
 
-    evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
+    evaluators = {s: RulEvaluatorConfig() for s in ["train", "test", "val"]}
 
-    tconf = TrainerConfig(accelerator='gpu' if torch.cuda.is_available() else 'cpu',
-                  devices=[1])
+    tconf = TrainerConfig(
+        accelerator="gpu" if torch.cuda.is_available() else "cpu", devices=[1]
+    )
 
-    interface.train(run_name='test',
-                    training_config=tconf,
-                    task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
-                    loggers=loggers, evaluators=evaluators, transforms=transforms,
-                    overrides=[])
+    interface.train(
+        run_name="test",
+        training_config=tconf,
+        task_definition=task_definition,
+        model=model,
+        datasource=processed_datasource,
+        callbacks=callbacks,
+        loggers=loggers,
+        evaluators=evaluators,
+        transforms=transforms,
+        overrides=[],
+    )

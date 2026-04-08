@@ -1,11 +1,12 @@
 """Fixtures for loader characterization tests: in-memory SingleSourceLoader and configs."""
+
 import numpy as np
 import pandas as pd
 import pytest
 from omegaconf import OmegaConf
 
 from picid.data.datasources.base.single_source_loader import SingleSourceLoader
-from picid.data.preprocessing.splits import TimeSplitter
+from picid.data.preprocessing import TimeSplitter
 
 
 class InMemorySingleSourceLoader(SingleSourceLoader):
@@ -45,7 +46,6 @@ class InMemorySingleSourceLoader(SingleSourceLoader):
         }
 
 
-
 def get_random_numpy_data(samples=100, features=5):
     rng = np.random.default_rng(7721)
     features = rng.standard_normal((samples, features))
@@ -57,7 +57,7 @@ def get_sources(request):
     n_sources, str_type = request.param
 
     sources = [get_random_numpy_data() for _ in range(n_sources)]
-    if str_type == 'csv':
+    if str_type == "csv":
         names = [str(i) for i in range(sources[0].shape[1])]
         sources = [pd.DataFrame(s, columns=names) for s in sources]
 
@@ -66,11 +66,10 @@ def get_sources(request):
 
 @pytest.fixture
 def csv_sources(request):
-
     if len(request.param) == 2:
         n_sources, colum_names = request.param
     else:
-        n_sources,  = request.param
+        (n_sources,) = request.param
 
     np_sources = [get_random_numpy_data() for _ in range(n_sources)]
     names = [str(i) for i in range(np_sources[0].shape[1])]
@@ -81,6 +80,7 @@ def csv_sources(request):
 @pytest.fixture
 def numpy_multiple_source():
     return get_random_numpy_data(), get_random_numpy_data()
+
 
 @pytest.fixture
 def in_memory_loader():
@@ -101,7 +101,7 @@ def in_memory_loader_part_of_multi():
 
 def _two_source_config():
     """Config for two sources without multisource splitter (each source splits itself)."""
-    train, val, test = 0.5, 0.25, 0.25
+    train, val = 0.5, 0.25
     splitter_cfg = {
         "train": train,
         "val": val,
@@ -116,7 +116,10 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_a",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {
+            "_target_": "picid.data.preprocessing.TimeSplitter",
+            **splitter_cfg,
+        },
     }
     source_b = {
         "_target_": "test.data.datasources.base.conftest.InMemorySingleSourceLoader",
@@ -124,7 +127,10 @@ def _two_source_config():
         "n_features": 4,
         "data_name": "unit_b",
         "task_mode": "regression",
-        "data_splitter": {"_target_": "picid.data.preprocessing.splits.TimeSplitter", **splitter_cfg},
+        "data_splitter": {
+            "_target_": "picid.data.preprocessing.TimeSplitter",
+            **splitter_cfg,
+        },
     }
     return {
         "data_name": "multi_test",
@@ -172,7 +178,7 @@ def _two_sources_with_by_source_splitter_config():
         "task_mode": "regression",
         "source_list": {"unit_a": source_a, "unit_b": source_b, "unit_c": source_c},
         "multisource_data_splitter": {
-            "_target_": "picid.data.preprocessing.splits.BySourceSplitter",
+            "_target_": "picid.data.preprocessing.BySourceSplitter",
             "sources_train": ["unit_a"],
             "sources_val": ["unit_b"],
             "sources_test": ["unit_c"],
