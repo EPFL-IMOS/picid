@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  lean:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,9 +61,64 @@ jobs:
           uv sync
           uv pip install -e ".[dev]"
 
-      - name: Test with pytest
+      - name: Lean lane tests
         run: |
-          uv run pytest --cov=picid --cov-report=xml:coverage.xml --cov-fail-under=74 test/ -m 'not slow and not requires_snapshots'
+          uv run pytest test/ -q -m "unit and not optional_dep and not slow and not benchmark and not requires_snapshots"
+
+  full:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      # 1. Load the Private Key
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
+
+      # 1b. Configure SSH (Keyscan + Connection Test)
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          # We run this just to verify connectivity in the logs
+          ssh -T git@github.com || true
+
+      # 2. Checkout Main Repo ONLY
+      # persist-credentials: false -> Prevents GitHub from overriding SSH with HTTPS
+      # submodules: false -> We handle them manually below
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+
+      # 3. Manually Update Submodules
+      # Uses verbose SSH logging so we can debug connection issues if they happen
+      - name: Update Submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+        env:
+          GIT_SSH_COMMAND: "ssh -v"
+
+      # 4. Install uv
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          uv sync
+          uv pip install -e ".[dev]"
+
+      - name: Full lane tests with coverage (excluding slow/snapshot lanes)
+        run: |
+          uv run pytest --cov=picid --cov-report=xml:coverage.xml --cov-fail-under=74 test/ -m "not slow and not benchmark and not requires_snapshots"
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
