@@ -11,16 +11,24 @@ import awkward as ak
 from omegaconf import OmegaConf, DictConfig
 from torch import nn
 
-from picid.data.data_objects.data import DatasetContainer
+from picid.data.data_objects import DatasetContainer
 from picid.evaluator.base import AbstractEvaluator
-from picid.model.wrappers.base import AbstractFeedForwardWrapper, AbstractFeedForwardTrainingWrapper, \
-    AbstractFitPredictWrapper
-from picid.pipeline.base import ConstantLossLightningModule, TrainingLightningModule, FitPredictWrapperLightningModule
+from picid.model.wrappers.base import (
+    AbstractFeedForwardWrapper,
+    AbstractFeedForwardTrainingWrapper,
+    AbstractFitPredictWrapper,
+)
+from picid.pipeline.base import (
+    ConstantLossLightningModule,
+    TrainingLightningModule,
+    FitPredictWrapperLightningModule,
+)
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.multisource import InverseTransformMixin
 from picid.utils.awkward_utils import get_ak_shape
 
 log = logging.getLogger(__name__)
+
 
 def register_data_dim_resolver(
     data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
@@ -70,6 +78,7 @@ def register_data_dim_resolver(
         lambda key, dim: infer_data_dim(get_key(data, key), dim),
         replace=True,
     )
+
 
 def create_lightning_module(
     cfg: DictConfig,
@@ -137,7 +146,7 @@ def create_lightning_module(
     log.info(f"Optimizer: {cfg.optimization.optimizer._target_}")
 
     if backbone is None:
-        if cfg.model.get('metadata', {}).get("lightning_model", False):
+        if cfg.model.get("metadata", {}).get("lightning_model", False):
             # Model is already a standard LightningModule and does not require a wrapper
             model = hydra.utils.instantiate(
                 cfg.model,
@@ -187,9 +196,7 @@ def create_lightning_module(
             debug=cfg.get("debug", False),
         )
     else:
-        raise ValueError(
-            f"Unsupported backbone wrapper type: {type(backbone)}"
-        )
+        raise ValueError(f"Unsupported backbone wrapper type: {type(backbone)}")
     # else:
     #     model = None
     #
@@ -255,44 +262,46 @@ def create_lightning_module(
 
 class ProcessedDatasource:
     """
-        A wrapper around a DatasetContainer that holds processed data along with
-        its metadata and task configuration.
+    A wrapper around a DatasetContainer that holds processed data along with
+    its metadata and task configuration.
 
-        Attribute lookups that are not found on this class are transparently
-        delegated to the underlying DatasetContainer instance, so callers can
-        treat a ProcessedDatasource as a drop-in replacement for the original
-        datasource while still accessing the processed state.
+    Attribute lookups that are not found on this class are transparently
+    delegated to the underlying DatasetContainer instance, so callers can
+    treat a ProcessedDatasource as a drop-in replacement for the original
+    datasource while still accessing the processed state.
 
-        Args:
-            datasource (DatasetContainer): The original dataset container being wrapped.
-            task_mode (str): The mode describing the kind of task this data is prepared for
-                (e.g. "classification", "regression").
-            data_dict (dict): A dictionary containing the processed data splits or arrays
-                (e.g. {"train": ..., "val": ..., "test": ...}).
-            meta_data_dict (dict): A dictionary containing metadata about the processed data
-                (e.g. class counts, feature names, normalization statistics).
+    Args:
+        datasource (DatasetContainer): The original dataset container being wrapped.
+        task_mode (str): The mode describing the kind of task this data is prepared for
+            (e.g. "classification", "regression").
+        data_dict (dict): A dictionary containing the processed data splits or arrays
+            (e.g. {"train": ..., "val": ..., "test": ...}).
+        meta_data_dict (dict): A dictionary containing metadata about the processed data
+            (e.g. class counts, feature names, normalization statistics).
 
-        Attributes:
-            task_mode (str): Publicly accessible task mode string passed at construction.
+    Attributes:
+        task_mode (str): Publicly accessible task mode string passed at construction.
 
-        Example:
-            >>> container = DatasetContainer(...)
-            >>> processed = ProcessedDatasource(
-            ...     datasource=container,
-            ...     task_mode="classification",
-            ...     data_dict={"train": X_train, "test": X_test},
-            ...     meta_data_dict={"n_classes": 10}
-            ... )
-            >>> processed.data_dict["train"]      # access processed training data
-            >>> processed.meta_data_dict          # access metadata
-            >>> processed.some_datasource_attr    # transparently forwarded to container
+    Example:
+        >>> container = DatasetContainer(...)
+        >>> processed = ProcessedDatasource(
+        ...     datasource=container,
+        ...     task_mode="classification",
+        ...     data_dict={"train": X_train, "test": X_test},
+        ...     meta_data_dict={"n_classes": 10}
+        ... )
+        >>> processed.data_dict["train"]      # access processed training data
+        >>> processed.meta_data_dict          # access metadata
+        >>> processed.some_datasource_attr    # transparently forwarded to container
     """
-    def __init__(self,
-                 datasource: DatasetContainer,
-                 task_mode: str,
-                 data_dict: dict,
-                 meta_data_dict: dict):
 
+    def __init__(
+        self,
+        datasource: DatasetContainer,
+        task_mode: str,
+        data_dict: dict,
+        meta_data_dict: dict,
+    ):
         self._datasource = datasource
 
         self._meta_data_dict = meta_data_dict
@@ -340,8 +349,8 @@ class ProcessedDatasource:
 
 class InterfacePreProcessor:
     """
-        InterfacePreProcessor is a data preprocessing class that orchestrates the loading, splitting,
-        transformation, and management of datasources.
+    InterfacePreProcessor is a data preprocessing class that orchestrates the loading, splitting,
+    transformation, and management of datasources.
 
         See also:
             - `picid.data.preprocessing.single_source_loader.SingleSourceLoader`:
@@ -351,29 +360,29 @@ class InterfacePreProcessor:
             - `picid.data.preprocessing.phmd_loader.PHMDLoader`:
                     For specialized loading of PHMD-formatted data sources.
 
-        Attributes:
-            mode (str): Specifies the preprocessing mode, either 'per_unit' or 'cross_unit'.
-            datasource: The data source object providing access to raw data and metadata.
-            transforms: A collection of DataTransform objects to be applied sequentially.
-            data (Optional[DatasetContainer]): The processed dataset container.
+    Attributes:
+        mode (str): Specifies the preprocessing mode, either 'per_unit' or 'cross_unit'.
+        datasource: The data source object providing access to raw data and metadata.
+        transforms: A collection of DataTransform objects to be applied sequentially.
+        data (Optional[DatasetContainer]): The processed dataset container.
 
-        Methods:
-            __init__(mode, datasource, transforms, **kwargs):
-                Initializes the PreProcessor with the specified mode, datasource, and transforms.
-            get_meta_data_dict():
-                Retrieves metadata from the datasource as a dictionary.
-            get_processed_data_dict(return_splits_on_first_level: bool = False) -> dict:
-                Returns the processed data as a dictionary, optionally splitting data at the first level.
-            fetch_data() -> None:
-                Loads and stores data and metadata from the datasource.
-            apply_transforms(data: DatasetContainer, transforms) -> List[Any]:
-                Applies a sequence of data transformations to the dataset.
-            pipeline() -> DatasetContainer:
-                Executes the full preprocessing pipeline: loads, splits, fetches,
-                transforms, and returns the processed data.
-        """
-    def     __init__(self, datasource, transforms, cache_path=None, **kwargs):
+    Methods:
+        __init__(mode, datasource, transforms, **kwargs):
+            Initializes the PreProcessor with the specified mode, datasource, and transforms.
+        get_meta_data_dict():
+            Retrieves metadata from the datasource as a dictionary.
+        get_processed_data_dict(return_splits_on_first_level: bool = False) -> dict:
+            Returns the processed data as a dictionary, optionally splitting data at the first level.
+        fetch_data() -> None:
+            Loads and stores data and metadata from the datasource.
+        apply_transforms(data: DatasetContainer, transforms) -> List[Any]:
+            Applies a sequence of data transformations to the dataset.
+        pipeline() -> DatasetContainer:
+            Executes the full preprocessing pipeline: loads, splits, fetches,
+            transforms, and returns the processed data.
+    """
 
+    def __init__(self, datasource, transforms, cache_path=None, **kwargs):
         self.datasource = datasource
         self.transforms = transforms
         self.memory = Memory(cache_path, verbose=20)
@@ -434,7 +443,9 @@ class InterfacePreProcessor:
         self.data: DatasetContainer = data
 
     @staticmethod
-    def apply_transforms(data: DatasetContainer, transforms, caching_values: Any = None) -> DatasetContainer:
+    def apply_transforms(
+        data: DatasetContainer, transforms, caching_values: Any = None
+    ) -> DatasetContainer:
         """Apply a list of transforms sequentially to a DatasetContainer.
 
         Parameters
@@ -494,12 +505,9 @@ class InterfacePreProcessor:
         return meta_data
 
     def get_meta_data(self, datasource=None):
-
         return datasource.get_meta_data()
 
-    def pipeline(
-        self
-    ) -> ProcessedDatasource:
+    def pipeline(self) -> ProcessedDatasource:
         """
         Run the preprocessing pipeline, loading the preprocessed data if already saved in the cache.
         """
@@ -514,17 +522,17 @@ class InterfacePreProcessor:
         # self.data.meta_data_dict = self.get_meta_data_dict()
         # self.data.data_dict = self.get_processed_data_dict()
 
-        return ProcessedDatasource(self.datasource,
-                                   task_mode=self.datasource.task_mode,
-                                   data_dict=self.data.to_split_dict(),
-                                   meta_data_dict=self.get_meta_data_dict())
+        return ProcessedDatasource(
+            self.datasource,
+            task_mode=self.datasource.task_mode,
+            data_dict=self.data.to_split_dict(),
+            meta_data_dict=self.get_meta_data_dict(),
+        )
 
 
-
-def get_inverter_for_key_with_name(transforms: list[DataTransform],
-                                   key: str,
-                                   which: str = "last")\
-        -> tuple[InverseTransformMixin | None, str | None]:
+def get_inverter_for_key_with_name(
+    transforms: list[DataTransform], key: str, which: str = "last"
+) -> tuple[InverseTransformMixin | None, str | None]:
     """Find the first or last invertible transform that handles a given key.
 
     Scans ``transforms`` for ``DataTransform`` instances whose underlying
@@ -558,7 +566,9 @@ def get_inverter_for_key_with_name(transforms: list[DataTransform],
             f"get_inverter_for_key_with_name(which=...) must be 'first' or 'last', got {which!r}"
         )
 
-    inverters = [t for t in transforms if isinstance(t.transform_instance, InverseTransformMixin)]
+    inverters = [
+        t for t in transforms if isinstance(t.transform_instance, InverseTransformMixin)
+    ]
 
     if len(inverters) == 0:
         return None, None
