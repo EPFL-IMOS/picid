@@ -27,7 +27,7 @@ if __name__ == "__main__" or not __name__.startswith("picid_report_dashboard"):
     _pkg = pathlib.Path(__file__).parent
     sys.path.insert(0, str(_pkg.parent))
 
-from picid_report_dashboard.data import ResultsLoader
+from picid_report_dashboard.data import ResultsLoader, is_alt_model
 from picid_report_dashboard.views import (
     build_bar_chart,
     build_heatmap,
@@ -47,7 +47,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 3
+_PERSISTED_STATE_VERSION = 4
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -67,6 +67,8 @@ _PERSISTED_STATE_PARAMS = (
     "use_alt_metric",
     "alt_metric_key",
     "alt_sort_metric_key",
+    "alt_metric_overridden",
+    "alt_sort_metric_overridden",
     "show_n",
     "show_rank",
     "selected_dataset",
@@ -82,6 +84,7 @@ _ACTIVE_BUTTON_STYLESHEET = """
   box-shadow: inset 0px 3px 5px rgb(0 0 0 / 25%);
 }
 """
+_UNAVAILABLE_METRIC_COLOR = "#9ca3af"
 
 
 def _selected_primary_button(widget: pn.widgets.Widget) -> pn.widgets.Widget:
@@ -91,6 +94,53 @@ def _selected_primary_button(widget: pn.widgets.Widget) -> pn.widgets.Widget:
     if hasattr(widget, "stylesheets"):
         widget.stylesheets = [*widget.stylesheets, _ACTIVE_BUTTON_STYLESHEET]
     return widget
+
+
+def _css_attr_value(value: str) -> str:
+    """Escape a string for use in a CSS attribute selector."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _metric_availability_stylesheet(unavailable_values: set[str]) -> str:
+    """Return CSS that grays out unavailable Select options."""
+    if not unavailable_values:
+        return ""
+    selectors: list[str] = []
+    for metric_name in sorted(unavailable_values):
+        escaped = _css_attr_value(metric_name)
+        selectors.extend(
+            [
+                f':host select option[value="{escaped}"]',
+                f':host .bk-input option[value="{escaped}"]',
+                f':host option[value="{escaped}"]',
+            ]
+        )
+    joined_selectors = ",\n".join(selectors)
+    return f"""
+{joined_selectors} {{
+  color: {_UNAVAILABLE_METRIC_COLOR} !important;
+}}
+"""
+
+
+def _apply_metric_availability_style(
+    widget: pn.widgets.Select,
+    *,
+    unavailable_values: set[str],
+    active_value: str | None,
+    base_stylesheets: list[str],
+) -> None:
+    """Apply per-option and selected-value styling for unavailable metrics."""
+    stylesheet = _metric_availability_stylesheet(unavailable_values)
+    widget.stylesheets = [*base_stylesheets, stylesheet] if stylesheet else list(
+        base_stylesheets
+    )
+    current_styles = dict(getattr(widget, "styles", {}) or {})
+    if active_value is not None and active_value in unavailable_values:
+        current_styles["color"] = _UNAVAILABLE_METRIC_COLOR
+    else:
+        current_styles.pop("color", None)
+    widget.styles = current_styles
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +176,13 @@ class PiCIDDashboard(param.Parameterized):
         objects=[],
         doc="Alternate sort metric for fit-predict models",
     )
+    alt_metric_overridden = param.Boolean(
+        default=False, doc="Whether the alt metric differs from the derived default"
+    )
+    alt_sort_metric_overridden = param.Boolean(
+        default=False,
+        doc="Whether the alt sort metric differs from the derived default",
+    )
     show_n = param.Boolean(default=True, doc="Show n= run count in heatmap cells")
     show_rank = param.Boolean(
         default=False, doc="Show rank within dataset in heatmap cells"
@@ -144,6 +201,8 @@ class PiCIDDashboard(param.Parameterized):
         self._load_error: str | None = None
         self._restore_in_progress = False
         self._state_store: pn.widgets.TextInput | None = None
+        self._suspend_alt_metric_tracking = False
+        self._suspend_alt_sort_metric_tracking = False
         self._load_data()
         self._sync_selectors()
         self.param.watch(self._sync_state_store, list(_PERSISTED_STATE_PARAMS))
@@ -197,17 +256,57 @@ class PiCIDDashboard(param.Parameterized):
                 return candidate if candidate in available_metrics else None
         return metric if metric in available_metrics else None
 
+    def _set_alt_metric_value(self, value: str, *, overridden: bool) -> None:
+        """Assign the alt metric while suppressing manual-override tracking."""
+        self._suspend_alt_metric_tracking = True
+        try:
+            self.alt_metric_key = value
+            self.alt_metric_overridden = overridden
+        finally:
+            self._suspend_alt_metric_tracking = False
+
+    def _set_alt_sort_metric_value(self, value: str, *, overridden: bool) -> None:
+        """Assign the alt sort metric while suppressing manual-override tracking."""
+        self._suspend_alt_sort_metric_tracking = True
+        try:
+            self.alt_sort_metric_key = value
+            self.alt_sort_metric_overridden = overridden
+        finally:
+            self._suspend_alt_sort_metric_tracking = False
+
     @param.depends("metric_key", watch=True)
     def _on_metric_key_change(self) -> None:
         derived = self._derive_alt_metric(self.metric_key, "alt_metric_key")
         if derived:
-            self.alt_metric_key = derived
+            self._set_alt_metric_value(derived, overridden=False)
 
     @param.depends("sort_metric_key", watch=True)
     def _on_sort_metric_key_change(self) -> None:
         derived = self._derive_alt_metric(self.sort_metric_key, "alt_sort_metric_key")
         if derived:
-            self.alt_sort_metric_key = derived
+            self._set_alt_sort_metric_value(derived, overridden=False)
+
+    @param.depends("alt_metric_key", watch=True)
+    def _on_alt_metric_key_change(self) -> None:
+        if self._suspend_alt_metric_tracking or self._restore_in_progress:
+            return
+        derived = self._derive_alt_metric(self.metric_key, "alt_metric_key")
+        self.alt_metric_overridden = (
+            self.alt_metric_key != derived
+            if derived is not None
+            else self.alt_metric_key not in (None, self.metric_key)
+        )
+
+    @param.depends("alt_sort_metric_key", watch=True)
+    def _on_alt_sort_metric_key_change(self) -> None:
+        if self._suspend_alt_sort_metric_tracking or self._restore_in_progress:
+            return
+        derived = self._derive_alt_metric(self.sort_metric_key, "alt_sort_metric_key")
+        self.alt_sort_metric_overridden = (
+            self.alt_sort_metric_key != derived
+            if derived is not None
+            else self.alt_sort_metric_key not in (None, self.sort_metric_key)
+        )
 
     def _set_selector_value(
         self,
@@ -234,6 +333,8 @@ class PiCIDDashboard(param.Parameterized):
         current_sort_metric = self.sort_metric_key
         current_alt_metric = self.alt_metric_key
         current_alt_sort_metric = self.alt_sort_metric_key
+        current_alt_metric_overridden = self.alt_metric_overridden
+        current_alt_sort_metric_overridden = self.alt_sort_metric_overridden
         current_dataset = self.selected_dataset
         current_model = self.selected_model
 
@@ -253,22 +354,35 @@ class PiCIDDashboard(param.Parameterized):
         derived = self._derive_alt_metric(
             self.metric_key, "alt_metric_key", available=metrics
         )
+        keep_alt_metric_override = bool(
+            current_alt_metric_overridden and current_alt_metric in metrics
+        )
         self._set_selector_value(
             "alt_metric_key",
             metrics,
-            preferred=current_alt_metric,
+            preferred=current_alt_metric if keep_alt_metric_override else _UNSET,
             fallback=derived if derived is not None else _DEFAULT_METRIC,
+        )
+        self.alt_metric_overridden = (
+            keep_alt_metric_override and self.alt_metric_key == current_alt_metric
         )
         derived_sort = self._derive_alt_metric(
             self.sort_metric_key,
             "alt_sort_metric_key",
             available=metrics,
         )
+        keep_alt_sort_override = bool(
+            current_alt_sort_metric_overridden and current_alt_sort_metric in metrics
+        )
         self._set_selector_value(
             "alt_sort_metric_key",
             metrics,
-            preferred=current_alt_sort_metric,
+            preferred=current_alt_sort_metric if keep_alt_sort_override else _UNSET,
             fallback=derived_sort if derived_sort is not None else self.sort_metric_key,
+        )
+        self.alt_sort_metric_overridden = (
+            keep_alt_sort_override
+            and self.alt_sort_metric_key == current_alt_sort_metric
         )
 
         datasets = loader.datasets or []
@@ -285,6 +399,40 @@ class PiCIDDashboard(param.Parameterized):
             preferred=current_model,
             fallback=_ALL_MODELS_OPTION,
         )
+
+    def _availability_scope_models(self, *, alt: bool) -> list[str]:
+        """Return the models whose HP metric availability should drive one selector family."""
+        if self._loader is None:
+            return []
+        active_model = self._active_model()
+        if active_model is not None and is_alt_model(active_model) == alt:
+            return [active_model]
+        return [model for model in self._loader.models if is_alt_model(model) == alt]
+
+    def _available_hp_metrics_for_family(self, *, alt: bool) -> set[str]:
+        """Return union of HP metric names for the active dataset and model family."""
+        if self._loader is None or self.selected_dataset is None:
+            return set()
+        available: set[str] = set()
+        for model in self._availability_scope_models(alt=alt):
+            hp_ds = self._loader.hp_impact_ds(self.selected_dataset, model)
+            if hp_ds is None or "metric" not in hp_ds.coords:
+                continue
+            available.update(str(metric) for metric in hp_ds.coords["metric"].values.tolist())
+        return available
+
+    def _unavailable_metric_values(self, *, alt: bool, selector_name: str) -> set[str]:
+        """Return selector values unavailable in the current HP-config scope."""
+        if self._loader is None or self.selected_dataset is None:
+            return set()
+        available = self._available_hp_metrics_for_family(alt=alt)
+        if not available:
+            return set()
+        return {
+            str(metric)
+            for metric in self.param[selector_name].objects
+            if str(metric) not in available
+        }
 
     def _serialize_state(self) -> dict[str, Any]:
         state: dict[str, Any] = {"version": _PERSISTED_STATE_VERSION}
@@ -309,7 +457,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -323,7 +471,13 @@ class PiCIDDashboard(param.Parameterized):
             "selected_dataset",
             "selected_model",
         )
-        bool_fields = ("use_alt_metric", "show_n", "show_rank")
+        bool_fields = (
+            "use_alt_metric",
+            "alt_metric_overridden",
+            "alt_sort_metric_overridden",
+            "show_n",
+            "show_rank",
+        )
         for field in string_fields:
             value = payload.get(field)
             if isinstance(value, str):
@@ -367,14 +521,24 @@ class PiCIDDashboard(param.Parameterized):
                     setattr(self, name, state[name])
 
             if self._loader is not None:
-                for name in (
-                    "metric_key",
-                    "sort_metric_key",
-                    "alt_metric_key",
-                    "alt_sort_metric_key",
-                    "selected_dataset",
-                    "selected_model",
-                ):
+                for name in ("metric_key", "sort_metric_key"):
+                    self._apply_selector_state(name, state.get(name))
+
+                if state.get("alt_metric_overridden"):
+                    alt_metric = state.get("alt_metric_key")
+                    if alt_metric in self.param["alt_metric_key"].objects:
+                        self._set_alt_metric_value(alt_metric, overridden=True)
+                else:
+                    self.alt_metric_overridden = False
+
+                if state.get("alt_sort_metric_overridden"):
+                    alt_sort_metric = state.get("alt_sort_metric_key")
+                    if alt_sort_metric in self.param["alt_sort_metric_key"].objects:
+                        self._set_alt_sort_metric_value(alt_sort_metric, overridden=True)
+                else:
+                    self.alt_sort_metric_overridden = False
+
+                for name in ("selected_dataset", "selected_model"):
                     self._apply_selector_state(name, state.get(name))
 
             if not self._has_url_tab_override() and "active_tab" in state:
@@ -649,6 +813,56 @@ class PiCIDDashboard(param.Parameterized):
         alt_sort_metric_sel = pn.widgets.Select.from_param(
             self.param.alt_sort_metric_key, name="Alt sort metric", width=280
         )
+        metric_sel_base_stylesheets = list(metric_sel.stylesheets)
+        sort_metric_sel_base_stylesheets = list(sort_metric_sel.stylesheets)
+        alt_metric_sel_base_stylesheets = list(alt_metric_sel.stylesheets)
+        alt_sort_metric_sel_base_stylesheets = list(alt_sort_metric_sel.stylesheets)
+
+        def _refresh_metric_selector_styles(*_events: Any) -> None:
+            primary_unavailable = self._unavailable_metric_values(
+                alt=False, selector_name="metric_key"
+            )
+            alt_unavailable = self._unavailable_metric_values(
+                alt=True, selector_name="alt_metric_key"
+            )
+            _apply_metric_availability_style(
+                metric_sel,
+                unavailable_values=primary_unavailable,
+                active_value=self.metric_key,
+                base_stylesheets=metric_sel_base_stylesheets,
+            )
+            _apply_metric_availability_style(
+                sort_metric_sel,
+                unavailable_values=primary_unavailable,
+                active_value=self.sort_metric_key,
+                base_stylesheets=sort_metric_sel_base_stylesheets,
+            )
+            _apply_metric_availability_style(
+                alt_metric_sel,
+                unavailable_values=alt_unavailable,
+                active_value=self.alt_metric_key,
+                base_stylesheets=alt_metric_sel_base_stylesheets,
+            )
+            _apply_metric_availability_style(
+                alt_sort_metric_sel,
+                unavailable_values=alt_unavailable,
+                active_value=self.alt_sort_metric_key,
+                base_stylesheets=alt_sort_metric_sel_base_stylesheets,
+            )
+
+        self.param.watch(
+            _refresh_metric_selector_styles,
+            [
+                "report_dir",
+                "selected_dataset",
+                "selected_model",
+                "metric_key",
+                "sort_metric_key",
+                "alt_metric_key",
+                "alt_sort_metric_key",
+            ],
+        )
+        _refresh_metric_selector_styles()
         alt_metric_panel = pn.bind(
             lambda use: alt_metric_sel if use else pn.layout.Spacer(height=0),
             self.param.use_alt_metric,

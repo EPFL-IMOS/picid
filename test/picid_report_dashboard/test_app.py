@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import panel as pn
+import xarray as xr
 
 from panel.io.location import Location
 
@@ -23,6 +25,10 @@ def _loader_factory(loader_map):
             self.xarray_dataset = object()
             self.summary_df = pd.DataFrame()
             self.stats_df = pd.DataFrame()
+            self._hp_map = dict(config.get("hp_map", {}))
+
+        def hp_impact_ds(self, dataset: str, model: str):
+            return self._hp_map.get((dataset, model))
 
     return FakeResultsLoader
 
@@ -30,6 +36,26 @@ def _loader_factory(loader_map):
 def _make_dashboard(monkeypatch, loader_map, report_dir: str = "report_a"):
     monkeypatch.setattr(dashboard_app, "ResultsLoader", _loader_factory(loader_map))
     return dashboard_app.PiCIDDashboard(report_dir=report_dir)
+
+
+def _make_hp_dataset(metrics: list[str]) -> xr.Dataset:
+    return xr.Dataset(
+        {
+            "mean": xr.DataArray(
+                np.zeros((1, len(metrics)), dtype=float),
+                dims=["config", "metric"],
+            ),
+            "std": xr.DataArray(
+                np.zeros((1, len(metrics)), dtype=float),
+                dims=["config", "metric"],
+            ),
+            "count": xr.DataArray(
+                np.ones((1, len(metrics)), dtype=float),
+                dims=["config", "metric"],
+            ),
+        },
+        coords={"config": [0], "metric": metrics},
+    )
 
 
 def test_serialize_state_contains_expected_keys(monkeypatch):
@@ -66,8 +92,81 @@ def test_serialize_state_contains_expected_keys(monkeypatch):
     assert state["version"] == dashboard_app._PERSISTED_STATE_VERSION
     assert state["metric_key"] == "custom_metric"
     assert state["sort_metric_key"] == "custom_metric"
+    assert state["alt_metric_overridden"] is True
+    assert state["alt_sort_metric_overridden"] is True
     assert state["selected_model"] == "model_b"
     assert state["active_tab"] == 3
+
+
+def test_dashboard_initializes_alt_selectors_from_derived_metric(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    assert dash.alt_metric_key == "test/mae_denormalized"
+    assert dash.alt_sort_metric_key == "test/mae_denormalized"
+    assert dash.alt_metric_overridden is False
+    assert dash.alt_sort_metric_overridden is False
+
+
+def test_metric_availability_stylesheet_marks_unavailable_options_gray():
+    css = dashboard_app._metric_availability_stylesheet(
+        {"val/mse_denormalized_mean"}
+    )
+
+    assert 'option[value="val/mse_denormalized_mean"]' in css
+    assert dashboard_app._UNAVAILABLE_METRIC_COLOR in css
+
+
+def test_unavailable_metric_values_follow_active_model_family(monkeypatch):
+    dataset = "dataset_a"
+    primary_model = "model_a"
+    alt_model = "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                    "val/mse_denormalized",
+                    "val/mse_denormalized_mean",
+                ],
+                "datasets": [dataset],
+                "models": [primary_model, alt_model],
+                "hp_map": {
+                    (dataset, primary_model): _make_hp_dataset(
+                        ["val/mse_denormalized", "val/mse_denormalized_mean"]
+                    ),
+                    (dataset, alt_model): _make_hp_dataset(["val/mse_denormalized"]),
+                },
+            }
+        },
+    )
+
+    dash.selected_dataset = dataset
+    dash.selected_model = alt_model
+
+    alt_unavailable = dash._unavailable_metric_values(
+        alt=True, selector_name="alt_metric_key"
+    )
+    primary_unavailable = dash._unavailable_metric_values(
+        alt=False, selector_name="metric_key"
+    )
+
+    assert "val/mse_denormalized_mean" in alt_unavailable
+    assert "val/mse_denormalized" not in alt_unavailable
+    assert "val/mse_denormalized_mean" not in primary_unavailable
 
 
 def test_sync_selectors_preserves_valid_values_and_falls_back(monkeypatch):
@@ -247,6 +346,8 @@ def test_apply_saved_state_restores_report_dir_before_selectors(monkeypatch):
             "use_alt_metric": False,
             "alt_metric_key": "target_alt_metric",
             "alt_sort_metric_key": "target_alt_sort_metric",
+            "alt_metric_overridden": True,
+            "alt_sort_metric_overridden": True,
             "show_n": False,
             "show_rank": True,
             "selected_dataset": "target_dataset",
@@ -262,11 +363,82 @@ def test_apply_saved_state_restores_report_dir_before_selectors(monkeypatch):
     assert dash.use_alt_metric is False
     assert dash.alt_metric_key == "target_alt_metric"
     assert dash.alt_sort_metric_key == "target_alt_sort_metric"
+    assert dash.alt_metric_overridden is True
+    assert dash.alt_sort_metric_overridden is True
     assert dash.show_n is False
     assert dash.show_rank is True
     assert dash.selected_dataset == "target_dataset"
     assert dash.selected_model == "target_model"
     assert dash.active_tab == 2
+
+
+def test_apply_saved_state_ignores_stale_alt_metrics_without_override_flags(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                    "val_best_rerun/mae_denormalized_mean",
+                    "val/mae_denormalized",
+                    "val/mae_denormalized_mean",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    dash._apply_saved_state(
+        {
+            "metric_key": "val_best_rerun/mae_denormalized_mean",
+            "sort_metric_key": "val_best_rerun/mae_denormalized_mean",
+            "alt_metric_key": "val/mae_denormalized",
+            "alt_sort_metric_key": "val/mae_denormalized",
+        }
+    )
+
+    assert dash.metric_key == "val_best_rerun/mae_denormalized_mean"
+    assert dash.sort_metric_key == "val_best_rerun/mae_denormalized_mean"
+    assert dash.alt_metric_key == "val/mae_denormalized_mean"
+    assert dash.alt_sort_metric_key == "val/mae_denormalized_mean"
+    assert dash.alt_metric_overridden is False
+    assert dash.alt_sort_metric_overridden is False
+
+
+def test_apply_saved_state_restores_explicit_alt_metric_overrides(monkeypatch):
+    loader_map = {
+        "report_a": {
+            "metric_keys": [
+                dashboard_app._DEFAULT_METRIC,
+                "test/mae_denormalized",
+                "custom_metric",
+                "custom_alt",
+                "sort_metric",
+                "sort_alt",
+            ],
+            "datasets": ["dataset_a"],
+            "models": ["model_a"],
+        }
+    }
+    dash = _make_dashboard(monkeypatch, loader_map)
+    dash.metric_key = "custom_metric"
+    dash.sort_metric_key = "sort_metric"
+    dash.alt_metric_key = "custom_alt"
+    dash.alt_sort_metric_key = "sort_alt"
+
+    state = dash._serialize_state()
+
+    restored = _make_dashboard(monkeypatch, loader_map)
+    restored._apply_saved_state(state)
+
+    assert restored.metric_key == "custom_metric"
+    assert restored.sort_metric_key == "sort_metric"
+    assert restored.alt_metric_key == "custom_alt"
+    assert restored.alt_sort_metric_key == "sort_alt"
+    assert restored.alt_metric_overridden is True
+    assert restored.alt_sort_metric_overridden is True
 
 
 def test_parse_saved_state_migrates_v2_active_tab_indices(monkeypatch):
