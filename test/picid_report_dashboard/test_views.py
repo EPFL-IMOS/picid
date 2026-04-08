@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import panel as pn
 import pytest
 import xarray as xr
 from types import SimpleNamespace
@@ -585,6 +586,67 @@ def test_build_heatmap_frame_orders_models_by_average_rank_not_average_value():
     )
 
     assert model_order == [PRIMARY_MODEL, ALT_MODEL]
+
+
+def test_build_parallel_coordinates_returns_plotly_pane_with_expected_axes():
+    loader = _make_average_rank_loader()
+
+    pane = views.build_parallel_coordinates(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert isinstance(pane, pn.pane.Plotly)
+    dimensions = pane.object.data[0].dimensions
+    assert [dimension.label for dimension in dimensions] == [
+        "Model",
+        "Dataset A [project_a]",
+        "Dataset B [project_b]",
+        "Average",
+        "Average rank",
+    ]
+
+
+def test_build_parallel_coordinates_frame_uses_alt_metric_for_alt_models():
+    loader = _make_loader()
+
+    frame, ordered_models, axis_order = views._build_parallel_coordinates_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert ordered_models == [PRIMARY_MODEL, ALT_MODEL]
+    assert axis_order == [DATASET, "Average", "Average rank"]
+    values = frame.set_index("model")[DATASET].to_dict()
+    assert values[PRIMARY_MODEL] == pytest.approx(5.0)
+    assert values[ALT_MODEL] == pytest.approx(7.0)
+
+
+def test_build_parallel_coordinates_frame_orders_models_by_average_rank():
+    loader = _make_rank_order_loader()
+
+    frame, ordered_models, _axis_order = views._build_parallel_coordinates_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert ordered_models == [PRIMARY_MODEL, ALT_MODEL]
+    assert list(frame["model"]) == [PRIMARY_MODEL, ALT_MODEL]
 
 
 def test_build_hp_impact_frame_sorts_rows_by_active_sort_metric():

@@ -282,6 +282,161 @@ def build_heatmap(
 
 
 # ---------------------------------------------------------------------------
+# Parallel coordinates overview
+# ---------------------------------------------------------------------------
+
+def _build_parallel_coordinates_frame(
+    loader: ResultsLoader,
+    metric_key: str,
+    *,
+    sort_metric_key: str | None,
+    mode: str,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Build a wide overview frame for the parallel-coordinates plot."""
+    long, model_order, axis_order = _build_heatmap_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    if long.empty:
+        return pd.DataFrame(columns=["model", "Model"]), [], axis_order
+
+    wide = long.pivot_table(index="model", columns="dataset", values="value", aggfunc="first")
+    ordered_axes = [axis_name for axis_name in axis_order if axis_name in wide.columns]
+    wide = wide.reindex(index=model_order).reindex(columns=ordered_axes)
+    wide = wide.apply(pd.to_numeric, errors="coerce")
+    wide = wide[wide.notna().any(axis=1)]
+    if wide.empty:
+        return pd.DataFrame(columns=["model", "Model"]), [], ordered_axes
+
+    ordered_models = [model_name for model_name in model_order if model_name in wide.index]
+    wide = wide.loc[ordered_models].reset_index()
+    wide.insert(1, "Model", wide["model"].map(_shorten_model_name))
+    return wide, ordered_models, ordered_axes
+
+
+def _plotly_axis_range(values: pd.Series | np.ndarray, *, reverse: bool = False) -> list[float] | None:
+    """Compute a Plotly axis range, expanding degenerate ranges slightly."""
+    numeric = np.asarray(values, dtype=float)
+    finite = numeric[np.isfinite(numeric)]
+    if finite.size == 0:
+        return None
+
+    lo = float(finite.min())
+    hi = float(finite.max())
+    if lo == hi:
+        delta = max(abs(lo) * 0.05, 1.0)
+        lo -= delta
+        hi += delta
+    return [hi, lo] if reverse else [lo, hi]
+
+
+def build_parallel_coordinates(
+    loader: ResultsLoader,
+    metric_key: str,
+    sort_metric_key: str | None = None,
+    mode: str = "min",
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+) -> pn.viewable.Viewable:
+    """Parallel-coordinates overview of per-model selected metric values."""
+    import plotly.graph_objects as go
+
+    frame, ordered_models, axis_order = _build_parallel_coordinates_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    if frame.empty:
+        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
+
+    model_positions = np.arange(len(frame), dtype=float)
+    model_range = [float(len(frame) - 1), 0.0] if len(frame) > 1 else [0.5, -0.5]
+    dimensions: list[dict[str, object]] = [
+        {
+            "label": "Model",
+            "values": model_positions.tolist(),
+            "range": model_range,
+            "tickvals": model_positions.tolist(),
+            "ticktext": frame["Model"].tolist(),
+        }
+    ]
+
+    for axis_name in axis_order:
+        values = frame[axis_name].astype(float)
+        axis_range = _plotly_axis_range(
+            values,
+            reverse=(axis_name == "Average rank") or (mode == "min" and axis_name != "Average rank"),
+        )
+        if axis_range is None:
+            continue
+        dimensions.append(
+            {
+                "label": (
+                    axis_name
+                    if axis_name in {"Average", "Average rank"}
+                    else _shorten_dataset_name(axis_name)
+                ),
+                "values": values.tolist(),
+                "range": axis_range,
+            }
+        )
+
+    color_values = frame["Average rank"].astype(float)
+    finite_color = color_values[np.isfinite(color_values)]
+    if finite_color.empty:
+        cmin, cmax = 0.0, 1.0
+    else:
+        cmin = float(finite_color.min())
+        cmax = float(finite_color.max())
+        if cmin == cmax:
+            cmin -= 0.5
+            cmax += 0.5
+
+    fig = go.Figure(
+        data=go.Parcoords(
+            line={
+                "color": color_values.tolist(),
+                "colorscale": [
+                    [0.0, "#2ca25f"],
+                    [0.5, "#fee08b"],
+                    [1.0, "#d7301f"],
+                ],
+                "cmin": cmin,
+                "cmax": cmax,
+                "colorbar": {"title": "Average rank"},
+            },
+            dimensions=dimensions,
+            labelfont={"size": 12},
+            tickfont={"size": 10},
+        )
+    )
+    fig.update_layout(
+        title=f"{metric_key} (selected by active sort metric)",
+        height=max(520, 120 + 45 * len(ordered_models)),
+        margin={"l": 60, "r": 60, "t": 60, "b": 30},
+    )
+    return pn.pane.Plotly(
+        fig,
+        config={"responsive": True, "displaylogo": False},
+        sizing_mode="stretch_width",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Bar chart — best metric per model for a single dataset
 # ---------------------------------------------------------------------------
 

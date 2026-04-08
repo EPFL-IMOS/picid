@@ -269,6 +269,28 @@ def test_apply_saved_state_restores_report_dir_before_selectors(monkeypatch):
     assert dash.active_tab == 2
 
 
+def test_parse_saved_state_migrates_v2_active_tab_indices(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    migrated = dash._parse_saved_state('{"version": 2, "active_tab": 4}')
+    unmigrated = dash._parse_saved_state('{"version": 2, "active_tab": 0}')
+
+    assert migrated == {"active_tab": 5}
+    assert unmigrated == {"active_tab": 0}
+
+
 def test_url_tab_override_takes_precedence_over_saved_state(monkeypatch):
     dash = _make_dashboard(
         monkeypatch,
@@ -298,6 +320,7 @@ def test_url_tab_override_takes_precedence_over_saved_state(monkeypatch):
 def test_panel_can_render_with_state_bridge(monkeypatch):
     for builder_name in (
         "build_heatmap",
+        "build_parallel_coordinates",
         "build_model_summary_table",
         "build_bar_chart",
         "build_metadata_panel",
@@ -331,6 +354,41 @@ def test_panel_can_render_with_state_bridge(monkeypatch):
     assert doc.roots
 
 
+def test_panel_includes_parallel_coordinates_tab_after_heatmap(monkeypatch):
+    for builder_name in (
+        "build_heatmap",
+        "build_parallel_coordinates",
+        "build_model_summary_table",
+        "build_bar_chart",
+        "build_metadata_panel",
+        "build_hp_impact_table",
+        "build_summary_table",
+        "build_stats_table",
+    ):
+        monkeypatch.setattr(
+            dashboard_app, builder_name, lambda *args, **kwargs: pn.pane.Markdown("ok")
+        )
+
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    template = dash.panel()
+    tabs = template.main[0]
+
+    assert tabs._names[:3] == ["Heatmap", "Parallel Coordinates", "Bar Chart"]
+
+
 def test_show_hp_impact_for_model_selects_model_and_tab(monkeypatch):
     dash = _make_dashboard(
         monkeypatch,
@@ -352,7 +410,71 @@ def test_show_hp_impact_for_model_selects_model_and_tab(monkeypatch):
     dash._show_hp_impact_for_model("model_b")
 
     assert dash.selected_model == "model_b"
-    assert dash.active_tab == 2
+    assert dash.active_tab == dashboard_app._HP_IMPACT_TAB_INDEX
+
+
+def test_parallel_coordinates_view_includes_verification_model_summary(monkeypatch):
+    parallel_call: dict[str, object] = {}
+    model_summary_call: dict[str, object] = {}
+
+    def _fake_parallel_coordinates(*args, **kwargs):
+        parallel_call["args"] = args
+        parallel_call["kwargs"] = kwargs
+        return pn.pane.Markdown("parallel")
+
+    def _fake_model_summary_table(*args, **kwargs):
+        model_summary_call["args"] = args
+        model_summary_call["kwargs"] = kwargs
+        return pn.pane.Markdown("model summary")
+
+    monkeypatch.setattr(
+        dashboard_app, "build_parallel_coordinates", _fake_parallel_coordinates
+    )
+    monkeypatch.setattr(
+        dashboard_app, "build_model_summary_table", _fake_model_summary_table
+    )
+
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+    dash.selected_dataset = "dataset_a"
+    dash.metric_key = dashboard_app._DEFAULT_METRIC
+    dash.sort_metric_key = dashboard_app._DEFAULT_METRIC
+    dash.alt_metric_key = "test/mae_denormalized"
+    dash.alt_sort_metric_key = "test/mae_denormalized"
+
+    view = dash._parallel_coordinates_view()
+
+    assert isinstance(view, pn.Column)
+    assert view.objects[0].object == "parallel"
+    assert view.objects[2].object == "### View Configuration Summary for dataset_a"
+    assert view.objects[3].object == "model summary"
+    assert parallel_call["args"][1] == dashboard_app._DEFAULT_METRIC
+    assert parallel_call["kwargs"] == {
+        "sort_metric_key": dashboard_app._DEFAULT_METRIC,
+        "mode": "min",
+        "alt_metric_key": "test/mae_denormalized",
+        "alt_sort_metric_key": "test/mae_denormalized",
+        "use_alt_metric": True,
+    }
+    assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
+    assert (
+        model_summary_call["kwargs"]["sort_metric_key"] == dashboard_app._DEFAULT_METRIC
+    )
+    assert model_summary_call["kwargs"]["alt_metric_key"] == "test/mae_denormalized"
+    assert (
+        model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
+    )
 
 
 def test_hp_impact_view_includes_title_for_selected_dataset_and_model(monkeypatch):
