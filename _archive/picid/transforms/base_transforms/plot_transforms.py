@@ -1,5 +1,5 @@
 from typing import Any
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.transforms.base.base_transform import DenseTransform
 
 import numpy as _np

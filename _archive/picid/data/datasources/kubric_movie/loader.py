@@ -4,7 +4,7 @@ import logging
 from picid.data.datasources.kubric_movie.movi_dataset import MoviDataset
 from collections import defaultdict
 from picid.data.datasources.base.interfaces import AbstractDataSourceLoader
-from picid.data.data_objects.data import SplitDatasetContainer
+from picid.data.data_objects import SplitDatasetContainer
 from typing import Any, Dict, override
 import torch
 
