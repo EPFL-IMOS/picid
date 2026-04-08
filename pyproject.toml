@@ -106,6 +106,7 @@ norecursedirs = ["_archive"]
 # To run only benchmark/slow timing tests: -m benchmark (or -m slow)
 # Add --cov=picid --cov-fail-under=95 when running coverage (e.g. pytest test/ --cov=picid --cov-fail-under=95)
 markers = [
+    "unit: isolated unit tests with minimal dependencies",
     "optional_dep: needs optional dependencies, extras, or non-default environment",
     "integration: crosses subsystem boundaries (I/O, full pipeline slices, external services)",
     "tutorial: tutorial-style or walkthrough tests (often heavier or narrative)",
