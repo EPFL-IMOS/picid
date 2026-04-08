@@ -16,6 +16,7 @@ That keeps long-running and timing-focused checks out of the common review loop 
 
 | Marker | Meaning | Default review path |
 |---|---|---|
+| `unit` | Isolated tests with minimal dependencies and fast runtime | Included in lean lane |
 | `slow` | Longer-running tests that are useful but not part of the focused loop | Excluded |
 | `benchmark` | Timing and throughput checks | Excluded |
 | `tutorial` | Narrative/tutorial coverage; often still safe to run locally | Included unless also marked otherwise |
@@ -35,6 +36,7 @@ Snapshot-backed tests in this branch are verification-only.
 
 | Layer | Command | Result on this branch |
 |---|---|---|
+| Lean unit lane | `uv run pytest test -q -m "unit and not optional_dep and not slow and not benchmark"` | Fast contract verification for local iteration and CI precheck |
 | Collection sanity | `uv run pytest --collect-only -q test` | `2769 tests collected in 31.82s` |
 | Foundational unit layer | `uv run pytest test/utils test/data/data_objects test/transforms/base -q` | `668 passed, 2 skipped, 1 warning in 11.32s` |
 | Datasource and tutorial layer | `uv run pytest test/data/datasources test/tutorials -q` | `285 passed in 59.09s` |
@@ -46,6 +48,12 @@ Snapshot-backed tests in this branch are verification-only.
 Use these when you are touching the corresponding test families:
 
 ```bash
+# Lean lane used by fast CI checks
+uv run pytest test -q -m "unit and not optional_dep and not slow and not benchmark"
+
+# Full non-benchmark lane
+uv run pytest test -q -m "not slow and not benchmark"
+
 # Benchmark/timing checks only
 uv run pytest test/data/test_performance_benchmarks.py -q -m benchmark
 
