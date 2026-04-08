@@ -2,23 +2,14 @@ import os
 from copy import deepcopy
 
 import pytest
-import torch
-from lightning.pytorch.callbacks import EarlyStopping
-from lightning.pytorch.callbacks import RichModelSummary
 
 from picid.data.data_objects import SplitDatasetContainer
 from picid.data.preprocessing import TimeSplitter, BySourceSplitter
-from picid.interface import EntryInterface
 from picid.interface.datasources import CustomMultiSourceLoader
-from picid.interface.schemas.evaluators import RulEvaluatorConfig
-from picid.interface.schemas.loggers import CsvLogger
-from picid.interface.schemas.model import LSTMConfig
-from picid.interface.schemas.task_definition import Prognostic
-from picid.transforms.base.data_transform import DataTransform
-from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
 @pytest.mark.parametrize("get_sources", [[3, "numpy"], [3, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_multi_source_loader_not_multi_part_load_split_get_returns_split_container(
     get_sources,
 ):
@@ -55,6 +46,7 @@ def test_multi_source_loader_not_multi_part_load_split_get_returns_split_contain
 
 
 @pytest.mark.parametrize("get_sources", [[3, "numpy"], [3, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_multi_source_loader_multi_part_load_split_get_returns_split_container(
     get_sources,
 ):
@@ -88,8 +80,22 @@ def test_multi_source_loader_multi_part_load_split_get_returns_split_container(
 @pytest.mark.skipif(
     os.environ.get("TEST_SKIP_TRAINING", True), reason="Not testing training right now."
 )
+@pytest.mark.integration
+@pytest.mark.optional_dep
 @pytest.mark.parametrize("get_sources", [[3, "numpy"], [3, "csv"]], indirect=True)
 def test_training(get_sources):
+    import torch
+    from lightning.pytorch.callbacks import EarlyStopping
+    from lightning.pytorch.callbacks import RichModelSummary
+
+    from picid.interface import EntryInterface
+    from picid.interface.schemas.evaluators import RulEvaluatorConfig
+    from picid.interface.schemas.loggers import CsvLogger
+    from picid.interface.schemas.model import LSTMConfig
+    from picid.interface.schemas.task_definition import Prognostic
+    from picid.transforms.base.data_transform import DataTransform
+    from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
+
     data_splitter = TimeSplitter(
         train=0.5,
         val=0.25,

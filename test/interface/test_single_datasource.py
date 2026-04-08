@@ -2,23 +2,23 @@ import os
 
 import numpy as np
 import pytest
-import torch.cuda
-from lightning.pytorch.callbacks import EarlyStopping
-from lightning.pytorch.callbacks import RichModelSummary
 
 from picid.data.data_objects import SplitDatasetContainer
+from picid.data.datasources.base.exceptions import DatasourceStateError
 from picid.data.preprocessing import TimeSplitter
-from picid.interface import CustomSingleSourceLoader, EntryInterface
-from picid.interface.schemas import TrainerConfig
-from picid.interface.schemas.evaluators import RulEvaluatorConfig
-from picid.interface.schemas.loggers import CsvLogger
-from picid.interface.schemas.model import LSTMConfig
-from picid.interface.schemas.task_definition import Prognostic
-from picid.transforms.base import DataTransform
-from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
+from picid.interface import CustomSingleSourceLoader
+
+
+@pytest.mark.unit
+def test_interface_datasource_import_surface_is_lightweight():
+    from picid.interface import CustomMultiSourceLoader, CustomSingleSourceLoader
+
+    assert CustomSingleSourceLoader is not None
+    assert CustomMultiSourceLoader is not None
 
 
 @pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_single_source_loader_standalone_load_split_get_returns_split_container(
     get_sources,
 ):
@@ -54,6 +54,7 @@ def test_single_source_loader_standalone_load_split_get_returns_split_container(
 
 
 @pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_single_source_loader_get_data_before_load_raises(get_sources):
     """get_data() before load_data() raises AssertionError."""
     data_splitter = TimeSplitter(
@@ -75,11 +76,12 @@ def test_single_source_loader_get_data_before_load_raises(get_sources):
             source, target_column=-1, data_splitter=data_splitter, task_mode="target"
         )
 
-    with pytest.raises(AssertionError, match="must be loaded"):
+    with pytest.raises(DatasourceStateError, match="must be loaded"):
         loader.get_data()
 
 
 @pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_single_source_loader_get_data_before_split_raises(get_sources):
     """Standalone: get_data() before split_data() raises AssertionError."""
     data_splitter = TimeSplitter(
@@ -102,11 +104,12 @@ def test_single_source_loader_get_data_before_split_raises(get_sources):
         )
 
     loader.load_data()
-    with pytest.raises(AssertionError, match="must be splitted"):
+    with pytest.raises(DatasourceStateError, match="must be splitted"):
         loader.get_data()
 
 
 @pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
+@pytest.mark.unit
 def test_single_source_loader_get_meta_data_after_load(get_sources):
     """get_meta_data() after load returns dict (empty for CustomSingleSourceLoader)."""
     data_splitter = TimeSplitter(
@@ -137,8 +140,23 @@ def test_single_source_loader_get_meta_data_after_load(get_sources):
 @pytest.mark.skipif(
     os.environ.get("TEST_SKIP_TRAINING", True), reason="Not testing training right now."
 )
+@pytest.mark.integration
+@pytest.mark.optional_dep
 @pytest.mark.parametrize("get_sources", [[1, "numpy"], [1, "csv"]], indirect=True)
 def test_training(get_sources):
+    import torch.cuda
+    from lightning.pytorch.callbacks import EarlyStopping
+    from lightning.pytorch.callbacks import RichModelSummary
+
+    from picid.interface import EntryInterface
+    from picid.interface.schemas import TrainerConfig
+    from picid.interface.schemas.evaluators import RulEvaluatorConfig
+    from picid.interface.schemas.loggers import CsvLogger
+    from picid.interface.schemas.model import LSTMConfig
+    from picid.interface.schemas.task_definition import Prognostic
+    from picid.transforms.base import DataTransform
+    from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
+
     data_splitter = TimeSplitter(
         train=0.5,
         val=0.25,
