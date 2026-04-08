@@ -21,7 +21,9 @@ _CONFIG_DIR = _REPO_ROOT / "configs"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from picid.data.datasources.base.multi_source_loader import MultiSourceLoader  # noqa: E402
+from picid.data.datasources.base.multi_source_loader import (  # noqa: E402
+    MultiSourceLoader,
+)
 
 from tutorials.datasources._tutorial_cli import (  # noqa: E402
     add_data_dir_argument,
