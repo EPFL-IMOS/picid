@@ -42,9 +42,8 @@ def flatten_aggregated_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Flatten MultiIndex columns to 'colname_stat' strings.
 
-    Aggregated results have columns like (metric, 'mean'), (metric, 'std'), (metric, 'count').
-    This converts them to metric_mean, metric_std, metric_count. Plain string columns
-    are left unchanged.
+    Deprecated: internal pipeline now uses xr.Dataset for aggregated results.
+    Kept for external callers and backward compatibility.
 
     Args:
         df: DataFrame possibly with MultiIndex (tuple) columns.
@@ -52,6 +51,12 @@ def flatten_aggregated_columns(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         A copy of df with flattened column names.
     """
+    import warnings
+    warnings.warn(
+        "flatten_aggregated_columns is deprecated; sorted_aggregated_results is now an xr.Dataset.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     result = df.copy()
     new_cols = []
     for col in result.columns:

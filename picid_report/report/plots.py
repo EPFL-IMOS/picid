@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 import numpy as np
 import pandas as pd
 
-from picid_report.utils import flatten_aggregated_columns
+from picid_report.core.analysis import _ds_is_empty
 
 # Canonical short display names for known model class names (last dotted component).
 _MODEL_SHORT_NAMES = {
@@ -220,16 +220,11 @@ def plot_hp_impact(
     if dataset not in all_results or model not in all_results[dataset]:
         return None
     res = all_results[dataset][model]
-    if "sorted_aggregated_results" not in res or res["sorted_aggregated_results"].empty:
+    ds = res.get("sorted_aggregated_results")
+    if _ds_is_empty(ds) or metric not in ds.coords["metric"].values:
         return None
 
-    df = flatten_aggregated_columns(res["sorted_aggregated_results"].copy())
-    mean_col = f"{metric}_mean"
-    if mean_col not in df.columns:
-        return None
-
-    df = df.head(max_configs)
-    y = df[mean_col].values
+    y = ds.sel(metric=metric)["mean"].values[:max_configs]
     x_labels = [str(i) for i in range(len(y))]
 
     if figsize is None:

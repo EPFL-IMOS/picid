@@ -349,46 +349,41 @@ def build_hp_impact_table(
     loader: ResultsLoader,
     dataset: str,
     model: str,
+    precision: int = 4,
 ) -> pn.viewable.Viewable:
-    df = loader.hp_impact_df(dataset, model)
-    if df is None:
+    ds = loader.hp_impact_ds(dataset, model)
+    if ds is None:
         return pn.pane.Markdown(
             f"No HP config table found for **{dataset}** / **{model}**. "
             f"Re-run the report pipeline to generate it."
         )
 
-    is_raw = any(c.endswith("_mean") for c in df.columns)
+    hp_coord_names = [c for c in ds.coords if c not in ("config", "metric")]
+    metric_names   = ds.coords["metric"].values.tolist()
 
-    if is_raw:
-        # New format: numeric _mean/_std columns + seeds
-        mean_cols = [c for c in df.columns if c.endswith("_mean")]
-        std_cols = [c for c in df.columns if c.endswith("_std")]
-        stat_cols = set(mean_cols) | set(std_cols) | {"seeds"}
-        hp_cols = [c for c in df.columns if c not in stat_cols]
-        for c in mean_cols + std_cols:
-            df[c] = pd.to_numeric(df[c], errors="coerce").round(4)
-        ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + mean_cols + std_cols
-    else:
-        # Legacy format: formatted string columns ("mean ± std (n=X)")
-        # Extract seeds from the first metric column that has (n=X)
-        metric_cols = [c for c in df.columns if "±" in df[c].astype(str).iloc[0] if not df.empty]
-        hp_cols = [c for c in df.columns if c not in metric_cols]
-        if metric_cols and not df.empty:
-            df.insert(len(hp_cols), "seeds",
-                df[metric_cols[0]].str.extract(r"\(n=(\d+)\)")[0].astype("Int64"))
-        ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + metric_cols
+    rows = []
+    for i in range(ds.sizes["config"]):
+        cfg = ds.isel(config=i)
+        row = {hp: cfg.coords[hp].item() for hp in hp_coord_names}
+        row["seeds"] = int(cfg["count"].values[0])
+        for metric in metric_names:
+            m = cfg.sel(metric=metric)
+            mean_v = float(m["mean"].values)
+            std_v  = float(m["std"].values)
+            n      = int(m["count"].values)
+            row[metric] = f"{mean_v:.{precision}f} ± {std_v:.{precision}f} (n={n})"
+        rows.append(row)
 
+    df = pd.DataFrame(rows)
+    hp_cols     = hp_coord_names
+    metric_cols = metric_names
+    ordered_cols = hp_cols + (["seeds"] if "seeds" in df.columns else []) + metric_cols
     df = df[ordered_cols]
 
     # Pre-select only varying HP columns (nunique > 1) + seeds + metric cols
-    if is_raw:
-        stat_default = (["seeds"] if "seeds" in df.columns else []) + mean_cols + std_cols
-        varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
-        default_cols = (varying_hp or hp_cols) + stat_default
-    else:
-        stat_default = (["seeds"] if "seeds" in df.columns else []) + metric_cols
-        varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
-        default_cols = (varying_hp or hp_cols) + stat_default
+    stat_default = (["seeds"] if "seeds" in df.columns else []) + metric_cols
+    varying_hp = [c for c in hp_cols if df[c].nunique() > 1]
+    default_cols = (varying_hp or hp_cols) + stat_default
 
     col_selector = pn.widgets.MultiChoice(
         name="Visible columns",

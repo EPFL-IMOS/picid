@@ -10,7 +10,7 @@ loader = ResultsLoader("report_output/")
 ds = loader.xarray_dataset          # xr.Dataset, dims (dataset, model, metric_key)
 summary = loader.summary_df         # pd.DataFrame
 stats = loader.stats_df
-hp = loader.hp_impact_df("n_cmapss", "LSTM")
+hp = loader.hp_impact_ds("n_cmapss", "LSTM")
 """
 
 from __future__ import annotations
@@ -210,10 +210,10 @@ class ResultsLoader:
             return None
         return pd.concat(frames, ignore_index=True)
 
-    def hp_impact_df(
+    def hp_impact_ds(
         self, dataset: str, model: str
-    ) -> Optional[pd.DataFrame]:
-        """Load the HP impact CSV for a (dataset, model) combination.
+    ) -> Optional[xr.Dataset]:
+        """Load the sorted_aggregated_results xr.Dataset for a (dataset, model) combination.
 
         ``dataset`` may carry a ' [project_name]' suffix from the dashboard
         coordinate labelling. The suffix is stripped for filename lookup and
@@ -229,7 +229,7 @@ class ResultsLoader:
         else:
             ds_base, project_name = dataset, None
 
-        ds_safe = _safe(ds_base)
+        ds_safe    = _safe(ds_base)
         model_safe = _safe(model)
 
         # Search only the matching project directory when we know the project
@@ -239,9 +239,7 @@ class ResultsLoader:
         ]
 
         for d in search_dirs:
-            hp_dir = os.path.join(d, "tables", "hp_impact")
-            for prefix in ("hp_configs_", "hp_impact_"):
-                p = os.path.join(hp_dir, f"{prefix}{ds_safe}_{model_safe}.csv")
-                if os.path.isfile(p):
-                    return pd.read_csv(p, index_col=0)
+            p = os.path.join(d, "tables", "hp_configs", f"{ds_safe}_{model_safe}.nc")
+            if os.path.isfile(p):
+                return xr.load_dataset(p)
         return None

@@ -12,7 +12,6 @@ from picid_report.report.reporting import (
     iter_hp_impact_tables,
     export_experiment_stats,
     export_hp_impact_tables,
-    export_hp_configs_raw,
     write_tables_tex,
 )
 from picid_report.report.report_html import write_report_html
@@ -30,7 +29,6 @@ __all__ = [
     "iter_hp_impact_tables",
     "export_experiment_stats",
     "export_hp_impact_tables",
-    "export_hp_configs_raw",
     "write_tables_tex",
     "write_report_html",
     "plot_best_metric_bars",

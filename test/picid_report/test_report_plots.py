@@ -8,10 +8,49 @@ metric/prefix handling, empty/missing data, sorted (ranked) HP config order, and
 from collections import defaultdict
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 
 from picid_report.report import plots
+
+
+def _make_agg_ds(df: pd.DataFrame, opt_col: str = "test/mse", opt_mode: str = "min") -> xr.Dataset:
+    """Convert flat DataFrame with {metric}_mean/_std/_count columns to xr.Dataset."""
+    metric_names = [c[:-5] for c in df.columns if c.endswith("_mean")]
+    metric_stat_cols = {f"{m}_{s}" for m in metric_names for s in ("mean", "std", "count")}
+    hp_cols = [c for c in df.columns if c not in metric_stat_cols]
+
+    n_configs = len(df)
+    n_metrics = len(metric_names)
+    mean_data = np.full((n_configs, n_metrics), np.nan)
+    std_data = np.full((n_configs, n_metrics), np.nan)
+    count_data = np.full((n_configs, n_metrics), np.nan)
+    for mi, metric in enumerate(metric_names):
+        if f"{metric}_mean" in df.columns:
+            mean_data[:, mi] = pd.to_numeric(df[f"{metric}_mean"], errors="coerce").values
+        if f"{metric}_std" in df.columns:
+            std_data[:, mi] = pd.to_numeric(df[f"{metric}_std"], errors="coerce").values
+        if f"{metric}_count" in df.columns:
+            count_data[:, mi] = pd.to_numeric(df[f"{metric}_count"], errors="coerce").values
+
+    coords: dict = {"config": np.arange(n_configs), "metric": metric_names}
+    for hp in hp_cols:
+        vals = np.empty(n_configs, dtype=object)
+        for j, v in enumerate(df[hp].values):
+            vals[j] = v
+        coords[hp] = ("config", vals)
+
+    return xr.Dataset(
+        {
+            "mean":  (["config", "metric"], mean_data),
+            "std":   (["config", "metric"], std_data),
+            "count": (["config", "metric"], count_data),
+        },
+        coords=coords,
+        attrs={"optimization_col": opt_col, "optimization_mode": opt_mode},
+    )
 
 
 def _make_all_results(
@@ -189,16 +228,16 @@ class TestPlotHpImpact:
         assert fig is None
 
     def test_happy_path_returns_figure_with_bars_in_rank_order(self):
-        """Flattened sorted_aggregated_results with metric_mean produces horizontal bars in config order (rank)."""
+        """sorted_aggregated_results (xr.Dataset) produces horizontal bars in config order (rank)."""
         # sorted_aggregated_results is already sorted by best first (rank 1, 2, ...)
-        df = pd.DataFrame(
+        ds = _make_agg_ds(pd.DataFrame(
             {
                 "test/mse_mean": [0.40, 0.45, 0.50],
                 "test/mse_std": [0.02, 0.03, 0.01],
                 "test/mse_count": [3, 3, 3],
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds)
         fig = plots.plot_hp_impact(
             all_results, model="ModelA", dataset="DS1", metric="test/mse"
         )
@@ -216,14 +255,14 @@ class TestPlotHpImpact:
     def test_max_configs_truncates(self):
         """When more than max_configs rows, only first max_configs are plotted."""
         n = 60
-        df = pd.DataFrame(
+        ds = _make_agg_ds(pd.DataFrame(
             {
                 "test/mse_mean": [0.4 + i * 0.01 for i in range(n)],
                 "test/mse_std": [0.0] * n,
                 "test/mse_count": [3] * n,
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds)
         fig = plots.plot_hp_impact(
             all_results,
             model="ModelA",
@@ -237,14 +276,14 @@ class TestPlotHpImpact:
 
     def test_hp_impact_save_path_creates_file(self, tmp_path):
         """When save_path is set, figure is saved."""
-        df = pd.DataFrame(
+        ds = _make_agg_ds(pd.DataFrame(
             {
                 "test/mse_mean": [0.5],
                 "test/mse_std": [0.0],
                 "test/mse_count": [3],
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds)
         out = tmp_path / "hp_impact.png"
         plots.plot_hp_impact(
             all_results,
@@ -256,17 +295,15 @@ class TestPlotHpImpact:
         assert out.is_file()
 
     def test_hp_impact_with_multiindex_flattened(self):
-        """sorted_aggregated_results may have MultiIndex columns; flatten_aggregated_columns is used."""
-        # Simulate aggregated columns that flatten to test/mse_mean, etc.
-        df = pd.DataFrame(
+        """sorted_aggregated_results as xr.Dataset with test/mse metric produces horizontal bars."""
+        ds = _make_agg_ds(pd.DataFrame(
             {
-                ("test/mse", "mean"): [0.44, 0.48],
-                ("test/mse", "std"): [0.02, 0.01],
-                ("test/mse", "count"): [3, 3],
+                "test/mse_mean": [0.44, 0.48],
+                "test/mse_std": [0.02, 0.01],
+                "test/mse_count": [3, 3],
             }
-        )
-        df.columns = [f"test/mse_{s}" for s in ["mean", "std", "count"]]
-        all_results = _make_all_results(sorted_aggregated=df)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds)
         fig = plots.plot_hp_impact(
             all_results, model="ModelA", dataset="DS1", metric="test/mse"
         )

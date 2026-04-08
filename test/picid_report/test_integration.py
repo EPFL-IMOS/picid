@@ -81,7 +81,7 @@ class TestPipelineIntegration:
         tbl = results["DS1"]["baselines.tide_model.TiDE_Forecaster"][
             "sorted_aggregated_results"
         ]
-        assert len(tbl) == 4
+        assert tbl.sizes["config"] == 4
         reporting.display_hp_impact(results, precision=4)
 
     def test_val_best_rerun_captured_as_metric_not_hp(

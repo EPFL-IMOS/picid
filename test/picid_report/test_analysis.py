@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from picid_report import config
 from picid_report.core import analysis
+from picid_report.core.analysis import _ds_is_empty
 
 
 # --- _trace_nans (analysis._trace_nans) ---
@@ -339,27 +340,26 @@ class TestGetVaryingHyperparameters:
                 "run_name": ["r1", "r2"],
             }
         )
-        sorted_df, _ = analysis.aggregate_and_find_best(
+        sorted_ds, _ = analysis.aggregate_and_find_best(
             df, ["Model", "lr", "tags"], ["test/mse"], "test/mse", "min"
         )
-        assert len(sorted_df) == 1
+        assert sorted_ds.sizes["config"] == 1
 
     def test_optimization_col_mean_missing_empty_perf_returns_empty(self):
-        """Branch: (optimization_col, mean) not in columns, len(all_performance_cols)==0 -> return empty. (aggregate_and_find_best)"""
+        """Branch: no numeric perf cols -> return empty Dataset. (aggregate_and_find_best)"""
         df = pd.DataFrame({"Model": ["M"], "lr": [0.001]})
         a, b = analysis.aggregate_and_find_best(df, ["Model", "lr"], [], "x", "min")
-        assert a.empty and b.empty
+        assert _ds_is_empty(a) and _ds_is_empty(b)
 
     def test_optimization_col_mean_missing_valid_means_empty_returns_agg_and_empty_best(
         self,
     ):
-        """Branch: valid_means empty -> return aggregated_df, empty DataFrame. (aggregate_and_find_best)"""
-        # agg_dict has run_name only (no numeric perf col) if we pass perf col not in df
+        """Branch: perf col not in df -> empty Dataset. (aggregate_and_find_best)"""
         df = pd.DataFrame({"Model": ["M"], "lr": [0.001], "run_name": ["r1"]})
         a, b = analysis.aggregate_and_find_best(
             df, ["Model", "lr"], ["missing_metric"], "missing_metric", "min"
         )
-        assert b.empty
+        assert _ds_is_empty(b)
 
 
 # --- aggregate_and_find_best (analysis.aggregate_and_find_best) ---
@@ -385,32 +385,30 @@ class TestAggregateAndFindBest:
         agg_cols = ["Model", "lr"]
         perf_cols = ["test/mse"]
         opt_col = "test/mse"
-        sorted_df, best = analysis.aggregate_and_find_best(
+        sorted_ds, best = analysis.aggregate_and_find_best(
             df, agg_cols, perf_cols, opt_col, "min"
         )
-        assert len(sorted_df) == 1
-        assert (sorted_df[("test/mse", "mean")].values[0] - 0.5) < 1e-6
-        assert sorted_df[("test/mse", "std")].values[0] >= 0
-        assert sorted_df[("test/mse", "count")].values[0] == 2
+        assert sorted_ds.sizes["config"] == 1
+        assert abs(float(sorted_ds.sel(metric="test/mse")["mean"].values[0]) - 0.5) < 1e-6
+        assert float(sorted_ds.sel(metric="test/mse")["std"].values[0]) >= 0
+        assert int(sorted_ds.sel(metric="test/mse")["count"].values[0]) == 2
 
     def test_empty_agg_dict_returns_empty_dataframes(self):
         """
-        Branch: When no performance column is numeric or present, agg_dict is empty.
-        Methodology: all_performance_cols empty or not in df / not numeric.
-        Expected: (empty DataFrame, empty DataFrame).
+        Branch: When no performance column is numeric or present -> empty Dataset.
         """
         df = pd.DataFrame({"Model": ["M"], "lr": [0.001]})
-        sorted_df, best = analysis.aggregate_and_find_best(
+        sorted_ds, best = analysis.aggregate_and_find_best(
             df, ["Model", "lr"], [], "test/mse", "min"
         )
-        assert sorted_df.empty
-        assert best.empty
+        assert _ds_is_empty(sorted_ds)
+        assert _ds_is_empty(best)
 
     def test_nan_in_performance_still_aggregates(self):
         """
-        Branch: Numeric Guard: NaNs in performance columns; groupby still runs.
+        Branch: NaNs in performance columns; groupby still runs.
         Methodology: Two rows same group, one test/mse=0.4, one test/mse=NaN.
-        Expected: One row; mean could be 0.4 or NaN depending on implementation; no crash.
+        Expected: One config row; no crash.
         """
         df = pd.DataFrame(
             {
@@ -420,18 +418,17 @@ class TestAggregateAndFindBest:
                 "run_name": ["r1", "r2"],
             }
         )
-        sorted_df, best = analysis.aggregate_and_find_best(
+        sorted_ds, best = analysis.aggregate_and_find_best(
             df, ["Model", "lr"], ["test/mse"], "test/mse", "min"
         )
-        assert len(sorted_df) == 1
+        assert sorted_ds.sizes["config"] == 1
         # count may be 2 or 1 depending on how NaN is handled in groupby
-        assert sorted_df[("test/mse", "count")].values[0] >= 1
+        assert int(sorted_ds.sel(metric="test/mse")["count"].values[0]) >= 1
 
     def test_fallback_to_first_mean_column(self):
         """
-        Branch: (optimization_col, "mean") not in aggregated_df; valid_means exist -> use first.
-        Methodology: Pass optimization_col that is not in agg result; df has ("other_metric", "mean").
-        Expected: Uses first valid mean column for sort; returns non-empty. (aggregate_and_find_best)
+        Branch: optimization_col not in perf cols -> falls back to first available metric.
+        Expected: non-empty Dataset; "other_metric" in metric coordinate.
         """
         df = pd.DataFrame(
             {
@@ -441,11 +438,11 @@ class TestAggregateAndFindBest:
                 "run_name": ["r1", "r2"],
             }
         )
-        sorted_df, best = analysis.aggregate_and_find_best(
+        sorted_ds, best = analysis.aggregate_and_find_best(
             df, ["Model", "lr"], ["other_metric"], "missing_col", "min"
         )
-        assert not sorted_df.empty
-        assert ("other_metric", "mean") in sorted_df.columns
+        assert not _ds_is_empty(sorted_ds)
+        assert "other_metric" in sorted_ds.coords["metric"].values
 
 
 # --- analyze_results: Schema-First (EXPECTED_SEARCH_SPACE) ---
@@ -492,10 +489,10 @@ class TestAnalyzeResultsSchemaFirst:
         assert "baselines.tide_model.TiDE_Forecaster" in results["DS1"]
         res = results["DS1"]["baselines.tide_model.TiDE_Forecaster"]
         tbl = res["sorted_aggregated_results"]
-        assert len(tbl) == 4
+        assert tbl.sizes["config"] == 4
         # Grid has 2*2 = 4 combinations
-        assert set(tbl["task_definition.seq_len"].astype(int)) == {10, 50}
-        assert set(tbl["optimization.lr"].astype(float)) == {0.001, 0.0005}
+        assert set(tbl.coords["task_definition.seq_len"].values.astype(float).astype(int)) == {10, 50}
+        assert set(tbl.coords["optimization.lr"].values.astype(float)) == {0.001, 0.0005}
 
     def test_heterogeneous_hp_string_normalization_merge(
         self, mock_df_heterogeneous_hp, default_analysis_kwargs
@@ -529,9 +526,9 @@ class TestAnalyzeResultsSchemaFirst:
         model_key = "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)"
         assert model_key in results["DS1"]
         tbl = results["DS1"][model_key]["sorted_aggregated_results"]
-        assert len(tbl) == 2
-        assert "test/mse_mean" in tbl.columns
-        assert sorted(tbl["task_definition.seq_len"].tolist()) == [10, 20]
+        assert tbl.sizes["config"] == 2
+        assert "test/mse" in tbl.coords["metric"].values
+        assert sorted(tbl.coords["task_definition.seq_len"].values.astype(float).astype(int).tolist()) == [10, 20]
 
 
 # --- analyze_results: Data-First (EXPECTED_SEARCH_SPACE None) ---
@@ -560,8 +557,8 @@ class TestAnalyzeResultsDataFirst:
         model_key = "baselines.lstm_model.LSTM_Forecaster"
         assert model_key in results["DS1"]
         tbl = results["DS1"][model_key]["sorted_aggregated_results"]
-        assert len(tbl) == 2
-        assert sorted(tbl["task_definition.seq_len"].tolist()) == [10, 20]
+        assert tbl.sizes["config"] == 2
+        assert sorted(tbl.coords["task_definition.seq_len"].values.astype(float).astype(int).tolist()) == [10, 20]
 
 
 # --- Model wrapper splitting (model_type differentiation) ---
@@ -684,9 +681,7 @@ class TestAnalyzeResultsEdgeCases:
         assert "baselines.lstm_model.LSTM_Forecaster" in results["DS1"]
         res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
         assert "sorted_aggregated_results" in res
-        assert (
-            not res["sorted_aggregated_results"].empty or True
-        )  # may be empty if no varying HPs
+        assert True  # may be empty if no varying HPs (xr.Dataset has no .empty)
 
     def test_multiindex_flattening_in_sorted_aggregated(
         self, mock_df_multi_seed_runs, default_analysis_kwargs
@@ -704,11 +699,11 @@ class TestAnalyzeResultsEdgeCases:
         tbl = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"][
             "sorted_aggregated_results"
         ]
-        for c in tbl.columns:
-            assert isinstance(c, str), f"Column should be string, got {type(c)}: {c}"
-        assert "test/mse_mean" in tbl.columns
-        assert "test/mse_std" in tbl.columns
-        assert "test/mse_count" in tbl.columns
+        # xr.Dataset: metrics are coordinate values, not column names
+        assert "test/mse" in tbl.coords["metric"].values
+        assert "mean" in tbl.data_vars
+        assert "std" in tbl.data_vars
+        assert "count" in tbl.data_vars
 
 
 # --- Mean ± std (n=count) and multi-seed aggregation ---
@@ -1004,7 +999,7 @@ class TestTotalRunsAndConfigsFailed:
         res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
         assert res["total_runs"] == 6  # 3 + 3 runs in the two retained configs
         assert res["configs_failed_not_full_seed_set"] == 1  # seq_len=30 dropped
-        assert len(res["sorted_aggregated_results"]) == 2  # 2 configs completed
+        assert res["sorted_aggregated_results"].sizes["config"] == 2  # 2 configs completed
 
     def test_total_runs_and_configs_failed_zero_when_no_seed_filter(
         self, mock_df_multi_seed_runs, default_analysis_kwargs
@@ -1021,7 +1016,7 @@ class TestTotalRunsAndConfigsFailed:
         res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
         assert res["total_runs"] == 6
         assert res["configs_failed_not_full_seed_set"] == 0
-        assert len(res["sorted_aggregated_results"]) == 2
+        assert res["sorted_aggregated_results"].sizes["config"] == 2
 
 
 # --- configs_failed_missing_invalid_metric (analyze_results) ---
@@ -1050,7 +1045,7 @@ class TestConfigsFailedMissingInvalidMetric:
             )
         res = results["DS1"]["baselines.lstm_model.LSTM_Forecaster"]
         assert res["configs_failed_missing_invalid_metric"] == 1
-        assert len(res["sorted_aggregated_results"]) == 1  # only seq_len=10 kept
+        assert res["sorted_aggregated_results"].sizes["config"] == 1  # only seq_len=10 kept
 
     def test_configs_failed_invalid_metric_zero_when_all_valid(
         self, mock_df_multi_seed_runs, default_analysis_kwargs
@@ -1136,7 +1131,7 @@ class TestSortMetricFallback:
         assert res.get("sort_metric_used") == "val/mse"
         assert (
             "sorted_aggregated_results" in res
-            and not res["sorted_aggregated_results"].empty
+            and not _ds_is_empty(res["sorted_aggregated_results"])
         )
 
     def test_no_fallback_when_no_val_or_test_metric(self, base_config_columns):

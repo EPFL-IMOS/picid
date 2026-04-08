@@ -26,6 +26,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+from picid_report.core.analysis import _ds_is_empty
 from picid_report import (
     PipelineConfig,
     config,
@@ -37,7 +38,6 @@ from picid_report import (
     export_summary_table,
     export_experiment_stats,
     export_hp_impact_tables,
-    export_hp_configs_raw,
     get_experiment_stats_df,
     iter_hp_impact_tables,
     write_tables_tex,
@@ -602,7 +602,25 @@ def _save_outputs(
     export_hp_impact_tables(
         all_results, hp_impact_dir, precision=precision, sort_metric=sort_metric
     )
-    export_hp_configs_raw(all_results, hp_impact_dir)
+
+    # Save sorted_aggregated_results as .nc per (dataset, model) for dashboard
+    hp_nc_dir = os.path.join(tables_dir, "hp_configs")
+    os.makedirs(hp_nc_dir, exist_ok=True)
+    for _ds_name, _models in all_results.items():
+        for _model_name, _res in _models.items():
+            _agg_ds = _res.get("sorted_aggregated_results")
+            if _agg_ds is not None and not _ds_is_empty(_agg_ds):
+                _safe_ds = re.sub(r"[^\w\-.]", "_", str(_ds_name))[:80]
+                _safe_m  = re.sub(r"[^\w\-.]", "_", str(_model_name))[:80]
+                # Prepare for netCDF: drop run_names (variable-length strings),
+                # cast any remaining object-dtype coords to str
+                _to_save = _agg_ds.drop_vars("run_names", errors="ignore")
+                for _cn in list(_to_save.coords):
+                    if _to_save.coords[_cn].dtype == object:
+                        _to_save = _to_save.assign_coords(
+                            {_cn: _to_save.coords[_cn].astype(str)}
+                        )
+                _to_save.to_netcdf(os.path.join(hp_nc_dir, f"{_safe_ds}_{_safe_m}.nc"))
 
     global_plots: List[Tuple[str, str]] = []
     hp_impact_entries: List[Tuple[str, str, pd.DataFrame, str, str]] = []

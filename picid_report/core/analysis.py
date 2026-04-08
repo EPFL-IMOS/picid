@@ -24,11 +24,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from picid_report import config
 from picid_report.config import PipelineConfig
 from picid_report.core import validators
-from picid_report.utils import flatten_aggregated_columns
 
 # Import search space helper: one function handles both legacy and new structure
 try:
@@ -452,29 +452,116 @@ def get_varying_hyperparameters(
     return varying_params
 
 
+def _ds_is_empty(ds: xr.Dataset) -> bool:
+    """Return True when ds carries no data.
+
+    Handles two shapes:
+    - Full Dataset  (dims include "config"): empty when config size is 0.
+    - Best-config Dataset (isel(config=0), no "config" dim): non-empty when data vars exist.
+    - Empty sentinel xr.Dataset(): no data vars → empty.
+    """
+    if not isinstance(ds, xr.Dataset):
+        return True
+    if len(ds.data_vars) == 0:
+        return True
+    # Full dataset: check config count via sizes (avoids FutureWarning from ds.dims)
+    if "config" in ds.sizes:
+        return ds.sizes["config"] == 0
+    # Best-config dataset (config dropped by isel): non-empty if it has data vars
+    return False
+
+
+def _ds_to_wide_df(ds: xr.Dataset) -> pd.DataFrame:
+    """Convert an aggregated xr.Dataset to a flat wide DataFrame for schema-first merging."""
+    hp_coords = [c for c in ds.coords if c not in ("config", "metric")]
+    rows = []
+    for i in range(ds.sizes["config"]):
+        cfg = ds.isel(config=i)
+        row = {hp: cfg.coords[hp].item() for hp in hp_coords}
+        for metric in ds.coords["metric"].values:
+            m = cfg.sel(metric=metric)
+            row[f"{metric}__mean"]  = float(m["mean"].values)
+            row[f"{metric}__std"]   = float(m["std"].values)
+            row[f"{metric}__count"] = float(m["count"].values)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _wide_df_to_ds(
+    df: pd.DataFrame,
+    aggregation_cols: List[str],
+    perf_cols: List[str],
+    opt_col: str,
+    opt_mode: str,
+) -> xr.Dataset:
+    """Rebuild an xr.Dataset from a wide merged DataFrame (schema-first path only)."""
+    hp_coords = {
+        col: ("config", df[col].tolist())
+        for col in aggregation_cols
+        if col in df.columns
+    }
+    means  = np.array([[df[f"{m}__mean"].iloc[i]  for m in perf_cols] for i in range(len(df))], dtype=float)
+    stds   = np.array([[df[f"{m}__std"].iloc[i]   for m in perf_cols] for i in range(len(df))], dtype=float)
+    counts = np.array([[df[f"{m}__count"].iloc[i] for m in perf_cols] for i in range(len(df))], dtype=float)
+
+    is_ascending = opt_mode == "min"
+    opt_idx  = perf_cols.index(opt_col) if opt_col in perf_cols else 0
+    sort_idx = np.argsort(means[:, opt_idx])
+    if not is_ascending:
+        sort_idx = sort_idx[::-1]
+
+    sorted_coords = {
+        k: (dim, [vals[i] for i in sort_idx])
+        for k, (dim, vals) in hp_coords.items()
+    }
+
+    ds = xr.Dataset(
+        {
+            "mean":  xr.DataArray(means[sort_idx],  dims=["config", "metric"]),
+            "std":   xr.DataArray(stds[sort_idx],   dims=["config", "metric"]),
+            "count": xr.DataArray(counts[sort_idx], dims=["config", "metric"]),
+        },
+        coords={
+            "config": np.arange(len(df)),
+            "metric": perf_cols,
+            **sorted_coords,
+        },
+    )
+    ds.attrs["optimization_col"]  = opt_col
+    ds.attrs["optimization_mode"] = opt_mode
+    return ds
+
+
 def aggregate_and_find_best(
     df_subset: pd.DataFrame,
     aggregation_cols: List[str],
     all_performance_cols: List[str],
     optimization_col: str,
     optimization_mode: str,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Tuple[xr.Dataset, xr.Dataset]:
     """
-    Aggregate runs by HP config (mean/std/count per metric) and pick the best config row.
+    Aggregate runs by HP config and return an xr.Dataset.
+
+    Dims:   config (int, 0 = best), metric (str)
+    Vars:   mean, std, count  — shape (config, metric)
+            run_names         — shape (config,), list of run-name strings per config
+    Coords: metric, config, + one coord per HP column (dim=config)
+    Attrs:  optimization_col, optimization_mode
 
     Args:
         df_subset: Runs for one dataset/model.
         aggregation_cols: Columns to group by (HP names).
-        all_performance_cols: Metric columns to aggregate (mean, std, count).
+        all_performance_cols: Metric columns to aggregate.
         optimization_col: Metric column used to rank configs.
-        optimization_mode: "min" or "max" for ranking.
+        optimization_mode: "min" or "max".
 
     Returns:
-        (aggregated_df, best_row_df): Aggregated DataFrame and the single best row (by optimization_col).
+        (sorted_ds, best_ds): Dataset of all configs sorted best-first, and isel(config=0).
     """
+    _EMPTY = xr.Dataset()
+
     subset_copy = df_subset.copy()
 
-    # --- BUG FIX: Ensure all performance columns are strictly numeric ---
     for col in all_performance_cols:
         if col in subset_copy.columns:
             subset_copy[col] = pd.to_numeric(subset_copy[col], errors="coerce")
@@ -489,44 +576,75 @@ def aggregate_and_find_best(
                 lambda x: tuple(x) if isinstance(x, (list, np.ndarray)) else x
             )
 
-    # Only include valid numeric performance columns in aggregation
-    agg_dict = {
-        col: ["mean", "std", "count"]
-        for col in all_performance_cols
+    perf_cols = [
+        col for col in all_performance_cols
         if col in subset_copy.columns
         and pd.api.types.is_numeric_dtype(subset_copy[col])
-    }
+    ]
+    if not perf_cols:
+        return _EMPTY, _EMPTY
 
-    if "run_name" in subset_copy.columns:
-        agg_dict["run_name"] = list
-    if not agg_dict:
-        return pd.DataFrame(), pd.DataFrame()
+    grouped = subset_copy.groupby(aggregation_cols)
+    means  = grouped[perf_cols].mean()
+    stds   = grouped[perf_cols].std()
+    counts = grouped[perf_cols].count()
 
-    aggregated_df = subset_copy.groupby(aggregation_cols).agg(agg_dict).reset_index()
-    if ("run_name", "list") in aggregated_df.columns:
-        aggregated_df.rename(columns={("run_name", "list"): "run_name"}, inplace=True)
+    # Fallback if the requested opt col wasn't in the numeric set
+    if optimization_col not in means.columns:
+        optimization_col = perf_cols[0]
 
     is_ascending = optimization_mode == "min"
+    sort_idx = np.argsort(means[optimization_col].values)
+    if not is_ascending:
+        sort_idx = sort_idx[::-1]
 
-    if (optimization_col, "mean") not in aggregated_df.columns:
-        if len(all_performance_cols) > 0:
-            # Fallback to the first available mean column
-            valid_means = [
-                c
-                for c in aggregated_df.columns
-                if isinstance(c, tuple) and c[1] == "mean"
-            ]
-            if valid_means:
-                optimization_col = valid_means[0][0]
-            else:
-                return aggregated_df, pd.DataFrame()
-        else:
-            return pd.DataFrame(), pd.DataFrame()
+    means  = means.iloc[sort_idx]
+    stds   = stds.iloc[sort_idx]
+    counts = counts.iloc[sort_idx]
 
-    sorted_results = aggregated_df.sort_values(
-        by=(optimization_col, "mean"), ascending=is_ascending
+    # HP values as per-config coordinates.
+    # Use dtype=object for all HP coords to safely handle tuples/lists (e.g. tags columns),
+    # which numpy would otherwise unpack into a 2D array causing xarray coordinate errors.
+    idx = means.index
+    hp_coords: Dict[str, Any] = {}
+    if isinstance(idx, pd.MultiIndex):
+        for i, col in enumerate(aggregation_cols):
+            vals = np.empty(len(idx), dtype=object)
+            for j, v in enumerate(idx.get_level_values(i).tolist()):
+                vals[j] = v
+            hp_coords[col] = ("config", vals)
+    elif len(aggregation_cols) == 1:
+        vals = np.empty(len(idx), dtype=object)
+        for j, v in enumerate(idx.tolist()):
+            vals[j] = v
+        hp_coords[aggregation_cols[0]] = ("config", vals)
+
+    n_configs = len(means)
+    ds = xr.Dataset(
+        {
+            "mean":  xr.DataArray(means.values.astype(float),  dims=["config", "metric"]),
+            "std":   xr.DataArray(stds.values.astype(float),   dims=["config", "metric"]),
+            "count": xr.DataArray(counts.values.astype(float), dims=["config", "metric"]),
+        },
+        coords={
+            "config": np.arange(n_configs),
+            "metric": perf_cols,
+            **hp_coords,
+        },
     )
-    return sorted_results, sorted_results.head(1)
+
+    if "run_name" in subset_copy.columns:
+        run_name_lists = grouped["run_name"].apply(list).iloc[sort_idx].tolist()
+        # Use object dtype so numpy doesn't unpack equal-length inner lists into a 2D array
+        run_names_arr = np.empty(n_configs, dtype=object)
+        for _i, _lst in enumerate(run_name_lists):
+            run_names_arr[_i] = _lst
+        ds["run_names"] = xr.DataArray(run_names_arr, dims=["config"])
+
+    ds.attrs["optimization_col"]  = optimization_col
+    ds.attrs["optimization_mode"] = optimization_mode
+
+    return ds, ds.isel(config=0)
 
 
 def analyze_results(
@@ -1163,72 +1281,56 @@ def analyze_results(
                 list(model_grid.keys()) if model_grid else None,
             )
 
-            # Flatten MultiIndex regardless of grid presence for downstream consistency
-            actual_results = flatten_aggregated_columns(sorted_aggregated)
-            opt_col_flattened = f"{cur_optimization_col}_mean"
+            # sorted_aggregated is now an xr.Dataset (from aggregate_and_find_best)
+            opt_col = sorted_aggregated.attrs.get("optimization_col", cur_optimization_col)
 
-            # Skip if no metric column to sort by (e.g. zero matching performance cols)
-            if opt_col_flattened not in actual_results.columns:
+            # Skip if aggregation produced no results or opt metric is missing
+            if _ds_is_empty(sorted_aggregated):
+                continue
+            if opt_col not in sorted_aggregated.coords["metric"].values:
                 continue
 
             if model_grid:
                 grid_df = get_search_grid_df(model_grid)
                 grid_df["Model"] = model
                 join_keys = ["Model"] + list(model_grid.keys())
-                missing_in_actual = [
-                    k for k in join_keys if k not in actual_results.columns
+                hp_coord_names = [
+                    c for c in sorted_aggregated.coords if c not in ("config", "metric")
                 ]
+                missing_in_actual = [k for k in join_keys if k not in hp_coord_names]
+
                 if missing_in_actual:
-                    # Actual results don't have all grid dimensions (e.g. different schema/dataset)
                     logger.debug(
                         "(%s | %s) Schema-first skipped: actual results missing grid keys %s; using DATA-FIRST",
                         dataset,
                         model,
                         missing_in_actual,
                     )
-                    sorted_aggregated = actual_results.sort_values(
-                        by=opt_col_flattened,
-                        ascending=(
-                            cur_optimization_mode == "min"
-                        ),  # min: ascending; max: descending
-                    )
+                    # sorted_aggregated already sorted — nothing to do
                 else:
                     logger.debug(
                         "(%s | %s) Mode: SCHEMA-FIRST (merging with expected grid)",
                         dataset,
                         model,
                     )
-                    # Normalization: Ensure all join keys are the same type (string)
-                    # This prevents '150' != '150.0' merge failures
-                    grid_df_merged = grid_df.copy()
-                    actual_results_merged = actual_results.copy()
-
+                    flat = _ds_to_wide_df(sorted_aggregated)
+                    grid_df_merged  = grid_df.copy()
+                    flat_merged     = flat.copy()
                     for k in join_keys:
-                        if (
-                            k in grid_df_merged.columns
-                            and k in actual_results_merged.columns
-                        ):
+                        if k in grid_df_merged.columns and k in flat_merged.columns:
                             grid_df_merged[k] = grid_df_merged[k].astype(str)
-                            actual_results_merged[k] = actual_results_merged[k].astype(
-                                str
-                            )
-
-                    # Join actual results onto the skeleton grid
-                    merged_df = pd.merge(
-                        grid_df_merged, actual_results_merged, on=join_keys, how="left"
-                    )
-
-                    # Restore original types to hyperparameter columns for display
+                            flat_merged[k]    = flat_merged[k].astype(str)
+                    merged_df = pd.merge(grid_df_merged, flat_merged, on=join_keys, how="left")
                     for k in list(model_grid.keys()):
                         merged_df[k] = grid_df[k].values
-
-                    sorted_aggregated = merged_df.sort_values(
-                        by=opt_col_flattened,
-                        ascending=(
-                            cur_optimization_mode == "min"
-                        ),  # min: ascending; max: descending
-                        na_position="last",
+                    sorted_aggregated = _wide_df_to_ds(
+                        merged_df,
+                        aggregation_cols,
+                        perf_cols=list(sorted_aggregated.coords["metric"].values),
+                        opt_col=opt_col,
+                        opt_mode=cur_optimization_mode,
                     )
+                    best_result = sorted_aggregated.isel(config=0) if not _ds_is_empty(sorted_aggregated) else xr.Dataset()
             else:
                 logger.debug(
                     "(%s | %s) Mode: DATA-FIRST, varying HPs: %s",
@@ -1236,20 +1338,20 @@ def analyze_results(
                     model,
                     list(varying_hyperparams.keys()),
                 )
-                sorted_aggregated = actual_results.sort_values(
-                    by=opt_col_flattened,
-                    ascending=(
-                        cur_optimization_mode == "min"
-                    ),  # min: ascending; max: descending
-                )
+                # sorted_aggregated already sorted — nothing to do
 
-            if best_result.empty:
+            if _ds_is_empty(best_result):
                 continue
 
             # --- 7. COLLECT RESULTS ---
-            best_params = {hp: best_result[hp].item() for hp in varying_hyperparams}
-            if "run_name" in best_result.columns:
-                best_params["run_names"] = best_result["run_name"].iloc[0, 0]
+            best_params = {
+                hp: best_result.coords[hp].item()
+                for hp in varying_hyperparams
+                if hp in best_result.coords
+            }
+            if "run_names" in best_result:
+                run_names_val = best_result["run_names"].item()
+                best_params["run_names"] = run_names_val[0] if run_names_val else None
 
             performance_results = defaultdict(dict)
             mode = cur_optimization_mode
@@ -1258,34 +1360,34 @@ def analyze_results(
             sorted_prefixes = sorted(metric_prefixes, key=len, reverse=True)
 
             for col_full in all_performance_cols:
-                matched_prefix = ""
-                metric_name = ""
+                if col_full not in best_result.coords["metric"].values:
+                    continue
 
-                # Reverse engineer the prefix and metric name
+                matched_prefix = ""
+                metric_name    = ""
                 for p in sorted_prefixes:
                     if col_full.startswith(p):
                         matched_prefix = p.strip("/")
-                        metric_name = col_full[len(p) :]
+                        metric_name    = col_full[len(p):]
                         break
-
-                # If we couldn't match a known prefix, skip
                 if not matched_prefix:
                     continue
 
-                if (col_full, "mean") in best_result.columns:
-                    mean = best_result[(col_full, "mean")].values[0]
-                    std = best_result[(col_full, "std")].values[0]
-                    cnt = best_result[(col_full, "count")].values[0]
+                m    = best_result.sel(metric=col_full)
+                mean = float(m["mean"].values)
+                std  = float(m["std"].values)
+                _cnt = m["count"].values
+                cnt  = int(_cnt) if not np.isnan(float(_cnt)) else 0
 
-                    # Scale if it's the target metric and we are maximizing
-                    if col_full == cur_optimization_col and mode == "max":
-                        mean, std = mean * 100, std * 100
+                # Scale if it's the target metric and we are maximizing
+                if col_full == cur_optimization_col and mode == "max":
+                    mean, std = mean * 100, std * 100
 
-                    performance_results[metric_name][matched_prefix] = {
-                        "mean": mean,
-                        "std": std,
-                        "count": cnt,
-                    }
+                performance_results[metric_name][matched_prefix] = {
+                    "mean": mean,
+                    "std":  std,
+                    "count": cnt,
+                }
 
             res_entry = all_results[dataset][model]
             res_entry["best_hyperparameters"] = best_params
@@ -1454,22 +1556,21 @@ def analyze_results(
             )
 
             # Completed configs: HP columns from the aggregated results used for reporting
-            completed_df = res_entry.get("sorted_aggregated_results")
-            if completed_df is not None and not completed_df.empty:
-                # Aggregated result may have aggregation_cols as index; reset so we can select columns
-                if completed_df.index.names and any(
-                    n in (aggregation_cols or [])
-                    for n in (completed_df.index.names or [])
-                ):
-                    completed_df = completed_df.reset_index()
-                hp_cols = [c for c in aggregation_cols if c in completed_df.columns]
-                opt_col_flat = f"{cur_optimization_col}_mean"
-                display_cols = hp_cols + (
-                    [opt_col_flat] if opt_col_flat in completed_df.columns else []
-                )
-                display_cols = [c for c in display_cols if c in completed_df.columns]
-                if display_cols:
-                    completed_snapshot = completed_df[display_cols].copy()
+            completed_ds = res_entry.get("sorted_aggregated_results")
+            if not _ds_is_empty(completed_ds):
+                hp_coord_names = [
+                    c for c in completed_ds.coords if c not in ("config", "metric")
+                ]
+                diag_opt_col = completed_ds.attrs.get("optimization_col", cur_optimization_col)
+                rows = []
+                for i in range(completed_ds.sizes["config"]):
+                    cfg = completed_ds.isel(config=i)
+                    row = {hp: cfg.coords[hp].item() for hp in hp_coord_names}
+                    if diag_opt_col in completed_ds.coords["metric"].values:
+                        row[diag_opt_col] = float(cfg.sel(metric=diag_opt_col)["mean"].values)
+                    rows.append(row)
+                if rows:
+                    completed_snapshot = pd.DataFrame(rows)
                     diag.extend(
                         [
                             "",

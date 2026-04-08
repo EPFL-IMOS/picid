@@ -7,9 +7,48 @@ n=1 std 0.0, and MultiIndex flattening. Each test references the function under 
 """
 
 from collections import defaultdict
+import numpy as np
 import pandas as pd
+import xarray as xr
 
 from picid_report.report import reporting
+
+
+def _make_agg_ds(df: pd.DataFrame, opt_col: str = "test/mse", opt_mode: str = "min") -> xr.Dataset:
+    """Convert flat DataFrame with {metric}_mean/_std/_count columns to xr.Dataset."""
+    metric_names = [c[:-5] for c in df.columns if c.endswith("_mean")]
+    metric_stat_cols = {f"{m}_{s}" for m in metric_names for s in ("mean", "std", "count")}
+    hp_cols = [c for c in df.columns if c not in metric_stat_cols]
+
+    n_configs = len(df)
+    n_metrics = len(metric_names)
+    mean_data = np.full((n_configs, n_metrics), np.nan)
+    std_data = np.full((n_configs, n_metrics), np.nan)
+    count_data = np.full((n_configs, n_metrics), np.nan)
+    for mi, metric in enumerate(metric_names):
+        if f"{metric}_mean" in df.columns:
+            mean_data[:, mi] = pd.to_numeric(df[f"{metric}_mean"], errors="coerce").values
+        if f"{metric}_std" in df.columns:
+            std_data[:, mi] = pd.to_numeric(df[f"{metric}_std"], errors="coerce").values
+        if f"{metric}_count" in df.columns:
+            count_data[:, mi] = pd.to_numeric(df[f"{metric}_count"], errors="coerce").values
+
+    coords: dict = {"config": np.arange(n_configs), "metric": metric_names}
+    for hp in hp_cols:
+        vals = np.empty(n_configs, dtype=object)
+        for j, v in enumerate(df[hp].values):
+            vals[j] = v
+        coords[hp] = ("config", vals)
+
+    return xr.Dataset(
+        {
+            "mean":  (["config", "metric"], mean_data),
+            "std":   (["config", "metric"], std_data),
+            "count": (["config", "metric"], count_data),
+        },
+        coords=coords,
+        attrs={"optimization_col": opt_col, "optimization_mode": opt_mode},
+    )
 
 
 def _make_all_results(
@@ -252,6 +291,22 @@ class TestGetExperimentStatsDf:
         assert row["Configs Failed (not full seed set)"] == 0
         assert row["Configs Failed (missing/invalid metric)"] == 0
 
+    def test_configs_completed_counts_configs_not_data_vars(self):
+        """
+        get_experiment_stats_df must use ds.sizes["config"], not len(ds).
+        len(xr.Dataset) returns the number of data variables (mean/std/count/run_names = 4),
+        not the number of HP configs. This test guards against that regression.
+        """
+        ds3 = _make_agg_ds(pd.DataFrame({
+            "task_definition.seq_len": [10, 20, 50],
+            "test/mse_mean": [0.5, 0.4, 0.6],
+            "test/mse_std": [0.1, 0.05, 0.2],
+            "test/mse_count": [3, 3, 3],
+        }))
+        all_results = _make_all_results(sorted_aggregated=ds3)
+        df = reporting.get_experiment_stats_df(all_results)
+        assert df.iloc[0]["Configs Completed"] == 3
+
 
 # --- display_experiment_stats (reporting.display_experiment_stats) ---
 
@@ -368,7 +423,7 @@ class TestBuildHpImpactDfWithSortMetric:
         Methodology: Call _build_hp_impact_df with sort_metric=None.
         Expected: Uses optimization metric for sorting and column order.
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -376,9 +431,9 @@ class TestBuildHpImpactDfWithSortMetric:
                 "test/mse_std": [0.1],
                 "test/mse_count": [3],
             }
-        )
+        ))
         res = {
-            "sorted_aggregated_results": df_sorted,
+            "sorted_aggregated_results": ds_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
             },
@@ -395,10 +450,10 @@ class TestBuildHpImpactDfWithSortMetric:
         Methodology: sorted_aggregated_results with multiple rows, sort by different metric.
         Expected: DataFrame sorted by sort_metric, not optimization metric.
         """
-        # Create DataFrame with two configs
+        # Create Dataset with two configs
         # Config 1: test/mse=0.3 (best for mse), test/accuracy=0.7
         # Config 2: test/mse=0.5, test/accuracy=0.9 (best for accuracy)
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M", "M"],
                 "task_definition.seq_len": [10, 20],
@@ -409,9 +464,9 @@ class TestBuildHpImpactDfWithSortMetric:
                 "test/accuracy_std": [0.02, 0.01],
                 "test/accuracy_count": [3, 3],
             }
-        )
+        ))
         res = {
-            "sorted_aggregated_results": df_sorted,
+            "sorted_aggregated_results": ds_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
             },
@@ -437,7 +492,7 @@ class TestBuildHpImpactDfWithSortMetric:
         Methodology: sort_metric="test/nonexistent", column doesn't exist.
         Expected: Uses optimization metric, no crash.
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -445,9 +500,9 @@ class TestBuildHpImpactDfWithSortMetric:
                 "test/mse_std": [0.1],
                 "test/mse_count": [3],
             }
-        )
+        ))
         res = {
-            "sorted_aggregated_results": df_sorted,
+            "sorted_aggregated_results": ds_sorted,
             "best_performance": {
                 "optimized_on": {"metric": "test/mse", "strategy": "min"},
             },
@@ -475,7 +530,7 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call iter_hp_impact_tables with sort_metric=None.
         Expected: Yields (dataset, model, df, metric_used) with optimization metric.
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -483,8 +538,8 @@ class TestIterHpImpactTablesWithSortMetric:
                 "test/mse_std": [0.1],
                 "test/mse_count": [3],
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds_sorted)
         entries = list(
             reporting.iter_hp_impact_tables(all_results, precision=4, sort_metric=None)
         )
@@ -498,7 +553,7 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call iter_hp_impact_tables with sort_metric="test/accuracy".
         Expected: Yields entries with metric_used="test/accuracy".
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -509,8 +564,8 @@ class TestIterHpImpactTablesWithSortMetric:
                 "test/accuracy_std": [0.02],
                 "test/accuracy_count": [3],
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds_sorted)
         entries = list(
             reporting.iter_hp_impact_tables(
                 all_results, precision=4, sort_metric="test/accuracy"
@@ -526,7 +581,7 @@ class TestIterHpImpactTablesWithSortMetric:
         Methodology: Call with dict sort_metric.
         Expected: Uses per-combination metric.
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -537,8 +592,8 @@ class TestIterHpImpactTablesWithSortMetric:
                 "test/accuracy_std": [0.02],
                 "test/accuracy_count": [3],
             }
-        )
-        all_results = _make_all_results(sorted_aggregated=df_sorted)
+        ))
+        all_results = _make_all_results(sorted_aggregated=ds_sorted)
         sort_metric_dict = {("DS1", "ModelA"): "test/accuracy"}
         entries = list(
             reporting.iter_hp_impact_tables(
@@ -556,7 +611,7 @@ class TestIterHpImpactTablesWithSortMetric:
         original_sort_metric=val/loss. Call iter_hp_impact_tables.
         Expected: metric_used contains "fallback" and "val/loss" (original not found).
         """
-        df_sorted = pd.DataFrame(
+        ds_sorted = _make_agg_ds(pd.DataFrame(
             {
                 "Model": ["M"],
                 "task_definition.seq_len": [10],
@@ -564,9 +619,9 @@ class TestIterHpImpactTablesWithSortMetric:
                 "val/mse_std": [0.08],
                 "val/mse_count": [3],
             }
-        )
+        ), opt_col="val/mse")
         all_results = _make_all_results(
-            sorted_aggregated=df_sorted,
+            sorted_aggregated=ds_sorted,
             sort_metric_used="val/mse",
             sort_metric_is_fallback=True,
             original_sort_metric="val/loss",

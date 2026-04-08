@@ -17,10 +17,13 @@ import re
 from collections import defaultdict
 from typing import List, Tuple
 
+import numpy as np
 import pandas as pd
+import xarray as xr
 from IPython.display import display
 
-from picid_report.utils import flatten_aggregated_columns, format_mean_std_count
+from picid_report.core.analysis import _ds_is_empty
+from picid_report.utils import format_mean_std_count
 
 logger = logging.getLogger(__name__)
 
@@ -130,74 +133,30 @@ def create_summary_table(
 
             # Get metrics data - either from best_performance or re-select from sorted_aggregated_results
             if combo_sort_metric is not None and combo_sort_metric != opt_metric:
-                # Re-select best run based on sort_metric
-                if (
-                    "sorted_aggregated_results" in results
-                    and not results["sorted_aggregated_results"].empty
-                ):
-                    df = results["sorted_aggregated_results"].copy()
-                    df = flatten_aggregated_columns(df)
-                    sort_col = f"{combo_sort_metric}_mean"
-                    if sort_col in df.columns:
-                        # Infer sort mode and select best row
-                        sort_mode = _infer_metric_mode(combo_sort_metric)
-                        ascending = sort_mode == "min"
-                        df_sorted = df.sort_values(
-                            by=sort_col, ascending=ascending, na_position="last"
-                        )
-                        best_row = df_sorted.iloc[0] if not df_sorted.empty else None
+                ds = results.get("sorted_aggregated_results")
+                if not _ds_is_empty(ds) and combo_sort_metric in ds.coords["metric"].values:
+                    sort_mode = _infer_metric_mode(combo_sort_metric)
+                    sort_vals = ds.sel(metric=combo_sort_metric)["mean"].values
+                    sort_idx  = np.argsort(sort_vals)
+                    if sort_mode != "min":
+                        sort_idx = sort_idx[::-1]
+                    best_cfg = ds.isel(config=int(sort_idx[0]))
 
-                        if best_row is not None:
-                            # Extract metrics from best row
-                            metrics_data = {}
-                            metric_bases = set(
-                                c.rsplit("_", 1)[0]
-                                for c in df.columns
-                                if c.endswith("_mean")
-                            )
-                            for base in metric_bases:
-                                m_col = f"{base}_mean"
-                                s_col = f"{base}_std"
-                                c_col = f"{base}_count"
-                                if m_col in best_row.index and c_col in best_row.index:
-                                    # Parse metric name (e.g., "test/mse" -> prefix="test", name="mse")
-                                    parts = base.split("/", 1)
-                                    if len(parts) == 2:
-                                        prefix, metric_name = parts
-                                        if metric_name not in metrics_data:
-                                            metrics_data[metric_name] = {}
-                                        mean_val = best_row[m_col]
-                                        std_val = (
-                                            best_row[s_col]
-                                            if s_col in best_row.index
-                                            and not pd.isna(best_row[s_col])
-                                            else 0.0
-                                        )
-                                        count_val = (
-                                            int(best_row[c_col])
-                                            if not pd.isna(best_row[c_col])
-                                            else 0
-                                        )
-                                        metrics_data[metric_name][prefix] = {
-                                            "mean": mean_val,
-                                            "std": std_val,
-                                            "count": count_val,
-                                        }
-                        else:
-                            # Fallback to best_performance if re-selection fails
-                            metrics_data = results.get("best_performance", {}).get(
-                                "metrics", {}
-                            )
-                    else:
-                        # Fallback to best_performance if sort_metric column not found
-                        metrics_data = results.get("best_performance", {}).get(
-                            "metrics", {}
-                        )
+                    metrics_data = {}
+                    for metric_full in ds.coords["metric"].values:
+                        parts = str(metric_full).split("/", 1)
+                        if len(parts) != 2:
+                            continue
+                        prefix, metric_name = parts
+                        m         = best_cfg.sel(metric=metric_full)
+                        mean_val  = float(m["mean"].values)
+                        std_val   = float(m["std"].values) if not np.isnan(float(m["std"].values)) else 0.0
+                        count_val = int(m["count"].values) if not np.isnan(float(m["count"].values)) else 0
+                        metrics_data.setdefault(metric_name, {})[prefix] = {
+                            "mean": mean_val, "std": std_val, "count": count_val,
+                        }
                 else:
-                    # Fallback to best_performance if no sorted_aggregated_results
-                    metrics_data = results.get("best_performance", {}).get(
-                        "metrics", {}
-                    )
+                    metrics_data = results.get("best_performance", {}).get("metrics", {})
             else:
                 # Use best_performance (selected by optimization metric)
                 metrics_data = results.get("best_performance", {}).get("metrics", {})
@@ -282,7 +241,9 @@ def get_experiment_stats_df(all_results: defaultdict) -> pd.DataFrame:
         for model_name, res in models.items():
             count = 0
             if "sorted_aggregated_results" in res:
-                count = len(res["sorted_aggregated_results"])
+                ds = res["sorted_aggregated_results"]
+                if not _ds_is_empty(ds):
+                    count = ds.sizes["config"]
 
             total_runs = res.get("total_runs", None)
             configs_failed = res.get("configs_failed_not_full_seed_set", 0)
@@ -412,90 +373,56 @@ def _build_hp_impact_df(res: dict, precision: int, sort_metric: str = None):
         df: DataFrame with HP impact table
         metric_used: str, the metric actually used for sorting
     """
-    if "sorted_aggregated_results" not in res or res["sorted_aggregated_results"].empty:
+    ds = res.get("sorted_aggregated_results")
+    if _ds_is_empty(ds):
         return None
-    df = res["sorted_aggregated_results"].copy()
-    df = flatten_aggregated_columns(df)
 
-    # Determine which metric to use for sorting
-    opt_info = res.get("best_performance", {}).get("optimized_on", {})
-    opt_metric = opt_info.get("metric", "")
-
-    # Use sort_metric if provided, otherwise use optimization metric
+    opt_info       = res.get("best_performance", {}).get("optimized_on", {})
+    opt_metric     = opt_info.get("metric", "")
     metric_to_sort = sort_metric if sort_metric is not None else opt_metric
-    # Track which metric was actually used (may fallback if sort_metric column not found)
-    metric_used = metric_to_sort
+    metric_used    = metric_to_sort
 
-    # Re-sort by sort_metric if different from optimization metric
+    # Re-sort by alternative metric if requested
     if sort_metric is not None and sort_metric != opt_metric:
-        sort_col = f"{sort_metric}_mean"
-        if sort_col in df.columns:
-            # Infer sort mode (min/max)
+        if sort_metric in ds.coords["metric"].values:
             sort_mode = _infer_metric_mode(sort_metric)
-            ascending = sort_mode == "min"
-            df = df.sort_values(by=sort_col, ascending=ascending, na_position="last")
+            sort_vals = ds.sel(metric=sort_metric)["mean"].values
+            sort_idx  = np.argsort(sort_vals)
+            if sort_mode != "min":
+                sort_idx = sort_idx[::-1]
+            ds = ds.isel(config=sort_idx.tolist())
         else:
-            # Column not found, fallback to optimization metric
             logger.warning(
-                f"Sort metric '{sort_metric}' requested but column '{sort_col}' not found. "
-                f"Available columns ending in '_mean': {[c for c in df.columns if c.endswith('_mean')]}. "
-                f"Falling back to optimization metric '{opt_metric}'."
+                f"Sort metric '{sort_metric}' not in available metrics "
+                f"{list(ds.coords['metric'].values)}. Falling back to '{opt_metric}'."
             )
             metric_used = opt_metric
 
-    metric_bases = set(c.rsplit("_", 1)[0] for c in df.columns if c.endswith("_mean"))
+    hp_coord_names = [c for c in ds.coords if c not in ("config", "metric")]
+    metric_names   = [str(m) for m in ds.coords["metric"].values]
 
-    # We cannot write in-place because of <key>_mean_mean is reduced to _mean which causes conflicts.
-    # Instead, we create a new df_out and add formatted columns to it.
-    df_out = df.copy()
+    rows = []
+    for i in range(ds.sizes["config"]):
+        cfg = ds.isel(config=i)
+        row = {hp: cfg.coords[hp].item() for hp in hp_coord_names}
+        for metric in metric_names:
+            m         = cfg.sel(metric=metric)
+            mean_val  = float(m["mean"].values)
+            std_val   = float(m["std"].values)  if not np.isnan(float(m["std"].values))   else 0.0
+            count_val = int(m["count"].values)  if not np.isnan(float(m["count"].values)) else 0
+            row[metric] = "-" if np.isnan(mean_val) else format_mean_std_count(mean_val, std_val, count_val, precision)
+        rows.append(row)
 
-    for base in metric_bases:
-        m_col, s_col, c_col = f"{base}_mean", f"{base}_std", f"{base}_count"
-        if m_col in df.columns and c_col in df.columns:
+    df_out = pd.DataFrame(rows)
 
-            def format_impact_row(row):
-                if pd.isna(row[m_col]):
-                    return "-"
-                std_val = (
-                    row[s_col] if s_col in row and not pd.isna(row[s_col]) else 0.0
-                )
+    # Metric column ordering: sort/opt metric first, rest alphabetical
+    ordered_metrics = sorted(metric_names)
+    lead = metric_to_sort if metric_to_sort in ordered_metrics else opt_metric
+    if lead in ordered_metrics:
+        ordered_metrics.remove(lead)
+        ordered_metrics = [lead] + ordered_metrics
 
-                # print(
-                #     f"DEBUG: Formatting impact row for {base} with mean={row[m_col]}, std={std_val}, count={row[c_col]}"
-                # )
-                return format_mean_std_count(
-                    row[m_col], std_val, int(row[c_col]), precision
-                )
-
-            df_out[base] = df.apply(format_impact_row, axis=1)
-    df_out = df_out.copy()
-
-    raw_stats, ignore = (
-        ["_mean", "_std", "_count"],
-        [
-            "run_name",
-            "run_name_list",
-            "Model",
-        ],
-    )
-    hp_cols = [
-        c
-        for c in df_out.columns
-        if not any(c.endswith(s) for s in raw_stats)
-        and c not in ignore
-        and c not in metric_bases
-    ]
-    final_metrics = sorted(list(metric_bases))
-    # Put the metric used for sorting first
-    if metric_to_sort in final_metrics:
-        final_metrics.remove(metric_to_sort)
-        final_metrics = [metric_to_sort] + final_metrics
-    elif opt_metric in final_metrics:
-        # Fallback: if sort_metric not found, use opt_metric
-        final_metrics.remove(opt_metric)
-        final_metrics = [opt_metric] + final_metrics
-
-    return df_out[hp_cols + final_metrics].fillna("-"), metric_used
+    return df_out[hp_coord_names + ordered_metrics].fillna("-"), metric_used
 
 
 def iter_hp_impact_tables(
@@ -605,54 +532,6 @@ def export_hp_impact_tables(
         out.append((dataset, model, path))
     return out
 
-
-def export_hp_configs_raw(
-    all_results: defaultdict,
-    output_dir: str,
-) -> None:
-    """Save one raw CSV per (dataset, model) with one row per HP config.
-
-    Columns:
-        - HP parameter columns (one per hyperparameter)
-        - ``seeds``  — number of seeds run for that config (same across all metrics)
-        - ``{metric}_mean`` and ``{metric}_std`` — numeric, one pair per metric
-    """
-    os.makedirs(output_dir, exist_ok=True)
-    stat_suffixes = ("_mean", "_std", "_count")
-
-    for dataset, models in all_results.items():
-        for model, res in models.items():
-            if "sorted_aggregated_results" not in res or res["sorted_aggregated_results"].empty:
-                continue
-            df = res["sorted_aggregated_results"].copy()
-            df = flatten_aggregated_columns(df)
-
-            hp_cols = [
-                c for c in df.columns
-                if not any(c.endswith(s) for s in stat_suffixes)
-                and c != "run_name"
-            ]
-            metric_bases = sorted({c[:-5] for c in df.columns if c.endswith("_mean")})
-
-            out = df[hp_cols].copy()
-
-            # Seeds: take count from first metric (identical across all metrics per row)
-            for base in metric_bases:
-                count_col = f"{base}_count"
-                if count_col in df.columns:
-                    out.insert(len(hp_cols), "seeds", df[count_col].astype("Int64"))
-                    break
-
-            for base in metric_bases:
-                m_col, s_col = f"{base}_mean", f"{base}_std"
-                if m_col in df.columns:
-                    out[f"{base}_mean"] = df[m_col]
-                    if s_col in df.columns:
-                        out[f"{base}_std"] = df[s_col]
-
-            safe_ds = re.sub(r"[^\w\-.]", "_", str(dataset))[:80]
-            safe_m = re.sub(r"[^\w\-.]", "_", str(model))[:80]
-            out.to_csv(os.path.join(output_dir, f"hp_configs_{safe_ds}_{safe_m}.csv"), index=False)
 
 
 def write_tables_tex(
