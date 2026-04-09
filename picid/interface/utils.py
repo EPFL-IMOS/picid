@@ -286,7 +286,7 @@ class ProcessedDatasource:
                 or the underlying datasource.
         """
         try:
-            return super().__getattr__(item)
+            return getattr(self._datasource, item)
         except AttributeError:
             return getattr(self._datasource, item)
 
@@ -404,11 +404,11 @@ class InterfacePreProcessor:
                 "Every element of transforms_lst must be a DataTransform object."
             )
 
-        try:
-            for transform in transforms:
-                data, transform_log = transform.forward(data)
-        except Exception as e:
-            print(e)
+        # try:
+        for transform in transforms:
+            data, transform_log = transform.forward(data)
+        # except Exception as e:
+        #     print(e)
         return data
 
     def pre_process_data(self):

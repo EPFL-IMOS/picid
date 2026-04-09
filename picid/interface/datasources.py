@@ -212,7 +212,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
         Returns:
             dict: The assembled data dictionary, also stored as `self.data_dict`.
         """
-
+        stamps = {}
         if isinstance(self._inner_data, dict):
             dd = {}
             dt = {}
@@ -220,15 +220,18 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                 a, b = self._loading_function(split=k)
                 dd[k] = a
                 dt[k] = b
+                stamps[k] = np.arange(len(a))
+
             data = dd
             target = dt
         else:
             data, target = self._loading_function()
+            stamps = np.arange(len(data))
 
         data_dict = {
             "features": data,
             self._task_mode: target,
-            "timestamps": np.arange(len(data)),
+            "timestamps": stamps,
         }
 
         self.data_dict = data_dict
@@ -418,7 +421,7 @@ class CustomMultiSourceLoader(MultiSourceLoader):
         is_part_of_multisource = False
         if isinstance(data_splitter, BySourceSplitter):
             is_part_of_multisource = True
-        else:
+        elif data_splitter is not None:
             assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None '
                                                                                       'the number of sources must be '
                                                                                       'equal to the number of '

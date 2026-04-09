@@ -39,9 +39,8 @@ from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, re
 from picid.transforms.base.data_transform import DataTransform
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from picid.transforms.base.multisource import InverseTransformMixin
-#from picid.transforms.base.transform_manager import ConfigTransformManager
-# from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
-# from picid.utils import display_targets
+
+log = logging.getLogger(__name__)
 
 def verify_thread_limits(expected: int):
     log.info(f"[Thread sanity check] Expected threads: {expected}")
@@ -60,16 +59,6 @@ def verify_thread_limits(expected: int):
         val = os.environ.get(var)
         if val:
             log.info(f"{var:25s}: {val}")
-
-    # native library threadpools
-    # try:
-    #     for lib in threadpool_info():
-    #         name = lib.get("internal_api", "unknown")
-    #         num_threads = lib.get("num_threads")
-    #         path = Path(lib.get("filepath", "")).name
-    #         log.info(f"{name:12s} ({path:35s}) → {num_threads} threads")
-    # except Exception as e:
-    #     log.error(f"Could not query threadpools: {e}")
 
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
     def get_key(lengths, key):
@@ -129,9 +118,6 @@ OmegaConf.register_new_resolver("uuid", lambda kind="short": _uuid(kind))
 OmegaConf.register_new_resolver("mod", lambda x, y: int(x) % int(y))
 OmegaConf.register_new_resolver("int_div", lambda a, b: int(a) // int(b))
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
-
-log = logging.getLogger(__name__)
-
 
 class EntryInterface:
     """
@@ -328,7 +314,7 @@ class EntryInterface:
             if isinstance(model, AbsModelConfig):
                 model_cfg.update(model.model_dump(by_alias=True))
 
-            log.info('Using a picid model anmd its associated trainer.')
+            log.info('Using a picid model and its associated trainer.')
             log.info(f'Model path: {model_config_path}')
 
             return model_cfg, model_folder_name
@@ -471,6 +457,7 @@ class EntryInterface:
         if isinstance(overrides, str):
             overrides = [overrides]
 
+        task_yaml_name = None
         # task_definition must be a tuple because we need to load it from task_definitions folder in configs
         # alternatively it can be a BaseTaskDefinition
         if task_definition is not None:
@@ -481,6 +468,8 @@ class EntryInterface:
             if isinstance(model, CustomModelTrainer):
                 model_cfg, model_yaml_name = None, None
             else:
+                if task_yaml_name is None:
+                    raise ValueError('task_definition is none. You must define it.')
                 model_cfg, model_yaml_name = self.get_model_cfg(model, task=task_yaml_name)
 
         if datasource is not None:
