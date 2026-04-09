@@ -257,6 +257,8 @@ def build_heatmap(
         return f"{rank_str}{r['value']:.2f}{n_str}"
 
     long["label"] = long.apply(_make_label, axis=1)
+    effective_sort_metric = sort_metric_key or metric_key
+    effective_alt_sort_metric = alt_sort_metric_key or "—"
 
     model_dim = hv.Dimension("model", values=model_order)
     dataset_dim = hv.Dimension("dataset", values=dataset_order)
@@ -268,7 +270,10 @@ def build_heatmap(
         cmap="RdYlGn",
         tools=["hover"],
         xrotation=45,
-        title=f"{metric_key} (selected by active sort metric)",
+        title=(
+            f"{metric_key} "
+            f"(sort: {effective_sort_metric}; alt sort: {effective_alt_sort_metric})"
+        ),
         fontsize={"title": 13, "labels": 11, "ticks": 9},
         labelled=[],
         toolbar="above",
@@ -338,6 +343,48 @@ def _plotly_axis_range(values: pd.Series | np.ndarray, *, reverse: bool = False)
     return [hi, lo] if reverse else [lo, hi]
 
 
+def _parallel_coordinates_line_colors(models: list[str]) -> list[str]:
+    """Return colors for model lines using Matplotlib's default color cycle."""
+    if not models:
+        return []
+
+    from matplotlib import rcParams
+
+    palette = list(rcParams["axes.prop_cycle"].by_key().get("color", ()))
+    if not palette:
+        palette = [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ]
+    repeats = (len(models) + len(palette) - 1) // len(palette)
+    return (palette * repeats)[: len(models)]
+
+
+def _plotly_discrete_colorscale(colors: list[str]) -> list[list[float | str]]:
+    """Build a discrete Plotly colorscale from a list of colors."""
+    if not colors:
+        return []
+    if len(colors) == 1:
+        return [[0.0, colors[0]], [1.0, colors[0]]]
+
+    step = 1.0 / len(colors)
+    colorscale: list[list[float | str]] = []
+    for index, color in enumerate(colors):
+        start = index * step
+        end = (index + 1) * step
+        colorscale.append([start, color])
+        colorscale.append([end, color])
+    return colorscale
+
+
 def build_parallel_coordinates(
     loader: ResultsLoader,
     metric_key: str,
@@ -395,45 +442,303 @@ def build_parallel_coordinates(
             }
         )
 
-    color_values = frame["Average rank"].astype(float)
-    finite_color = color_values[np.isfinite(color_values)]
-    if finite_color.empty:
-        cmin, cmax = 0.0, 1.0
-    else:
-        cmin = float(finite_color.min())
-        cmax = float(finite_color.max())
-        if cmin == cmax:
-            cmin -= 0.5
-            cmax += 0.5
+    line_colors = _parallel_coordinates_line_colors(ordered_models)
+    line_color_values = list(range(len(ordered_models)))
 
     fig = go.Figure(
         data=go.Parcoords(
             line={
-                "color": color_values.tolist(),
-                "colorscale": [
-                    [0.0, "#2ca25f"],
-                    [0.5, "#fee08b"],
-                    [1.0, "#d7301f"],
-                ],
-                "cmin": cmin,
-                "cmax": cmax,
-                "colorbar": {"title": "Average rank"},
+                "color": line_color_values,
+                "colorscale": _plotly_discrete_colorscale(line_colors),
+                "cmin": -0.5,
+                "cmax": max(len(line_colors) - 0.5, 0.5),
+                "showscale": False,
             },
             dimensions=dimensions,
             labelfont={"size": 12},
             tickfont={"size": 10},
+            labelside="bottom",
+            labelangle=-45,
         )
     )
     fig.update_layout(
         title=f"{metric_key} (selected by active sort metric)",
         height=max(520, 120 + 45 * len(ordered_models)),
-        margin={"l": 60, "r": 60, "t": 60, "b": 30},
+        margin={"l": 60, "r": 60, "t": 60, "b": 180},
     )
     return pn.pane.Plotly(
         fig,
         config={"responsive": True, "displaylogo": False},
         sizing_mode="stretch_width",
     )
+
+
+# ---------------------------------------------------------------------------
+# Spiderweb overview
+# ---------------------------------------------------------------------------
+
+def _normalize_spiderweb_scores(values: pd.Series, mode: str) -> pd.Series:
+    """Normalize one model spoke across datasets to a 0..1 spiderweb radius."""
+    numeric = pd.to_numeric(values, errors="coerce")
+    finite = numeric.dropna()
+    if finite.empty:
+        return pd.Series(np.nan, index=numeric.index, dtype=float)
+
+    lo = float(finite.min())
+    hi = float(finite.max())
+    if hi == lo:
+        return pd.Series(
+            np.where(numeric.notna(), 0.5, np.nan), index=numeric.index, dtype=float
+        )
+
+    normalized = (numeric - lo) / (hi - lo)
+    if mode == "min":
+        normalized = 1.0 - normalized
+    return normalized.astype(float)
+
+
+def _build_spiderweb_frame(
+    loader: ResultsLoader,
+    metric_key: str,
+    *,
+    sort_metric_key: str | None,
+    mode: str,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
+    """Build raw and normalized dataset-by-model frames for the spiderweb view."""
+    raw_long = _selected_metric_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    if raw_long.empty:
+        empty = pd.DataFrame()
+        return empty, empty, [], []
+
+    _heatmap_long, model_order, _dataset_order = _build_heatmap_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+    if not model_order:
+        empty = pd.DataFrame()
+        return empty, empty, [], []
+
+    raw_matrix = raw_long.pivot_table(
+        index="dataset",
+        columns="model",
+        values="value",
+        aggfunc="first",
+    )
+    dataset_order = [dataset for dataset in loader.datasets if dataset in raw_matrix.index]
+    raw_matrix = raw_matrix.reindex(index=dataset_order, columns=model_order)
+    normalized_matrix = raw_matrix.apply(
+        lambda series: _normalize_spiderweb_scores(series, mode)
+    )
+
+    keep_mask = normalized_matrix.notna().any(axis=1)
+    raw_matrix = raw_matrix.loc[keep_mask]
+    normalized_matrix = normalized_matrix.loc[keep_mask]
+    dataset_order = [dataset for dataset in dataset_order if dataset in raw_matrix.index]
+    return raw_matrix, normalized_matrix, model_order, dataset_order
+
+
+def _spiderweb_palette(count: int) -> list[str]:
+    """Return a stable palette for model polygons."""
+    from bokeh.palettes import Category10, Category20
+
+    if count <= 10:
+        palette = list(Category10[10])
+    else:
+        palette = list(Category20[20])
+    if count <= len(palette):
+        return palette[:count]
+    repeats = (count + len(palette) - 1) // len(palette)
+    return (palette * repeats)[:count]
+
+
+def build_spiderweb(
+    loader: ResultsLoader,
+    metric_key: str,
+    sort_metric_key: str | None = None,
+    mode: str = "min",
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    selected_dataset: str | None = None,
+) -> pn.viewable.Viewable:
+    """Spiderweb overview with dataset spokes and one polygon per model."""
+    import holoviews as hv
+
+    hv.extension("bokeh")
+    raw_matrix, normalized_matrix, model_order, dataset_order = _build_spiderweb_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    if raw_matrix.empty or normalized_matrix.empty:
+        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
+
+    angles = np.linspace(
+        np.pi / 2,
+        np.pi / 2 - (2 * np.pi),
+        len(dataset_order),
+        endpoint=False,
+    )
+    closed_angles = np.append(angles, angles[0])
+
+    ring_radii = [0.25, 0.5, 0.75, 1.0]
+    ring_paths = [
+        pd.DataFrame(
+            {
+                "x": radius * np.cos(closed_angles),
+                "y": radius * np.sin(closed_angles),
+            }
+        )
+        for radius in ring_radii
+    ]
+    rings = hv.Path(ring_paths, kdims=["x", "y"]).opts(
+        color="#d1d5db",
+        line_width=1,
+        alpha=0.8,
+    )
+
+    spoke_radius = 1.02
+    spokes_df = pd.DataFrame(
+        {
+            "x0": np.zeros(len(dataset_order), dtype=float),
+            "y0": np.zeros(len(dataset_order), dtype=float),
+            "x1": spoke_radius * np.cos(angles),
+            "y1": spoke_radius * np.sin(angles),
+            "dataset": dataset_order,
+        }
+    )
+    selected_spokes = spokes_df[spokes_df["dataset"] == selected_dataset]
+    base_spokes = spokes_df[spokes_df["dataset"] != selected_dataset]
+    spokes = hv.Segments(base_spokes, kdims=["x0", "y0", "x1", "y1"]).opts(
+        color="#d1d5db",
+        line_width=1,
+        alpha=0.9,
+    )
+    highlighted_spoke = hv.Segments(
+        selected_spokes, kdims=["x0", "y0", "x1", "y1"]
+    ).opts(
+        color="#2563eb",
+        line_width=2.5,
+        alpha=0.95,
+    )
+
+    label_radius = 1.15
+    labels_df = pd.DataFrame(
+        {
+            "x": label_radius * np.cos(angles),
+            "y": label_radius * np.sin(angles),
+            "text": [_shorten_dataset_name(dataset) for dataset in dataset_order],
+            "dataset": dataset_order,
+        }
+    )
+    base_labels = hv.Labels(
+        labels_df[labels_df["dataset"] != selected_dataset], ["x", "y"], "text"
+    ).opts(
+        text_color="#374151",
+        text_font_size="8pt",
+    )
+    selected_labels = hv.Labels(
+        labels_df[labels_df["dataset"] == selected_dataset], ["x", "y"], "text"
+    ).opts(
+        text_color="#2563eb",
+        text_font_size="9pt",
+    )
+
+    overlay = rings * spokes * highlighted_spoke * base_labels * selected_labels
+    palette = _spiderweb_palette(len(model_order))
+    for model_name, color in zip(model_order, palette, strict=False):
+        model_scores = normalized_matrix[model_name]
+        model_values = raw_matrix[model_name]
+        path_df = pd.DataFrame(
+            {
+                "x": np.append(model_scores.to_numpy(dtype=float) * np.cos(angles), np.nan),
+                "y": np.append(model_scores.to_numpy(dtype=float) * np.sin(angles), np.nan),
+                "Model": _shorten_model_name(model_name),
+            }
+        )
+        if len(path_df) > 1:
+            path_df.iloc[-1] = {
+                "x": path_df.iloc[0]["x"],
+                "y": path_df.iloc[0]["y"],
+                "Model": path_df.iloc[0]["Model"],
+            }
+
+        model_path = hv.Path(path_df, kdims=["x", "y"], vdims=["Model"]).relabel(
+            _shorten_model_name(model_name)
+        ).opts(
+            color=color,
+            line_width=2.2,
+            alpha=0.65,
+            muted_alpha=0.08,
+            show_legend=True,
+        )
+
+        point_rows = []
+        for dataset_name, angle in zip(dataset_order, angles, strict=False):
+            score = model_scores[dataset_name]
+            raw_value = model_values[dataset_name]
+            if pd.isna(score):
+                continue
+            point_rows.append(
+                {
+                    "x": float(score) * float(np.cos(angle)),
+                    "y": float(score) * float(np.sin(angle)),
+                    "Model": _shorten_model_name(model_name),
+                    "Dataset": _shorten_dataset_name(dataset_name),
+                    "Raw value": float(raw_value),
+                    "Normalized score": float(score),
+                }
+            )
+        if point_rows:
+            model_points = hv.Points(
+                pd.DataFrame(point_rows),
+                kdims=["x", "y"],
+                vdims=["Model", "Dataset", "Raw value", "Normalized score"],
+            ).opts(
+                color=color,
+                size=6,
+                alpha=0.75,
+                tools=["hover"],
+                show_legend=False,
+            )
+            overlay = overlay * model_path * model_points
+        else:
+            overlay = overlay * model_path
+
+    overlay = overlay.opts(
+        responsive=True,
+        min_height=700,
+        aspect="equal",
+        xaxis=None,
+        yaxis=None,
+        show_frame=False,
+        show_grid=False,
+        padding=0.15,
+        toolbar="above",
+        legend_position="top_right",
+        title=f"{metric_key} normalized spiderweb across datasets (configs selected by active sort metric)",
+    ).redim.range(x=(-1.25, 1.25), y=(-1.25, 1.25))
+    return pn.pane.HoloViews(overlay, sizing_mode="stretch_width")
 
 
 # ---------------------------------------------------------------------------

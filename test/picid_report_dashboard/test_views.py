@@ -588,6 +588,28 @@ def test_build_heatmap_frame_orders_models_by_average_rank_not_average_value():
     assert model_order == [PRIMARY_MODEL, ALT_MODEL]
 
 
+def test_build_heatmap_title_includes_sort_metrics():
+    import holoviews as hv
+
+    hv.extension("bokeh")
+    loader = _make_loader()
+
+    pane = views.build_heatmap(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_OPT_METRIC,
+        use_alt_metric=True,
+    )
+
+    plot = hv.renderer("bokeh").get_plot(pane.object)
+    assert plot.state.title.text == (
+        f"{PRIMARY_DISPLAY_METRIC} "
+        f"(sort: {PRIMARY_OPT_METRIC}; alt sort: {ALT_OPT_METRIC})"
+    )
+
+
 def test_build_parallel_coordinates_returns_plotly_pane_with_expected_axes():
     loader = _make_average_rank_loader()
 
@@ -610,6 +632,15 @@ def test_build_parallel_coordinates_returns_plotly_pane_with_expected_axes():
         "Average",
         "Average rank",
     ]
+    assert pane.object.data[0].labelside == "bottom"
+    assert pane.object.data[0].labelangle == -45
+    assert pane.object.data[0].line.showscale is False
+    assert len(pane.object.data[0].line.color) == 2
+    assert list(pane.object.data[0].line.color) == [0, 1]
+    colorscale = pane.object.data[0].line.colorscale
+    assert colorscale[0][1].startswith("#")
+    assert colorscale[1][1].startswith("#")
+    assert colorscale[0][1] != colorscale[-1][1]
 
 
 def test_build_parallel_coordinates_frame_uses_alt_metric_for_alt_models():
@@ -647,6 +678,134 @@ def test_build_parallel_coordinates_frame_orders_models_by_average_rank():
 
     assert ordered_models == [PRIMARY_MODEL, ALT_MODEL]
     assert list(frame["model"]) == [PRIMARY_MODEL, ALT_MODEL]
+
+
+def test_build_spiderweb_returns_holoviews_pane():
+    loader = _make_average_rank_loader()
+
+    pane = views.build_spiderweb(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+        selected_dataset=DATASET,
+    )
+
+    assert isinstance(pane, pn.pane.HoloViews)
+    assert not isinstance(pane, pn.pane.Plotly)
+
+
+def test_build_spiderweb_uses_dataset_spokes_and_model_paths():
+    loader = _make_average_rank_loader()
+
+    pane = views.build_spiderweb(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+        selected_dataset=DATASET,
+    )
+
+    overlay = pane.object
+    label_texts = [
+        row["text"]
+        for element in overlay
+        if element.__class__.__name__ == "Labels"
+        for _, row in element.data.iterrows()
+    ]
+    model_path_labels = [
+        element.label
+        for element in overlay
+        if element.__class__.__name__ == "Path" and element.label != ""
+    ]
+
+    assert sorted(label_texts) == sorted(
+        [
+        views._shorten_dataset_name(DATASET),
+        views._shorten_dataset_name(SECOND_DATASET),
+        ]
+    )
+    assert model_path_labels == [
+        views._shorten_model_name(ALT_MODEL),
+        views._shorten_model_name(PRIMARY_MODEL),
+    ]
+
+
+def test_build_spiderweb_frame_orders_model_paths_by_average_rank():
+    loader = _make_rank_order_loader()
+
+    raw_matrix, normalized_matrix, model_order, dataset_order = views._build_spiderweb_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert model_order == [PRIMARY_MODEL, ALT_MODEL]
+    assert list(raw_matrix.columns) == [PRIMARY_MODEL, ALT_MODEL]
+    assert list(normalized_matrix.columns) == [PRIMARY_MODEL, ALT_MODEL]
+    assert dataset_order == [DATASET, SECOND_DATASET, THIRD_DATASET]
+
+
+def test_build_spiderweb_frame_normalizes_scores_by_mode():
+    loader = _make_average_rank_loader()
+
+    _raw_min, normalized_min, _model_order, _dataset_order = views._build_spiderweb_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+    _raw_max, normalized_max, _model_order, _dataset_order = views._build_spiderweb_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="max",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert normalized_min.loc[DATASET, PRIMARY_MODEL] == pytest.approx(1.0)
+    assert normalized_min.loc[SECOND_DATASET, PRIMARY_MODEL] == pytest.approx(0.0)
+    assert normalized_min.loc[DATASET, ALT_MODEL] == pytest.approx(1.0)
+    assert normalized_min.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(0.0)
+
+    assert normalized_max.loc[DATASET, PRIMARY_MODEL] == pytest.approx(0.0)
+    assert normalized_max.loc[SECOND_DATASET, PRIMARY_MODEL] == pytest.approx(1.0)
+    assert normalized_max.loc[DATASET, ALT_MODEL] == pytest.approx(0.0)
+    assert normalized_max.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(1.0)
+
+
+def test_build_spiderweb_frame_uses_alt_metric_for_alt_models():
+    loader = _make_loader()
+
+    raw_matrix, _normalized_matrix, model_order, dataset_order = views._build_spiderweb_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+    )
+
+    assert model_order == [PRIMARY_MODEL, ALT_MODEL]
+    assert dataset_order == [DATASET]
+    assert raw_matrix.loc[DATASET, PRIMARY_MODEL] == pytest.approx(5.0)
+    assert raw_matrix.loc[DATASET, ALT_MODEL] == pytest.approx(7.0)
 
 
 def test_build_hp_impact_frame_sorts_rows_by_active_sort_metric():

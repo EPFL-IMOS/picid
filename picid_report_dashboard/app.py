@@ -35,6 +35,7 @@ from picid_report_dashboard.views import (
     build_metadata_panel,
     build_model_summary_table,
     build_parallel_coordinates,
+    build_spiderweb,
     build_stats_table,
     build_summary_table,
 )
@@ -47,12 +48,13 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 4
+_PERSISTED_STATE_VERSION = 5
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
     "Heatmap",
     "Parallel Coordinates",
+    "Spiderweb",
     "Bar Chart",
     "HP Impact",
     "Summary Table",
@@ -457,7 +459,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -491,8 +493,11 @@ class PiCIDDashboard(param.Parameterized):
             active_tab = None
         elif isinstance(active_tab, str) and active_tab.isdigit():
             active_tab = int(active_tab)
-        if isinstance(active_tab, int) and version == 2 and active_tab >= 1:
-            active_tab += 1
+        if isinstance(active_tab, int):
+            if version == 2 and active_tab >= 1:
+                active_tab += 2
+            elif version in {3, 4} and active_tab >= 2:
+                active_tab += 1
         if isinstance(active_tab, int) and 0 <= active_tab < len(_MAIN_TAB_TITLES):
             parsed["active_tab"] = active_tab
         return parsed
@@ -666,6 +671,50 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
+            ),
+            pn.layout.Divider(),
+            pn.pane.Markdown(
+                f"### View Configuration Summary for {self.selected_dataset}"
+                if self.selected_dataset is not None
+                else "### View Configuration Summary"
+            ),
+            build_model_summary_table(
+                self._loader,
+                self.selected_dataset,
+                metric_key=self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+                on_model_click=self._show_hp_impact_for_model,
+            ),
+            sizing_mode="stretch_width",
+        )
+
+    @param.depends(
+        "metric_key",
+        "sort_metric_key",
+        "mode",
+        "selected_dataset",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+    )
+    def _spiderweb_view(self):
+        if self._load_error:
+            return pn.pane.Alert(
+                f"**Error loading data:** {self._load_error}", alert_type="danger"
+            )
+        return pn.Column(
+            build_spiderweb(
+                self._loader,
+                self.metric_key,
+                sort_metric_key=self.sort_metric_key,
+                mode=self.mode,
+                alt_metric_key=self._active_alt_metric(),
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                use_alt_metric=self.use_alt_metric,
+                selected_dataset=self.selected_dataset,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -969,10 +1018,11 @@ class PiCIDDashboard(param.Parameterized):
         tabs = pn.Tabs(
             (_MAIN_TAB_TITLES[0], pn.panel(self._heatmap_view)),
             (_MAIN_TAB_TITLES[1], pn.panel(self._parallel_coordinates_view)),
-            (_MAIN_TAB_TITLES[2], pn.panel(self._bar_chart_view)),
-            (_MAIN_TAB_TITLES[3], pn.panel(self._hp_impact_view)),
-            (_MAIN_TAB_TITLES[4], pn.panel(self._summary_view)),
-            (_MAIN_TAB_TITLES[5], pn.panel(self._stats_view)),
+            (_MAIN_TAB_TITLES[2], pn.panel(self._spiderweb_view)),
+            (_MAIN_TAB_TITLES[3], pn.panel(self._bar_chart_view)),
+            (_MAIN_TAB_TITLES[4], pn.panel(self._hp_impact_view)),
+            (_MAIN_TAB_TITLES[5], pn.panel(self._summary_view)),
+            (_MAIN_TAB_TITLES[6], pn.panel(self._stats_view)),
             dynamic=True,
             active=self.active_tab,
         )
