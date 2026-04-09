@@ -32,9 +32,10 @@ def default_pre_process(batch: dict[str, torch.Tensor],
             list[torch.Tensor]: A list of extracted tensors ordered according to
                 the keys provided in `to_extract`.
 
-        Raises:
-            KeyError: If any of the keys in `to_extract` are not present in the
-                `batch` dictionary.
+        Raises
+        ------
+        KeyError
+            If any key in ``to_extract`` is not present in ``batch``.
     """
 
     if isinstance(to_extract, str):

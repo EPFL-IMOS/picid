@@ -6,6 +6,28 @@ from .base import AbsModelConfig
 
 
 class LinearForecasterConfig(AbsModelConfig):
+    """Config for the linear forecasting baseline.
+
+    A lightweight linear model for time-series forecasting. Supports optional
+    reversible instance normalisation and seasonal decomposition.
+
+    Parameters
+    ----------
+    linear_window : int
+        Look-back window size for the linear layer. ``0`` uses the full
+        context window. Default ``0``.
+    linear_shared_weights : bool
+        Share weights across all feature dimensions. Default ``False``.
+    use_revin : bool
+        Enable reversible instance normalisation. Default ``False``.
+    use_seasonal_decomp : bool
+        Enable seasonal decomposition. Default ``False``.
+    context_points : int or None
+        Context length override. Inferred from task definition when ``None``.
+    d_x, d_yt, d_yc : int or None
+        Dimension overrides; inferred from data when ``None``.
+    """
+
     config_name : str = Field('linear_forecaster', frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)

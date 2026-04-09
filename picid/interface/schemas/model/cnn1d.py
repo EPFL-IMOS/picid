@@ -4,6 +4,31 @@ from .base import AbsModelConfig
 
 
 class CNN1DConfig(AbsModelConfig):
+    """Config for the 1-D convolutional encoder model.
+
+    Suitable for prognostics and feature-extraction tasks. All architecture
+    fields are required because the model cannot infer them from the data.
+
+    Parameters
+    ----------
+    input_channels : int
+        Number of input feature channels. Required.
+    seq_len : int
+        Length of the input window. Must match the task definition. Required.
+    kernels : int
+        Convolutional kernel size. Required.
+    strides : int
+        Convolutional stride. Required.
+    dilations : int
+        Dilation factor. Required.
+    latent_dim : int
+        Dimensionality of the encoder output. Required.
+    dropout_prob : float
+        Dropout probability. Must be in ``[0.1, 1.0]``. Required.
+    output_channels : int
+        Number of output channels from the final conv layer. Required.
+    """
+
     config_name : str = Field('cnn_1d', frozen=True)
     # lightning_model: bool = Field(True, frozen=True)
     model_class: str = Field('picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper',

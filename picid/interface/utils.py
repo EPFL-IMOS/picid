@@ -25,6 +25,19 @@ log = logging.getLogger(__name__)
 def register_data_dim_resolver(
     data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
 ) -> None:
+    """Register the ``infer_data_dim`` OmegaConf resolver against a data dict.
+
+    The resolver is used in Hydra configs to dynamically read tensor dimensions
+    at composition time, e.g. ``${infer_data_dim:features,1}`` resolves to the
+    size of axis 1 of ``data["features"]``. Calling this function a second time
+    replaces any previously registered resolver.
+
+    Parameters
+    ----------
+    data : dict[str, np.ndarray or ak.Array or torch.Tensor]
+        Mapping from tensor name to array for the *training* split. The
+        resolver looks up keys in this dict.
+    """
 
     def infer_data_dim(obj: Union[np.array, ak.Array, torch.Tensor], dim: int) -> int:
         if isinstance(obj, list):
@@ -63,8 +76,42 @@ def create_lightning_module(
     datamodule: LightningDataModule,
     evaluators: list[AbstractEvaluator],
     loss: Any,
-    backbone: nn.Module =None
+    backbone: nn.Module = None,
 ):
+    """Wrap a backbone in the appropriate PyTorch Lightning module.
+
+    Inspects the type of ``backbone`` and routes it to the correct Lightning
+    wrapper. If ``backbone`` is ``None``, the model is instantiated from
+    ``cfg.model`` using Hydra.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Fully composed Hydra configuration (output of ``hydra.compose``).
+    datamodule : LightningDataModule
+        The datamodule for the current experiment (used for fit-predict models
+        that need dataloader references at construction time).
+    evaluators : list[AbstractEvaluator]
+        Evaluator instances for each split, passed into the Lightning module.
+    loss : Any
+        Instantiated loss function.
+    backbone : nn.Module or None
+        Pre-instantiated backbone. When ``None``, Hydra instantiates the model
+        from ``cfg.model``.
+
+    Returns
+    -------
+    LightningModule
+        A Lightning module ready to be passed to ``trainer.fit()``.
+
+    Raises
+    ------
+    ValueError
+        If ``backbone`` is provided but does not match any supported wrapper
+        type (``AbstractFeedForwardWrapper``,
+        ``AbstractFeedForwardTrainingWrapper``,
+        ``AbstractFitPredictWrapper``).
+    """
     # we can only partially initialize the optimizer here because
     # we need the parameter list from the model later
     # as a consequence, the same applies for the scheduler
@@ -297,11 +344,11 @@ class InterfacePreProcessor:
         transformation, and management of datasources.
 
         See also:
-            - `pcid.data.preprocessing.single_source_loader.SingleSourceLoader`:
+            - `picid.data.preprocessing.single_source_loader.SingleSourceLoader`:
                     For preprocessing pipelines that operate on a single data source.
-            - `pcid.data.preprocessing.multi_source_loader.MultiSourceLoader`:
+            - `picid.data.preprocessing.multi_source_loader.MultiSourceLoader`:
                     For pipelines that handle multiple data sources simultaneously.
-            - `pcid.data.preprocessing.phmd_loader.PHMDLoader`:
+            - `picid.data.preprocessing.phmd_loader.PHMDLoader`:
                     For specialized loading of PHMD-formatted data sources.
 
         Attributes:
@@ -387,21 +434,36 @@ class InterfacePreProcessor:
         self.data: DatasetContainer = data
 
     @staticmethod
-    def apply_transforms(data: DatasetContainer, transforms, caching_values: Any = None) -> List[Any]:
-        """
-        Apply a list of transforms to each data item in data.
-        Args:
-            data: List of data items.
-            transforms_lst: List of lists of DataTransform objects, one list per data item.
-        Returns:
-            List of transformed data items.
+    def apply_transforms(data: DatasetContainer, transforms, caching_values: Any = None) -> DatasetContainer:
+        """Apply a list of transforms sequentially to a DatasetContainer.
+
+        Parameters
+        ----------
+        data : DatasetContainer
+            The dataset to transform.
+        transforms : list[DataTransform] or None
+            Ordered list of transforms to apply. Each transform is applied in
+            turn and receives the output of the previous one. If ``None``,
+            ``data`` is returned unchanged.
+        caching_values : Any, optional
+            Reserved for joblib caching; pass ``None``.
+
+        Returns
+        -------
+        DatasetContainer
+            The transformed dataset container.
+
+        Raises
+        ------
+        ValueError
+            If any element of ``transforms`` is not a ``DataTransform`` instance.
         """
         if transforms is None:
             return data
 
         if not all(isinstance(t, DataTransform) for t in transforms):
             raise ValueError(
-                "Every element of transforms_lst must be a DataTransform object."
+                "Every element of transforms must be a DataTransform object."
             )
 
         # try:
@@ -412,6 +474,16 @@ class InterfacePreProcessor:
         return data
 
     def pre_process_data(self):
+        """Load the datasource and split it into train/val/test.
+
+        Calls ``load_data()`` and ``split_data()`` on the datasource, then
+        fetches the resulting ``DatasetContainer`` into ``self.data``.
+
+        Returns
+        -------
+        dict
+            Metadata dict returned by ``datasource.get_meta_data()``.
+        """
         self.datasource.load_data()
         self.datasource.split_data()
 
@@ -453,6 +525,33 @@ def get_inverter_for_key_with_name(transforms: list[DataTransform],
                                    key: str,
                                    which: str = "last")\
         -> tuple[InverseTransformMixin | None, str | None]:
+    """Find the first or last invertible transform that handles a given key.
+
+    Scans ``transforms`` for ``DataTransform`` instances whose underlying
+    transform implements ``InverseTransformMixin`` and whose ``assign_to``
+    includes ``key``.
+
+    Parameters
+    ----------
+    transforms : list[DataTransform]
+        Ordered list of transforms as passed to ``process_datasource()``.
+    key : str
+        The data-dict key to look for (e.g. ``"rul"``).
+    which : {"first", "last"}
+        Whether to return the first or last matching transform.
+        Default ``"last"``.
+
+    Returns
+    -------
+    tuple[InverseTransformMixin or None, str or None]
+        The matching transform instance and its ``transform_name``, or
+        ``(None, None)`` if no match is found.
+
+    Raises
+    ------
+    ValueError
+        If ``which`` is not ``"first"`` or ``"last"``.
+    """
 
     if which not in ("first", "last"):
         raise ValueError(

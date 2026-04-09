@@ -6,6 +6,43 @@ from .base import AbsModelConfig
 
 
 class CrossformerConfig(AbsModelConfig):
+    """Config for the Crossformer Transformer model.
+
+    A Transformer-based architecture designed for multivariate time-series
+    forecasting. Input/output dimensions are inferred from the data when left
+    as ``None``.
+
+    Parameters
+    ----------
+    dropout : float
+        Dropout rate. Must be in ``[0.1, 1.0]``. Required.
+    d_model : int
+        Model embedding dimension. Default ``128``.
+    d_ff : int
+        Feed-forward layer dimension. Default ``128``.
+    n_heads : int
+        Number of attention heads. Default ``4``.
+    e_layers : int
+        Number of encoder layers. Default ``3``.
+    seg_len : int
+        Segment length for cross-dimension attention. Default ``6``.
+    win_size : int
+        Window size for hierarchical attention. Default ``2``.
+    factor : int
+        Attention sampling factor. Default ``10``.
+    use_revin : bool
+        Enable reversible instance normalisation. Default ``False``.
+    use_seasonal_decomp : bool
+        Enable seasonal decomposition pre-processing. Default ``False``.
+    d_x, d_yt, d_yc, ts_in, ts_out : int or None
+        Dimension overrides; inferred from data when ``None``.
+
+    Examples
+    --------
+    >>> model = CrossformerConfig(dropout=0.1)
+    >>> model = CrossformerConfig(dropout=0.2, d_model=256, n_heads=8)
+    """
+
     config_name : str = Field('lstm', frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)

@@ -68,41 +68,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                  data_splitter: Callable[[dict], dict] = None,
                  data_name: str = 'custom single source datasource',
                  **kwargs):
-        """
-        Initializes the CustomSingleSourceLoader with raw data and its configuration.
-
-        The internal loading function is selected at construction time based on
-        `loading_type`. If `data` is a dictionary, it is treated as already split
-        and must contain exactly the keys 'train', 'val', and 'test'. Negative
-        `target_column` indices are resolved immediately against the array's column
-        count when `loading_type` is 'numpy', so downstream code always operates
-        on a positive index.
-
-        Args:
-            data (DataFrame | np.ndarray | dict[str, DataFrame | np.ndarray]): Raw
-                input data. Either a single array or DataFrame, or a pre-split
-                dictionary keyed by 'train', 'val', and 'test'.
-            target_column (int | str): Column index or name identifying the target
-                feature. Supports negative indexing when `loading_type` is 'numpy'.
-            task_mode (str): Task type string (e.g. 'classification', 'regression'),
-                used as a key in the assembled data dictionary.
-            loading_type (Literal['csv', 'numpy']): Selects the internal loading
-                strategy. Use 'csv' for pandas DataFrames and 'numpy' for ndarrays.
-            is_part_of_multisource (bool): Whether this loader is a component of a
-                larger CustomMultiSourceLoader. Defaults to False.
-            data_splitter (Callable[[dict], dict], optional): A function that
-                partitions data into subsets. It receives a dictionary of all
-                features and targets, and must return a mask for each split
-                ('train', 'val', 'test'). Defaults to None.
-            data_name (str): Human-readable label for this data source, used in
-                logs. Defaults to 'custom single source datasource'.
-            **kwargs: Additional arguments forwarded to SingleSourceLoader.
-
-        Raises:
-            AssertionError: If `data` is a dict but does not contain all three
-                required keys ('train', 'val', 'test').
-            AssertionError: If `loading_type` is not 'csv' or 'numpy'.
-        """
+        """Initialise the loader. See class docstring for parameter details."""
 
         super().__init__(
             is_part_of_multisource=is_part_of_multisource,
@@ -112,9 +78,12 @@ class CustomSingleSourceLoader(SingleSourceLoader):
             **kwargs)
 
         if isinstance(data, dict):
-            assert all(k in data for k in ['train', 'val', 'test']), ("all splits ['train', 'val', 'test'] "
-                                                                      f"must be in data, but {list(data.keys())} are given.)")
-
+            missing = [k for k in ['train', 'val', 'test'] if k not in data]
+            if missing:
+                raise ValueError(
+                    f"Pre-split data must contain all three splits ['train', 'val', 'test'], "
+                    f"but {list(data.keys())} were given (missing: {missing})."
+                )
             self._is_splitted = True
 
         if loading_type == 'csv':
@@ -127,7 +96,9 @@ class CustomSingleSourceLoader(SingleSourceLoader):
                     target_column = np.arange(data.shape[1])[target_column]
             self._loading_function = self._load_numpy
         else:
-            assert False, 'loading_type must be either "csv" or "numpy".'
+            raise ValueError(
+                f'loading_type must be either "csv" or "numpy", got {loading_type!r}.'
+            )
 
         self._inner_data = data
         self._target_column = target_column
@@ -209,8 +180,12 @@ class CustomSingleSourceLoader(SingleSourceLoader):
             - task_mode key (e.g. 'classification'): the target array or dict of targets.
             - 'timestamps': a sequential integer index over the samples.
 
-        Returns:
-            dict: The assembled data dictionary, also stored as `self.data_dict`.
+        Returns
+        -------
+        dict
+            The assembled data dictionary with keys ``"features"``, the task-mode
+            key (e.g. ``"rul"``), and ``"timestamps"``. Also stored as
+            ``self.data_dict``.
         """
         stamps = {}
         if isinstance(self._inner_data, dict):
@@ -239,7 +214,7 @@ class CustomSingleSourceLoader(SingleSourceLoader):
 
         if isinstance(self._inner_data, dict):
             log.info(
-                f'Loaded {self.data_name} already spitted datasource resulting following split:')
+                f'Loaded {self.data_name} already split datasource resulting following split:')
             for k, v in data_dict['features'].items():
                 # print()
                 log.info(f'{k}: {v.shape}')
@@ -338,29 +313,7 @@ class CustomMultiSourceLoader(MultiSourceLoader):
                  data_name: str = 'custom multi source datasource',
                  **kwargs):
 
-        """
-        Initializes the CustomMultiSourceLoader with a set of named single-source
-        loaders and an optional cross-source splitting strategy.
-
-        If `multisource_data_splitter` is provided, all sources must have been
-        created without an individual data_splitter, since the two splitting
-        strategies are mutually exclusive.
-
-        Args:
-            sources (dict[str, CustomSingleSourceLoader]): Mapping from source name
-                to its corresponding loader instance.
-            task_mode (str): Task type string (e.g. 'classification', 'regression').
-            multisource_data_splitter (BySourceSplitter | None): An optional splitter
-                that operates across all sources simultaneously. If provided, no
-                individual source may carry its own data_splitter. Defaults to None.
-            data_name (str): Human-readable label for this combined data source,
-                used in logs. Defaults to 'custom multi source datasource'.
-            **kwargs: Additional arguments forwarded to MultiSourceLoader.
-
-        Raises:
-            AssertionError: If `multisource_data_splitter` is not None but one or
-                more individual sources also have a data_splitter set.
-        """
+        """Initialise the loader. See class docstring for parameter details."""
 
         log.info(f'Creating Multi Source Loader (name: {data_name}) with task mode {task_mode} '
                  f'and sources dictionary: {list(sources.keys())}')
@@ -422,10 +375,16 @@ class CustomMultiSourceLoader(MultiSourceLoader):
         if isinstance(data_splitter, BySourceSplitter):
             is_part_of_multisource = True
         elif data_splitter is not None:
-            assert isinstance(sources, dict) and len(sources) == len(data_splitter), ('when is_part_of_multisource=None '
-                                                                                      'the number of sources must be '
-                                                                                      'equal to the number of '
-                                                                                      'single_source_data_splitter.')
+            if not isinstance(data_splitter, dict):
+                raise TypeError(
+                    f"data_splitter must be a BySourceSplitter or a dict mapping source names to "
+                    f"splitters, got {type(data_splitter)}."
+                )
+            if len(sources) != len(data_splitter):
+                raise ValueError(
+                    f"When data_splitter is a dict it must have one entry per source, "
+                    f"but got {len(sources)} sources and {len(data_splitter)} splitters."
+                )
 
         _sources = {}
         for s, source in sources.items():
