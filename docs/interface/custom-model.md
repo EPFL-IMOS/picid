@@ -7,7 +7,7 @@ The interface lets you plug in any PyTorch `nn.Module` through two adapters:
 
 ```python
 from picid.interface.model import CustomModelTrainer
-from picid.interface.model.wrapper import ModelWrapper
+from picid.interface.model import ModelWrapper
 ```
 
 ---

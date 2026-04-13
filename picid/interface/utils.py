@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Any, List, Union
+from typing import Optional, Any, Union
 
 import hydra
 import numpy as np

@@ -9,8 +9,10 @@ Both wrap your raw NumPy arrays or pandas DataFrames and expose the same interfa
 
 ```python
 from picid.interface import CustomSingleSourceLoader
-from picid.interface.datasources import CustomMultiSourceLoader
+from picid.interface import CustomMultiSourceLoader
 ```
+
+You can instantiate a SingleSourceLoader from a numpy array or a panda dataframe object. You can instantiate a MultiSource using the already create SingleSource or a collection of primitives.  
 
 ---
 

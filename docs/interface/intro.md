@@ -44,7 +44,7 @@ Every call to `train()` requires four things:
 |---|---|---|
 | **Task definition** | Window size, stride, task type (RUL, forecasting, …) | [Schemas — Task definitions](schemas.md#task-definitions) |
 | **Model** | Which architecture to use and its hyperparameters | [Schemas — Models](schemas.md#models) or [Custom models](custom-model.md) |
-| **Datasource** | Where the data comes from | [Schemas](schemas.md) (built-in) or [Custom datasources](datasources.md) |
+| **Datasource** | Where the data comes from | [Custom datasources](datasources.md) |
 | **Evaluators** | Which metrics to compute on each split | [Schemas — Evaluators](schemas.md#evaluators) |
 
 Transforms, loggers, callbacks, and trainer settings are optional.
@@ -108,7 +108,7 @@ processed = interface.process_datasource(
 )
 ```
 
-Use this when you want to inspect or cache the preprocessed data before training, or when you want to re-use the same preprocessing result across multiple `train()` calls.
+Use this when you want to inspect or cache the preprocessed data before training, when you want to re-use the same preprocessing result across multiple `train()` calls, or when you are using a custom DataSource (see [custom datasources](datasources.md)).
 
 ---
 
