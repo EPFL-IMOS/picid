@@ -44,7 +44,12 @@ wrapped = ModelWrapper(
     pre_process_function=lambda x: x.permute(0, 2, 1),  # (B, T, C) → (B, C, T)
     post_process_function=None,   # identity by default
 )
+
 ```
+
+You can use pre_process_function to change the input of the model without had to change the whole codebase (e.g., how a dataset is loaded). 
+The `post_process_function` function has a similar goal, and can be used to align the output of the model with the required input shape of subsequent function (e.g., evaluators and metrics).
+
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -64,19 +69,31 @@ You can skip `ModelWrapper` if your model does not need any input reshaping.
 It extracts `"features"` and the target tensor from the incoming batch dict, runs the inner model, and returns a `{"predictions": ..., "targets": ...}` dict.
 
 ```python
-from picid.interface.model import CustomModelTrainer
+from picid.interface.model import CustomModelTrainer, default_pre_process
 
 trainer_model = CustomModelTrainer(
     task_type="rul",    # must match the task_type in your Prognostic/Forecasting config
-    model=wrapped,      # ModelWrapper or bare nn.Module
+    model=model,      # ModelWrapper or bare nn.Module
+    pre_process_function = default_pre_process
 )
 ```
+
+The pre_processing_function takes as input the dict batch and extract the keys associated with the task:
+
+```
+x, y = self._pre_process_function(batch,
+                       to_extract=self._keys_to_extract,
+                       **kwargs)
+```
+
+where `self._keys_to_extract` defaults to `['features', self.task_type]` but can be overridden via the `keys_to_extract` constructor argument.
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `task_type` | `str` | required | The key used to retrieve targets from the batch (e.g. `"rul"`, `"ahrul"`, `"target"`). Must match the `task_type` of your `BaseTaskDefinition`. |
 | `model` | `nn.Module` | required | The backbone (plain or wrapped). |
-| `pre_process_function` | `Callable \| None` | `default_pre_process` | Extracts `["features", task_type]` from the batch dict. Override only if you need a different extraction strategy. |
+| `pre_process_function` | `Callable \| None` | `default_pre_process` | Extracts tensors from the batch dict using `keys_to_extract`. Override only if you need a different extraction strategy. |
+| `keys_to_extract` | `list[str] \| None` | `["features", task_type]` | Keys to pull from the batch dict. Defaults to `["features", task_type]` when `None`. Override to use different or additional batch keys. |
 
 ### What `task_type` must be
 
@@ -113,7 +130,7 @@ interface.train(
 ```python
 import torch.nn as nn
 from picid.interface import EntryInterface
-from picid.interface.model import CustomModelTrainer
+from picid.interface.model import CustomModelTrainer, default_pre_process
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.schemas.task_definition import Prognostic
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -139,17 +156,17 @@ class SimpleMLP(nn.Module):
 task = Prognostic(task_type="rul", seq_len=16)
 
 # 3. Instantiate your model
-#    in_features = seq_len * n_features (after flatten)
-backbone = SimpleMLP(in_features=16 * 10, out_features=1)
+#    in_features = seq_len X n_features (after flatten)
+backbone = SimpleMLP(in_features=10, out_features=1)
 
-# 4. (Optional) Wrap with ModelWrapper if you need input reshaping
+# 4. Wrap with ModelWrapper 
 wrapped = ModelWrapper(
     model=backbone,
-    pre_process_function=lambda x: x,   # already (B, T, C) — no reshape needed
 )
 
 # 5. Wrap in CustomModelTrainer
-custom_model = CustomModelTrainer(task_type=task.task_type, model=wrapped)
+
+custom_model = CustomModelTrainer(task_type=task.task_type, model=wrapped, pre_process_function=default_pre_process)
 
 # 6. Train
 interface = EntryInterface()
@@ -157,7 +174,7 @@ interface.train(
     run_name="mlp_rul",
     model=custom_model,
     task_definition=task,
-    datasource=processed,   # ProcessedDatasource from process_datasource()
+    datasource=interface.process_datasource(...),
     evaluators={s: RulEvaluatorConfig() for s in ["train", "val", "test"]},
     loggers=[CsvLogger(name="mlp_rul")],
     overrides=["trainer.max_epochs=30"],

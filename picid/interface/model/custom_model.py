@@ -62,6 +62,7 @@ class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
                  task_type: str,
                  model : nn.Module,
                  pre_process_function: Callable | None = default_pre_process,
+                 keys_to_extract: list[str] | None = None,
                  **kwargs):
         """
                 Initializes the CustomModelTrainer.
@@ -72,12 +73,18 @@ class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
                     model (nn.Module): The core PyTorch neural network model to be wrapped and trained.
                     pre_process_function (Callable | None, optional): A function to process the incoming
                         batch dictionary into inputs (x) and targets (y). Defaults to `default_pre_process`.
+                    keys_to_extract (list[str] | None, optional): The keys to extract from the batch dict.
+                        Defaults to ``['features', task_type]`` when ``None``.
                     **kwargs: Additional keyword arguments to be passed to the parent class.
         """
 
         # add checks on task type
         self.task_type = task_type
         self._pre_process_function = pre_process_function
+        if keys_to_extract is None:
+            keys_to_extract = ['features', self.task_type]
+
+        self._keys_to_extract = keys_to_extract
 
         super().__init__(model, **kwargs)
 
@@ -92,8 +99,8 @@ class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
 
         Args:
             batch (dict[str, torch.Tensor]): A dictionary containing the batch data. It must
-                contain the keys 'features' and the string matching `self.task_type`
-                so the pre-process function can extract them.
+                contain the keys listed in `self._keys_to_extract` (by default
+                ``'features'`` and the value of `self.task_type``).
             **kwargs: Additional keyword arguments passed to the pre-process function
                 and the model backbone.
 
@@ -107,7 +114,7 @@ class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
         """
 
         x, y = self._pre_process_function(batch,
-                                          to_extract=['features', self.task_type],
+                                          to_extract=self._keys_to_extract,
                                           **kwargs)
 
         outputs = self.backbone(x, batch=batch, **kwargs)
