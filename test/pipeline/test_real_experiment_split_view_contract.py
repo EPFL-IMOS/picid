@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from hydra import compose, initialize_config_dir
+from hydra.errors import InstantiationException
 from hydra.utils import instantiate
 from hydra.core.global_hydra import GlobalHydra
 
@@ -48,13 +49,21 @@ def test_real_experiment_processed_split_dict_keeps_unit_lists(
     GlobalHydra.instance().clear()
     with initialize_config_dir(version_base="1.3", config_dir=str(CONFIG_DIR)):
         cfg = compose(
-            config_name="run.yaml", overrides=[f"experiment={experiment_name}"]
+            config_name="run.yaml",
+            overrides=[
+                f"experiment={experiment_name}",
+                "hydra/hydra_logging=default",
+                "hydra/job_logging=default",
+            ],
         )
 
-    datasource = instantiate(cfg.datasource)
+    try:
+        datasource = instantiate(cfg.datasource)
+    except InstantiationException as exc:
+        pytest.skip(f"Datasource dependencies unavailable for {experiment_name}: {exc}")
     try:
         datasource.load_data()
-    except (FileNotFoundError, OSError) as exc:
+    except (FileNotFoundError, OSError, ImportError) as exc:
         pytest.skip(f"Dataset unavailable for {experiment_name}: {exc}")
 
     transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)

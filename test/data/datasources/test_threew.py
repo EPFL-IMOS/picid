@@ -362,7 +362,7 @@ class TestFlagsAndOptionalExport:
         ):
             ThreeWLoader(**threew_kwargs, multisource_data_splitter=object())
 
-    def test_skip_missing_instances_kwarg_does_not_skip_rows(
+    def test_missing_instances_raise_aggregate_error_when_nothing_loads(
         self,
         threew_kwargs: dict,
     ):
@@ -371,21 +371,30 @@ class TestFlagsAndOptionalExport:
             [("0/WELL-NORMAL-0001.csv", 2, False)],
         )
         loader = ThreeWLoader(**threew_kwargs, skip_missing_instances=True)
-        with pytest.raises(FileNotFoundError, match="3W instance file not found"):
+        with pytest.raises(
+            FileNotFoundError,
+            match="no instance parquet files could be loaded",
+        ):
             loader.load_data()
 
     def test_warns_on_download_true_without_auto_download(
         self,
         threew_kwargs: dict,
+        monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ):
+        monkeypatch.setattr(
+            "picid.data.datasources.threew.shutil.which", lambda *_: None
+        )
         kwargs = {**threew_kwargs, "download": True}
         with caplog.at_level(logging.WARNING, logger="picid.data.datasources.threew"):
             loader = ThreeWLoader(**kwargs)
             with pytest.raises(FileNotFoundError, match="3W folds file not found"):
                 loader.load_data()
         assert any(
-            "Automatic download is not implemented" in r.message for r in caplog.records
+            "Automatic 3W download requested but 'git' is unavailable on PATH."
+            in r.message
+            for r in caplog.records
         )
 
 
@@ -420,11 +429,13 @@ class TestFilesystemAndLayoutFailures:
         )
         loader = ThreeWLoader(**threew_kwargs)
         with pytest.raises(
-            FileNotFoundError, match="3W instance file not found"
+            FileNotFoundError,
+            match="no instance parquet files could be loaded",
         ) as exc_info:
             loader.load_data()
         msg = str(exc_info.value)
-        assert "dataset/0/WELL-NORMAL-0001.parquet" in msg
+        assert "Attempted rows=1" in msg
+        assert "skipped_missing_rows=1" in msg
 
     def test_raises_when_folds_stem_has_no_matching_parquet(
         self,
@@ -437,7 +448,10 @@ class TestFilesystemAndLayoutFailures:
             [("0/WELL-NORMAL-0001.csv", 2, False)],
         )
         loader = ThreeWLoader(**threew_kwargs)
-        with pytest.raises(FileNotFoundError, match="WELL-NORMAL-0001.parquet"):
+        with pytest.raises(
+            FileNotFoundError,
+            match="no instance parquet files could be loaded",
+        ):
             loader.load_data()
 
     def test_raises_when_folds_file_missing(self, threew_kwargs: dict):
@@ -472,9 +486,10 @@ class TestMetadataAndPathIdentity:
         meta = loader.get_meta_data()
         assert meta["unit_names"]["train"][0] == "2/WELL-00012_20170320123144"
 
-    def test_requires_exact_parquet_stem_no_fuzzy_match(
+    def test_falls_back_to_same_well_prefix_when_exact_stem_is_missing(
         self,
         threew_kwargs: dict,
+        monkeypatch: pytest.MonkeyPatch,
     ):
         touch_threew_instance(
             Path(threew_kwargs["data_dir"]), 2, "WELL-00012_20170320123144"
@@ -483,9 +498,15 @@ class TestMetadataAndPathIdentity:
             Path(threew_kwargs["data_dir"]),
             [("2/WELL-00012_20170320143144.csv", 2, False)],
         )
+        monkeypatch.setattr(
+            ThreeWLoader,
+            "_read_instance_frame",
+            lambda self, path: make_threew_frame(2),
+        )
         loader = ThreeWLoader(**threew_kwargs)
-        with pytest.raises(FileNotFoundError, match="20170320143144"):
-            loader.load_data()
+        loader.load_data()
+        data = loader.get_data()
+        assert len(data["features"]["train"]) == 1
 
     def test_loads_multiple_train_instances_when_paths_exist(
         self,
