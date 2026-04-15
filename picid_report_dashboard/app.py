@@ -103,6 +103,16 @@ def _css_attr_value(value: str) -> str:
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _dataset_base_name(dataset: object) -> str | None:
+    """Return the dataset label without its optional ``[project]`` suffix."""
+    if dataset is None:
+        return None
+    dataset_str = str(dataset)
+    if " [" in dataset_str and dataset_str.endswith("]"):
+        return dataset_str.rsplit(" [", 1)[0]
+    return dataset_str
+
+
 def _metric_availability_stylesheet(unavailable_values: set[str]) -> str:
     """Return CSS that grays out unavailable Select options."""
     if not unavailable_values:
@@ -203,6 +213,7 @@ class PiCIDDashboard(param.Parameterized):
         self._load_error: str | None = None
         self._restore_in_progress = False
         self._state_store: pn.widgets.TextInput | None = None
+        self._sync_selectors_in_progress = False
         self._suspend_alt_metric_tracking = False
         self._suspend_alt_sort_metric_tracking = False
         self._load_data()
@@ -278,19 +289,30 @@ class PiCIDDashboard(param.Parameterized):
 
     @param.depends("metric_key", watch=True)
     def _on_metric_key_change(self) -> None:
+        if self._sync_selectors_in_progress:
+            return
         derived = self._derive_alt_metric(self.metric_key, "alt_metric_key")
         if derived:
             self._set_alt_metric_value(derived, overridden=False)
+        if self._restore_in_progress:
+            return
+        self._sync_selectors()
 
     @param.depends("sort_metric_key", watch=True)
     def _on_sort_metric_key_change(self) -> None:
+        if self._sync_selectors_in_progress:
+            return
         derived = self._derive_alt_metric(self.sort_metric_key, "alt_sort_metric_key")
         if derived:
             self._set_alt_sort_metric_value(derived, overridden=False)
 
     @param.depends("alt_metric_key", watch=True)
     def _on_alt_metric_key_change(self) -> None:
-        if self._suspend_alt_metric_tracking or self._restore_in_progress:
+        if (
+            self._sync_selectors_in_progress
+            or self._suspend_alt_metric_tracking
+            or self._restore_in_progress
+        ):
             return
         derived = self._derive_alt_metric(self.metric_key, "alt_metric_key")
         self.alt_metric_overridden = (
@@ -298,10 +320,15 @@ class PiCIDDashboard(param.Parameterized):
             if derived is not None
             else self.alt_metric_key not in (None, self.metric_key)
         )
+        self._sync_selectors()
 
     @param.depends("alt_sort_metric_key", watch=True)
     def _on_alt_sort_metric_key_change(self) -> None:
-        if self._suspend_alt_sort_metric_tracking or self._restore_in_progress:
+        if (
+            self._sync_selectors_in_progress
+            or self._suspend_alt_sort_metric_tracking
+            or self._restore_in_progress
+        ):
             return
         derived = self._derive_alt_metric(self.sort_metric_key, "alt_sort_metric_key")
         self.alt_sort_metric_overridden = (
@@ -309,6 +336,12 @@ class PiCIDDashboard(param.Parameterized):
             if derived is not None
             else self.alt_sort_metric_key not in (None, self.sort_metric_key)
         )
+
+    @param.depends("use_alt_metric", watch=True)
+    def _on_use_alt_metric_change(self) -> None:
+        if self._sync_selectors_in_progress or self._restore_in_progress:
+            return
+        self._sync_selectors()
 
     def _set_selector_value(
         self,
@@ -327,80 +360,111 @@ class PiCIDDashboard(param.Parameterized):
             return
         setattr(self, name, options[0] if options else None)
 
-    def _sync_selectors(self) -> None:
-        if self._loader is None:
+    def _preferred_dataset_for_display_metric(
+        self,
+        current_dataset: object,
+        valid_datasets: list[str],
+    ) -> str | None:
+        """Resolve the best dataset to keep when display-metric validity changes."""
+        if current_dataset in valid_datasets:
+            return str(current_dataset)
+        current_base = _dataset_base_name(current_dataset)
+        if current_base is not None:
+            for dataset_name in valid_datasets:
+                if _dataset_base_name(dataset_name) == current_base:
+                    return dataset_name
+        return None
+
+    def _sync_selectors(self, *, preferred_dataset: Any = _UNSET) -> None:
+        if self._loader is None or self._sync_selectors_in_progress:
             return
-        loader = self._loader
-        current_metric = self.metric_key
-        current_sort_metric = self.sort_metric_key
-        current_alt_metric = self.alt_metric_key
-        current_alt_sort_metric = self.alt_sort_metric_key
-        current_alt_metric_overridden = self.alt_metric_overridden
-        current_alt_sort_metric_overridden = self.alt_sort_metric_overridden
-        current_dataset = self.selected_dataset
-        current_model = self.selected_model
+        self._sync_selectors_in_progress = True
+        try:
+            loader = self._loader
+            current_metric = self.metric_key
+            current_sort_metric = self.sort_metric_key
+            current_alt_metric = self.alt_metric_key
+            current_alt_sort_metric = self.alt_sort_metric_key
+            current_alt_metric_overridden = self.alt_metric_overridden
+            current_alt_sort_metric_overridden = self.alt_sort_metric_overridden
+            current_dataset = (
+                preferred_dataset if preferred_dataset is not _UNSET else self.selected_dataset
+            )
+            current_model = self.selected_model
 
-        metrics = loader.metric_keys or [_DEFAULT_METRIC]
-        self._set_selector_value(
-            "metric_key",
-            metrics,
-            preferred=current_metric,
-            fallback=_DEFAULT_METRIC,
-        )
-        self._set_selector_value(
-            "sort_metric_key",
-            metrics,
-            preferred=current_sort_metric,
-            fallback=self.metric_key,
-        )
-        derived = self._derive_alt_metric(
-            self.metric_key, "alt_metric_key", available=metrics
-        )
-        keep_alt_metric_override = bool(
-            current_alt_metric_overridden and current_alt_metric in metrics
-        )
-        self._set_selector_value(
-            "alt_metric_key",
-            metrics,
-            preferred=current_alt_metric if keep_alt_metric_override else _UNSET,
-            fallback=derived if derived is not None else _DEFAULT_METRIC,
-        )
-        self.alt_metric_overridden = (
-            keep_alt_metric_override and self.alt_metric_key == current_alt_metric
-        )
-        derived_sort = self._derive_alt_metric(
-            self.sort_metric_key,
-            "alt_sort_metric_key",
-            available=metrics,
-        )
-        keep_alt_sort_override = bool(
-            current_alt_sort_metric_overridden and current_alt_sort_metric in metrics
-        )
-        self._set_selector_value(
-            "alt_sort_metric_key",
-            metrics,
-            preferred=current_alt_sort_metric if keep_alt_sort_override else _UNSET,
-            fallback=derived_sort if derived_sort is not None else self.sort_metric_key,
-        )
-        self.alt_sort_metric_overridden = (
-            keep_alt_sort_override
-            and self.alt_sort_metric_key == current_alt_sort_metric
-        )
+            metrics = loader.metric_keys or [_DEFAULT_METRIC]
+            self._set_selector_value(
+                "metric_key",
+                metrics,
+                preferred=current_metric,
+                fallback=_DEFAULT_METRIC,
+            )
+            self._set_selector_value(
+                "sort_metric_key",
+                metrics,
+                preferred=current_sort_metric,
+                fallback=self.metric_key,
+            )
+            derived = self._derive_alt_metric(
+                self.metric_key, "alt_metric_key", available=metrics
+            )
+            keep_alt_metric_override = bool(
+                current_alt_metric_overridden and current_alt_metric in metrics
+            )
+            self._set_selector_value(
+                "alt_metric_key",
+                metrics,
+                preferred=current_alt_metric if keep_alt_metric_override else _UNSET,
+                fallback=derived if derived is not None else _DEFAULT_METRIC,
+            )
+            self.alt_metric_overridden = (
+                keep_alt_metric_override and self.alt_metric_key == current_alt_metric
+            )
+            derived_sort = self._derive_alt_metric(
+                self.sort_metric_key,
+                "alt_sort_metric_key",
+                available=metrics,
+            )
+            keep_alt_sort_override = bool(
+                current_alt_sort_metric_overridden and current_alt_sort_metric in metrics
+            )
+            self._set_selector_value(
+                "alt_sort_metric_key",
+                metrics,
+                preferred=current_alt_sort_metric if keep_alt_sort_override else _UNSET,
+                fallback=derived_sort if derived_sort is not None else self.sort_metric_key,
+            )
+            self.alt_sort_metric_overridden = (
+                keep_alt_sort_override
+                and self.alt_sort_metric_key == current_alt_sort_metric
+            )
 
-        datasets = loader.datasets or []
-        self._set_selector_value(
-            "selected_dataset",
-            datasets,
-            preferred=current_dataset,
-        )
+            valid_datasets = loader.datasets_with_display_metric(
+                metric_key=self.metric_key,
+                alt_metric_key=self._active_alt_metric(),
+                use_alt_metric=self.use_alt_metric,
+            )
+            preferred_valid_dataset = self._preferred_dataset_for_display_metric(
+                current_dataset,
+                valid_datasets,
+            )
+            self._set_selector_value(
+                "selected_dataset",
+                valid_datasets,
+                preferred=preferred_valid_dataset
+                if preferred_valid_dataset is not None
+                else _UNSET,
+            )
 
-        models = loader.models or []
-        self._set_selector_value(
-            "selected_model",
-            [_ALL_MODELS_OPTION, *models],
-            preferred=current_model,
-            fallback=_ALL_MODELS_OPTION,
-        )
+            models = loader.models or []
+            self._set_selector_value(
+                "selected_model",
+                [_ALL_MODELS_OPTION, *models],
+                preferred=current_model,
+                fallback=_ALL_MODELS_OPTION,
+            )
+        finally:
+            self._sync_selectors_in_progress = False
 
     def _availability_scope_models(self, *, alt: bool) -> list[str]:
         """Return the models whose HP metric availability should drive one selector family."""
@@ -542,6 +606,10 @@ class PiCIDDashboard(param.Parameterized):
                         self._set_alt_sort_metric_value(alt_sort_metric, overridden=True)
                 else:
                     self.alt_sort_metric_overridden = False
+
+                self._sync_selectors(
+                    preferred_dataset=state.get("selected_dataset", _UNSET)
+                )
 
                 for name in ("selected_dataset", "selected_model"):
                     self._apply_selector_state(name, state.get(name))

@@ -528,6 +528,79 @@ def test_missing_sort_metric_falls_back_to_opt_metric():
     assert record["value"] == pytest.approx(10.0)
 
 
+def test_missing_sort_metric_prefers_report_sort_metric_over_opt_metric():
+    dataset = "Dataset D [project_d]"
+    model = "baselines.crossformer_model.Crossformer_Forecaster"
+    display_metric = "test/mae_denormalized"
+    opt_metric = "val/loss"
+    report_sort_metric = "val_best_rerun/loss"
+    missing_sort_metric = "val/f1"
+
+    coords3 = {
+        "dataset": [dataset],
+        "model": [model],
+        "metric_key": [display_metric],
+    }
+    coords2 = {
+        "dataset": [dataset],
+        "model": [model],
+    }
+    xarray_dataset = xr.Dataset(
+        {
+            "mean": xr.DataArray(
+                np.asarray([[[10.0]]], dtype=float),
+                dims=["dataset", "model", "metric_key"],
+                coords=coords3,
+            ),
+            "std": xr.DataArray(
+                np.asarray([[[1.0]]], dtype=float),
+                dims=["dataset", "model", "metric_key"],
+                coords=coords3,
+            ),
+            "n": xr.DataArray(
+                np.asarray([[[5.0]]], dtype=float),
+                dims=["dataset", "model", "metric_key"],
+                coords=coords3,
+            ),
+            "sort_metric": xr.DataArray(
+                np.asarray([[report_sort_metric]], dtype=object),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "opt_metric": xr.DataArray(
+                np.asarray([[opt_metric]], dtype=object),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+        }
+    )
+    hp_map = {
+        (dataset, model): _make_hp_dataset(
+            [display_metric, opt_metric, report_sort_metric],
+            [[10.0, 0.2, 0.3], [5.0, 0.4, 0.1]],
+            [[1.0, 0.02, 0.03], [0.5, 0.04, 0.01]],
+            [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+            **{
+                "task_definition.seq_len": [16, 32],
+                "optimization.lr": [0.001, 0.002],
+            },
+        ),
+    }
+    loader = FakeResultsLoader(xarray_dataset, hp_map)
+
+    record = loader.selected_metric_record(
+        dataset,
+        model,
+        metric_key=display_metric,
+        sort_metric_key=missing_sort_metric,
+        use_alt_metric=False,
+    )
+
+    assert record["sort_metric_fell_back"] is True
+    assert record["effective_sort_metric_key"] == report_sort_metric
+    assert record["value"] == pytest.approx(5.0)
+
+
 def test_selected_metric_frame_reflects_dynamic_reselection_for_overview():
     loader = _make_loader()
 

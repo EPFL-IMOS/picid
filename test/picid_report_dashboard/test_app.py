@@ -30,6 +30,58 @@ def _loader_factory(loader_map):
         def hp_impact_ds(self, dataset: str, model: str):
             return self._hp_map.get((dataset, model))
 
+        def dataset_has_display_metric(
+            self,
+            dataset: str,
+            *,
+            metric_key: str,
+            alt_metric_key: str | None = None,
+            use_alt_metric: bool = True,
+        ) -> bool:
+            if not self._hp_map:
+                return dataset in self.datasets
+            for model_name in self.models:
+                display_metric_key = (
+                    alt_metric_key
+                    if (
+                        use_alt_metric
+                        and alt_metric_key
+                        and dashboard_app.is_alt_model(model_name)
+                    )
+                    else metric_key
+                )
+                hp_ds = self.hp_impact_ds(dataset, model_name)
+                if hp_ds is None or "metric" not in hp_ds.coords:
+                    continue
+                metrics = {str(metric) for metric in hp_ds.coords["metric"].values.tolist()}
+                if display_metric_key not in metrics:
+                    continue
+                mean_values = np.asarray(
+                    hp_ds.sel(metric=display_metric_key)["mean"].values,
+                    dtype=float,
+                )
+                if np.isfinite(mean_values).any():
+                    return True
+            return False
+
+        def datasets_with_display_metric(
+            self,
+            *,
+            metric_key: str,
+            alt_metric_key: str | None = None,
+            use_alt_metric: bool = True,
+        ) -> list[str]:
+            return [
+                dataset_name
+                for dataset_name in self.datasets
+                if self.dataset_has_display_metric(
+                    dataset_name,
+                    metric_key=metric_key,
+                    alt_metric_key=alt_metric_key,
+                    use_alt_metric=use_alt_metric,
+                )
+            ]
+
     return FakeResultsLoader
 
 
@@ -232,6 +284,122 @@ def test_sync_selectors_preserves_valid_values_and_falls_back(monkeypatch):
     assert dash.alt_sort_metric_key == "test/mae_denormalized"
     assert dash.selected_dataset == "fallback_dataset"
     assert dash.selected_model == dashboard_app._ALL_MODELS_OPTION
+
+
+def test_metric_change_reselects_dataset_to_same_base_valid_dataset(monkeypatch):
+    invalid_dataset = (
+        "MultiSource_concepts_N-CMAPSS "
+        "[16_03_2026_concepts_n_cmapss_prognostics_]"
+    )
+    same_base_valid_dataset = (
+        "MultiSource_concepts_N-CMAPSS "
+        "[16_03_2026_concepts_n_cmapss_multi_diagnostics_]"
+    )
+    other_valid_dataset = "HSF15 [16_03_2026_hsf15_pump_diagnostics_]"
+    model = "model_a"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/f1",
+                    "val/f1",
+                ],
+                "datasets": [
+                    invalid_dataset,
+                    same_base_valid_dataset,
+                    other_valid_dataset,
+                ],
+                "models": [model],
+                "hp_map": {
+                    (invalid_dataset, model): _make_hp_dataset(
+                        [dashboard_app._DEFAULT_METRIC]
+                    ),
+                    (same_base_valid_dataset, model): _make_hp_dataset(
+                        ["test/f1", "val/f1"]
+                    ),
+                    (other_valid_dataset, model): _make_hp_dataset(["test/f1"]),
+                },
+            }
+        },
+    )
+
+    dash.selected_dataset = invalid_dataset
+    dash.metric_key = "test/f1"
+
+    assert dash.selected_dataset == same_base_valid_dataset
+    assert list(dash.param["selected_dataset"].objects) == [
+        same_base_valid_dataset,
+        other_valid_dataset,
+    ]
+    unavailable = dash._unavailable_metric_values(
+        alt=False, selector_name="sort_metric_key"
+    )
+    assert "val/f1" not in unavailable
+    assert dashboard_app._DEFAULT_METRIC in unavailable
+
+
+def test_metric_change_keeps_current_dataset_when_it_remains_valid(monkeypatch):
+    dataset_a = "dataset_a"
+    dataset_b = "dataset_b"
+    model = "model_a"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [dashboard_app._DEFAULT_METRIC, "test/f1"],
+                "datasets": [dataset_a, dataset_b],
+                "models": [model],
+                "hp_map": {
+                    (dataset_a, model): _make_hp_dataset(
+                        [dashboard_app._DEFAULT_METRIC, "test/f1"]
+                    ),
+                    (dataset_b, model): _make_hp_dataset(["test/f1"]),
+                },
+            }
+        },
+    )
+
+    dash.selected_dataset = dataset_a
+    dash.metric_key = "test/f1"
+
+    assert dash.selected_dataset == dataset_a
+
+
+def test_metric_change_falls_back_to_first_valid_dataset_without_same_base_match(
+    monkeypatch,
+):
+    invalid_dataset = "dataset_z [project_prog]"
+    first_valid_dataset = "dataset_a [project_diag]"
+    second_valid_dataset = "dataset_b [project_diag]"
+    model = "model_a"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [dashboard_app._DEFAULT_METRIC, "test/f1"],
+                "datasets": [
+                    invalid_dataset,
+                    first_valid_dataset,
+                    second_valid_dataset,
+                ],
+                "models": [model],
+                "hp_map": {
+                    (invalid_dataset, model): _make_hp_dataset(
+                        [dashboard_app._DEFAULT_METRIC]
+                    ),
+                    (first_valid_dataset, model): _make_hp_dataset(["test/f1"]),
+                    (second_valid_dataset, model): _make_hp_dataset(["test/f1"]),
+                },
+            }
+        },
+    )
+
+    dash.selected_dataset = invalid_dataset
+    dash.metric_key = "test/f1"
+
+    assert dash.selected_dataset == first_valid_dataset
 
 
 def test_sort_metric_change_derives_alt_sort_metric(monkeypatch):
@@ -439,6 +607,85 @@ def test_apply_saved_state_restores_explicit_alt_metric_overrides(monkeypatch):
     assert restored.alt_sort_metric_key == "sort_alt"
     assert restored.alt_metric_overridden is True
     assert restored.alt_sort_metric_overridden is True
+
+
+def test_apply_saved_state_reselects_invalid_dataset_to_same_base_valid_dataset(
+    monkeypatch,
+):
+    invalid_dataset = (
+        "MultiSource_concepts_N-CMAPSS "
+        "[16_03_2026_concepts_n_cmapss_prognostics_]"
+    )
+    same_base_valid_dataset = (
+        "MultiSource_concepts_N-CMAPSS "
+        "[16_03_2026_concepts_n_cmapss_multi_diagnostics_]"
+    )
+    other_valid_dataset = "HSF15 [16_03_2026_hsf15_pump_diagnostics_]"
+    model = "model_a"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [dashboard_app._DEFAULT_METRIC, "test/f1"],
+                "datasets": [
+                    invalid_dataset,
+                    same_base_valid_dataset,
+                    other_valid_dataset,
+                ],
+                "models": [model],
+                "hp_map": {
+                    (invalid_dataset, model): _make_hp_dataset(
+                        [dashboard_app._DEFAULT_METRIC]
+                    ),
+                    (same_base_valid_dataset, model): _make_hp_dataset(["test/f1"]),
+                    (other_valid_dataset, model): _make_hp_dataset(["test/f1"]),
+                },
+            }
+        },
+    )
+    dash.selected_dataset = other_valid_dataset
+
+    dash._apply_saved_state(
+        {
+            "metric_key": "test/f1",
+            "sort_metric_key": "test/f1",
+            "selected_dataset": invalid_dataset,
+        }
+    )
+
+    assert dash.selected_dataset == same_base_valid_dataset
+
+
+def test_use_alt_metric_change_reselects_dataset_for_alt_display_metric(monkeypatch):
+    dataset_primary = "dataset_primary [project_prog]"
+    dataset_alt = "dataset_alt [project_diag]"
+    alt_model = "model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper"
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    "test/custom_primary",
+                    "test/custom_alt",
+                ],
+                "datasets": [dataset_primary, dataset_alt],
+                "models": [alt_model],
+                "hp_map": {
+                    (dataset_primary, alt_model): _make_hp_dataset(
+                        ["test/custom_primary"]
+                    ),
+                    (dataset_alt, alt_model): _make_hp_dataset(["test/custom_alt"]),
+                },
+            }
+        },
+    )
+
+    dash.use_alt_metric = False
+    dash.selected_dataset = dataset_primary
+    dash.alt_metric_key = "test/custom_alt"
+    dash.use_alt_metric = True
+
+    assert dash.selected_dataset == dataset_alt
 
 
 def test_parse_saved_state_migrates_v2_active_tab_indices(monkeypatch):

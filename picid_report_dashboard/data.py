@@ -345,6 +345,68 @@ class ResultsLoader:
             return False
         return metric_key in {str(metric) for metric in hp_ds.coords["metric"].values}
 
+    def _display_metric_key_for_model(
+        self,
+        model: str,
+        *,
+        metric_key: str,
+        alt_metric_key: str | None,
+        use_alt_metric: bool,
+    ) -> str:
+        """Resolve the display metric key for one model under the active metric mode."""
+        if use_alt_metric and alt_metric_key and is_alt_model(model):
+            return alt_metric_key
+        return metric_key
+
+    def _metric_has_finite_hp_values(
+        self, hp_ds: xr.Dataset | None, metric_key: str | None
+    ) -> bool:
+        """Return whether the HP dataset contains any finite values for *metric_key*."""
+        if not self.metric_in_hp_dataset(hp_ds, metric_key):
+            return False
+        metric_values = np.asarray(hp_ds.sel(metric=metric_key)["mean"].values, dtype=float)
+        return bool(np.isfinite(metric_values).any())
+
+    def dataset_has_display_metric(
+        self,
+        dataset: str,
+        *,
+        metric_key: str,
+        alt_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+    ) -> bool:
+        """Return whether *dataset* has any finite display metric values."""
+        for model_name in self.models:
+            display_metric_key = self._display_metric_key_for_model(
+                model_name,
+                metric_key=metric_key,
+                alt_metric_key=alt_metric_key,
+                use_alt_metric=use_alt_metric,
+            )
+            hp_ds = self.hp_impact_ds(dataset, model_name)
+            if self._metric_has_finite_hp_values(hp_ds, display_metric_key):
+                return True
+        return False
+
+    def datasets_with_display_metric(
+        self,
+        *,
+        metric_key: str,
+        alt_metric_key: str | None = None,
+        use_alt_metric: bool = True,
+    ) -> list[str]:
+        """Return datasets that have at least one finite display metric value."""
+        return [
+            dataset_name
+            for dataset_name in self.datasets
+            if self.dataset_has_display_metric(
+                dataset_name,
+                metric_key=metric_key,
+                alt_metric_key=alt_metric_key,
+                use_alt_metric=use_alt_metric,
+            )
+        ]
+
     def sort_config_indices(
         self,
         hp_ds: xr.Dataset | None,
@@ -397,7 +459,11 @@ class ResultsLoader:
         fallback_from_sort_metric_key = None
 
         if not self.metric_in_hp_dataset(hp_ds, effective_sort_metric_key):
-            for candidate in (opt_metric_key, stored_sort_metric_key):
+            # Prefer the report's stored sort metric when the requested selector
+            # value is unavailable. Falling back to the optimization metric is a
+            # last resort because it may differ from the metric used to rank the
+            # report's best configuration.
+            for candidate in (stored_sort_metric_key, opt_metric_key):
                 if self.metric_in_hp_dataset(hp_ds, candidate):
                     fallback_from_sort_metric_key = effective_sort_metric_key
                     effective_sort_metric_key = candidate
@@ -525,7 +591,15 @@ class ResultsLoader:
         dataset: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return dashboard display records for all dataset/model combinations."""
-        datasets = [dataset] if dataset is not None else self.datasets
+        datasets = (
+            [dataset]
+            if dataset is not None
+            else self.datasets_with_display_metric(
+                metric_key=metric_key,
+                alt_metric_key=alt_metric_key,
+                use_alt_metric=use_alt_metric,
+            )
+        )
         records: list[dict[str, Any]] = []
         for dataset_name in datasets:
             for model_name in self.models:
