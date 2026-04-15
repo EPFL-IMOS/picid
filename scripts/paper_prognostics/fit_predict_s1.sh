@@ -50,7 +50,11 @@ model_names=(
 
 # Careful here because of oom issues with long context lengths / short strides
 # Pairs: "seq_len:stride_train"
-context_stride_pairs=(
+context_stride_pairs=(  
+  "1:2"
+  "5:2"
+  "1:5"
+  "5:5"
   "1:1"
   "5:1"
   "10:5"

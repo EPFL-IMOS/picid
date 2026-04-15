@@ -52,6 +52,10 @@ model_names=(
 # Pairs: "seq_len:stride_train"
 context_stride_pairs=(
   "1:1"
+  "1:2"
+  "5:2"
+  "1:5"
+  "5:5"
   "5:1"
   "10:5"
   "20:5"
