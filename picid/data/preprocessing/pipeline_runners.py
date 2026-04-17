@@ -225,9 +225,18 @@ class CachingPipelineRunner:
             )
             pp.meta_data = saved["meta_data"]
 
+            # Restore fitted transform instances from the saved boundary into the
+            # current manager.  Only transforms that exist in both the saved manager
+            # and the current chain are updated; transforms added after the boundary
+            # was originally written are left unfitted and will be run via the tail.
+            saved_dts = saved["transforms"].get_transforms()
+            current_dts = full_transforms.get_transforms()
+            for name, saved_dt in saved_dts.items():
+                if name in current_dts:
+                    current_dts[name].transform_instance = saved_dt.transform_instance
+
             names_after = full_transforms.get_transform_names_after(boundary_name)
-            all_dt = full_transforms.get_transforms()
-            tail = OrderedDict((n, all_dt[n]) for n in names_after if n in all_dt)
+            tail = OrderedDict((n, current_dts[n]) for n in names_after if n in current_dts)
 
             logger.info(
                 "Restored from boundary cache after %r; %d remaining transform(s) to run.",
