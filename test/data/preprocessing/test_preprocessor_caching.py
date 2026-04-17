@@ -19,6 +19,8 @@ from picid.transforms.base.transform_pipeline import TransformPipeline
 from picid.transforms.base.data_transform import DataTransform
 from picid.utils.hash_utils import compute_cache_key, ensure_serializable
 
+from sklearn.utils.validation import check_is_fitted
+
 from test.transforms.base.conftest import DummyStatelessTransform
 
 
@@ -712,3 +714,114 @@ class TestCacheLoadWhenMissing:
             str(tmp_path), stage="preprocessed", cache_key="nonexistent_key"
         )
         assert result is None
+
+
+# -----------------------------------------------------------------------------
+# Boundary cache: stateful (sklearn) transform fitted state is preserved
+# -----------------------------------------------------------------------------
+
+
+class TestBoundaryCachePreservesStatefulTransforms:
+    """
+    Regression test for: NotFittedError when a sklearn scaler that was fitted
+    before a boundary cache point is used for inverse-transforming predictions.
+
+    The bug: _try_restore_from_boundary loaded the cached DatasetContainer but
+    discarded saved["transforms"], leaving the in-process ConfigTransformManager
+    with an unfitted scaler.  get_cached_transform_manager() then returned this
+    unfitted manager to the evaluator, which raised NotFittedError on the first
+    validation step.
+
+    The fix: restore pp.transforms = saved["transforms"] in _try_restore_from_boundary
+    so the fitted scaler state survives the cache round-trip.
+    """
+
+    # MinMaxScalerSklearn fitted on "target" BEFORE the boundary cache point.
+    _CONFIG_SCALER_BEFORE_BOUNDARY = {
+        "scaler": {
+            "transform": {
+                "_target_": "picid.transforms.base_transforms.scaler.MinMaxScalerSklearn"
+            },
+            "metadata": {
+                "apply_to": "target",
+                "assign_to": "target",
+                "fit_on": "train",
+            },
+        },
+        "heavy": {
+            "transform": {
+                "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+            },
+            "metadata": {
+                "apply_to": "features",
+                "assign_to": "features",
+                "cache_point": True,
+            },
+        },
+        "light": {
+            "transform": {
+                "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+            },
+            "metadata": {"apply_to": "features", "assign_to": "features"},
+        },
+    }
+
+    # Identical scaler + heavy; "light" has extra_param to bust the preprocessed cache
+    # but leave the boundary cache valid, forcing a boundary restore on run 2.
+    _CONFIG_LIGHT_CHANGED = {
+        "scaler": _CONFIG_SCALER_BEFORE_BOUNDARY["scaler"],
+        "heavy": _CONFIG_SCALER_BEFORE_BOUNDARY["heavy"],
+        "light": {
+            "transform": {
+                "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+            },
+            "metadata": {
+                "apply_to": "features",
+                "assign_to": "features",
+                "extra_param": "changed",
+            },
+        },
+    }
+
+    def test_scaler_is_fitted_after_boundary_restore(
+        self, cache_dir, library_dir, datasource
+    ):
+        """
+        After restoring from a boundary cache the MinMaxScalerSklearn (fitted before
+        the boundary) must have its sklearn scaler in a fitted state.
+        Without the fix this raises sklearn.exceptions.NotFittedError.
+        """
+        manager1 = ConfigTransformManager(
+            transforms_config=self._CONFIG_SCALER_BEFORE_BOUNDARY
+        )
+        manager2 = ConfigTransformManager(
+            transforms_config=self._CONFIG_LIGHT_CHANGED
+        )
+
+        # Run 1: full pipeline — writes boundary (after "heavy") + preprocessed.
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager1)
+        preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Run 2: "light" changed → preprocessed cache miss, boundary hit.
+        # The scaler (before the boundary) must be restored with its fitted state.
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager2)
+        preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        restored_manager = preprocessor2.get_cached_transform_manager()
+        inverter = restored_manager.get_inverter_for_key("target")
+        assert inverter is not None, "No inverter found for key 'target'"
+
+        # check_is_fitted raises NotFittedError if the sklearn scaler was not restored.
+        check_is_fitted(inverter.scaler)
