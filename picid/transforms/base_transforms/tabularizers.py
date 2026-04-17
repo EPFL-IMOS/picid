@@ -24,7 +24,10 @@ from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
 from picid.data.data_objects.data import NamedTransformInput
-from picid.data.datasets.subset_sampling import make_subset_blocks_indices
+from picid.data.datasets.subset_sampling import (
+    create_sequence_subset,
+    make_subset_blocks_indices,
+)
 from picid.data.optimization.sequencer import DenseArraySequencer, RaggedArraySequencer
 from picid.transforms.base.base_transform.base_transform import RaggedOrDenseTransform
 from picid.transforms.base.multisource import NoFitPerSegmentMixin
@@ -133,14 +136,6 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
                 )
         return seq
 
-    def _create_sequence_subset(self, sequence_length, subset_ratio):
-        """Functionality to test reduced data scenarios."""
-        rng = random.Random(self.subset_seed)  # independent RNG
-        n_subset = int(sequence_length * subset_ratio)
-        seq_idx = rng.sample(range(sequence_length), n_subset)
-        seq_idx.sort()
-        return np.array(seq_idx)
-
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
         r"""Applies the tabularization to the input data.
 
@@ -197,8 +192,10 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
                         )
                         seq_idx = res["seq_idx"]
                     else:
-                        seq_idx = self._create_sequence_subset(
-                            len_ds, self.subset_ratio
+                        seq_idx = create_sequence_subset(
+                            len_ds,
+                            subset_ratio=subset_ratio,
+                            subset_seed=self.subset_seed,
                         )
 
                     logger.info(

@@ -9,7 +9,10 @@ import torch
 
 from picid.data.datasets.base import BaseDataset
 from picid.data.datasets.collate_functions import collate_key_value_batch
-from picid.data.datasets.subset_sampling import make_subset_blocks_indices
+from picid.data.datasets.subset_sampling import (
+    create_sequence_subset,
+    make_subset_blocks_indices,
+)
 from picid.data.optimization.sequencer import (
     BaseSequencer,
     DenseArraySequencer,
@@ -140,7 +143,11 @@ class SlidingWindowBatchDataset(BaseDataset):
                     )
                     self._seq_idx = res["seq_idx"]
                 else:
-                    self._seq_idx = self._create_sequence_subset(len_ds, subset_ratio)
+                    self._seq_idx = create_sequence_subset(
+                        len_ds,
+                        subset_ratio=subset_ratio,
+                        subset_seed=self.subset_seed,
+                    )
 
                 logger.info(
                     f"Subsetting sequences: using {len(self._seq_idx)} out of {len(driver)} sequences."
@@ -157,14 +164,6 @@ class SlidingWindowBatchDataset(BaseDataset):
                     f"All sequences must yield the same number of windows "
                     f"(mismatch at key '{key}')"
                 )
-
-    def _create_sequence_subset(self, sequence_length, subset_ratio):
-        """Functionality to test reduced data scenarios."""
-        rng = random.Random(self.subset_seed)  # independent RNG
-        n_subset = int(sequence_length * subset_ratio)
-        seq_idx = rng.sample(range(sequence_length), n_subset)
-        seq_idx.sort()
-        return np.array(seq_idx)
 
     def _create_sequencer(self, arr, sequencer_params, key):
         """Create the sequencer object for an array based on the array type."""

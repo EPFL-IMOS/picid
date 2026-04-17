@@ -45,6 +45,19 @@ def geometric_block_lengths(n_subset, k, rng, p=0.5):
     return lengths
 
 
+def create_sequence_subset(sequence_length, subset_ratio, subset_seed):
+    """Functionality to test reduced data scenarios."""
+    rng = random.Random(subset_seed)  # independent RNG
+
+    # Floor to 1 so very small segments always contribute at
+    # least one sequence (avoids empty float64 index arrays).
+    n_subset = max(1, int(sequence_length * subset_ratio))
+
+    seq_idx = rng.sample(range(sequence_length), n_subset)
+    seq_idx.sort()
+    return np.array(seq_idx)
+
+
 def make_subset_blocks_indices(
     *,
     len_ds: int,
