@@ -18,6 +18,7 @@ import os
 import sys
 from typing import Any
 
+import pandas as pd
 import panel as pn
 import param
 
@@ -29,9 +30,12 @@ if __name__ == "__main__" or not __name__.startswith("picid_report_dashboard"):
 
 from picid_report_dashboard.data import ResultsLoader, is_alt_model
 from picid_report_dashboard.views import (
+    _shorten_dataset_name,
+    _shorten_model_name,
     build_bar_chart,
     build_heatmap,
     build_hp_impact_table,
+    build_latex_table,
     build_metadata_panel,
     build_model_summary_table,
     build_parallel_coordinates,
@@ -48,7 +52,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 5
+_PERSISTED_STATE_VERSION = 6
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -59,6 +63,7 @@ _MAIN_TAB_TITLES = (
     "HP Impact",
     "Summary Table",
     "Experiment Stats",
+    "LaTeX Table",
 )
 _HP_IMPACT_TAB_INDEX = _MAIN_TAB_TITLES.index("HP Impact")
 _PERSISTED_STATE_PARAMS = (
@@ -73,9 +78,14 @@ _PERSISTED_STATE_PARAMS = (
     "alt_sort_metric_overridden",
     "show_n",
     "show_rank",
+    "spiderweb_plot_mode",
     "selected_dataset",
     "selected_model",
     "active_tab",
+    "latex_precision",
+    "latex_show_std",
+    "latex_show_n",
+    "latex_rename_json",
 )
 _UNSET = object()
 _ACTIVE_BUTTON_STYLESHEET = """
@@ -144,8 +154,8 @@ def _apply_metric_availability_style(
 ) -> None:
     """Apply per-option and selected-value styling for unavailable metrics."""
     stylesheet = _metric_availability_stylesheet(unavailable_values)
-    widget.stylesheets = [*base_stylesheets, stylesheet] if stylesheet else list(
-        base_stylesheets
+    widget.stylesheets = (
+        [*base_stylesheets, stylesheet] if stylesheet else list(base_stylesheets)
     )
     current_styles = dict(getattr(widget, "styles", {}) or {})
     if active_value is not None and active_value in unavailable_values:
@@ -199,6 +209,11 @@ class PiCIDDashboard(param.Parameterized):
     show_rank = param.Boolean(
         default=False, doc="Show rank within dataset in heatmap cells"
     )
+    spiderweb_plot_mode = param.Selector(
+        default="matplotlib",
+        objects=["matplotlib", "interactive"],
+        doc="Renderer for the spiderweb tab",
+    )
     selected_dataset = param.Selector(
         default=None, objects=[], doc="Dataset for bar chart / HP impact"
     )
@@ -206,6 +221,14 @@ class PiCIDDashboard(param.Parameterized):
         default=None, objects=[], doc="Model for HP impact / metadata"
     )
     active_tab = param.Integer(default=0, doc="Active main tab index (synced to URL)")
+    latex_precision = param.Integer(
+        default=4, bounds=(1, 8), doc="Decimal precision for LaTeX table cells"
+    )
+    latex_show_std = param.Boolean(default=True, doc="Show ± std in LaTeX table cells")
+    latex_show_n = param.Boolean(default=True, doc="Show (n=…) count in LaTeX table cells")
+    latex_rename_json = param.String(
+        default="{}", doc="JSON map of shortened name → display name for LaTeX table"
+    )
 
     def __init__(self, report_dir: str = _DEFAULT_REPORT_DIR, **params):
         super().__init__(report_dir=report_dir, **params)
@@ -388,7 +411,9 @@ class PiCIDDashboard(param.Parameterized):
             current_alt_metric_overridden = self.alt_metric_overridden
             current_alt_sort_metric_overridden = self.alt_sort_metric_overridden
             current_dataset = (
-                preferred_dataset if preferred_dataset is not _UNSET else self.selected_dataset
+                preferred_dataset
+                if preferred_dataset is not _UNSET
+                else self.selected_dataset
             )
             current_model = self.selected_model
 
@@ -426,13 +451,16 @@ class PiCIDDashboard(param.Parameterized):
                 available=metrics,
             )
             keep_alt_sort_override = bool(
-                current_alt_sort_metric_overridden and current_alt_sort_metric in metrics
+                current_alt_sort_metric_overridden
+                and current_alt_sort_metric in metrics
             )
             self._set_selector_value(
                 "alt_sort_metric_key",
                 metrics,
                 preferred=current_alt_sort_metric if keep_alt_sort_override else _UNSET,
-                fallback=derived_sort if derived_sort is not None else self.sort_metric_key,
+                fallback=derived_sort
+                if derived_sort is not None
+                else self.sort_metric_key,
             )
             self.alt_sort_metric_overridden = (
                 keep_alt_sort_override
@@ -484,7 +512,9 @@ class PiCIDDashboard(param.Parameterized):
             hp_ds = self._loader.hp_impact_ds(self.selected_dataset, model)
             if hp_ds is None or "metric" not in hp_ds.coords:
                 continue
-            available.update(str(metric) for metric in hp_ds.coords["metric"].values.tolist())
+            available.update(
+                str(metric) for metric in hp_ds.coords["metric"].values.tolist()
+            )
         return available
 
     def _unavailable_metric_values(self, *, alt: bool, selector_name: str) -> set[str]:
@@ -523,7 +553,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, 4, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, 5, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -532,10 +562,12 @@ class PiCIDDashboard(param.Parameterized):
             "metric_key",
             "sort_metric_key",
             "mode",
+            "spiderweb_plot_mode",
             "alt_metric_key",
             "alt_sort_metric_key",
             "selected_dataset",
             "selected_model",
+            "latex_rename_json",
         )
         bool_fields = (
             "use_alt_metric",
@@ -543,6 +575,8 @@ class PiCIDDashboard(param.Parameterized):
             "alt_sort_metric_overridden",
             "show_n",
             "show_rank",
+            "latex_show_std",
+            "latex_show_n",
         )
         for field in string_fields:
             value = payload.get(field)
@@ -552,6 +586,9 @@ class PiCIDDashboard(param.Parameterized):
             value = payload.get(field)
             if isinstance(value, bool):
                 parsed[field] = value
+        latex_precision = payload.get("latex_precision")
+        if isinstance(latex_precision, int) and not isinstance(latex_precision, bool):
+            parsed["latex_precision"] = max(1, min(8, latex_precision))
         active_tab = payload.get("active_tab")
         if isinstance(active_tab, bool):
             active_tab = None
@@ -584,6 +621,9 @@ class PiCIDDashboard(param.Parameterized):
                 self.report_dir = report_dir
 
             self._apply_selector_state("mode", state.get("mode"))
+            self._apply_selector_state(
+                "spiderweb_plot_mode", state.get("spiderweb_plot_mode")
+            )
 
             for name in ("use_alt_metric", "show_n", "show_rank"):
                 if name in state:
@@ -603,7 +643,9 @@ class PiCIDDashboard(param.Parameterized):
                 if state.get("alt_sort_metric_overridden"):
                     alt_sort_metric = state.get("alt_sort_metric_key")
                     if alt_sort_metric in self.param["alt_sort_metric_key"].objects:
-                        self._set_alt_sort_metric_value(alt_sort_metric, overridden=True)
+                        self._set_alt_sort_metric_value(
+                            alt_sort_metric, overridden=True
+                        )
                 else:
                     self.alt_sort_metric_overridden = False
 
@@ -616,6 +658,14 @@ class PiCIDDashboard(param.Parameterized):
 
             if not self._has_url_tab_override() and "active_tab" in state:
                 self.active_tab = state["active_tab"]
+
+            if "latex_precision" in state:
+                self.latex_precision = state["latex_precision"]
+            for name in ("latex_show_std", "latex_show_n"):
+                if name in state:
+                    setattr(self, name, state[name])
+            if "latex_rename_json" in state:
+                self.latex_rename_json = state["latex_rename_json"]
         finally:
             self._restore_in_progress = False
             self._sync_state_store()
@@ -764,6 +814,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "selected_dataset",
+        "spiderweb_plot_mode",
         "use_alt_metric",
         "alt_metric_key",
         "alt_sort_metric_key",
@@ -783,6 +834,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
                 selected_dataset=self.selected_dataset,
+                plot_mode=self.spiderweb_plot_mode,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -897,6 +949,157 @@ class PiCIDDashboard(param.Parameterized):
             self._loader, self.selected_dataset, self._active_model()
         )
 
+    def _latex_configurator_panel(self) -> pn.viewable.Viewable:
+        """Precision input + rename table. Built once per tab activation; not itself reactive."""
+        loader = self._loader
+        if loader is None:
+            return pn.pane.Markdown("No data loaded.")
+
+        try:
+            rename_map: dict[str, str] = json.loads(self.latex_rename_json or "{}")
+        except json.JSONDecodeError:
+            rename_map = {}
+
+        short_models = [_shorten_model_name(m) for m in loader.models]
+        short_datasets = [_shorten_dataset_name(d) for d in loader.datasets]
+        all_names = short_models + short_datasets
+        types = ["Model"] * len(short_models) + ["Dataset"] * len(short_datasets)
+
+        df = pd.DataFrame(
+            {
+                "type": types,
+                "original": all_names,
+                "display_name": [rename_map.get(n, "") for n in all_names],
+            }
+        )
+
+        tabulator = pn.widgets.Tabulator(
+            df,
+            editors={"type": None, "original": None, "display_name": "input"},
+            titles={
+                "type": "Type",
+                "original": "Default name",
+                "display_name": "Display name (empty = keep default)",
+            },
+            show_index=False,
+            sizing_mode="stretch_width",
+            height=min(400, 45 + 35 * max(len(all_names), 1)),
+        )
+
+        def _on_edit(_event: Any) -> None:
+            new_map = {
+                row["original"]: row["display_name"]
+                for _, row in tabulator.value.iterrows()
+                if str(row["display_name"]).strip()
+            }
+            self.latex_rename_json = json.dumps(new_map, ensure_ascii=False)
+
+        tabulator.on_edit(_on_edit)
+
+        precision_input = pn.widgets.IntInput(
+            name="Decimal precision",
+            value=self.latex_precision,
+            start=1,
+            end=8,
+            step=1,
+            width=120,
+        )
+        precision_input.param.watch(
+            lambda e: setattr(self, "latex_precision", e.new), "value"
+        )
+
+        show_std_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Show ± std", value=self.latex_show_std, width=120
+            )
+        )
+        show_std_toggle.param.watch(
+            lambda e: setattr(self, "latex_show_std", e.new), "value"
+        )
+
+        show_n_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Show (n=…)", value=self.latex_show_n, width=120
+            )
+        )
+        show_n_toggle.param.watch(
+            lambda e: setattr(self, "latex_show_n", e.new), "value"
+        )
+
+        return pn.Column(
+            pn.pane.Markdown("### Configuration"),
+            pn.Row(
+                pn.Column("**Precision**", precision_input),
+                pn.Column("**Columns**", pn.Row(show_std_toggle, show_n_toggle)),
+            ),
+            pn.layout.Divider(),
+            pn.pane.Markdown(
+                "**Rename models / datasets** — leave *Display name* empty to keep the default"
+            ),
+            tabulator,
+            pn.layout.Divider(),
+            sizing_mode="stretch_width",
+        )
+
+    @param.depends(
+        "metric_key",
+        "sort_metric_key",
+        "mode",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+        "latex_show_n",
+        "latex_show_std",
+        "latex_precision",
+        "latex_rename_json",
+    )
+    def _latex_output_view(self) -> pn.viewable.Viewable:
+        if self._load_error:
+            return pn.pane.Alert(
+                f"**Error loading data:** {self._load_error}", alert_type="danger"
+            )
+        try:
+            rename_map: dict[str, str] = json.loads(self.latex_rename_json or "{}")
+        except json.JSONDecodeError:
+            rename_map = {}
+        return build_latex_table(
+            self._loader,
+            self.metric_key,
+            sort_metric_key=self.sort_metric_key,
+            mode=self.mode,
+            alt_metric_key=self._active_alt_metric(),
+            alt_sort_metric_key=self._active_alt_sort_metric(),
+            use_alt_metric=self.use_alt_metric,
+            show_n=self.latex_show_n,
+            show_std=self.latex_show_std,
+            precision=self.latex_precision,
+            rename_map=rename_map,
+        )
+
+    @param.depends(
+        "report_dir",
+        "metric_key",
+        "sort_metric_key",
+        "mode",
+        "use_alt_metric",
+        "alt_metric_key",
+        "alt_sort_metric_key",
+        "latex_show_n",
+        "latex_show_std",
+        "latex_precision",
+        "latex_rename_json",
+    )
+    def _latex_table_view(self) -> pn.viewable.Viewable:
+        if self._load_error:
+            return pn.pane.Alert(
+                f"**Error loading data:** {self._load_error}", alert_type="danger"
+            )
+        return pn.Column(
+            self._latex_configurator_panel(),
+            pn.panel(self._latex_output_view),
+            sizing_mode="stretch_width",
+        )
+
     # ------------------------------------------------------------------
     # Layout
     # ------------------------------------------------------------------
@@ -994,6 +1197,9 @@ class PiCIDDashboard(param.Parameterized):
         model_sel = pn.widgets.Select.from_param(
             self.param.selected_model, name="Model", width=280
         )
+        spiderweb_plot_sel = pn.widgets.Select.from_param(
+            self.param.spiderweb_plot_mode, name="Spiderweb Plot", width=280
+        )
         state_store = pn.widgets.TextInput(
             value=self._serialize_state_json(),
             width=0,
@@ -1070,6 +1276,7 @@ class PiCIDDashboard(param.Parameterized):
                     self.param.show_rank, name="Show rank in heatmap", width=280
                 )
             ),
+            spiderweb_plot_sel,
             pn.layout.Divider(),
             "**Focus**",
             dataset_sel,
@@ -1091,6 +1298,7 @@ class PiCIDDashboard(param.Parameterized):
             (_MAIN_TAB_TITLES[4], pn.panel(self._hp_impact_view)),
             (_MAIN_TAB_TITLES[5], pn.panel(self._summary_view)),
             (_MAIN_TAB_TITLES[6], pn.panel(self._stats_view)),
+            (_MAIN_TAB_TITLES[7], pn.panel(self._latex_table_view)),
             dynamic=True,
             active=self.active_tab,
         )

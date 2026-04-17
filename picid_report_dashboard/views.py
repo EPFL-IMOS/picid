@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ from .data import ResultsLoader, is_alt_model
 # ---------------------------------------------------------------------------
 # Label helpers
 # ---------------------------------------------------------------------------
+
 
 def _shorten_model_name(name: str) -> str:
     """Extract a concise display label from a dotted Python module path.
@@ -71,6 +73,7 @@ def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
 # ---------------------------------------------------------------------------
 # Heatmap (model × dataset)
 # ---------------------------------------------------------------------------
+
 
 def _selected_metric_frame(
     loader: ResultsLoader,
@@ -143,9 +146,11 @@ def _build_heatmap_frame(
         long["color"] = 1.0 - long["color"]
 
     # Rank within each dataset (1 = best); computed before summary rows are added
-    long["rank"] = long.groupby("dataset")["value"].rank(
-        method="min", ascending=(mode == "min")
-    ).astype(float)
+    long["rank"] = (
+        long.groupby("dataset")["value"]
+        .rank(method="min", ascending=(mode == "min"))
+        .astype(float)
+    )
 
     # Average metric-value column
     avg_val = long.groupby("model")["value"].mean()
@@ -221,6 +226,7 @@ def build_heatmap(
 ) -> pn.viewable.Viewable:
     """Color-coded heatmap of mean metric values across datasets and models."""
     import holoviews as hv
+
     hv.extension("bokeh")
 
     long, model_order, dataset_order = _build_heatmap_frame(
@@ -241,7 +247,8 @@ def build_heatmap(
     long["dataset"] = long["dataset"].map(_shorten_dataset_name)
     model_order = [_shorten_model_name(model_name) for model_name in model_order]
     dataset_label_map = {
-        dataset_name: _shorten_dataset_name(dataset_name) for dataset_name in dataset_order
+        dataset_name: _shorten_dataset_name(dataset_name)
+        for dataset_name in dataset_order
     }
     dataset_order = [dataset_label_map[dataset_name] for dataset_name in dataset_order]
 
@@ -252,8 +259,14 @@ def build_heatmap(
     def _make_label(r):
         if r.get("summary_kind") == "average_rank":
             return f"{r['value']:.2f}"
-        rank_str = f"#{int(r['rank'])} " if (show_rank and pd.notna(r.get("rank"))) else ""
-        n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else (" (n=N/A)" if show_n else "")
+        rank_str = (
+            f"#{int(r['rank'])} " if (show_rank and pd.notna(r.get("rank"))) else ""
+        )
+        n_str = (
+            f" (n={int(r['n'])})"
+            if (show_n and pd.notna(r.get("n")))
+            else (" (n=N/A)" if show_n else "")
+        )
         return f"{rank_str}{r['value']:.2f}{n_str}"
 
     long["label"] = long.apply(_make_label, axis=1)
@@ -262,7 +275,9 @@ def build_heatmap(
 
     model_dim = hv.Dimension("model", values=model_order)
     dataset_dim = hv.Dimension("dataset", values=dataset_order)
-    heatmap = hv.HeatMap(long, kdims=[dataset_dim, model_dim], vdims=["color", "value"]).opts(
+    heatmap = hv.HeatMap(
+        long, kdims=[dataset_dim, model_dim], vdims=["color", "value"]
+    ).opts(
         responsive=True,
         frame_height=plot_height,
         colorbar=False,
@@ -287,8 +302,155 @@ def build_heatmap(
 
 
 # ---------------------------------------------------------------------------
+# LaTeX table export
+# ---------------------------------------------------------------------------
+
+
+def _latex_escape(s: str) -> str:
+    """Escape LaTeX special characters in plain-text strings (index / column names)."""
+    # Backslash must come first to avoid double-escaping.
+    s = s.replace("\\", "\\textbackslash{}")
+    for ch, rep in [
+        ("&", "\\&"),
+        ("%", "\\%"),
+        ("$", "\\$"),
+        ("#", "\\#"),
+        ("_", "\\_"),
+        ("{", "\\{"),
+        ("}", "\\}"),
+        ("~", "\\textasciitilde{}"),
+        ("^", "\\^{}"),
+    ]:
+        s = s.replace(ch, rep)
+    return s
+
+
+def build_latex_table(
+    loader: ResultsLoader,
+    metric_key: str,
+    sort_metric_key: str | None = None,
+    mode: str = "min",
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    show_n: bool = True,
+    show_std: bool = True,
+    precision: int = 4,
+    rename_map: dict[str, str] | None = None,
+) -> pn.viewable.Viewable:
+    """Booktabs LaTeX table of mean ± std values (models × datasets) for one metric."""
+    long, model_order, dataset_order = _build_heatmap_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    if long.empty:
+        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
+
+    # Apply shortening then optional user rename
+    _renames = rename_map or {}
+
+    def _display_model(name: str) -> str:
+        short = _shorten_model_name(name)
+        return _renames.get(short) or short
+
+    def _display_dataset(name: str) -> str:
+        short = _shorten_dataset_name(name)
+        return _renames.get(short) or short
+
+    long["model"] = long["model"].map(_display_model)
+    long["dataset"] = long["dataset"].map(_display_dataset)
+    model_order = [_display_model(m) for m in model_order]
+    dataset_order_short = [_display_dataset(d) for d in dataset_order]
+
+    # Determine best model per real dataset (for bolding)
+    dataset_rows = long[long["summary_kind"] == "dataset"]
+    best_per_dataset: dict[str, str] = {}
+    for ds, grp in dataset_rows.groupby("dataset"):
+        valid = grp.dropna(subset=["value"])
+        if valid.empty:
+            continue
+        best_idx = valid["value"].idxmin() if mode == "min" else valid["value"].idxmax()
+        best_per_dataset[str(ds)] = str(valid.loc[best_idx, "model"])
+
+    # Format each cell
+    fmt = f".{precision}f"
+
+    def _fmt_cell(r: pd.Series) -> str:
+        if pd.isna(r["value"]):
+            return "—"
+        kind = r.get("summary_kind", "dataset")
+        if kind == "average_rank":
+            txt = f"{r['value']:.2f}"
+        else:
+            std_str = f" ± {r['std']:{fmt}}" if (show_std and pd.notna(r.get("std"))) else ""
+            n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
+            txt = f"{r['value']:{fmt}}{std_str}{n_str}"
+        # Bold best value per dataset
+        ds = str(r["dataset"])
+        if best_per_dataset.get(ds) == str(r["model"]):
+            txt = f"\\textbf{{{txt}}}"
+        return txt
+
+    long["cell"] = long.apply(_fmt_cell, axis=1)
+
+    # Pivot: models as rows, datasets as columns
+    pivot = long.pivot_table(
+        index="model", columns="dataset", values="cell", aggfunc="first"
+    )
+    pivot = pivot.reindex(index=model_order, columns=dataset_order_short)
+    pivot.index.name = "Model"
+    pivot.columns.name = None
+
+    # Escape special chars in row/column labels
+    pivot.index = pd.Index(
+        [_latex_escape(m) for m in pivot.index], name=pivot.index.name
+    )
+    pivot.columns = pd.Index([_latex_escape(d) for d in pivot.columns])
+
+    # Build LaTeX string
+    effective_sort = sort_metric_key or metric_key
+    safe_metric = metric_key.replace("/", "_").replace(".", "_")
+    header_comment = (
+        "% Requires: \\usepackage{booktabs}\n"
+        f"% Metric: {metric_key}  |  Sort: {effective_sort}  |  Mode: {mode}\n\n"
+    )
+    latex_body = pivot.to_latex(
+        escape=False,
+        caption=f"Results for metric: {_latex_escape(metric_key)}",
+        label=f"tab:results_{safe_metric}",
+        column_format="l" + "r" * len(pivot.columns),
+    )
+    latex_str = header_comment + latex_body
+
+    # Panel UI: copy button + read-only textarea
+    textarea = pn.widgets.TextAreaInput(
+        value=latex_str,
+        disabled=True,
+        height=500,
+        sizing_mode="stretch_width",
+    )
+    copy_btn = pn.widgets.Button(
+        name="Copy to clipboard",
+        button_type="primary",
+        width=200,
+    )
+    copy_btn.js_on_click(
+        args={"ta": textarea},
+        code="navigator.clipboard.writeText(ta.value)",
+    )
+    return pn.Column(copy_btn, textarea, sizing_mode="stretch_width")
+
+
+# ---------------------------------------------------------------------------
 # Parallel coordinates overview
 # ---------------------------------------------------------------------------
+
 
 def _build_parallel_coordinates_frame(
     loader: ResultsLoader,
@@ -313,7 +475,9 @@ def _build_parallel_coordinates_frame(
     if long.empty:
         return pd.DataFrame(columns=["model", "Model"]), [], axis_order
 
-    wide = long.pivot_table(index="model", columns="dataset", values="value", aggfunc="first")
+    wide = long.pivot_table(
+        index="model", columns="dataset", values="value", aggfunc="first"
+    )
     ordered_axes = [axis_name for axis_name in axis_order if axis_name in wide.columns]
     wide = wide.reindex(index=model_order).reindex(columns=ordered_axes)
     wide = wide.apply(pd.to_numeric, errors="coerce")
@@ -321,13 +485,17 @@ def _build_parallel_coordinates_frame(
     if wide.empty:
         return pd.DataFrame(columns=["model", "Model"]), [], ordered_axes
 
-    ordered_models = [model_name for model_name in model_order if model_name in wide.index]
+    ordered_models = [
+        model_name for model_name in model_order if model_name in wide.index
+    ]
     wide = wide.loc[ordered_models].reset_index()
     wide.insert(1, "Model", wide["model"].map(_shorten_model_name))
     return wide, ordered_models, ordered_axes
 
 
-def _plotly_axis_range(values: pd.Series | np.ndarray, *, reverse: bool = False) -> list[float] | None:
+def _plotly_axis_range(
+    values: pd.Series | np.ndarray, *, reverse: bool = False
+) -> list[float] | None:
     """Compute a Plotly axis range, expanding degenerate ranges slightly."""
     numeric = np.asarray(values, dtype=float)
     finite = numeric[np.isfinite(numeric)]
@@ -426,7 +594,8 @@ def build_parallel_coordinates(
         values = frame[axis_name].astype(float)
         axis_range = _plotly_axis_range(
             values,
-            reverse=(axis_name == "Average rank") or (mode == "min" and axis_name != "Average rank"),
+            reverse=(axis_name == "Average rank")
+            or (mode == "min" and axis_name != "Average rank"),
         )
         if axis_range is None:
             continue
@@ -477,8 +646,9 @@ def build_parallel_coordinates(
 # Spiderweb overview
 # ---------------------------------------------------------------------------
 
+
 def _normalize_spiderweb_scores(values: pd.Series, mode: str) -> pd.Series:
-    """Normalize one model spoke across datasets to a 0..1 spiderweb radius."""
+    """Normalize one dataset spoke across models to a 0..1 spiderweb radius."""
     numeric = pd.to_numeric(values, errors="coerce")
     finite = numeric.dropna()
     if finite.empty:
@@ -539,16 +709,20 @@ def _build_spiderweb_frame(
         values="value",
         aggfunc="first",
     )
-    dataset_order = [dataset for dataset in loader.datasets if dataset in raw_matrix.index]
+    dataset_order = [
+        dataset for dataset in loader.datasets if dataset in raw_matrix.index
+    ]
     raw_matrix = raw_matrix.reindex(index=dataset_order, columns=model_order)
     normalized_matrix = raw_matrix.apply(
-        lambda series: _normalize_spiderweb_scores(series, mode)
+        lambda series: _normalize_spiderweb_scores(series, mode), axis=1
     )
 
     keep_mask = normalized_matrix.notna().any(axis=1)
     raw_matrix = raw_matrix.loc[keep_mask]
     normalized_matrix = normalized_matrix.loc[keep_mask]
-    dataset_order = [dataset for dataset in dataset_order if dataset in raw_matrix.index]
+    dataset_order = [
+        dataset for dataset in dataset_order if dataset in raw_matrix.index
+    ]
     return raw_matrix, normalized_matrix, model_order, dataset_order
 
 
@@ -566,32 +740,19 @@ def _spiderweb_palette(count: int) -> list[str]:
     return (palette * repeats)[:count]
 
 
-def build_spiderweb(
-    loader: ResultsLoader,
+def _build_spiderweb_interactive(
+    raw_matrix: pd.DataFrame,
+    normalized_matrix: pd.DataFrame,
+    model_order: list[str],
+    dataset_order: list[str],
+    *,
     metric_key: str,
-    sort_metric_key: str | None = None,
-    mode: str = "min",
-    alt_metric_key: str | None = None,
-    alt_sort_metric_key: str | None = None,
-    use_alt_metric: bool = True,
-    selected_dataset: str | None = None,
-) -> pn.viewable.Viewable:
-    """Spiderweb overview with dataset spokes and one polygon per model."""
+    selected_dataset: str | None,
+) -> pn.pane.HoloViews:
+    """Render the existing interactive spiderweb using HoloViews/Bokeh."""
     import holoviews as hv
 
     hv.extension("bokeh")
-    raw_matrix, normalized_matrix, model_order, dataset_order = _build_spiderweb_frame(
-        loader,
-        metric_key,
-        sort_metric_key=sort_metric_key,
-        mode=mode,
-        alt_metric_key=alt_metric_key,
-        alt_sort_metric_key=alt_sort_metric_key,
-        use_alt_metric=use_alt_metric,
-    )
-
-    if raw_matrix.empty or normalized_matrix.empty:
-        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
 
     angles = np.linspace(
         np.pi / 2,
@@ -671,8 +832,12 @@ def build_spiderweb(
         model_values = raw_matrix[model_name]
         path_df = pd.DataFrame(
             {
-                "x": np.append(model_scores.to_numpy(dtype=float) * np.cos(angles), np.nan),
-                "y": np.append(model_scores.to_numpy(dtype=float) * np.sin(angles), np.nan),
+                "x": np.append(
+                    model_scores.to_numpy(dtype=float) * np.cos(angles), np.nan
+                ),
+                "y": np.append(
+                    model_scores.to_numpy(dtype=float) * np.sin(angles), np.nan
+                ),
                 "Model": _shorten_model_name(model_name),
             }
         )
@@ -683,14 +848,16 @@ def build_spiderweb(
                 "Model": path_df.iloc[0]["Model"],
             }
 
-        model_path = hv.Path(path_df, kdims=["x", "y"], vdims=["Model"]).relabel(
-            _shorten_model_name(model_name)
-        ).opts(
-            color=color,
-            line_width=2.2,
-            alpha=0.65,
-            muted_alpha=0.08,
-            show_legend=True,
+        model_path = (
+            hv.Path(path_df, kdims=["x", "y"], vdims=["Model"])
+            .relabel(_shorten_model_name(model_name))
+            .opts(
+                color=color,
+                line_width=2.2,
+                alpha=0.65,
+                muted_alpha=0.08,
+                show_legend=True,
+            )
         )
 
         point_rows = []
@@ -741,9 +908,145 @@ def build_spiderweb(
     return pn.pane.HoloViews(overlay, sizing_mode="stretch_width")
 
 
+def _build_spiderweb_matplotlib(
+    raw_matrix: pd.DataFrame,
+    normalized_matrix: pd.DataFrame,
+    model_order: list[str],
+    dataset_order: list[str],
+    *,
+    metric_key: str,
+    selected_dataset: str | None,
+) -> pn.pane.Matplotlib:
+    """Render the spiderweb as a static Matplotlib radar chart."""
+    import matplotlib.pyplot as plt
+
+    angles = np.linspace(0.0, 2.0 * np.pi, len(dataset_order), endpoint=False)
+    closed_angles = np.append(angles, angles[0])
+    short_dataset_names = [_shorten_dataset_name(dataset) for dataset in dataset_order]
+
+    fig, ax = plt.subplots(figsize=(8.5, 8.5), subplot_kw={"projection": "polar"})
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0.0, 1.05)
+    ax.set_xticks(angles)
+    ax.set_xticklabels(short_dataset_names)
+    ax.tick_params(axis="x", pad=12)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(["0.25", "0.50", "0.75", "1.00"])
+    ax.set_rlabel_position(90)
+    ax.yaxis.grid(True, color="#d1d5db", linewidth=1, alpha=0.8)
+    ax.xaxis.grid(False)
+    ax.spines["polar"].set_color("#d1d5db")
+    ax.spines["polar"].set_linewidth(1)
+
+    for dataset_name, angle in zip(dataset_order, angles, strict=False):
+        is_selected = dataset_name == selected_dataset
+        ax.plot(
+            [angle, angle],
+            [0.0, 1.02],
+            color="#2563eb" if is_selected else "#d1d5db",
+            linewidth=2.5 if is_selected else 1,
+            alpha=0.95 if is_selected else 0.9,
+            zorder=1,
+        )
+
+    for tick_label, dataset_name in zip(
+        ax.get_xticklabels(), dataset_order, strict=False
+    ):
+        is_selected = dataset_name == selected_dataset
+        tick_label.set_color("#2563eb" if is_selected else "#374151")
+        tick_label.set_fontsize(9 if is_selected else 8)
+
+    colors = _parallel_coordinates_line_colors(model_order)
+    for model_name, color in zip(model_order, colors, strict=False):
+        model_scores = normalized_matrix[model_name].to_numpy(dtype=float)
+        closed_scores = np.append(
+            model_scores,
+            model_scores[0] if len(model_scores) else np.nan,
+        )
+        ax.plot(
+            closed_angles,
+            closed_scores,
+            color=color,
+            linewidth=2.2,
+            alpha=0.8,
+            label=_shorten_model_name(model_name),
+            zorder=2,
+        )
+        ax.scatter(
+            angles,
+            model_scores,
+            color=color,
+            s=30,
+            alpha=0.85,
+            zorder=3,
+        )
+
+    ax.set_title(
+        f"{metric_key} normalized spiderweb across datasets (configs selected by active sort metric)",
+        pad=24,
+    )
+    if model_order:
+        ax.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.05, 1.02),
+            borderaxespad=0.0,
+            frameon=False,
+        )
+    fig.tight_layout()
+    return pn.pane.Matplotlib(fig, sizing_mode="stretch_width")
+
+
+def build_spiderweb(
+    loader: ResultsLoader,
+    metric_key: str,
+    sort_metric_key: str | None = None,
+    mode: str = "min",
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
+    selected_dataset: str | None = None,
+    plot_mode: Literal["interactive", "matplotlib"] = "interactive",
+) -> pn.viewable.Viewable:
+    """Spiderweb overview with dataset spokes and one polygon per model."""
+    raw_matrix, normalized_matrix, model_order, dataset_order = _build_spiderweb_frame(
+        loader,
+        metric_key,
+        sort_metric_key=sort_metric_key,
+        mode=mode,
+        alt_metric_key=alt_metric_key,
+        alt_sort_metric_key=alt_sort_metric_key,
+        use_alt_metric=use_alt_metric,
+    )
+
+    if raw_matrix.empty or normalized_matrix.empty:
+        return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
+
+    if plot_mode == "interactive":
+        return _build_spiderweb_interactive(
+            raw_matrix,
+            normalized_matrix,
+            model_order,
+            dataset_order,
+            metric_key=metric_key,
+            selected_dataset=selected_dataset,
+        )
+    if plot_mode == "matplotlib":
+        return _build_spiderweb_matplotlib(
+            raw_matrix,
+            normalized_matrix,
+            model_order,
+            dataset_order,
+            metric_key=metric_key,
+            selected_dataset=selected_dataset,
+        )
+    raise ValueError(f"Unsupported spiderweb plot_mode: {plot_mode}")
+
+
 # ---------------------------------------------------------------------------
 # Bar chart — best metric per model for a single dataset
 # ---------------------------------------------------------------------------
+
 
 def build_bar_chart(
     loader: ResultsLoader,
@@ -759,6 +1062,7 @@ def build_bar_chart(
 ) -> pn.viewable.Viewable:
     """Horizontal bar chart with error bars for a single dataset."""
     import holoviews as hv
+
     hv.extension("bokeh")
 
     if dataset not in loader.datasets:
@@ -801,7 +1105,7 @@ def build_bar_chart(
         fontsize={"title": 12, "labels": 11, "ticks": 10},
         xrotation=0,
         toolbar="above",
-        labelled=["x"],   # keep value axis label, suppress category label
+        labelled=["x"],  # keep value axis label, suppress category label
     )
     errorbars = hv.ErrorBars(df, kdims=[model_dim], vdims=["mean", "std"]).opts(
         line_width=1.5, line_color="black"
@@ -812,6 +1116,7 @@ def build_bar_chart(
 # ---------------------------------------------------------------------------
 # Summary table
 # ---------------------------------------------------------------------------
+
 
 def _parse_dataset_filter(dataset: str) -> tuple[str, str | None]:
     """Split 'DatasetName [project_name]' into (base_name, project_name)."""
@@ -878,6 +1183,7 @@ def build_summary_table(
 # Experiment stats
 # ---------------------------------------------------------------------------
 
+
 def build_stats_table(
     loader: ResultsLoader,
     dataset: str | None = None,
@@ -906,7 +1212,10 @@ def build_stats_table(
 # HP impact table
 # ---------------------------------------------------------------------------
 
-def _format_metric_cell(mean_v: float, std_v: float, count_v: float, precision: int) -> str:
+
+def _format_metric_cell(
+    mean_v: float, std_v: float, count_v: float, precision: int
+) -> str:
     """Format one HP impact metric cell."""
     if np.isnan(mean_v):
         return "-"
@@ -943,9 +1252,15 @@ def _prioritize_metric_columns(
     """Order metrics as display metric, sort metric, then all remaining metrics."""
     prioritized: list[str] = []
     for metric_name in (display_metric_key, sort_metric_key):
-        if metric_name and metric_name in metric_names and metric_name not in prioritized:
+        if (
+            metric_name
+            and metric_name in metric_names
+            and metric_name not in prioritized
+        ):
             prioritized.append(metric_name)
-    return prioritized + [metric for metric in metric_names if metric not in prioritized]
+    return prioritized + [
+        metric for metric in metric_names if metric not in prioritized
+    ]
 
 
 def _build_hp_impact_frame(
@@ -978,7 +1293,9 @@ def _build_hp_impact_frame(
     metric_names = _prioritize_metric_columns(
         metric_names,
         selection.get("display_metric_key") if isinstance(selection, dict) else None,
-        selection.get("effective_sort_metric_key") if isinstance(selection, dict) else None,
+        selection.get("effective_sort_metric_key")
+        if isinstance(selection, dict)
+        else None,
     )
 
     rows = []
@@ -998,9 +1315,7 @@ def _build_hp_impact_frame(
 
     df = pd.DataFrame(rows)
     ordered_cols = (
-        hp_coord_names
-        + metric_names
-        + (["seeds"] if "seeds" in df.columns else [])
+        hp_coord_names + metric_names + (["seeds"] if "seeds" in df.columns else [])
     )
     return df[ordered_cols], selection, hp_coord_names, metric_names
 
@@ -1097,6 +1412,7 @@ def build_hp_impact_table(
 # Metadata helpers and tables
 # ---------------------------------------------------------------------------
 
+
 def _display_metadata_value(value: object) -> str:
     """Render metadata values consistently for metadata tables."""
     if value is None:
@@ -1160,7 +1476,9 @@ def _metadata_rows(
         "Opt metric": _display_metadata_value(
             loader.metadata_value("opt_metric", dataset, model)
         ),
-        "Opt mode": _display_metadata_value(loader.metadata_value("opt_mode", dataset, model)),
+        "Opt mode": _display_metadata_value(
+            loader.metadata_value("opt_mode", dataset, model)
+        ),
         "Opt value": _display_metadata_value(
             loader.metadata_value("opt_value", dataset, model)
         ),
@@ -1210,7 +1528,11 @@ def build_model_summary_table(
 
         row = {"Model": _shorten_model_name(model), **metadata, "_model_key": model}
         # Skip models that do not have any meaningful values for this dataset.
-        if all(value == "—" for key, value in row.items() if key not in {"Model", "_model_key"}):
+        if all(
+            value == "—"
+            for key, value in row.items()
+            if key not in {"Model", "_model_key"}
+        ):
             continue
         rows.append(row)
 
@@ -1228,6 +1550,7 @@ def build_model_summary_table(
         stylesheets=[_MODEL_LINK_STYLESHEET],
     )
     if on_model_click is not None:
+
         def _handle_model_click(event: object) -> None:
             row = getattr(event, "row", None)
             if not isinstance(row, int) or row < 0 or row >= len(df):

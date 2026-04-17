@@ -53,7 +53,9 @@ def _loader_factory(loader_map):
                 hp_ds = self.hp_impact_ds(dataset, model_name)
                 if hp_ds is None or "metric" not in hp_ds.coords:
                     continue
-                metrics = {str(metric) for metric in hp_ds.coords["metric"].values.tolist()}
+                metrics = {
+                    str(metric) for metric in hp_ds.coords["metric"].values.tolist()
+                }
                 if display_metric_key not in metrics:
                     continue
                 mean_values = np.asarray(
@@ -134,6 +136,7 @@ def test_serialize_state_contains_expected_keys(monkeypatch):
     dash.alt_sort_metric_key = "test/mae_denormalized"
     dash.show_n = False
     dash.show_rank = True
+    dash.spiderweb_plot_mode = "interactive"
     dash.selected_dataset = "dataset_b"
     dash.selected_model = "model_b"
     dash.active_tab = 3
@@ -146,6 +149,7 @@ def test_serialize_state_contains_expected_keys(monkeypatch):
     assert state["sort_metric_key"] == "custom_metric"
     assert state["alt_metric_overridden"] is True
     assert state["alt_sort_metric_overridden"] is True
+    assert state["spiderweb_plot_mode"] == "interactive"
     assert state["selected_model"] == "model_b"
     assert state["active_tab"] == 3
 
@@ -172,9 +176,7 @@ def test_dashboard_initializes_alt_selectors_from_derived_metric(monkeypatch):
 
 
 def test_metric_availability_stylesheet_marks_unavailable_options_gray():
-    css = dashboard_app._metric_availability_stylesheet(
-        {"val/mse_denormalized_mean"}
-    )
+    css = dashboard_app._metric_availability_stylesheet({"val/mse_denormalized_mean"})
 
     assert 'option[value="val/mse_denormalized_mean"]' in css
     assert dashboard_app._UNAVAILABLE_METRIC_COLOR in css
@@ -288,8 +290,7 @@ def test_sync_selectors_preserves_valid_values_and_falls_back(monkeypatch):
 
 def test_metric_change_reselects_dataset_to_same_base_valid_dataset(monkeypatch):
     invalid_dataset = (
-        "MultiSource_concepts_N-CMAPSS "
-        "[16_03_2026_concepts_n_cmapss_prognostics_]"
+        "MultiSource_concepts_N-CMAPSS [16_03_2026_concepts_n_cmapss_prognostics_]"
     )
     same_base_valid_dataset = (
         "MultiSource_concepts_N-CMAPSS "
@@ -518,6 +519,7 @@ def test_apply_saved_state_restores_report_dir_before_selectors(monkeypatch):
             "alt_sort_metric_overridden": True,
             "show_n": False,
             "show_rank": True,
+            "spiderweb_plot_mode": "interactive",
             "selected_dataset": "target_dataset",
             "selected_model": "target_model",
             "active_tab": 2,
@@ -535,12 +537,15 @@ def test_apply_saved_state_restores_report_dir_before_selectors(monkeypatch):
     assert dash.alt_sort_metric_overridden is True
     assert dash.show_n is False
     assert dash.show_rank is True
+    assert dash.spiderweb_plot_mode == "interactive"
     assert dash.selected_dataset == "target_dataset"
     assert dash.selected_model == "target_model"
     assert dash.active_tab == 2
 
 
-def test_apply_saved_state_ignores_stale_alt_metrics_without_override_flags(monkeypatch):
+def test_apply_saved_state_ignores_stale_alt_metrics_without_override_flags(
+    monkeypatch,
+):
     dash = _make_dashboard(
         monkeypatch,
         {
@@ -595,6 +600,7 @@ def test_apply_saved_state_restores_explicit_alt_metric_overrides(monkeypatch):
     dash.sort_metric_key = "sort_metric"
     dash.alt_metric_key = "custom_alt"
     dash.alt_sort_metric_key = "sort_alt"
+    dash.spiderweb_plot_mode = "interactive"
 
     state = dash._serialize_state()
 
@@ -605,6 +611,7 @@ def test_apply_saved_state_restores_explicit_alt_metric_overrides(monkeypatch):
     assert restored.sort_metric_key == "sort_metric"
     assert restored.alt_metric_key == "custom_alt"
     assert restored.alt_sort_metric_key == "sort_alt"
+    assert restored.spiderweb_plot_mode == "interactive"
     assert restored.alt_metric_overridden is True
     assert restored.alt_sort_metric_overridden is True
 
@@ -613,8 +620,7 @@ def test_apply_saved_state_reselects_invalid_dataset_to_same_base_valid_dataset(
     monkeypatch,
 ):
     invalid_dataset = (
-        "MultiSource_concepts_N-CMAPSS "
-        "[16_03_2026_concepts_n_cmapss_prognostics_]"
+        "MultiSource_concepts_N-CMAPSS [16_03_2026_concepts_n_cmapss_prognostics_]"
     )
     same_base_valid_dataset = (
         "MultiSource_concepts_N-CMAPSS "
@@ -732,6 +738,26 @@ def test_parse_saved_state_migrates_v4_active_tab_indices(monkeypatch):
     assert untouched == {"active_tab": 1}
 
 
+def test_parse_saved_state_accepts_v5_payload(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    parsed = dash._parse_saved_state('{"version": 5, "active_tab": 7}')
+
+    assert parsed == {"active_tab": 7}
+
+
 def test_url_tab_override_takes_precedence_over_saved_state(monkeypatch):
     dash = _make_dashboard(
         monkeypatch,
@@ -769,6 +795,7 @@ def test_panel_can_render_with_state_bridge(monkeypatch):
         "build_hp_impact_table",
         "build_summary_table",
         "build_stats_table",
+        "build_latex_table",
     ):
         monkeypatch.setattr(
             dashboard_app, builder_name, lambda *args, **kwargs: pn.pane.Markdown("ok")
@@ -807,6 +834,7 @@ def test_panel_includes_parallel_coordinates_tab_after_heatmap(monkeypatch):
         "build_hp_impact_table",
         "build_summary_table",
         "build_stats_table",
+        "build_latex_table",
     ):
         monkeypatch.setattr(
             dashboard_app, builder_name, lambda *args, **kwargs: pn.pane.Markdown("ok")
@@ -962,6 +990,7 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
     dash.sort_metric_key = dashboard_app._DEFAULT_METRIC
     dash.alt_metric_key = "test/mae_denormalized"
     dash.alt_sort_metric_key = "test/mae_denormalized"
+    dash.spiderweb_plot_mode = "interactive"
 
     view = dash._spiderweb_view()
 
@@ -977,6 +1006,7 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
         "alt_sort_metric_key": "test/mae_denormalized",
         "use_alt_metric": True,
         "selected_dataset": "dataset_a",
+        "plot_mode": "interactive",
     }
     assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
     assert (
@@ -985,6 +1015,18 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
     assert model_summary_call["kwargs"]["alt_metric_key"] == "test/mae_denormalized"
     assert (
         model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
+    )
+
+
+def test_spiderweb_view_reacts_to_plot_mode_changes():
+    assert "spiderweb_plot_mode" in dashboard_app.PiCIDDashboard._spiderweb_view._dinfo[
+        "dependencies"
+    ]
+    assert (
+        "spiderweb_plot_mode"
+        not in dashboard_app.PiCIDDashboard._parallel_coordinates_view._dinfo[
+            "dependencies"
+        ]
     )
 
 

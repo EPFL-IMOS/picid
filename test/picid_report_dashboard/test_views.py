@@ -7,6 +7,7 @@ import pandas as pd
 import panel as pn
 import pytest
 import xarray as xr
+from matplotlib.colors import to_hex
 from types import SimpleNamespace
 
 from picid_report_dashboard.data import ResultsLoader
@@ -28,7 +29,9 @@ THIRD_DATASET = "Dataset C [project_c]"
 class FakeResultsLoader(ResultsLoader):
     """Minimal ResultsLoader subclass backed by in-memory xarray datasets."""
 
-    def __init__(self, xarray_dataset: xr.Dataset, hp_map: dict[tuple[str, str], xr.Dataset]):
+    def __init__(
+        self, xarray_dataset: xr.Dataset, hp_map: dict[tuple[str, str], xr.Dataset]
+    ):
         self.base_dir = "/tmp/fake_dashboard"
         self._xarray_dataset = xarray_dataset
         self._hp_map = hp_map
@@ -61,9 +64,15 @@ def _make_hp_dataset(
 
     return xr.Dataset(
         {
-            "mean": xr.DataArray(np.asarray(means, dtype=float), dims=["config", "metric"]),
-            "std": xr.DataArray(np.asarray(stds, dtype=float), dims=["config", "metric"]),
-            "count": xr.DataArray(np.asarray(counts, dtype=float), dims=["config", "metric"]),
+            "mean": xr.DataArray(
+                np.asarray(means, dtype=float), dims=["config", "metric"]
+            ),
+            "std": xr.DataArray(
+                np.asarray(stds, dtype=float), dims=["config", "metric"]
+            ),
+            "count": xr.DataArray(
+                np.asarray(counts, dtype=float), dims=["config", "metric"]
+            ),
         },
         coords=coords,
     )
@@ -753,7 +762,7 @@ def test_build_parallel_coordinates_frame_orders_models_by_average_rank():
     assert list(frame["model"]) == [PRIMARY_MODEL, ALT_MODEL]
 
 
-def test_build_spiderweb_returns_holoviews_pane():
+def test_build_spiderweb_interactive_returns_holoviews_pane():
     loader = _make_average_rank_loader()
 
     pane = views.build_spiderweb(
@@ -765,13 +774,14 @@ def test_build_spiderweb_returns_holoviews_pane():
         alt_sort_metric_key=ALT_DISPLAY_METRIC,
         use_alt_metric=True,
         selected_dataset=DATASET,
+        plot_mode="interactive",
     )
 
     assert isinstance(pane, pn.pane.HoloViews)
     assert not isinstance(pane, pn.pane.Plotly)
 
 
-def test_build_spiderweb_uses_dataset_spokes_and_model_paths():
+def test_build_spiderweb_interactive_uses_dataset_spokes_and_model_paths():
     loader = _make_average_rank_loader()
 
     pane = views.build_spiderweb(
@@ -783,6 +793,7 @@ def test_build_spiderweb_uses_dataset_spokes_and_model_paths():
         alt_sort_metric_key=ALT_DISPLAY_METRIC,
         use_alt_metric=True,
         selected_dataset=DATASET,
+        plot_mode="interactive",
     )
 
     overlay = pane.object
@@ -800,8 +811,8 @@ def test_build_spiderweb_uses_dataset_spokes_and_model_paths():
 
     assert sorted(label_texts) == sorted(
         [
-        views._shorten_dataset_name(DATASET),
-        views._shorten_dataset_name(SECOND_DATASET),
+            views._shorten_dataset_name(DATASET),
+            views._shorten_dataset_name(SECOND_DATASET),
         ]
     )
     assert model_path_labels == [
@@ -810,10 +821,10 @@ def test_build_spiderweb_uses_dataset_spokes_and_model_paths():
     ]
 
 
-def test_build_spiderweb_frame_orders_model_paths_by_average_rank():
-    loader = _make_rank_order_loader()
+def test_build_spiderweb_matplotlib_returns_radar_chart_with_expected_labels():
+    loader = _make_average_rank_loader()
 
-    raw_matrix, normalized_matrix, model_order, dataset_order = views._build_spiderweb_frame(
+    pane = views.build_spiderweb(
         loader,
         PRIMARY_DISPLAY_METRIC,
         sort_metric_key=PRIMARY_DISPLAY_METRIC,
@@ -821,6 +832,42 @@ def test_build_spiderweb_frame_orders_model_paths_by_average_rank():
         alt_metric_key=ALT_DISPLAY_METRIC,
         alt_sort_metric_key=ALT_DISPLAY_METRIC,
         use_alt_metric=True,
+        selected_dataset=DATASET,
+        plot_mode="matplotlib",
+    )
+
+    assert isinstance(pane, pn.pane.Matplotlib)
+
+    figure = pane.object
+    axis = figure.axes[0]
+    legend = axis.get_legend()
+
+    assert axis.name == "polar"
+    assert [tick.get_text() for tick in axis.get_xticklabels()] == [
+        views._shorten_dataset_name(DATASET),
+        views._shorten_dataset_name(SECOND_DATASET),
+    ]
+    assert to_hex(axis.get_xticklabels()[0].get_color()) == "#2563eb"
+    assert to_hex(axis.get_xticklabels()[1].get_color()) == "#374151"
+    assert [text.get_text() for text in legend.get_texts()] == [
+        views._shorten_model_name(ALT_MODEL),
+        views._shorten_model_name(PRIMARY_MODEL),
+    ]
+
+
+def test_build_spiderweb_frame_orders_model_paths_by_average_rank():
+    loader = _make_rank_order_loader()
+
+    raw_matrix, normalized_matrix, model_order, dataset_order = (
+        views._build_spiderweb_frame(
+            loader,
+            PRIMARY_DISPLAY_METRIC,
+            sort_metric_key=PRIMARY_DISPLAY_METRIC,
+            mode="min",
+            alt_metric_key=ALT_DISPLAY_METRIC,
+            alt_sort_metric_key=ALT_DISPLAY_METRIC,
+            use_alt_metric=True,
+        )
     )
 
     assert model_order == [PRIMARY_MODEL, ALT_MODEL]
@@ -832,47 +879,53 @@ def test_build_spiderweb_frame_orders_model_paths_by_average_rank():
 def test_build_spiderweb_frame_normalizes_scores_by_mode():
     loader = _make_average_rank_loader()
 
-    _raw_min, normalized_min, _model_order, _dataset_order = views._build_spiderweb_frame(
-        loader,
-        PRIMARY_DISPLAY_METRIC,
-        sort_metric_key=PRIMARY_DISPLAY_METRIC,
-        mode="min",
-        alt_metric_key=ALT_DISPLAY_METRIC,
-        alt_sort_metric_key=ALT_DISPLAY_METRIC,
-        use_alt_metric=True,
+    _raw_min, normalized_min, _model_order, _dataset_order = (
+        views._build_spiderweb_frame(
+            loader,
+            PRIMARY_DISPLAY_METRIC,
+            sort_metric_key=PRIMARY_DISPLAY_METRIC,
+            mode="min",
+            alt_metric_key=ALT_DISPLAY_METRIC,
+            alt_sort_metric_key=ALT_DISPLAY_METRIC,
+            use_alt_metric=True,
+        )
     )
-    _raw_max, normalized_max, _model_order, _dataset_order = views._build_spiderweb_frame(
-        loader,
-        PRIMARY_DISPLAY_METRIC,
-        sort_metric_key=PRIMARY_DISPLAY_METRIC,
-        mode="max",
-        alt_metric_key=ALT_DISPLAY_METRIC,
-        alt_sort_metric_key=ALT_DISPLAY_METRIC,
-        use_alt_metric=True,
+    _raw_max, normalized_max, _model_order, _dataset_order = (
+        views._build_spiderweb_frame(
+            loader,
+            PRIMARY_DISPLAY_METRIC,
+            sort_metric_key=PRIMARY_DISPLAY_METRIC,
+            mode="max",
+            alt_metric_key=ALT_DISPLAY_METRIC,
+            alt_sort_metric_key=ALT_DISPLAY_METRIC,
+            use_alt_metric=True,
+        )
     )
 
     assert normalized_min.loc[DATASET, PRIMARY_MODEL] == pytest.approx(1.0)
+    assert normalized_min.loc[DATASET, ALT_MODEL] == pytest.approx(0.0)
     assert normalized_min.loc[SECOND_DATASET, PRIMARY_MODEL] == pytest.approx(0.0)
-    assert normalized_min.loc[DATASET, ALT_MODEL] == pytest.approx(1.0)
-    assert normalized_min.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(0.0)
+    assert normalized_min.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(1.0)
 
     assert normalized_max.loc[DATASET, PRIMARY_MODEL] == pytest.approx(0.0)
+    assert normalized_max.loc[DATASET, ALT_MODEL] == pytest.approx(1.0)
     assert normalized_max.loc[SECOND_DATASET, PRIMARY_MODEL] == pytest.approx(1.0)
-    assert normalized_max.loc[DATASET, ALT_MODEL] == pytest.approx(0.0)
-    assert normalized_max.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(1.0)
+    assert normalized_max.loc[SECOND_DATASET, ALT_MODEL] == pytest.approx(0.0)
 
 
 def test_build_spiderweb_frame_uses_alt_metric_for_alt_models():
     loader = _make_loader()
 
-    raw_matrix, _normalized_matrix, model_order, dataset_order = views._build_spiderweb_frame(
-        loader,
-        PRIMARY_DISPLAY_METRIC,
-        sort_metric_key=PRIMARY_DISPLAY_METRIC,
-        mode="min",
-        alt_metric_key=ALT_DISPLAY_METRIC,
-        alt_sort_metric_key=ALT_DISPLAY_METRIC,
-        use_alt_metric=True,
+    raw_matrix, _normalized_matrix, model_order, dataset_order = (
+        views._build_spiderweb_frame(
+            loader,
+            PRIMARY_DISPLAY_METRIC,
+            sort_metric_key=PRIMARY_DISPLAY_METRIC,
+            mode="min",
+            alt_metric_key=ALT_DISPLAY_METRIC,
+            alt_sort_metric_key=ALT_DISPLAY_METRIC,
+            use_alt_metric=True,
+        )
     )
 
     assert model_order == [PRIMARY_MODEL, ALT_MODEL]
