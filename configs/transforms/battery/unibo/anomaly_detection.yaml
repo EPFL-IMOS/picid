@@ -25,7 +25,8 @@ time_domain_features:
   transform:
     _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
     hankel_window_size: 10
-    stats_to_compute: [
+    stats_to_compute:
+      [
         "mean",
         "maximum",
         "minimum",
@@ -52,7 +53,8 @@ ragged2regular_time_domain_features:
 spectral_domain_features:
   transform:
     _target_: picid.transforms.base_transforms.spectral.SpectralStatsTransform
-    stats_to_compute: [
+    stats_to_compute:
+      [
         "mean",
         "maximum",
         "minimum",
@@ -89,3 +91,4 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+    cache_point: True

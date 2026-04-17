@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="16_02_2026_scaling"
+wandb_log_folder="16_04_2026_scaling"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -31,16 +31,16 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 datasets=(
 #   "nb14|raw|prognostics"
 #   "nb14|combined|prognostics"
-#   "unibo|combined|prognostics" # TODO
-  "phme20|raw|prognostics"
+  "unibo|combined|prognostics" # TODO
+#   "phme20|raw|prognostics"
 #   "concepts_n_cmapss||prognostics"
-#   "concepts_n_cmapss_ds02||prognostics"  # TODO
+  "concepts_n_cmapss_ds02||prognostics"  # TODO
 #   "pronostia|raw|prognostics"
 #   "pronostia|combined|prognostics"
 #   "xjtu_sy|combined|prognostics"
 )
 
-subset_ratios=(0.001 0.005 0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+subset_ratios=(0.001 0.005 0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
 SEEDS=(72 88 101 666 226688)
 
 model_names=(

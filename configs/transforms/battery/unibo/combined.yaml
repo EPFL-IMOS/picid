@@ -1,6 +1,6 @@
 scaler_features:
   transform:
-    _target_:  picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
 
   metadata:
     apply_to: features
@@ -37,7 +37,6 @@ time_domain_features:
         #"hankel_svd",
       ]
 
-
   metadata:
     apply_to: "features"
     assign_to: "time_domain_features"
@@ -48,7 +47,6 @@ ragged2regular_time_domain_features:
 
   metadata:
     apply_to: "time_domain_features"
-
 
 spectral_domain_features:
   transform:
@@ -125,6 +123,7 @@ final_scaler_features:
   metadata:
     apply_to: features
     fit_on: train
+    cache_point: True
 
 # plot_features_final:
 #   transform:
