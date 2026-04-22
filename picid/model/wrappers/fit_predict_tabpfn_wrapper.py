@@ -90,7 +90,7 @@ class FitPredictTabPFNWrapper(AbstractFitPredictWrapper):
                 torch.save(output, output_file)
                 if self.output_type == "full":
                     output = output["mean"]
-
+                return torch.Tensor(output)
             else:
                 return torch.Tensor(self.backbone.predict(X.numpy()))
 
