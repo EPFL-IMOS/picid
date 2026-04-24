@@ -11,6 +11,8 @@
 #     apply_to: ['features', 'time_features', 'target']
 #     assign_to: features
 
+"""Tabularize time-series tensors for forecasting feature pipelines."""
+
 import logging
 from typing import Any, Dict, Optional
 
@@ -93,6 +95,38 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         warmup_steps: int = None,
         **kwargs,
     ):
+        """
+        Instantiate a tabularizer (see class docstring for behavior overview).
+
+        Parameters
+        ----------
+        select_features : dict[str, str]
+            Mapping from input key to selection mode.
+        timestep_dimension : int
+            Timestep dimension used by downstream consumers.
+        seq_len : int
+            Input history length.
+        label_len : int
+            Decoder label length.
+        pred_len : int
+            Prediction horizon length.
+        stride : int
+            Sliding-window stride.
+        subset_ratio : float, optional
+            Fraction of sequences to keep when subsetting.
+        subset_seed : int
+            Random seed used for deterministic subsetting.
+        subset_blocks : int, optional
+            Number of subset blocks for grouped sampling.
+        pred_offset : int
+            Forecast offset applied when building sequences.
+        padding_left_flag : bool
+            Whether sequence padding should be left-aligned.
+        warmup_steps : int, optional
+            Number of warmup steps passed to the sequencer.
+        **kwargs
+            Extra keyword arguments for API compatibility (for example ``freq``).
+        """
         # Call the BaseTransform constructor.
         # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
         # so just pass any generic kwargs along.
@@ -346,4 +380,17 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
     def __call__(self, data: Any) -> Any:
+        """
+        Run :meth:`transform_data` without split metadata.
+
+        Parameters
+        ----------
+        data : Any
+            Input forwarded to :meth:`transform_data`.
+
+        Returns
+        -------
+        Any
+            Output of :meth:`transform_data`.
+        """
         return self.transform_data(data, None)
