@@ -112,3 +112,25 @@ git branch -d codex/worktree-setup-doc
 
 This leaves the documentation change on the parent `fix_tests` branch while
 cleaning up the temporary checkout used to prepare it.
+
+
+
+
+---- Generalized workflow ----
+
+Standard Operating Procedure: Git Worktree & Environment SetupThis document outlines the generalized process for creating isolated Git worktrees, configuring Python environments with uv, and reintegrating changes into a parent workspace. This workflow is designed for maximum isolation and is ideal for agentic workflows.1. Create the Worktree (Detached Mode)To work on a task without switching branches in your primary workspace, create a linked worktree. If the parent workspace already has the target branch checked out, you must use detached mode to avoid Git conflicts.Command:git worktree add --detach <target_path> <source_branch>
+Why Detached?Git forbids having the same branch active in two separate worktrees at once. By using --detach, you check out the state of <source_branch> at its current commit without "occupying" the branch name itself, keeping it free for the parent workspace.2. Set Up the EnvironmentA worktree requires its own isolated virtual environment. In this repository, we use uv to handle dependencies and local editable packages.Workflow:# 1. Navigate to the new worktree
+cd <target_path>
+
+# 2. Synchronize the environment
+uv sync --extra dev
+Why uv sync?Path Integrity: A copied .venv contains absolute paths that point back to the original workspace.Editable Installs: If this project uses local packages (e.g., in local_packages/), uv sync ensures these are rebuilt against the current worktree's paths, preventing cross-workspace contamination.3. Verify the EnvironmentBefore performing automated tasks or agents start coding, verify that the Python interpreter is correctly resolving paths within the worktree.Verification Script:.venv/bin/python -c "import <main_package>; print(<main_package>.__file__)"
+Expected: The output path should start with <target_path>.Smoke Test:.venv/bin/python -m pytest -q <path_to_smoke_test>
+4. Bring Changes Back to the Parent BranchSince the worktree is in a detached state, you must create a temporary branch to "label" your commits before they can be merged.Inside the worktree, create a feature branch:git switch -c <task_branch_name>
+Commit your changes:git add .
+git commit -m "<type>: <description_of_changes>"
+Return to the parent workspace and merge:cd <parent_workspace_path>
+git merge --no-ff <task_branch_name>
+5. Cleanup ProcedureAfter the merge is verified and successful in the parent workspace, remove the temporary artifacts.Remove the worktree directory:git worktree remove <target_path>
+Delete the temporary local branch:git branch -d <task_branch_name>
+Variable Reference TablePlaceholderDescription<target_path>The directory where the worktree will be created (e.g., ../worktrees/task-1).<source_branch>The base branch to checkout (e.g., main, develop).<main_package>The primary Python package name to verify imports.<task_branch_name>The temporary branch created to hold the work (e.g., feat/api-fix).

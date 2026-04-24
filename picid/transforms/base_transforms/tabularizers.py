@@ -12,7 +12,6 @@
 #     assign_to: features
 
 import logging
-import random
 from typing import Any, Dict, Optional
 
 import omegaconf
@@ -23,7 +22,7 @@ from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.data.datasets.subset_sampling import (
     create_sequence_subset,
     make_subset_blocks_indices,
@@ -180,7 +179,8 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         return seq
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-        r"""Applies the tabularization to the input data.
+        r"""
+        Apply tabularization to the input data.
 
         Make sure that the input data to this transform is of shape (N, T, ...)
         Where N is the number of samples and T is the task number.

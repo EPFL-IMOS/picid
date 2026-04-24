@@ -168,7 +168,7 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         return instantiate(multisource_data_splitter)
 
     def _validate_constructor_inputs(
-        self, source_list: dict[str, Any], multisource_data_splitter: Any
+        self, source_list: dict[str, Any] | DictConfig, multisource_data_splitter: Any
     ) -> None:
         """
         Fail fast on invalid multisource constructor combinations.
@@ -182,7 +182,7 @@ class MultiSourceLoader(AbstractDataSourceLoader):
         """
         if not source_list:
             raise DatasourceConfigurationError("source_list cannot be empty.")
-        if not isinstance(source_list, dict):
+        if not isinstance(source_list, (dict, DictConfig)):
             raise DatasourceConfigurationError("source_list must be a dictionary.")
         for source_name in source_list.keys():
             if not isinstance(source_name, str):

@@ -171,17 +171,17 @@ def _write_metrics_to_eval_details(
     metrics : dict[str, Any]
         Metrics dictionary returned by Lightning.
     """
-    p_dir = getattr(cfg.paths, "eval_details", None)
-    if not p_dir or not metrics:
+    if not metrics:
         return
-    out = Path(str(p_dir)) / stage / split / "metrics.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
     # Strip "val/" or "test/" prefix from keys
     clean = {k.split("/", 1)[1] if "/" in k else k: v for k, v in metrics.items()}
-
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(clean, f, indent=2, default=_json_default)
-    log.info("Saved metrics to %s", out)
+    p_dir = getattr(cfg.paths, "eval_details", None)
+    if p_dir:
+        out = Path(str(p_dir)) / stage / split / "metrics.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(clean, f, indent=2, default=_json_default)
+        log.info("Saved metrics to %s", out)
 
 
 def _json_default(o: Any) -> Any:
