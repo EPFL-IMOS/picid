@@ -11,8 +11,9 @@
 #     apply_to: ['features', 'time_features', 'target']
 #     assign_to: features
 
+"""Tabularize time-series tensors for forecasting feature pipelines."""
+
 import logging
-import random
 from typing import Any, Dict, Optional
 
 import omegaconf
@@ -23,7 +24,7 @@ from einops import rearrange, repeat
 from omegaconf import OmegaConf
 
 # Assuming this import path is correct for your project
-from picid.data.data_objects.data import NamedTransformInput
+from picid.data.data_objects import NamedTransformInput
 from picid.data.datasets.subset_sampling import (
     create_sequence_subset,
     make_subset_blocks_indices,
@@ -94,6 +95,38 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         warmup_steps: int = None,
         **kwargs,
     ):
+        """
+        Instantiate a tabularizer (see class docstring for behavior overview).
+
+        Parameters
+        ----------
+        select_features : dict[str, str]
+            Mapping from input key to selection mode.
+        timestep_dimension : int
+            Timestep dimension used by downstream consumers.
+        seq_len : int
+            Input history length.
+        label_len : int
+            Decoder label length.
+        pred_len : int
+            Prediction horizon length.
+        stride : int
+            Sliding-window stride.
+        subset_ratio : float, optional
+            Fraction of sequences to keep when subsetting.
+        subset_seed : int
+            Random seed used for deterministic subsetting.
+        subset_blocks : int, optional
+            Number of subset blocks for grouped sampling.
+        pred_offset : int
+            Forecast offset applied when building sequences.
+        padding_left_flag : bool
+            Whether sequence padding should be left-aligned.
+        warmup_steps : int, optional
+            Number of warmup steps passed to the sequencer.
+        **kwargs
+            Extra keyword arguments for API compatibility (for example ``freq``).
+        """
         # Call the BaseTransform constructor.
         # Your BaseTransform doesn't take specific 'apply_to'/'fit_on' in its init,
         # so just pass any generic kwargs along.
@@ -180,7 +213,8 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         return seq
 
     def transform_data(self, data: NamedTransformInput, metadata: Dict) -> Any:
-        r"""Applies the tabularization to the input data.
+        r"""
+        Apply tabularization to the input data.
 
         Make sure that the input data to this transform is of shape (N, T, ...)
         Where N is the number of samples and T is the task number.
@@ -346,4 +380,17 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
     # Keeping your original __call__ and transform methods for compatibility.
     # They simply delegate to the new transform_data method.
     def __call__(self, data: Any) -> Any:
+        """
+        Run :meth:`transform_data` without split metadata.
+
+        Parameters
+        ----------
+        data : Any
+            Input forwarded to :meth:`transform_data`.
+
+        Returns
+        -------
+        Any
+            Output of :meth:`transform_data`.
+        """
         return self.transform_data(data, None)

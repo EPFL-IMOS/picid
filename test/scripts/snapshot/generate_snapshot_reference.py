@@ -19,6 +19,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -123,6 +124,11 @@ def merge_reference_from_per_experiment_files(ref_dir: Path) -> dict:
     return ref
 
 
+def _metrics_path_from_run_dir(run_dir: Path) -> Path:
+    """Return the best-epoch test metrics path for a subprocess pipeline run."""
+    return run_dir / "eval_details" / "best_epoch" / "test" / "metrics.json"
+
+
 def main():
     args = parse_args()
     to_run = filter_experiments(EXPERIMENTS, args.task, args.model, args.experiment)
@@ -143,30 +149,40 @@ def main():
 
     print(f"Running {len(to_run)} experiments: {[f'{t}/{m}' for (t, _, m) in to_run]}")
 
-    for task_type, exp_base, model in to_run:
-        key = f"{task_type}/{model}"
-        (REF_DIR / task_type).mkdir(parents=True, exist_ok=True)
-        out = REF_DIR / task_type / f"{model}.json"
-        env["PIPELINE_REGRESSION_OUTPUT"] = str(out)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_root = Path(tmp)
+        for task_type, exp_base, model in to_run:
+            key = f"{task_type}/{model}"
+            (REF_DIR / task_type).mkdir(parents=True, exist_ok=True)
+            out = REF_DIR / task_type / f"{model}.json"
+            run_dir = tmp_root / task_type / model
+            run_dir.mkdir(parents=True, exist_ok=True)
 
-        # Fit-predict (anomaly isolation_forest) uses max_epochs=1; no checkpoints
-        max_epochs = "1" if task_type == "anomaly_detection" else "10"
-        cmd = [
-            sys.executable,
-            "picid/run.py",
-            f"experiment={exp_base}/{model}",
-            "paths=default",
-            "debug=nox_testing_fit_predict",
-            f"trainer.max_epochs={max_epochs}",
-            "num_threads=1",
-            "seed=42",
-            f"hydra.searchpath=[{searchpath}]",
-        ]
-        print(f"Running {key}...", flush=True)
-        r = subprocess.run(cmd, env=env, cwd=PROJECT_ROOT)
-        if r.returncode != 0:
-            print(f"Failed: {key}", file=sys.stderr)
-            sys.exit(r.returncode)
+            # Fit-predict (anomaly isolation_forest) uses max_epochs=1; no checkpoints
+            max_epochs = "1" if task_type == "anomaly_detection" else "10"
+            cmd = [
+                sys.executable,
+                "picid/run.py",
+                f"experiment={exp_base}/{model}",
+                "paths=default",
+                "debug=nox_testing_fit_predict",
+                f"trainer.max_epochs={max_epochs}",
+                "num_threads=1",
+                "seed=42",
+                f"hydra.run.dir={run_dir}",
+                f"hydra.searchpath=[{searchpath}]",
+            ]
+            print(f"Running {key}...", flush=True)
+            r = subprocess.run(cmd, env=env, cwd=PROJECT_ROOT)
+            if r.returncode != 0:
+                print(f"Failed: {key}", file=sys.stderr)
+                sys.exit(r.returncode)
+
+            metrics_path = _metrics_path_from_run_dir(run_dir)
+            if not metrics_path.exists():
+                print(f"Metrics not captured for {key}: {metrics_path}", file=sys.stderr)
+                sys.exit(1)
+            out.write_text(metrics_path.read_text())
 
     ref = merge_reference_from_per_experiment_files(REF_DIR)
     (REF_DIR / "reference.json").write_text(json.dumps(ref, indent=2))

@@ -33,7 +33,6 @@ from pathlib import Path
 import pytest
 from picid.interface import EntryInterface
 from picid.config import project_config
-from omegaconf import OmegaConf, DictConfig, open_dict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -71,18 +70,15 @@ def round_metrics(obj):
 def _run_experiment_to_dir(
     exp: str,
     out_dir: Path,
-    metrics_path: Path | None,
     epochs: int = 5,
 ) -> int:
-    """Run experiment to out_dir, optionally capture metrics. Returns exit code."""
+    """Run experiment to out_dir. Returns exit code."""
     env = os.environ.copy()
     env["PROJECT_ROOT"] = str(PROJECT_ROOT)
     env["PYTHONPATH"] = str(
         PROJECT_ROOT
     )  # Ensure test.data importable (not stdlib test)
     env["HYDRA_FULL_ERROR"] = "1"
-    if metrics_path:
-        env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_path)
     root = str(PROJECT_ROOT).replace("\\", "/")
     searchpath = f"file://{root}/test/configs,file://{root}/configs"
     cmd = [
@@ -100,6 +96,11 @@ def _run_experiment_to_dir(
     return subprocess.run(cmd, env=env, cwd=PROJECT_ROOT).returncode
 
 
+def _metrics_path_from_run_dir(run_dir: Path) -> Path:
+    """Return the best-epoch test metrics path for a subprocess pipeline run."""
+    return run_dir / "eval_details" / "best_epoch" / "test" / "metrics.json"
+
+
 @pytest.mark.requires_snapshots
 @pytest.mark.skipif(
     not REF_PATH.exists(),
@@ -108,7 +109,6 @@ def _run_experiment_to_dir(
 @pytest.mark.parametrize("task_type,exp_base,model", EXPERIMENTS)
 def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     """Current pipeline output matches committed reference (4 decimals)."""
-    import tempfile
 
     key = f"{task_type}/{model}"
 
@@ -118,17 +118,21 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     interface = EntryInterface()
 
     # IMPLEMENTERE CARICAMENTO DA CFG
-    results = interface.train(run_name=f'test_{key}',
+    results = interface.train(
+        run_name=f"test_{key}",
         model=None,
-                              task_definition=None,
-                              datasource=None,
-                              overrides=['trainer.max_epochs=10',
-                                         "num_threads=1",
-                                         "debug=nox_testing_fit_predict",
-                                         "trainer.accelerator=cpu",
-                                         "seed=42",
-                                         f"experiment={exp_base}/{model}",
-                                         f"hydra.searchpath=[{searchpath}]"])
+        task_definition=None,
+        datasource=None,
+        overrides=[
+            "trainer.max_epochs=10",
+            "num_threads=1",
+            "debug=nox_testing_fit_predict",
+            "trainer.accelerator=cpu",
+            "seed=42",
+            f"experiment={exp_base}/{model}",
+            f"hydra.searchpath=[{searchpath}]",
+        ],
+    )
 
     results = results[0]
 
@@ -155,12 +159,11 @@ def test_reproduce_from_run_matches_overrides():
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp) / "run_a"
         run_dir.mkdir()
-        metrics_a = Path(tmp) / "metrics_a.json"
-        metrics_b = Path(tmp) / "metrics_b.json"
 
-        rc = _run_experiment_to_dir(exp, run_dir, metrics_a, epochs=5)
+        rc = _run_experiment_to_dir(exp, run_dir, epochs=5)
         assert rc == 0, "Initial run failed"
-        assert metrics_a.exists(), "Metrics not captured"
+        metrics_a_path = _metrics_path_from_run_dir(run_dir)
+        assert metrics_a_path.exists(), "Metrics not captured"
 
         env = os.environ.copy()
         env["PROJECT_ROOT"] = str(PROJECT_ROOT)
@@ -168,7 +171,6 @@ def test_reproduce_from_run_matches_overrides():
             PROJECT_ROOT
         )  # Ensure test.data importable (not stdlib test)
         env["HYDRA_FULL_ERROR"] = "1"
-        env["PIPELINE_REGRESSION_OUTPUT"] = str(metrics_b)
         rc = subprocess.run(
             [
                 sys.executable,
@@ -179,10 +181,14 @@ def test_reproduce_from_run_matches_overrides():
             cwd=PROJECT_ROOT,
         )
         assert rc.returncode == 0, "reproduce_from_run failed"
-        assert metrics_b.exists(), "Reproduce metrics not captured"
+        reproduce_dirs = list(run_dir.glob("reproduce_*"))
+        assert reproduce_dirs, "Reproduce dir not created"
+        reproduce_dir = max(reproduce_dirs, key=lambda p: p.stat().st_mtime)
+        metrics_b_path = _metrics_path_from_run_dir(reproduce_dir)
+        assert metrics_b_path.exists(), "Reproduce metrics not captured"
 
-        a = round_metrics(json.loads(metrics_a.read_text()))
-        b = round_metrics(json.loads(metrics_b.read_text()))
+        a = round_metrics(json.loads(metrics_a_path.read_text()))
+        b = round_metrics(json.loads(metrics_b_path.read_text()))
         for k in a:
             assert k in b, f"Missing {k} in reproduce output"
             assert (

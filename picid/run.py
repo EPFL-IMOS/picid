@@ -131,6 +131,33 @@ os.environ["TABPFN_DISABLE_TELEMETRY"] = "1"
 
 
 def safe_div(a, b):
+    """
+    Return ``a // b`` when ``a`` is evenly divisible by ``b``.
+
+    If ``b`` is a non-string iterable, try each candidate divisor until one
+    succeeds.
+
+    Parameters
+    ----------
+    a : int
+        Dividend.
+    b : int or Iterable of int
+        Divisor or iterable of candidate divisors (strings and bytes are not
+        treated as iterables of divisors).
+
+    Returns
+    -------
+    int
+        Integer quotient.
+
+    Raises
+    ------
+    ZeroDivisionError
+        If a scalar divisor is zero.
+    ValueError
+        If division is not exact, no candidate succeeds, or the candidate list
+        is empty.
+    """
     # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
     if isinstance(b, Iterable) and not isinstance(b, (str, bytes)):
         bs = list(b)
@@ -171,21 +198,39 @@ def _write_metrics_to_eval_details(
     metrics : dict[str, Any]
         Metrics dictionary returned by Lightning.
     """
-    p_dir = getattr(cfg.paths, "eval_details", None)
-    if not p_dir or not metrics:
+    if not metrics:
         return
-    out = Path(str(p_dir)) / stage / split / "metrics.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
     # Strip "val/" or "test/" prefix from keys
     clean = {k.split("/", 1)[1] if "/" in k else k: v for k, v in metrics.items()}
-
-    with open(out, "w", encoding="utf-8") as f:
-        json.dump(clean, f, indent=2, default=_json_default)
-    log.info("Saved metrics to %s", out)
+    p_dir = getattr(cfg.paths, "eval_details", None)
+    if p_dir:
+        out = Path(str(p_dir)) / stage / split / "metrics.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(clean, f, indent=2, default=_json_default)
+        log.info("Saved metrics to %s", out)
 
 
 def _json_default(o: Any) -> Any:
-    """Serialize common tensor and NumPy scalar metric values to JSON."""
+    """
+    Convert metric values into JSON-serializable scalars.
+
+    Parameters
+    ----------
+    o : Any
+        Value to serialize. Supports ``torch.Tensor``, NumPy scalar types, and
+        Python ``float``. Non-finite floating values are written as strings.
+
+    Returns
+    -------
+    Any
+        JSON-serializable scalar or string.
+
+    Raises
+    ------
+    TypeError
+        If ``o`` is not a supported type.
+    """
     if isinstance(o, torch.Tensor):
         v = o.detach().cpu().item()
         if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
@@ -231,6 +276,21 @@ def _log_preprocessing_datasource_error(exc: PreprocessingDatasourceError) -> No
 
 # safe diff that returns a if a or b are strings
 def diff_if_not_string(a, b):
+    """
+    Return ``a`` when either operand is a string; otherwise return ``a - b``.
+
+    Parameters
+    ----------
+    a : Any
+        Left-hand value.
+    b : Any
+        Right-hand value.
+
+    Returns
+    -------
+    Any
+        ``a`` if ``a`` or ``b`` is a string, else ``a - b``.
+    """
     if isinstance(a, str) or isinstance(b, str):
         return a
     return a - b
@@ -249,7 +309,41 @@ OmegaConf.register_new_resolver(
 
 
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
+    """
+    Register the Hydra ``infer_dataloader_length`` resolver from length map.
+
+    Parameters
+    ----------
+    lengths : dict[str, int]
+        Mapping from dataloader keys to lengths.
+
+    Returns
+    -------
+    None
+        Resolver registration is performed in place.
+    """
+
     def get_key(lengths, key):
+        """
+        Look up a dataloader length or raise with resolver context.
+
+        Parameters
+        ----------
+        lengths : dict[str, int]
+            Known lengths by key.
+        key : str
+            Resolver key.
+
+        Returns
+        -------
+        int
+            Length for ``key``.
+
+        Raises
+        ------
+        KeyError
+            If ``key`` is missing from ``lengths``.
+        """
         if key not in lengths:
             raise KeyError(
                 f"Resolver issue: key: '{key}' "
@@ -267,7 +361,41 @@ def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
 def register_data_dim_resolver(
     data: dict[str, Union[np.array, ak.Array, torch.Tensor]],
 ) -> None:
+    """
+    Register the Hydra ``infer_data_dim`` resolver from a data dictionary.
+
+    Parameters
+    ----------
+    data : dict[str, Union[np.ndarray, ak.Array, torch.Tensor]]
+        Mapping from resolver keys to array-like values.
+
+    Returns
+    -------
+    None
+        Resolver registration is performed in place.
+    """
+
     def infer_data_dim(obj: Union[np.array, ak.Array, torch.Tensor], dim: int) -> int:
+        """
+        Infer tensor length along ``dim`` for supported array types.
+
+        Parameters
+        ----------
+        obj : Union[list, np.ndarray, torch.Tensor, ak.Array]
+            Array-like object or nested list of consistent arrays.
+        dim : int
+            Dimension index.
+
+        Returns
+        -------
+        int
+            Size along ``dim``.
+
+        Raises
+        ------
+        ValueError
+            If the type is unsupported or list elements disagree on shape.
+        """
         if isinstance(obj, list):
             dims = {infer_data_dim(o, dim) for o in obj}
             if len(dims) > 1:
@@ -286,6 +414,26 @@ def register_data_dim_resolver(
             raise ValueError(f"Cannot infer data dim for type {type(obj)}")
 
     def get_key(data, key):
+        """
+        Return ``data[key]`` or raise with resolver context.
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            Resolver source mapping.
+        key : str
+            Requested key.
+
+        Returns
+        -------
+        Any
+            Value for ``key``.
+
+        Raises
+        ------
+        KeyError
+            If ``key`` is missing from ``data``.
+        """
         if key not in data:
             raise KeyError(
                 f"Resolver issue: key: '{key}' "
@@ -301,6 +449,24 @@ def register_data_dim_resolver(
 
 
 def _uuid(kind: str) -> str:
+    """
+    Build a UUID string for the ``uuid`` OmegaConf resolver.
+
+    Parameters
+    ----------
+    kind : str
+        ``\"hex\"`` for the full hex form, ``\"short\"`` for an 8-character prefix.
+
+    Returns
+    -------
+    str
+        UUID representation.
+
+    Raises
+    ------
+    ValueError
+        If ``kind`` is not recognized.
+    """
     u = uuid.uuid4()
     if kind == "hex":
         return u.hex
@@ -328,6 +494,19 @@ log = RankedLogger(__name__, rank_zero_only=True)
 
 
 def verify_thread_limits(expected: int):
+    """
+    Log configured thread-related environment variables and library pools.
+
+    Parameters
+    ----------
+    expected : int
+        Expected thread count from configuration (for log context only).
+
+    Returns
+    -------
+    None
+        Emits logs only.
+    """
     log.info(f"[Thread sanity check] Expected threads: {expected}")
 
     # environment variables
@@ -362,6 +541,25 @@ def log_training_run_config(
     model: L.LightningModule,
     logger: list[Logger],
 ):
+    """
+    Save the resolved config and push hyperparameters to experiment loggers.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Full Hydra configuration including ``paths``.
+    trainer : Trainer
+        Active Lightning trainer.
+    model : L.LightningModule
+        Model being trained.
+    logger : list[Logger]
+        Lightning loggers (for example WandB).
+
+    Returns
+    -------
+    None
+        Writes files and updates loggers in place.
+    """
     # This is needed because wandb otherwise only tracks part of the config
     cfg_container = OmegaConf.to_container(cfg, resolve=True)
     resolved_cfg = OmegaConf.create(cfg_container)
@@ -401,6 +599,32 @@ def create_lightning_module(
     evaluators: list[AbstractEvaluator],
     loss: Any,
 ):
+    """
+    Instantiate the Lightning module that wraps the configured backbone.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra config with ``model``, ``optimization``, and ``datasource`` nodes.
+    datamodule : LightningDataModule
+        Data module (used for optional dataloader-dependent construction).
+    evaluators : list of AbstractEvaluator
+        Evaluators wired into the Lightning module.
+    loss : Any
+        Loss object from configuration.
+
+    Returns
+    -------
+    L.LightningModule
+        Training, constant-loss, or fit-predict Lightning module.
+
+    Raises
+    ------
+    ValueError
+        If the backbone wrapper type is not supported.
+    AssertionError
+        If no model could be built.
+    """
     # we can only partially initialize the optimizer here because
     # we need the parameter list from the model later
     # as a consequence, the same applies for the scheduler
@@ -493,6 +717,36 @@ def rerun_best_model_checkpoint(
     loss: Any,
     logger: list[Logger],
 ) -> None:
+    """
+    Load the best ``ModelCheckpoint`` and re-run validation and test loops.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration for trainer and model construction.
+    datamodule : LightningDataModule
+        Source of validation and test dataloaders.
+    device : torch.device
+        Device for the reloaded weights.
+    callbacks : list[Callback]
+        Callback list from training; must include ``ModelCheckpoint``.
+    evaluators : dict[str, AbstractEvaluator]
+        Evaluators forwarded to :func:`create_lightning_module`.
+    loss : Any
+        Loss for reconstructing the Lightning module.
+    logger : list[Logger]
+        Loggers that receive rerun metrics.
+
+    Returns
+    -------
+    None
+        Evaluation runs and metrics logging happen as side effects.
+
+    Raises
+    ------
+    ValueError
+        If no ``ModelCheckpoint`` callback is present.
+    """
     for lgr in logger:
         if isinstance(lgr, WandbLogger):
             lgr.experiment.log({}, commit=True)
