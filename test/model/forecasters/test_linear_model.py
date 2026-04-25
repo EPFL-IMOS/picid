@@ -29,8 +29,8 @@ import pytest
 import torch
 from typing import Dict, Any
 
-from picid.baselines.linear_model.linear_ar import LinearModel
-from picid.baselines.linear_model.linear_model import Linear_Forecaster
+from picid.model.forecasters.linear_model.linear_ar import LinearModel
+from picid.model.forecasters.linear_model.linear_model import Linear_Forecaster
 from picid.evaluator.base import AbstractEvaluator
 
 

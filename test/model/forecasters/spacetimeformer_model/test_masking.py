@@ -2,9 +2,9 @@
 
 import torch
 
-from picid.baselines.spacetimeformer_model.utils.masking import (
-    TriangularCausalMask,
+from picid.model.forecasters.spacetimeformer_model.utils.masking import (
     ProbMask,
+    TriangularCausalMask,
 )
 
 

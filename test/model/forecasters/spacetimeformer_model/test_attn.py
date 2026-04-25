@@ -2,10 +2,10 @@
 
 import torch
 
-from picid.baselines.spacetimeformer_model.nn.attn import (
+from picid.model.forecasters.spacetimeformer_model.nn.attn import (
+    AttentionLayer,
     FullAttention,
     ProbAttention,
-    AttentionLayer,
 )
 
 

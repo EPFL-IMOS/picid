@@ -2,7 +2,7 @@
 
 import torch
 
-from picid.baselines.spacetimeformer_model.nn.scalenorm import ScaleNorm
+from picid.model.forecasters.spacetimeformer_model.nn.scalenorm import ScaleNorm
 
 
 class TestScaleNorm:

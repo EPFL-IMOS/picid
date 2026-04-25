@@ -1,10 +1,13 @@
 """Unit tests for PatchTST Model, Transpose, FlattenHead (thuml_patchtst.py)."""
 
-import pytest
 import torch
 from types import SimpleNamespace
 
-from picid.baselines.patchtst_model.thuml_patchtst import Model, Transpose, FlattenHead
+from picid.model.forecasters.patchtst_model.thuml_patchtst import (
+    FlattenHead,
+    Model,
+    Transpose,
+)
 
 
 def _patchtst_config(task_name="long_term_forecast", seq_len=96, pred_len=24, enc_in=1):
@@ -42,7 +45,9 @@ class TestTranspose:
 
 class TestFlattenHead:
     def test_forward_shape(self):
-        h = FlattenHead(nf=160, target_window=24, head_dropout=0)  # nf = d_model * patch_num
+        h = FlattenHead(
+            nf=160, target_window=24, head_dropout=0
+        )  # nf = d_model * patch_num
         x = torch.randn(2, 4, 16, 10)  # bs, nvars, d_model, patch_num
         out = h(x)
         assert out.shape == (2, 4, 24)

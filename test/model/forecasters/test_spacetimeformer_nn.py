@@ -7,12 +7,12 @@ ReconstructionDropout is used for encoder embedding regularization.
 
 import torch
 
-from picid.baselines.spacetimeformer_model.nn.data_dropout import (
+from picid.model.forecasters.spacetimeformer_model.nn.data_dropout import (
     ReconstructionDropout,
     RandomMask,
     create_subsequence_mask,
 )
-from picid.baselines.spacetimeformer_model.nn.powernorm import (
+from picid.model.forecasters.spacetimeformer_model.nn.powernorm import (
     GroupScaling1D,
     MaskPowerNorm,
     _sum_ft,

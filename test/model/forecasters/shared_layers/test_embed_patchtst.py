@@ -2,7 +2,7 @@
 
 import torch
 
-from picid.baselines.shared_layers.Embed_PatchTST import (
+from picid.model.forecasters.shared_layers.Embed_PatchTST import (
     DataEmbedding,
     DataEmbedding_inverted,
     DataEmbedding_wo_pos,

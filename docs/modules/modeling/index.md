@@ -1,6 +1,6 @@
 # Modeling Module
 
-Modeling combines wrappers, backbone baselines, and optimization components.
+Modeling combines wrappers, forecaster backbones, and optimization components.
 
 Pages:
 
@@ -14,4 +14,4 @@ API:
 
 - [picid.model](../../reference/api/picid_model.md)
 - [picid.model.wrappers](../../reference/api/picid_model_wrappers.md)
-- [picid.baselines](../../reference/api/picid_baselines.md)
+- [picid.model.forecasters](../../reference/api/picid_model_forecasters.md)

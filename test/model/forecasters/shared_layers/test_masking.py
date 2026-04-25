@@ -2,7 +2,10 @@
 
 import torch
 
-from picid.baselines.shared_layers.masking import ProbMask, TriangularCausalMask
+from picid.model.forecasters.shared_layers.masking import (
+    ProbMask,
+    TriangularCausalMask,
+)
 
 
 def test_triangular_causal_mask_shape_and_dtype():

@@ -32,7 +32,7 @@ import torch
 import torch.nn as nn
 from typing import Dict, Any
 
-from picid.baselines.lstm_model.lstm_model import (
+from picid.model.forecasters.lstm_model.lstm_model import (
     LSTM_Encoder,
     LSTM_Decoder,
     LSTM_Seq2Seq,

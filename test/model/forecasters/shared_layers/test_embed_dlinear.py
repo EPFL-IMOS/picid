@@ -2,7 +2,7 @@
 
 import torch
 
-from picid.baselines.shared_layers.Embed_DLinear import (
+from picid.model.forecasters.shared_layers.Embed_DLinear import (
     ContextEmbedding,
     DataEmbedding,
     DataEmbedding_wo_pos,

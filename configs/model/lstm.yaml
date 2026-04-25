@@ -1,4 +1,4 @@
-_target_: picid.baselines.lstm_model.LSTM_Forecaster
+_target_: picid.model.forecasters.lstm_model.LSTM_Forecaster
 
 metadata:
   lightning_model: true

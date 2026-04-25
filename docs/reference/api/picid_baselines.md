@@ -1,6 +1,6 @@
 # picid.baselines
 
-Backbone baseline models and supporting definitions.
+Legacy compatibility package for forecaster backbones.
 
 ::: picid.baselines
     options:

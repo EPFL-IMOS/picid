@@ -17,8 +17,8 @@ class TestCleanAndRenameModels:
         df = pd.DataFrame(
             {
                 "model._target_": [
-                    "picid.baselines.patchtst_model.PatchTST_Forecaster",
-                    "picid.baselines.lstm_model.LSTM_Forecaster",
+                    "picid.model.forecasters.patchtst_model.PatchTST_Forecaster",
+                    "picid.model.forecasters.lstm_model.LSTM_Forecaster",
                 ],
             }
         )
@@ -63,8 +63,8 @@ class TestCleanAndRenameModels:
         df = pd.DataFrame(
             {
                 config.COLUMN_CONFIG["model_target"]: [
-                    "picid.baselines.patchtst_model.PatchTST_Forecaster",
-                    "picid.baselines.lstm_model.LSTM_Forecaster",
+                    "picid.model.forecasters.patchtst_model.PatchTST_Forecaster",
+                    "picid.model.forecasters.lstm_model.LSTM_Forecaster",
                 ],
             }
         )

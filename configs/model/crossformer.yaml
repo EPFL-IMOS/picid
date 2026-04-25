@@ -1,4 +1,4 @@
-_target_: picid.baselines.crossformer_model.Crossformer_Forecaster
+_target_: picid.model.forecasters.crossformer_model.Crossformer_Forecaster
 
 metadata:
   lightning_model: true

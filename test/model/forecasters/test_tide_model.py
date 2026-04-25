@@ -1,15 +1,16 @@
 import numpy as np
+
 import pytest
 import hydra
-from hydra.core.global_hydra import GlobalHydra
 import torch
 
-from picid.baselines.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
-from picid.baselines.patchtst_model.thuml_patchtst_model import PatchTST_Forecaster
+from picid.model.definitions import CLASSIFICATION_TASKS, REGRESSION_TASKS
+from picid.model.forecasters.tide_model.tide_model import TiDE_Forecaster
 from test.conftest import BATCH_SIZE
 from test.utils import ProjectSearchPathPlugin
 from typing import Any
 from picid.evaluator.base import AbstractEvaluator
+from hydra.core.global_hydra import GlobalHydra
 
 
 ProjectSearchPathPlugin.register()
@@ -60,7 +61,7 @@ def hydra_cfg(request, path_cfg):
     cfg = hydra.compose(
         config_name="test.yaml",
         overrides=[
-            "model=patchtst",
+            "model=tide",
             f"task_definition={task}",
             f"+model_configs={model_cfg}",
             f"paths={path_cfg}",
@@ -127,11 +128,11 @@ def test_batch_reg_class(hydra_cfg):
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
@@ -139,7 +140,7 @@ def test_batch_reg_class(hydra_cfg):
 )
 def test_initialize_model(hydra_model):
     assert hydra_model.task_type in CLASSIFICATION_TASKS + REGRESSION_TASKS
-    assert isinstance(hydra_model, PatchTST_Forecaster)
+    assert isinstance(hydra_model, TiDE_Forecaster)
 
 
 @pytest.mark.parametrize(
@@ -147,11 +148,11 @@ def test_initialize_model(hydra_model):
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
@@ -195,11 +196,11 @@ def test_compute_loss_calls_forecasting_loss(
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
@@ -235,11 +236,11 @@ def test_step_train_mode(hydra_model, test_batch_reg_class, monkeypatch):
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
@@ -283,38 +284,34 @@ def test_forward_model_including_model(hydra_model, hydra_cfg):
     [
         {
             "task": "prognostics/rul",
-            "model_cfg": "prognostics/patchtst.yaml",
+            "model_cfg": "prognostics/tide.yaml",
         },
         {
             "task": "diagnostics/concepts_n_cmapss_multi",
-            "model_cfg": "diagnostics/patchtst.yaml",
+            "model_cfg": "diagnostics/tide.yaml",
         },
     ],
     ids=["rul", "diagnostics"],
     indirect=True,
 )
 def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
-    # x_t is the data.
-    # the model should set x_c = x_t
-    # the model should initialize a zero vector for y_c
-
     assert hydra_model.task_type in CLASSIFICATION_TASKS + REGRESSION_TASKS
-    assert hydra_model.include_x_t is False
+    assert hydra_model.include_x_t is True
 
     cfg = hydra_cfg
     called = {}
 
-    def fake_forward(x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
+    def fake_forward(x_enc, x_mark_enc, x_dec, batch_y_mark, mask=None):
         assert mask is None
         called["x_enc"] = x_enc
         called["x_mark_enc"] = x_mark_enc
         called["x_dec"] = x_dec
-        called["x_mark_dec"] = x_mark_dec
+        called["batch_y_mark"] = batch_y_mark
 
         if hydra_model.task_type in REGRESSION_TASKS:
-            return torch.randn(batch_size, 1)
+            return torch.randn(batch_size, 1, 1)
         elif hydra_model.task_type in CLASSIFICATION_TASKS:
-            return torch.randn(batch_size, cfg.task_definition.num_classes)
+            return torch.randn(batch_size, 1, cfg.task_definition.num_classes)
         else:
             raise ValueError("Unknown task type")
 
@@ -342,10 +339,9 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
         y_t=y_t,
     )
 
-    assert called["x_enc"].shape == (batch_size, ts, d_x)
-
-    assert called["x_mark_enc"] is None
-    assert called["x_mark_dec"] is None
+    assert called["x_enc"].shape == (batch_size, ts, 1)
+    assert called["batch_y_mark"].shape == (batch_size, ts, d_x)
+    assert called["x_mark_enc"].shape == (batch_size, ts, d_x)
     assert called["x_dec"] is None
 
     if hydra_model.task_type in REGRESSION_TASKS:

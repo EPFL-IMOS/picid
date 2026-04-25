@@ -2,9 +2,8 @@
 
 import pytest
 import torch
-from omegaconf import OmegaConf
 
-from picid.baselines.tide_model.tide_model import TiDE_Forecaster
+from picid.model.forecasters.tide_model.tide_model import TiDE_Forecaster
 from picid.evaluator.base import AbstractEvaluator
 from typing import Any, Dict
 

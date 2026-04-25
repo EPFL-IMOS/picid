@@ -1,14 +1,14 @@
 """Tests for shared-layer Transformer encoder/decoder blocks."""
 
 import torch
-from picid.baselines.shared_layers.Transformer_EncDec import (
+from picid.model.forecasters.shared_layers.Transformer_EncDec import (
     ConvLayer,
-    Encoder,
-    EncoderLayer,
     Decoder,
     DecoderLayer,
+    Encoder,
+    EncoderLayer,
 )
-from picid.baselines.shared_layers.SelfAttention_Family import (
+from picid.model.forecasters.shared_layers.SelfAttention_Family import (
     FullAttention,
     AttentionLayer,
 )

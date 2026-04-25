@@ -11,12 +11,12 @@ import hydra
 from hydra.core.global_hydra import GlobalHydra
 import torch
 
-from picid.baselines.definitions import (
+from picid.model.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     STATE_FORECASTING_TASKS,
 )
-from picid.baselines.spacetimeformer_model.spacetimeformer_model import (
+from picid.model.forecasters.spacetimeformer_model.spacetimeformer_model import (
     Spacetimeformer_Forecaster,
 )
 from test.conftest import BATCH_SIZE

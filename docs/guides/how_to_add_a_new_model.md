@@ -29,7 +29,7 @@ Create a new file under **`picid/model/wrappers/`**, e.g. `my_model_wrapper.py`.
 - **Fit-predict:** Implement `fit(X, y)` and `predict(X)` (and optionally `serialize_model` / `load_model` if the pipeline should checkpoint the backbone). Ensure `predict` returns a 2D tensor (or array convertible to tensor). Respect the `allows_multi_target` property if applicable.
 - **Feed-forward:** Implement the interface expected by the pipeline (e.g. `forward(batch)` returning a dict with at least `"predictions"` and optionally `"targets"`). For training wrappers, implement `_training_step`, `_validation_step`, `_test_step` as required by the pipeline’s Lightning module.
 
-Use **`picid.baselines.definitions`** for task-type checks (e.g. `REGRESSION_TASKS`, `CLASSIFICATION_TASKS`, `FORECASTING_TASKS`) so your wrapper only accepts supported task types and the evaluator receives consistent outputs.
+Use **`picid.model.definitions`** for task-type checks (e.g. `REGRESSION_TASKS`, `CLASSIFICATION_TASKS`, `FORECASTING_TASKS`) so your wrapper only accepts supported task types and the evaluator receives consistent outputs.
 
 ---
 

@@ -2,7 +2,7 @@
 
 import torch
 
-from picid.baselines.spacetimeformer_model.nn.embed import Embedding
+from picid.model.forecasters.spacetimeformer_model.nn.embed import Embedding
 
 
 class TestEmbeddingTemporal:

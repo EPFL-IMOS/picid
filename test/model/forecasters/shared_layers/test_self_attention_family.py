@@ -2,7 +2,7 @@
 
 import torch
 
-from picid.baselines.shared_layers.SelfAttention_Family import (
+from picid.model.forecasters.shared_layers.SelfAttention_Family import (
     AttentionLayer,
     FullAttention,
     ProbAttention,

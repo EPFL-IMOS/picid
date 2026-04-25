@@ -29,7 +29,7 @@ import torch.nn as nn
 from typing import Dict, Any
 from unittest.mock import MagicMock
 
-from picid.baselines.forecaster import Forecaster, TransformerForecaster
+from picid.model.forecasters.forecaster import Forecaster, TransformerForecaster
 from picid.evaluator.base import AbstractEvaluator
 
 

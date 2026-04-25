@@ -3,7 +3,7 @@
 import torch
 from omegaconf import OmegaConf
 
-from picid.baselines.tide_model.tide import Model as TiDE
+from picid.model.forecasters.tide_model.tide import Model as TiDE
 
 
 def _tide_config(task_name="long_term_forecast", seq_len=96, pred_len=24):

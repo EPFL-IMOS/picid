@@ -2,20 +2,18 @@
 
 import torch
 
-from picid.baselines.spacetimeformer_model.nn.extra_layers import (
+from picid.model.forecasters.spacetimeformer_model.nn.extra_layers import (
     Flatten,
-    Localize,
-    ReverseLocalize,
-    MakeSelfMaskFromSeq,
-    MakeCrossMaskFromSeq,
-    WindowTime,
-    ReverseWindowTime,
-    ShiftBeforeWindow,
-    ReverseShiftBeforeWindow,
-    Stack,
-    FoldForPred,
     ConvBlock,
+    FoldForPred,
+    Localize,
+    MakeCrossMaskFromSeq,
+    MakeSelfMaskFromSeq,
     Normalization,
+    ReverseLocalize,
+    ReverseWindowTime,
+    Stack,
+    WindowTime,
 )
 
 

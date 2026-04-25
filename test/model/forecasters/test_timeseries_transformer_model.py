@@ -7,6 +7,15 @@ forecasting, regression, and classification tasks.
 import pytest
 import torch
 from types import SimpleNamespace
+from typing import Any, Dict
+
+from picid.evaluator.base import AbstractEvaluator
+from picid.model.forecasters.timeseries_transformer_model.timeseries_transformer import (
+    Model as Transformer,
+)
+from picid.model.forecasters.timeseries_transformer_model.timeseries_transformer_model import (
+    Timeseries_Transformer_Forecaster,
+)
 
 
 class _Config:
@@ -21,16 +30,6 @@ class _Config:
 
     def __getitem__(self, k):
         return getattr(self, k)
-
-
-from picid.baselines.timeseries_transformer_model.timeseries_transformer_model import (
-    Timeseries_Transformer_Forecaster,
-)
-from picid.baselines.timeseries_transformer_model.timeseries_transformer import (
-    Model as Transformer,
-)
-from picid.evaluator.base import AbstractEvaluator
-from typing import Any, Dict
 
 
 class MockEvaluator(AbstractEvaluator):

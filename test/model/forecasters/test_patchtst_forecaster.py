@@ -3,7 +3,9 @@
 import pytest
 import torch
 
-from picid.baselines.patchtst_model.thuml_patchtst_model import PatchTST_Forecaster
+from picid.model.forecasters.patchtst_model.thuml_patchtst_model import (
+    PatchTST_Forecaster,
+)
 from picid.evaluator.base import AbstractEvaluator
 from typing import Any, Dict
 
