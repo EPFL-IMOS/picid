@@ -180,6 +180,50 @@ class TestEmbeddingSpatioTemporal:
         out, _, _, mask = emb(x, y)
         assert out.shape[0] == B
 
+    def test_spatio_temporal_embed_with_router_and_linear_components(self):
+        emb = Embedding(
+            d_y=3,
+            d_x=4,
+            d_model=16,
+            method="spatio-temporal",
+            max_seq_len=64,
+            position_emb="abs",
+            time_emb="linear",
+            timetable_emb="linear",
+            variable_emb="linear",
+            embedding_router=torch.tensor([0, 0, 1, 1]),
+            use_timetable=False,
+            null_value=0.0,
+            downsample_convs=1,
+            is_encoder=True,
+        )
+        B, L = 2, 8
+        y = torch.randn(B, L, 3)
+        y[:, 0, 0] = 0.0
+        x = torch.randn(B, L, 4)
+        out, _, var_idxs, mask = emb(x, y)
+
+        assert out.shape[0] == B
+        assert out.shape[1] < L * 3
+        assert var_idxs is not None
+        assert mask is None or mask.shape[0] == B
+
+    def test_spatio_temporal_embed_router_without_timetable_embedding(self):
+        emb = Embedding(
+            d_y=2,
+            d_x=4,
+            d_model=8,
+            method="spatio-temporal",
+            max_seq_len=32,
+            position_emb="abs",
+            time_emb="linear",
+            timetable_emb=None,
+            embedding_router=torch.tensor([0, 0, 1, 1]),
+            is_encoder=True,
+        )
+        assert emb.timetable_emb is None
+        assert emb.embedding_router is not None
+
 
 class TestEmbeddingInverted:
     """Tests for inverted embedding method (rearranges b l n -> b n l)."""
@@ -201,3 +245,21 @@ class TestEmbeddingInverted:
         x = torch.randn(B, L, dy)
         out, space_emb, _, _ = emb(x, y)
         assert out.shape[0] == B
+
+    def test_temporal_embed_with_variable_time2vec_projection(self):
+        emb = Embedding(
+            d_y=2,
+            d_x=2,
+            d_model=8,
+            method="temporal",
+            max_seq_len=32,
+            position_emb="abs",
+            time_emb="linear",
+            timetable_emb=None,
+            variable_emb="t2v",
+            is_encoder=True,
+        )
+        y = torch.randn(2, 6, 2)
+        x = torch.randn(2, 6, 2)
+        out, _, _, _ = emb(x, y)
+        assert out.shape[0] == 2

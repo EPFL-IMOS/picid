@@ -738,6 +738,29 @@ class TestForecasterClassificationLoss:
         loss = forecaster_classification.classification_loss(outputs, y_t, mask)
         assert torch.isfinite(loss)
 
+    def test_compute_loss_classification_branch_returns_none_mask(
+        self, forecaster_classification, monkeypatch
+    ):
+        outputs = torch.randn(2, 5, forecaster_classification.d_yt)
+
+        def fake_forward(x_c, y_c, x_t, y_t, **forward_kwargs):
+            return (outputs,)
+
+        monkeypatch.setattr(forecaster_classification, "forward", fake_forward)
+
+        loss, computed_outputs, mask = forecaster_classification.compute_loss(
+            batch=(
+                None,
+                None,
+                torch.randn(2, 5, forecaster_classification.d_x),
+                torch.randint(0, forecaster_classification.d_yt, (2, 5, 1)),
+            )
+        )
+
+        assert torch.isfinite(loss)
+        assert computed_outputs is outputs
+        assert mask is None
+
 
 # =============================================================================
 # BATCH MAPPING TESTS
@@ -1017,6 +1040,58 @@ class TestForecasterSteps:
         assert "loss" in result
         assert torch.isfinite(result["loss"])
 
+    def test_validation_and_test_steps_delegate_with_eval_mode(
+        self, forecaster_regression, monkeypatch
+    ):
+        mapped_batch = (
+            None,
+            None,
+            torch.randn(2, 10, 4),
+            torch.randn(2, 1, 1),
+        )
+        calls = []
+
+        monkeypatch.setattr(
+            forecaster_regression, "_map_batch_to_task", lambda batch: mapped_batch
+        )
+
+        def fake_step(batch, train=False):
+            calls.append((batch, train))
+            return {"loss": torch.tensor(0.5)}
+
+        monkeypatch.setattr(forecaster_regression, "step", fake_step)
+
+        val_out = forecaster_regression._validation_step(
+            {"features": torch.randn(1)}, 0
+        )
+        test_out = forecaster_regression._test_step({"features": torch.randn(1)}, 0)
+
+        assert val_out == {"loss": torch.tensor(0.5)}
+        assert test_out == {"loss": torch.tensor(0.5)}
+        assert calls == [(mapped_batch, False), (mapped_batch, False)]
+
+    def test_predict_step_uses_eval_forward_kwargs(
+        self, forecaster_regression, monkeypatch
+    ):
+        batch = (
+            None,
+            None,
+            torch.randn(2, 10, 4),
+            torch.randn(2, 1, 1),
+        )
+        captured = {}
+
+        def fake_forward(x_c, y_c, x_t, y_t, **forward_kwargs):
+            captured["forward_kwargs"] = forward_kwargs
+            return (torch.zeros_like(y_t),)
+
+        monkeypatch.setattr(forecaster_regression, "forward", fake_forward)
+
+        out = forecaster_regression.predict_step(batch, 0)
+
+        assert out[0].shape == batch[-1].shape
+        assert captured["forward_kwargs"] == {"training": False}
+
 
 # =============================================================================
 # TRANSFORMER FORECASTER TESTS
@@ -1107,6 +1182,56 @@ class TestTransformerForecaster:
         forecaster.validation_step_outputs = [forecaster.step(batch, train=False)]
         forecaster.on_validation_epoch_end()
         assert forecaster.validation_step_outputs == []
+
+    def test_transformer_forecaster_validation_step_appends_outputs(
+        self, mock_optimizer_factory, mock_scheduler_factory
+    ):
+        evaluators = {split: MockEvaluator() for split in ("train", "val", "test")}
+        forecaster = ConcreteTransformerForecaster(
+            optimizer_factory=mock_optimizer_factory,
+            scheduler_factory=mock_scheduler_factory,
+            d_x=4,
+            d_yc=2,
+            d_yt=1,
+            task_type="rul",
+            loss="mse",
+            evaluators=evaluators,
+        )
+        batch = {
+            "features": torch.randn(2, 10, 4),
+            "rul": torch.randn(2, 1),
+        }
+
+        out = forecaster._validation_step(batch, 0)
+
+        assert forecaster.validation_step_outputs == [out]
+
+    def test_transformer_forecaster_validation_epoch_end_raises_when_monitor_missing(
+        self, mock_optimizer_factory
+    ):
+        mock_sched = MagicMock()
+
+        def sched_factory(optimizer):
+            return mock_sched
+
+        evaluators = {split: MockEvaluator() for split in ("train", "val", "test")}
+        forecaster = ConcreteTransformerForecaster(
+            optimizer_factory=mock_optimizer_factory,
+            scheduler_factory=sched_factory,
+            d_x=4,
+            d_yc=2,
+            d_yt=1,
+            task_type="rul",
+            loss="mse",
+            evaluators=evaluators,
+            scheduler_Loss_monitor="forecast_loss",
+        )
+        forecaster.dummy_param = nn.Parameter(torch.randn(5))
+        forecaster.configure_optimizers()
+        forecaster.validation_step_outputs = [{"loss": torch.tensor(0.5)}]
+
+        with pytest.raises(ValueError, match="Could not find forecast_loss"):
+            forecaster.on_validation_epoch_end()
 
     def test_transformer_forecaster_training_step(
         self, mock_optimizer_factory, mock_scheduler_factory

@@ -294,9 +294,7 @@ def test_forward_model_including_model(hydra_model, hydra_cfg):
         if hydra_model.task_type in REGRESSION_TASKS:
             y_t = torch.randn(batch_size, 1, d_yt)
         elif hydra_model.task_type in CLASSIFICATION_TASKS:
-            y_t = torch.randint(
-                0, cfg.task_definition.num_classes, (batch_size, 1, 1)
-            )
+            y_t = torch.randint(0, cfg.task_definition.num_classes, (batch_size, 1, 1))
         else:
             raise ValueError("Unknown task type")
 
@@ -370,9 +368,7 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
             y_t = torch.randn(batch_size, 1, d_yt)
             expected_forecast_shape = (batch_size, 1, d_yt)
         elif hydra_model.task_type in CLASSIFICATION_TASKS:
-            y_t = torch.randint(
-                0, cfg.task_definition.num_classes, (batch_size, 1, 1)
-            )
+            y_t = torch.randint(0, cfg.task_definition.num_classes, (batch_size, 1, 1))
             expected_forecast_shape = (batch_size, 1, cfg.task_definition.num_classes)
         else:
             raise ValueError("Unknown task type")
@@ -420,3 +416,213 @@ def test_forward_model_pass(hydra_model, hydra_cfg, monkeypatch):
 
     forecast_out = result[0]
     assert forecast_out.shape == expected_forecast_shape
+
+
+def test_spacetimeformer_init_negative_start_token_builds_router():
+    evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+    model = Spacetimeformer_Forecaster(
+        optimizer_factory=lambda params: torch.optim.Adam(params, lr=0.001),
+        scheduler_factory=lambda optimizer: torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=10
+        ),
+        d_yc=2,
+        d_yt=1,
+        d_x=4,
+        task_type="forecasting",
+        n_timefeatures=2,
+        start_token_len=-2,
+        max_seq_len=32,
+        d_model=16,
+        d_queries_keys=8,
+        d_values=8,
+        n_heads=2,
+        e_layers=1,
+        d_layers=1,
+        d_ff=32,
+        time_emb_dim=2,
+        timetable_emb_type="linear",
+        evaluators=evaluators,
+    )
+
+    assert model.start_token_len == -2
+    assert model.d_x_embedding_router is not None
+    assert torch.equal(model.d_x_embedding_router.cpu(), torch.tensor([0, 0, 1, 1]))
+
+
+def test_spacetimeformer_forward_model_pass_masks_decoder_only_target_and_returns_attn(
+    monkeypatch,
+):
+    evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+    model = Spacetimeformer_Forecaster(
+        optimizer_factory=lambda params: torch.optim.Adam(params, lr=0.001),
+        scheduler_factory=lambda optimizer: torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=10
+        ),
+        d_yc=0,
+        d_yt=1,
+        d_x=4,
+        task_type="rul",
+        max_seq_len=24,
+        d_model=16,
+        d_queries_keys=8,
+        d_values=8,
+        n_heads=2,
+        e_layers=1,
+        d_layers=1,
+        d_ff=32,
+        evaluators=evaluators,
+    )
+    captured = {}
+
+    def fake_forward(enc_x, enc_y, dec_x, dec_y, output_attention=False):
+        captured["enc_x"] = enc_x
+        captured["enc_y"] = enc_y
+        captured["dec_x"] = dec_x
+        captured["dec_y"] = dec_y
+        captured["output_attention"] = output_attention
+        return (
+            torch.randn(2, dec_y.shape[1], 1),
+            torch.randn(2, dec_y.shape[1], 1),
+            (None, None),
+            "attn-map",
+            (None, None),
+        )
+
+    monkeypatch.setattr(model.spacetimeformer, "forward", fake_forward)
+
+    x_t = torch.randn(2, 5, 4)
+    y_t = torch.randn(2, 5)
+
+    forecast_out, recon_out, _, attn = model.forward_model_pass(
+        x_c=None,
+        y_c=None,
+        x_t=x_t,
+        y_t=y_t,
+        output_attn=True,
+        target_mask=[0],
+    )
+
+    assert forecast_out.shape == (2, 5, 1)
+    assert recon_out.shape == (2, 5, 1)
+    assert attn == "attn-map"
+    assert captured["enc_x"] is None
+    assert captured["enc_y"] is None
+    assert captured["output_attention"] is True
+    assert torch.equal(captured["dec_y"][:, :, 0], torch.zeros(2, 5))
+
+
+def test_spacetimeformer_forward_model_pass_masks_2d_context_in_state_forecasting(
+    monkeypatch,
+):
+    evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+    model = Spacetimeformer_Forecaster(
+        optimizer_factory=lambda params: torch.optim.Adam(params, lr=0.001),
+        scheduler_factory=lambda optimizer: torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=10
+        ),
+        d_yc=1,
+        d_yt=1,
+        d_x=0,
+        task_type="state_forecasting",
+        max_seq_len=24,
+        d_model=16,
+        d_queries_keys=8,
+        d_values=8,
+        n_heads=2,
+        e_layers=1,
+        d_layers=1,
+        d_ff=32,
+        mask_y_c=True,
+        evaluators=evaluators,
+    )
+    captured = {}
+
+    def fake_forward(enc_x, enc_y, dec_x, dec_y, output_attention=False):
+        captured["enc_x"] = enc_x
+        captured["enc_y"] = enc_y
+        captured["dec_x"] = dec_x
+        captured["dec_y"] = dec_y
+        return (
+            torch.randn(2, dec_y.shape[1], 1),
+            torch.randn(2, enc_y.shape[1], 1),
+            (None, None),
+            None,
+            (None, None),
+        )
+
+    monkeypatch.setattr(model.spacetimeformer, "forward", fake_forward)
+
+    y_c = torch.randn(2, 6)
+    y_t = torch.randn(2, 3)
+
+    forecast_out, _, _ = model.forward_model_pass(x_c=None, y_c=y_c, x_t=None, y_t=y_t)
+
+    assert forecast_out.shape[0] == 2
+    assert forecast_out.shape[2] == 1
+    assert captured["enc_y"].shape == (2, 6, 1)
+    assert torch.equal(captured["enc_y"], torch.zeros(2, 6, 1))
+    assert captured["enc_x"].shape == (2, 6, 1)
+    assert captured["dec_x"].shape[0] == 2
+    assert captured["dec_x"].shape[2] == 1
+
+
+def test_spacetimeformer_compute_loss_handles_target_recon_and_class_terms(monkeypatch):
+    evaluators = {s: MockEvaluator() for s in ("train", "val", "test")}
+    model = Spacetimeformer_Forecaster(
+        optimizer_factory=lambda params: torch.optim.Adam(params, lr=0.001),
+        scheduler_factory=lambda optimizer: torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=10
+        ),
+        d_yc=2,
+        d_yt=2,
+        d_x=2,
+        task_type="forecasting",
+        max_seq_len=24,
+        d_model=16,
+        d_queries_keys=8,
+        d_values=8,
+        n_heads=2,
+        e_layers=1,
+        d_layers=1,
+        d_ff=32,
+        recon_loss_imp=1.0,
+        class_loss_imp=1.0,
+        embed_method="spatio-temporal",
+        evaluators=evaluators,
+    )
+
+    def fake_forward(x_c, y_c, x_t, y_t, **forward_kwargs):
+        return (
+            torch.randn(2, 4, 2),
+            torch.randn(2, 6, 2),
+            (torch.randn(8, 3), torch.randint(0, 3, (8,))),
+        )
+
+    forecast_calls = []
+
+    def fake_forecasting_loss(outputs, y_t, time_mask=None, feat_mask=None):
+        forecast_calls.append((outputs, y_t, time_mask))
+        return torch.tensor(0.5), torch.ones_like(y_t, dtype=torch.bool)
+
+    monkeypatch.setattr(model, "forward", fake_forward)
+    monkeypatch.setattr(model, "forecasting_loss", fake_forecasting_loss)
+    monkeypatch.setattr(
+        model, "classification_loss", lambda logits, labels: (torch.tensor(0.7), 0.8)
+    )
+
+    batch = (
+        torch.randn(2, 6, 2),
+        torch.randn(2, 6, 2),
+        torch.randn(2, 4, 2),
+        torch.randn(2, 4, 2),
+    )
+    loss_dict = model.compute_loss(
+        batch=batch, time_mask=2, forward_kwargs={"target_mask": [0]}
+    )
+
+    assert loss_dict["forecast_loss"].equal(torch.tensor(0.5))
+    assert loss_dict["recon_loss"].equal(torch.tensor(0.5))
+    assert loss_dict["class_loss"].equal(torch.tensor(0.7))
+    assert loss_dict["acc"] == 0.8
+    assert forecast_calls[0][1].shape == (2, 4, 1)
+    assert forecast_calls[1][1].shape == (2, 6, 2)
