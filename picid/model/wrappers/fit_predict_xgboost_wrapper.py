@@ -7,7 +7,7 @@ import torch
 
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 
-from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.autoencoder.residual_1d import ResidualBlock
 
 

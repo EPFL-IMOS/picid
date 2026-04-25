@@ -8,7 +8,7 @@ import torch
 from sklearn.ensemble import IsolationForest
 
 # Canonical task type for this wrapper is anomaly_detection (in CLASSIFICATION_TASKS).
-from picid.baselines.definitions import CLASSIFICATION_TASKS
+from picid.model.definitions import CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFitPredictWrapper
 
 

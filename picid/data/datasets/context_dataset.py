@@ -2,7 +2,7 @@ from typing import List, Dict, Optional, Union
 from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 
-from picid.baselines.definitions import (
+from picid.model.definitions import (
     REGRESSION_TASKS,
     FORECASTING_TASKS,
     CLASSIFICATION_TASKS,

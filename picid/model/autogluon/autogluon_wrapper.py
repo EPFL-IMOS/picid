@@ -3,7 +3,7 @@
 from typing import Optional, Any
 
 
-from picid.baselines.definitions import CLASSIFICATION_TASKS
+from picid.model.definitions import CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardWrapper
 
 from omegaconf import OmegaConf

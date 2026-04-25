@@ -4,38 +4,38 @@ import torch
 from einops import rearrange
 from torch import nn
 
-from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
 
 
-def default_pre_process(batch: dict[str, torch.Tensor],
-                        to_extract :  str | list[str],
-                        **kwargs) -> list[torch.Tensor]:
+def default_pre_process(
+    batch: dict[str, torch.Tensor], to_extract: str | list[str], **kwargs
+) -> list[torch.Tensor]:
     """
-        Extracts specified tensors from a batch dictionary.
+    Extracts specified tensors from a batch dictionary.
 
-        This utility function retrieves data from a batch based on the provided
-        keys. It normalizes the input so that whether a single string or a list
-        of strings is requested, it consistently returns a list of the
-        corresponding tensors.
+    This utility function retrieves data from a batch based on the provided
+    keys. It normalizes the input so that whether a single string or a list
+    of strings is requested, it consistently returns a list of the
+    corresponding tensors.
 
-        Args:
-            batch (dict[str, torch.Tensor]): A dictionary containing the batch data,
-                where keys are strings (e.g., 'features', 'labels') and values
-                are PyTorch tensors.
-            to_extract (str | list[str]): A single key or a list of keys indicating
-                which tensors to pull from the batch dictionary.
-            **kwargs: Additional keyword arguments (currently unused in this
-                default implementation).
+    Args:
+        batch (dict[str, torch.Tensor]): A dictionary containing the batch data,
+            where keys are strings (e.g., 'features', 'labels') and values
+            are PyTorch tensors.
+        to_extract (str | list[str]): A single key or a list of keys indicating
+            which tensors to pull from the batch dictionary.
+        **kwargs: Additional keyword arguments (currently unused in this
+            default implementation).
 
-        Returns:
-            list[torch.Tensor]: A list of extracted tensors ordered according to
-                the keys provided in `to_extract`.
+    Returns:
+        list[torch.Tensor]: A list of extracted tensors ordered according to
+            the keys provided in `to_extract`.
 
-        Raises
-        ------
-        KeyError
-            If any key in ``to_extract`` is not present in ``batch``.
+    Raises
+    ------
+    KeyError
+        If any key in ``to_extract`` is not present in ``batch``.
     """
 
     if isinstance(to_extract, str):
@@ -46,50 +46,53 @@ def default_pre_process(batch: dict[str, torch.Tensor],
 
 class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
     """
-        A wrapper class for feed-forward neural network models during training.
+    A wrapper class for feed-forward neural network models during training.
 
-        This class handles the pre-processing of input batches, routes the data
-        through the underlying model (referred to as the backbone), and ensures
-        that the shapes of the predictions and targets are properly aligned
-        based on whether the task is a regression or classification problem.
+    This class handles the pre-processing of input batches, routes the data
+    through the underlying model (referred to as the backbone), and ensures
+    that the shapes of the predictions and targets are properly aligned
+    based on whether the task is a regression or classification problem.
 
-        Attributes:
-            task_type (str): The specific type of machine learning task (e.g., 'regression', 'classification').
-            _pre_process_function (Callable): The function used to extract features and targets from the raw batch.
+    Attributes:
+        task_type (str): The specific type of machine learning task (e.g., 'regression', 'classification').
+        _pre_process_function (Callable): The function used to extract features and targets from the raw batch.
+    """
+
+    def __init__(
+        self,
+        task_type: str,
+        model: nn.Module,
+        pre_process_function: Callable | None = default_pre_process,
+        keys_to_extract: list[str] | None = None,
+        **kwargs,
+    ):
         """
+        Initializes the CustomModelTrainer.
 
-    def __init__(self,
-                 task_type: str,
-                 model : nn.Module,
-                 pre_process_function: Callable | None = default_pre_process,
-                 keys_to_extract: list[str] | None = None,
-                 **kwargs):
-        """
-                Initializes the CustomModelTrainer.
-
-                Args:
-                    task_type (str): The type of task being performed. Expected to be a value present
-                        in either REGRESSION_TASKS or CLASSIFICATION_TASKS.
-                    model (nn.Module): The core PyTorch neural network model to be wrapped and trained.
-                    pre_process_function (Callable | None, optional): A function to process the incoming
-                        batch dictionary into inputs (x) and targets (y). Defaults to `default_pre_process`.
-                    keys_to_extract (list[str] | None, optional): The keys to extract from the batch dict.
-                        Defaults to ``['features', task_type]`` when ``None``.
-                    **kwargs: Additional keyword arguments to be passed to the parent class.
+        Args:
+            task_type (str): The type of task being performed. Expected to be a value present
+                in either REGRESSION_TASKS or CLASSIFICATION_TASKS.
+            model (nn.Module): The core PyTorch neural network model to be wrapped and trained.
+            pre_process_function (Callable | None, optional): A function to process the incoming
+                batch dictionary into inputs (x) and targets (y). Defaults to `default_pre_process`.
+            keys_to_extract (list[str] | None, optional): The keys to extract from the batch dict.
+                Defaults to ``['features', task_type]`` when ``None``.
+            **kwargs: Additional keyword arguments to be passed to the parent class.
         """
 
         # add checks on task type
         self.task_type = task_type
         self._pre_process_function = pre_process_function
         if keys_to_extract is None:
-            keys_to_extract = ['features', self.task_type]
+            keys_to_extract = ["features", self.task_type]
 
         self._keys_to_extract = keys_to_extract
 
         super().__init__(model, **kwargs)
 
-    def forward(self, batch: dict[str, torch.Tensor], **kwargs) -> dict[str, torch.Tensor]:
-
+    def forward(
+        self, batch: dict[str, torch.Tensor], **kwargs
+    ) -> dict[str, torch.Tensor]:
         """
         Performs the forward pass of the model.
 
@@ -113,9 +116,9 @@ class CustomModelTrainer(AbstractFeedForwardTrainingWrapper):
             ValueError: If `self.task_type` is not found in `REGRESSION_TASKS` or `CLASSIFICATION_TASKS`.
         """
 
-        x, y = self._pre_process_function(batch,
-                                          to_extract=self._keys_to_extract,
-                                          **kwargs)
+        x, y = self._pre_process_function(
+            batch, to_extract=self._keys_to_extract, **kwargs
+        )
 
         outputs = self.backbone(x, batch=batch, **kwargs)
 

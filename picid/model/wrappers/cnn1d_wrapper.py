@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 
 from einops import rearrange
 
-from picid.baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 from picid.model.methods.cnn_1d import EncoderModel
 from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
 

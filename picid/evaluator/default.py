@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 
-from picid.baselines.definitions import ALL_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import ALL_TASKS, CLASSIFICATION_TASKS
 from picid.evaluator.base import AbstractEvaluator
 from picid.evaluator.buffer import PredictionBuffer
 from picid.evaluator.hooks.base import BaseEvalHook
