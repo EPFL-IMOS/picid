@@ -2,6 +2,9 @@
 
 Legacy compatibility package for forecaster backbones.
 
+This namespace is deprecated. New code should import from
+`picid.model.forecasters` instead.
+
 ::: picid.baselines
     options:
       show_root_heading: true

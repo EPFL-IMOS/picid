@@ -15,7 +15,7 @@ create_subsequence_mask : Low-level helper for subsequence masking.
 
 Examples
 --------
->>> from picid.baselines.spacetimeformer_model.nn.data_dropout import (
+>>> from picid.model.forecasters.spacetimeformer_model.nn.data_dropout import (
 ...     ReconstructionDropout,
 ...     RandomMask,
 ... )

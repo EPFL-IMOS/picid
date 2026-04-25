@@ -1,8 +1,7 @@
 """Canonical forecaster namespace.
 
-This package exposes lazy top-level imports so submodules can migrate from
-``picid.baselines`` to ``picid.model.forecasters`` without introducing import
-cycles during the transition.
+This package exposes lazy top-level imports so submodules can resolve without
+eagerly importing the entire forecaster tree.
 """
 
 from importlib import import_module
