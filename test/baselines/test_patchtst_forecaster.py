@@ -2,7 +2,6 @@
 
 import pytest
 import torch
-from types import SimpleNamespace
 
 from picid.baselines.patchtst_model.thuml_patchtst_model import PatchTST_Forecaster
 from picid.evaluator.base import AbstractEvaluator
@@ -94,6 +93,58 @@ class TestPatchTSTForecasterLongTerm:
 class TestPatchTSTForecasterIncludeXT:
     """Tests for include_x_t=True with d_x_mask. enc_in=1 for long_term_forecast."""
 
+    def test_init_include_x_t_with_d_x_mask_sets_masks(self):
+        f = _patchtst_forecaster(
+            task_type="forecasting",
+            include_x_t=True,
+            d_x_mask=[0, 1],
+            d_yc=1,
+            d_x=2,
+        )
+
+        assert f.d_x_mask == [0, 1]
+        assert torch.equal(f.mask_tt, torch.tensor([True, False]))
+        assert torch.equal(f.mask_t, torch.tensor([False, True]))
+
+    def test_forward_include_x_t_applies_d_x_mask_before_concat(self, monkeypatch):
+        f = _patchtst_forecaster(
+            task_type="forecasting",
+            include_x_t=True,
+            d_x_mask=[0],
+            d_yc=1,
+            d_x=1,
+            d_yt=1,
+        )
+        B, L_ctx, L_tgt = 2, 24, 6
+        captured = {}
+
+        def fake_forward(x_enc, x_mark_enc, x_dec, x_mark_dec):
+            captured["x_enc"] = x_enc
+            captured["x_mark_enc"] = x_mark_enc
+            captured["x_dec"] = x_dec
+            captured["x_mark_dec"] = x_mark_dec
+            return torch.randn(B, L_tgt, 2)
+
+        monkeypatch.setattr(f.model, "forward", fake_forward)
+
+        y_c = torch.randn(B, L_ctx, 1)
+        x_c = torch.randn(B, L_ctx, 1)
+        x_t = torch.randn(B, L_tgt, 1)
+        y_t = torch.randn(B, L_tgt, 1)
+
+        (out,) = f.forward_model_pass(x_c, y_c, x_t.clone(), y_t)
+
+        expected_context = torch.cat([y_c, x_c], dim=2)
+        target_half = captured["x_enc"][:, L_ctx:, :]
+
+        assert torch.equal(captured["x_enc"][:, :L_ctx, :], expected_context)
+        assert torch.equal(target_half[:, :, 0], torch.zeros_like(y_t[:, :, 0]))
+        assert torch.equal(target_half[:, :, 1], torch.zeros_like(x_t[:, :, 0]))
+        assert captured["x_mark_enc"] is None
+        assert captured["x_dec"] is None
+        assert captured["x_mark_dec"] is None
+        assert out.shape == (B, L_tgt, 1)
+
     @pytest.mark.skip(
         reason="PatchTST enc_in=1 conflicts with d_x_mask multi-dim; needs config fix"
     )
@@ -139,6 +190,29 @@ class TestPatchTSTForecasterMaskYC:
         (out,) = f.forward_model_pass(x_c, y_c, x_t, y_t)
         assert out.shape == (B, 6, 1)
 
+    def test_forward_mask_y_c_unsqueezes_2d_context_and_zeros_it(self, monkeypatch):
+        f = _patchtst_forecaster(task_type="forecasting", mask_y_c=True, d_yc=1, d_x=1)
+        B, L_ctx, L_tgt = 2, 24, 6
+        captured = {}
+
+        def fake_forward(x_enc, x_mark_enc, x_dec, x_mark_dec):
+            captured["x_enc"] = x_enc
+            return torch.randn(B, L_tgt, 2)
+
+        monkeypatch.setattr(f.model, "forward", fake_forward)
+
+        y_c = torch.randn(B, L_ctx)
+        x_c = torch.randn(B, L_ctx, 1)
+        x_t = torch.randn(B, L_tgt, 1)
+        y_t = torch.randn(B, L_tgt, 1)
+
+        (out,) = f.forward_model_pass(x_c, y_c, x_t, y_t)
+
+        assert captured["x_enc"].shape == (B, L_ctx, 2)
+        assert torch.equal(captured["x_enc"][:, :, :1], torch.zeros(B, L_ctx, 1))
+        assert torch.equal(captured["x_enc"][:, :, 1:], x_c)
+        assert out.shape == (B, L_tgt, 1)
+
 
 class TestPatchTSTForecasterRegression:
     """Tests for regression task. enc_in=d_yc+d_x for regression."""
@@ -168,3 +242,35 @@ class TestPatchTSTForecasterClassification:
         y_t = torch.randint(0, 3, (B, L, 1)).float()
         (out,) = f.forward_model_pass(x_c, y_c, x_t, y_t)
         assert out.shape == (B, 1, 3)
+
+
+def test_eval_step_forwards_target_mask_when_present(monkeypatch):
+    f = _patchtst_forecaster(task_type="forecasting", d_yc=1, d_x=1)
+    f.target_mask = "keep-last-channel"
+    batch = (
+        torch.randn(2, 24, 1),
+        torch.randn(2, 24, 1),
+        torch.randn(2, 6, 1),
+        torch.randn(2, 6, 1),
+    )
+    captured = {}
+
+    def fake_compute_loss(batch, time_mask=None, forward_kwargs=None):
+        captured["time_mask"] = time_mask
+        captured["forward_kwargs"] = dict(forward_kwargs)
+        return {
+            "forecast_loss": torch.tensor(0.5),
+            "forecast_out": torch.randn(2, 6, 1),
+            "forecast_mask": torch.ones(2, 6, 1, dtype=torch.bool),
+        }
+
+    monkeypatch.setattr(f, "compute_loss", fake_compute_loss)
+
+    stats = f.step(batch=batch, train=False)
+
+    assert captured["time_mask"] is None
+    assert captured["forward_kwargs"] == {
+        "output_attn": False,
+        "target_mask": "keep-last-channel",
+    }
+    assert stats["loss"].equal(torch.tensor(0.5))
