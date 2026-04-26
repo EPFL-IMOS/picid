@@ -7,6 +7,7 @@ Pages:
 - [Wrapper Interfaces](wrapper-interfaces.md)
 - [Fit-Predict vs Feed-Forward](fitpredict-vs-feedforward.md)
 - [Baselines and Backbones](baselines-backbones.md)
+- [Model Capabilities](model-capabilities.md)
 - [Loss/Optimizer/LR Scheduler](loss-optimizer-lr-scheduler.md)
 - [Extending Models](extending-models.md)
 
