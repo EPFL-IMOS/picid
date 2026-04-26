@@ -1,6 +1,6 @@
 # Wrapper Interfaces
 
-Core wrapper interfaces live in `picid.model.wrappers.base`:
+Core adapter interfaces live in `picid.model.adapters.base` and re-export the legacy wrapper base classes:
 
 - `AbstractFitPredictWrapper`
 - `AbstractFeedForwardWrapper`
