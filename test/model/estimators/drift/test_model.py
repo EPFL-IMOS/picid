@@ -3,6 +3,10 @@ import torch
 from picid.model.estimators.drift.model import DriftModelBaseline
 
 
+def test_drift_model_reports_canonical_module():
+    assert DriftModelBaseline.__module__ == "picid.model.estimators.drift.model"
+
+
 def test_drift_model_forward_output_shape():
     """Forward returns (batch_size, forecast_horizon, num_features)."""
     batch_size, seq_len, pred_len, num_features = 4, 10, 3, 2
