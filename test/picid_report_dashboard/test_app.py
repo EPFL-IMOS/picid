@@ -758,6 +758,88 @@ def test_parse_saved_state_accepts_v5_payload(monkeypatch):
     assert parsed == {"active_tab": 7}
 
 
+def test_latex_multiplier_persistence_roundtrip(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    dash.latex_multiplier = 100.0
+    state = dash._serialize_state()
+    assert state["latex_multiplier"] == 100.0
+
+    restored = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+    restored._apply_saved_state(state)
+    assert restored.latex_multiplier == 100.0
+
+
+def test_parse_saved_state_v6_payload_omits_latex_multiplier(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    # A v6 payload predates latex_multiplier — it must still parse, and applying
+    # it must leave the multiplier at its default (1.0).
+    parsed = dash._parse_saved_state('{"version": 6, "active_tab": 7}')
+    assert parsed == {"active_tab": 7}
+
+    dash.latex_multiplier = 1.0
+    dash._apply_saved_state(parsed)
+    assert dash.latex_multiplier == 1.0
+
+
+def test_parse_saved_state_rejects_bool_latex_multiplier(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+
+    parsed = dash._parse_saved_state(
+        '{"version": 7, "latex_multiplier": true}'
+    )
+    assert "latex_multiplier" not in parsed
+
+
 def test_url_tab_override_takes_precedence_over_saved_state(monkeypatch):
     dash = _make_dashboard(
         monkeypatch,

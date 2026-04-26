@@ -52,7 +52,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 6
+_PERSISTED_STATE_VERSION = 7
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -83,6 +83,7 @@ _PERSISTED_STATE_PARAMS = (
     "selected_model",
     "active_tab",
     "latex_precision",
+    "latex_multiplier",
     "latex_show_std",
     "latex_show_n",
     "latex_highlight_best_bg",
@@ -226,6 +227,10 @@ class PiCIDDashboard(param.Parameterized):
     active_tab = param.Integer(default=0, doc="Active main tab index (synced to URL)")
     latex_precision = param.Integer(
         default=4, bounds=(1, 8), doc="Decimal precision for LaTeX table cells"
+    )
+    latex_multiplier = param.Number(
+        default=1.0,
+        doc="Scalar applied to all metric values and stds in the LaTeX table",
     )
     latex_show_std = param.Boolean(default=True, doc="Show ± std in LaTeX table cells")
     latex_show_n = param.Boolean(default=True, doc="Show (n=…) count in LaTeX table cells")
@@ -547,7 +552,11 @@ class PiCIDDashboard(param.Parameterized):
         state: dict[str, Any] = {"version": _PERSISTED_STATE_VERSION}
         for name in _PERSISTED_STATE_PARAMS:
             value = getattr(self, name)
-            if isinstance(value, bool) or value is None or isinstance(value, int):
+            if (
+                isinstance(value, bool)
+                or value is None
+                or isinstance(value, (int, float))
+            ):
                 state[name] = value
             else:
                 state[name] = str(value)
@@ -566,7 +575,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, 4, 5, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, 5, 6, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -605,6 +614,12 @@ class PiCIDDashboard(param.Parameterized):
         latex_precision = payload.get("latex_precision")
         if isinstance(latex_precision, int) and not isinstance(latex_precision, bool):
             parsed["latex_precision"] = max(1, min(8, latex_precision))
+        latex_multiplier = payload.get("latex_multiplier")
+        if (
+            isinstance(latex_multiplier, (int, float))
+            and not isinstance(latex_multiplier, bool)
+        ):
+            parsed["latex_multiplier"] = float(latex_multiplier)
         active_tab = payload.get("active_tab")
         if isinstance(active_tab, bool):
             active_tab = None
@@ -677,6 +692,8 @@ class PiCIDDashboard(param.Parameterized):
 
             if "latex_precision" in state:
                 self.latex_precision = state["latex_precision"]
+            if "latex_multiplier" in state:
+                self.latex_multiplier = state["latex_multiplier"]
             for name in (
                 "latex_show_std",
                 "latex_show_n",
@@ -1030,6 +1047,16 @@ class PiCIDDashboard(param.Parameterized):
             lambda e: setattr(self, "latex_precision", e.new), "value"
         )
 
+        multiplier_input = pn.widgets.FloatInput(
+            name="Multiplier",
+            value=self.latex_multiplier,
+            step=1.0,
+            width=120,
+        )
+        multiplier_input.param.watch(
+            lambda e: setattr(self, "latex_multiplier", e.new), "value"
+        )
+
         show_std_toggle = _selected_primary_button(
             pn.widgets.Toggle(
                 name="Show ± std", value=self.latex_show_std, width=120
@@ -1085,6 +1112,7 @@ class PiCIDDashboard(param.Parameterized):
             pn.pane.Markdown("### Configuration"),
             pn.Row(
                 pn.Column("**Precision**", precision_input),
+                pn.Column("**Scale**", multiplier_input),
                 pn.Column("**Columns**", pn.Row(show_std_toggle, show_n_toggle)),
                 pn.Column(
                     "**Highlights**",
@@ -1117,6 +1145,7 @@ class PiCIDDashboard(param.Parameterized):
         "latex_underline_2nd_best",
         "latex_highlight_within_1std",
         "latex_precision",
+        "latex_multiplier",
         "latex_rename_json",
     )
     def _latex_output_view(self) -> pn.viewable.Viewable:
@@ -1142,6 +1171,7 @@ class PiCIDDashboard(param.Parameterized):
             underline_2nd_best=self.latex_underline_2nd_best,
             highlight_within_1std=self.latex_highlight_within_1std,
             precision=self.latex_precision,
+            multiplier=self.latex_multiplier,
             rename_map=rename_map,
         )
 
@@ -1159,6 +1189,7 @@ class PiCIDDashboard(param.Parameterized):
         "latex_underline_2nd_best",
         "latex_highlight_within_1std",
         "latex_precision",
+        "latex_multiplier",
         "latex_rename_json",
     )
     def _latex_table_view(self) -> pn.viewable.Viewable:

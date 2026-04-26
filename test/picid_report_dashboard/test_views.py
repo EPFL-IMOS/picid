@@ -1553,3 +1553,98 @@ def test_build_latex_table_wraps_tabular_in_adjustbox():
     tab_close = latex_str.index("\\end{tabular}")
     adj_close = latex_str.index("\\end{adjustbox}")
     assert adj_open < tab_open < tab_close < adj_close
+
+
+def test_build_latex_table_multiplier_default_is_no_op():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    baseline = _latex_value(
+        views.build_latex_table(
+            loader,
+            HL_METRIC,
+            sort_metric_key=HL_METRIC,
+            mode="min",
+            use_alt_metric=False,
+        )
+    )
+    explicit = _latex_value(
+        views.build_latex_table(
+            loader,
+            HL_METRIC,
+            sort_metric_key=HL_METRIC,
+            mode="min",
+            use_alt_metric=False,
+            multiplier=1.0,
+        )
+    )
+    assert explicit == baseline
+
+
+def test_build_latex_table_multiplier_scales_mean_and_std():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        multiplier=100.0,
+    )
+    latex_str = _latex_value(pane)
+    best_row = _latex_row(latex_str, HL_LABEL_BEST)
+    near_row = _latex_row(latex_str, HL_LABEL_NEAR)
+
+    # mean 1.0 → 100.0000, std 0.5 → 50.0000
+    assert "100.0000" in best_row and "50.0000" in best_row
+    # mean 1.3 → 130.0000, std 0.1 → 10.0000
+    assert "130.0000" in near_row and "10.0000" in near_row
+    # raw values must be gone
+    assert "1.0000" not in best_row
+    assert "1.3000" not in near_row
+
+
+def test_build_latex_table_multiplier_skips_average_rank():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        multiplier=100.0,
+    )
+    latex_str = _latex_value(pane)
+    best_row = _latex_row(latex_str, HL_LABEL_BEST)
+    far_row = _latex_row(latex_str, HL_LABEL_FAR)
+
+    # Per-dataset rank uses ":.2f"; with one dataset and three models, ranks are
+    # 1.00 / 2.00 / 3.00. A wrongly-multiplied rank would render as 100.00 / 300.00.
+    assert "1.00" in best_row
+    assert "3.00" in far_row
+    assert "300.00" not in far_row
+
+
+def test_build_latex_table_multiplier_in_header_and_caption():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+
+    pane_default = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_default = _latex_value(pane_default)
+    assert "Values multiplied by" not in latex_default
+
+    pane_scaled = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        multiplier=100.0,
+    )
+    latex_scaled = _latex_value(pane_scaled)
+    assert "% Values multiplied by 100" in latex_scaled
+    caption = _extract_caption(latex_scaled)
+    assert "Values multiplied by 100." in caption

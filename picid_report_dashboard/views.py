@@ -351,6 +351,7 @@ def build_latex_table(
     underline_2nd_best: bool = True,
     highlight_within_1std: bool = True,
     precision: int = 4,
+    multiplier: float = 1.0,
     rename_map: dict[str, str] | None = None,
 ) -> pn.viewable.Viewable:
     """Booktabs LaTeX table of mean ± std values (models × datasets) for one metric."""
@@ -441,9 +442,13 @@ def build_latex_table(
         if kind == "average_rank":
             return f"{r['value']:.2f}"
 
-        std_str = f" ± {r['std']:{fmt}}" if (show_std and pd.notna(r.get("std"))) else ""
+        scaled_value = float(r["value"]) * multiplier
+        scaled_std = (
+            float(r["std"]) * multiplier if pd.notna(r.get("std")) else r.get("std")
+        )
+        std_str = f" ± {scaled_std:{fmt}}" if (show_std and pd.notna(scaled_std)) else ""
         n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
-        txt = f"{r['value']:{fmt}}{std_str}{n_str}"
+        txt = f"{scaled_value:{fmt}}{std_str}{n_str}"
 
         stats = ds_stats.get(str(r["dataset"]))
         if stats is None:
@@ -491,8 +496,11 @@ def build_latex_table(
         "% Requires: \\usepackage{booktabs}\n"
         "% Requires: \\usepackage[table]{xcolor}  % for \\cellcolor\n"
         "% Requires: \\usepackage{adjustbox}      % for max-width scaling\n"
-        f"% Metric: {metric_key}  |  Sort: {effective_sort}  |  Mode: {mode}\n\n"
+        f"% Metric: {metric_key}  |  Sort: {effective_sort}  |  Mode: {mode}\n"
     )
+    if multiplier != 1.0:
+        header_comment += f"% Values multiplied by {multiplier:g}\n"
+    header_comment += "\n"
 
     # Caption: display metric + sort metric + a "shortcut = full name" dataset legend
     # for any dataset whose displayed shortcut differs from its full name.
@@ -511,6 +519,8 @@ def build_latex_table(
     ]
     if legend_entries:
         caption_parts.append("Datasets: " + "; ".join(legend_entries) + ".")
+    if multiplier != 1.0:
+        caption_parts.append(f"Values multiplied by {multiplier:g}.")
     caption = " ".join(caption_parts)
 
     latex_body = pivot.to_latex(
