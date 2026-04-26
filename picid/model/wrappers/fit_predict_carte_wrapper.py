@@ -12,7 +12,7 @@ from carte_ai.configs.directory import config_directory
 from huggingface_hub import hf_hub_download
 
 from .base import AbstractFitPredictWrapper
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 

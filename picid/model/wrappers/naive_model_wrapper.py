@@ -2,7 +2,7 @@
 
 from .base import AbstractFeedForwardWrapper
 from picid.model.methods.naive_model import NaiveModelBaseline
-from ...baselines.definitions import FORECASTING_TASKS
+from picid.model.definitions import FORECASTING_TASKS
 
 
 class NaiveModelWrapper(AbstractFeedForwardWrapper):
@@ -18,6 +18,16 @@ class NaiveModelWrapper(AbstractFeedForwardWrapper):
     """
 
     def __init__(self, task_type: str, **kwargs):
+        """
+        Initialize the naive wrapper for forecasting tasks.
+
+        Parameters
+        ----------
+        task_type : str
+            Forecasting task identifier.
+        **kwargs : Any
+            Additional wrapper arguments forwarded to the baseline.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = FORECASTING_TASKS
         self.classification_tasks = None

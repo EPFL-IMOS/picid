@@ -3,7 +3,7 @@
 from .base import AbstractFeedForwardWrapper
 
 from picid.model.methods.linear_regression_model import LinearRegressionModelBaseline
-from ...baselines.definitions import FORECASTING_TASKS
+from picid.model.definitions import FORECASTING_TASKS
 
 
 class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
@@ -19,6 +19,16 @@ class LinearRegressionModelWrapper(AbstractFeedForwardWrapper):
     """
 
     def __init__(self, task_type: str, **kwargs):
+        """
+        Initialize the linear-regression wrapper for forecasting tasks.
+
+        Parameters
+        ----------
+        task_type : str
+            Forecasting task identifier.
+        **kwargs : Any
+            Additional wrapper arguments forwarded to the baseline.
+        """
         # Define supported tasks based on your new categories
         self.regression_tasks = FORECASTING_TASKS
         self.classification_tasks = None

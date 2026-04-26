@@ -10,7 +10,7 @@ import cloudpickle
 
 from tabdpt import TabDPTRegressor, TabDPTClassifier
 from .base import AbstractFitPredictWrapper
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 

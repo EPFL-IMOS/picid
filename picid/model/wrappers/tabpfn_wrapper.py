@@ -4,7 +4,7 @@ import torch
 from .base import AbstractFeedForwardWrapper
 
 from tabpfn import TabPFNRegressor, TabPFNClassifier
-from ...baselines.definitions import CLASSIFICATION_TASKS, FORECASTING_TASKS
+from picid.model.definitions import CLASSIFICATION_TASKS, FORECASTING_TASKS
 
 
 class TabPFNWrapper(AbstractFeedForwardWrapper):

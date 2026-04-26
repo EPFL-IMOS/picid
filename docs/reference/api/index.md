@@ -24,7 +24,8 @@ Auto-generated package API from source docstrings.
 ## Modeling and Runtime
 
 - [picid.model.catalog](picid_model_catalog.md)
-- [picid.model.wrappers](picid_model_wrappers.md)
+- [picid.model.estimators (canonical)](picid_model_estimators.md)
+- [picid.model.wrappers (legacy)](picid_model_wrappers.md)
 - [picid.model.forecasters](picid_model_forecasters.md)
 - [picid.callbacks](picid_callbacks.md)
 - [picid.loss](picid_loss.md)

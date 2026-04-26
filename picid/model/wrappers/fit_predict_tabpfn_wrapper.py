@@ -10,7 +10,7 @@ import torch
 from tabpfn import TabPFNRegressor, TabPFNClassifier
 
 from .base import AbstractFitPredictWrapper
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 logger = logging.getLogger(__name__)
 

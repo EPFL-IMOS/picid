@@ -7,7 +7,7 @@ import joblib
 
 from .base import AbstractFitPredictWrapper
 from ..autogluon.autogluon_wrapper import AutoGluonWrapper
-from ...baselines.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
+from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
 
 
 class FitPredictAutoGluonWrapper(AbstractFitPredictWrapper):
