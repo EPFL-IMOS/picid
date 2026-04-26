@@ -9,6 +9,12 @@ from picid.model.estimators.statistical.model import (
     ExponentialBaseline,
 )
 
+
+def test_statistical_backbones_report_canonical_module():
+    assert LinearBaseline.__module__ == "picid.model.estimators.statistical.model"
+    assert PolynomialBaseline.__module__ == "picid.model.estimators.statistical.model"
+    assert ExponentialBaseline.__module__ == "picid.model.estimators.statistical.model"
+
 # -------------------------------------------------------------------------
 # Fixtures
 # -------------------------------------------------------------------------
