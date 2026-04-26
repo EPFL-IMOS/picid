@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Literal
 
 import numpy as np
@@ -15,6 +16,17 @@ import pandas as pd
 import panel as pn
 
 from .data import ResultsLoader, is_alt_model
+
+
+@dataclass
+class _DatasetStats:
+    """Per-dataset stats used to drive LaTeX cell highlighting."""
+
+    best_models: set[str]
+    best_mean: float
+    best_std: float
+    second_best_model: str | None = None
+    within_1std_models: set[str] = field(default_factory=set)
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +347,9 @@ def build_latex_table(
     use_alt_metric: bool = True,
     show_n: bool = True,
     show_std: bool = True,
+    highlight_best_bg: bool = True,
+    underline_2nd_best: bool = True,
+    highlight_within_1std: bool = True,
     precision: int = 4,
     rename_map: dict[str, str] | None = None,
 ) -> pn.viewable.Viewable:
@@ -368,15 +383,53 @@ def build_latex_table(
     model_order = [_display_model(m) for m in model_order]
     dataset_order_short = [_display_dataset(d) for d in dataset_order]
 
-    # Determine best model per real dataset (for bolding)
+    # Reverse so the best model (lowest avg rank from _build_heatmap_frame)
+    # ends up at the bottom of the LaTeX table.
+    model_order = list(reversed(model_order))
+
+    # Per-dataset stats for highlighting (bold/grey best, underline 2nd best, blue within-1σ)
     dataset_rows = long[long["summary_kind"] == "dataset"]
-    best_per_dataset: dict[str, str] = {}
+    ds_stats: dict[str, _DatasetStats] = {}
     for ds, grp in dataset_rows.groupby("dataset"):
         valid = grp.dropna(subset=["value"])
         if valid.empty:
             continue
         best_idx = valid["value"].idxmin() if mode == "min" else valid["value"].idxmax()
-        best_per_dataset[str(ds)] = str(valid.loc[best_idx, "model"])
+        best_mean = float(valid.loc[best_idx, "value"])
+        best_std_raw = valid.loc[best_idx, "std"]
+        best_std = 0.0 if pd.isna(best_std_raw) else float(best_std_raw)
+
+        # All models tied at best_mean (could be 1 or many).
+        tied_at_best = valid[valid["value"] == best_mean]
+        best_models = {str(m) for m in tied_at_best["model"].tolist()}
+
+        # Second best: only meaningful when the top is a single row. If multiple
+        # models tie at best_mean, there is no clear "second place".
+        second_best_model: str | None = None
+        if len(best_models) == 1:
+            not_best = valid[valid["value"] != best_mean]
+            if not not_best.empty:
+                second_idx = (
+                    not_best["value"].idxmin()
+                    if mode == "min"
+                    else not_best["value"].idxmax()
+                )
+                second_best_model = str(not_best.loc[second_idx, "model"])
+
+        # Within-1σ band around best (using best's std). Excludes all tied bests.
+        within_models: set[str] = set()
+        if best_std > 0:
+            band = (valid["value"] - best_mean).abs() <= best_std
+            within = valid[band & (~valid["model"].isin(best_models))]
+            within_models = {str(m) for m in within["model"].tolist()}
+
+        ds_stats[str(ds)] = _DatasetStats(
+            best_models=best_models,
+            best_mean=best_mean,
+            best_std=best_std,
+            second_best_model=second_best_model,
+            within_1std_models=within_models,
+        )
 
     # Format each cell
     fmt = f".{precision}f"
@@ -386,15 +439,33 @@ def build_latex_table(
             return "—"
         kind = r.get("summary_kind", "dataset")
         if kind == "average_rank":
-            txt = f"{r['value']:.2f}"
-        else:
-            std_str = f" ± {r['std']:{fmt}}" if (show_std and pd.notna(r.get("std"))) else ""
-            n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
-            txt = f"{r['value']:{fmt}}{std_str}{n_str}"
-        # Bold best value per dataset
-        ds = str(r["dataset"])
-        if best_per_dataset.get(ds) == str(r["model"]):
+            return f"{r['value']:.2f}"
+
+        std_str = f" ± {r['std']:{fmt}}" if (show_std and pd.notna(r.get("std"))) else ""
+        n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
+        txt = f"{r['value']:{fmt}}{std_str}{n_str}"
+
+        stats = ds_stats.get(str(r["dataset"]))
+        if stats is None:
+            return txt
+
+        model = str(r["model"])
+        is_best = model in stats.best_models
+        is_second = (not is_best) and stats.second_best_model == model
+        is_within = (not is_best) and (model in stats.within_1std_models)
+
+        # Text decorations: bold best (unconditional), underline 2nd best (toggle).
+        if is_best:
             txt = f"\\textbf{{{txt}}}"
+        if is_second and underline_2nd_best:
+            txt = f"\\underline{{{txt}}}"
+
+        # Background colors: best wins over within-1σ (mutually exclusive by construction).
+        if is_best and highlight_best_bg:
+            txt = f"\\cellcolor[gray]{{0.85}}{txt}"
+        elif is_within and highlight_within_1std:
+            txt = f"\\cellcolor{{blue!15}}{txt}"
+
         return txt
 
     long["cell"] = long.apply(_fmt_cell, axis=1)
@@ -418,13 +489,45 @@ def build_latex_table(
     safe_metric = metric_key.replace("/", "_").replace(".", "_")
     header_comment = (
         "% Requires: \\usepackage{booktabs}\n"
+        "% Requires: \\usepackage[table]{xcolor}  % for \\cellcolor\n"
+        "% Requires: \\usepackage{adjustbox}      % for max-width scaling\n"
         f"% Metric: {metric_key}  |  Sort: {effective_sort}  |  Mode: {mode}\n\n"
     )
+
+    # Caption: display metric + sort metric + a "shortcut = full name" dataset legend
+    # for any dataset whose displayed shortcut differs from its full name.
+    legend_entries: list[str] = []
+    for full, short in zip(dataset_order, dataset_order_short, strict=False):
+        if full in ("Average", "Average rank"):
+            continue
+        if short != full:
+            legend_entries.append(
+                f"{_latex_escape(short)} = {_latex_escape(full)}"
+            )
+
+    caption_parts = [
+        f"Results for display metric \\texttt{{{_latex_escape(metric_key)}}} "
+        f"(sorted by \\texttt{{{_latex_escape(effective_sort)}}}, mode: {mode})."
+    ]
+    if legend_entries:
+        caption_parts.append("Datasets: " + "; ".join(legend_entries) + ".")
+    caption = " ".join(caption_parts)
+
     latex_body = pivot.to_latex(
         escape=False,
-        caption=f"Results for metric: {_latex_escape(metric_key)}",
+        caption=caption,
         label=f"tab:results_{safe_metric}",
         column_format="l" + "r" * len(pivot.columns),
+    )
+    # Wrap the inner tabular in adjustbox so wide tables shrink to fit \textwidth
+    latex_body = latex_body.replace(
+        "\\begin{tabular}",
+        "\\begin{adjustbox}{max width=\\textwidth}\n\\begin{tabular}",
+        1,
+    ).replace(
+        "\\end{tabular}",
+        "\\end{tabular}\n\\end{adjustbox}",
+        1,
     )
     latex_str = header_comment + latex_body
 

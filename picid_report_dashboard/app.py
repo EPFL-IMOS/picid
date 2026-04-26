@@ -85,6 +85,9 @@ _PERSISTED_STATE_PARAMS = (
     "latex_precision",
     "latex_show_std",
     "latex_show_n",
+    "latex_highlight_best_bg",
+    "latex_underline_2nd_best",
+    "latex_highlight_within_1std",
     "latex_rename_json",
 )
 _UNSET = object()
@@ -226,6 +229,16 @@ class PiCIDDashboard(param.Parameterized):
     )
     latex_show_std = param.Boolean(default=True, doc="Show ± std in LaTeX table cells")
     latex_show_n = param.Boolean(default=True, doc="Show (n=…) count in LaTeX table cells")
+    latex_highlight_best_bg = param.Boolean(
+        default=True, doc="Light-grey background on the best cell per dataset"
+    )
+    latex_underline_2nd_best = param.Boolean(
+        default=True, doc="Underline the second-best cell per dataset"
+    )
+    latex_highlight_within_1std = param.Boolean(
+        default=True,
+        doc="Light-blue background on cells within 1σ of the best (using best's std)",
+    )
     latex_rename_json = param.String(
         default="{}", doc="JSON map of shortened name → display name for LaTeX table"
     )
@@ -577,6 +590,9 @@ class PiCIDDashboard(param.Parameterized):
             "show_rank",
             "latex_show_std",
             "latex_show_n",
+            "latex_highlight_best_bg",
+            "latex_underline_2nd_best",
+            "latex_highlight_within_1std",
         )
         for field in string_fields:
             value = payload.get(field)
@@ -661,7 +677,13 @@ class PiCIDDashboard(param.Parameterized):
 
             if "latex_precision" in state:
                 self.latex_precision = state["latex_precision"]
-            for name in ("latex_show_std", "latex_show_n"):
+            for name in (
+                "latex_show_std",
+                "latex_show_n",
+                "latex_highlight_best_bg",
+                "latex_underline_2nd_best",
+                "latex_highlight_within_1std",
+            ):
                 if name in state:
                     setattr(self, name, state[name])
             if "latex_rename_json" in state:
@@ -1026,11 +1048,52 @@ class PiCIDDashboard(param.Parameterized):
             lambda e: setattr(self, "latex_show_n", e.new), "value"
         )
 
+        best_bg_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Best cell grey",
+                value=self.latex_highlight_best_bg,
+                width=140,
+            )
+        )
+        best_bg_toggle.param.watch(
+            lambda e: setattr(self, "latex_highlight_best_bg", e.new), "value"
+        )
+
+        second_underline_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Underline 2nd best",
+                value=self.latex_underline_2nd_best,
+                width=160,
+            )
+        )
+        second_underline_toggle.param.watch(
+            lambda e: setattr(self, "latex_underline_2nd_best", e.new), "value"
+        )
+
+        within_blue_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Within 1σ blue",
+                value=self.latex_highlight_within_1std,
+                width=140,
+            )
+        )
+        within_blue_toggle.param.watch(
+            lambda e: setattr(self, "latex_highlight_within_1std", e.new), "value"
+        )
+
         return pn.Column(
             pn.pane.Markdown("### Configuration"),
             pn.Row(
                 pn.Column("**Precision**", precision_input),
                 pn.Column("**Columns**", pn.Row(show_std_toggle, show_n_toggle)),
+                pn.Column(
+                    "**Highlights**",
+                    pn.Row(
+                        best_bg_toggle,
+                        second_underline_toggle,
+                        within_blue_toggle,
+                    ),
+                ),
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -1050,6 +1113,9 @@ class PiCIDDashboard(param.Parameterized):
         "alt_sort_metric_key",
         "latex_show_n",
         "latex_show_std",
+        "latex_highlight_best_bg",
+        "latex_underline_2nd_best",
+        "latex_highlight_within_1std",
         "latex_precision",
         "latex_rename_json",
     )
@@ -1072,6 +1138,9 @@ class PiCIDDashboard(param.Parameterized):
             use_alt_metric=self.use_alt_metric,
             show_n=self.latex_show_n,
             show_std=self.latex_show_std,
+            highlight_best_bg=self.latex_highlight_best_bg,
+            underline_2nd_best=self.latex_underline_2nd_best,
+            highlight_within_1std=self.latex_highlight_within_1std,
             precision=self.latex_precision,
             rename_map=rename_map,
         )
@@ -1086,6 +1155,9 @@ class PiCIDDashboard(param.Parameterized):
         "alt_sort_metric_key",
         "latex_show_n",
         "latex_show_std",
+        "latex_highlight_best_bg",
+        "latex_underline_2nd_best",
+        "latex_highlight_within_1std",
         "latex_precision",
         "latex_rename_json",
     )

@@ -1147,3 +1147,409 @@ def test_build_model_summary_table_clicks_model_cell_with_full_model_key():
     callback(SimpleNamespace(row=1))
 
     assert clicked_models == [ALT_MODEL]
+
+
+# ---------------------------------------------------------------------------
+# build_latex_table — cell highlighting (best / 2nd best / within-1σ)
+# ---------------------------------------------------------------------------
+
+
+HL_DATASET = "Dataset H [project_h]"
+HL_METRIC = "test/mae_denormalized"
+HL_MODEL_BEST = "models.demo.BestForecaster"
+HL_MODEL_NEAR = "models.demo.NearForecaster"
+HL_MODEL_FAR = "models.demo.FarForecaster"
+HL_LABEL_BEST = "Best"  # _shorten_model_name strips "Forecaster"
+HL_LABEL_NEAR = "Near"
+HL_LABEL_FAR = "Far"
+
+
+def _make_highlight_loader(
+    means: dict[str, float],
+    stds: dict[str, float],
+    *,
+    dataset: str = HL_DATASET,
+    metric_key: str = HL_METRIC,
+) -> FakeResultsLoader:
+    """Build a single-dataset loader with one config per model for highlight tests."""
+    models = list(means.keys())
+    n_models = len(models)
+
+    coords3 = {"dataset": [dataset], "model": models, "metric_key": [metric_key]}
+    coords2 = {"dataset": [dataset], "model": models}
+
+    mean_arr = np.asarray([[[means[m]] for m in models]], dtype=float)
+    std_arr = np.asarray([[[stds[m]] for m in models]], dtype=float)
+    n_arr = np.full((1, n_models, 1), 5.0, dtype=float)
+
+    xarray_dataset = xr.Dataset(
+        {
+            "mean": xr.DataArray(
+                mean_arr, dims=["dataset", "model", "metric_key"], coords=coords3
+            ),
+            "std": xr.DataArray(
+                std_arr, dims=["dataset", "model", "metric_key"], coords=coords3
+            ),
+            "n": xr.DataArray(
+                n_arr, dims=["dataset", "model", "metric_key"], coords=coords3
+            ),
+            "sort_metric": xr.DataArray(
+                np.asarray([[metric_key] * n_models], dtype=object),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "opt_metric": xr.DataArray(
+                np.asarray([[metric_key] * n_models], dtype=object),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "opt_mode": xr.DataArray(
+                np.asarray([["min"] * n_models], dtype=object),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "opt_value": xr.DataArray(
+                np.asarray([[means[m] for m in models]], dtype=float),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "total_runs": xr.DataArray(
+                np.full((1, n_models), 5.0, dtype=float),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "configs_failed_seed": xr.DataArray(
+                np.zeros((1, n_models), dtype=float),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+            "configs_failed_metric": xr.DataArray(
+                np.zeros((1, n_models), dtype=float),
+                dims=["dataset", "model"],
+                coords=coords2,
+            ),
+        }
+    )
+
+    hp_map = {
+        (dataset, m): _make_hp_dataset(
+            [metric_key],
+            [[means[m]]],
+            [[stds[m]]],
+            [[5.0]],
+            **{"task_definition.seq_len": [16]},
+        )
+        for m in models
+    }
+    return FakeResultsLoader(xarray_dataset, hp_map)
+
+
+def _latex_value(component) -> str:
+    """Extract the LaTeX text from a build_latex_table return value (Column[btn, textarea])."""
+    return component[1].value
+
+
+def _latex_row(latex_str: str, model_label: str) -> str:
+    """Find the rendered tabular row for *model_label* in the LaTeX output."""
+    for line in latex_str.splitlines():
+        if line.lstrip().startswith(model_label):
+            return line
+    raise AssertionError(f"row for {model_label!r} not found in LaTeX output:\n{latex_str}")
+
+
+_HL_MEANS_BASIC = {HL_MODEL_BEST: 1.0, HL_MODEL_NEAR: 1.3, HL_MODEL_FAR: 2.5}
+_HL_STDS_BASIC = {HL_MODEL_BEST: 0.5, HL_MODEL_NEAR: 0.1, HL_MODEL_FAR: 0.1}
+
+
+def test_build_latex_table_bolds_best_and_greys_background():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+    best_row = _latex_row(latex_str, HL_LABEL_BEST)
+
+    assert "\\textbf{" in best_row
+    assert "\\cellcolor[gray]{0.85}" in best_row
+    assert "\\underline{" not in best_row
+    assert "\\cellcolor{blue!15}" not in best_row
+
+
+def test_build_latex_table_underlines_second_best():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+    near_row = _latex_row(latex_str, HL_LABEL_NEAR)
+
+    assert "\\underline{" in near_row
+    assert "\\textbf{" not in near_row
+    assert "\\cellcolor[gray]{0.85}" not in near_row
+
+
+def test_build_latex_table_blue_for_within_one_std():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+    near_row = _latex_row(latex_str, HL_LABEL_NEAR)
+    far_row = _latex_row(latex_str, HL_LABEL_FAR)
+
+    # Near is within 1σ of best (|1.3 − 1.0| = 0.3 ≤ best_std = 0.5)
+    assert "\\cellcolor{blue!15}" in near_row
+    # Far has no decorations whatsoever
+    for marker in (
+        "\\textbf{",
+        "\\underline{",
+        "\\cellcolor[gray]{0.85}",
+        "\\cellcolor{blue!15}",
+    ):
+        assert marker not in far_row, f"unexpected {marker!r} in Far row: {far_row}"
+
+
+@pytest.mark.parametrize(
+    "kwargs, missing_marker",
+    [
+        ({"highlight_best_bg": False}, "\\cellcolor[gray]{0.85}"),
+        ({"underline_2nd_best": False}, "\\underline{"),
+        ({"highlight_within_1std": False}, "\\cellcolor{blue!15}"),
+    ],
+)
+def test_build_latex_table_toggles_off_disable_decorations_independently(
+    kwargs, missing_marker
+):
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        **kwargs,
+    )
+    latex_str = _latex_value(pane)
+
+    assert missing_marker not in latex_str
+    # Bold of the best is unconditional and unaffected by the toggles
+    assert "\\textbf{" in latex_str
+
+
+def test_build_latex_table_all_highlights_off_keeps_only_bold():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        highlight_best_bg=False,
+        underline_2nd_best=False,
+        highlight_within_1std=False,
+    )
+    latex_str = _latex_value(pane)
+
+    # No background colors and no underlines anywhere in the body
+    body_start = latex_str.find("\\begin{tabular}")
+    assert body_start != -1
+    body = latex_str[body_start:]
+    assert "\\cellcolor" not in body
+    assert "\\underline{" not in body
+    # Bold remains on the best cell
+    assert "\\textbf{" in body
+
+
+def test_build_latex_table_tied_best_no_second_underline():
+    loader = _make_highlight_loader(
+        means={HL_MODEL_BEST: 1.0, HL_MODEL_NEAR: 1.0, HL_MODEL_FAR: 2.0},
+        stds={HL_MODEL_BEST: 0.5, HL_MODEL_NEAR: 0.5, HL_MODEL_FAR: 0.1},
+    )
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+    best_row = _latex_row(latex_str, HL_LABEL_BEST)
+    near_row = _latex_row(latex_str, HL_LABEL_NEAR)
+    far_row = _latex_row(latex_str, HL_LABEL_FAR)
+
+    # Both tied bests are bolded + grey-backgrounded
+    assert "\\textbf{" in best_row and "\\cellcolor[gray]{0.85}" in best_row
+    assert "\\textbf{" in near_row and "\\cellcolor[gray]{0.85}" in near_row
+    # No second-best is promoted when the top is tied
+    assert "\\underline{" not in far_row
+    body_start = latex_str.find("\\begin{tabular}")
+    assert body_start != -1
+    assert "\\underline{" not in latex_str[body_start:]
+
+
+def test_build_latex_table_max_mode_picks_best_correctly():
+    loader = _make_highlight_loader(
+        means={HL_MODEL_BEST: 1.0, HL_MODEL_NEAR: 1.3, HL_MODEL_FAR: 2.5},
+        stds={HL_MODEL_BEST: 0.1, HL_MODEL_NEAR: 0.1, HL_MODEL_FAR: 0.5},
+    )
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="max",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+    best_row = _latex_row(latex_str, HL_LABEL_BEST)
+    far_row = _latex_row(latex_str, HL_LABEL_FAR)
+
+    # Far has the largest mean → it is now the best
+    assert "\\textbf{" in far_row
+    assert "\\cellcolor[gray]{0.85}" in far_row
+    # Best has the smallest mean → no decorations
+    for marker in (
+        "\\textbf{",
+        "\\underline{",
+        "\\cellcolor[gray]{0.85}",
+        "\\cellcolor{blue!15}",
+    ):
+        assert marker not in best_row, f"unexpected {marker!r} in Best row: {best_row}"
+
+
+def test_build_latex_table_header_documents_required_packages():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+
+    assert "\\usepackage{booktabs}" in latex_str
+    assert "\\usepackage[table]{xcolor}" in latex_str
+    assert "\\usepackage{adjustbox}" in latex_str
+
+
+def test_build_latex_table_orders_best_model_at_bottom():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+
+    lines = latex_str.splitlines()
+
+    def _row_index(label: str) -> int:
+        for idx, line in enumerate(lines):
+            if line.lstrip().startswith(label):
+                return idx
+        raise AssertionError(f"row {label!r} not found in:\n{latex_str}")
+
+    far_idx = _row_index(HL_LABEL_FAR)
+    near_idx = _row_index(HL_LABEL_NEAR)
+    best_idx = _row_index(HL_LABEL_BEST)
+
+    # Worst → best, top to bottom
+    assert far_idx < near_idx < best_idx
+
+
+def _extract_caption(latex_str: str) -> str:
+    """Return the contents of the \\caption{...} command, handling nested braces."""
+    marker = "\\caption{"
+    start = latex_str.find(marker)
+    assert start != -1, "no \\caption{...} found in LaTeX output"
+    i = start + len(marker)
+    depth = 1
+    while i < len(latex_str) and depth > 0:
+        ch = latex_str[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return latex_str[start + len(marker) : i]
+        i += 1
+    raise AssertionError("unmatched braces in \\caption{...}")
+
+
+def test_build_latex_table_caption_lists_display_and_sort_metric():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    sort_metric = "val_best_rerun/loss"
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=sort_metric,
+        mode="min",
+        use_alt_metric=False,
+    )
+    caption = _extract_caption(_latex_value(pane))
+
+    assert HL_METRIC.replace("_", "\\_") in caption
+    assert sort_metric.replace("_", "\\_") in caption
+    assert "sorted by" in caption
+    assert "min" in caption
+
+
+def test_build_latex_table_caption_lists_dataset_shortcuts_to_full_names():
+    # Dataset name with a date-stamped project suffix → _shorten_dataset_name
+    # strips the date, so the displayed shortcut differs from the full name.
+    full_dataset = "Dataset H [16_03_2026_project_h]"
+    expected_short = "Dataset H [project_h]"
+
+    loader = _make_highlight_loader(
+        _HL_MEANS_BASIC,
+        _HL_STDS_BASIC,
+        dataset=full_dataset,
+    )
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    caption = _extract_caption(_latex_value(pane))
+
+    assert "Datasets:" in caption
+    escaped_short = expected_short.replace("_", "\\_")
+    escaped_full = full_dataset.replace("_", "\\_")
+    assert f"{escaped_short} = {escaped_full}" in caption
+
+
+def test_build_latex_table_wraps_tabular_in_adjustbox():
+    loader = _make_highlight_loader(_HL_MEANS_BASIC, _HL_STDS_BASIC)
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+    )
+    latex_str = _latex_value(pane)
+
+    assert "\\begin{adjustbox}{max width=\\textwidth}" in latex_str
+    assert "\\end{adjustbox}" in latex_str
+    # adjustbox brackets must enclose the tabular environment, not the other way around
+    adj_open = latex_str.index("\\begin{adjustbox}")
+    tab_open = latex_str.index("\\begin{tabular}")
+    tab_close = latex_str.index("\\end{tabular}")
+    adj_close = latex_str.index("\\end{adjustbox}")
+    assert adj_open < tab_open < tab_close < adj_close
