@@ -14,7 +14,15 @@ _CARTE_CFG = "carte_ai.configs"
 _CARTE_DIR = "carte_ai.configs.directory"
 _HF = "huggingface_hub"
 _WRAPPER = "picid.model.wrappers.fit_predict_carte_wrapper"
-_STUBBED_MODULES = (_CARTE, _CARTE_CFG, _CARTE_DIR, _HF, _WRAPPER)
+_CANONICAL_WRAPPER = "picid.model.estimators.carte.wrapper"
+_STUBBED_MODULES = (
+    _CARTE,
+    _CARTE_CFG,
+    _CARTE_DIR,
+    _HF,
+    _WRAPPER,
+    _CANONICAL_WRAPPER,
+)
 
 _download_log: list[tuple[str, str]] = []
 
@@ -73,6 +81,7 @@ def _install_carte_stubs(fake_pretrained: str = "/stub/pretrained.pt"):
     sys.modules[_CARTE] = carte_pkg
 
     sys.modules.pop(_WRAPPER, None)
+    sys.modules.pop(_CANONICAL_WRAPPER, None)
     return importlib.import_module(_WRAPPER)
 
 
