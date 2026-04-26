@@ -4,7 +4,8 @@ This page is the contributor-facing inventory of public model configs under
 `configs/model/`. The source of truth is `picid.model.catalog.MODEL_CATALOG`.
 
 `window_average` is the preferred family name for the `naive`/`mean` aliases,
-and `persistence`/`similar_period` remain legacy public configs for now.
+and `persistence`/`similar_period` are stale legacy configs kept outside the
+canonical inventory until real implementations exist.
 
 | Config | Canonical Class | Family | Execution Style | Regression | Classification | Forecasting | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -23,10 +24,8 @@ and `persistence`/`similar_period` remain legacy public configs for now.
 | `mlp` | `picid.model.wrappers.mlp_wrapper.MLPWrapper` | `mlp` | `feed_forward_wrapper` | yes | yes | no | Fully connected baseline for supervised PHM tasks. |
 | `naive` | `picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper` | `window_average` | `forecasting_wrapper` | no | no | yes | Last-value alias; canonical family should be window_average. |
 | `patchtst` | `picid.model.forecasters.patchtst_model.PatchTST_Forecaster` | `patchtst` | `lightning_forecaster` | yes | yes | yes | PatchTST forecaster with regression/classification support. |
-| `persistence` | `picid.models.persistence.Persistence` | `window_average` | `legacy_forecasting` | no | no | yes | Legacy public config outside picid.model. |
 | `polynomial_regression` | `picid.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper` | `linear_regression` | `forecasting_wrapper` | no | no | yes | Linear-regression alias with polynomial growth mode. |
 | `ses` | `picid.model.wrappers.ses_model_wrapper.SESModelWrapper` | `ses` | `forecasting_wrapper` | no | no | yes | Simple exponential smoothing baseline for forecasting only. |
-| `similar_period` | `picid.models.similar_period.SimilarPeriod` | `similar_period` | `legacy_forecasting` | no | no | yes | Legacy public config outside picid.model. |
 | `stf` | `picid.model.forecasters.spacetimeformer_model.Spacetimeformer_Forecaster` | `spacetimeformer` | `lightning_forecaster` | yes | yes | yes | Spacetimeformer supports forecasting plus decoder-style tasks. |
 | `tabdpt_fit_predict` | `picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper` | `tabdpt` | `fit_predict_wrapper` | yes | yes | no | TabDPT tabular wrapper for regression and classification. |
 | `tabpfn_fit_predict` | `picid.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper` | `tabpfn` | `fit_predict_wrapper` | yes | yes | no | TabPFN tabular wrapper for regression and classification. |

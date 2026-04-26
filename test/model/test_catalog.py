@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from picid.model.catalog import MODEL_CATALOG, render_model_capabilities_table
+from picid.model.catalog import (
+    LEGACY_MODEL_CONFIG_NAMES,
+    MODEL_CATALOG,
+    render_model_capabilities_table,
+)
 
 
 def _public_model_config_paths() -> list[Path]:
@@ -9,7 +13,11 @@ def _public_model_config_paths() -> list[Path]:
 
 
 def _public_model_config_names() -> set[str]:
-    return {path.stem for path in _public_model_config_paths()}
+    return {
+        path.stem
+        for path in _public_model_config_paths()
+        if path.stem not in LEGACY_MODEL_CONFIG_NAMES
+    }
 
 
 def _extract_direct_target(path: Path) -> str | None:
@@ -63,6 +71,8 @@ def test_model_catalog_entries_are_unique():
 def test_model_catalog_direct_targets_match_configs():
     catalog_by_name = {row["config_name"]: row for row in MODEL_CATALOG}
     for path in _public_model_config_paths():
+        if path.stem in LEGACY_MODEL_CONFIG_NAMES:
+            continue
         direct_target = _extract_direct_target(path)
         if direct_target is None:
             continue

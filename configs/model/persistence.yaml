@@ -1,3 +1,6 @@
+# Legacy compatibility config.
+# This placeholder is intentionally excluded from the canonical model catalog
+# while the naive_model rename settles on window_average.
 _target_: picid.models.persistence.Persistence
 
 task_type: ${task_definition.task_type}

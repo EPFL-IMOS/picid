@@ -25,6 +25,9 @@ class ModelCatalogEntry(TypedDict):
     notes: str
 
 
+LEGACY_MODEL_CONFIG_NAMES = frozenset({"persistence", "similar_period"})
+
+
 MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     {
         "config_name": "autogluon_fit_predict",
@@ -147,14 +150,6 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
         "notes": "PatchTST forecaster with regression/classification support.",
     },
     {
-        "config_name": "persistence",
-        "class_path": "picid.models.persistence.Persistence",
-        "family": "window_average",
-        "execution_style": "legacy_forecasting",
-        "tasks": ("forecasting",),
-        "notes": "Legacy public config outside picid.model.",
-    },
-    {
         "config_name": "polynomial_regression",
         "class_path": "picid.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper",
         "family": "linear_regression",
@@ -169,14 +164,6 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
         "notes": "Simple exponential smoothing baseline for forecasting only.",
-    },
-    {
-        "config_name": "similar_period",
-        "class_path": "picid.models.similar_period.SimilarPeriod",
-        "family": "similar_period",
-        "execution_style": "legacy_forecasting",
-        "tasks": ("forecasting",),
-        "notes": "Legacy public config outside picid.model.",
     },
     {
         "config_name": "stf",
@@ -288,6 +275,7 @@ def render_model_capabilities_table() -> str:
 
 __all__ = [
     "ExecutionStyle",
+    "LEGACY_MODEL_CONFIG_NAMES",
     "MODEL_CATALOG",
     "ModelCatalogEntry",
     "TaskName",
