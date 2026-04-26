@@ -3,6 +3,13 @@ import torch
 from picid.model.estimators.linear_regression.model import LinearRegressionModelBaseline
 
 
+def test_linear_regression_model_reports_canonical_module():
+    assert (
+        LinearRegressionModelBaseline.__module__
+        == "picid.model.estimators.linear_regression.model"
+    )
+
+
 def test_linear_regression_model_forward_output_shape():
     batch_size, seq_len, pred_len, num_features = 3, 10, 3, 2
     model = LinearRegressionModelBaseline(pred_len=pred_len, lag_features=3)
