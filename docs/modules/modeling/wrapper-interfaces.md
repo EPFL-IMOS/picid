@@ -1,8 +1,6 @@
 # Wrapper Interfaces
 
 Core adapter interfaces live in `picid.model.adapters.base`.
-`picid.model.wrappers.base` currently re-exports the same classes for
-compatibility, but new code should import from the canonical adapters module.
 
 - `AbstractFitPredictWrapper`
 - `AbstractFeedForwardWrapper`

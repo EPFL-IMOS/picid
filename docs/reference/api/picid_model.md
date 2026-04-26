@@ -8,11 +8,6 @@ Primary namespaces:
 - `picid.model.estimators` for non-forecaster families
 - `picid.model.forecasters` for forecasting families
 
-Legacy compatibility namespaces still present during the migration:
-
-- `picid.model.methods`
-- `picid.model.wrappers`
-
 ::: picid.model
     options:
       show_root_heading: true

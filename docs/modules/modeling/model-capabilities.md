@@ -9,9 +9,6 @@ Canonical development entry points are:
 - `picid.model.estimators` for non-forecaster model families
 - `picid.model.adapters.base` for shared adapter base classes
 
-`picid.model.wrappers` remains a legacy compatibility namespace during the
-transition, but new code and examples should use the canonical paths above.
-
 `window_average` is the preferred family name for the `naive`/`mean` aliases,
 and `persistence`/`similar_period` are stale legacy configs kept outside the
 canonical inventory until real implementations exist.

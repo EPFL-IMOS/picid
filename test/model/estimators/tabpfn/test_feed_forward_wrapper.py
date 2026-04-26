@@ -1,4 +1,4 @@
-"""Tests for TabPFNWrapper with a stub ``tabpfn`` package (no real TabPFN / downloads)."""
+"""Canonical tests for TabPFNWrapper and helper utilities."""
 
 import importlib
 import sys
@@ -9,9 +9,8 @@ import pytest
 import torch
 
 _TABPFN = "tabpfn"
-_WRAPPER = "picid.model.wrappers.tabpfn_wrapper"
-_CANONICAL_WRAPPER = "picid.model.estimators.tabpfn.wrapper"
-_STUBBED_MODULES = (_TABPFN, _WRAPPER, _CANONICAL_WRAPPER)
+_WRAPPER = "picid.model.estimators.tabpfn.wrapper"
+_STUBBED_MODULES = (_TABPFN, _WRAPPER)
 
 
 class _StubTabPFNRegressor:
@@ -59,7 +58,6 @@ def _install_stub_tabpfn():
     mod.TabPFNClassifier = _StubTabPFNClassifier
     sys.modules[_TABPFN] = mod
     sys.modules.pop(_WRAPPER, None)
-    sys.modules.pop(_CANONICAL_WRAPPER, None)
     return importlib.import_module(_WRAPPER)
 
 
@@ -84,6 +82,11 @@ def _restore_stubbed_modules():
 
 def _common_kwargs():
     return dict(ignore_pretraining_limits=True, random_state=0, device="cpu")
+
+
+def test_tabpfn_feed_forward_wrapper_reports_canonical_module():
+    TabPFNWrapper = _cls()
+    assert TabPFNWrapper.__module__ == "picid.model.estimators.tabpfn.wrapper"
 
 
 def test_invalid_task_type_is_rejected():
@@ -151,7 +154,6 @@ def test_predict_classification_uses_predict_proba():
 def test_forward_squeezes_batch_calls_fit_then_predict_and_reshapes():
     TabPFNWrapper = _cls()
     w = TabPFNWrapper(task_type="forecasting", **_common_kwargs())
-    # Leading batch dim 1 -> squeeze(0) removes it for fit/predict tensors.
     batch = {
         "context": {
             "x": torch.randn(1, 3, 2),

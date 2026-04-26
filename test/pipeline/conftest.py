@@ -13,7 +13,7 @@ from picid.evaluator.base import AbstractEvaluator
 from picid.evaluator.default import DefaultEvaluator
 from picid.metrics.metric_factory import MetricFactory
 from picid.metrics.metrics import MSEMetric
-from picid.model.wrappers.base import AbstractFitPredictWrapper
+from picid.model.adapters.base import AbstractFitPredictWrapper
 
 
 # -----------------------------------------------------------------------------

@@ -7,9 +7,6 @@ run via Hydra experiments. The repo now uses a family-first layout:
 - `picid.model.estimators` for non-forecaster families
 - `picid.model.adapters.base` for shared adapter contracts
 
-`picid.model.wrappers` remains a legacy compatibility namespace, but new code
-should use the canonical layout above.
-
 ---
 
 ## 1. Choose the extension point

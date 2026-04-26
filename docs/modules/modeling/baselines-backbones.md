@@ -8,8 +8,7 @@ Non-forecaster families now live under
 (`mlp`, `cnn1d`, `window_average`, `statistical`, and fit-predict families).
 
 Use `picid.model.forecasters` and `picid.model.estimators` for all new code,
-configs, and extension work. `picid.model.wrappers` is legacy-only during the
-transition.
+configs, and extension work.
 
 Wrappers adapt these heterogeneous models to a unified pipeline contract.
 
