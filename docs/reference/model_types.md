@@ -1,3 +1,12 @@
-# Model Types (Legacy)
+# Model Types
 
-Canonical pages moved to [Modules -> Modeling](../modules/modeling/index.md).
+Canonical model organization now lives under
+[Modules -> Modeling](../modules/modeling/index.md).
+
+Use:
+
+- `picid.model.forecasters` for forecasting families
+- `picid.model.estimators` for non-forecaster families
+- `picid.model.adapters.base` for shared adapter interfaces
+
+`picid.model.wrappers` remains a legacy compatibility namespace.

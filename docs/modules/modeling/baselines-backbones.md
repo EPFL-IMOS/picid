@@ -1,12 +1,19 @@
 # Baselines and Backbones
 
-Backbone implementations live under the canonical
-`picid/model/forecasters/` namespace (LSTM, PatchTST, Crossformer, TiDE, etc.).
+Temporal backbone implementations live under
+`picid/model/forecasters/` (LSTM, PatchTST, Crossformer, TiDE, etc.).
 
-Use `picid.model.forecasters` for all new code, configs, and extension work.
+Non-forecaster families now live under
+`picid/model/estimators/` with one directory per family
+(`mlp`, `cnn1d`, `window_average`, `statistical`, and fit-predict families).
+
+Use `picid.model.forecasters` and `picid.model.estimators` for all new code,
+configs, and extension work. `picid.model.wrappers` is legacy-only during the
+transition.
 
 Wrappers adapt these heterogeneous models to a unified pipeline contract.
 
 API:
 
+- [picid.model.estimators](../../reference/api/picid_model_estimators.md)
 - [picid.model.forecasters](../../reference/api/picid_model_forecasters.md)

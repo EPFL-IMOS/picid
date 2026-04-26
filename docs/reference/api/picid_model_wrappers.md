@@ -1,6 +1,12 @@
 # picid.model.wrappers
 
-Unified wrapper interfaces and concrete wrapper implementations.
+Legacy compatibility namespace for wrapper-era imports.
+
+New code should prefer:
+
+- `picid.model.adapters.base` for shared adapter interfaces
+- `picid.model.estimators.<family>` for non-forecaster families
+- `picid.model.forecasters.<family>` for forecasting families
 
 ::: picid.model.wrappers
     options:

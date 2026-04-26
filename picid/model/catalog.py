@@ -31,7 +31,7 @@ LEGACY_MODEL_CONFIG_NAMES = frozenset({"persistence", "similar_period"})
 MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     {
         "config_name": "autogluon_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_autogluon_wrapper.FitPredictAutoGluonWrapper",
+        "class_path": "picid.model.estimators.autogluon.wrapper.FitPredictAutoGluonWrapper",
         "family": "autogluon",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("regression", "classification"),
@@ -39,7 +39,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "carte_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_carte_wrapper.FitPredictCarteWrapper",
+        "class_path": "picid.model.estimators.carte.wrapper.FitPredictCarteWrapper",
         "family": "carte",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("regression", "classification"),
@@ -55,7 +55,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "cnn_1d",
-        "class_path": "picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper",
+        "class_path": "picid.model.estimators.cnn1d.wrapper.CNN1D_Wrapper",
         "family": "cnn1d",
         "execution_style": "feed_forward_wrapper",
         "tasks": ("regression", "classification"),
@@ -71,7 +71,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "drift",
-        "class_path": "picid.model.wrappers.drift_model_wrapper.DriftModelWrapper",
+        "class_path": "picid.model.estimators.drift.wrapper.DriftModelWrapper",
         "family": "drift",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
@@ -79,15 +79,15 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "exponential_regression",
-        "class_path": "picid.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper",
+        "class_path": "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper",
         "family": "linear_regression",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
-        "notes": "Linear-regression alias with exponential growth mode.",
+        "notes": "Statistical baseline alias with exponential growth mode.",
     },
     {
         "config_name": "isolation_forest_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_isolation_forest_wrapper.FitPredictIsolationForestWrapper",
+        "class_path": "picid.model.estimators.isolation_forest.wrapper.FitPredictIsolationForestWrapper",
         "family": "isolation_forest",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("classification",),
@@ -103,7 +103,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "linear_regression",
-        "class_path": "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper",
+        "class_path": "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper",
         "family": "linear_regression",
         "execution_style": "feed_forward_wrapper",
         "tasks": ("regression", "classification"),
@@ -127,7 +127,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "mlp",
-        "class_path": "picid.model.wrappers.mlp_wrapper.MLPWrapper",
+        "class_path": "picid.model.estimators.mlp.wrapper.MLPWrapper",
         "family": "mlp",
         "execution_style": "feed_forward_wrapper",
         "tasks": ("regression", "classification"),
@@ -151,15 +151,15 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "polynomial_regression",
-        "class_path": "picid.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper",
+        "class_path": "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper",
         "family": "linear_regression",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
-        "notes": "Linear-regression alias with polynomial growth mode.",
+        "notes": "Statistical baseline alias with polynomial growth mode.",
     },
     {
         "config_name": "ses",
-        "class_path": "picid.model.wrappers.ses_model_wrapper.SESModelWrapper",
+        "class_path": "picid.model.estimators.ses.wrapper.SESModelWrapper",
         "family": "ses",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
@@ -175,7 +175,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "tabdpt_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper",
+        "class_path": "picid.model.estimators.tabdpt.wrapper.FitPredictTabDPTWrapper",
         "family": "tabdpt",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("regression", "classification"),
@@ -183,7 +183,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "tabpfn_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper",
+        "class_path": "picid.model.estimators.tabpfn.wrapper.FitPredictTabPFNWrapper",
         "family": "tabpfn",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("regression", "classification"),
@@ -207,7 +207,7 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "xgboost_fit_predict",
-        "class_path": "picid.model.wrappers.fit_predict_xgboost_wrapper.FitPredictXGBoostWrapper",
+        "class_path": "picid.model.estimators.xgboost.wrapper.FitPredictXGBoostWrapper",
         "family": "xgboost",
         "execution_style": "fit_predict_wrapper",
         "tasks": ("regression", "classification"),

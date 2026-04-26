@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tutorial: FitPredictIsolationForestWrapper fit and predict basics."""
+"""Tutorial: canonical isolation-forest fit-predict basics."""
 
 import sys
 from pathlib import Path
@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np
 import torch
 
-from picid.model.wrappers.fit_predict_isolation_forest_wrapper import (
+from picid.model.estimators.isolation_forest.wrapper import (
     FitPredictIsolationForestWrapper,
 )
 
