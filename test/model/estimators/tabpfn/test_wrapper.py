@@ -76,6 +76,13 @@ def _common_kwargs():
     return dict(ignore_pretraining_limits=True, random_state=0)
 
 
+def test_tabpfn_wrapper_reports_canonical_module():
+    FitPredictTabPFNWrapper = _cls()
+    assert (
+        FitPredictTabPFNWrapper.__module__ == "picid.model.estimators.tabpfn.wrapper"
+    )
+
+
 def test_invalid_task_type_is_rejected():
     FitPredictTabPFNWrapper = _cls()
     with pytest.raises(ValueError, match="not supported"):

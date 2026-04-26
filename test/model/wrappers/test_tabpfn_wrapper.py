@@ -10,7 +10,8 @@ import torch
 
 _TABPFN = "tabpfn"
 _WRAPPER = "picid.model.wrappers.tabpfn_wrapper"
-_STUBBED_MODULES = (_TABPFN, _WRAPPER)
+_CANONICAL_WRAPPER = "picid.model.estimators.tabpfn.wrapper"
+_STUBBED_MODULES = (_TABPFN, _WRAPPER, _CANONICAL_WRAPPER)
 
 
 class _StubTabPFNRegressor:
@@ -58,6 +59,7 @@ def _install_stub_tabpfn():
     mod.TabPFNClassifier = _StubTabPFNClassifier
     sys.modules[_TABPFN] = mod
     sys.modules.pop(_WRAPPER, None)
+    sys.modules.pop(_CANONICAL_WRAPPER, None)
     return importlib.import_module(_WRAPPER)
 
 
