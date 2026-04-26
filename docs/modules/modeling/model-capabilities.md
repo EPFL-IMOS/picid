@@ -20,9 +20,9 @@ canonical inventory until real implementations exist.
 | `linear_forecaster` | `picid.model.forecasters.linear_model.linear_model.Linear_Forecaster` | `linear_forecaster` | `lightning_forecaster` | no | no | yes | Minimal linear forecaster for time-series prediction. |
 | `linear_regression` | `picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper` | `linear_regression` | `feed_forward_wrapper` | yes | yes | no | Flattened statistical baseline for supervised tasks. |
 | `lstm` | `picid.model.forecasters.lstm_model.LSTM_Forecaster` | `lstm` | `lightning_forecaster` | yes | yes | yes | LSTM forecaster/prognostics model; also used for state forecasting. |
-| `mean` | `picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper` | `window_average` | `forecasting_wrapper` | no | no | yes | Window-average alias; canonical family should be window_average. |
+| `mean` | `picid.model.estimators.window_average.wrapper.WindowAverageWrapper` | `window_average` | `forecasting_wrapper` | no | no | yes | Window-average alias; canonical family is window_average. |
 | `mlp` | `picid.model.wrappers.mlp_wrapper.MLPWrapper` | `mlp` | `feed_forward_wrapper` | yes | yes | no | Fully connected baseline for supervised PHM tasks. |
-| `naive` | `picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper` | `window_average` | `forecasting_wrapper` | no | no | yes | Last-value alias; canonical family should be window_average. |
+| `naive` | `picid.model.estimators.window_average.wrapper.WindowAverageWrapper` | `window_average` | `forecasting_wrapper` | no | no | yes | Last-value alias; canonical family is window_average. |
 | `patchtst` | `picid.model.forecasters.patchtst_model.PatchTST_Forecaster` | `patchtst` | `lightning_forecaster` | yes | yes | yes | PatchTST forecaster with regression/classification support. |
 | `polynomial_regression` | `picid.model.wrappers.linear_regression_wrapper.LinearRegressionModelWrapper` | `linear_regression` | `forecasting_wrapper` | no | no | yes | Linear-regression alias with polynomial growth mode. |
 | `ses` | `picid.model.wrappers.ses_model_wrapper.SESModelWrapper` | `ses` | `forecasting_wrapper` | no | no | yes | Simple exponential smoothing baseline for forecasting only. |

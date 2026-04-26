@@ -1,4 +1,4 @@
-_target_: picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper
+_target_: picid.model.estimators.window_average.wrapper.WindowAverageWrapper
 task_type: ${task_definition.task_type}
 
 # There values will be read from the model parameters similarly to how we deal with data_path.

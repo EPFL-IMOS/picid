@@ -119,11 +119,11 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "mean",
-        "class_path": "picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper",
+        "class_path": "picid.model.estimators.window_average.wrapper.WindowAverageWrapper",
         "family": "window_average",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
-        "notes": "Window-average alias; canonical family should be window_average.",
+        "notes": "Window-average alias; canonical family is window_average.",
     },
     {
         "config_name": "mlp",
@@ -135,11 +135,11 @@ MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     },
     {
         "config_name": "naive",
-        "class_path": "picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper",
+        "class_path": "picid.model.estimators.window_average.wrapper.WindowAverageWrapper",
         "family": "window_average",
         "execution_style": "forecasting_wrapper",
         "tasks": ("forecasting",),
-        "notes": "Last-value alias; canonical family should be window_average.",
+        "notes": "Last-value alias; canonical family is window_average.",
     },
     {
         "config_name": "patchtst",
