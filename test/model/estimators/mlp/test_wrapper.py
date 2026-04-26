@@ -10,6 +10,10 @@ from picid.model.estimators.mlp.wrapper import MLPWrapper
 # =========================================================================
 
 
+def test_mlp_now_reports_canonical_module():
+    assert MLP.__module__ == "picid.model.estimators.mlp.model"
+
+
 def test_mlp_model_validation_invalid_layers():
     """
     [Coverage: MLP Lines 44-45]
