@@ -1,4 +1,4 @@
-"""Tests for FitPredictTabDPTWrapper with a stub ``tabdpt`` package (no TabDPT install)."""
+"""Canonical tests for FitPredictTabDPTWrapper."""
 
 import importlib
 import sys
@@ -67,6 +67,14 @@ def _restore_stubbed_modules():
             sys.modules.pop(name, None)
         else:
             sys.modules[name] = module
+
+
+def test_tabdpt_wrapper_reports_canonical_module():
+    FitPredictTabDPTWrapper = _cls()
+    assert (
+        FitPredictTabDPTWrapper.__module__
+        == "picid.model.estimators.tabdpt.wrapper"
+    )
 
 
 def test_invalid_task_type_is_rejected():
