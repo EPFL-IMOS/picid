@@ -1,4 +1,8 @@
+from importlib import import_module
 from pathlib import Path
+import sys
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -35,3 +39,9 @@ def test_active_code_and_configs_do_not_reference_legacy_baselines_namespace():
             offenders.append(path.relative_to(REPO_ROOT).as_posix())
 
     assert offenders == []
+
+
+def test_legacy_baselines_namespace_is_removed():
+    sys.modules.pop("picid.baselines", None)
+    with pytest.raises(ModuleNotFoundError):
+        import_module("picid.baselines")
