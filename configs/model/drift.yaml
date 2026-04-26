@@ -1,4 +1,4 @@
-_target_: picid.model.wrappers.drift_model_wrapper.DriftModelWrapper
+_target_: picid.model.estimators.drift.wrapper.DriftModelWrapper
 task_type: ${task_definition.task_type}
 
 seq_len: ${task_definition.seq_len} # window size

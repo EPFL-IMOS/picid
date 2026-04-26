@@ -25,7 +25,7 @@ class NaiveConfig(AbsModelConfig):
     config_name : str = Field('naive', frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('picid.model.wrappers.naive_model_wrapper.NaiveModelWrapper',
+    model_class : str = Field('picid.model.estimators.window_average.wrapper.WindowAverageWrapper',
                                  frozen=True, serialization_alias='_target_')
 
     pred_len: int = Field(ge=1)
