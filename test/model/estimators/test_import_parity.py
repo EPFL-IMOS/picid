@@ -1,6 +1,19 @@
 from importlib import import_module
+import sys
 
 import pytest
+
+
+def _clear_module_family(module_name: str) -> None:
+    family_root = module_name
+    for suffix in (".wrapper", ".model"):
+        if family_root.endswith(suffix):
+            family_root = family_root[: -len(suffix)]
+            break
+
+    for loaded_name in list(sys.modules):
+        if loaded_name == family_root or loaded_name.startswith(f"{family_root}."):
+            sys.modules.pop(loaded_name, None)
 
 
 @pytest.mark.parametrize(
@@ -263,6 +276,9 @@ import pytest
 def test_estimators_namespace_reexports_legacy_symbols(
     canonical_module, canonical_symbol, legacy_module, legacy_symbol
 ):
+    _clear_module_family(canonical_module)
+    _clear_module_family(legacy_module)
+
     canonical = import_module(canonical_module)
     legacy = import_module(legacy_module)
 

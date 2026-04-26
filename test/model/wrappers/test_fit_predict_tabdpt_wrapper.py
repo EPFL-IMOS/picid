@@ -11,7 +11,8 @@ import torch
 
 _TABDPT = "tabdpt"
 _WRAPPER = "picid.model.wrappers.fit_predict_tabdpt_wrapper"
-_STUBBED_MODULES = (_TABDPT, _WRAPPER)
+_CANONICAL_WRAPPER = "picid.model.estimators.tabdpt.wrapper"
+_STUBBED_MODULES = (_TABDPT, _WRAPPER, _CANONICAL_WRAPPER)
 
 
 class _StubTabDPTRegressor:
@@ -51,6 +52,7 @@ def _install_stub_tabdpt():
     mod.TabDPTClassifier = _StubTabDPTClassifier
     sys.modules[_TABDPT] = mod
     sys.modules.pop(_WRAPPER, None)
+    sys.modules.pop(_CANONICAL_WRAPPER, None)
     return importlib.import_module(_WRAPPER)
 
 

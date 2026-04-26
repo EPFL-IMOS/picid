@@ -1,7 +1,6 @@
 import torch
 
 from picid.model.estimators.window_average.wrapper import WindowAverageWrapper
-from picid.model.wrappers.naive_model_wrapper import NaiveModelWrapper
 
 
 def _make_batch(batch_size=2, seq_len=6, pred_len=2, num_features=1):
@@ -23,7 +22,10 @@ def test_window_average_wrapper_is_canonical_named():
     )
 
     assert WindowAverageWrapper.__name__ == "WindowAverageWrapper"
-    assert WindowAverageWrapper is NaiveModelWrapper
+    assert (
+        WindowAverageWrapper.__module__
+        == "picid.model.estimators.window_average.wrapper"
+    )
 
 
 def test_window_average_wrapper_keeps_forecasting_behavior():

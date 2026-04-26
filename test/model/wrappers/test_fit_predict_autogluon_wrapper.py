@@ -11,7 +11,8 @@ import torch
 
 _AG_MODULE = "picid.model.autogluon.autogluon_wrapper"
 _WRAPPER_MODULE = "picid.model.wrappers.fit_predict_autogluon_wrapper"
-_STUBBED_MODULES = (_AG_MODULE, _WRAPPER_MODULE)
+_CANONICAL_WRAPPER_MODULE = "picid.model.estimators.autogluon.wrapper"
+_STUBBED_MODULES = (_AG_MODULE, _WRAPPER_MODULE, _CANONICAL_WRAPPER_MODULE)
 
 
 class _StubAutoGluonWrapper:
@@ -38,6 +39,7 @@ def _install_stub_autogluon_wrapper():
     fake.AutoGluonWrapper = _StubAutoGluonWrapper
     sys.modules[_AG_MODULE] = fake
     sys.modules.pop(_WRAPPER_MODULE, None)
+    sys.modules.pop(_CANONICAL_WRAPPER_MODULE, None)
     return importlib.import_module(_WRAPPER_MODULE)
 
 

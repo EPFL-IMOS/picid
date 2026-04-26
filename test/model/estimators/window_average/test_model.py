@@ -1,14 +1,16 @@
 import torch
 
 from picid.model.estimators.window_average.model import WindowAverageBaseline
-from picid.model.methods.naive_model import NaiveModelBaseline
 
 
 def test_window_average_baseline_is_canonical_named():
     model = WindowAverageBaseline(pred_len=3, window_size_to_average=2)
 
     assert WindowAverageBaseline.__name__ == "WindowAverageBaseline"
-    assert WindowAverageBaseline is NaiveModelBaseline
+    assert (
+        WindowAverageBaseline.__module__
+        == "picid.model.estimators.window_average.model"
+    )
     assert "WindowAverageBaseline" in repr(model)
 
 

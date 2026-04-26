@@ -4,8 +4,8 @@ import pytest
 import torch
 
 from picid.model.estimators.cnn1d.wrapper import CNN1D_Wrapper
+from picid.model.estimators.cnn1d.wrapper import _calculate_receptive_field
 from picid.model.estimators.cnn1d.model import EncoderModel
-from picid.model.wrappers.cnn1d_wrapper import _calculate_receptive_field
 
 
 def _default_cnn_config(seq_len=7):
