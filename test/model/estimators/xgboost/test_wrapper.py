@@ -14,6 +14,13 @@ def _build_linear_dataset(num_samples: int, num_features: int, *, seed: int = 0)
     return features, targets
 
 
+def test_xgboost_wrapper_reports_canonical_module():
+    assert (
+        FitPredictXGBoostWrapper.__module__
+        == "picid.model.estimators.xgboost.wrapper"
+    )
+
+
 def test_regression_predict_output_is_two_dimensional():
     X, y = _build_linear_dataset(num_samples=8, num_features=3, seed=0)
     wrapper = FitPredictXGBoostWrapper(
