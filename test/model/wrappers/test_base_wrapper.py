@@ -350,9 +350,9 @@ def test_predict_yield_verbose_and_profile_predict_cfg(monkeypatch, tmp_path):
 
 
 def test_check_stop_profiler_exports_and_exits(monkeypatch, tmp_path):
-    from torch.profiler import ProfilerAction
+    import importlib
 
-    import picid.model.wrappers.base as base_mod
+    from torch.profiler import ProfilerAction
 
     cfg = OmegaConf.create({"trace_path": str(tmp_path / "chrome.json")})
 
@@ -379,6 +379,7 @@ def test_check_stop_profiler_exports_and_exits(monkeypatch, tmp_path):
     def _exit_raises(code=0):
         raise SystemExit(code)
 
+    base_mod = importlib.import_module(AbstractFitPredictWrapper.__module__)
     monkeypatch.setattr(base_mod.sys, "exit", _exit_raises)
 
     with pytest.raises(SystemExit) as excinfo:

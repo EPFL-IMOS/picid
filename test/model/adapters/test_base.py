@@ -132,6 +132,12 @@ class _AbstractPassThrough(AbstractFitPredictWrapper):
         return super().load_model(task_id)
 
 
+def test_adapter_base_is_the_real_implementation_module():
+    assert (
+        AbstractFeedForwardTrainingWrapper.__module__ == "picid.model.adapters.base"
+    )
+
+
 def test_invalid_backbone_missing_predict_raises_valueerror():
     with pytest.raises(ValueError, match="must implement fit and predict"):
         _DummyFitPredictWrapper(backbone=_NoPredictBackbone())
