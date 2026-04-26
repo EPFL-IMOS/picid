@@ -75,7 +75,7 @@ from picid.data.datasources.base.contracts import DatasourceProtocol
 from picid.data.preprocessing.preprocessor import PreProcessor
 from picid.exceptions import PreprocessingDatasourceError
 from picid.evaluator.base import AbstractEvaluator
-from picid.model.wrappers.base import (
+from picid.model.adapters.base import (
     AbstractFeedForwardWrapper,
     AbstractFitPredictWrapper,
     AbstractFeedForwardTrainingWrapper,

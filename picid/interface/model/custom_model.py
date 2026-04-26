@@ -5,7 +5,7 @@ from einops import rearrange
 from torch import nn
 
 from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from picid.model.wrappers.base import AbstractFeedForwardTrainingWrapper
+from picid.model.adapters.base import AbstractFeedForwardTrainingWrapper
 
 
 def default_pre_process(

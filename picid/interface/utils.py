@@ -13,7 +13,7 @@ from torch import nn
 
 from picid.data.data_objects import DatasetContainer
 from picid.evaluator.base import AbstractEvaluator
-from picid.model.wrappers.base import (
+from picid.model.adapters.base import (
     AbstractFeedForwardWrapper,
     AbstractFeedForwardTrainingWrapper,
     AbstractFitPredictWrapper,

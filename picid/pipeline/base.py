@@ -6,7 +6,7 @@ import torch
 from lightning import LightningModule
 
 from picid.evaluator.base import AbstractEvaluator
-from picid.model.wrappers.base import AbstractFitPredictWrapper
+from picid.model.adapters.base import AbstractFitPredictWrapper
 
 import logging
 
