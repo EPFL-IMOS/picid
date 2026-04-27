@@ -1,3 +1,13 @@
+imputation:
+  transform:
+    _target_: picid.transforms.base_transforms.imputation_methods.ImputationTransform
+    strategy: "locf"
+
+  metadata:
+    apply_to: features
+    fit_on: train
+    validate_output: false
+
 scaler_features:
   transform:
     _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn

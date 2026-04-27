@@ -1,5 +1,8 @@
 # ThreeW anomaly_detection: tabularize features + binary labels, then dense concat for fit-predict.
 
+defaults:
+  - threew/fault_classification_default@_here_
+
 __tabularize_x_transform: &__tabularize_x_transform
   _target_: picid.transforms.base_transforms.tabularizers.TimeseriesTabularizer
   seq_len: ${task_definition.seq_len}
