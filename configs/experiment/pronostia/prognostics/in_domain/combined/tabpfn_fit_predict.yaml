@@ -3,6 +3,7 @@
 defaults:
   - /experiment/pronostia/prognostics/in_domain/combined/base
   - /model_configs/prognostics/tabpfn_fit_predict
+  - override /transforms: bearings/pronostia/combined_fit_predict
 
 task_definition:
   model:

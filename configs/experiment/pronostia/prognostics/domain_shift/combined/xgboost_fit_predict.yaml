@@ -3,6 +3,7 @@
 defaults:
   - /experiment/pronostia/prognostics/domain_shift/combined/base
   - /model_configs/prognostics/xgboost_fit_predict
+  - override /transforms: bearings/pronostia/combined_fit_predict
 
 task_definition:
   model:
