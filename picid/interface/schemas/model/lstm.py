@@ -31,11 +31,14 @@ class LSTMConfig(AbsModelConfig):
     >>> model = LSTMConfig(n_layers=8, hidden_dim=64)
     """
 
-    config_name : str = Field('lstm', frozen=True)
+    config_name: str = Field("lstm", frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('picid.baselines.lstm_model.LSTM_Forecaster',
-                                 frozen=True, serialization_alias='_target_')
+    model_class: str = Field(
+        "picid.model.forecasters.lstm_model.LSTM_Forecaster",
+        frozen=True,
+        serialization_alias="_target_",
+    )
 
     d_x: Optional[int] = Field(None)
     d_yt: Optional[int] = Field(None)

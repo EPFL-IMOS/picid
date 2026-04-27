@@ -43,11 +43,14 @@ class CrossformerConfig(AbsModelConfig):
     >>> model = CrossformerConfig(dropout=0.2, d_model=256, n_heads=8)
     """
 
-    config_name : str = Field('lstm', frozen=True)
+    config_name: str = Field("lstm", frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('picid.baselines.crossformer_model.Crossformer_Forecaster',
-                                 frozen=True, serialization_alias='_target_')
+    model_class: str = Field(
+        "picid.model.forecasters.crossformer_model.Crossformer_Forecaster",
+        frozen=True,
+        serialization_alias="_target_",
+    )
 
     d_x: Optional[int] = Field(None)
     d_yt: Optional[int] = Field(None)
@@ -64,7 +67,7 @@ class CrossformerConfig(AbsModelConfig):
     n_heads: int = Field(4, ge=1)
     e_layers: int = Field(3, ge=1)
     dropout: float = Field(ge=0.1, le=1.0)
-    decoder_embedding: str = 'DSW'
+    decoder_embedding: str = "DSW"
 
     baseline: bool = False
     use_revin: bool = False

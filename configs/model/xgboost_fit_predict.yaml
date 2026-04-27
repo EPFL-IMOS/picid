@@ -1,4 +1,4 @@
-_target_: picid.model.wrappers.fit_predict_xgboost_wrapper.FitPredictXGBoostWrapper
+_target_: picid.model.estimators.xgboost.wrapper.FitPredictXGBoostWrapper
 task_type: ${task_definition.task_type}
 
 seq_len: ${task_definition.seq_len}      # window size

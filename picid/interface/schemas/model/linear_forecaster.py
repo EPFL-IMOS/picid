@@ -28,11 +28,14 @@ class LinearForecasterConfig(AbsModelConfig):
         Dimension overrides; inferred from data when ``None``.
     """
 
-    config_name : str = Field('linear_forecaster', frozen=True)
+    config_name: str = Field("linear_forecaster", frozen=True)
 
     # lightning_model: bool = Field(True, frozen=True)
-    model_class : str = Field('picid.baselines.linear_model.linear_model.Linear_Forecaster',
-                                 frozen=True, serialization_alias='_target_')
+    model_class: str = Field(
+        "picid.model.forecasters.linear_model.linear_model.Linear_Forecaster",
+        frozen=True,
+        serialization_alias="_target_",
+    )
 
     d_x: Optional[int] = Field(None)
     d_yt: Optional[int] = Field(None)

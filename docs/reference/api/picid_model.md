@@ -1,6 +1,12 @@
 # picid.model
 
-Model wrappers and architectures.
+Canonical model package root.
+
+Primary namespaces:
+
+- `picid.model.adapters` for shared adapter interfaces
+- `picid.model.estimators` for non-forecaster families
+- `picid.model.forecasters` for forecasting families
 
 ::: picid.model
     options:

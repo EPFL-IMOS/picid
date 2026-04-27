@@ -1,3 +1,6 @@
+# Legacy compatibility config.
+# This placeholder is intentionally excluded from the canonical model catalog
+# because no in-repo implementation exists.
 _target_: picid.models.similar_period.SimilarPeriod
 
 task_type: ${task_definition.task_type}

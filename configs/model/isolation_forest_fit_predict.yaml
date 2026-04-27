@@ -1,5 +1,5 @@
 
-_target_: picid.model.wrappers.fit_predict_isolation_forest_wrapper.FitPredictIsolationForestWrapper
+_target_: picid.model.estimators.isolation_forest.wrapper.FitPredictIsolationForestWrapper
 task_type: ${task_definition.task_type}
 
 n_estimators: 100

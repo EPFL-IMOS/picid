@@ -1,4 +1,4 @@
-_target_: picid.baselines.spacetimeformer_model.Spacetimeformer_Forecaster
+_target_: picid.model.forecasters.spacetimeformer_model.Spacetimeformer_Forecaster
 
 metadata:
   lightning_model: true

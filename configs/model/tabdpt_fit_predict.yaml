@@ -1,4 +1,4 @@
-_target_: picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper
+_target_: picid.model.estimators.tabdpt.wrapper.FitPredictTabDPTWrapper
 ignore_pretraining_limits: True
 device: ${trainer.accelerator}
 task_type: ${task_definition.task_type}

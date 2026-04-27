@@ -3,8 +3,8 @@
 from typing import Optional, Any
 
 
-from picid.baselines.definitions import CLASSIFICATION_TASKS
-from picid.model.wrappers.base import AbstractFeedForwardWrapper
+from picid.model.definitions import CLASSIFICATION_TASKS
+from picid.model.adapters.base import AbstractFeedForwardWrapper
 
 from omegaconf import OmegaConf
 from autogluon.tabular import TabularPredictor

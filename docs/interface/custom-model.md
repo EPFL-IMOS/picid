@@ -65,7 +65,9 @@ You can skip `ModelWrapper` if your model does not need any input reshaping.
 
 ## `CustomModelTrainer`
 
-`CustomModelTrainer` extends `AbstractFeedForwardTrainingWrapper` and implements the batch contract that the training pipeline expects.
+`CustomModelTrainer` extends
+`picid.model.adapters.base.AbstractFeedForwardTrainingWrapper` and implements
+the batch contract that the training pipeline expects.
 It extracts `"features"` and the target tensor from the incoming batch dict, runs the inner model, and returns a `{"predictions": ..., "targets": ...}` dict.
 
 ```python
@@ -186,7 +188,7 @@ interface.train(
 ## Full example: 1-D CNN for RUL
 
 ```python
-from picid.model.methods.cnn_1d import EncoderModel
+from picid.model.estimators.cnn1d.model import EncoderModel
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.model import CustomModelTrainer
 from picid.interface.schemas.task_definition import Prognostic

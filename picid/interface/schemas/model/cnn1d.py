@@ -31,7 +31,7 @@ class CNN1DConfig(AbsModelConfig):
 
     config_name : str = Field('cnn_1d', frozen=True)
     # lightning_model: bool = Field(True, frozen=True)
-    model_class: str = Field('picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper',
+    model_class: str = Field('picid.model.estimators.cnn1d.wrapper.CNN1D_Wrapper',
                                 frozen=True, serialization_alias='_target_')
 
     input_channels: int = Field(ge=1)

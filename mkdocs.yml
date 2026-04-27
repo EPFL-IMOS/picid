@@ -137,8 +137,6 @@ nav:
       - picid.transforms: reference/api/picid_transforms.md
       - picid.transforms.base: reference/api/picid_transforms_base.md
       - picid.model: reference/api/picid_model.md
-      - picid.model.wrappers: reference/api/picid_model_wrappers.md
-      - picid.baselines: reference/api/picid_baselines.md
       - picid.pipeline: reference/api/picid_pipeline.md
       - picid.evaluator: reference/api/picid_evaluator.md
       - picid.metrics: reference/api/picid_metrics.md

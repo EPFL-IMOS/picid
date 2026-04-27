@@ -1,0 +1,1 @@
+"""Window-average estimator tests."""

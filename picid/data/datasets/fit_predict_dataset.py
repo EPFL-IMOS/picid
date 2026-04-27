@@ -9,7 +9,7 @@ from lightning_fabric.utilities.data import AttributeDict
 from numpy import ndarray
 from torch.utils.data._utils.collate import default_collate
 
-from picid.baselines.definitions import (
+from picid.model.definitions import (
     CLASSIFICATION_TASKS,
     REGRESSION_TASKS,
     FORECASTING_TASKS,

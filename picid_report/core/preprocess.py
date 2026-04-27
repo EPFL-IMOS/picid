@@ -3,7 +3,7 @@
 Preprocessing helpers for the analysis pipeline.
 
 clean_and_rename_models: normalizes model names for display and grouping:
-- Strips a common package prefix (e.g. picid.baselines. -> baselines.) so names are short.
+- Strips a common package prefix (e.g. picid.model.forecasters. -> forecasters.) so names are short.
 - Appends (linear) or (exponential) from model.model_type when present (e.g. StatisticalBaselineWrapper).
 Defaults use config.COLUMN_CONFIG for column names; override via optional arguments.
 """
@@ -29,9 +29,11 @@ def clean_and_rename_models(
     as "(linear)" vs "(exponential)" using model.model_type.
 
     Matches the logic in table.ipynb so that:
-    - "picid.baselines.patchtst_model.PatchTST_Forecaster" -> "patchtst_model.PatchTST_Forecaster"
-    - "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper" + type "linear"
-      -> "statistical_models_wrapper.StatisticalBaselineWrapper (linear)"
+    - "picid.model.forecasters.patchtst_model.PatchTST_Forecaster"
+      -> "patchtst_model.PatchTST_Forecaster"
+    - "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper"
+      + type "linear"
+      -> "wrapper.StatisticalBaselineWrapper (linear)"
 
     Parameters
     ----------
