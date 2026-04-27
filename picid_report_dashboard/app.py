@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 from typing import Any
@@ -43,6 +44,23 @@ from picid_report_dashboard.views import (
     build_stats_table,
     build_summary_table,
 )
+
+
+class _DropBokehStaleRefFilter(logging.Filter):
+    """Suppress Bokeh's 'Dropping a patch...' churn under --autoreload.
+
+    Bokeh logs these at WARNING when a session message references a model that
+    has already been replaced — common for reactive views that fully rebuild
+    on parameter changes. The library itself notes the message is harmless.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "Dropping a patch because it contains" not in record.getMessage()
+
+
+for _name in ("bokeh", "bokeh.server.session", "bokeh.document"):
+    logging.getLogger(_name).addFilter(_DropBokehStaleRefFilter())
+
 
 pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 

@@ -267,8 +267,14 @@ class ResultsLoader:
             data = df.iloc[:, 1:].copy()
             data.index = df[first_col].values
             data.index.name = "Model"
-            # Stack the dataset level (level 0) into rows → index becomes (Model, Dataset)
-            stacked = data.stack(level=0).reset_index()
+            # Stack the dataset level (level 0) into rows → index becomes (Model, Dataset).
+            # future_stack=True opts into the new pandas-2 implementation; dropna(how="all")
+            # preserves the old default of dropping (Model, Dataset) pairs with no metrics.
+            stacked = (
+                data.stack(level=0, future_stack=True)
+                .dropna(how="all")
+                .reset_index()
+            )
             stacked.columns = ["Model", "Dataset"] + list(stacked.columns[2:])
             # Melt the remaining metric columns into long form
             metric_cols = [c for c in stacked.columns if c not in ("Model", "Dataset")]

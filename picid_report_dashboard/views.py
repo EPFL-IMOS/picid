@@ -1704,6 +1704,5 @@ def build_metadata_panel(
     return pn.widgets.Tabulator(
         df,
         show_index=False,
-        sizing_mode="stretch_width",
         width=400,
     )
