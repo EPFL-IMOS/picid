@@ -15,8 +15,10 @@ run_and_log() {
     # Define log file paths
     local log_dir="./logs"
     mkdir -p "$log_dir"
-    local stdout_log="$log_dir/${run_name}_stdout.log"
-    local stderr_log="$log_dir/${run_name}_stderr.log"
+    local file_run_name="${run_name//\//_}"
+    file_run_name="${file_run_name// /_}"
+    local stdout_log="$log_dir/${file_run_name}_stdout.log"
+    local stderr_log="$log_dir/${file_run_name}_stderr.log"
     local success_log="$log_dir/SUCCESSFUL_RUNS.log"
     local failed_log="$log_dir/FAILED_RUNS.log"
     local timestamp
@@ -60,7 +62,7 @@ run_and_log() {
     wait "$tee_err_pid"
     rm -f "$stdout_pipe" "$stderr_pipe"
     # Extra safety: remove any lingering FIFOs for this run name
-    find "$log_dir" -maxdepth 1 -type p -name "${run_name}_*.pipe.*" -delete 2>/dev/null
+    find "$log_dir" -maxdepth 1 -type p -name "${file_run_name}_*.pipe.*" -delete 2>/dev/null
 
     # Check the exit status of the command
     if [ $cmd_status -eq 0 ]; then

@@ -56,7 +56,7 @@ model_names=(
 
 BATCH_SIZES=(512)
 SEEDS=(72 88 101 666 226688)
-SEQ_LEN=(1 10 50)
+SEQ_LEN=(10 50)
 MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
 
 # ========================================================================
@@ -100,8 +100,9 @@ for dataset in "${datasets[@]}"; do
                         IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
                         exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
                         dataset_run_name="${dataset_key//\//_}"
-                        run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
-                        final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp}"
+                        subexp_run_name="${subexp//\//_}"
+                        run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp_run_name" "$seed" )
+                        final_log_folder="${wandb_log_folder}_${dataset_run_name}"_"${task_type}"_"${subexp_run_name}"
 
                         # --- 4. Build the full command as a single string ---
                         # Note the escaped quotes \"...\" for parameters that are lists.

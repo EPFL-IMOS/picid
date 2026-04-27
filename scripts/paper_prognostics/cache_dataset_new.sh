@@ -30,8 +30,8 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
 
 datasets=(
-  "pronostia|combined|prognostics"
-  "xjtu_sy|combined|prognostics"
+#   "pronostia|combined|prognostics"
+  "xjtu_sy|in_domain/combined|prognostics"
 )
 
 model_names=(
@@ -84,7 +84,8 @@ for dataset in "${datasets[@]}"; do
                         IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
                         exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
                         dataset_run_name="${dataset_key//\//_}"
-                        run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp" "$seed" )
+                        subexp_run_name="${subexp//\//_}"
+                        run_name=$(printf "%03d_%s_%s_%s_%s_%s" "$run_counter" "$dataset_run_name" "$model_name" "$task_type" "$subexp_run_name" "$seed" )
 
                         # --- 4. Build the full command as a single string ---
                         # Note the escaped quotes \"...\" for parameters that are lists.
