@@ -22,7 +22,7 @@ def clean_and_rename_models(
 
 **Behavior:**
 
-1. **Strip common prefix** — Finds the common prefix of all model identifiers (e.g. `picid.baselines.`) and removes it so names are shorter (e.g. `patchtst_model.PatchTST_Forecaster`).
+1. **Strip common prefix** — Finds the common prefix of all model identifiers (e.g. `picid.model.forecasters.`) and removes it so names are shorter (e.g. `patchtst_model.PatchTST_Forecaster`).
 2. **Append (linear) / (exponential)** — If a model type column exists (e.g. `model.model_type` with values `"linear"` or `"exponential"`), appends ` (linear)` or ` (exponential)` to the model name. Used to distinguish StatisticalBaselineWrapper variants.
 
 **Parameters:**
@@ -42,7 +42,7 @@ from picid_report.preprocess import clean_and_rename_models
 
 df = clean_and_rename_models(df)
 # Uses config.COLUMN_CONFIG["model_target"] and "model.model_type"
-# e.g. "picid.baselines.patchtst_model.PatchTST_Forecaster" becomes "baselines.patchtst_model.PatchTST_Forecaster"
+# e.g. "picid.model.forecasters.patchtst_model.PatchTST_Forecaster" becomes "patchtst_model.PatchTST_Forecaster"
 # If model.model_type is "linear" then "... (linear)" is appended
 ```
 
