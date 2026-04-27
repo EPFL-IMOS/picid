@@ -93,8 +93,8 @@ DATASETS_PROGNOSTICS = [
     # We want to test raw for pronostia to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     # Info(ds="pronostia", subexp="raw", type="prognostics"),
-    Info(ds="pronostia", subexp="combined", type="prognostics"),
-    Info(ds="xjtu_sy", subexp="combined", type="prognostics"),
+    Info(ds="pronostia", subexp="in_domain/combined", type="prognostics"),
+    Info(ds="xjtu_sy", subexp="in_domain/combined", type="prognostics"),
 ]
 
 DATASETS_DIAGNOSTICS = [
