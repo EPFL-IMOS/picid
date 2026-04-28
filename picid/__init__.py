@@ -60,7 +60,7 @@ def _silence_wandb_legacy_require_warnings() -> None:
     wandb_require._Requires.require_core = lambda self: None
 
 
-_silence_wandb_legacy_require_warnings()
+# _silence_wandb_legacy_require_warnings()
 
 __all__ = ["data", "_setup_project_root"]
 

@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
+from omegaconf.errors import OmegaConfBaseException
 
 from rich.console import Console
 from rich.panel import Panel
@@ -80,7 +81,15 @@ def print_hydra_config_tree(
     """
 
     tree = Tree(title, style="dim", guide_style="dim")
-    container = OmegaConf.to_container(cfg, resolve=resolve)
+    try:
+        container = OmegaConf.to_container(cfg, resolve=resolve)
+    except OmegaConfBaseException as exc:
+        logger.warning(
+            "Could not fully resolve Hydra config tree; rendering unresolved config. "
+            "Original error: %s",
+            exc,
+        )
+        container = OmegaConf.to_container(cfg, resolve=False)
 
     def add_node(parent: Tree, key: str, value: Any) -> None:
         if isinstance(value, dict):

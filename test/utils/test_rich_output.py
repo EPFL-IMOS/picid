@@ -544,6 +544,29 @@ class TestPrintHydraConfigTree:
         assert len(tree.children) == 2
         assert "value: 3" in str(tree.children[1].children[0].label)
 
+    def test_print_hydra_config_tree_falls_back_when_hydra_job_num_is_missing(self):
+        cfg = OmegaConf.create(
+            {
+                "hydra": {
+                    "job": {"num": "???"},
+                    "sweep": {"subdir": "${hydra.job.num}"},
+                }
+            }
+        )
+
+        tree = print_hydra_config_tree(cfg)
+        rendered_labels = []
+
+        def collect_labels(node):
+            rendered_labels.append(str(node.label))
+            for child in node.children:
+                collect_labels(child)
+
+        collect_labels(tree)
+
+        assert tree is not None
+        assert any("subdir: ${hydra.job.num}" in label for label in rendered_labels)
+
 
 class TestDisplayConfigSources:
     def test_display_config_sources_prints_table(self):
