@@ -160,7 +160,7 @@ def create_lightning_module(
         else:
             add_backbone_args = {}
 
-            if cfg.datasource.data_name == "railway":
+            if OmegaConf.select(cfg, "datasource.data_name") == "railway":
                 add_backbone_args["train_dataloader"] = datamodule.train_dataloader()
                 add_backbone_args["val_dataloader"] = datamodule.val_dataloader()
 
