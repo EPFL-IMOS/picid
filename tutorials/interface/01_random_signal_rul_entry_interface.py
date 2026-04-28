@@ -26,10 +26,11 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from rich.console import Console
 
 from picid.data.data_objects.validation import (
+    build_split_alignment_report_table,
     collect_split_alignment_report,
-    format_split_alignment_report,
 )
 from picid.data.preprocessing import TimeSplitter
 from picid.interface import CustomSingleSourceLoader, EntryInterface
@@ -158,7 +159,7 @@ payloads = [
 ]
 
 report = collect_split_alignment_report(payloads)
-format_split_alignment_report(report)
+Console(width=180).print(build_split_alignment_report_table(report))
 
 splits = report["splits"]
 report_keys = [row["key"] for row in report["rows"]]
