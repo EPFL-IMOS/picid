@@ -81,15 +81,7 @@ def print_hydra_config_tree(
     """
 
     tree = Tree(title, style="dim", guide_style="dim")
-    try:
-        container = OmegaConf.to_container(cfg, resolve=resolve)
-    except OmegaConfBaseException as exc:
-        logger.warning(
-            "Could not fully resolve Hydra config tree; rendering unresolved config. "
-            "Original error: %s",
-            exc,
-        )
-        container = OmegaConf.to_container(cfg, resolve=False)
+    container = _to_config_tree_container(cfg, resolve=resolve)
 
     def add_node(parent: Tree, key: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -123,6 +115,48 @@ def print_hydra_config_tree(
         tree.add(str(container))
 
     return tree
+
+
+def _to_config_tree_container(cfg: DictConfig, resolve: bool) -> Any:
+    if not resolve:
+        return OmegaConf.to_container(cfg, resolve=False)
+
+    try:
+        return OmegaConf.to_container(cfg, resolve=True)
+    except OmegaConfBaseException as exc:
+        container = _to_resolved_container_without_uninitialized_hydra(cfg)
+        if container is not None:
+            logger.warning(
+                "Could not fully resolve Hydra config tree because Hydra runtime "
+                "metadata is not initialized; rendering config without the top-level "
+                "hydra section. Original error: %s",
+                exc,
+            )
+            return container
+
+        logger.warning(
+            "Could not fully resolve Hydra config tree; rendering unresolved config. "
+            "Original error: %s",
+            exc,
+        )
+        return OmegaConf.to_container(cfg, resolve=False)
+
+
+def _to_resolved_container_without_uninitialized_hydra(cfg: DictConfig) -> Any | None:
+    if HydraConfig.initialized() or not isinstance(cfg, DictConfig) or "hydra" not in cfg:
+        return None
+
+    try:
+        unresolved_container = OmegaConf.to_container(cfg, resolve=False)
+        if not isinstance(unresolved_container, dict) or "hydra" not in unresolved_container:
+            return None
+
+        display_container = dict(unresolved_container)
+        display_container.pop("hydra", None)
+        display_cfg = OmegaConf.create(display_container)
+        return OmegaConf.to_container(display_cfg, resolve=True)
+    except OmegaConfBaseException:
+        return None
 
 
 def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:

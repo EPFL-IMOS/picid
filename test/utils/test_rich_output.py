@@ -544,9 +544,11 @@ class TestPrintHydraConfigTree:
         assert len(tree.children) == 2
         assert "value: 3" in str(tree.children[1].children[0].label)
 
-    def test_print_hydra_config_tree_falls_back_when_hydra_job_num_is_missing(self):
+    def test_print_hydra_config_tree_omits_uninitialized_hydra_metadata(self):
         cfg = OmegaConf.create(
             {
+                "base": 3,
+                "nested": {"value": "${base}"},
                 "hydra": {
                     "job": {"num": "???"},
                     "sweep": {"subdir": "${hydra.job.num}"},
@@ -554,7 +556,9 @@ class TestPrintHydraConfigTree:
             }
         )
 
-        tree = print_hydra_config_tree(cfg)
+        with patch("picid.utils.rich_output.HydraConfig.initialized", return_value=False):
+            tree = print_hydra_config_tree(cfg)
+
         rendered_labels = []
 
         def collect_labels(node):
@@ -565,7 +569,9 @@ class TestPrintHydraConfigTree:
         collect_labels(tree)
 
         assert tree is not None
-        assert any("subdir: ${hydra.job.num}" in label for label in rendered_labels)
+        assert any("value: 3" in label for label in rendered_labels)
+        assert "hydra" not in rendered_labels
+        assert not any("${hydra.job.num}" in label for label in rendered_labels)
 
 
 class TestDisplayConfigSources:
