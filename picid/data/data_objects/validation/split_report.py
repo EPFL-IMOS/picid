@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from io import StringIO
 from typing import Any
 
 import awkward as ak
 import numpy as np
 import pandas as pd
+from rich import box
+from rich.console import Console
+from rich.table import Table
 
 from picid.data.data_objects.core.metadata_data_object import BaseDataObjectWithMetadata
 
@@ -209,7 +213,7 @@ def collect_split_alignment_report(
 
 def format_split_alignment_report(report: dict[str, Any]) -> str:
     """
-    Format a compact ASCII table for split alignment diagnostics.
+    Format a compact Rich table for split alignment diagnostics.
 
     Parameters
     ----------
@@ -219,7 +223,7 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
     Returns
     -------
     str
-        Human-readable ASCII table representation of the report.
+        Human-readable table representation of the report.
     """
     if not report["rows"]:
         return "No split payloads available."
@@ -259,35 +263,39 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
             ]
         )
 
-    widths = [
-        max(len(str(value)) for value in [header] + [row[idx] for row in table_rows])
-        for idx, header in enumerate(headers)
-    ]
+    table = Table(
+        box=box.ASCII,
+        header_style="",
+        pad_edge=True,
+        show_lines=False,
+        expand=False,
+    )
+    for header in headers:
+        table.add_column(header, no_wrap=True, overflow="fold")
+    for table_row in table_rows:
+        table.add_row(*(str(value) for value in table_row))
 
-    def _format_row(values: list[str]) -> str:
-        """
-        Render one row of the ASCII report table.
-
-        Parameters
-        ----------
-        values : list[str]
-            Row values to format.
-
-        Returns
-        -------
-        str
-            Formatted row string.
-        """
-        return " | ".join(
-            str(value).ljust(widths[idx]) for idx, value in enumerate(values)
+    render_width = max(
+        80,
+        sum(
+            max(len(str(value)) for value in [header] + [row[idx] for row in table_rows])
+            for idx, header in enumerate(headers)
         )
+        + (3 * (len(headers) - 1))
+        + 4,
+    )
+    buffer = StringIO()
+    console = Console(
+        color_system=None,
+        file=buffer,
+        force_terminal=False,
+        highlight=False,
+        legacy_windows=False,
+        width=render_width,
+    )
+    console.print(table)
 
-    separator = "-+-".join("-" * width for width in widths)
-    lines = [
-        _format_row(headers),
-        separator,
-        *(_format_row(row) for row in table_rows),
-    ]
+    lines = buffer.getvalue().rstrip().splitlines()
     if report["schema_mismatches"]:
         lines.append("")
         lines.append("schema_mismatches:")
