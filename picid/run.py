@@ -5,6 +5,7 @@ import math
 import os
 import sys
 import time
+from rich.console import Console
 import yaml
 from collections.abc import Iterable
 from pathlib import Path
@@ -98,6 +99,7 @@ from picid.utils import (
     task_wrapper,
     log_hyperparameters,
     display_targets,
+    print_hydra_config_tree,
 )
 from picid.utils.logging_utils import get_hydra_override
 from picid.utils.awkward_utils import get_ak_shape
@@ -879,6 +881,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # HydraConfig.set_config(cfg)
     # display_config_sources(cfg)
     display_targets(cfg)
+    tree = print_hydra_config_tree(cfg)
+    Console.print(tree)
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))

@@ -1,20 +1,25 @@
+import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import awkward as ak
 import pandas as pd
 import torch
 from hydra.core.hydra_config import HydraConfig
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 from rich.tree import Tree
+from rich.text import Text
 
 from picid.data.data_objects import BaseDataObject
 from picid.utils.awkward_utils import get_ak_shape, ak_find_var_dims
+
+logger = logging.getLogger(__name__)
 
 
 def extract_targets(cfg, prefix=""):
@@ -52,6 +57,63 @@ def display_targets(cfg):
         table.add_row(path, target)
 
     Console().print(table)
+
+
+def print_hydra_config_tree(
+    cfg: DictConfig, resolve: bool = True, title: str = "HYDRA CONFIG"
+) -> Tree:
+    """Build a Rich tree for the final Hydra config.
+
+    Parameters
+    ----------
+    cfg : DictConfig
+        Fully composed Hydra config.
+    resolve : bool, default=True
+        Whether to resolve interpolations before rendering.
+    title : str, default="HYDRA CONFIG"
+        Root label shown at the top of the tree.
+
+    Returns
+    -------
+    Tree
+        A Rich tree that renders the complete config hierarchy.
+    """
+
+    tree = Tree(title, style="dim", guide_style="dim")
+    container = OmegaConf.to_container(cfg, resolve=resolve)
+
+    def add_node(parent: Tree, key: str, value: Any) -> None:
+        if isinstance(value, dict):
+            branch = parent.add(Text(key, style="bold"))
+            if not value:
+                branch.add("{}")
+                return
+            for child_key, child_value in value.items():
+                add_node(branch, str(child_key), child_value)
+        elif isinstance(value, list):
+            branch = parent.add(Text(key, style="bold"))
+            if not value:
+                branch.add("[]")
+                return
+            for index, child_value in enumerate(value):
+                add_node(branch, f"[{index}]", child_value)
+        else:
+            label = Text()
+            label.append(key, style="bold")
+            label.append(": ")
+            label.append(str(value))
+            parent.add(label)
+
+    if isinstance(container, dict):
+        for key, value in container.items():
+            add_node(tree, str(key), value)
+    elif isinstance(container, list):
+        for index, value in enumerate(container):
+            add_node(tree, f"[{index}]", value)
+    else:
+        tree.add(str(container))
+
+    return tree
 
 
 def _describe_list_of_ak_arrays(obj: list[ak.Array], calculate_stat=False) -> str:
@@ -317,6 +379,28 @@ def print_transforms_summary(summary: dict[str, str]):
         )
 
     Console(width=180).print(table)
+
+
+def transform_log_to_summary_string(transform_log: Any) -> str:
+    """
+    Extract a human-readable summary from a transform log payload.
+
+    Transform strategies return per-split dictionaries. Prefer the training
+    split for the table because it is the split used to fit stateful transforms.
+    """
+    if not transform_log:
+        return "No additional transform log."
+    if not isinstance(transform_log, dict):
+        return str(transform_log)
+    for preferred in ("train", "test"):
+        if preferred in transform_log:
+            return str(transform_log[preferred])
+    first_key = next(iter(transform_log))
+    logger.debug(
+        "transform_log has no 'train' or 'test' key; using %r for summary.",
+        first_key,
+    )
+    return str(transform_log[first_key])
 
 
 def build_transform_error_renderables(

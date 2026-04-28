@@ -12,6 +12,7 @@ from hydra.core.config_store import ConfigStore
 from hydra.core.global_hydra import GlobalHydra
 from omegaconf import OmegaConf, DictConfig, open_dict
 from hydra.core.hydra_config import HydraConfig
+from rich.console import Console
 import yaml
 
 from lightning import Callback, Trainer, seed_everything
@@ -34,13 +35,20 @@ from picid.interface.schemas.model import AbsModelConfig
 from picid.interface.schemas.task_definition import BaseTaskDefinition
 from picid.interface.schemas.trainer import TrainerConfig
 from picid.interface.schemas.evaluators import AbsEvalConfig
-from picid.interface.utils import ProcessedDatasource, InterfacePreProcessor, register_data_dim_resolver, \
-    create_lightning_module, get_inverter_for_key_with_name
+from picid.interface.utils import (
+    ProcessedDatasource,
+    InterfacePreProcessor,
+    register_data_dim_resolver,
+    create_lightning_module,
+    get_inverter_for_key_with_name,
+)
 from picid.transforms.base.data_transform import DataTransform
+from picid.utils import print_hydra_config_tree
 from picid.callbacks.model_checkpoint import ModelCheckpointWithConfig
 from picid.transforms.base.multisource import InverseTransformMixin
 
 log = logging.getLogger(__name__)
+
 
 def verify_thread_limits(expected: int):
     log.info(f"[Thread sanity check] Expected threads: {expected}")
@@ -60,6 +68,7 @@ def verify_thread_limits(expected: int):
         if val:
             log.info(f"{var:25s}: {val}")
 
+
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
     def get_key(lengths, key):
         if key not in lengths:
@@ -74,6 +83,7 @@ def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
         lambda key: get_key(lengths, key),
         replace=True,
     )
+
 
 def safe_div(a, b):
     # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
@@ -102,6 +112,7 @@ def diff_if_not_string(a, b):
         return a
     return a - b
 
+
 def _uuid(kind: str) -> str:
     u = uuid.uuid4()
     if kind == "hex":
@@ -119,6 +130,7 @@ OmegaConf.register_new_resolver("mod", lambda x, y: int(x) % int(y))
 OmegaConf.register_new_resolver("int_div", lambda a, b: int(a) // int(b))
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 
+
 class EntryInterface:
     """
     A high-level interface for managing machine learning experiments.
@@ -127,6 +139,7 @@ class EntryInterface:
     configuration composition using Hydra/OmegaConf, and managing the
     end-to-end training lifecycle via PyTorch Lightning.
     """
+
     def get_datasource(self, v: str):
         """Load and instantiate a built-in data source by name.
 
@@ -142,13 +155,17 @@ class EntryInterface:
             An instantiated data source loader, ready to pass to
             ``process_datasource()``.
         """
-        datasource = self.load_resource(v, 'datasource')
+        datasource = self.load_resource(v, "datasource")
         dataset_source = hydra.utils.instantiate(datasource)
 
         return dataset_source
 
-    def process_datasource(self, datasource: str | AbstractDataSourceLoader,
-                           transforms: list[DataTransform]):
+    def process_datasource(
+        self,
+        datasource: str | AbstractDataSourceLoader,
+        transforms: list[DataTransform],
+        cache: bool = True,
+    ):
         """Apply a sequence of transforms to a datasource and return processed data.
 
         Parameters
@@ -159,6 +176,10 @@ class EntryInterface:
         transforms : list[DataTransform]
             Ordered list of transforms to apply. Transforms are fitted on the
             training split and applied to all splits.
+        cache : bool, default True
+            Cache the transformed dataset on disk under
+            ``project_config.cache_path``. When ``False``, transforms run
+            every call (joblib ``Memory(None)`` no-op).
 
         Returns
         -------
@@ -167,12 +188,14 @@ class EntryInterface:
             ``datasource=`` to ``train()``.
         """
 
-        log.info('Processing datasource.')
+        log.info("Processing datasource.")
 
-        preprocessor = InterfacePreProcessor(datasource,
-                                             transforms,
-                                             preprocessor_mode=None,
-                                             cache_path=project_config.cache_path)
+        preprocessor = InterfacePreProcessor(
+            datasource,
+            transforms,
+            preprocessor_mode=None,
+            cache_path=project_config.cache_path if cache else None,
+        )
 
         return preprocessor.pipeline()
 
@@ -187,11 +210,10 @@ class EntryInterface:
             Names of all registered datasources (each is a valid argument to
             ``get_datasource()``).
         """
-        return EntryInterface.get_available_resource('datasource')
+        return EntryInterface.get_available_resource("datasource")
 
     @staticmethod
-    def load_resource(v: str | Path | dict = None,
-                      resource_type: str = None):
+    def load_resource(v: str | Path | dict = None, resource_type: str = None):
         """Resolve and load a configuration resource from disk or a dict.
 
         Parameters
@@ -226,35 +248,40 @@ class EntryInterface:
                 v = v.relative_to(root)
 
             max_level = None
-            if resource_type == 'datasource':
+            if resource_type == "datasource":
                 max_level = 1
 
-            resources = EntryInterface.get_available_resource(str(resource_type),
-                                                              max_level=max_level)
+            resources = EntryInterface.get_available_resource(
+                str(resource_type), max_level=max_level
+            )
 
             v = str(v)
 
-            assert v in resources, (f'Given path {v.replace('.yaml', '')} is not present in the resource type {resource_type}. '
-                                         f'Available sources are {resources}.')
+            assert v in resources, (
+                f"Given path {v.replace('.yaml', '')} is not present in the resource type {resource_type}. "
+                f"Available sources are {resources}."
+            )
 
-            if resource_type == 'datasource':
-                v = v + '.yaml'
+            if resource_type == "datasource":
+                v = v + ".yaml"
 
             path = root / v
             cfg = OmegaConf.load(path)
         else:
             raise TypeError(
-                f'load_resource expects a str, Path, or dict, got {type(v)}.'
+                f"load_resource expects a str, Path, or dict, got {type(v)}."
             )
 
-        if resource_type == 'datasource':
-            cfg['cache_dir'] = project_config.cache_dir
-            cfg['data_path'] = project_config.data_dir / cfg['_target_'].split('.')[-1]
+        if resource_type == "datasource":
+            cfg["cache_dir"] = project_config.cache_dir
+            cfg["data_path"] = project_config.data_dir / cfg["_target_"].split(".")[-1]
 
         return cfg
 
     @staticmethod
-    def get_available_resource(resource_type: str, max_level: int = None, as_tuple: bool = False):
+    def get_available_resource(
+        resource_type: str, max_level: int = None, as_tuple: bool = False
+    ):
         """Scan the config directory and return available resource identifiers.
 
         Parameters
@@ -294,16 +321,21 @@ class EntryInterface:
                 break
 
         if as_tuple:
-            return list(map(lambda x: x[0] if len(x) == 1 else x,
-                            [tuple(td.replace('.yaml', '').split(os.sep)) for td in all_files]))
+            return list(
+                map(
+                    lambda x: x[0] if len(x) == 1 else x,
+                    [tuple(td.replace(".yaml", "").split(os.sep)) for td in all_files],
+                )
+            )
 
-        if resource_type == 'datasource':
-            all_files = [f.replace('.yaml', '') for f in all_files]
+        if resource_type == "datasource":
+            all_files = [f.replace(".yaml", "") for f in all_files]
 
         return all_files
 
-    def get_model_cfg(self, model: AbsModelConfig | CustomModelTrainer | str | dict, task: str) :
-
+    def get_model_cfg(
+        self, model: AbsModelConfig | CustomModelTrainer | str | dict, task: str
+    ):
         """Resolve a model definition to a DictConfig (or pass through a custom trainer).
 
         Parameters
@@ -336,37 +368,48 @@ class EntryInterface:
         if isinstance(model, dict):
             return model, None
         elif isinstance(model, CustomModelTrainer):
-            log.info('Using user defined model.')
+            log.info("Using user defined model.")
             return model, None
         elif isinstance(model, (AbsModelConfig, str)):
-            model_folder_name = model.config_name if not isinstance(model, str) else model
+            model_folder_name = (
+                model.config_name if not isinstance(model, str) else model
+            )
 
-            log.info(f'Using a picid model config trainer for {model}.')
+            log.info(f"Using a picid model config trainer for {model}.")
 
-            available_model_definition_as_tuples = self.get_available_resource(f'model_configs/{task}', as_tuple=True)
+            available_model_definition_as_tuples = self.get_available_resource(
+                f"model_configs/{task}", as_tuple=True
+            )
             assert model_folder_name in available_model_definition_as_tuples, (
-                f'Selected model definition {model_folder_name} '
-                'does not exist. Select one from the '
-                'following list:'
-                f' {available_model_definition_as_tuples}')
+                f"Selected model definition {model_folder_name} "
+                "does not exist. Select one from the "
+                "following list:"
+                f" {available_model_definition_as_tuples}"
+            )
 
-            model_config_path = (project_config.config_path / f'model_configs/{task}' / (model_folder_name + '.yaml'))
+            model_config_path = (
+                project_config.config_path
+                / f"model_configs/{task}"
+                / (model_folder_name + ".yaml")
+            )
             model_cfg = OmegaConf.load(model_config_path)
 
             if isinstance(model, AbsModelConfig):
                 model_cfg.update(model.model_dump(by_alias=True))
 
-            log.info('Using a picid model and its associated trainer.')
-            log.info(f'Model path: {model_config_path}')
+            log.info("Using a picid model and its associated trainer.")
+            log.info(f"Model path: {model_config_path}")
 
             return model_cfg, model_folder_name
         else:
             raise TypeError(
-                f'Invalid model type {type(model)}. '
-                f'Allowed types are: AbsModelConfig | CustomModelTrainer | str | dict.'
+                f"Invalid model type {type(model)}. "
+                f"Allowed types are: AbsModelConfig | CustomModelTrainer | str | dict."
             )
 
-    def get_task_definition_cfg(self, task_definition: BaseTaskDefinition | tuple[str, str]):
+    def get_task_definition_cfg(
+        self, task_definition: BaseTaskDefinition | tuple[str, str]
+    ):
         """Resolve a task definition to an OmegaConf DictConfig.
 
         Parameters
@@ -402,15 +445,21 @@ class EntryInterface:
 
             task_folder_name = task_definition[0]
 
-            available_task_definition_as_tuples = self.get_available_resource('task_definition',
-                                                                              as_tuple=True)
+            available_task_definition_as_tuples = self.get_available_resource(
+                "task_definition", as_tuple=True
+            )
 
             assert task_definition in available_task_definition_as_tuples, (
-                f'Selected task definition {task_folder_name} does not exist. '
-                f'Select one from the following list: {available_task_definition_as_tuples}')
+                f"Selected task definition {task_folder_name} does not exist. "
+                f"Select one from the following list: {available_task_definition_as_tuples}"
+            )
 
-            selected_task_definition = os.sep.join(task_definition) + '.yaml'
-            task_definition_path = project_config.config_path / 'task_definition' / selected_task_definition
+            selected_task_definition = os.sep.join(task_definition) + ".yaml"
+            task_definition_path = (
+                project_config.config_path
+                / "task_definition"
+                / selected_task_definition
+            )
 
             task_definition_cfg = OmegaConf.load(task_definition_path)
         elif isinstance(task_definition, BaseTaskDefinition):
@@ -418,16 +467,18 @@ class EntryInterface:
             task_folder_name = task_definition.config_name
         else:
             raise TypeError(
-                f'Invalid task definition type {type(task_definition)}. '
-                f'Allowed types are: BaseTaskDefinition | tuple[str, str].'
+                f"Invalid task definition type {type(task_definition)}. "
+                f"Allowed types are: BaseTaskDefinition | tuple[str, str]."
             )
 
         return task_definition_cfg, task_folder_name
 
-    def get_datasource_cfg(self, datasource: str | tuple[str, str] | dict,
-                           task: str = None,
-                           model: str = None):
-
+    def get_datasource_cfg(
+        self,
+        datasource: str | tuple[str, str] | dict,
+        task: str = None,
+        model: str = None,
+    ):
         """Resolve a datasource identifier to an OmegaConf DictConfig.
 
         Parameters
@@ -462,61 +513,88 @@ class EntryInterface:
         if isinstance(datasource, tuple):
             source, sub_folder = datasource
 
-            log.info('Datasource as a tuple is used. The complete experiment config will be loaded from disk.')
+            log.info(
+                "Datasource as a tuple is used. The complete experiment config will be loaded from disk."
+            )
 
-            assert model is not None, \
-                "When using datasource as a tuple you must specify also the model to use."
+            assert (
+                model is not None
+            ), "When using datasource as a tuple you must specify also the model to use."
 
-            available_experiments = self.get_available_resource(f'experiment/{source}', as_tuple=True)
-            available_experiments = [t for t in available_experiments if isinstance(t, tuple) and t[-1] != 'base']
+            available_experiments = self.get_available_resource(
+                f"experiment/{source}", as_tuple=True
+            )
+            available_experiments = [
+                t
+                for t in available_experiments
+                if isinstance(t, tuple) and t[-1] != "base"
+            ]
 
             available_tasks = [t[0] for t in available_experiments]
 
-            assert task in available_tasks, (f"Datasource {source} does not have a default experiment for task {task}. "
-                                             f"Available tasks are: {available_tasks}.")
+            assert task in available_tasks, (
+                f"Datasource {source} does not have a default experiment for task {task}. "
+                f"Available tasks are: {available_tasks}."
+            )
 
-            available_sub_folder = [t[1] for t in available_experiments if len(t) > 1 and t[:2] == (task, sub_folder)]
+            available_sub_folder = [
+                t[1]
+                for t in available_experiments
+                if len(t) > 1 and t[:2] == (task, sub_folder)
+            ]
 
-            assert sub_folder in available_sub_folder, (f"Datasource {source} and task {task} do not have a default experiment value {sub_folder}. "
-                                             f"Available selections are: {available_sub_folder}.")
+            assert sub_folder in available_sub_folder, (
+                f"Datasource {source} and task {task} do not have a default experiment value {sub_folder}. "
+                f"Available selections are: {available_sub_folder}."
+            )
 
-            available_models = [t[2] for t in available_experiments if len(t) > 1 and t[:2] == (task, sub_folder)]
+            available_models = [
+                t[2]
+                for t in available_experiments
+                if len(t) > 1 and t[:2] == (task, sub_folder)
+            ]
 
-            assert model in available_models, (f"Datasource {datasource} and task {task} do not have a model {model}. "
-                                             f"Available models are: {available_models}.")
+            assert model in available_models, (
+                f"Datasource {datasource} and task {task} do not have a model {model}. "
+                f"Available models are: {available_models}."
+            )
 
             complete_path = (source, task, sub_folder, model)
 
-            _complete_path = project_config.config_path / 'experiment' / ('/'.join(complete_path) + '.yaml')
+            _complete_path = (
+                project_config.config_path
+                / "experiment"
+                / ("/".join(complete_path) + ".yaml")
+            )
 
             datasource_cfg = OmegaConf.load(_complete_path)
-            OmegaConf.update(datasource_cfg, 'is_experiment', True)
+            OmegaConf.update(datasource_cfg, "is_experiment", True)
 
         elif isinstance(datasource, str):
-            datasource_cfg = self.load_resource(datasource, 'datasource')
+            datasource_cfg = self.load_resource(datasource, "datasource")
         elif isinstance(datasource, dict):
             datasource_cfg = datasource
         else:
             raise TypeError(
-                f'Invalid datasource type {type(datasource)}. '
-                f'Allowed types are: str | tuple[str, str] | dict.'
+                f"Invalid datasource type {type(datasource)}. "
+                f"Allowed types are: str | tuple[str, str] | dict."
             )
 
         return datasource_cfg
 
-    def _compose_config_file(self,
-                             *,
-                             run_name: str,
-                             task_definition: BaseTaskDefinition | tuple[str, str] | str | None,
-                             model: AbsModelConfig | CustomModelTrainer | str | None,
-                             datasource: str | tuple[str, str] | ProcessedDatasource | None,
-                             evaluators: list[str] | str | dict = None,
-                             callbacks: list[str] | str | dict | Callback | list[Callback] | None = None,
-                             trainer_config: TrainerConfig | None = None,
-                             transforms: str | dict = None,
-                             overrides: List[str] | str = None
-                             ) -> DictConfig:
-
+    def _compose_config_file(
+        self,
+        *,
+        run_name: str,
+        task_definition: BaseTaskDefinition | tuple[str, str] | str | None,
+        model: AbsModelConfig | CustomModelTrainer | str | None,
+        datasource: str | tuple[str, str] | ProcessedDatasource | None,
+        evaluators: list[str] | str | dict = None,
+        callbacks: list[str] | str | dict | Callback | list[Callback] | None = None,
+        trainer_config: TrainerConfig | None = None,
+        transforms: str | dict = None,
+        overrides: List[str] | str = None,
+    ) -> DictConfig:
         """Assembles a unified Hydra configuration from various components.
 
         This method merges model, task, datasource, evaluator, and trainer configs
@@ -537,7 +615,7 @@ class EntryInterface:
             DictConfig: The fully composed Hydra configuration.
         """
 
-        log.info('Composing internal experiment components.')
+        log.info("Composing internal experiment components.")
 
         model_cfg = None
         datasource_cfg = None
@@ -561,160 +639,197 @@ class EntryInterface:
                 model_cfg, model_yaml_name = None, None
             else:
                 if task_yaml_name is None:
-                    raise ValueError('task_definition is none. You must define it.')
-                model_cfg, model_yaml_name = self.get_model_cfg(model, task=task_yaml_name)
+                    raise ValueError("task_definition is none. You must define it.")
+                model_cfg, model_yaml_name = self.get_model_cfg(
+                    model, task=task_yaml_name
+                )
 
         if datasource is not None:
             if isinstance(datasource, ProcessedDatasource):
                 datasource_cfg = None
-                overrides.append(f'+datasource.task_mode={datasource.task_mode}')
-                log.info(f'Using custom datasource as override (+datasource.task_mode={datasource.task_mode})')
+                overrides.append(f"+datasource.task_mode={datasource.task_mode}")
+                log.info(
+                    f"Using custom datasource as override (+datasource.task_mode={datasource.task_mode})"
+                )
             else:
-                datasource_cfg = self.get_datasource_cfg(datasource,
-                                                         task=task_yaml_name,
-                                                         model=model_yaml_name)
+                datasource_cfg = self.get_datasource_cfg(
+                    datasource, task=task_yaml_name, model=model_yaml_name
+                )
 
         cs = ConfigStore.instance()
 
         if datasource_cfg is not None:
-            if datasource_cfg.get('is_experiment', False):
-                cs.store(group="experiment",
-                         name="experiment_cfg",
-                         package="_global_",
-                         node=datasource_cfg)
-                overrides.append('experiment=experiment_cfg')
-                log.info(f'Using experiment {datasource}')
+            if datasource_cfg.get("is_experiment", False):
+                cs.store(
+                    group="experiment",
+                    name="experiment_cfg",
+                    package="_global_",
+                    node=datasource_cfg,
+                )
+                overrides.append("experiment=experiment_cfg")
+                log.info(f"Using experiment {datasource}")
             else:
-                cs.store(group="datasource",
-                         name="datasource_cfg",
-                         node=datasource_cfg)
-                overrides.append('datasource=datasource_cfg')
-                log.info(f'Using picid datasource {datasource}')
+                cs.store(group="datasource", name="datasource_cfg", node=datasource_cfg)
+                overrides.append("datasource=datasource_cfg")
+                log.info(f"Using picid datasource {datasource}")
 
         if model_cfg is not None:
-            cs.store(group="model_configs", name="model_configs_cfg", package="_global_",
-                     node=model_cfg)
-            overrides.append('+model_configs=model_configs_cfg')
+            cs.store(
+                group="model_configs",
+                name="model_configs_cfg",
+                package="_global_",
+                node=model_cfg,
+            )
+            overrides.append("+model_configs=model_configs_cfg")
         elif isinstance(model, CustomModelTrainer):
-            assert task_yaml_name is not None, f'When using a custom model, task_definition must be provide and cannot be a dictionary {type(task_definition)} '
-            custom_path = project_config.config_path / 'model_configs' / task_yaml_name / 'custom_base.yaml'
+            assert (
+                task_yaml_name is not None
+            ), f"When using a custom model, task_definition must be provide and cannot be a dictionary {type(task_definition)} "
+            custom_path = (
+                project_config.config_path
+                / "model_configs"
+                / task_yaml_name
+                / "custom_base.yaml"
+            )
             training_model_cfg = OmegaConf.load(custom_path)
 
-            cs.store(group="model_configs", name="model_configs_cfg", package="_global_",
-                     node=training_model_cfg)
-            overrides.append('+model_configs=model_configs_cfg')
+            cs.store(
+                group="model_configs",
+                name="model_configs_cfg",
+                package="_global_",
+                node=training_model_cfg,
+            )
+            overrides.append("+model_configs=model_configs_cfg")
 
         if task_cfg is not None:
-            cs.store(group="task_definition",
-                     name="task_definition_cfg",
-                     node=task_cfg)
+            cs.store(group="task_definition", name="task_definition_cfg", node=task_cfg)
 
-            overrides.append('task_definition=task_definition_cfg')
+            overrides.append("task_definition=task_definition_cfg")
 
         if callbacks is not None:
-            if callbacks == 'default':
-                log.info('Using custom callbacks.')
-                callbacks_cfg = OmegaConf.load(project_config.config_path / 'callbacks' / 'default.yaml')
+            if callbacks == "default":
+                log.info("Using custom callbacks.")
+                callbacks_cfg = OmegaConf.load(
+                    project_config.config_path / "callbacks" / "default.yaml"
+                )
 
-                cs.store(group="callbacks",
-                         name="callbacks_cfg",
-                         node=callbacks_cfg)
-                overrides.append('callbacks=callbacks_cfg')
+                cs.store(group="callbacks", name="callbacks_cfg", node=callbacks_cfg)
+                overrides.append("callbacks=callbacks_cfg")
             else:
                 if not isinstance(callbacks, Sequence):
                     callbacks = [callbacks]
 
-                callbacks_to_inst = len(set(type(c) for c in callbacks
-                                            if not isinstance(c, (DeprecatedPytorchCallback, PytorchCallback))))
+                callbacks_to_inst = len(
+                    set(
+                        type(c)
+                        for c in callbacks
+                        if not isinstance(
+                            c, (DeprecatedPytorchCallback, PytorchCallback)
+                        )
+                    )
+                )
 
                 if callbacks_to_inst > 0:
 
-                    log.info('Creating callbacks confing.')
+                    log.info("Creating callbacks confing.")
 
-                    assert all(isinstance(c, (str, dict)) for c in callbacks), \
-                        ('In addition to lightning callbacks, you can defined them as string or dicts. '
-                         f'{[isinstance(c, (str, dict)) for c in callbacks]} where given.')
+                    assert all(isinstance(c, (str, dict)) for c in callbacks), (
+                        "In addition to lightning callbacks, you can defined them as string or dicts. "
+                        f"{[isinstance(c, (str, dict)) for c in callbacks]} where given."
+                    )
 
                     callbacks_cfg = []
                     for c in callbacks:
                         if isinstance(c, str):
-                            callbacks_cfg.append(OmegaConf.load(project_config.config_path / 'callbacks' / f'{c}.yaml'))
+                            callbacks_cfg.append(
+                                OmegaConf.load(
+                                    project_config.config_path
+                                    / "callbacks"
+                                    / f"{c}.yaml"
+                                )
+                            )
                         elif isinstance(callbacks, dict):
                             callbacks_cfg.append(c)
 
-                    cs.store(group="callbacks",
-                             name="callbacks_cfg",
-                             node=callbacks_cfg)
-                    overrides.append('callbacks=callbacks_cfg')
+                    cs.store(
+                        group="callbacks", name="callbacks_cfg", node=callbacks_cfg
+                    )
+                    overrides.append("callbacks=callbacks_cfg")
                 else:
-                    log.info('No callbacks for creating a confing.')
+                    log.info("No callbacks for creating a confing.")
 
         if trainer_config is None:
-            trainer_cfg = OmegaConf.load(project_config.config_path / 'trainer' / 'default.yaml')
+            trainer_cfg = OmegaConf.load(
+                project_config.config_path / "trainer" / "default.yaml"
+            )
         else:
             trainer_cfg = trainer_config.model_dump(by_alias=True)
 
-        cs.store(group="trainer",
-                 name="trainer_cfg",
-                 node=trainer_cfg)
-        overrides.append('trainer=trainer_cfg')
+        cs.store(group="trainer", name="trainer_cfg", node=trainer_cfg)
+        overrides.append("trainer=trainer_cfg")
 
-        assert isinstance(evaluators, str) or isinstance(evaluators, AbsEvalConfig) or evaluators is None, \
-            f'Evaluators can be a string or a list of AbsEvalConfig or None. {type(evaluators)} where given'
+        assert (
+            isinstance(evaluators, str)
+            or isinstance(evaluators, AbsEvalConfig)
+            or evaluators is None
+        ), f"Evaluators can be a string or a list of AbsEvalConfig or None. {type(evaluators)} where given"
 
         if evaluators is not None:
             if isinstance(evaluators, str):
-                available_evaluators = self.get_available_resource('evaluator', as_tuple=True)
+                available_evaluators = self.get_available_resource(
+                    "evaluator", as_tuple=True
+                )
 
-                assert evaluators in available_evaluators, f'evaluators must be in [{available_evaluators}]. {evaluators} given.'
+                assert (
+                    evaluators in available_evaluators
+                ), f"evaluators must be in [{available_evaluators}]. {evaluators} given."
 
-                evaluators_cfg = OmegaConf.load(project_config.config_path / 'evaluator' / f'{evaluators}.yaml')
+                evaluators_cfg = OmegaConf.load(
+                    project_config.config_path / "evaluator" / f"{evaluators}.yaml"
+                )
             else:
 
                 evaluators_cfg = evaluators.model_dump(by_alias=True)
 
-            cs.store(group="evaluator",
-                     name="evaluator_cfg",
-                     node=evaluators_cfg)
-            overrides.append('evaluator=evaluator_cfg')
+            cs.store(group="evaluator", name="evaluator_cfg", node=evaluators_cfg)
+            overrides.append("evaluator=evaluator_cfg")
 
-        cs.store(group="paths",
-                 name="paths_cfg",
-                 node=project_config.model_dump())
-        overrides.append('paths=paths_cfg')
+        cs.store(group="paths", name="paths_cfg", node=project_config.model_dump())
+        overrides.append("paths=paths_cfg")
 
-        hydra_config = OmegaConf.load(project_config.config_path / 'hydra' / 'interface.yaml')
+        hydra_config = OmegaConf.load(
+            project_config.config_path / "hydra" / "interface.yaml"
+        )
         # OmegaConf.update(hydra_config, 'interface_run_name', run_name)
 
-        cs.store(group="hydra",
-                 name="hydra_cfg",
-                 node=hydra_config)
-        overrides.append('hydra=hydra_cfg')
+        cs.store(group="hydra", name="hydra_cfg", node=hydra_config)
+        overrides.append("hydra=hydra_cfg")
 
-        overrides.append(f'hydra.job.name={run_name}')
+        overrides.append(f"hydra.job.name={run_name}")
 
-
-        cfg = hydra.compose(config_name='run',
-                            overrides=overrides,
-                            return_hydra_config=True)
+        cfg = hydra.compose(
+            config_name="run", overrides=overrides, return_hydra_config=True
+        )
 
         return cfg
 
-    def train(self, *,
-              run_name: str,
-              model: AbsModelConfig | CustomModelTrainer | str,
-              task_definition: BaseTaskDefinition | tuple[str, str] | str,
-              training_config: TrainerConfig | None = None,
-              datasource: ProcessedDatasource | tuple[str, str] | str | None,
-              callbacks: Callback | list[Callback] | dict | None = None,
-              loggers: list[Logger | BaseLogger] = None,
-              evaluators: str = None,
-              transforms: list[DataTransform] = None,
-              overrides: List[str] | str = None,
-              enable_progress_bar: bool = True,
-              debug: bool = False,
-              seed: int = None) -> None:
-
+    def train(
+        self,
+        *,
+        run_name: str,
+        model: AbsModelConfig | CustomModelTrainer | str,
+        task_definition: BaseTaskDefinition | tuple[str, str] | str,
+        training_config: TrainerConfig | None = None,
+        datasource: ProcessedDatasource | tuple[str, str] | str | None,
+        callbacks: Callback | list[Callback] | dict | None = None,
+        loggers: list[Logger | BaseLogger] = None,
+        evaluators: str = None,
+        transforms: list[DataTransform] = None,
+        overrides: List[str] | str = None,
+        enable_progress_bar: bool = True,
+        debug: bool = False,
+        seed: int = None,
+    ) -> None:
         """Run a complete training experiment.
 
         Orchestrates the full pipeline: Hydra config composition → data
@@ -769,27 +884,42 @@ class EntryInterface:
         local_instance = GlobalHydra.instance()
         GlobalHydra.instance().clear()
 
-        with hydra.initialize_config_dir(config_dir=str(project_config.config_path.absolute()),
-                                         job_name="interface", version_base="1.3"):
+        with hydra.initialize_config_dir(
+            config_dir=str(project_config.config_path.absolute()),
+            job_name="interface",
+            version_base="1.3",
+        ):
 
             if transforms is not None:
-                assert isinstance(transforms, Sequence), ('transforms must be a list of transforms '
-                                                          'or None (default one will be used, if possible).')
+                assert isinstance(transforms, Sequence), (
+                    "transforms must be a list of transforms "
+                    "or None (default one will be used, if possible)."
+                )
 
             if debug:
-                log.info('Debug mode is enabled. No training will be performed.')
+                log.info("Debug mode is enabled. No training will be performed.")
 
-            cfg = self._compose_config_file(run_name = run_name,
-                                            trainer_config=training_config,
-                                            datasource=datasource,
-                                            task_definition=task_definition,
-                                            evaluators=evaluators,
-                                            callbacks=callbacks,
-                                            overrides=overrides,
-                                            model=model)
+            cfg = self._compose_config_file(
+                run_name=run_name,
+                trainer_config=training_config,
+                datasource=datasource,
+                task_definition=task_definition,
+                evaluators=evaluators,
+                callbacks=callbacks,
+                overrides=overrides,
+                model=model,
+            )
 
             HydraConfig.instance().set_config(cfg)
-            log.info(yaml.dump(OmegaConf.to_container(cfg, resolve=False), default_flow_style=False, indent=4))
+            log.info(
+                yaml.dump(
+                    OmegaConf.to_container(cfg, resolve=False),
+                    default_flow_style=False,
+                    indent=4,
+                )
+            )
+            tree = print_hydra_config_tree(cfg)
+            Console.print(tree)
             # display_targets(cfg)
 
             # if cfg.get("num_threads", None) is not None:
@@ -803,7 +933,7 @@ class EntryInterface:
             #     log.info("Using default number of threads for all libraries")
 
             if seed is None:
-                seed = cfg.get('seed', seed)
+                seed = cfg.get("seed", seed)
 
             seed_everything(seed, workers=True)
             torch.manual_seed(seed)
@@ -821,39 +951,48 @@ class EntryInterface:
                     torch.backends.cuda.enable_mem_efficient_sdp(False)
                     torch.backends.cuda.enable_math_sdp(True)
 
-            log.info('Training config file creation ended.')
+            log.info("Training config file creation ended.")
 
             if isinstance(datasource, ProcessedDatasource):
                 data_dict = datasource.data_dict
                 meta_data_dict = datasource.meta_data_dict
 
-                log.info('Using an already processed datasource.')
+                log.info("Using an already processed datasource.")
 
             else:
-                log.info('Loading the datasource.')
+                log.info("Loading the datasource.")
                 datasource = cfg.datasource
 
                 dataset_source = hydra.utils.instantiate(datasource)
 
-                log.info('Processing the datasource.')
+                log.info("Processing the datasource.")
                 if transforms is None:
-                    assert 'transforms' in cfg, ('There is not transforms defined in config file. '
-                                                 'Fix the inputs of this function or pass a custom transforms list.')
-                    transforms_cfg = hydra.utils.instantiate(cfg['transforms'])
+                    assert "transforms" in cfg, (
+                        "There is not transforms defined in config file. "
+                        "Fix the inputs of this function or pass a custom transforms list."
+                    )
+                    transforms_cfg = hydra.utils.instantiate(cfg["transforms"])
 
                     transforms = []
                     for k, t in transforms_cfg.items():
-                        transforms.append(DataTransform(transform_name=k, transform=t['transform'],
-                                                        metadata=t['metadata']))
+                        transforms.append(
+                            DataTransform(
+                                transform_name=k,
+                                transform=t["transform"],
+                                metadata=t["metadata"],
+                            )
+                        )
                 else:
-                    assert all(isinstance(t, DataTransform) for t in transforms), f'transforms must be a list of DataTransform or None. {[type(t) for t in transforms]} were given.'
+                    assert all(
+                        isinstance(t, DataTransform) for t in transforms
+                    ), f"transforms must be a list of DataTransform or None. {[type(t) for t in transforms]} were given."
 
                 process_datasource = self.process_datasource(dataset_source, transforms)
 
                 data_dict = process_datasource.data_dict
                 meta_data_dict = process_datasource.meta_data_dict
 
-                log.info('Datasource correctly processed.')
+                log.info("Datasource correctly processed.")
 
             register_data_dim_resolver(data=data_dict["train"])
 
@@ -862,15 +1001,18 @@ class EntryInterface:
                 assert set(data_dict[split].keys()) == features_set, (
                     f"Mismatch in features for split {split}. "
                     f"Expected: {features_set}, "
-                    f"Found: {set(data_dict[split].keys())}")
+                    f"Found: {set(data_dict[split].keys())}"
+                )
 
-            input_data_task_keys = cfg.task_definition.model.data_requirements.input_tensors
+            input_data_task_keys = (
+                cfg.task_definition.model.data_requirements.input_tensors
+            )
 
-            log.info('Creating the datasets.')
+            log.info("Creating the datasets.")
 
             datasets = {}
             for split in ["train", "val", "test"]:
-                log.info(f'Creating {split} dataset.')
+                log.info(f"Creating {split} dataset.")
 
                 key = f"dataset_{split}"
 
@@ -885,8 +1027,11 @@ class EntryInterface:
 
                 datasets[key] = hydra.utils.instantiate(
                     init_cfg,
-                    data_dict={key: data_dict[split][key] for key in input_data_task_keys},
-                    meta_data_dict=meta_data_dict)
+                    data_dict={
+                        key: data_dict[split][key] for key in input_data_task_keys
+                    },
+                    meta_data_dict=meta_data_dict,
+                )
 
             dataset_train = datasets["dataset_train"]
             dataset_val = datasets["dataset_val"]
@@ -899,17 +1044,17 @@ class EntryInterface:
                 dataset_test=dataset_test,
             )
 
-            log.info('Creating loaders.')
+            log.info("Creating loaders.")
 
             # Log the sizes of one batch for each data loader
             loader_lengths = {}
             for split, loader in zip(
-                    ["train", "val", "test"],
-                    [
-                        datamodule.train_dataloader(),
-                        datamodule.val_dataloader(),
-                        datamodule.test_dataloader(),
-                    ],
+                ["train", "val", "test"],
+                [
+                    datamodule.train_dataloader(),
+                    datamodule.val_dataloader(),
+                    datamodule.test_dataloader(),
+                ],
             ):
                 loader_lengths[split] = len(loader)
 
@@ -929,20 +1074,21 @@ class EntryInterface:
             if loggers is None:
                 loggers = []
 
-            log.info('Creating loggers.')
+            log.info("Creating loggers.")
 
             for logger in loggers:
                 if isinstance(logger, Logger):
                     log_functions.append(logger)
                 elif isinstance(logger, BaseLogger):
                     d = logger.model_dump(by_alias=True)
-                    d['save_dir'] = project_config.save_dir
+                    d["save_dir"] = project_config.save_dir
                     log_functions.append(hydra.utils.instantiate(d))
 
-            for d in cfg.get("logger", {}).values():
-                log_functions.append(hydra.utils.instantiate(d))
+            if not loggers:
+                for d in cfg.get("logger", {}).values():
+                    log_functions.append(hydra.utils.instantiate(d))
 
-            log.info('Creating evaluators.')
+            log.info("Creating evaluators.")
 
             register_infer_dataloader_length_resolver(loader_lengths)
 
@@ -956,14 +1102,23 @@ class EntryInterface:
 
                 inverse_transform = None
                 if cfg.evaluator[s].get("apply_inverse_scaling", False):
-                    inverse_transform_key = cfg.evaluator[s].get("inverse_transform_key", None)
-                    inverse_transform_name = cfg.evaluator[s].get("inverse_transform_name", None)
-                    inverse_transform_which = cfg.evaluator[s].get("inverse_transform_which", "last")
+                    inverse_transform_key = cfg.evaluator[s].get(
+                        "inverse_transform_key", None
+                    )
+                    inverse_transform_name = cfg.evaluator[s].get(
+                        "inverse_transform_name", None
+                    )
+                    inverse_transform_which = cfg.evaluator[s].get(
+                        "inverse_transform_which", "last"
+                    )
                     # Prefer key-based lookup: discover inverter from registry
-                    
+
                     if inverse_transform_key is not None:
-                        inverse_transform, chosen_name = get_inverter_for_key_with_name(transforms, inverse_transform_key,
-                                                                                        which=inverse_transform_which)
+                        inverse_transform, chosen_name = get_inverter_for_key_with_name(
+                            transforms,
+                            inverse_transform_key,
+                            which=inverse_transform_which,
+                        )
 
                         # inverse_transform, chosen_name = (transforms_manager.get_inverter_for_key_with_name(
                         #         inverse_transform_key, which=inverse_transform_which))
@@ -982,8 +1137,11 @@ class EntryInterface:
                                 inverse_transform_which,
                             )
                     elif inverse_transform_name is not None:
-                        inverse_transform = [dt.transform_instance
-                                             for dt in transforms if dt.name == inverse_transform_name]
+                        inverse_transform = [
+                            dt.transform_instance
+                            for dt in transforms
+                            if dt.name == inverse_transform_name
+                        ]
 
                         inverse_transform = inverse_transform[0]
 
@@ -1025,27 +1183,31 @@ class EntryInterface:
             loss = hydra.utils.instantiate(cfg.loss)
 
             if callbacks is not None:
-                if isinstance(callbacks, Callback) or (isinstance(callbacks, list) and isinstance(callbacks[0], Callback)):
-                    log.info(f'Using user define callbacks: {callbacks}.')
+                if isinstance(callbacks, Callback) or (
+                    isinstance(callbacks, list) and isinstance(callbacks[0], Callback)
+                ):
+                    log.info(f"Using user define callbacks: {callbacks}.")
             else:
-                if 'callbacks' in cfg:
-                    log.info('Loading callbacks.')
-                    for _, k in cfg['callbacks'].items():
+                if "callbacks" in cfg:
+                    log.info("Loading callbacks.")
+                    for _, k in cfg["callbacks"].items():
                         log.info(f"Instantiating callback <{k['_target_']}>")
 
-                    callbacks: list[Callback] = list(hydra.utils.instantiate(cfg["callbacks"]).values())
+                    callbacks: list[Callback] = list(
+                        hydra.utils.instantiate(cfg["callbacks"]).values()
+                    )
                 else:
-                    log.info('No callbacks to load.')
+                    log.info("No callbacks to load.")
 
             for callback in callbacks:
                 if isinstance(callback, ModelCheckpointWithConfig):
                     callback.config = cfg
 
-            if 'model' in cfg and 'config_name' in cfg.model:
+            if "model" in cfg and "config_name" in cfg.model:
                 with open_dict(cfg):
-                    del cfg.model['config_name']
+                    del cfg.model["config_name"]
 
-            log.info('Creating torch lightning module.')
+            log.info("Creating torch lightning module.")
             model = create_lightning_module(
                 backbone=model if isinstance(model, CustomModelTrainer) else None,
                 cfg=cfg,
@@ -1054,7 +1216,7 @@ class EntryInterface:
                 loss=loss,
             )
 
-            log.info('Creating the trainer class.')
+            log.info("Creating the trainer class.")
             trainer: Trainer = hydra.utils.instantiate(
                 cfg.trainer,
                 callbacks=callbacks,
@@ -1065,7 +1227,7 @@ class EntryInterface:
             )
 
             if not debug:
-                log.info('Fitting the trainer.')
+                log.info("Fitting the trainer.")
                 trainer.fit(
                     model=model,
                     datamodule=datamodule,
@@ -1077,7 +1239,9 @@ class EntryInterface:
                 else:
                     # If max epochs is 1, there is no checkpoint to load from
                     # So we just test the model as is
-                    log.info("Starting testing without training (used for pre-trained models)!")
+                    log.info(
+                        "Starting testing without training (used for pre-trained models)!"
+                    )
                     test_results = trainer.test(model=model, datamodule=datamodule)
 
                 print(test_results)

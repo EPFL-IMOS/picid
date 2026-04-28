@@ -31,6 +31,7 @@ from picid.data.data_objects.types import (
     SplitViewPolicy as SplitViewPolicyFromTypes,
 )
 from picid.data.data_objects.validation import (
+    build_split_alignment_report_table,
     collect_split_alignment_report,
     describe_unit_payload,
 )
@@ -49,5 +50,6 @@ def test_package_root_re_exports_split_data_objects():
 
 def test_validation_subpackage_exports_split_report_helpers():
     """The validation package should expose the split-report helper functions."""
+    assert callable(build_split_alignment_report_table)
     assert callable(collect_split_alignment_report)
     assert callable(describe_unit_payload)

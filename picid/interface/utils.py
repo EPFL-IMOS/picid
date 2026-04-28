@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional, Any, Union
 
 import hydra
@@ -11,8 +12,9 @@ import awkward as ak
 from omegaconf import OmegaConf, DictConfig
 from torch import nn
 
-from picid.data.data_objects import DatasetContainer
+from picid.data.data_objects import DatasetContainer, SplitViewPolicy
 from picid.evaluator.base import AbstractEvaluator
+from picid.exceptions import TransformError
 from picid.model.adapters.base import (
     AbstractFeedForwardWrapper,
     AbstractFeedForwardTrainingWrapper,
@@ -26,6 +28,12 @@ from picid.pipeline.base import (
 from picid.transforms.base.data_transform import DataTransform
 from picid.transforms.base.multisource import InverseTransformMixin
 from picid.utils.awkward_utils import get_ak_shape
+from picid.utils.rich_output import (
+    descriptive_dict_differences_str,
+    print_transforms_summary,
+    to_descriptive_dict,
+    transform_log_to_summary_string,
+)
 
 log = logging.getLogger(__name__)
 
@@ -477,11 +485,73 @@ class InterfacePreProcessor:
                 "Every element of transforms must be a DataTransform object."
             )
 
-        # try:
-        for transform in transforms:
-            data, transform_log = transform.forward(data)
-        # except Exception as e:
-        #     print(e)
+        summary = []
+
+        try:
+            for transform in transforms:
+                log.info(
+                    "Applying transform: '%s' (Strategy: %s)",
+                    transform.transform_name,
+                    transform.strategy.__class__.__name__,
+                )
+
+                pre_descr = to_descriptive_dict(
+                    data.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)["train"],
+                    calculate_stat=False,
+                )
+                start_time = time.time()
+
+                try:
+                    data, transform_log = transform.forward(data)
+                except TransformError:
+                    raise
+                except Exception as e:
+                    raise TransformError(
+                        f"Transform {transform.transform_name!r} failed. "
+                        f"Original error: {e}",
+                        step_id=transform.transform_name,
+                        cause=e,
+                    ) from e
+
+                elapsed = time.time() - start_time
+                log.info(
+                    "Transform '%s' completed in %.4f seconds.",
+                    transform.transform_name,
+                    elapsed,
+                )
+
+                post_descr = to_descriptive_dict(
+                    data.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)["train"],
+                    calculate_stat=False,
+                )
+                log_str = transform_log_to_summary_string(transform_log)
+
+                summary.append(
+                    {
+                        "transform_name": transform.transform_name,
+                        "time": f"{elapsed:.4f}",
+                        "status": "Success",
+                        "details": log_str,
+                        "changes": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="changed"
+                            )
+                        ),
+                        "added": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="added"
+                            )
+                        ),
+                        "removed": str(
+                            descriptive_dict_differences_str(
+                                pre_descr, post_descr, mode="removed"
+                            )
+                        ),
+                        "inputs": str(pre_descr),
+                    }
+                )
+        finally:
+            print_transforms_summary(summary)
         return data
 
     def pre_process_data(self):

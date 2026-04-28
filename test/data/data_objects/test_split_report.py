@@ -2,16 +2,18 @@
 
 import awkward as ak
 import numpy as np
+from rich.console import Console
+from rich.table import Table
 
 from picid.data.data_objects.validation import (
+    build_split_alignment_report_table,
     collect_split_alignment_report,
     format_split_alignment_report,
 )
 
 
-def test_format_split_alignment_report_draws_rich_ascii_table():
-    """Split reports render as a Rich table captured for plain-text logs."""
-    report = collect_split_alignment_report(
+def _sample_report():
+    return collect_split_alignment_report(
         [
             (
                 "features",
@@ -29,6 +31,39 @@ def test_format_split_alignment_report_draws_rich_ascii_table():
             ),
         ]
     )
+
+
+def test_build_split_alignment_report_table_returns_rich_table():
+    """Split reports have a Rich renderable for interactive display."""
+    table = build_split_alignment_report_table(_sample_report())
+
+    assert isinstance(table, Table)
+    assert table.title == "Split Alignment Report"
+
+
+def test_build_split_alignment_report_table_renders_without_ansi_codes():
+    """Recorded Rich output is styled by Rich, not pre-rendered as ASCII text."""
+    console = Console(
+        color_system=None,
+        force_terminal=True,
+        record=True,
+        width=140,
+    )
+
+    console.print(build_split_alignment_report_table(_sample_report()))
+    rendered = console.export_text()
+
+    assert "Split Alignment Report" in rendered
+    assert "features" in rendered
+    assert "target" in rendered
+    assert "sample_shapes" in rendered
+    assert "\x1b[" not in rendered
+    assert "+-" not in rendered
+
+
+def test_format_split_alignment_report_draws_ascii_fallback_table():
+    """Plain-text fallback remains stable for logs and exception messages."""
+    report = _sample_report()
 
     rendered = format_split_alignment_report(report)
     lines = rendered.splitlines()

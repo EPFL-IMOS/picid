@@ -17,7 +17,11 @@ from picid.utils.utils import (
     task_wrapper,
 )
 
-from picid.utils.rich_output import display_targets, print_data_dict_structure
+from picid.utils.rich_output import (
+    display_targets,
+    print_data_dict_structure,
+    print_hydra_config_tree,
+)
 
 __all__ = [
     "RankedLogger",
@@ -28,6 +32,7 @@ __all__ = [
     "instantiate_loggers",
     "log_hyperparameters",
     "print_config_tree",
+    "print_hydra_config_tree",
     "task_wrapper",
     "display_targets",
     "print_data_dict_structure",

@@ -87,6 +87,7 @@ from picid.utils.rich_output import (
     descriptive_dict_differences_str,
     print_transforms_summary,
     to_descriptive_dict,
+    transform_log_to_summary_string,
 )
 
 logger = logging.getLogger(__name__)
@@ -484,19 +485,7 @@ class PreProcessor(PreProcessorInterface):
         str
             Human-readable log summary.
         """
-        if not transform_log:
-            return "No additional transform log."
-        if not isinstance(transform_log, dict):
-            return str(transform_log)
-        for preferred in ("train", "test"):
-            if preferred in transform_log:
-                return str(transform_log[preferred])
-        first_key = next(iter(transform_log))
-        logger.debug(
-            "transform_log has no 'train' or 'test' key; using %r for summary.",
-            first_key,
-        )
-        return str(transform_log[first_key])
+        return transform_log_to_summary_string(transform_log)
 
     # ------------------------------------------------------------------
     # Pipeline entry point

@@ -15,6 +15,15 @@ from rich.table import Table
 
 from picid.data.data_objects.core.metadata_data_object import BaseDataObjectWithMetadata
 
+SPLIT_ALIGNMENT_REPORT_HEADERS = [
+    "key",
+    "splits",
+    "unit_counts",
+    "sample_shapes",
+    "schema_status",
+    "sample_schema",
+]
+
 
 def describe_unit_payload(unit_list: list[Any]) -> str:
     """
@@ -211,9 +220,9 @@ def collect_split_alignment_report(
     }
 
 
-def format_split_alignment_report(report: dict[str, Any]) -> str:
+def _split_alignment_table_rows(report: dict[str, Any]) -> list[list[str]]:
     """
-    Format a compact Rich table for split alignment diagnostics.
+    Build display rows for a split alignment report.
 
     Parameters
     ----------
@@ -222,20 +231,9 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
 
     Returns
     -------
-    str
-        Human-readable table representation of the report.
+    list[list[str]]
+        Display-ready rows ordered like :data:`SPLIT_ALIGNMENT_REPORT_HEADERS`.
     """
-    if not report["rows"]:
-        return "No split payloads available."
-
-    headers = [
-        "key",
-        "splits",
-        "unit_counts",
-        "sample_shapes",
-        "schema_status",
-        "sample_schema",
-    ]
     table_rows = []
     for row in report["rows"]:
         split_names = ",".join(row["splits"]) or "-"
@@ -262,6 +260,60 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
                 schema_str,
             ]
         )
+    return table_rows
+
+
+def build_split_alignment_report_table(report: dict[str, Any]) -> Table:
+    """
+    Build a live Rich table for split alignment diagnostics.
+
+    Parameters
+    ----------
+    report : dict[str, Any]
+        Structured report returned by :func:`collect_split_alignment_report`.
+
+    Returns
+    -------
+    rich.table.Table
+        Rich renderable for interactive terminal or notebook display.
+    """
+    table = Table(
+        title="Split Alignment Report",
+        header_style="bold cyan",
+        pad_edge=True,
+        show_lines=False,
+        expand=False,
+    )
+    for header in SPLIT_ALIGNMENT_REPORT_HEADERS:
+        table.add_column(
+            header,
+            min_width=len(header),
+            no_wrap=header in {"key", "splits"},
+            overflow="fold",
+        )
+    for table_row in _split_alignment_table_rows(report):
+        table.add_row(*(str(value) for value in table_row))
+    return table
+
+
+def format_split_alignment_report(report: dict[str, Any]) -> str:
+    """
+    Format a compact ASCII table for split alignment diagnostics.
+
+    Parameters
+    ----------
+    report : dict[str, Any]
+        Structured report returned by :func:`collect_split_alignment_report`.
+
+    Returns
+    -------
+    str
+        Plain-text fallback representation for logs and exception messages.
+    """
+    if not report["rows"]:
+        return "No split payloads available."
+
+    table_rows = _split_alignment_table_rows(report)
 
     table = Table(
         box=box.ASCII,
@@ -270,7 +322,7 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
         show_lines=False,
         expand=False,
     )
-    for header in headers:
+    for header in SPLIT_ALIGNMENT_REPORT_HEADERS:
         table.add_column(header, no_wrap=True, overflow="fold")
     for table_row in table_rows:
         table.add_row(*(str(value) for value in table_row))
@@ -279,9 +331,9 @@ def format_split_alignment_report(report: dict[str, Any]) -> str:
         80,
         sum(
             max(len(str(value)) for value in [header] + [row[idx] for row in table_rows])
-            for idx, header in enumerate(headers)
+            for idx, header in enumerate(SPLIT_ALIGNMENT_REPORT_HEADERS)
         )
-        + (3 * (len(headers) - 1))
+        + (3 * (len(SPLIT_ALIGNMENT_REPORT_HEADERS) - 1))
         + 4,
     )
     buffer = StringIO()

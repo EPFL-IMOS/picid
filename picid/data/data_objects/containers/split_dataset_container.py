@@ -8,11 +8,13 @@ from typing import Any, Dict, Generic, List, TypeVar
 
 import awkward as ak
 import numpy as np
+from rich.console import Console
 
 from picid.data.data_objects.containers.dataset_container import DatasetContainer
 from picid.data.data_objects.core.metadata_data_object import BaseDataObjectWithMetadata
 from picid.data.data_objects.types import SplitUnitCardinality, SplitViewPolicy
 from picid.data.data_objects.validation.split_report import (
+    build_split_alignment_report_table,
     collect_split_alignment_report,
     format_split_alignment_report,
 )
@@ -111,7 +113,7 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
 
     def _format_split_alignment_report(self, report: dict[str, Any]) -> str:
         """
-        Format a compact ASCII table for split alignment diagnostics.
+        Format a compact ASCII fallback for split alignment diagnostics.
 
         Parameters
         ----------
@@ -125,6 +127,45 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
             Human-readable table representation of the report.
         """
         return format_split_alignment_report(report)
+
+    def _format_validation_report(self, report: dict[str, Any]) -> str:
+        """
+        Format the complete plain-text validation report for exceptions.
+
+        Parameters
+        ----------
+        report : dict[str, Any]
+            Structured alignment report enriched with unit metadata diagnostics.
+
+        Returns
+        -------
+        str
+            Plain-text validation report.
+        """
+        table = self._format_split_alignment_report(report)
+        if report["unit_metadata_match"]:
+            return table
+
+        mismatch_lines = [
+            "unit_metadata_mismatches:",
+            *(
+                f"  {split}: expected {values['expected']} entries but got "
+                f"{values['actual']}"
+                for split, values in report["unit_metadata_mismatches"].items()
+            ),
+        ]
+        return f"{table}\n\n" + "\n".join(mismatch_lines)
+
+    def _print_split_alignment_report(self, report: dict[str, Any]) -> None:
+        """
+        Print the split alignment report as a Rich renderable.
+
+        Parameters
+        ----------
+        report : dict[str, Any]
+            Structured alignment report returned by validation.
+        """
+        Console(width=180).print(build_split_alignment_report_table(report))
 
     @property
     def unit_cardinality(self) -> SplitUnitCardinality:
@@ -177,26 +218,14 @@ class SplitDatasetContainer(DatasetContainer, Generic[T]):
             logger.info("SplitDatasetContainer is empty. Nothing to validate.")
             return report
 
-        table = self._format_split_alignment_report(report)
-        if not report["unit_metadata_match"]:
-            mismatch_lines = [
-                "unit_metadata_mismatches:",
-                *(
-                    f"  {split}: expected {values['expected']} entries but got "
-                    f"{values['actual']}"
-                    for split, values in report["unit_metadata_mismatches"].items()
-                ),
-            ]
-            table = f"{table}\n\n" + "\n".join(mismatch_lines)
+        self._print_split_alignment_report(report)
         if report["is_consistent"]:
-            logger.info("SplitDatasetContainer validation successful.\n%s", table)
+            logger.info("SplitDatasetContainer validation successful.")
             return report
 
-        message = (
-            "SplitDatasetContainer contains heterogeneous split payloads.\n" f"{table}"
-        )
+        message = "SplitDatasetContainer contains heterogeneous split payloads."
         if strict:
-            raise ValueError(message)
+            raise ValueError(f"{message}\n{self._format_validation_report(report)}")
         logger.warning(message)
         return report
 

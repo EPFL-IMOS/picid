@@ -5,6 +5,8 @@ Covers: split payload normalization, cardinality reporting, validate(),
 to_split_dict(), group_by_split(), get_instance_cls().
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -147,6 +149,32 @@ def test_split_container_validate_success(single_unit_split_container):
     assert report["is_consistent"] is True
 
 
+def test_split_container_validate_success_prints_rich_report_without_ascii_logs(
+    single_unit_split_container,
+    monkeypatch,
+    caplog,
+):
+    """validate() prints the Rich report and logs only the short status line."""
+    printed_reports = []
+    monkeypatch.setattr(
+        SplitDatasetContainer,
+        "_print_split_alignment_report",
+        lambda self, report: printed_reports.append(report),
+    )
+
+    with caplog.at_level(
+        logging.INFO,
+        logger="picid.data.data_objects.containers.split_dataset_container",
+    ):
+        report = single_unit_split_container.validate()
+
+    assert printed_reports == [report]
+    assert report["is_consistent"] is True
+    assert "SplitDatasetContainer validation successful." in caplog.text
+    assert "| key" not in caplog.text
+    assert "+-" not in caplog.text
+
+
 def test_split_container_validate_inconsistent_units_reports_heterogeneity():
     """validate() reports heterogeneous unit counts instead of raising by default."""
     c = SplitDatasetContainer(
@@ -180,8 +208,12 @@ def test_split_container_validate_strict_inconsistent_units_raises():
             "test": [np.zeros((30, 1))],
         },
     )
-    with pytest.raises(ValueError, match="heterogeneous split payloads"):
+    with pytest.raises(ValueError, match="heterogeneous split payloads") as exc_info:
         c.validate(strict=True)
+    message = str(exc_info.value)
+    assert "| key" in message
+    assert "unit_counts" in message
+    assert "features" in message
 
 
 def test_split_container_validate_reports_unit_schema_mismatch():

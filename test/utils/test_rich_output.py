@@ -29,6 +29,7 @@ from picid.utils.rich_output import (
     to_descriptive_dict,
     descriptive_dict_differences_str,
     print_data_dict_structure,
+    print_hydra_config_tree,
     extract_targets,
     get_config_info,
     build_transform_error_renderables,
@@ -531,6 +532,17 @@ class TestPrintDataDictStructureEdgeCases:
         data = {"x": np.array([1, 2])}
         tree = print_data_dict_structure(data)
         assert tree is not None
+
+
+class TestPrintHydraConfigTree:
+    def test_print_hydra_config_tree_resolves_interpolations(self):
+        cfg = OmegaConf.create({"base": 3, "nested": {"value": "${base}"}})
+
+        tree = print_hydra_config_tree(cfg)
+
+        assert tree is not None
+        assert len(tree.children) == 2
+        assert "value: 3" in str(tree.children[1].children[0].label)
 
 
 class TestDisplayConfigSources:
