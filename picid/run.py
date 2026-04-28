@@ -882,7 +882,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     # display_config_sources(cfg)
     display_targets(cfg)
     tree = print_hydra_config_tree(cfg)
-    Console.print(tree)
+    Console().print(tree)
 
     log.info("Instantiating loggers...")
     logger: list[Logger] = instantiate_loggers(cfg.get("logger"))

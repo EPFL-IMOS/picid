@@ -366,6 +366,8 @@ def test_run_top_level_logs_preprocessing_datasource_error_stage_details(tmp_pat
         patch.object(run_module, "PreProcessor", return_value=fake_preprocessor),
         patch.object(run_module, "instantiate_loggers", return_value=[]),
         patch.object(run_module, "display_targets"),
+        patch.object(run_module, "print_hydra_config_tree", return_value="cfg-tree"),
+        patch.object(run_module, "Console") as mock_console,
         patch.object(run_module.L, "seed_everything"),
         patch.object(run_module.torch, "manual_seed"),
         patch.object(run_module.np.random, "seed"),
@@ -375,6 +377,7 @@ def test_run_top_level_logs_preprocessing_datasource_error_stage_details(tmp_pat
         with pytest.raises(PreprocessingDatasourceError):
             run_module.run(cfg)
 
+    mock_console.return_value.print.assert_called_once_with("cfg-tree")
     assert mock_log_error.call_count == 6
     assert mock_log_error.call_args_list[0].args == (
         "Datasource preprocessing failed.",

@@ -919,7 +919,7 @@ class EntryInterface:
                 )
             )
             tree = print_hydra_config_tree(cfg)
-            Console.print(tree)
+            Console().print(tree)
             # display_targets(cfg)
 
             # if cfg.get("num_threads", None) is not None:
