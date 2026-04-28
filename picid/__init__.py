@@ -48,6 +48,20 @@ def _setup_project_root():
 # Set up PROJECT_ROOT automatically when package is imported
 _setup_project_root()
 
+
+def _silence_wandb_legacy_require_warnings() -> None:
+    # Lightning's WandbLogger still calls wandb.require("service") on pickle, which
+    # wandb has demoted to a no-op that termwarns on every call. Make the shim silent.
+    try:
+        from wandb.sdk import wandb_require
+    except ImportError:
+        return
+    wandb_require._Requires.require_service = lambda self: None
+    wandb_require._Requires.require_core = lambda self: None
+
+
+_silence_wandb_legacy_require_warnings()
+
 __all__ = ["data", "_setup_project_root"]
 
 
