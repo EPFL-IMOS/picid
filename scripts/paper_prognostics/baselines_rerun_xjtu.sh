@@ -38,26 +38,26 @@ datasets=(
 #   "concepts_n_cmapss_ds02||prognostics"
 # #   "pronostia|raw|prognostics"
 #   "pronostia|combined|prognostics"
-  "xjtu_sy|in_domain/combined|prognostics"
+  "xjtu_sy|domain_shift/combined|prognostics"
 )
 
 model_names=(
-    # lstm
+    lstm
     # cnn_1d
     # mlp
     # linear_regression
     # exponential_regression
     # stf
-    crossformer
+    # crossformer
     # timeseries_transformer
     # tide
-    patchtst
+    # patchtst
 )
 
 BATCH_SIZES=(512)
-SEEDS=(72 88 101 666 226688)
+SEEDS=(72)
 SEQ_LEN=(10 50)
-MAX_LEARNING_RATE=(0.001 0.0005 0.0001)
+MAX_LEARNING_RATE=(0.001)
 
 # ========================================================================
 # Main Loop with Execution Tracking
