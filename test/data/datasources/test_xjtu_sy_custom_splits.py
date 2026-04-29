@@ -291,3 +291,25 @@ def test_xjtu_sy_configs_and_experiment_bases_compose() -> None:
         assert cfg.datasource.split_mode == split_mode
         assert cfg.datasource.fold_id == 1
         assert expected_transform_key in cfg.transforms
+
+
+XJTU_PHMD_SPLIT = {
+    "train": ["1_3", "1_4", "2_1", "2_4", "2_5", "3_1", "3_2", "3_3"],
+    "val": ["1_1", "1_2", "3_5"],
+    "test": ["1_5", "2_2", "2_3", "3_4"],
+}
+
+
+def test_xjtu_sy_loader_resolves_phmd_split() -> None:
+    loader = XJTU_SYLoader(**_loader_kwargs(), split_mode="phmd_split")
+
+    assert loader.split_assignments == XJTU_PHMD_SPLIT
+
+
+def test_xjtu_sy_configs_expose_phmd_split() -> None:
+    cfg = compose(
+        config_name="run",
+        overrides=["datasource=xjtu_sy", "datasource.split_mode=phmd_split"],
+    )
+    assert cfg.datasource.split_mode == "phmd_split"
+    assert dict(cfg.datasource.split_assignments_by_mode.phmd_split) == XJTU_PHMD_SPLIT

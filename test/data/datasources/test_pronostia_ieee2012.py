@@ -642,3 +642,42 @@ def test_pronostia_ieee2012_configs_and_experiment_bases_compose() -> None:
         assert cfg.datasource.fold_id == 1
         assert cfg.datasource.task_mode == "rul"
         assert expected_transform_key in cfg.transforms
+
+
+PRONOSTIA_PHMD_SPLIT = {
+    "train": ["1_2", "2_1", "3_1", "3_2"],
+    "val": ["1_1", "2_2"],
+    "test": list(FULL_TEST_UNITS),
+}
+
+
+def test_pronostia_ieee2012_loader_resolves_phmd_split() -> None:
+    from picid.data.datasources.pronostia_ieee2012 import PronostiaIEEE2012Loader
+
+    loader = PronostiaIEEE2012Loader(
+        data_name="pronostia_phmd_split_test",
+        task_mode="rul",
+        data_dir="/tmp/unused_pronostia",
+        split_mode="phmd_split",
+        split_assignments_by_mode={
+            "in_domain": PRONOSTIA_IN_DOMAIN_FOLDS,
+            "domain_shift": PRONOSTIA_DOMAIN_SHIFT_FOLDS,
+            "phmd_split": PRONOSTIA_PHMD_SPLIT,
+        },
+        download_if_missing=False,
+        sample_range_size=SAMPLE_RANGE_SIZE,
+    )
+
+    assert loader.split_assignments == PRONOSTIA_PHMD_SPLIT
+
+
+def test_pronostia_ieee2012_configs_expose_phmd_split() -> None:
+    cfg = compose(
+        config_name="run",
+        overrides=["datasource=pronostia", "datasource.split_mode=phmd_split"],
+    )
+    assert cfg.datasource.split_mode == "phmd_split"
+    phmd_split = cfg.datasource.split_assignments_by_mode.phmd_split
+    assert list(phmd_split.train) == PRONOSTIA_PHMD_SPLIT["train"]
+    assert list(phmd_split.val) == PRONOSTIA_PHMD_SPLIT["val"]
+    assert list(phmd_split.test) == PRONOSTIA_PHMD_SPLIT["test"]

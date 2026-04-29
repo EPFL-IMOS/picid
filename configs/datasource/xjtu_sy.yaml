@@ -50,4 +50,9 @@ split_assignments_by_mode:
       val: ["1_5", "2_5"]
       test: ["3_1", "3_2", "3_3", "3_4", "3_5"]
 
+  phmd_split:
+    train: ["1_3", "1_4", "2_1", "2_4", "2_5", "3_1", "3_2", "3_3"]
+    val: ["1_1", "1_2", "3_5"]
+    test: ["1_5", "2_2", "2_3", "3_4"]
+
 use_ragged: True # This flag at the end assumed to be true by def

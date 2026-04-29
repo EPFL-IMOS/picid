@@ -1,6 +1,5 @@
 """
 Provide datasource helpers for phmd xjtu sy.
-
 """
 
 from __future__ import annotations
@@ -41,6 +40,11 @@ FAULT_TARGET_COLS = ["Outer race", "Cage", "Inner race"]
 # the transport/source dataset, but these tables redefine which fully observed
 # bearings belong to train/validation/test for reporting.
 XJTU_SY_SPLIT_ASSIGNMENTS_BY_MODE = {
+    "phmd_split": {
+        "train": ["1_3", "1_4", "2_1", "2_4", "2_5", "3_1", "3_2", "3_3"],
+        "val": ["1_1", "1_2", "3_5"],
+        "test": ["1_5", "2_2", "2_3", "3_4"],
+    },
     "in_domain": {
         "fold_1": {
             "train": ["1_3", "1_4", "1_5", "2_3", "2_4", "2_5", "3_3", "3_4", "3_5"],
@@ -99,7 +103,24 @@ XJTU_SY_SPLIT_ASSIGNMENTS_BY_MODE = {
 
 
 class XJTU_SYLoader(PHMDMultiSourceLoader):
-    """XJTU-SY PHMD datasource using the refactored PHMD base."""
+    """
+    XJTU-SY PHMD datasource using the refactored PHMD base.
+
+    Parameters
+    ----------
+    split_mode : str, optional
+        Evaluation protocol to activate (e.g. ``"in_domain"``, ``"domain_shift"``,
+        ``"phmd_split"``). When ``None`` the raw PHMD fold split is used unchanged.
+    fold_id : int or str, optional
+        Fold identifier within a CV split table. Required when *split_mode* maps to
+        a multi-fold structure.
+    split_assignments : dict, optional
+        Explicit ``{split: [unit_keys]}`` table. Takes precedence over *split_mode*.
+    split_assignments_by_mode : dict, optional
+        Full mode-keyed split table. Falls back to the module constant when ``None``.
+    **kwargs
+        Forwarded to :class:`PHMDMultiSourceLoader`.
+    """
 
     def __init__(
         self,
@@ -109,6 +130,24 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         split_assignments_by_mode: dict[str, dict[str, Any]] | None = None,
         **kwargs,
     ):
+        """
+        Initialize the loader and resolve the active split table.
+
+        Parameters
+        ----------
+        split_mode : str, optional
+            Evaluation protocol to activate (e.g. ``"in_domain"``, ``"domain_shift"``,
+            ``"phmd_split"``). When ``None`` the raw PHMD fold split is used unchanged.
+        fold_id : int or str, optional
+            Fold identifier within a CV split table. Required when *split_mode* maps to
+            a multi-fold structure.
+        split_assignments : dict, optional
+            Explicit ``{split: [unit_keys]}`` table. Takes precedence over *split_mode*.
+        split_assignments_by_mode : dict, optional
+            Full mode-keyed split table. Falls back to the module constant when ``None``.
+        **kwargs
+            Forwarded to :class:`PHMDMultiSourceLoader`.
+        """
         # Preserve the custom split configuration in the constructor snapshot so
         # payload-cache fingerprints change when the evaluation protocol changes.
         kwargs.update(
@@ -135,11 +174,28 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         fold_id: int | str | None,
         split_assignments_by_mode: dict[str, dict[str, Any]] | None,
     ) -> dict[str, list[str]] | None:
-        """Return the active unit split table for the configured evaluation mode.
+        """
+        Return the active unit split table for the configured evaluation mode.
 
         When no custom split mode is provided, the loader falls back to the PHMD
-        fold split exactly as before. This keeps the dataset transport unchanged
-        and makes the custom protocols opt-in at the config layer.
+        fold split exactly as before.
+
+        Parameters
+        ----------
+        split_assignments : dict, optional
+            Explicit split table; takes precedence over all other arguments.
+        split_mode : str, optional
+            Name of the evaluation mode to look up.
+        fold_id : int or str, optional
+            Fold key within a CV split table.
+        split_assignments_by_mode : dict, optional
+            Mode-keyed split table; falls back to the module constant when ``None``.
+
+        Returns
+        -------
+        dict or None
+            Resolved ``{split: [unit_keys]}`` mapping, or ``None`` if no split mode
+            is configured.
         """
         if split_assignments is not None:
             return {
@@ -177,11 +233,17 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                     f"Available folds: {sorted(split_table_or_folds)}"
                 )
             resolved_table = split_table_or_folds[fold_key]
-        return {
-            split: list(unit_keys) for split, unit_keys in resolved_table.items()
-        }
+        return {split: list(unit_keys) for split, unit_keys in resolved_table.items()}
 
     def _load_data(self):
+        """
+        Load PHMD payload and apply custom split assignments if configured.
+
+        Returns
+        -------
+        dict
+            Payload dict keyed by data field and split name.
+        """
         out_dict = super()._load_data()
         if self.split_assignments is None:
             return out_dict
@@ -191,12 +253,21 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         return remapped
 
     def _apply_custom_split_assignments(self, out_dict):
-        """Reassemble the PHMD unit payload using the configured custom protocol.
+        """
+        Reassemble the PHMD unit payload using the configured custom protocol.
 
         PHMD already materializes one payload entry per bearing, so custom split
         support only needs to relocate whole-unit records across train/val/test.
-        No raw signal processing changes here; this is strictly an evaluation
-        protocol layer on top of the existing PHMD XJTU-SY ingestion.
+
+        Parameters
+        ----------
+        out_dict : dict
+            Raw payload dict from the PHMD loader, keyed by data field and split.
+
+        Returns
+        -------
+        dict
+            Remapped payload with units relocated across train/val/test splits.
         """
         assert self.split_assignments is not None, "Custom split assignments missing."
         unit_metadata = out_dict["unit_metadata"]
@@ -209,10 +280,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
         self._validate_split_assignments(indexed_units)
 
-        remapped = {
-            key: {"train": [], "val": [], "test": []}
-            for key in out_dict
-        }
+        remapped = {key: {"train": [], "val": [], "test": []} for key in out_dict}
         for target_split in ("train", "val", "test"):
             for unit_key in self.split_assignments.get(target_split, []):
                 source_split, idx = indexed_units[unit_key]
@@ -220,7 +288,17 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
                     remapped[key][target_split].append(out_dict[key][source_split][idx])
         return remapped
 
-    def _validate_split_assignments(self, indexed_units: dict[str, tuple[str, int]]) -> None:
+    def _validate_split_assignments(
+        self, indexed_units: dict[str, tuple[str, int]]
+    ) -> None:
+        """
+        Validate that configured split assignments are consistent with the PHMD payload.
+
+        Parameters
+        ----------
+        indexed_units : dict
+            Mapping of unit key to ``(split_name, index)`` from the PHMD payload.
+        """
         configured_keys: list[str] = []
         for split_name in ("train", "val", "test"):
             configured_keys.extend(self.split_assignments.get(split_name, []))
@@ -233,7 +311,9 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
         unknown_units = sorted(set(configured_keys) - set(indexed_units))
         if unknown_units:
-            raise ValueError(f"Configured units not found in PHMD fold payload: {unknown_units}")
+            raise ValueError(
+                f"Configured units not found in PHMD fold payload: {unknown_units}"
+            )
 
         unassigned_units = sorted(set(indexed_units) - set(configured_keys))
         if unassigned_units:
@@ -242,6 +322,14 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             )
 
     def _refresh_split_metadata(self, out_dict) -> None:
+        """
+        Refresh unit name and ID metadata after custom split reassignment.
+
+        Parameters
+        ----------
+        out_dict : dict
+            Remapped payload dict after custom split assignments have been applied.
+        """
         unit_metadata = out_dict.get("unit_metadata", {})
         unit_ids = out_dict.get("unit_id", {})
         self.meta_data["unit_names"] = {
@@ -249,20 +337,58 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
             for split in ("train", "val", "test")
         }
         self.meta_data["unit_ids"] = {
-            split: unit_ids.get(split, [])
-            for split in ("train", "val", "test")
+            split: unit_ids.get(split, []) for split in ("train", "val", "test")
         }
 
     def _get_features_columns(self):
+        """
+        Return the list of feature column names from loader metadata.
+
+        Returns
+        -------
+        list
+            Feature column names.
+        """
         return self.meta_data["features"]
 
     def _get_target_column(self):
+        """
+        Return the target column name for the current task mode.
+
+        Returns
+        -------
+        str
+            Target column name.
+        """
         return self.task_mode
 
     def _get_unit_column(self):
+        """
+        Return the column name used to identify individual bearing units.
+
+        Returns
+        -------
+        str
+            Unit column name.
+        """
         return "bearing"  # TODO: self.meta_data["identifier"] do not work correctly for fault
 
     def _preprocess_fold(self, main_fold, auxiliary_tasks_fold_dict):
+        """
+        Merge auxiliary task data into a PHMD fold when fault task mode is active.
+
+        Parameters
+        ----------
+        main_fold : dict
+            Primary task fold data.
+        auxiliary_tasks_fold_dict : dict
+            Auxiliary task fold data keyed by task name.
+
+        Returns
+        -------
+        dict
+            Merged fold data.
+        """
         if self.task_mode == "fault":
             assert (
                 "rul" in list(auxiliary_tasks_fold_dict.keys())
@@ -278,7 +404,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
         self, df_unit: pd.DataFrame, unit_name: str, features_col: list, target_col: str
     ):
         """
-        Processes a single unit's DataFrame to extract features, targets, and metadata.
+        Extract features, targets, and metadata from a single unit's DataFrame.
 
         This internal method handles the logic for two primary task modes:
         1.  'rul': Remaining Useful Life prediction.
@@ -399,7 +525,7 @@ class XJTU_SYLoader(PHMDMultiSourceLoader):
 
 def merge_data_folds_on_key(main_fold, aux_fold, key="bearing", how="left"):
     """
-    Merges dataframes from an auxiliary dictionary into a main dictionary on a key.
+    Merge dataframes from an auxiliary dictionary into a main dictionary on a key.
 
     This function iterates through the splits ('train', 'val', etc.) in the
     main_fold, finds the corresponding split in the aux_fold, and performs a
