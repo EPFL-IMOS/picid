@@ -31,7 +31,7 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 
 datasets=(
 #   "pronostia|combined|prognostics"
-  "xjtu_sy|domain_shift/combined|prognostics"
+  "xjtu_sy|phmd_split/combined|prognostics"
 )
 
 model_names=(
