@@ -1,0 +1,14 @@
+#@package _global_
+
+defaults:
+  - /experiment/xjtu_sy/prognostics/phmd_split/combined/base
+  - /model_configs/prognostics/xgboost_fit_predict
+  - override /transforms: bearings/xjtu_sy/combined_fit_predict
+
+task_definition:
+  model:
+    data_requirements:
+      input_tensors:
+        - features
+        - rul
+        - unit_id
