@@ -660,6 +660,20 @@ class TestConstantLossLightningModule:
 class TestTrainingLightningModule:
     """Validates model_step applies loss and configure_optimizers with/without scheduler."""
 
+    def test_training_step_invokes_backbone_wrapper_training_step(
+        self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
+    ):
+        """BackboneWrapperLightningModule._training_step called via training_step (lines 424-425)."""
+        module = TrainingLightningModule(
+            backbone=mock_backbone,
+            loss=mock_loss,
+            evaluators=mock_evaluators,
+            optimizer_factory=lambda p: torch.optim.SGD(p, lr=0.01),
+            scheduler_factory=None,
+        )
+        loss = module.training_step(phm_batch_rul, 0, _evaluate=False)
+        assert isinstance(loss, torch.Tensor)
+
     def test_model_step_returns_loss_from_loss_module(
         self, mock_evaluators, mock_backbone, mock_loss, phm_batch_rul
     ):
