@@ -1,3 +1,5 @@
+"""High-level experiment interface for TabPHM: config composition, data preprocessing, and training."""
+
 import logging
 import os
 import uuid
@@ -51,6 +53,14 @@ log = logging.getLogger(__name__)
 
 
 def verify_thread_limits(expected: int):
+    """
+    Log the expected thread count and all relevant thread-limit env vars.
+
+    Parameters
+    ----------
+    expected : int
+        The expected number of threads to log for sanity-checking.
+    """
     log.info(f"[Thread sanity check] Expected threads: {expected}")
 
     # environment variables
@@ -70,7 +80,31 @@ def verify_thread_limits(expected: int):
 
 
 def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
+    """
+    Register an OmegaConf resolver that looks up dataloader lengths by split name.
+
+    Parameters
+    ----------
+    lengths : dict[str, int]
+        Mapping from split name (e.g. ``"train"``) to dataloader length.
+    """
+
     def get_key(lengths, key):
+        """
+        Return the dataloader length for ``key``, raising KeyError when absent.
+
+        Parameters
+        ----------
+        lengths : dict[str, int]
+            Mapping of split names to dataloader lengths.
+        key : str
+            Split name to look up.
+
+        Returns
+        -------
+        int
+            Dataloader length for the requested split.
+        """
         if key not in lengths:
             raise KeyError(
                 f"Resolver issue: key: '{key}' "
@@ -86,6 +120,24 @@ def register_infer_dataloader_length_resolver(lengths: dict[str, int]) -> None:
 
 
 def safe_div(a, b):
+    """
+    Divide ``a`` by ``b``, raising if not exactly divisible.
+
+    When ``b`` is an iterable (not str/bytes), tries each candidate in order
+    and returns the first exact quotient; raises if none succeed.
+
+    Parameters
+    ----------
+    a : int
+        Dividend.
+    b : int or Iterable[int]
+        Divisor or ordered sequence of candidate divisors.
+
+    Returns
+    -------
+    int
+        Exact integer quotient ``a // b``.
+    """
     # Treat lists/tuples as candidates, but avoid treating strings/bytes as iterables here.
     if isinstance(b, Iterable) and not isinstance(b, (str, bytes)):
         bs = list(b)
@@ -106,14 +158,42 @@ def safe_div(a, b):
     return a // b
 
 
-# safe diff that returns a if a or b are strings
 def diff_if_not_string(a, b):
+    """
+    Return ``a - b``, or ``a`` unchanged when either operand is a string.
+
+    Parameters
+    ----------
+    a : numeric or str
+        Minuend.
+    b : numeric or str
+        Subtrahend.
+
+    Returns
+    -------
+    numeric or str
+        ``a - b`` when both are numeric, otherwise ``a``.
+    """
     if isinstance(a, str) or isinstance(b, str):
         return a
     return a - b
 
 
 def _uuid(kind: str) -> str:
+    """
+    Generate a UUID string.
+
+    Parameters
+    ----------
+    kind : str
+        Format selector: ``"hex"`` returns a 32-character hex string;
+        ``"short"`` returns the first 8 characters.
+
+    Returns
+    -------
+    str
+        UUID string in the requested format.
+    """
     u = uuid.uuid4()
     if kind == "hex":
         return u.hex
@@ -141,7 +221,8 @@ class EntryInterface:
     """
 
     def get_datasource(self, v: str):
-        """Load and instantiate a built-in data source by name.
+        """
+        Load and instantiate a built-in data source by name.
 
         Parameters
         ----------
@@ -166,7 +247,8 @@ class EntryInterface:
         transforms: list[DataTransform],
         cache: bool = True,
     ):
-        """Apply a sequence of transforms to a datasource and return processed data.
+        """
+        Apply a sequence of transforms to a datasource and return processed data.
 
         Parameters
         ----------
@@ -202,7 +284,8 @@ class EntryInterface:
     @staticmethod
     @lru_cache
     def get_available_datasources():
-        """List all data sources available in the configuration directory.
+        """
+        List all data sources available in the configuration directory.
 
         Returns
         -------
@@ -214,7 +297,8 @@ class EntryInterface:
 
     @staticmethod
     def load_resource(v: str | Path | dict = None, resource_type: str = None):
-        """Resolve and load a configuration resource from disk or a dict.
+        """
+        Resolve and load a configuration resource from disk or a dict.
 
         Parameters
         ----------
@@ -282,7 +366,8 @@ class EntryInterface:
     def get_available_resource(
         resource_type: str, max_level: int = None, as_tuple: bool = False
     ):
-        """Scan the config directory and return available resource identifiers.
+        """
+        Scan the config directory and return available resource identifiers.
 
         Parameters
         ----------
@@ -336,7 +421,8 @@ class EntryInterface:
     def get_model_cfg(
         self, model: AbsModelConfig | CustomModelTrainer | str | dict, task: str
     ):
-        """Resolve a model definition to a DictConfig (or pass through a custom trainer).
+        """
+        Resolve a model definition to a DictConfig (or pass through a custom trainer).
 
         Parameters
         ----------
@@ -410,7 +496,8 @@ class EntryInterface:
     def get_task_definition_cfg(
         self, task_definition: BaseTaskDefinition | tuple[str, str]
     ):
-        """Resolve a task definition to an OmegaConf DictConfig.
+        """
+        Resolve a task definition to an OmegaConf DictConfig.
 
         Parameters
         ----------
@@ -442,7 +529,6 @@ class EntryInterface:
             task_folder_name = None
 
         elif isinstance(task_definition, (tuple, str)):
-
             task_folder_name = task_definition[0]
 
             available_task_definition_as_tuples = self.get_available_resource(
@@ -479,7 +565,8 @@ class EntryInterface:
         task: str = None,
         model: str = None,
     ):
-        """Resolve a datasource identifier to an OmegaConf DictConfig.
+        """
+        Resolve a datasource identifier to an OmegaConf DictConfig.
 
         Parameters
         ----------
@@ -595,29 +682,43 @@ class EntryInterface:
         transforms: str | dict = None,
         overrides: List[str] | str = None,
     ) -> DictConfig:
-        """Assembles a unified Hydra configuration from various components.
+        """
+        Assemble a unified Hydra configuration from various components.
 
-        This method merges model, task, datasource, evaluator, and trainer configs
+        Merges model, task, datasource, evaluator, and trainer configs
         into a single DictConfig object using the Hydra ConfigStore.
 
-        Args:
-            run_name (str): Name of the current run.
-            task_definition: Task config or identifier.
-            model: Model config or identifier.
-            datasource: Datasource config or identifier.
-            evaluators: Evaluation config.
-            callbacks: List or dict of callback configs.
-            trainer_config: Trainer parameters.
-            transforms: Data transformation configs.
-            overrides (List[str]): Manual Hydra override strings.
+        Parameters
+        ----------
+        run_name : str
+            Name of the current run.
+        task_definition : BaseTaskDefinition or tuple[str, str] or str or None
+            Task config or identifier.
+        model : AbsModelConfig or CustomModelTrainer or str or None
+            Model config or identifier.
+        datasource : str or tuple[str, str] or ProcessedDatasource or None
+            Datasource config or identifier.
+        evaluators : list[str] or str or dict, optional
+            Evaluation config.
+        callbacks : list[str] or str or dict or Callback or list[Callback] or None
+            Callback configs or instances.
+        trainer_config : TrainerConfig or None
+            Trainer parameters.
+        transforms : str or dict, optional
+            Data transformation configs.
+        overrides : list[str] or str, optional
+            Manual Hydra override strings.
 
-        Returns:
-            DictConfig: The fully composed Hydra configuration.
+        Returns
+        -------
+        DictConfig
+            The fully composed Hydra configuration.
         """
 
         log.info("Composing internal experiment components.")
 
         model_cfg = None
+        model_yaml_name = None
         datasource_cfg = None
         task_cfg = None
 
@@ -730,7 +831,6 @@ class EntryInterface:
                 )
 
                 if callbacks_to_inst > 0:
-
                     log.info("Creating callbacks confing.")
 
                     assert all(isinstance(c, (str, dict)) for c in callbacks), (
@@ -788,7 +888,6 @@ class EntryInterface:
                     project_config.config_path / "evaluator" / f"{evaluators}.yaml"
                 )
             else:
-
                 evaluators_cfg = evaluators.model_dump(by_alias=True)
 
             cs.store(group="evaluator", name="evaluator_cfg", node=evaluators_cfg)
@@ -830,7 +929,8 @@ class EntryInterface:
         debug: bool = False,
         seed: int = None,
     ) -> None:
-        """Run a complete training experiment.
+        """
+        Run a complete training experiment.
 
         Orchestrates the full pipeline: Hydra config composition → data
         preprocessing → dataset/datamodule creation → logger and evaluator
@@ -846,33 +946,33 @@ class EntryInterface:
             Model to train. See :meth:`get_model_cfg` for accepted forms.
         task_definition : BaseTaskDefinition or tuple[str, str]
             Task configuration. See :meth:`get_task_definition_cfg`.
+        training_config : TrainerConfig, optional
+            Trainer overrides. When ``None``, the project default is used.
         datasource : str or tuple[str, str] or ProcessedDatasource
             Data to train on. A ``ProcessedDatasource`` (from
             :meth:`process_datasource`) skips inline preprocessing.
-        training_config : TrainerConfig, optional
-            Trainer overrides. When ``None``, the project default is used.
-        transforms : list[DataTransform], optional
-            Preprocessing steps. Required when ``datasource`` is not already
-            a ``ProcessedDatasource`` and the datasource config defines no
-            transforms of its own.
-        evaluators : dict[str, AbsEvalConfig] or str or None
-            Per-split evaluator configs keyed by ``"train"``, ``"val"``,
-            ``"test"``. A string loads a built-in evaluator YAML by name.
         callbacks : Callback or list[Callback] or None
             PyTorch Lightning callbacks.
         loggers : list[Logger or BaseLogger], optional
             Loggers to attach to the trainer.
+        evaluators : dict[str, AbsEvalConfig] or str or None
+            Per-split evaluator configs keyed by ``"train"``, ``"val"``,
+            ``"test"``. A string loads a built-in evaluator YAML by name.
+        transforms : list[DataTransform], optional
+            Preprocessing steps. Required when ``datasource`` is not already
+            a ``ProcessedDatasource`` and the datasource config defines no
+            transforms of its own.
         overrides : list[str] or str, optional
             Raw Hydra override strings (e.g. ``["trainer.max_epochs=50"]``).
-        seed : int, optional
-            Random seed for reproducibility. Falls back to the config value
-            when ``None``.
         enable_progress_bar : bool
             Show the Lightning progress bar. Default ``True``.
         debug : bool
             Skip ``trainer.fit()`` and ``trainer.test()``. Useful for
             verifying config composition without running training.
             Default ``False``.
+        seed : int, optional
+            Random seed for reproducibility. Falls back to the config value
+            when ``None``.
 
         Returns
         -------
@@ -889,7 +989,6 @@ class EntryInterface:
             job_name="interface",
             version_base="1.3",
         ):
-
             if transforms is not None:
                 assert isinstance(transforms, Sequence), (
                     "transforms must be a list of transforms "
@@ -1099,7 +1198,6 @@ class EntryInterface:
             # transforms_manager = ConfigTransformManager(transforms_config=cfg.transforms)
 
             for s in ["train", "val", "test"]:
-
                 inverse_transform = None
                 if cfg.evaluator[s].get("apply_inverse_scaling", False):
                     inverse_transform_key = cfg.evaluator[s].get(
@@ -1183,9 +1281,10 @@ class EntryInterface:
             loss = hydra.utils.instantiate(cfg.loss)
 
             if callbacks is not None:
-                if isinstance(callbacks, Callback) or (
-                    isinstance(callbacks, list) and isinstance(callbacks[0], Callback)
-                ):
+                if isinstance(callbacks, Callback):
+                    log.info(f"Using user define callbacks: {callbacks}.")
+                    callbacks = [callbacks]
+                elif isinstance(callbacks, list) and isinstance(callbacks[0], Callback):
                     log.info(f"Using user define callbacks: {callbacks}.")
             else:
                 if "callbacks" in cfg:
@@ -1198,6 +1297,7 @@ class EntryInterface:
                     )
                 else:
                     log.info("No callbacks to load.")
+                    callbacks = []
 
             for callback in callbacks:
                 if isinstance(callback, ModelCheckpointWithConfig):
