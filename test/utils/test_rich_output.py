@@ -24,6 +24,8 @@ import awkward as ak
 from omegaconf import OmegaConf
 from unittest.mock import patch
 
+from omegaconf.errors import OmegaConfBaseException
+
 from picid.utils.rich_output import (
     describe_data_type,
     to_descriptive_dict,
@@ -36,6 +38,10 @@ from picid.utils.rich_output import (
     display_targets,
     display_config_sources,
     print_transforms_summary,
+    transform_log_to_summary_string,
+    _describe_list_of_ak_arrays,
+    _to_config_tree_container,
+    _to_resolved_container_without_uninitialized_hydra,
 )
 
 
@@ -552,11 +558,13 @@ class TestPrintHydraConfigTree:
                 "hydra": {
                     "job": {"num": "???"},
                     "sweep": {"subdir": "${hydra.job.num}"},
-                }
+                },
             }
         )
 
-        with patch("picid.utils.rich_output.HydraConfig.initialized", return_value=False):
+        with patch(
+            "picid.utils.rich_output.HydraConfig.initialized", return_value=False
+        ):
             tree = print_hydra_config_tree(cfg)
 
         rendered_labels = []
@@ -610,3 +618,294 @@ class TestPrintTransformsSummary:
         with patch("picid.utils.rich_output.Console") as mock_console:
             print_transforms_summary(summary)
         mock_console.return_value.print.assert_called_once()
+
+
+@pytest.mark.unit
+class TestAddNodeEdgeCases:
+    """Tests for add_node edge cases inside print_hydra_config_tree."""
+
+    def test_empty_dict_value_renders_braces(self):
+        """Empty dict value → node with '{}' child (lines 90-91).
+
+        **Expected**: Tree is returned without error.
+        """
+        cfg = OmegaConf.create({"empty_section": {}})
+        tree = print_hydra_config_tree(cfg)
+        assert tree is not None
+
+    def test_empty_list_value_renders_brackets(self):
+        """Empty list value → node with '[]' child (lines 95-100).
+
+        **Expected**: Tree is returned without error.
+        """
+        cfg = OmegaConf.create({"empty_list": []})
+        tree = print_hydra_config_tree(cfg)
+        assert tree is not None
+
+    def test_nonempty_list_value_enumerates_children(self):
+        """Non-empty list value → children enumerated (lines 95-100).
+
+        **Expected**: Tree is returned without error.
+        """
+        cfg = OmegaConf.create({"items": [1, 2, 3]})
+        tree = print_hydra_config_tree(cfg)
+        assert tree is not None
+
+    def test_list_container_hits_elif_branch(self):
+        """Container returned as list → elif isinstance(container, list) branch (lines 111-113).
+
+        **Expected**: Tree is returned without error.
+        """
+        with patch(
+            "picid.utils.rich_output._to_config_tree_container",
+            return_value=[{"a": 1}, "b"],
+        ):
+            cfg = OmegaConf.create({"x": 1})
+            tree = print_hydra_config_tree(cfg)
+        assert tree is not None
+
+    def test_scalar_container_hits_else_branch(self):
+        """Container returned as scalar → else branch (lines 114-115).
+
+        **Expected**: Tree is returned without error.
+        """
+        with patch(
+            "picid.utils.rich_output._to_config_tree_container",
+            return_value="just a string",
+        ):
+            cfg = OmegaConf.create({"x": 1})
+            tree = print_hydra_config_tree(cfg)
+        assert tree is not None
+
+    def test_resolve_false_takes_direct_path(self):
+        """resolve=False → _to_config_tree_container returns unresolved (line 122).
+
+        **Expected**: Tree built from unresolved config, no exception.
+        """
+        cfg = OmegaConf.create({"a": 1, "b": "${a}"})
+        tree = print_hydra_config_tree(cfg, resolve=False)
+        assert tree is not None
+
+
+@pytest.mark.unit
+class TestToConfigTreeContainerFallback:
+    """Tests for _to_config_tree_container OmegaConf exception paths (lines 137-142)."""
+
+    def test_resolve_error_with_hydra_initialized_falls_back_to_unresolved(self):
+        """OmegaConf resolve error + HydraConfig.initialized()=True → unresolved fallback (lines 137-142).
+
+        **Expected**: container returned without error.
+        """
+        cfg = OmegaConf.create({"a": 1})
+        with patch(
+            "picid.utils.rich_output.OmegaConf.to_container",
+            side_effect=[OmegaConfBaseException("fail"), {"a": 1}],
+        ):
+            with patch(
+                "picid.utils.rich_output.HydraConfig.initialized",
+                return_value=True,
+            ):
+                result = _to_config_tree_container(cfg, resolve=True)
+        assert result is not None
+
+
+@pytest.mark.unit
+class TestToResolvedContainerBranches:
+    """Tests for _to_resolved_container_without_uninitialized_hydra branches."""
+
+    def test_returns_none_when_hydra_initialized(self):
+        """HydraConfig.initialized()=True → returns None immediately (line 147).
+
+        **Expected**: None.
+        """
+        cfg = OmegaConf.create({"a": 1})
+        with patch(
+            "picid.utils.rich_output.HydraConfig.initialized", return_value=True
+        ):
+            result = _to_resolved_container_without_uninitialized_hydra(cfg)
+        assert result is None
+
+    def test_returns_none_when_no_hydra_key(self):
+        """cfg has no 'hydra' key → returns None (line 152).
+
+        **Expected**: None.
+        """
+        cfg = OmegaConf.create({"a": 1})
+        with patch(
+            "picid.utils.rich_output.HydraConfig.initialized", return_value=False
+        ):
+            result = _to_resolved_container_without_uninitialized_hydra(cfg)
+        assert result is None
+
+    def test_returns_none_when_to_container_strips_hydra_key(self):
+        """to_container result lacks 'hydra' → returns None (line 152).
+
+        **Expected**: None.
+        """
+        cfg = OmegaConf.create({"hydra": {}, "a": 1})
+        with patch(
+            "picid.utils.rich_output.HydraConfig.initialized", return_value=False
+        ):
+            with patch(
+                "picid.utils.rich_output.OmegaConf.to_container",
+                return_value={"no_hydra": 1},
+            ):
+                result = _to_resolved_container_without_uninitialized_hydra(cfg)
+        assert result is None
+
+    def test_returns_none_on_inner_exception(self):
+        """Inner OmegaConf error → returns None (lines 158-159).
+
+        **Expected**: None, exception not propagated.
+        """
+        cfg = OmegaConf.create({"hydra": {}, "a": 1})
+        with patch(
+            "picid.utils.rich_output.HydraConfig.initialized", return_value=False
+        ):
+            with patch(
+                "picid.utils.rich_output.OmegaConf.to_container",
+                side_effect=OmegaConfBaseException("inner fail"),
+            ):
+                result = _to_resolved_container_without_uninitialized_hydra(cfg)
+        assert result is None
+
+
+@pytest.mark.unit
+class TestDescribeListOfAkArrays:
+    """Tests for _describe_list_of_ak_arrays edge cases."""
+
+    def test_empty_list_returns_zero_count(self):
+        """Empty list → 'x 0' description (line 179).
+
+        **Expected**: "list<ak.Array> x 0" in result.
+        """
+        result = _describe_list_of_ak_arrays([])
+        assert "x 0" in result
+
+    def test_exception_in_stats_returns_fallback(self):
+        """Exception during stats computation → fallback string (lines 228-229).
+
+        **Expected**: result contains "stats failed".
+        """
+        bad_arr = ak.Array([{"x": 1}])
+        with patch(
+            "picid.utils.rich_output.get_ak_shape", side_effect=RuntimeError("bad")
+        ):
+            result = _describe_list_of_ak_arrays([bad_arr])
+        assert "stats failed" in result
+
+
+@pytest.mark.unit
+class TestPrintDataDictStructureNonDictLeaf:
+    """Tests for print_data_dict_structure non-dict container (line 336)."""
+
+    def test_non_dict_container_renders_as_leaf(self):
+        """Non-dict data_dict → add_to_tree hits else branch (line 336).
+
+        **Expected**: Tree returned without error.
+        """
+        tree = print_data_dict_structure(np.array([1.0, 2.0]))
+        assert tree is not None
+
+
+@pytest.mark.unit
+class TestGetConfigInfoBranches:
+    """Tests for get_config_info override and defaults traversal (lines 350-363)."""
+
+    def test_overrides_with_equals_sign_parsed(self):
+        """Overrides containing '=' → parsed into override_map (lines 350-352).
+
+        **Expected**: table_data entries reference the override key.
+        """
+        from unittest.mock import MagicMock
+
+        mock_hydra = MagicMock()
+        mock_hydra.get.return_value.overrides.task = ["model=lstm", "no_equals_item"]
+        cfg = OmegaConf.create({"model": "lstm"})
+        cfg._metadata.config_sources = {}
+
+        with patch("picid.utils.rich_output.HydraConfig", mock_hydra):
+            result = get_config_info(cfg)
+        assert isinstance(result, list)
+
+    def test_defaults_dict_and_str_entries_parsed(self):
+        """defaults list with dict and str entries parsed (lines 357-363).
+
+        **Expected**: No exception; default_sources populated.
+        """
+        from unittest.mock import MagicMock
+
+        mock_hydra = MagicMock()
+        mock_hydra.get.return_value.overrides.task = []
+        cfg = OmegaConf.create(
+            {"defaults": [{"model": "lstm"}, "override/file"], "a": 1}
+        )
+        cfg._metadata.config_sources = {}
+
+        with patch("picid.utils.rich_output.HydraConfig", mock_hydra):
+            result = get_config_info(cfg)
+        assert isinstance(result, list)
+
+    def test_recurse_handles_nested_dicts(self):
+        """recurse() handles nested dict and leaf values (lines 370, 374).
+
+        **Expected**: Both nested dict key and leaf values appear in result.
+        """
+        from unittest.mock import MagicMock
+
+        mock_hydra = MagicMock()
+        mock_hydra.get.return_value.overrides.task = []
+        cfg = OmegaConf.create({"top": 1, "nested": {"inner": 2}})
+        cfg._metadata.config_sources = {}
+
+        with patch("picid.utils.rich_output.HydraConfig", mock_hydra):
+            result = get_config_info(cfg)
+        keys = [row[0] for row in result]
+        assert "top" in keys
+        assert "nested.inner" in keys
+
+
+@pytest.mark.unit
+class TestTransformLogToSummaryString:
+    """Tests for transform_log_to_summary_string branches (lines 434-446)."""
+
+    def test_empty_log_returns_no_additional(self):
+        """Empty transform_log → 'No additional transform log.' (line 434-435).
+
+        **Expected**: message about no log.
+        """
+        assert "No additional" in transform_log_to_summary_string({})
+        assert "No additional" in transform_log_to_summary_string(None)
+
+    def test_non_dict_log_converted_to_string(self):
+        """Non-dict log → str(transform_log) (lines 436-437).
+
+        **Expected**: string representation returned.
+        """
+        result = transform_log_to_summary_string("plain string")
+        assert result == "plain string"
+
+    def test_train_key_preferred_over_test(self):
+        """Log with 'train' key → returns train value (lines 438-440).
+
+        **Expected**: train value in result.
+        """
+        log = {"train": "train_info", "test": "test_info"}
+        assert "train_info" in transform_log_to_summary_string(log)
+
+    def test_test_key_used_when_no_train(self):
+        """Log with 'test' but no 'train' key → returns test value (lines 438-440).
+
+        **Expected**: test value in result.
+        """
+        log = {"test": "test_info", "val": "val_info"}
+        assert "test_info" in transform_log_to_summary_string(log)
+
+    def test_first_key_used_when_no_preferred_key(self):
+        """Log without 'train' or 'test' → first key used (lines 441-446).
+
+        **Expected**: value from first key returned.
+        """
+        log = {"val": "val_info", "other": "other_info"}
+        result = transform_log_to_summary_string(log)
+        assert "val_info" in result
