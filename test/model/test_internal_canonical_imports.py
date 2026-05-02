@@ -12,7 +12,6 @@ def test_runtime_modules_do_not_import_legacy_methods_or_wrappers():
         Path("picid/pipeline/base.py"),
         Path("picid/interface/model/custom_model.py"),
         Path("picid/interface/utils.py"),
-        Path("picid/model/autogluon/autogluon_wrapper.py"),
     ]
     forbidden = ("picid.model.methods", "picid.model.wrappers")
 

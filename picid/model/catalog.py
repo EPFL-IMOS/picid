@@ -30,14 +30,6 @@ LEGACY_MODEL_CONFIG_NAMES = frozenset({"persistence", "similar_period"})
 
 MODEL_CATALOG: tuple[ModelCatalogEntry, ...] = (
     {
-        "config_name": "autogluon_fit_predict",
-        "class_path": "picid.model.estimators.autogluon.wrapper.FitPredictAutoGluonWrapper",
-        "family": "autogluon",
-        "execution_style": "fit_predict_wrapper",
-        "tasks": ("regression", "classification"),
-        "notes": "Tabular AutoGluon wrapper; best for structured features.",
-    },
-    {
         "config_name": "carte_fit_predict",
         "class_path": "picid.model.estimators.carte.wrapper.FitPredictCarteWrapper",
         "family": "carte",

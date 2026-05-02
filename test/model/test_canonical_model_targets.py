@@ -7,7 +7,6 @@ from pathlib import Path
 
 def test_canonical_model_configs_target_estimators_namespace():
     for name in [
-        "autogluon_fit_predict",
         "carte_fit_predict",
         "cnn_1d",
         "drift",

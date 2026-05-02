@@ -20,13 +20,13 @@ repos:
     rev: v0.8.4
     hooks:
       - id: ruff-format
-        exclude: ^(local_packages|_archive)/|\.ipynb$
+        exclude: ^(local_packages|_archive|archive)/|\.ipynb$
       - id: ruff
         args: [--fix]
-        exclude: ^(local_packages|_archive)/|\.ipynb$
+        exclude: ^(local_packages|_archive|archive)/|\.ipynb$
 
   - repo: https://github.com/numpy/numpydoc
     rev: v1.8.0
     hooks:
       - id: numpydoc-validation
-        exclude: ^(local_packages|_archive|test|tutorials|picid/data/datasources/picasso)/|picid/data/datasources/umar\.py$|picid/interface/utils\.py$
+        exclude: ^(local_packages|_archive|archive|test|tutorials|picid/data/datasources/picasso)/|picid/data/datasources/umar\.py$|picid/interface/utils\.py$
