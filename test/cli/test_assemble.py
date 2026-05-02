@@ -356,3 +356,337 @@ def test_no_data_prints_message(capsys):
     assemble._no_data("model configs")
 
     assert capsys.readouterr().out == "No model configs found.\n"
+
+
+# ---------------------------------------------------------------------------
+# _show_tree_navigation
+# ---------------------------------------------------------------------------
+
+
+def test_show_tree_navigation_builds_tree(monkeypatch):
+    """_show_tree_navigation prints a tree for a list of paths."""
+    printed = []
+    monkeypatch.setattr(assemble.console, "print", printed.append)
+
+    assemble._show_tree_navigation(
+        ["a/b/c.yaml", "a/b/d.yaml", "x/y.yaml"], title="Root"
+    )
+
+    assert len(printed) == 1  # one rich Tree object printed
+
+
+def test_show_tree_navigation_empty_paths(monkeypatch):
+    """_show_tree_navigation with empty list prints empty tree."""
+    printed = []
+    monkeypatch.setattr(assemble.console, "print", printed.append)
+
+    assemble._show_tree_navigation([], title="Empty")
+
+    assert len(printed) == 1
+
+
+# ---------------------------------------------------------------------------
+# run_assemble — choice=None (second prompt cancelled)
+# ---------------------------------------------------------------------------
+
+
+def test_run_assemble_returns_when_funnel_prompt_cancelled(monkeypatch):
+    """After selecting tier, cancelling the funnel prompt exits early (line 89)."""
+    _install_questionary(monkeypatch, ["Easy: Use defaults only", None])
+    task_calls = []
+    monkeypatch.setattr(
+        assemble, "_funnel_task_first", lambda tier: task_calls.append(tier)
+    )
+    monkeypatch.setattr(
+        assemble, "_funnel_dataset_first", lambda tier: task_calls.append(tier)
+    )
+    monkeypatch.setattr(
+        assemble, "_funnel_model_first", lambda tier: task_calls.append(tier)
+    )
+
+    assemble.run_assemble()
+
+    assert task_calls == []
+
+
+def test_run_assemble_routes_to_task_funnel(monkeypatch):
+    """choice='task' → _funnel_task_first called (line 92)."""
+    _install_questionary(monkeypatch, ["Easy: Use defaults only", "task"])
+    task_calls = []
+    monkeypatch.setattr(
+        assemble, "_funnel_task_first", lambda tier: task_calls.append(tier)
+    )
+    monkeypatch.setattr(assemble, "_funnel_dataset_first", lambda tier: None)
+    monkeypatch.setattr(assemble, "_funnel_model_first", lambda tier: None)
+
+    assemble.run_assemble()
+
+    assert task_calls == ["Easy: Use defaults only"]
+
+
+def test_run_assemble_routes_to_dataset_funnel(monkeypatch):
+    """choice='dataset' → _funnel_dataset_first called (line 94)."""
+    _install_questionary(monkeypatch, ["Easy: Use defaults only", "dataset"])
+    dataset_calls = []
+    monkeypatch.setattr(assemble, "_funnel_task_first", lambda tier: None)
+    monkeypatch.setattr(
+        assemble, "_funnel_dataset_first", lambda tier: dataset_calls.append(tier)
+    )
+    monkeypatch.setattr(assemble, "_funnel_model_first", lambda tier: None)
+
+    assemble.run_assemble()
+
+    assert dataset_calls == ["Easy: Use defaults only"]
+
+
+# ---------------------------------------------------------------------------
+# _funnel_task_first edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_funnel_task_first_returns_when_task_selection_cancelled(monkeypatch):
+    """Cancelling task selection → early return (line 124)."""
+    task_info = TaskInfo(
+        "prognostics", "rul", Path("/tmp/configs/task_definition/p/r.yaml")
+    )
+    _install_questionary(monkeypatch, [None])
+    monkeypatch.setattr(assemble, "list_task_definitions", lambda: [task_info])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", Path("/tmp/configs"))
+    monkeypatch.setattr(assemble, "_show_tree_navigation", lambda paths, title: None)
+
+    # Should return cleanly without raising
+    assemble._funnel_task_first("Easy: Use defaults only")
+
+
+def test_funnel_task_first_returns_when_no_experiments(monkeypatch):
+    """No experiments for task → _no_data + return (lines 132-133)."""
+    task_info = TaskInfo(
+        "prognostics", "rul", Path("/tmp/configs/task_definition/p/r.yaml")
+    )
+    _install_questionary(monkeypatch, [task_info])
+    monkeypatch.setattr(assemble, "list_task_definitions", lambda: [task_info])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", Path("/tmp/configs"))
+    monkeypatch.setattr(assemble, "_show_tree_navigation", lambda paths, title: None)
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [])
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_task_first("Easy: Use defaults only")
+
+    assert any("experiment" in m for m in messages)
+
+
+def test_funnel_task_first_returns_when_experiment_selection_cancelled(monkeypatch):
+    """Cancelling experiment selection → early return (line 141)."""
+    task_info = TaskInfo(
+        "prognostics", "rul", Path("/tmp/configs/task_definition/p/r.yaml")
+    )
+    group = DatasetGroupInfo("demo", Path("demo"))
+    _install_questionary(monkeypatch, [task_info, None])
+    monkeypatch.setattr(assemble, "list_task_definitions", lambda: [task_info])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", Path("/tmp/configs"))
+    monkeypatch.setattr(assemble, "_show_tree_navigation", lambda paths, title: None)
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(
+        assemble,
+        "list_experiments_for_group_task",
+        lambda g, t: ["demo/prognostics/exp1"],
+    )
+    shown = []
+    monkeypatch.setattr(assemble, "_show_final_command", lambda k, t: shown.append(k))
+
+    assemble._funnel_task_first("Easy: Use defaults only")
+
+    assert shown == []
+
+
+# ---------------------------------------------------------------------------
+# _funnel_dataset_first edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_funnel_dataset_first_returns_when_group_selection_cancelled(monkeypatch):
+    """Cancelling group selection → early return (line 167)."""
+    group = DatasetGroupInfo("demo", Path("demo"))
+    _install_questionary(monkeypatch, [None])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+
+def test_funnel_dataset_first_returns_when_exp_root_missing(monkeypatch, tmp_path):
+    """exp_root doesn't exist → _no_data + return (lines 172-173)."""
+    group = DatasetGroupInfo("demo", tmp_path / "experiment" / "demo")
+    _install_questionary(monkeypatch, [group])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", tmp_path / "nonexistent")
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+    assert any("experiment dir" in m for m in messages)
+
+
+def test_funnel_dataset_first_returns_when_no_task_types(monkeypatch, tmp_path):
+    """exp_root exists but empty → _no_data + return (lines 177-178)."""
+    exp_root = tmp_path / "experiment" / "demo"
+    exp_root.mkdir(parents=True)  # exists but no subdirs
+    group = DatasetGroupInfo("demo", exp_root)
+    _install_questionary(monkeypatch, [group])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", tmp_path)
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+    assert any("task type" in m for m in messages)
+
+
+def test_funnel_dataset_first_returns_when_task_type_cancelled(monkeypatch, tmp_path):
+    """Cancelling task type selection → early return (line 182)."""
+    exp_root = tmp_path / "experiment" / "demo"
+    (exp_root / "forecasting").mkdir(parents=True)
+    group = DatasetGroupInfo("demo", exp_root)
+    _install_questionary(monkeypatch, [group, None])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", tmp_path)
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+
+def test_funnel_dataset_first_returns_when_no_experiments(monkeypatch, tmp_path):
+    """No experiments for group/task → _no_data + return (lines 186-187)."""
+    exp_root = tmp_path / "experiment" / "demo"
+    (exp_root / "forecasting").mkdir(parents=True)
+    group = DatasetGroupInfo("demo", exp_root)
+    _install_questionary(monkeypatch, [group, "forecasting"])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", tmp_path)
+    monkeypatch.setattr(assemble, "list_experiments_for_group_task", lambda g, t: [])
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+    assert any("experiment" in m for m in messages)
+
+
+def test_funnel_dataset_first_returns_when_experiment_cancelled(monkeypatch, tmp_path):
+    """Cancelling experiment selection → early return (line 195)."""
+    exp_root = tmp_path / "experiment" / "demo"
+    (exp_root / "forecasting").mkdir(parents=True)
+    group = DatasetGroupInfo("demo", exp_root)
+    _install_questionary(monkeypatch, [group, "forecasting", None])
+    monkeypatch.setattr(assemble, "list_experiment_groups", lambda: [group])
+    monkeypatch.setattr(assemble, "CONFIGS_ROOT", tmp_path)
+    monkeypatch.setattr(
+        assemble,
+        "list_experiments_for_group_task",
+        lambda g, t: ["demo/forecasting/model_a"],
+    )
+    monkeypatch.setattr(assemble, "_show_tree_navigation", lambda paths, title: None)
+    shown = []
+    monkeypatch.setattr(assemble, "_show_final_command", lambda k, t: shown.append(k))
+
+    assemble._funnel_dataset_first("Easy: Use defaults only")
+
+    assert shown == []
+
+
+# ---------------------------------------------------------------------------
+# _funnel_model_first edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_funnel_model_first_returns_when_no_models(monkeypatch):
+    """No models → _no_data + return (lines 213-214)."""
+    _install_questionary(monkeypatch, [])
+    monkeypatch.setattr(assemble, "list_model_configs", lambda: [])
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_model_first("Easy: Use defaults only")
+
+    assert any("model" in m for m in messages)
+
+
+def test_funnel_model_first_returns_when_model_selection_cancelled(monkeypatch):
+    """Cancelling model selection → early return (line 221)."""
+    model = ModelInfo("forecasting", "linear", Path("linear.yaml"))
+    _install_questionary(monkeypatch, [None])
+    monkeypatch.setattr(assemble, "list_model_configs", lambda: [model])
+
+    assemble._funnel_model_first("Easy: Use defaults only")
+
+
+def test_funnel_model_first_returns_when_no_matching_experiments(monkeypatch):
+    """No experiments match model name → _no_data + return (lines 231-232)."""
+    model = ModelInfo("forecasting", "linear", Path("linear.yaml"))
+    _install_questionary(monkeypatch, [model])
+    monkeypatch.setattr(assemble, "list_model_configs", lambda: [model])
+    monkeypatch.setattr(
+        assemble,
+        "list_experiment_groups",
+        lambda: [DatasetGroupInfo("demo", Path("demo"))],
+    )
+    monkeypatch.setattr(
+        assemble,
+        "list_experiments_for_group_task",
+        lambda g, t: ["demo/forecasting/raw/transformer"],  # no "linear" at end
+    )
+    messages = []
+    monkeypatch.setattr(assemble, "_no_data", messages.append)
+
+    assemble._funnel_model_first("Easy: Use defaults only")
+
+    assert any("model" in m for m in messages)
+
+
+def test_funnel_model_first_returns_when_experiment_selection_cancelled(monkeypatch):
+    """Cancelling experiment selection → early return (line 240)."""
+    model = ModelInfo("forecasting", "linear", Path("linear.yaml"))
+    _install_questionary(monkeypatch, [model, None])
+    monkeypatch.setattr(assemble, "list_model_configs", lambda: [model])
+    monkeypatch.setattr(
+        assemble,
+        "list_experiment_groups",
+        lambda: [DatasetGroupInfo("demo", Path("demo"))],
+    )
+    monkeypatch.setattr(
+        assemble,
+        "list_experiments_for_group_task",
+        lambda g, t: ["demo/forecasting/raw/linear"],
+    )
+    monkeypatch.setattr(assemble, "_show_tree_navigation", lambda paths, title: None)
+    shown = []
+    monkeypatch.setattr(assemble, "_show_final_command", lambda k, t: shown.append(k))
+
+    assemble._funnel_model_first("Easy: Use defaults only")
+
+    assert shown == []
+
+
+# ---------------------------------------------------------------------------
+# _parameter_injection_phase — AdamW override (line 300)
+# ---------------------------------------------------------------------------
+
+
+def test_parameter_injection_phase_hard_adamw_override(monkeypatch):
+    """Hard tier with 'Yes AdamW' → 'optimization=reduce_on_plateau' added (line 300)."""
+    _install_questionary(monkeypatch, ["Yes AdamW", "", ""])
+    monkeypatch.setattr(
+        assemble,
+        "get_overridable_from_experiment",
+        lambda key: {},  # no model_params → skips lr prompt
+    )
+    monkeypatch.setattr(assemble, "get_task_type_from_experiment", lambda key: None)
+    monkeypatch.setattr(assemble, "get_model_specific_params", lambda m, t: {})
+
+    result = assemble._parameter_injection_phase(
+        "demo/forecasting/raw/cnn_1d",
+        "Hard: Override optimizer, learning rate, transforms",
+    )
+
+    assert "optimization=reduce_on_plateau" in result
