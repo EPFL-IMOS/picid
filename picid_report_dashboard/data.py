@@ -28,6 +28,53 @@ import xarray as xr
 
 _ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
 
+# ---------------------------------------------------------------------------
+# Model name aliases
+# Maps old model name → new model name. Aliasing fires ONLY when both sides
+# are present in the same loaded dataset; the old name is kept as canonical
+# and the new-name slice is merged into it (old data wins on conflict).
+# If only one side is present, no renaming occurs.
+# ---------------------------------------------------------------------------
+MODEL_ALIASES: dict[str, str] = {
+    "baselines.crossformer_model.Crossformer_Forecaster": "model.forecasters.crossformer_model.Crossformer_Forecaster",
+}
+
+
+def _apply_model_aliases(
+    ds: xr.Dataset,
+) -> tuple[xr.Dataset, list[tuple[str, str]]]:
+    """Apply MODEL_ALIASES only when both old (key) and new (value) names coexist.
+
+    Falls back to the old name as canonical: the new-name slice is merged into
+    the old-name slice via combine_first (old data wins on conflict).
+    When only one side is present, no renaming occurs.
+
+    Returns (dataset, applied) where applied is a list of (old_name, new_name)
+    pairs that were actually unified.
+    """
+    current_models = set(ds.coords["model"].values)
+    # Build new_name → old_name map, but only for pairs where both sides exist.
+    active: dict[str, str] = {
+        new: old
+        for old, new in MODEL_ALIASES.items()
+        if old in current_models and new in current_models
+    }
+    if not active:
+        return ds, []
+
+    slices = []
+    for model in ds.coords["model"].values:
+        if model in active:
+            continue  # "new" name — gets folded into the "old" name below
+        model_slice = ds.sel(model=model)
+        for new_name, old_name in active.items():
+            if old_name == model:
+                model_slice = model_slice.combine_first(ds.sel(model=new_name))
+        slices.append(model_slice.expand_dims("model").assign_coords(model=[model]))
+
+    applied = [(old, new) for new, old in active.items()]
+    return xr.concat(slices, dim="model"), applied
+
 
 def is_alt_model(name: str) -> bool:
     """Return whether *name* should use the alternate metric selectors."""
@@ -119,6 +166,7 @@ class ResultsLoader:
     def __init__(self, base_dir: str) -> None:
         self.base_dir = os.path.abspath(base_dir)
         self._hp_ds_cache: dict[tuple[str, str], xr.Dataset | None] = {}
+        self._applied_model_aliases: list[tuple[str, str]] = []
         self._check_base_dir()
 
     def _check_base_dir(self) -> None:
@@ -175,6 +223,7 @@ class ResultsLoader:
         combined.load()
         for ds in relabeled:
             ds.close()
+        combined, self._applied_model_aliases = _apply_model_aliases(combined)
         return combined
 
     # ------------------------------------------------------------------
@@ -190,6 +239,11 @@ class ResultsLoader:
     def models(self) -> list[str]:
         """Model names present across all loaded projects."""
         return list(self.xarray_dataset.coords["model"].values)
+
+    @property
+    def applied_model_aliases(self) -> list[tuple[str, str]]:
+        """(old_name, new_name) pairs that were actually unified by MODEL_ALIASES."""
+        return list(self._applied_model_aliases)
 
     @property
     def metric_keys(self) -> list[str]:
@@ -319,7 +373,6 @@ class ResultsLoader:
 
         ds_base, project_name = _split_dataset_label(dataset)
         ds_safe = _safe_path_fragment(ds_base)
-        model_safe = _safe_path_fragment(model)
 
         # Search only the matching project directory when we know the project
         search_dirs = [
@@ -327,12 +380,20 @@ class ResultsLoader:
             if project_name is None or os.path.basename(d) == project_name
         ]
 
-        for d in search_dirs:
-            p = os.path.join(d, "tables", "hp_configs", f"{ds_safe}_{model_safe}.nc")
-            if os.path.isfile(p):
-                loaded = xr.load_dataset(p)
-                self._hp_ds_cache[cache_key] = loaded
-                return loaded
+        # Try the given model name first, then any aliased names from MODEL_ALIASES.
+        # Aliasing may have renamed the model to an old canonical name while the HP
+        # config files on disk were written by the pipeline using the new name.
+        model_names_to_try = [model] + [
+            new for old, new in MODEL_ALIASES.items() if old == model
+        ]
+        for model_candidate in model_names_to_try:
+            candidate_safe = _safe_path_fragment(model_candidate)
+            for d in search_dirs:
+                p = os.path.join(d, "tables", "hp_configs", f"{ds_safe}_{candidate_safe}.nc")
+                if os.path.isfile(p):
+                    loaded = xr.load_dataset(p)
+                    self._hp_ds_cache[cache_key] = loaded
+                    return loaded
 
         self._hp_ds_cache[cache_key] = None
         return None

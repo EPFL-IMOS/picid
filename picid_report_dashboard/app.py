@@ -270,6 +270,7 @@ class PiCIDDashboard(param.Parameterized):
         super().__init__(report_dir=report_dir, **params)
         self._loader: ResultsLoader | None = None
         self._load_error: str | None = None
+        self._alias_warnings: list[tuple[str, str]] = []
         self._restore_in_progress = False
         self._state_store: pn.widgets.TextInput | None = None
         self._sync_selectors_in_progress = False
@@ -291,9 +292,11 @@ class PiCIDDashboard(param.Parameterized):
             _ = self._loader.summary_df  # pre-warm CSV cache
             _ = self._loader.stats_df  # pre-warm CSV cache
             self._load_error = None
+            self._alias_warnings = self._loader.applied_model_aliases
         except Exception as exc:
             self._loader = None
             self._load_error = str(exc)
+            self._alias_warnings = []
 
     @param.depends("report_dir", watch=True)
     def _on_report_dir_change(self) -> None:
@@ -1435,12 +1438,30 @@ class PiCIDDashboard(param.Parameterized):
         # Trigger the localStorage restore after the browser WebSocket is ready
         pn.state.onload(lambda: setattr(load_trigger, "value", 1))
 
-        return pn.template.FastListTemplate(
+        template = pn.template.FastListTemplate(
             title="piCID Experiment Dashboard",
             sidebar=[sidebar],
             main=[tabs],
             accent="#0072B2",
         )
+
+        if self._alias_warnings:
+            rows = "\n".join(
+                f"| `{old}` | `{new}` |" for old, new in self._alias_warnings
+            )
+            modal_content = pn.pane.Markdown(
+                "## ⚠️ Model Name Aliases Applied\n\n"
+                "Both old and new module paths were found simultaneously in the loaded data. "
+                "Runs under the **new name** were merged into the **old name** "
+                "(old data takes priority on conflict).\n\n"
+                "| Canonical name (old, kept) | Merged away (new) |\n"
+                "|---|---|\n" + rows,
+                width=700,
+            )
+            template.modal.append(pn.Column(modal_content, width=720))
+            pn.state.onload(template.open_modal)
+
+        return template
 
 
 # ---------------------------------------------------------------------------
