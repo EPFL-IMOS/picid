@@ -85,16 +85,17 @@ DATASETS_PROGNOSTICS = [
     # We want to test raw for nb14 to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
     # Info(ds="nb14", subexp="raw", type="prognostics"),
-    Info(ds="nb14", subexp="combined", type="prognostics"),
-    Info(ds="unibo", subexp="combined", type="prognostics"),
-    Info(ds="phme20", subexp="raw", type="prognostics"),
-    Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
-    Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
-    # We want to test raw for pronostia to show that it is basically impossible
-    # to fine tune in reasonable time because one epoch takes around 2-5 hours.
-    # Info(ds="pronostia", subexp="raw", type="prognostics"),
-    Info(ds="pronostia", subexp="in_domain/combined", type="prognostics"),
-    Info(ds="xjtu_sy", subexp="in_domain/combined", type="prognostics"),
+    # Info(ds="nb14", subexp="combined", type="prognostics"),
+    # Info(ds="unibo", subexp="combined", type="prognostics"),
+    # Info(ds="phme20", subexp="raw", type="prognostics"),
+    # Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
+    # Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
+    # # We want to test raw for pronostia to show that it is basically impossible
+    # # to fine tune in reasonable time because one epoch takes around 2-5 hours.
+    # # Info(ds="pronostia", subexp="raw", type="prognostics"),
+    # Info(ds="pronostia", subexp="in_domain/combined", type="prognostics"),
+    # Info(ds="xjtu_sy", subexp="in_domain/combined", type="prognostics"),
+    Info(ds="xjtu_sy", subexp="phmd_split/combined", type="prognostics"),
 ]
 
 DATASETS_DIAGNOSTICS = [
@@ -107,11 +108,17 @@ DATASETS_DIAGNOSTICS = [
 ]
 
 
+DATASETS_ANOMALY_DETECTION = [
+    Info(ds="airbus_helicopter", subexp="", type="anomaly_detection"),
+]
+
 ALL_MODELS = DEEP_LEARNING_MODELS
 VENV_PYTHON = Path(".venv/bin/python")
 RESULTS_FILE = Path(
     f"{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}_experiment_results.jsonl"
 )
+
+ANOMALY_DETECTION_MODELS = ["isolation_forest"]
 
 DEEP_LEARNING_ARGS = [
     "debug=nox_testing",
@@ -198,6 +205,27 @@ def experiments_diagnostics(session, model_name, info):
 @nox.session(venv_backend="none")
 @nox.parametrize("model_name,info", product(PROGNOSTICS_MODELS, DATASETS_PROGNOSTICS))
 def experiments_prognostics(session, model_name, info):
+    dataset_key = info.ds
+    subexp = info.subexp
+    task_type = info.type
+
+    if subexp is not None and subexp != "":
+        exp_name = f"{dataset_key}/{task_type}/{subexp}/{model_name}"
+    else:
+        exp_name = f"{dataset_key}/{task_type}/{model_name}"
+
+    run_experiment(
+        session,
+        exp_name,
+        metadata={"model_name": model_name, "dataset_key": dataset_key},
+    )
+
+
+@nox.session(venv_backend="none")
+@nox.parametrize(
+    "model_name,info", product(ANOMALY_DETECTION_MODELS, DATASETS_ANOMALY_DETECTION)
+)
+def experiments_anomaly_detection(session, model_name, info):
     dataset_key = info.ds
     subexp = info.subexp
     task_type = info.type
