@@ -167,3 +167,193 @@ def test_load_model_missing_file_raises(tmp_path):
     )
     with pytest.raises(FileNotFoundError, match="Model file not found"):
         w.load_model("missing-ag")
+
+
+# ---------------------------------------------------------------------------
+# Tests for the real AutoGluonWrapper (picid.model.autogluon.autogluon_wrapper)
+# ---------------------------------------------------------------------------
+
+_AG_REAL_MODULE = "picid.model.autogluon.autogluon_wrapper"
+_AG_DEPS = [
+    "autogluon",
+    "autogluon.tabular",
+    "autogluon.features",
+    "autogluon.features.generators",
+    "picid.model.autogluon.multi_label_predictor",
+]
+
+
+class _FakeTabularPredictor:
+    def __init__(self, label, problem_type, path):
+        self.label = label
+        self.problem_type = problem_type
+        self.is_fit = False
+
+    def fit(self, df, **kwargs):
+        self.is_fit = True
+
+
+class _FakeMultilabelPredictor:
+    def __init__(self, labels, problem_type, path):
+        self.labels = labels
+        self.problem_type = problem_type
+        self.is_fit = False
+
+    def fit(self, df, **kwargs):
+        self.is_fit = True
+
+
+class _FakeGenerator:
+    def __init__(self):
+        pass
+
+
+class _FakeBulkGenerator:
+    def __init__(self, generators):
+        self.generators = generators
+
+
+@pytest.fixture
+def _real_ag_module():
+    """Import the real AutoGluonWrapper with stubbed autogluon dependencies."""
+    ag = types.ModuleType("autogluon")
+    ag_tab = types.ModuleType("autogluon.tabular")
+    ag_tab.TabularPredictor = _FakeTabularPredictor
+    ag_feat = types.ModuleType("autogluon.features")
+    ag_feat_gen = types.ModuleType("autogluon.features.generators")
+    ag_feat_gen.AsTypeFeatureGenerator = _FakeGenerator
+    ag_feat_gen.IdentityFeatureGenerator = _FakeGenerator
+    ag_feat_gen.BulkFeatureGenerator = _FakeBulkGenerator
+    ag.tabular = ag_tab
+    ag.features = ag_feat
+
+    mlp_mod = types.ModuleType("picid.model.autogluon.multi_label_predictor")
+    mlp_mod.MultilabelTabularPredictor = _FakeMultilabelPredictor
+
+    saved = {name: sys.modules.get(name) for name in _AG_DEPS + [_AG_REAL_MODULE]}
+    sys.modules.update(
+        {
+            "autogluon": ag,
+            "autogluon.tabular": ag_tab,
+            "autogluon.features": ag_feat,
+            "autogluon.features.generators": ag_feat_gen,
+            "picid.model.autogluon.multi_label_predictor": mlp_mod,
+        }
+    )
+    sys.modules.pop(_AG_REAL_MODULE, None)
+    mod = importlib.import_module(_AG_REAL_MODULE)
+    mod.AutoGluonWrapper.__abstractmethods__ = frozenset()
+
+    yield mod
+
+    for name, module in saved.items():
+        if module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = module
+
+
+def _make_batch_loader(n_targets=1):
+    batch = {
+        "context": {"features_seq_x": torch.zeros(2, 10, 5)},
+        "target": {"target_seq_x": torch.zeros(2, 10, n_targets)},
+    }
+    return iter([batch])
+
+
+@pytest.mark.unit
+class TestAutoGluonWrapperInit:
+    """Tests for AutoGluonWrapper.__init__ and _initialize_backbone."""
+
+    def test_single_target_creates_tabular_predictor(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            model_dict=OmegaConf.create({}),
+        )
+        assert isinstance(w.backbone, _FakeTabularPredictor)
+        assert w.n_targets == 1
+
+    def test_multi_target_creates_multilabel_predictor(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=3),
+            model_dict=OmegaConf.create({}),
+        )
+        assert isinstance(w.backbone, _FakeMultilabelPredictor)
+        assert w.n_targets == 3
+
+    def test_classification_task_sets_classification_problem_type(
+        self, _real_ag_module
+    ):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            task_type="classification",
+            model_dict=OmegaConf.create({}),
+        )
+        assert w.backbone.problem_type == "classification"
+
+    def test_regression_task_sets_binary_problem_type(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            task_type="regression",
+            model_dict=OmegaConf.create({}),
+        )
+        assert w.backbone.problem_type == "binary"
+
+    def test_default_generators_two_items(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            model_dict=OmegaConf.create({}),
+        )
+        assert isinstance(w.feature_generators, _FakeBulkGenerator)
+        assert len(w.feature_generators.generators) == 2
+
+    def test_custom_generator_list_passed_through(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        class _MyGen:
+            def __init__(self):
+                pass
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            model_dict=OmegaConf.create({}),
+            generator_list=[_MyGen()],
+        )
+        assert len(w.feature_generators.generators) == 1
+
+
+@pytest.mark.unit
+class TestAutoGluonWrapperFit:
+    """Tests for AutoGluonWrapper.fit."""
+
+    def test_fit_calls_backbone_fit(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            model_dict=OmegaConf.create({}),
+        )
+        w.fit(np.zeros((5, 3)), np.zeros((5, 1)))
+        assert w.backbone.is_fit is True
+
+    def test_fit_reinitializes_backbone_when_already_fit(self, _real_ag_module):
+        from omegaconf import OmegaConf
+
+        w = _real_ag_module.AutoGluonWrapper(
+            train_dataloader=_make_batch_loader(n_targets=1),
+            model_dict=OmegaConf.create({}),
+        )
+        w.backbone.is_fit = True
+        old_backbone = w.backbone
+        w.fit(np.zeros((5, 3)), np.zeros((5, 1)))
+        assert w.backbone is not old_backbone
