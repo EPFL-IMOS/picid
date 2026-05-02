@@ -628,3 +628,286 @@ class TestPreProcessorEdgeCases:
         )
 
         assert preprocessor.datasource is mock_single_source_loader
+
+
+@pytest.mark.unit
+class TestPreprocessorInvalidTransforms:
+    """Tests __init__ transform type guard (line 149)."""
+
+    def test_non_protocol_transforms_raises_type_error(self, mock_single_source_loader):
+        """Non-TransformSequenceProtocol transforms → TypeError.
+
+        **Methodology**: Pass a plain object as transforms.
+
+        **Expected**: TypeError raised mentioning the type name.
+        """
+
+        class _NotATransformSequence:
+            pass
+
+        with pytest.raises(TypeError, match="_NotATransformSequence"):
+            PreProcessor(
+                datasource=mock_single_source_loader,
+                transforms=_NotATransformSequence(),
+            )
+
+
+@pytest.mark.unit
+class TestFetchDataNonContainer:
+    """Tests fetch_data contract check (lines 231-235)."""
+
+    def test_get_data_returns_non_container_raises(
+        self, mock_single_source_loader, mock_transform_manager
+    ):
+        """get_data() returning a non-DatasetContainer → PreprocessingDatasourceError.
+
+        **Methodology**: Configure mock to return a plain dict.
+
+        **Expected**: PreprocessingDatasourceError raised.
+        """
+        mock_single_source_loader.get_data.return_value = {"not": "a container"}
+        preprocessor = PreProcessor(
+            datasource=mock_single_source_loader,
+            transforms=mock_transform_manager,
+        )
+        with pytest.raises(PreprocessingDatasourceError):
+            preprocessor.fetch_data()
+
+    def test_get_data_raises_datasource_error_wrapped(self, mock_transform_manager):
+        """get_data() raising DatasourceError → wrapped in PreprocessingDatasourceError (lines 276-277).
+
+        **Methodology**: Use _PreprocessingErrorDatasource with DatasourceStateError.
+
+        **Expected**: PreprocessingDatasourceError with stage='get_data'.
+        """
+        from picid.data.datasources.base.exceptions import DatasourceStateError
+
+        datasource = _PreprocessingErrorDatasource(
+            data_error=DatasourceStateError("boom"),
+        )
+        preprocessor = PreProcessor(
+            datasource=datasource,
+            transforms=mock_transform_manager,
+        )
+        with pytest.raises(PreprocessingDatasourceError) as exc_info:
+            preprocessor.fetch_data()
+        assert exc_info.value.stage == "get_data"
+
+
+@pytest.mark.unit
+class TestAddDatasourceManifestEntry:
+    """Tests _add_datasource_manifest_entry early-return branches (lines 290, 293)."""
+
+    def test_data_none_returns_cleanly(
+        self, mock_single_source_loader, mock_transform_manager
+    ):
+        """self.data is None → method returns without error (line 290).
+
+        **Methodology**: Call directly on fresh preprocessor (data never loaded).
+
+        **Expected**: No exception raised.
+        """
+        preprocessor = PreProcessor(
+            datasource=mock_single_source_loader,
+            transforms=mock_transform_manager,
+        )
+        preprocessor._add_datasource_manifest_entry()
+
+    def test_non_metadata_manifest_returns_cleanly(
+        self, mock_single_source_loader, mock_transform_manager
+    ):
+        """manifest not a MetadataManifest → returns without adding entry (line 293).
+
+        **Methodology**: Attach a Mock with no manifest attribute so getattr returns None.
+
+        **Expected**: No exception raised.
+        """
+        preprocessor = PreProcessor(
+            datasource=mock_single_source_loader,
+            transforms=mock_transform_manager,
+        )
+        preprocessor.data = Mock(spec=[])
+        preprocessor._add_datasource_manifest_entry()
+
+
+@pytest.mark.unit
+class TestResolveDatasourceNamePreprocessor:
+    """Tests PreProcessor._resolve_datasource_name static method branches."""
+
+    def test_get_data_names_single_tuple_returns_string(self):
+        """get_data_names() returning 1-tuple → unpacked string (line 340).
+
+        **Expected**: "solo", not ("solo",).
+        """
+
+        class _Ds:
+            def get_data_names(self):
+                return ("solo",)
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) == "solo"
+
+    def test_get_data_names_multi_tuple_returns_list(self):
+        """get_data_names() returning multi-tuple → list (lines 342-344).
+
+        **Expected**: ["a", "b"].
+        """
+
+        class _Ds:
+            def get_data_names(self):
+                return ("a", "b")
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) == ["a", "b"]
+
+    def test_get_data_name_returns_string(self):
+        """get_data_name() returning a string → returned directly (line 350).
+
+        **Expected**: "myname".
+        """
+
+        class _Ds:
+            def get_data_name(self):
+                return "myname"
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) == "myname"
+
+    def test_get_data_name_returns_list_of_strings(self):
+        """get_data_name() returning a list → returned as-is (line 354).
+
+        **Expected**: ["x", "y"].
+        """
+
+        class _Ds:
+            def get_data_name(self):
+                return ["x", "y"]
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) == ["x", "y"]
+
+    def test_get_data_name_raises_returns_none(self):
+        """get_data_name() raising → None returned, no propagation (lines 355-356).
+
+        **Expected**: None.
+        """
+
+        class _Ds:
+            def get_data_name(self):
+                raise RuntimeError("boom")
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) is None
+
+    def test_get_data_names_raises_falls_through_to_none(self):
+        """get_data_names() raising → exception caught, falls through (lines 343-344).
+
+        **Expected**: None returned (no data_name, no get_data_names success).
+        """
+
+        class _Ds:
+            def get_data_names(self):
+                raise RuntimeError("exploded")
+
+        assert PreProcessor._resolve_datasource_name(_Ds()) is None
+
+
+@pytest.mark.unit
+class TestApplyTransformsErrors:
+    """Tests apply_transforms error branches (lines 397, 419-422)."""
+
+    def test_non_data_transform_raises_value_error(self):
+        """transforms dict with non-DataTransform value → ValueError (line 397).
+
+        **Methodology**: Pass "not_a_transform" as the dict value.
+
+        **Expected**: ValueError raised mentioning DataTransform.
+        """
+        datasource = _MetadataAwareDatasource()
+        preprocessor = PreProcessor(datasource=datasource)
+        preprocessor.fetch_data()
+        with pytest.raises(ValueError, match="DataTransform"):
+            preprocessor.apply_transforms(
+                preprocessor.data,
+                {"t": "not_a_transform"},
+            )
+
+    def test_forward_exception_wrapped_in_transform_error(self):
+        """transform.forward() raising RuntimeError → TransformError (lines 419-422).
+
+        **Methodology**: Patch DataTransform.forward to raise RuntimeError.
+
+        **Expected**: TransformError raised with original cause attached.
+        """
+        from unittest.mock import patch
+        from picid.exceptions import TransformError
+
+        datasource = _MetadataAwareDatasource()
+        preprocessor = PreProcessor(datasource=datasource)
+        preprocessor.fetch_data()
+
+        transform_instance = _PreprocessingMetadataTransform()
+        dt = DataTransform(
+            "failing_transform",
+            transform_instance,
+            {"apply_to": "features", "assign_to": "features"},
+        )
+        with patch.object(dt, "forward", side_effect=RuntimeError("exploded")):
+            with pytest.raises(TransformError):
+                preprocessor.apply_transforms(
+                    preprocessor.data,
+                    OrderedDict([("failing_transform", dt)]),
+                )
+
+    def test_transform_error_reraises_without_wrapping(self):
+        """transform.forward() raising TransformError → re-raised as-is (line 420).
+
+        **Methodology**: Patch forward to raise TransformError directly.
+
+        **Expected**: Same TransformError propagates, not wrapped in a new one.
+        """
+        from unittest.mock import patch
+        from picid.exceptions import TransformError
+
+        datasource = _MetadataAwareDatasource()
+        preprocessor = PreProcessor(datasource=datasource)
+        preprocessor.fetch_data()
+
+        transform_instance = _PreprocessingMetadataTransform()
+        dt = DataTransform(
+            "reraise_transform",
+            transform_instance,
+            {"apply_to": "features", "assign_to": "features"},
+        )
+        original_err = TransformError("already wrapped", step_id="reraise_transform")
+        with patch.object(dt, "forward", side_effect=original_err):
+            with pytest.raises(TransformError) as exc_info:
+                preprocessor.apply_transforms(
+                    preprocessor.data,
+                    OrderedDict([("reraise_transform", dt)]),
+                )
+            assert exc_info.value is original_err
+
+    def test_after_each_transform_callback_invoked(self):
+        """after_each_transform_callback called after each transform (line 429).
+
+        **Methodology**: Pass a Mock callback, mock forward to succeed.
+
+        **Expected**: callback called once with (data, transform_name).
+        """
+        from unittest.mock import Mock, patch
+
+        datasource = _MetadataAwareDatasource()
+        preprocessor = PreProcessor(datasource=datasource)
+        preprocessor.fetch_data()
+        data = preprocessor.data
+
+        transform_instance = _PreprocessingMetadataTransform()
+        dt = DataTransform(
+            "cb_transform",
+            transform_instance,
+            {"apply_to": "features", "assign_to": "features"},
+        )
+        callback = Mock()
+        with patch.object(dt, "forward", return_value=(data, {})):
+            preprocessor.apply_transforms(
+                data,
+                OrderedDict([("cb_transform", dt)]),
+                after_each_transform_callback=callback,
+            )
+        callback.assert_called_once()

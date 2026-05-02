@@ -1900,3 +1900,51 @@ class TestTrain:
             seed=42,
         )
         assert ckpt_callback.config is not None
+
+
+# ---------------------------------------------------------------------------
+# Task definition schema — validator + serializer branches
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestTaskDefinitionSchema:
+    """Tests for BaseTaskDefinition model_validator and model_serializer branches."""
+
+    def test_prognostic_task_type_appended_to_input_tensors(self):
+        """
+        Prognostic validator appends task_type to input_tensors when absent (lines 66-69).
+
+        **Expected**: "rul" added to default ["features"].
+        """
+        from picid.interface.schemas.task_definition import Prognostic
+
+        task = Prognostic(task_type="rul")
+        assert "rul" in task.input_tensors
+
+    def test_forecasting_task_type_not_propagated(self):
+        """
+        Forecasting is excluded from task_type propagation (validator guard).
+
+        **Expected**: "forecasting" not added a second time; input_tensors unchanged.
+        """
+        from picid.interface.schemas.task_definition import Forecasting
+
+        task = Forecasting()
+        assert task.input_tensors == ["features", "time_features", "target"]
+        assert task.input_tensors.count("forecasting") == 0
+
+    def test_model_dump_contains_data_requirements(self):
+        """
+        model_dump() triggers serialize_model which injects model requirements (lines 73-79).
+
+        **Expected**: result["model"]["data_requirements"]["input_tensors"] is present.
+        """
+        from picid.interface.schemas.task_definition import Prognostic
+
+        task = Prognostic(task_type="rul")
+        dumped = task.model_dump()
+        assert "model" in dumped
+        assert "data_requirements" in dumped["model"]
+        assert "input_tensors" in dumped["model"]["data_requirements"]
+        assert "rul" in dumped["model"]["data_requirements"]["input_tensors"]
