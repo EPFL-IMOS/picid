@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 import torch
 
+from picid.model.estimators.cnn1d.blocks import ResidualBlock
 from picid.model.autoencoder.residual_1d import (
-    ResidualBlock,
     ResidualTransposeBlock,
     SymmetricalAutoencoder,
 )

@@ -93,8 +93,8 @@ dev = [
 [tool.numpydoc_validation]
 # Relax strict checks: Examples, See Also, extended summary not required
 checks = ["all", "EX01", "SA01", "ES01"]
-# __repr__ methods need not have Returns/Examples
-exclude = ['__repr__$']
+# __repr__ and __init__ follow class-level docstring convention
+exclude = ['__repr__$', '__init__$']
 
 [tool.pytest.ini_options]
 # When run from repo root with `uv run pytest`, basetemp stays outside `test/` and out of the source-test tree

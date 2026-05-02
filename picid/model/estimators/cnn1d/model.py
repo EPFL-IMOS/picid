@@ -1,8 +1,10 @@
+"""CNN 1D encoder model with task-specific output head."""
+
 import torch
 import torch.nn as nn
 
 from picid.model.definitions import REGRESSION_TASKS, CLASSIFICATION_TASKS
-from picid.model.autoencoder.residual_1d import ResidualBlock
+from picid.model.estimators.cnn1d.blocks import ResidualBlock
 
 
 class EncoderModel(nn.Module):
@@ -25,8 +27,6 @@ class EncoderModel(nn.Module):
         self.task_type = task_type
         self.latent_dim = int(config["latent_dim"])
 
-        # --- 1. Build Encoder Backbone ---
-        # (This logic is unchanged)
         input_channels = int(config["input_channels"])
         output_channels = [int(c) for c in config["output_channels"]]
         kernels = [int(k) for k in config["kernels"]]
@@ -68,21 +68,15 @@ class EncoderModel(nn.Module):
             )
         self.cnn_backbone = nn.Sequential(*encoder_blocks)
 
-        # --- 2. Build Latent Head (WITH NORMALIZATION) ---
         self._calculate_flattened_size()
 
         self.head = torch.nn.Sequential(
             torch.nn.Flatten(),
             torch.nn.Linear(self.flattened_size, self.latent_dim),
-            # --- THIS IS THE FIX ---
-            # Normalizes the features *before* the activation
             nn.LayerNorm(self.latent_dim),
-            # ---------------------
             torch.nn.ReLU(),
         )
 
-        # --- 3. Build FINAL Output Head ---
-        # (This logic is unchanged)
         if self.task_type in REGRESSION_TASKS:
             self.final_head = torch.nn.Sequential(
                 torch.nn.Linear(self.latent_dim, 1), torch.nn.Flatten(start_dim=0)
@@ -98,7 +92,6 @@ class EncoderModel(nn.Module):
                 f"Unknown task_type: '{self.task_type}'. Must be 'regression' or 'classification'."
             )
 
-        # --- 4. APPLY WEIGHT INITIALIZATION ---
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -114,19 +107,16 @@ class EncoderModel(nn.Module):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-
-        # --- ADDED: Init LayerNorm as well ---
-        elif isinstance(m, (nn.LayerNorm)):
+        elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.weight, 1.0)
             nn.init.constant_(m.bias, 0)
-
         elif isinstance(m, ResidualBlock):
             if m.skip_connection is None:
                 if hasattr(m, "norm") and hasattr(m.norm, "weight"):
                     nn.init.constant_(m.norm.weight, 0)
 
     def _calculate_flattened_size(self):
-        # (Unchanged)
+        """Infer flattened feature size by passing a dummy tensor through the backbone."""
         dummy_input = torch.randn(
             1, int(self.config["input_channels"]), int(self.config["input_seq_len"])
         )
@@ -134,7 +124,19 @@ class EncoderModel(nn.Module):
         self.flattened_size = int(torch.numel(dummy_output) / dummy_output.shape[0])
 
     def forward(self, x):
-        # (Unchanged)
+        """
+        Run encoder backbone and output head.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor of shape ``(batch, channels, length)``.
+
+        Returns
+        -------
+        torch.Tensor
+            Task prediction tensor.
+        """
         feat = self.cnn_backbone(x)
         feat = self.head(feat)
         output = self.final_head(feat)
