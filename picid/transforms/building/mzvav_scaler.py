@@ -1,3 +1,5 @@
+"""Min-max scaler transform for the MZVAV building dataset."""
+
 import logging
 from typing import Any
 
@@ -19,11 +21,7 @@ logger = logging.getLogger(__name__)
 class MinMaxScalerMZVAV(
     ConcatFitAndPerSegmentTransformMixin, InverseTransformMixin, DenseTransform
 ):
-    """
-    An adapter for sklearn.preprocessing.MinMaxScaler, conforming to BaseTransform interface.
-    Handles various input data types by converting them to numpy.ndarray internally
-    and converting back to the original type.
-    """
+    """Adapt sklearn MinMaxScaler to the BaseTransform interface using Awkward arrays."""
 
     def __init__(self):
         super().__init__()
@@ -114,7 +112,7 @@ class MinMaxScalerMZVAV(
         np_data, _ = _convert_to_numpy(data[keys[0]])
 
         original_shape = np_data.shape
-        np_data = np_data.reshape(np_data.shape[0], -1)
+        np_data = np_data.reshape(-1, np_data.shape[-1])
 
         inverse_transformed_np_data = self.scaler.inverse_transform(np_data)
 

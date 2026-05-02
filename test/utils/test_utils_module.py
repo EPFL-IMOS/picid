@@ -8,6 +8,8 @@ from picid.utils.utils import (
     extras,
     task_wrapper,
     get_metric_value,
+    _get_hydra_overrides,
+    _save_git_info_to_run,
     _save_uv_lock_to_run,
     _write_reproduce_guide,
 )
@@ -193,3 +195,102 @@ class TestWriteReproduceGuide:
     def test_skips_when_no_output_dir(self):
         cfg = OmegaConf.create({"paths": {"root_dir": "/tmp"}})
         _write_reproduce_guide(cfg)  # no-op, no raise
+
+    def test_output_dir_outside_root_uses_absolute_path(self, tmp_path):
+        """When out_dir is not under root, relative_to raises ValueError → fallback to str(out_dir)."""
+        root = tmp_path / "project"
+        root.mkdir()
+        out_dir = tmp_path / "elsewhere" / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(root), "output_dir": str(out_dir)}}
+        )
+        _write_reproduce_guide(cfg)
+        dest = out_dir / "REPRODUCE.md"
+        assert dest.exists()
+        assert str(out_dir) in dest.read_text()
+
+    def test_experiment_key_extracted_from_overrides(self, tmp_path):
+        """experiment= override is parsed and appears in REPRODUCE.md."""
+        root = tmp_path / "project"
+        root.mkdir()
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(root), "output_dir": str(out_dir)}}
+        )
+        with patch(
+            "picid.utils.utils._get_hydra_overrides",
+            return_value=["experiment=my_exp", "trainer.max_epochs=5"],
+        ):
+            _write_reproduce_guide(cfg)
+        content = (out_dir / "REPRODUCE.md").read_text()
+        assert "my_exp" in content
+
+    def test_oserror_on_write_is_swallowed(self, tmp_path):
+        """OSError when writing REPRODUCE.md is caught and does not propagate."""
+        root = tmp_path / "project"
+        root.mkdir()
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(root), "output_dir": str(out_dir)}}
+        )
+        with patch(
+            "picid.utils.utils.Path.write_text", side_effect=OSError("disk full")
+        ):
+            _write_reproduce_guide(cfg)  # must not raise
+
+
+class TestGetHydraOverrides:
+    def test_returns_empty_list_when_hydra_not_initialized(self):
+        result = _get_hydra_overrides()
+        assert result == []
+
+    def test_returns_overrides_when_hydra_initialized(self):
+        mock_hc = MagicMock()
+        mock_hc.initialized.return_value = True
+        mock_hc.get.return_value.overrides.task = ["trainer.max_epochs=1"]
+        with patch("hydra.core.hydra_config.HydraConfig", mock_hc):
+            result = _get_hydra_overrides()
+        assert result == ["trainer.max_epochs=1"]
+
+
+class TestSaveGitInfoToRun:
+    def test_saves_run_metadata_yaml(self, tmp_path):
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(tmp_path), "output_dir": str(out_dir)}}
+        )
+        _save_git_info_to_run(cfg)
+        assert (out_dir / "run_metadata.yaml").exists()
+
+    def test_skips_when_no_paths(self):
+        _save_git_info_to_run(OmegaConf.create({}))
+
+    def test_root_defaults_to_cwd_when_dot(self, tmp_path):
+        """root_dir='.' triggers Path.cwd() fallback."""
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create({"paths": {"root_dir": ".", "output_dir": str(out_dir)}})
+        _save_git_info_to_run(cfg)
+        assert (out_dir / "run_metadata.yaml").exists()
+
+    def test_oserror_on_save_is_swallowed(self, tmp_path):
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(tmp_path), "output_dir": str(out_dir)}}
+        )
+        with patch(
+            "picid.utils.utils.OmegaConf.save", side_effect=OSError("disk full")
+        ):
+            _save_git_info_to_run(cfg)  # must not raise
+
+
+class TestSaveUvLockToRunOSError:
+    def test_oserror_on_copy_is_swallowed(self, tmp_path):
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "uv.lock").write_text("lock")
+        out_dir = tmp_path / "run"
+        cfg = OmegaConf.create(
+            {"paths": {"root_dir": str(root), "output_dir": str(out_dir)}}
+        )
+        with patch("picid.utils.utils.shutil.copy2", side_effect=OSError("disk full")):
+            _save_uv_lock_to_run(cfg)  # must not raise
