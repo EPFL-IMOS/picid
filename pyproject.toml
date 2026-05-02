@@ -94,7 +94,8 @@ dev = [
 # Relax strict checks: Examples, See Also, extended summary not required
 checks = ["all", "EX01", "SA01", "ES01"]
 # __repr__ and __init__ follow class-level docstring convention
-exclude = ['__repr__$', '__init__$']
+# Lightning callback hooks inherit parameter contracts from the framework
+exclude = ['__repr__$', '__init__$', 'resource_tracker\.ResourceTracker\.']
 
 [tool.pytest.ini_options]
 # When run from repo root with `uv run pytest`, basetemp stays outside `test/` and out of the source-test tree

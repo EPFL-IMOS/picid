@@ -15,7 +15,6 @@ canonical inventory until real implementations exist.
 
 | Config | Canonical Class | Family | Execution Style | Regression | Classification | Forecasting | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `autogluon_fit_predict` | `picid.model.estimators.autogluon.wrapper.FitPredictAutoGluonWrapper` | `autogluon` | `fit_predict_wrapper` | yes | yes | no | Tabular AutoGluon wrapper; best for structured features. |
 | `carte_fit_predict` | `picid.model.estimators.carte.wrapper.FitPredictCarteWrapper` | `carte` | `fit_predict_wrapper` | yes | yes | no | CARTE-based tabular wrapper with text-aware preprocessing. |
 | `catboost` | `catboost.CatBoostRegressor` | `catboost` | `sklearn_estimator` | yes | no | no | Direct CatBoost regressor target; forecasting is not part of this config. |
 | `cnn_1d` | `picid.model.estimators.cnn1d.wrapper.CNN1D_Wrapper` | `cnn1d` | `feed_forward_wrapper` | yes | yes | no | 1D CNN encoder wrapped for supervised PHM tasks. |

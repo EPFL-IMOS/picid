@@ -1,3 +1,5 @@
+"""Lightning callback for tracking compute resources and timing statistics."""
+
 import time
 import torch
 import lightning.pytorch as pl
@@ -45,10 +47,12 @@ class ResourceTracker(pl.Callback):
 
     # --- Helpers ---
     def _sync(self):
+        """Synchronize CUDA streams if a GPU is available."""
         if torch.cuda.is_available():
             torch.cuda.synchronize()
 
     def _get_gpu_memory(self):
+        """Return peak GPU memory allocated in MB, or 0.0 when no GPU is present."""
         if torch.cuda.is_available():
             return torch.cuda.max_memory_allocated() / 1024**2
         return 0.0
@@ -101,6 +105,7 @@ class ResourceTracker(pl.Callback):
         return batch
 
     def _calculate_flops(self, pl_module, batch):
+        """Compute and log forward-pass FLOPs once per run."""
         if self.flops_calculated:
             return
         try:
@@ -128,18 +133,21 @@ class ResourceTracker(pl.Callback):
     # =========================================================
 
     def on_train_epoch_start(self, trainer, pl_module):
+        """Start the epoch timer and reset per-epoch GPU load accumulator."""
         self._sync()
         self.timers["train_epoch"] = time.time()
         # Reset GPU load stats for the new epoch
         self.stats["gpu_loads"] = []
 
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        """Record batch start time and trigger one-shot FLOPs calculation."""
         if not self.flops_calculated:
             self._calculate_flops(pl_module, batch)
         self._sync()
         self.timers["train_batch"] = time.time()
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        """Record batch latency, GPU load, and log smoothed throughput."""
         self._sync()
         latency = time.time() - self.timers["train_batch"]
 
@@ -162,13 +170,14 @@ class ResourceTracker(pl.Callback):
             # Log metrics
             pl_module.log_dict(
                 {
-                    "efficiency/train_throughput": bs / avg_lat,
+                    "efficiency/train_throughput": bs / avg_lat if avg_lat > 0 else 0.0,
                     "efficiency/gpu_load_step": current_load,  # Real-time look
                 },
                 prog_bar=True,
             )
 
     def on_train_epoch_end(self, trainer, pl_module):
+        """Log epoch duration and average GPU load for the completed epoch."""
         self._sync()
         duration = time.time() - self.timers["train_epoch"]
         self.stats["train_epoch_times"].append(duration)
@@ -190,22 +199,26 @@ class ResourceTracker(pl.Callback):
     # =========================================================
 
     def on_validation_epoch_start(self, trainer, pl_module):
+        """Start the validation epoch timer."""
         self._sync()
         self.timers["val_epoch"] = time.time()
 
     def on_validation_batch_start(self, *args):
+        """Start the validation batch timer."""
         self._sync()
         self.timers["val_batch"] = time.time()
 
     def on_validation_batch_end(
         self, trainer, pl_module, outputs, batch, batch_idx, *args
     ):
+        """Record validation batch latency after skipping warm-up batches."""
         self._sync()
         latency = time.time() - self.timers["val_batch"]
         if batch_idx > self.skip_first_n:
             self.stats["val_batch_times"].append(latency)
 
     def on_validation_epoch_end(self, trainer, pl_module):
+        """Log validation epoch duration."""
         self._sync()
         duration = time.time() - self.timers["val_epoch"]
         self.stats["val_epoch_times"].append(duration)
@@ -213,27 +226,34 @@ class ResourceTracker(pl.Callback):
 
     # Unified Inference
     def _on_inf_start(self):
+        """Start the inference step timer."""
         self._sync()
         self.timers["inf_step"] = time.time()
 
     def _on_inf_end(self):
+        """Record inference step latency."""
         self._sync()
         latency = time.time() - self.timers["inf_step"]
         self.stats["inference_latencies"].append(latency)
 
     def on_test_batch_start(self, *args, **kwargs):
+        """Start inference timer at the beginning of a test batch."""
         self._on_inf_start()
 
     def on_test_batch_end(self, *args, **kwargs):
+        """Record latency at the end of a test batch."""
         self._on_inf_end()
 
     def on_predict_batch_start(self, *args, **kwargs):
+        """Start inference timer at the beginning of a predict batch."""
         self._on_inf_start()
 
     def on_predict_batch_end(self, *args, **kwargs):
+        """Record latency at the end of a predict batch."""
         self._on_inf_end()
 
     def _log_inference_summary(self, trainer):
+        """Log mean/std latency and peak VRAM to the trainer logger."""
         lats = np.array(self.stats["inference_latencies"])
         if len(lats) > 0:
             metrics = {
@@ -245,9 +265,11 @@ class ResourceTracker(pl.Callback):
             self.stats["inference_latencies"] = []
 
     def on_test_end(self, trainer, pl_module):
+        """Log inference summary at the end of the test phase."""
         self._log_inference_summary(trainer)
 
     def on_predict_end(self, trainer, pl_module):
+        """Log inference summary at the end of the predict phase."""
         self._log_inference_summary(trainer)
 
     def on_fit_end(self, trainer, pl_module):

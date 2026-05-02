@@ -274,6 +274,16 @@ class TestPreProcessData:
 class TestRegisterDataDimResolver:
     """Tests for register_data_dim_resolver and its inner infer_data_dim function."""
 
+    @pytest.fixture(autouse=True)
+    def _restore_resolver(self):
+        """Restore the conftest infer_data_dim resolver after each test."""
+        from omegaconf import OmegaConf as _OmegaConf
+
+        yield
+        _OmegaConf.register_new_resolver(
+            "infer_data_dim", lambda key, dim: 5, replace=True
+        )
+
     def _register_and_resolve(self, data, key, dim):
         """Register resolver then resolve ${infer_data_dim:<key>,<dim>}."""
         from omegaconf import OmegaConf
