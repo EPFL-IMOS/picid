@@ -22,6 +22,7 @@ results/
 artifacts/
 picid_report_artifacts/
 csv_files/
+csv_files_backup/
 MagicMock/
 picid_latex/
 docs/plans/
@@ -53,6 +54,7 @@ lmetk_report_artifacts
 
 # Generated report output (tables, plots, report.html)
 report_output/
+report_output_backup/
 
 # Local packages / datasets (e.g. rul-datasets)
 local_packages/
