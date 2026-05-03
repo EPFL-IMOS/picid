@@ -1,6 +1,0 @@
-_target_: picid.data.datasources.phmd_battery.PHMDBatteryLoader
-
-fold: 0
-data_name: NB14
-task_mode: ahRul #ahRul, rul
-cache_dir: ${paths.data_dir}/phmd_cache

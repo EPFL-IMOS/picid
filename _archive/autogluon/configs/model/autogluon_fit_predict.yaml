@@ -1,7 +1,0 @@
-_target_: picid.model.estimators.autogluon.wrapper.FitPredictAutoGluonWrapper
-task_type: ${task_definition.task_type}
-
-# for a list of all tabular models see https://auto.gluon.ai/dev/api/autogluon.tabular.models.html
-model_dict: { "GBM": { "num_boost_round": 200, "early_stopping_rounds": null } } # Use null instead of None
-output_dir: ${paths.model_workdir}
-model_cache_path: ${paths.model_cache_dir}

@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - concepts_n_cmapss_ds03_da/prognostics/base
-  - /model_configs/prognostics/patchtst
-  - override /transforms: concepts_n_cmapss_ds03_da/depater2023_default

@@ -1,7 +1,0 @@
-#@package _global_
-
-defaults:
-  - xjtu_sy/prognostics/base
-  - /model_configs/prognostics/timeseries_transformer
-
-  - override /transforms: bearings/xjtu_sy/statistics

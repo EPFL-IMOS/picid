@@ -1,4 +1,0 @@
-Command failed: python picid/run.py experiment=unibo/prognostics/bosello23_base_statistics/crossformer.yaml trainer.max_epochs=1
-Check scripts/checks/script_error.log for details.
-Command failed: python picid/run.py experiment=unibo/prognostics/bosello23_base_statistics/stf.yaml trainer.max_epochs=1
-Check scripts/checks/script_error.log for details.

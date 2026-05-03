@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - override /datasource: railway # railway
-  - override /evaluator: default
-  - override /task_definition: forecasting/c4_l0_p1

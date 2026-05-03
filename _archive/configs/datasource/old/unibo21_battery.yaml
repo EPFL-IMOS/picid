@@ -1,7 +1,0 @@
-_target_: picid.data.datasources.phmd_battery.PHMDBatteryLoader
-
-fold: 0
-dataset_fold: bosello
-data_name: UNIBO21
-task_mode: soc # state of charge (soc)
-cache_dir: ${paths.data_dir}/phmd_cache
