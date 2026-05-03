@@ -17,7 +17,7 @@ Steps:
 > -v ~/Experiments:/mnt/imos-students/${LDAP_USERNAME}/experiments \
 > -v ~/Workspaces/work/TabPHM:/mnt/imos-students/${LDAP_USERNAME}/projects
 > ```
-> These folders are symlinked to /workspace/datasets, ... in the container due to restrictions in how many pvc can be mounted on the EPFL RunAI cluster.
+> These folders are symlinked to /workspace/datasets, ... in the container due to restrictions in how many pvc can be mounted on the XXX RunAI cluster.
 
 Once the container is started, the following steps are necessary to run:
 

@@ -25,7 +25,7 @@ uv run python scripts/reproducibility/compare_configs.py run_a/config_resolved.y
 
 Output: `-` only in first, `+` only in second, `~` different values.
 
-See [scripts/reproducibility/README.md](https://github.com/epfl-imos/TabPHM/blob/main/scripts/reproducibility/README.md) and `tutorials/workflow/compare_configs.py` (runnable walkthrough).
+See [scripts/reproducibility/README.md](/scripts/reproducibility/README.md) and `tutorials/workflow/compare_configs.py` (runnable walkthrough).
 
 ---
 
