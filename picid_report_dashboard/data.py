@@ -37,6 +37,7 @@ _ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
 # ---------------------------------------------------------------------------
 MODEL_ALIASES: dict[str, str] = {
     "baselines.crossformer_model.Crossformer_Forecaster": "model.forecasters.crossformer_model.Crossformer_Forecaster",
+    "baselines.patchtst_model.PatchTST_Forecaster": "model.forecasters.patchtst_model.PatchTST_Forecaster",
 }
 
 
