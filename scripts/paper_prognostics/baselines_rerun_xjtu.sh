@@ -48,10 +48,10 @@ model_names=(
     # linear_regression
     # exponential_regression
     # stf
-    crossformer
+    # crossformer
     # timeseries_transformer
     # tide
-    # patchtst
+    patchtst
 )
 
 BATCH_SIZES=(512)
