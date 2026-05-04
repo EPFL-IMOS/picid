@@ -59,7 +59,7 @@ DataTransform("scaler", MinMaxScalerSklearn(),
 
 Transforms are applied in list order.
 Fitting happens exactly once, on the split named by `fit_on`, before the transform is applied to any other split.
-This means a scaler fitted on `"train"` uses the training statistics when it later transforms `"val"` and `"test"` — the correct behaviour to avoid data leakage.
+This means a scaler fitted on `"train"` uses the training statistics when it later transforms `"val"` and `"test"` — the correct behavior to avoid data leakage.
 
 ```python
 transforms = [
@@ -83,7 +83,7 @@ Import all standard transforms from `picid.transforms.base_transforms`.
 | Class | Import | Inverse | Description |
 |---|---|---|---|
 | `MinMaxScalerSklearn` | `picid.transforms.base_transforms.scaler` | Yes | Scales each feature to [0, 1] using sklearn's MinMaxScaler. Fits on training data. |
-| `StandardScalerSklearn` | `picid.transforms.base_transforms.scaler` | Yes | Zero-mean, unit-variance standardisation using sklearn's StandardScaler. |
+| `StandardScalerSklearn` | `picid.transforms.base_transforms.scaler` | Yes | Zero-mean, unit-variance standardization using sklearn's StandardScaler. |
 | `ConstantScaler` | `picid.transforms.base_transforms.scaler` | Yes | Multiplies all values by a fixed constant. Stateless — no fitting needed. |
 
 ```python
@@ -155,8 +155,10 @@ DataTransform("concat", ConcatenateTransform(dim=1),
 ### Subsampling and aggregation
 
 ```python
-from picid.transforms.base_transforms.subsampler import SubsampleTransform
-from picid.transforms.base_transforms.windowed_agg import WindowedAggregationTransform
+from picid.transforms.base_transforms.subsample import (
+    SubsampleTransform,
+    WindowedAggregationTransform,
+)
 
 # Keep every 4th sample
 DataTransform("sub", SubsampleTransform(step=4), {"apply_to": "features"})
@@ -176,8 +178,8 @@ Set `window_size="full"` to collapse an entire axis into one value.
 Compute hand-crafted features from raw time-series.
 
 ```python
-from picid.transforms.base_transforms.spectral_stats import SpectralStatsTransform
-from picid.transforms.base_transforms.time_stats import TimeStatsTransform
+from picid.transforms.base_transforms.spectral import SpectralStatsTransform
+from picid.transforms.base_transforms.time_statistics import TimeStatsTransform
 
 # Frequency-domain statistics
 DataTransform("fft_stats",
@@ -201,7 +203,7 @@ Both output shape `(1, n_features × n_stats)`.
 ### Padding
 
 ```python
-from picid.transforms.base_transforms.padding import PadToLength
+from picid.transforms.base_transforms.padding2length import PadToLength
 
 # Pad the time axis to at least 32 steps with zeros
 DataTransform("pad", PadToLength(target_length=32, axis=0, pad_value=0.0),
@@ -213,7 +215,7 @@ DataTransform("pad", PadToLength(target_length=32, axis=0, pad_value=0.0),
 ### Reshaping
 
 ```python
-from picid.transforms.base_transforms.reshape import ReshapeTransform
+from picid.transforms.base_transforms.reshaping import ReshapeTransform
 
 # Uses einops pattern notation
 DataTransform("reshape", ReshapeTransform(pattern="b t c -> (b t) c"), {"apply_to": "features"})
@@ -226,7 +228,7 @@ DataTransform("reshape", ReshapeTransform(pattern="b t c -> (b t) c"), {"apply_t
 Injects artificial missing data — useful for evaluating robustness.
 
 ```python
-from picid.transforms.base_transforms.corruptor import MCARCorruptorTransform
+from picid.transforms.base_transforms.mcar_corruption import MCARCorruptorTransform
 
 # 10% of samples missing as random blocks
 DataTransform("corrupt",
@@ -310,7 +312,7 @@ transforms = [
 ### Extract statistical features
 
 ```python
-from picid.transforms.base_transforms.time_stats import TimeStatsTransform
+from picid.transforms.base_transforms.time_statistics import TimeStatsTransform
 
 transforms = [
     # Extract hand-crafted features — output replaces raw signals

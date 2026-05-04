@@ -133,7 +133,6 @@ Example (existing): `experiment=railway_traction/forecasting/tabdpt_fit_predict`
 
 | Wrapper | Base class | Use case |
 |---------|------------|----------|
-| `estimators/autogluon/wrapper.py` | `AbstractFitPredictWrapper` | Tabular fit-predict (AutoGluon) |
 | `estimators/tabdpt/wrapper.py` | `AbstractFitPredictWrapper` | TabDPT fit-predict |
 | `estimators/tabpfn/wrapper.py` | `AbstractFitPredictWrapper` | TabPFN fit-predict |
 | `estimators/xgboost/wrapper.py` | `AbstractFitPredictWrapper` | XGBoost fit-predict |

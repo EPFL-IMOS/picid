@@ -4,7 +4,7 @@ Modules excluded from coverage (see `pyproject.toml` [tool.coverage.run].omit) a
 
 ## CLI / Entry Points
 
-- `picid/run.py`, `picid/simplified_run.py`, etc.
+- `picid/run.py` and other CLI entry points.
 - **Reason:** Exercised by nox experiment sessions and manual runs; unit testing CLI is low ROI.
 
 ## Datasources with External I/O

@@ -4,15 +4,12 @@
 
 `picid` uses [Hydra](https://hydra.cc/) configuration files internally to assemble experiments.
 Hydra is powerful, but learning its YAML conventions is a barrier when you just want to run a quick experiment or plug in your own data.
-The interface is a helper class allowing the user to easily implements custom pipelines in the project.
+The interface is a helper class for building custom pipelines in the project.
 
-The interface class is EntryInterface (which you can find in the following python [file](../../picid/interface/interface.py)), and manges the training pipeline.
+The interface class is `EntryInterface`, implemented in `picid/interface/interface.py`, and it manages the training pipeline.
 
 The `picid.interface` package also exposes lightweight datasource helpers (`CustomSingleSourceLoader`, `CustomMultiSourceLoader`) without importing the full training stack. `EntryInterface` is loaded lazily, so datasource-only workflows and tests can run without pulling plotting/evaluator extras at import time.
 
-It exposes three main functions:
-
-The interface removes that barrier.
 `EntryInterface` is a single Python class that accepts ordinary Python objects — Pydantic configs, NumPy arrays, PyTorch modules — and handles the Hydra plumbing for you.
 You describe an experiment in Python; the interface translates it into the internal format and runs it.
 
@@ -24,10 +21,13 @@ from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
 from picid.transforms.base import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
+```
 
-To check a list of possible datasources, you can use the static function `get_available_datasources()`, which output is a list of strings.
+To check the available datasources, use the static function `get_available_datasources()`, which returns a list of strings.
 
+```python
 interface = EntryInterface()
+datasource_names = EntryInterface.get_available_datasources()
 
 interface.train(
     run_name="my_first_run",
@@ -159,9 +159,9 @@ See [Schemas — Models](schemas.md#models).
 
 **Use `CustomModelTrainer`** when you have your own PyTorch `nn.Module`.
 See [Custom models](custom-model.md).
-Internally, picid uses Hydra config files to build an experiment. The function train() is an interface between the used and this aspect. To do it, internally, it convers all the input values into config files, which are then used to create the final config file, which is then run.
+Internally, `picid` uses Hydra config files to build an experiment. The `train()` function bridges the Python interface and Hydra composition by converting Python inputs into config fragments that are used to create and run the final experiment config.
 
-Most of the config files expose a parameter called `model_class`, which points to the associated class within the module
+Most model config files expose a `model_class` parameter that points to the associated class within the module.
 
 ## MultiSourceLoader constructor modes
 

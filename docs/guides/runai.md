@@ -1,7 +1,6 @@
 # RunAI
 
-To run on RunAI (or a general Kubernetes cluster), we provide a [Dockerfile](../../Dockerfile) and
-scripts to setup in [container](../../container/).
+To run on RunAI (or a general Kubernetes cluster), we provide a `Dockerfile` and setup scripts under `container/`.
 
 Steps:
 - Customize the scripts with your setup / credentials.
@@ -43,7 +42,7 @@ Alternatively, we provide a runscript `runai.sh`.
 
 ```bash
 chmod +x runai.sh
-./runai.sh debug=default experiment=railway_traction/autogluon_railway_fit_predict
+./runai.sh debug=default experiment=railway_traction/forecasting/tabpfn_fit_predict
 ```
 
 For local installation and running experiments without RunAI, see [Setup](../getting-started/setup.md).
