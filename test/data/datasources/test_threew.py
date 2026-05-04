@@ -574,3 +574,172 @@ class TestSplitContainerFlattenHelper:
         assert records[0]["split"] == "train"
         assert records[0]["metadata"]["class_label"] == 2
         assert records[0]["metadata"]["unit_name"] == "2/WELL-00012_20170320123144"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests that cover previously-uncovered branches
+# ---------------------------------------------------------------------------
+
+
+def _write_threew_parquet(tmp_path: Path, class_id: int, stem: str) -> Path:
+    """Write a real (non-empty) parquet file for a 3W instance."""
+    class_dir = tmp_path / "dataset" / str(class_id)
+    class_dir.mkdir(parents=True, exist_ok=True)
+    path = class_dir / f"{stem}.parquet"
+    make_threew_frame(class_id).to_parquet(path)
+    return path
+
+
+class TestEdgeCasesAndMissingCoverage:
+    """Targeted tests for previously-uncovered lines in ThreeWLoader."""
+
+    def test_simulated_fold_skipped_when_include_simulated_train_false(
+        self, threew_kwargs: dict, monkeypatch: pytest.MonkeyPatch
+    ):
+        """split_name=None for fold=-1 with include_simulated_train=False → continue (line 216)."""
+        root = Path(threew_kwargs["data_dir"])
+        # fold=2 → "train"; fold=-1 with include_simulated_train=False → None → skipped
+        touch_threew_instance(root, 0, "WELL-NORMAL-0001")
+        write_threew_folds(
+            root,
+            [
+                ("0/WELL-NORMAL-0001.csv", 2, False),
+                ("5/SIMULATED_0001.csv", -1, False),
+            ],
+        )
+        monkeypatch.setattr(
+            ThreeWLoader,
+            "_read_instance_frame",
+            lambda self, path: make_threew_frame(0 if "NORMAL" in path.stem else 5),
+        )
+        loader = ThreeWLoader(**{**threew_kwargs, "include_simulated_train": False})
+        loader.load_data()
+        data = loader.get_data()
+        # The simulated row (fold=-1) is skipped; only the train row (fold=2) is loaded
+        assert len(data["features"]["train"]) == 1
+        assert len(data["features"]["val"]) == 0
+
+    def test_skipped_missing_parquet_logs_warning(
+        self,
+        threew_kwargs: dict,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        """Warning is logged when some parquet files are missing but at least one loads (line 245)."""
+        root = tmp_path
+        # One valid parquet file; one folds row pointing to a non-existent file
+        _write_threew_parquet(root, 0, "WELL-NORMAL-0001")
+        write_threew_folds(
+            root,
+            [
+                ("0/WELL-NORMAL-0001.csv", 2, False),  # valid parquet → loaded
+                ("0/WELL-MISSING-9999.csv", 2, False),  # no parquet → skipped
+            ],
+        )
+        loader = ThreeWLoader(
+            data_dir=str(root),
+            data_name="threew",
+            task_mode="anomaly_detection",
+            download=False,
+            validation_fold=0,
+            test_fold=1,
+            include_ova=False,
+        )
+        with caplog.at_level(logging.WARNING, logger="picid.data.datasources.threew"):
+            loader.load_data()
+        assert any("skipped" in r.message.lower() for r in caplog.records)
+
+    def test_read_instance_frame_returns_dataframe_for_valid_parquet(
+        self,
+        threew_kwargs: dict,
+        tmp_path: Path,
+    ):
+        """_read_instance_frame reads from disk when parquet exists (line 527)."""
+        root = tmp_path
+        _write_threew_parquet(root, 0, "WELL-NORMAL-0001")
+        write_threew_folds(
+            root,
+            [("0/WELL-NORMAL-0001.csv", 2, False)],
+        )
+        loader = ThreeWLoader(
+            data_dir=str(root),
+            data_name="threew",
+            task_mode="anomaly_detection",
+            download=False,
+            validation_fold=0,
+            test_fold=1,
+            include_ova=False,
+        )
+        loader.load_data()
+        data = loader.get_data()
+        # If line 527 is reached, the frame is read and the record is populated
+        assert len(data["features"]["train"]) == 1
+
+    def test_build_record_uses_fallback_columns_when_default_missing(
+        self, threew_kwargs: dict, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Fallback feature detection is used when DEFAULT_FEATURE_COLUMNS not in frame (lines 563-568)."""
+        root = Path(threew_kwargs["data_dir"])
+        touch_threew_instance(root, 0, "WELL-CUSTOM-0001")
+        write_threew_folds(root, [("0/WELL-CUSTOM-0001.csv", 2, False)])
+
+        # Return a frame WITHOUT any DEFAULT_FEATURE_COLUMNS but WITH other numeric cols
+        def custom_reader(self, path):
+            return pd.DataFrame(
+                {
+                    "timestamp": pd.date_range("2026-01-01", periods=5, freq="min"),
+                    "class": np.zeros(5, dtype=np.int64),
+                    "state": np.zeros(5, dtype=np.int64),
+                    "sensor_A": np.ones(5, dtype=np.float32),
+                    "sensor_B": np.ones(5, dtype=np.float32) * 2,
+                }
+            )
+
+        monkeypatch.setattr(ThreeWLoader, "_read_instance_frame", custom_reader)
+        loader = ThreeWLoader(**threew_kwargs)
+        loader.load_data()
+        data = loader.get_data()
+        assert len(data["features"]["train"]) == 1
+        # 2 fallback features
+        assert data["features"]["train"][0].shape[1] == 2
+
+    def test_build_record_raises_when_no_numeric_features(
+        self, threew_kwargs: dict, monkeypatch: pytest.MonkeyPatch
+    ):
+        """ValueError when frame has no usable numeric columns (line 570)."""
+        root = Path(threew_kwargs["data_dir"])
+        touch_threew_instance(root, 0, "WELL-EMPTY-0001")
+        write_threew_folds(root, [("0/WELL-EMPTY-0001.csv", 2, False)])
+
+        def empty_reader(self, path):
+            return pd.DataFrame(
+                {
+                    "timestamp": pd.date_range("2026-01-01", periods=5, freq="min"),
+                    "class": np.zeros(5, dtype=np.int64),
+                    "state": np.zeros(5, dtype=np.int64),
+                }
+            )
+
+        monkeypatch.setattr(ThreeWLoader, "_read_instance_frame", empty_reader)
+        loader = ThreeWLoader(**threew_kwargs)
+        with pytest.raises(ValueError, match="No usable numeric features"):
+            loader.load_data()
+
+    def test_worktree_main_repo_data_path_with_worktrees_in_path(self, tmp_path: Path):
+        """_worktree_main_repo_data_path resolves to main-repo datasets dir (lines 430-434)."""
+        # Build a path like /tmp/.../root/.worktrees/branch/datasets
+        worktree_datasets = tmp_path / "root" / ".worktrees" / "branch" / "datasets"
+        worktree_datasets.mkdir(parents=True, exist_ok=True)
+        loader = ThreeWLoader(
+            data_dir=str(worktree_datasets),
+            data_name="threew",
+            task_mode="anomaly_detection",
+            download=False,
+            validation_fold=0,
+            test_fold=1,
+        )
+        result = loader._worktree_main_repo_data_path()
+        assert result is not None
+        # Should point to root/datasets (main repo's datasets dir)
+        assert result.name == "datasets"
+        assert ".worktrees" not in str(result)
