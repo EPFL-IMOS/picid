@@ -822,6 +822,10 @@ def rerun_best_model_checkpoint(
                 time.sleep(1.5)
 
 
+from picid.model.tabfm_guard import TABFM_REQUIREMENTS as _TABFM_REQUIREMENTS
+from picid.model.tabfm_guard import check_tabfm_available as _check_tabfm_available
+
+
 @task_wrapper
 def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     """
@@ -841,6 +845,8 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     tuple[dict[str, Any], dict[str, Any]]
         A tuple with metrics and dict with all instantiated objects.
     """
+    _check_tabfm_available(cfg)
+
     if cfg.get("num_threads", None) is not None:
         log.warning(f"Setting number of threads for all libraries to {cfg.num_threads}")
         verify_thread_limits(cfg.num_threads)
