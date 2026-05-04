@@ -2,6 +2,7 @@
 
 
 [![docs](https://img.shields.io/badge/docs-available-brightgreen)](docs/index.md)
+[![codecov](https://codecov.io/gh/picid-research/picid/branch/main/graph/badge.svg)](https://codecov.io/gh/picid-research/picid)
 
 ## Getting started
 
