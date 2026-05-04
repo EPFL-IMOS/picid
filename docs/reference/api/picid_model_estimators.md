@@ -4,8 +4,6 @@
 
 ## Families
 
-::: picid.model.estimators.autogluon
-::: picid.model.estimators.autogluon.wrapper
 ::: picid.model.estimators.carte
 ::: picid.model.estimators.carte.wrapper
 ::: picid.model.estimators.cnn1d
