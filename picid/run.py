@@ -1198,7 +1198,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     return None, None  # metric_dict, object_dict
 
 
-@hydra.main(version_base="1.3", config_path="../configs", config_name="run.yaml")
+@hydra.main(version_base="1.3", config_path=str(_PROJECT_ROOT / "configs"), config_name="run.yaml")
 def main(cfg: DictConfig) -> float | None:
     """
     Main entry point for training.

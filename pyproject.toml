@@ -67,6 +67,7 @@ dependencies = [
 [project.scripts]
 picid-assemble = "picid.cli.assemble:main"
 picid-generate-web = "picid.cli.generate_web:main"
+picid-run = "picid.run:main"
 
 [project.optional-dependencies]
 dev = [
