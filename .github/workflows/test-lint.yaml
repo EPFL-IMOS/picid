@@ -2,7 +2,7 @@ name: Lint
 
 on:
   push:
-    branches: [ main, github-actions-test ]
+    branches: [ main, github-actions-test, TabPHM-neurips2026-submission ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
