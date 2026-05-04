@@ -8,8 +8,8 @@ Follow the same setup as [docs/getting-started/setup.md](docs/getting-started/se
 
 ```bash
 git submodule update --init --recursive
-uv sync
-uv pip install -e ".[dev]"
+uv sync --group dev
+uv pip install -r requirements-local.txt
 ```
 
 Make sure your Git SSH key is configured for GitHub if needed (required for cloning submodules). On Windows, you may need [build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) for numpoly.

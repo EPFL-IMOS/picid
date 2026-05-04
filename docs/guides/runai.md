@@ -31,7 +31,7 @@ export LIBRARY_PATH=$HOME/lib:$LIBRARY_PATH
 export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 source /workspace/setup/.venv/bin/activate
 cd /workspace/projects/TabPHM
-uv pip install -e ".[dev]"
+uv sync --group dev
 # uv pip install --upgrade netCDF4 h5py xarray nvitop
 python picid/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict
 python picid/run.py paths=runai experiment=concepts_n_cmapss_ds02/prognostics/tabdpt_fit_predict

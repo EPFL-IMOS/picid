@@ -30,4 +30,4 @@ Use `uv run pytest` so the interpreter and dependencies match `pyproject.toml` a
   uv run pytest test/ -m "not slow"
   ```
 
-Install dev dependencies first if needed (e.g. `uv sync --extra dev`).
+Install dev dependencies first if needed: `uv sync --group dev`.

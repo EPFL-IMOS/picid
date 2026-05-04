@@ -9,11 +9,9 @@
 ## Install Steps
 
 ```bash
-git submodule update --init --recursive
-uv venv
-source .venv/bin/activate
+git clone <repo-url>
+cd picid
 uv sync
-uv pip install -e ".[dev]"
 ```
 
 ## Paths Configuration
