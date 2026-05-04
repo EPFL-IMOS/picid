@@ -27,7 +27,6 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync
-          uv pip install -e ".[dev]"
 
       - name: Download PHME20 (for requires_snapshots tests)
         run: |
