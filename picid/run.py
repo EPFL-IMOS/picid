@@ -822,7 +822,6 @@ def rerun_best_model_checkpoint(
                 time.sleep(1.5)
 
 
-from picid.model.tabfm_guard import TABFM_REQUIREMENTS as _TABFM_REQUIREMENTS
 from picid.model.tabfm_guard import check_tabfm_available as _check_tabfm_available
 
 

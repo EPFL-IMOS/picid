@@ -10,7 +10,7 @@ loader reproduces the experiment setup already used by the project.
 import logging
 import warnings
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Optional
 
 import awkward as ak
 import numpy as np

@@ -16,7 +16,6 @@ of the preprocessing pipeline.
 import logging
 import warnings
 from collections import defaultdict
-from typing import Any
 
 import awkward as ak
 import numpy as np

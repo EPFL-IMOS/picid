@@ -14,7 +14,6 @@ into ragged day-level sequences.
 """
 
 import warnings
-from typing import override
 import logging
 
 import pandas as pd
