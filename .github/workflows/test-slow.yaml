@@ -14,7 +14,10 @@ jobs:
   slow-and-snapshots:
     runs-on: ubuntu-latest
     steps:
-      - uses: astral-sh/setup-uv@v5
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v8
         with:
           enable-cache: true
 
