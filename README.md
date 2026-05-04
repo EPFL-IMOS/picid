@@ -5,4 +5,43 @@
 
 ## Getting started
 
-Please read the [documentation](docs/index.md) and [setup instructions](docs/getting-started/setup.md).
+Full documentation is available in [`docs/`](docs/index.md).
+
+## Quickstart
+
+### Prerequisites
+
+- Python 3.12+
+- [`uv`](https://docs.astral.sh/uv/)
+- Git with submodule support
+
+### Install
+
+```bash
+git clone <repo-url>
+cd TabPHM
+git submodule update --init --recursive
+uv venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+uv sync
+uv pip install -e ".[dev]"
+```
+
+### Configure paths
+
+Copy `configs/paths/default.yaml` to a new file (e.g. `configs/paths/local.yaml`) and set:
+
+```yaml
+root_dir: /path/to/project
+data_dir: /path/to/data
+output_dir: /path/to/outputs
+cache_path: /path/to/cache
+```
+
+### Run your first experiment
+
+```bash
+uv run picid-run paths=local debug=default experiment=unibo/prognostics/raw/cnn_1d
+```
+
+For full configuration options see the [documentation](docs/getting-started/install.md).
