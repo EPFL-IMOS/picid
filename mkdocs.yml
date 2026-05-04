@@ -1,7 +1,7 @@
 site_name: Picid Documentation
 site_url: https://anonymous.repository.com
 site_description: Prognostics, Health Management (PHM) and Forecasting Benchmark Arena
-site_author: EPFL IMOS
+site_author: anonymous
 
 theme:
     name: material
