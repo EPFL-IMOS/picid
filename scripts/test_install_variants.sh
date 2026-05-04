@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Verifies that all uv sync install variants resolve without error and use
-# the expected package sources (absent / local path / git).
+# Verifies that all install variants resolve without error and use the expected
+# package sources (absent / local path / git).
 # Run from the project root: bash scripts/test_install_variants.sh
 set -euo pipefail
 
@@ -62,6 +62,37 @@ run_variant() {
     pass=$((pass + 1))
 }
 
+local_requirements_present() {
+    local path
+    for path in \
+        local_packages/TabPFN \
+        local_packages/TabDPT \
+        local_packages/carte-ai \
+        local_packages/phmd
+    do
+        [ -d "$path" ] || return 1
+    done
+}
+
+run_local_variant() {
+    echo "local editable overlay"
+    if ! local_requirements_present; then
+        echo "  skipped: local_packages checkouts are missing"
+        return
+    fi
+    if ! uv sync --quiet 2>&1; then
+        echo "  uv sync FAILED"
+        fail=$((fail + 1))
+        return
+    fi
+    if ! uv pip install --quiet -r requirements-local.txt 2>&1; then
+        echo "  uv pip install -r requirements-local.txt FAILED"
+        fail=$((fail + 1))
+        return
+    fi
+    pass=$((pass + 1))
+}
+
 # ── without foundation models ────────────────────────────────────────────────
 run_variant "without foundation models" --no-group tabfm --no-group phmd
 _assert "tabpfn absent"   tabpfn   assert_absent
@@ -76,14 +107,14 @@ _assert "tabdpt absent"   tabdpt   assert_absent
 _assert "carte_ai absent" carte_ai assert_absent
 _assert "phmd from git"   phmd     assert_git
 
-# ── local submodule install ──────────────────────────────────────────────────
-run_variant "local submodule install" \
-    --no-group tabfm --group tabfm-local \
-    --no-group phmd  --group phmd-local
-_assert "tabpfn from local"   tabpfn   assert_local
-_assert "tabdpt from local"   tabdpt   assert_local
-_assert "carte_ai from local" carte_ai assert_local
-_assert "phmd from local"     phmd     assert_local
+# ── local editable overlay ───────────────────────────────────────────────────
+run_local_variant
+if local_requirements_present; then
+    _assert "tabpfn from local"   tabpfn   assert_local
+    _assert "tabdpt from local"   tabdpt   assert_local
+    _assert "carte_ai from local" carte_ai assert_local
+    _assert "phmd from local"     phmd     assert_local
+fi
 
 # ── default git install ──────────────────────────────────────────────────────
 run_variant "default git install"  # no flags — uses default-groups

@@ -70,3 +70,4 @@ tasks/*
 .claude/worktrees/
 .claude
 tmp/
+uv.toml

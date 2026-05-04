@@ -83,23 +83,9 @@ dev-dependencies = [
 
 default-groups = ["tabfm", "phmd"]
 
-conflicts = [
-    [
-        { group = "tabfm" },
-        { group = "tabfm-local" },
-    ],
-    [
-        { group = "phmd" },
-        { group = "phmd-local" },
-    ],
-]
-
 [dependency-groups]
 tabfm = ["tabdpt", "carte-ai", "TabPFN"]
-tabfm-local = ["tabdpt", "carte-ai", "TabPFN"]
-
 phmd = ["phmd"]
-phmd-local = ["phmd"]
 
 
 # If your package lives under src/, replace with:
@@ -236,22 +222,10 @@ exclude_lines = [
 
 
 [tool.uv.sources]
-TabPFN = [
-    { git = "https://github.com/picid-research/picid-tabpfn.git", group = "tabfm" },
-    { path = "./local_packages/TabPFN", editable = true, group = "tabfm-local" },
-]
-tabdpt = [
-    { git = "https://github.com/layer6ai-labs/TabDPT.git", group = "tabfm" },
-    { path = "./local_packages/TabDPT", editable = true, group = "tabfm-local" },
-]
-carte-ai = [
-    { git = "https://github.com/soda-inria/carte.git", group = "tabfm" },
-    { path = "./local_packages/carte-ai", editable = true, group = "tabfm-local" },
-]
-phmd = [
-    { git = "https://github.com/picid-research/picid-phmd.git", group = "phmd" },
-    { path = "./local_packages/phmd", editable = true, group = "phmd-local" },
-]
+TabPFN = { git = "https://github.com/picid-research/picid-tabpfn.git", group = "tabfm" }
+tabdpt = { git = "https://github.com/layer6ai-labs/TabDPT.git", group = "tabfm" }
+carte-ai = { git = "https://github.com/soda-inria/carte.git", group = "tabfm" }
+phmd = { git = "https://github.com/picid-research/picid-phmd.git", group = "phmd" }
 # obsolete: rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
 # obsolete: uni2ts = { path = "./local_packages/uni2ts", editable = true }
 

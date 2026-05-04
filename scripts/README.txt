@@ -3,6 +3,7 @@ Scripts
 
 Active scripts (do not archive):
   - env_setup.sh          — uv sync, pip install
+  - sync_local_packages.sh — uv sync plus editable local package overlays
   - datasets_setup.sh     — dataset downloads (gdown)
   - reproducibility/      — reproduce experiments from run config (see README.md)
   - (snapshot scripts moved to test/scripts/snapshot/ — see docs/testing/SNAPSHOT_SCRIPTS.md)

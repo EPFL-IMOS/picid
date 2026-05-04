@@ -24,7 +24,7 @@ Installs TabPFN, TabDPT, carte-ai and phmd directly from their git repositories.
 
 ```bash
 git clone <repo-url>
-cd TabPHM
+cd picid
 uv sync
 ```
 
@@ -36,7 +36,7 @@ Lighter install — skips the TabFM and phmd groups entirely.
 
 ```bash
 git clone <repo-url>
-cd TabPHM
+cd picid
 uv sync --no-group tabfm --no-group phmd
 ```
 
@@ -48,23 +48,20 @@ Installs phmd from git but skips TabPFN / TabDPT / carte-ai.
 
 ```bash
 git clone <repo-url>
-cd TabPHM
+cd picid
 uv sync --no-group tabfm
 ```
 
 </details>
 <details open>
-<summary>Local submodule install (for developing foundation models)</summary>
+<summary>Local editable install (for developing foundation models)</summary>
 
-Uses editable installs from local submodule checkouts instead of git. Requires submodules to be present.
+Uses editable installs from local checkouts after the standard git-backed sync.
 
 ```bash
 git clone <repo-url>
-cd TabPHM
-git submodule update --init --recursive
-uv sync \
-  --no-group tabfm --group tabfm-local \
-  --no-group phmd  --group phmd-local
+cd picid
+bash scripts/sync_local_packages.sh
 ```
 
 </details>

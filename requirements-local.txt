@@ -1,0 +1,7 @@
+# Editable local overlays for developers who keep these packages checked out
+# under ./local_packages/. Keep this file out of uv.lock so standard installs
+# continue to work without local package directories.
+-e ./local_packages/TabPFN
+-e ./local_packages/TabDPT
+-e ./local_packages/carte-ai
+-e ./local_packages/phmd
