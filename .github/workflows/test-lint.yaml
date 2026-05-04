@@ -27,9 +27,9 @@ jobs:
         run: uv python install 3.12
 
       # 4. Install the environment
-      # uv sync installs picid + local submodules + dev dependencies
+      # uv sync installs picid + configured dependency groups + dev tools
       - name: Install Dependencies
-        run: uv sync --all-extras
+        run: uv sync --group dev
 
       # 5. Run Ruff (Style & Syntax)
       # It will only check 'picid' based on your pyproject.toml settings

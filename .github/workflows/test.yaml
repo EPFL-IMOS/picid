@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --group dev
 
       - name: Lean lane tests
         run: |
@@ -56,8 +56,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
-          uv pip install -e ".[dev]"
+          uv sync --group dev
 
       - name: Full lane tests with coverage (excluding slow/snapshot lanes)
         run: |
