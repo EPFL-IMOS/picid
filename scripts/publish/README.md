@@ -1,6 +1,6 @@
 # Publish Scripts
 
-Scripts for packaging run results and submitting them to the leaderboard.
+Scripts for packaging run results.
 
 ## Scripts
 

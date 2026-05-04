@@ -4,195 +4,195 @@ site_description: Prognostics, Health Management (PHM) and Forecasting Benchmark
 site_author: EPFL IMOS
 
 theme:
-  name: material
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.suggest
-    - search.highlight
+    name: material
+    features:
+        - navigation.tabs
+        - navigation.sections
+        - navigation.expand
+        - navigation.top
+        - search.suggest
+        - search.highlight
 
 plugins:
-  - search
-  - mkdocstrings:
-      default_handler: python
-      handlers:
-        python:
-          options:
-            show_source: true
-            docstring_style: numpy
-            show_docstring_examples: true
-            # Improve API rendering
-            separate_signature: true
-            merge_init_into_class: true
-            show_signature_annotations: true
-            members: true
-            inherited_members: false
+    - search
+    - mkdocstrings:
+          default_handler: python
+          handlers:
+              python:
+                  options:
+                      show_source: true
+                      docstring_style: numpy
+                      show_docstring_examples: true
+                      # Improve API rendering
+                      separate_signature: true
+                      merge_init_into_class: true
+                      show_signature_annotations: true
+                      members: true
+                      inherited_members: false
 
 nav:
-  - Home: index.md
-  - Getting Started:
-      - Overview: getting-started/index.md
-      - Install: getting-started/install.md
-      - Quickstart (5 minutes): getting-started/quickstart-5min.md
-      - First Run: getting-started/first-run.md
-      - Concepts:
-          - Overview: concepts/index.md
-          - PHM Glossary: concepts/phm-glossary.md
-          - System Architecture: concepts/system-architecture.md
-          - End-to-End Flow: concepts/end-to-end-flow.md
-          - From data to prediction (legacy): concepts/from_data_to_prediction.md
-      - Tutorials:
-          - Overview: tutorials/index.md
-          - Unibo RUL: tutorials/unibo-rul.md
-          - Forecasting Fit-Predict: tutorials/forecasting-fitpredict.md
-          - Custom Transform: tutorials/custom-transform.md
-          - Custom Model: tutorials/custom-model.md
-      - Examples:
-          - Overview: examples/index.md
-          - Unibo RUL example: examples/unibo_rul.md
-      - Setup (legacy): getting-started/setup.md
-      - Old setup archive: old_setup.md
-  - Reference:
-      - Interface:
-          - Overview: interface/index.md
-          - Introduction: interface/intro.md
-          - Components: interface/components.md
-          - Datasources: interface/datasources.md
-          - Transforms: interface/transforms.md
-          - Schemas: interface/schemas.md
-          - Custom Model: interface/custom-model.md
-          - Examples: interface/examples.md
-      - Modules:
-          - Overview: modules/index.md
-          - Data:
-              - Overview: modules/data/index.md
-              - Datasources: modules/data/datasources.md
-              - Data Objects:
-                  - Overview: modules/data/data-objects/index.md
-                  - SplitDatasetContainer: modules/data/data-objects/split-dataset-container.md
-                  - Metadata Manifest: modules/data/data-objects/metadata-manifest.md
-                  - "Views: column vs split": modules/data/data-objects/views-column-vs-split.md
-              - Datasets:
-                  - Overview: modules/data/datasets/index.md
-                  - Task formats: modules/data/datasets/task-formats-rul-forecast-fitpredict.md
-                  - Sequencers, windowing, striding: modules/data/datasets/sequencers-windowing-striding.md
-                  - HydraConcatDataset: modules/data/datasets/hydra-concat-dataset.md
-              - Preprocessing:
-                  - Overview: modules/data/preprocessing/index.md
-                  - Direct vs cache runners: modules/data/preprocessing/direct-vs-cache-runners.md
-                  - Cache key and file locking: modules/data/preprocessing/cache-key-and-file-locking.md
-              - Datamodules:
-                  - Overview: modules/data/datamodules/index.md
-                  - Batch contracts: modules/data/datamodules/batch-contracts.md
-          - Transforms:
-              - Overview: modules/transforms/index.md
-              - Transform contract: modules/transforms/transform-contract.md
-              - Metadata apply/assign/fit: modules/transforms/metadata-apply-assign-fit.md
-              - Mixins and dispatch: modules/transforms/mixins-and-dispatch.md
-              - ConfigTransformManager: modules/transforms/config-transform-manager.md
-              - Domain transforms catalog: modules/transforms/domain-transforms-catalog.md
-              - Extending transforms: modules/transforms/extending-transforms.md
-          - Modeling:
-              - Overview: modules/modeling/index.md
-              - Model capabilities: modules/modeling/model-capabilities.md
-              - Wrapper interfaces: modules/modeling/wrapper-interfaces.md
-              - Fit-predict vs feed-forward: modules/modeling/fitpredict-vs-feedforward.md
-              - Baselines and backbones: modules/modeling/baselines-backbones.md
-              - Loss/optimizer/lr scheduler: modules/modeling/loss-optimizer-lr-scheduler.md
-              - Extending models: modules/modeling/extending-models.md
-          - Orchestration:
-              - Overview: modules/orchestration/index.md
-              - Run lifecycle: modules/orchestration/run-lifecycle.md
-              - Lightning modules: modules/orchestration/lightning-modules.md
-              - Trainer, callbacks, loggers: modules/orchestration/trainer-callbacks-loggers.md
-              - Reproducibility artifacts: modules/orchestration/reproducibility-artifacts.md
-          - Evaluation:
-              - Overview: modules/evaluation/index.md
-              - Evaluator contract: modules/evaluation/evaluator-contract.md
-              - Task evaluators: modules/evaluation/task-evaluators.md
-              - Metrics and MetricManager: modules/evaluation/metrics-and-metric-manager.md
-              - Hooks and inverse scaling: modules/evaluation/hooks-and-inverse-scaling.md
-          - Tooling:
-              - Overview: modules/tooling/index.md
-              - CLI: modules/tooling/cli.md
-              - Experiment Generator: modules/tooling/experiment-generator.md
-              - Scripts: modules/tooling/scripts.md
-  - API Reference:
-      - Overview: reference/index.md
-      - API Index: reference/api/index.md
-      - Package Reference (legacy): reference/api/package_reference.md
-      - picid: reference/api/picid.md
-      - picid.data: reference/api/picid_data.md
-      - picid.data.data_objects: reference/api/picid_data_data_objects.md
-      - picid.data.datasources: reference/api/picid_data_datasources.md
-      - picid.data.datasets: reference/api/picid_data_datasets.md
-      - picid.data.datamodules: reference/api/picid_data_datamodules.md
-      - picid.data.preprocessing: reference/api/picid_data_preprocessing.md
-      - picid.data.optimization: reference/api/picid_data_optimization.md
-      - picid.transforms: reference/api/picid_transforms.md
-      - picid.transforms.base: reference/api/picid_transforms_base.md
-      - picid.model: reference/api/picid_model.md
-      - picid.model.adapters: reference/api/picid_model_adapters.md
-      - picid.model.catalog: reference/api/picid_model_catalog.md
-      - picid.model.estimators: reference/api/picid_model_estimators.md
-      - picid.model.forecasters: reference/api/picid_model_forecasters.md
-      - picid.pipeline: reference/api/picid_pipeline.md
-      - picid.evaluator: reference/api/picid_evaluator.md
-      - picid.metrics: reference/api/picid_metrics.md
-      - picid.callbacks: reference/api/picid_callbacks.md
-      - picid.loss: reference/api/picid_loss.md
-      - picid.optimizer: reference/api/picid_optimizer.md
-      - picid.lr_scheduler: reference/api/picid_lr_scheduler.md
-      - picid.cli: reference/api/picid_cli.md
-      - picid.utils: reference/api/picid_utils.md
-      - Legacy:
-          - API (legacy): reference/api.md
-          - Datasources (legacy): reference/datasources.md
-          - Data objects (legacy): reference/dataobject.md
-          - Datasets (legacy): reference/datasets.md
-          - Datasets inner workings (legacy): reference/datasets_inner_workings.md
-          - Transforms (legacy): reference/transforms.md
-          - Evaluators (legacy): reference/evaluators.md
-          - Model types (legacy): reference/model_types.md
-          - Scripts (legacy): reference/scripts.md
-  - Guides:
-      - How-to:
-          - Overview: how-to/index.md
-          - Add datasource: how-to/add-datasource.md
-          - Add transform: how-to/add-transform.md
-          - Add dataset: how-to/add-dataset.md
-          - Add model wrapper: how-to/add-model-wrapper.md
-          - Add evaluator hook: how-to/add-evaluator-hook.md
-      - Guides (Legacy):
-          - Overview: guides/index.md
-          - Config and overrides: guides/configs_and_overrides.md
-          - Reproducibility: guides/reproducibility.md
-          - OmegaConf resolvers: guides/omegaconf_resolvers.md
-          - Adding a new model: guides/how_to_add_a_new_model.md
-          - RunAI (cluster): guides/runai.md
-          - Experiment Generator: guides/experiment_generator.md
-          - Dynamic Config Assembler: guides/dynamic-config-assembler.md
-          - Submit to Leaderboard: guides/submit_run_to_leaderboard.md
-      - Transforms (Legacy):
-          - Quick start: transforms/quick_start.md
-          - 5-minute intro: transforms/intro_5min.md
-          - Guide: transforms/guide.md
-          - Developer intro: transforms/intro_developer.md
-          - Developer guide: transforms/developer_guide.md
-          - Hooks examples: transforms/HOOKS_EXAMPLES.md
-  - Development:
-      - Experiment Generator UI: experiment-generator/index.html
-      # - Leaderboard: leaderboard/index.html
-      - Contributing:
-          - Website maintenance: README_WEBSITE.md
-          - Docstring style: contributing/docstring_style.md
-          - Docstring audit issues: contributing/docstring_audit_issues.md
-          - Git contributor stats: contributing/git-contributor-stats-scoped.md
-      - Testing:
-          - Test entrypoints: testing/test-entrypoints.md
-          - Test matrix: testing/test-matrix.md
-          - Test strategy: testing/TEST_STRATEGY.md
-          - Snapshot scripts: testing/SNAPSHOT_SCRIPTS.md
-          - Coverage omit rationale: testing/coverage-omit-rationale.md
+    - Home: index.md
+    - Getting Started:
+          - Overview: getting-started/index.md
+          - Install: getting-started/install.md
+          - Quickstart (5 minutes): getting-started/quickstart-5min.md
+          - First Run: getting-started/first-run.md
+          - Concepts:
+                - Overview: concepts/index.md
+                - PHM Glossary: concepts/phm-glossary.md
+                - System Architecture: concepts/system-architecture.md
+                - End-to-End Flow: concepts/end-to-end-flow.md
+                - From data to prediction (legacy): concepts/from_data_to_prediction.md
+          - Tutorials:
+                - Overview: tutorials/index.md
+                - Unibo RUL: tutorials/unibo-rul.md
+                - Forecasting Fit-Predict: tutorials/forecasting-fitpredict.md
+                - Custom Transform: tutorials/custom-transform.md
+                - Custom Model: tutorials/custom-model.md
+          - Examples:
+                - Overview: examples/index.md
+                - Unibo RUL example: examples/unibo_rul.md
+          - Setup (legacy): getting-started/setup.md
+          - Old setup archive: old_setup.md
+    - Reference:
+          - Interface:
+                - Overview: interface/index.md
+                - Introduction: interface/intro.md
+                - Components: interface/components.md
+                - Datasources: interface/datasources.md
+                - Transforms: interface/transforms.md
+                - Schemas: interface/schemas.md
+                - Custom Model: interface/custom-model.md
+                - Examples: interface/examples.md
+          - Modules:
+                - Overview: modules/index.md
+                - Data:
+                      - Overview: modules/data/index.md
+                      - Datasources: modules/data/datasources.md
+                      - Data Objects:
+                            - Overview: modules/data/data-objects/index.md
+                            - SplitDatasetContainer: modules/data/data-objects/split-dataset-container.md
+                            - Metadata Manifest: modules/data/data-objects/metadata-manifest.md
+                            - "Views: column vs split": modules/data/data-objects/views-column-vs-split.md
+                      - Datasets:
+                            - Overview: modules/data/datasets/index.md
+                            - Task formats: modules/data/datasets/task-formats-rul-forecast-fitpredict.md
+                            - Sequencers, windowing, striding: modules/data/datasets/sequencers-windowing-striding.md
+                            - HydraConcatDataset: modules/data/datasets/hydra-concat-dataset.md
+                      - Preprocessing:
+                            - Overview: modules/data/preprocessing/index.md
+                            - Direct vs cache runners: modules/data/preprocessing/direct-vs-cache-runners.md
+                            - Cache key and file locking: modules/data/preprocessing/cache-key-and-file-locking.md
+                      - Datamodules:
+                            - Overview: modules/data/datamodules/index.md
+                            - Batch contracts: modules/data/datamodules/batch-contracts.md
+                - Transforms:
+                      - Overview: modules/transforms/index.md
+                      - Transform contract: modules/transforms/transform-contract.md
+                      - Metadata apply/assign/fit: modules/transforms/metadata-apply-assign-fit.md
+                      - Mixins and dispatch: modules/transforms/mixins-and-dispatch.md
+                      - ConfigTransformManager: modules/transforms/config-transform-manager.md
+                      - Domain transforms catalog: modules/transforms/domain-transforms-catalog.md
+                      - Extending transforms: modules/transforms/extending-transforms.md
+                - Modeling:
+                      - Overview: modules/modeling/index.md
+                      - Model capabilities: modules/modeling/model-capabilities.md
+                      - Wrapper interfaces: modules/modeling/wrapper-interfaces.md
+                      - Fit-predict vs feed-forward: modules/modeling/fitpredict-vs-feedforward.md
+                      - Baselines and backbones: modules/modeling/baselines-backbones.md
+                      - Loss/optimizer/lr scheduler: modules/modeling/loss-optimizer-lr-scheduler.md
+                      - Extending models: modules/modeling/extending-models.md
+                - Orchestration:
+                      - Overview: modules/orchestration/index.md
+                      - Run lifecycle: modules/orchestration/run-lifecycle.md
+                      - Lightning modules: modules/orchestration/lightning-modules.md
+                      - Trainer, callbacks, loggers: modules/orchestration/trainer-callbacks-loggers.md
+                      - Reproducibility artifacts: modules/orchestration/reproducibility-artifacts.md
+                - Evaluation:
+                      - Overview: modules/evaluation/index.md
+                      - Evaluator contract: modules/evaluation/evaluator-contract.md
+                      - Task evaluators: modules/evaluation/task-evaluators.md
+                      - Metrics and MetricManager: modules/evaluation/metrics-and-metric-manager.md
+                      - Hooks and inverse scaling: modules/evaluation/hooks-and-inverse-scaling.md
+                - Tooling:
+                      - Overview: modules/tooling/index.md
+                      - CLI: modules/tooling/cli.md
+                      - Experiment Generator: modules/tooling/experiment-generator.md
+                      - Scripts: modules/tooling/scripts.md
+    - API Reference:
+          - Overview: reference/index.md
+          - API Index: reference/api/index.md
+          - Package Reference (legacy): reference/api/package_reference.md
+          - picid: reference/api/picid.md
+          - picid.data: reference/api/picid_data.md
+          - picid.data.data_objects: reference/api/picid_data_data_objects.md
+          - picid.data.datasources: reference/api/picid_data_datasources.md
+          - picid.data.datasets: reference/api/picid_data_datasets.md
+          - picid.data.datamodules: reference/api/picid_data_datamodules.md
+          - picid.data.preprocessing: reference/api/picid_data_preprocessing.md
+          - picid.data.optimization: reference/api/picid_data_optimization.md
+          - picid.transforms: reference/api/picid_transforms.md
+          - picid.transforms.base: reference/api/picid_transforms_base.md
+          - picid.model: reference/api/picid_model.md
+          - picid.model.adapters: reference/api/picid_model_adapters.md
+          - picid.model.catalog: reference/api/picid_model_catalog.md
+          - picid.model.estimators: reference/api/picid_model_estimators.md
+          - picid.model.forecasters: reference/api/picid_model_forecasters.md
+          - picid.pipeline: reference/api/picid_pipeline.md
+          - picid.evaluator: reference/api/picid_evaluator.md
+          - picid.metrics: reference/api/picid_metrics.md
+          - picid.callbacks: reference/api/picid_callbacks.md
+          - picid.loss: reference/api/picid_loss.md
+          - picid.optimizer: reference/api/picid_optimizer.md
+          - picid.lr_scheduler: reference/api/picid_lr_scheduler.md
+          - picid.cli: reference/api/picid_cli.md
+          - picid.utils: reference/api/picid_utils.md
+          - Legacy:
+                - API (legacy): reference/api.md
+                - Datasources (legacy): reference/datasources.md
+                - Data objects (legacy): reference/dataobject.md
+                - Datasets (legacy): reference/datasets.md
+                - Datasets inner workings (legacy): reference/datasets_inner_workings.md
+                - Transforms (legacy): reference/transforms.md
+                - Evaluators (legacy): reference/evaluators.md
+                - Model types (legacy): reference/model_types.md
+                - Scripts (legacy): reference/scripts.md
+    - Guides:
+          - How-to:
+                - Overview: how-to/index.md
+                - Add datasource: how-to/add-datasource.md
+                - Add transform: how-to/add-transform.md
+                - Add dataset: how-to/add-dataset.md
+                - Add model wrapper: how-to/add-model-wrapper.md
+                - Add evaluator hook: how-to/add-evaluator-hook.md
+          - Guides (Legacy):
+                - Overview: guides/index.md
+                - Config and overrides: guides/configs_and_overrides.md
+                - Reproducibility: guides/reproducibility.md
+                - OmegaConf resolvers: guides/omegaconf_resolvers.md
+                - Adding a new model: guides/how_to_add_a_new_model.md
+                - RunAI (cluster): guides/runai.md
+                - Experiment Generator: guides/experiment_generator.md
+                - Dynamic Config Assembler: guides/dynamic-config-assembler.md
+                # - Submit to Leaderboard: guides/submit_run_to_leaderboard.md
+          - Transforms (Legacy):
+                - Quick start: transforms/quick_start.md
+                - 5-minute intro: transforms/intro_5min.md
+                - Guide: transforms/guide.md
+                - Developer intro: transforms/intro_developer.md
+                - Developer guide: transforms/developer_guide.md
+                - Hooks examples: transforms/HOOKS_EXAMPLES.md
+    - Development:
+          - Experiment Generator UI: experiment-generator/index.html
+          # - Leaderboard: leaderboard/index.html
+          - Contributing:
+                - Website maintenance: README_WEBSITE.md
+                - Docstring style: contributing/docstring_style.md
+                - Docstring audit issues: contributing/docstring_audit_issues.md
+                - Git contributor stats: contributing/git-contributor-stats-scoped.md
+          - Testing:
+                - Test entrypoints: testing/test-entrypoints.md
+                - Test matrix: testing/test-matrix.md
+                - Test strategy: testing/TEST_STRATEGY.md
+                - Snapshot scripts: testing/SNAPSHOT_SCRIPTS.md
+                - Coverage omit rationale: testing/coverage-omit-rationale.md

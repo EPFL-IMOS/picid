@@ -44,7 +44,3 @@ After you select an experiment and any overrides, the assembler shows:
    ```
 
 Copy and run from the project root.
-
-## Next steps
-
-- [Submit to Leaderboard](submit_run_to_leaderboard.md) — How to run and submit results to the leaderboard.
