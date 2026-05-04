@@ -14,29 +14,6 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      # 1. Setup SSH for private submodules (e.g., TabPFN)
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
-
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh -T git@github.com || true
-
-      # 2. Checkout (submodules handled manually so SSH is used)
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: false
-
-      - name: Update Submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
-        env:
-          GIT_SSH_COMMAND: "ssh -v"
 
       # 3. Setup uv with Caching
       - name: Install uv

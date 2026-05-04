@@ -2,9 +2,9 @@ name: Testing
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -14,38 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: [ "3.12" ]
 
     steps:
-      # 1. Load the Private Key
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
-
-      # 1b. Configure SSH (Keyscan + Connection Test)
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          # We run this just to verify connectivity in the logs
-          ssh -T git@github.com || true
-
-      # 2. Checkout Main Repo ONLY
-      # persist-credentials: false -> Prevents GitHub from overriding SSH with HTTPS
-      # submodules: false -> We handle them manually below
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: false
-
-      # 3. Manually Update Submodules
-      # Uses verbose SSH logging so we can debug connection issues if they happen
-      - name: Update Submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
-        env:
-          GIT_SSH_COMMAND: "ssh -v"
 
       # 4. Install uv
       - name: Install uv
@@ -69,38 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: [ "3.12" ]
 
     steps:
-      # 1. Load the Private Key
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY_TABPFN }}
-
-      # 1b. Configure SSH (Keyscan + Connection Test)
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          # We run this just to verify connectivity in the logs
-          ssh -T git@github.com || true
-
-      # 2. Checkout Main Repo ONLY
-      # persist-credentials: false -> Prevents GitHub from overriding SSH with HTTPS
-      # submodules: false -> We handle them manually below
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: false
-
-      # 3. Manually Update Submodules
-      # Uses verbose SSH logging so we can debug connection issues if they happen
-      - name: Update Submodules
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
-        env:
-          GIT_SSH_COMMAND: "ssh -v"
 
       # 4. Install uv
       - name: Install uv
