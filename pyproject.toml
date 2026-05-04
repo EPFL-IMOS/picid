@@ -63,7 +63,10 @@ picid-generate-web = "picid.cli.generate_web:main"
 picid-run = "picid.run:main"
 
 [tool.uv]
-dev-dependencies = [
+default-groups = ["tabfm", "phmd"]
+
+[dependency-groups]
+dev = [
     "nox>=2025.11.12",
     "pre-commit",
     "pytest",
@@ -79,11 +82,6 @@ dev-dependencies = [
     "panel>=1.8.1",
     "holoviews>=1.21.0",
 ]
-
-
-default-groups = ["tabfm", "phmd"]
-
-[dependency-groups]
 tabfm = ["tabdpt", "carte-ai", "TabPFN"]
 phmd = ["phmd"]
 
