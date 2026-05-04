@@ -34,7 +34,6 @@ dependencies = [
     "h5netcdf>=1.1.0",
     "netcdf4>=1.6.5",
     "openpyxl>=3.1.2",
-    "tabpfn>=2.0.6",
     "jupyter>=1.1.1",
     "python-box>=7.3.2",
     "positional-encodings>=6.0.3",
@@ -49,12 +48,6 @@ dependencies = [
     "h5py>=3.14.0",
     "faiss-cpu==1.11.0",
     "huggingface-hub>=0.35.3",
-    # Local submodule dependencies
-    # uv will resolve these using [tool.uv.sources]
-    "tabdpt",
-    "carte-ai",
-    "phmd",
-    "TabPFN",
     "rul-datasets",
     "sortedcontainers>=2.4.0",
     "numba>=0.62.1",
@@ -69,8 +62,8 @@ picid-assemble = "picid.cli.assemble:main"
 picid-generate-web = "picid.cli.generate_web:main"
 picid-run = "picid.run:main"
 
-[project.optional-dependencies]
-dev = [
+[tool.uv]
+dev-dependencies = [
     "nox>=2025.11.12",
     "pre-commit",
     "pytest",
@@ -86,6 +79,28 @@ dev = [
     "panel>=1.8.1",
     "holoviews>=1.21.0",
 ]
+
+
+default-groups = ["tabfm", "phmd"]
+
+conflicts = [
+    [
+        { group = "tabfm" },
+        { group = "tabfm-local" },
+    ],
+    [
+        { group = "phmd" },
+        { group = "phmd-local" },
+    ],
+]
+
+[dependency-groups]
+tabfm = ["tabdpt", "carte-ai", "TabPFN"]
+tabfm-local = ["tabdpt", "carte-ai", "TabPFN"]
+
+phmd = ["phmd"]
+phmd-local = ["phmd"]
+
 
 # If your package lives under src/, replace with:
 # [tool.setuptools.packages.find]
@@ -221,10 +236,22 @@ exclude_lines = [
 
 
 [tool.uv.sources]
-phmd = { path = "./local_packages/phmd", editable = true }
-TabPFN = { path = "./local_packages/TabPFN", editable = true }
-tabdpt = { path = "./local_packages/TabDPT", editable = true }
-carte-ai = { path = "./local_packages/carte-ai", editable = true }
+TabPFN = [
+    { git = "https://github.com/picid-research/picid-tabpfn.git", group = "tabfm" },
+    { path = "./local_packages/TabPFN", editable = true, group = "tabfm-local" },
+]
+tabdpt = [
+    { git = "https://github.com/layer6ai-labs/TabDPT.git", group = "tabfm" },
+    { path = "./local_packages/TabDPT", editable = true, group = "tabfm-local" },
+]
+carte-ai = [
+    { git = "https://github.com/soda-inria/carte.git", group = "tabfm" },
+    { path = "./local_packages/carte-ai", editable = true, group = "tabfm-local" },
+]
+phmd = [
+    { git = "https://github.com/picid-research/picid-phmd.git", group = "phmd" },
+    { path = "./local_packages/phmd", editable = true, group = "phmd-local" },
+]
 # obsolete: rul-datasets = { path = "./local_packages/rul-datasets", editable = true }
 # obsolete: uni2ts = { path = "./local_packages/uni2ts", editable = true }
 

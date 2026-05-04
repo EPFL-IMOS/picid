@@ -17,15 +17,58 @@ Full documentation is available in [`docs/`](docs/index.md).
 
 ### Install
 
+<details open>
+<summary>Standard (with foundation models, from git)</summary>
+
+Installs TabPFN, TabDPT, carte-ai and phmd directly from their git repositories.
+
+```bash
+git clone <repo-url>
+cd TabPHM
+uv sync
+```
+
+</details>
+<details open>
+<summary>Without foundation models</summary>
+
+Lighter install — skips the TabFM and phmd groups entirely.
+
+```bash
+git clone <repo-url>
+cd TabPHM
+uv sync --no-group tabfm --no-group phmd
+```
+
+</details>
+<details open>
+<summary>phmd only (no foundation models)</summary>
+
+Installs phmd from git but skips TabPFN / TabDPT / carte-ai.
+
+```bash
+git clone <repo-url>
+cd TabPHM
+uv sync --no-group tabfm
+```
+
+</details>
+<details open>
+<summary>Local submodule install (for developing foundation models)</summary>
+
+Uses editable installs from local submodule checkouts instead of git. Requires submodules to be present.
+
 ```bash
 git clone <repo-url>
 cd TabPHM
 git submodule update --init --recursive
-uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-uv sync
-uv pip install -e ".[dev]"
+uv sync \
+  --no-group tabfm --group tabfm-local \
+  --no-group phmd  --group phmd-local
 ```
+
+</details>
+
 
 ### Configure paths
 
@@ -42,6 +85,13 @@ cache_path: /path/to/cache
 
 ```bash
 uv run picid-run paths=local debug=default experiment=unibo/prognostics/raw/cnn_1d
+```
+
+Or by activating the venv first:
+
+```bash
+source .venv/bin/activate
+python picid/run.py paths=local debug=default experiment=unibo/prognostics/raw/cnn_1d
 ```
 
 For full configuration options see the [documentation](docs/getting-started/install.md).
