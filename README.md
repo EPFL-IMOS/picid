@@ -45,3 +45,13 @@ uv run picid-run paths=local debug=default experiment=unibo/prognostics/raw/cnn_
 ```
 
 For full configuration options see the [documentation](docs/getting-started/install.md).
+
+## Documentation
+
+To browse the full docs locally:
+
+```bash
+uv run mkdocs serve
+```
+
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
