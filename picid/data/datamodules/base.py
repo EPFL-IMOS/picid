@@ -323,7 +323,7 @@ class BaseDataModule(LightningDataModule):
 
     def train_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for training.
+        Create a `torch.utils.data.DataLoader` for training.
 
         The data loader is configured to shuffle the data. The `pin_memory` option is
         activated to achieve maximum transfer speed to the GPU. The data loader is also
@@ -371,7 +371,7 @@ class BaseDataModule(LightningDataModule):
 
     def val_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for validation.
+        Create a `torch.utils.data.DataLoader` for validation.
 
         The data loader is configured to leave the data unshuffled. The `pin_memory`
         option is activated to achieve maximum transfer speed to the GPU.
@@ -414,7 +414,7 @@ class BaseDataModule(LightningDataModule):
 
     def test_dataloader(self, *args: Any, **kwargs: Any) -> DataLoader:
         """
-        Create a [data loader][torch.utils.data.DataLoader] for testing.
+        Create a `torch.utils.data.DataLoader` for testing.
 
         The data loader is configured to leave the data unshuffled. The `pin_memory`
         option is activated to achieve maximum transfer speed to the GPU.

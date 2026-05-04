@@ -25,6 +25,7 @@ def _loader_factory(loader_map):
             self.xarray_dataset = object()
             self.summary_df = pd.DataFrame()
             self.stats_df = pd.DataFrame()
+            self.applied_model_aliases: list[tuple[str, str]] = []
             self._hp_map = dict(config.get("hp_map", {}))
 
         def hp_impact_ds(self, dataset: str, model: str):
