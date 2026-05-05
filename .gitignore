@@ -71,3 +71,5 @@ tasks/*
 .claude
 tmp/
 uv.toml
+
+/cleanup.sh
