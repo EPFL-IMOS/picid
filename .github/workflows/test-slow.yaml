@@ -2,7 +2,7 @@ name: Slow & Snapshot Tests
 
 on:
   push:
-    branches: [ "main", "TabPHM-neurips2026-submission" ]
+    branches: [ "main", "neurips2026-submission" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
