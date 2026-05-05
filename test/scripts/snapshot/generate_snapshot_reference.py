@@ -36,6 +36,8 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "mlp"),
     ("prognostics", "snapshot/prognostics", "cnn_1d"),
     ("prognostics", "snapshot/prognostics", "tide"),
+    ("prognostics", "snapshot/prognostics", "timeseries_transformer"),
+    ("prognostics", "snapshot/prognostics", "stf"),
     ("diagnostics", "snapshot/diagnostics", "linear_classifier"),
     ("diagnostics", "snapshot/diagnostics", "mlp"),
     ("diagnostics", "snapshot/diagnostics", "lstm"),

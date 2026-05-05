@@ -50,6 +50,8 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "mlp"),
     ("prognostics", "snapshot/prognostics", "cnn_1d"),
     ("prognostics", "snapshot/prognostics", "tide"),
+    ("prognostics", "snapshot/prognostics", "timeseries_transformer"),
+    ("prognostics", "snapshot/prognostics", "stf"),
 ]
 
 PRECISION = 4

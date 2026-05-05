@@ -55,6 +55,20 @@
     "test/rmse_normalized": 1.2313,
     "test/nasa_score_normalized": 0.1293
   },
+  "prognostics/timeseries_transformer": {
+    "test/loss": 0.5297,
+    "test/mae_normalized": 0.6861,
+    "test/mse_normalized": 0.5297,
+    "test/rmse_normalized": 0.7278,
+    "test/nasa_score_normalized": 0.0713
+  },
+  "prognostics/stf": {
+    "test/loss": 1.0415,
+    "test/mae_normalized": 0.9968,
+    "test/mse_normalized": 1.0415,
+    "test/rmse_normalized": 1.0205,
+    "test/nasa_score_normalized": 0.1051
+  },
   "diagnostics/linear_classifier": {
     "test/loss": 1.4903,
     "test/f1": 0.212,
