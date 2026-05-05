@@ -1,0 +1,31 @@
+# Snapshot prognostics for FitPredict pipeline (XGBoost etc.)
+# Adds the task dimension expected by FitPredictTaskDataset: (n_samples, n_features) -> (1, n_samples, n_features).
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: rul
+    fit_on: train
+
+add_task_dim_features:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: features
+    assign_to: features
+
+add_task_dim_rul:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: rul
+    assign_to: rul

@@ -52,9 +52,14 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "tide"),
     ("prognostics", "snapshot/prognostics", "timeseries_transformer"),
     ("prognostics", "snapshot/prognostics", "stf"),
+    ("prognostics", "snapshot/prognostics", "xgboost_fit_predict"),
 ]
 
 PRECISION = 4
+
+# Fit-predict models (XGBoost etc.) use a one-epoch trainer with no ModelCheckpoint;
+# interface.train() must use max_epochs=1 to avoid the ckpt_path="best" branch.
+_FIT_PREDICT_MODELS: frozenset[str] = frozenset({"xgboost_fit_predict"})
 
 # Allow small cross-platform variance for neural nets (patchtst, lstm, crossformer)
 # e.g. 0.2362 vs 0.2364 on Linux vs macOS due to BLAS/PyTorch differences
@@ -122,6 +127,10 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
 
     interface = EntryInterface()
 
+    # Fit-predict models use a one-epoch trainer with no ModelCheckpoint;
+    # max_epochs=1 keeps interface.train() out of the ckpt_path="best" branch.
+    max_epochs = "1" if model in _FIT_PREDICT_MODELS else "10"
+
     # IMPLEMENTERE CARICAMENTO DA CFG
     results = interface.train(
         run_name=f"test_{key}",
@@ -129,7 +138,7 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
         task_definition=None,
         datasource=None,
         overrides=[
-            "trainer.max_epochs=10",
+            f"trainer.max_epochs={max_epochs}",
             "num_threads=1",
             "debug=nox_testing_fit_predict",
             "trainer.accelerator=cpu",

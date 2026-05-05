@@ -32,11 +32,16 @@ EXPERIMENTS = [
     ("diagnostics", "snapshot/diagnostics", "tide"),
     ("diagnostics", "snapshot/diagnostics", "timeseries_transformer"),
     ("diagnostics", "snapshot/diagnostics", "stf"),
+    ("diagnostics", "snapshot/diagnostics", "xgboost_fit_predict"),
 ]
 
 PRECISION = 4
 FLOAT_ABS_TOL = 0.001
 FLOAT_REL_TOL = 0.005
+
+# Fit-predict models (XGBoost etc.) use a one-epoch trainer with no ModelCheckpoint;
+# interface.train() must use max_epochs=1 to avoid the ckpt_path="best" branch.
+_FIT_PREDICT_MODELS: frozenset[str] = frozenset({"xgboost_fit_predict"})
 
 
 def round_metrics(obj):
@@ -65,6 +70,10 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
 
     interface = EntryInterface()
 
+    # Fit-predict models use a one-epoch trainer with no ModelCheckpoint;
+    # max_epochs=1 keeps interface.train() out of the ckpt_path="best" branch.
+    max_epochs = "1" if model in _FIT_PREDICT_MODELS else "10"
+
     # IMPLEMENTERE CARICAMENTO DA CFG
     results = interface.train(
         run_name="test",
@@ -72,7 +81,7 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
         task_definition=None,
         datasource=None,
         overrides=[
-            "trainer.max_epochs=10",
+            f"trainer.max_epochs={max_epochs}",
             "num_threads=1",
             "debug=nox_testing_fit_predict",
             "trainer.accelerator=cpu",

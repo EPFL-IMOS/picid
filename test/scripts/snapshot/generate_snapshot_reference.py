@@ -38,6 +38,7 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "tide"),
     ("prognostics", "snapshot/prognostics", "timeseries_transformer"),
     ("prognostics", "snapshot/prognostics", "stf"),
+    ("prognostics", "snapshot/prognostics", "xgboost_fit_predict"),
     ("diagnostics", "snapshot/diagnostics", "linear_classifier"),
     ("diagnostics", "snapshot/diagnostics", "mlp"),
     ("diagnostics", "snapshot/diagnostics", "lstm"),
@@ -47,6 +48,7 @@ EXPERIMENTS = [
     ("diagnostics", "snapshot/diagnostics", "tide"),
     ("diagnostics", "snapshot/diagnostics", "timeseries_transformer"),
     ("diagnostics", "snapshot/diagnostics", "stf"),
+    ("diagnostics", "snapshot/diagnostics", "xgboost_fit_predict"),
     ("prognostics_ragged", "snapshot/ragged_prognostics", "linear_regression"),
     ("prognostics_ragged", "snapshot/ragged_prognostics", "exponential_regression"),
     ("prognostics_ragged", "snapshot/ragged_prognostics", "lstm"),
@@ -178,8 +180,11 @@ def main():
             run_dir = tmp_root / task_type / model
             run_dir.mkdir(parents=True, exist_ok=True)
 
-            # Fit-predict (anomaly isolation_forest) uses max_epochs=1; no checkpoints
-            max_epochs = "1" if task_type == "anomaly_detection" else "10"
+            # Fit-predict models use max_epochs=1: no gradient loop, each epoch just
+            # calls fit()/predict() once; running more epochs is wasteful and may
+            # interact poorly with the one_epoch trainer config.
+            _fit_predict_models = {"isolation_forest", "xgboost_fit_predict"}
+            max_epochs = "1" if model in _fit_predict_models else "10"
             cmd = [
                 sys.executable,
                 "picid/run.py",

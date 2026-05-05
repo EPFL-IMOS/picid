@@ -1,0 +1,25 @@
+# Snapshot diagnostics for FitPredict pipeline (XGBoost etc.)
+# Adds the task dimension expected by FitPredictTaskDataset and renames
+# 'target' -> 'fault_classification' to match task_definition.task_type.
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+  metadata:
+    apply_to: features
+    fit_on: train
+
+add_task_dim_features:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: features
+    assign_to: features
+
+add_task_dim_fault_classification:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a b -> 1 a b"
+  metadata:
+    apply_to: target
+    assign_to: fault_classification

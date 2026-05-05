@@ -69,6 +69,13 @@
     "test/rmse_normalized": 1.0205,
     "test/nasa_score_normalized": 0.1051
   },
+  "prognostics/xgboost_fit_predict": {
+    "test/loss": 1.0,
+    "test/mae_normalized": 1.0106,
+    "test/mse_normalized": 1.022,
+    "test/rmse_normalized": 1.0109,
+    "test/nasa_score_normalized": 0.1063
+  },
   "diagnostics/linear_classifier": {
     "test/loss": 1.4903,
     "test/f1": 0.212,
@@ -140,6 +147,14 @@
     "test/precision": 0.0458,
     "test/recall": 0.25,
     "test/auroc": 0.5018
+  },
+  "diagnostics/xgboost_fit_predict": {
+    "test/loss": 1.0,
+    "test/f1": 0.0,
+    "test/accuracy": 0.0,
+    "test/precision": 0.0,
+    "test/recall": 0.0,
+    "test/auroc": 0.1146
   },
   "prognostics_ragged/linear_regression": {
     "test/loss": 2.6425,

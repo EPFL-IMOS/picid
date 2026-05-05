@@ -1,0 +1,5 @@
+#@package _global_
+defaults:
+  - snapshot/diagnostics/base
+  - /model_configs/diagnostics/xgboost_fit_predict
+  - override /transforms: snapshot/minimal_diagnostics_fit_predict
