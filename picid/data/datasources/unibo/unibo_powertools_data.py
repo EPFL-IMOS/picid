@@ -103,9 +103,6 @@ class UniboPowertoolsData:
             "Start loading data with lines: %s, types: %s and chunksize: %s..."
             % (self.lines, self.test_types, self.chunksize)
         )
-        # Temp
-        # self.cyc_path = '/home/levtel/projects/battery-rul-estimation/battery-rul-estimation/data/unibo-powertools-dataset/test_result.csv'
-        # self.cap_path = '/home/levtel/projects/battery-rul-estimation/battery-rul-estimation/data/unibo-powertools-dataset/test_result_trial_end.csv'
 
         iter_cyc = pd.read_csv(self.cyc_path, chunksize=self.chunksize, iterator=True)
         self.cycle_raw = pd.concat(self.__filter_raw_chunk(iter_cyc))
