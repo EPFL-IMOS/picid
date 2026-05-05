@@ -113,6 +113,7 @@ markers = [
     "benchmark: timing or throughput checks (not correctness-only)",
     "slow: slow tests (e.g. __getitem__ timing); exclude from focused runs with -m 'not benchmark and not slow'",
     "requires_snapshots: verification-only against committed snapshot fixtures; skip when fixtures are missing and do not regenerate snapshots from test runs",
+    "real_data: requires real datasets on disk; never runs in CI — local only",
 ]
 
 [tool.pylint."messages control"]

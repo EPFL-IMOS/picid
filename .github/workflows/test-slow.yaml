@@ -53,4 +53,4 @@ jobs:
           uv run python -c "from phmd.download import download; download('PHME20', cache_dir='datasets/phmd_cache', unzip=True)"
 
       - name: Run slow and requires_snapshots tests
-        run: uv run pytest test/ -m "slow or requires_snapshots" -v
+        run: uv run pytest test/ -m "(slow or requires_snapshots) and not real_data" -v

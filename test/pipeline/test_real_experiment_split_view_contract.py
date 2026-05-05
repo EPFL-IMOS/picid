@@ -20,6 +20,7 @@ CONFIG_DIR = PROJECT_ROOT / "configs"
 
 
 @pytest.mark.slow
+@pytest.mark.real_data
 @pytest.mark.parametrize(
     "experiment_name",
     [
