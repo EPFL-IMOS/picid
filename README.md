@@ -102,3 +102,8 @@ uv run mkdocs serve
 ```
 
 Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+
+## License
+
+This project is licensed under the Apache License 2.0 with Commons Clause.
