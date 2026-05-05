@@ -47,6 +47,9 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "lstm"),
     ("prognostics", "snapshot/prognostics", "patchtst"),
     ("prognostics", "snapshot/prognostics", "crossformer"),
+    ("prognostics", "snapshot/prognostics", "mlp"),
+    ("prognostics", "snapshot/prognostics", "cnn_1d"),
+    ("prognostics", "snapshot/prognostics", "tide"),
 ]
 
 PRECISION = 4

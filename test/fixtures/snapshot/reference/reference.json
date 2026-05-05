@@ -34,6 +34,27 @@
     "test/rmse_normalized": 0.7672,
     "test/nasa_score_normalized": 0.0774
   },
+  "prognostics/mlp": {
+    "test/loss": 4.0895,
+    "test/mae_normalized": 1.7101,
+    "test/mse_normalized": 4.0895,
+    "test/rmse_normalized": 2.0222,
+    "test/nasa_score_normalized": 0.1915
+  },
+  "prognostics/cnn_1d": {
+    "test/loss": 1.297,
+    "test/mae_normalized": 0.9606,
+    "test/mse_normalized": 1.297,
+    "test/rmse_normalized": 1.1388,
+    "test/nasa_score_normalized": 0.1014
+  },
+  "prognostics/tide": {
+    "test/loss": 1.5162,
+    "test/mae_normalized": 1.2143,
+    "test/mse_normalized": 1.5162,
+    "test/rmse_normalized": 1.2313,
+    "test/nasa_score_normalized": 0.1293
+  },
   "diagnostics/linear_classifier": {
     "test/loss": 1.4903,
     "test/f1": 0.212,

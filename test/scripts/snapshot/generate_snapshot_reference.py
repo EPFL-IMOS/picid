@@ -33,6 +33,9 @@ EXPERIMENTS = [
     ("prognostics", "snapshot/prognostics", "lstm"),
     ("prognostics", "snapshot/prognostics", "patchtst"),
     ("prognostics", "snapshot/prognostics", "crossformer"),
+    ("prognostics", "snapshot/prognostics", "mlp"),
+    ("prognostics", "snapshot/prognostics", "cnn_1d"),
+    ("prognostics", "snapshot/prognostics", "tide"),
     ("diagnostics", "snapshot/diagnostics", "linear_classifier"),
     ("diagnostics", "snapshot/diagnostics", "mlp"),
     ("diagnostics", "snapshot/diagnostics", "lstm"),
@@ -113,6 +116,16 @@ def round_metrics(obj):
     return obj
 
 
+def prefix_test_metrics(obj: dict) -> dict:
+    """Ensure top-level metric keys carry a 'test/' prefix.
+
+    interface.train() returns keys like 'test/loss'; eval_details/best_epoch/test/metrics.json
+    may omit the prefix. Normalise so reference files always match interface.train() output.
+    Idempotent: keys that already start with 'test/' are left unchanged.
+    """
+    return {(k if k.startswith("test/") else f"test/{k}"): v for k, v in obj.items()}
+
+
 def merge_reference_from_per_experiment_files(ref_dir: Path) -> dict:
     """Build ref dict from all per-experiment JSON files. Source of truth: reference/<task>/<model>.json"""
     ref = {}
@@ -182,7 +195,8 @@ def main():
             if not metrics_path.exists():
                 print(f"Metrics not captured for {key}: {metrics_path}", file=sys.stderr)
                 sys.exit(1)
-            out.write_text(metrics_path.read_text())
+            raw = json.loads(metrics_path.read_text())
+            out.write_text(json.dumps(prefix_test_metrics(raw), indent=2))
 
     ref = merge_reference_from_per_experiment_files(REF_DIR)
     (REF_DIR / "reference.json").write_text(json.dumps(ref, indent=2))
