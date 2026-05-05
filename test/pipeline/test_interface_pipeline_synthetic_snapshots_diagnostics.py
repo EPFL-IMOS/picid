@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -30,6 +27,11 @@ EXPERIMENTS = [
     ("diagnostics", "snapshot/diagnostics", "mlp"),
     ("diagnostics", "snapshot/diagnostics", "lstm"),
     ("diagnostics", "snapshot/diagnostics", "patchtst"),
+    ("diagnostics", "snapshot/diagnostics", "cnn_1d"),
+    ("diagnostics", "snapshot/diagnostics", "crossformer"),
+    ("diagnostics", "snapshot/diagnostics", "tide"),
+    ("diagnostics", "snapshot/diagnostics", "timeseries_transformer"),
+    ("diagnostics", "snapshot/diagnostics", "stf"),
 ]
 
 PRECISION = 4
@@ -55,7 +57,6 @@ def round_metrics(obj):
 @pytest.mark.parametrize("task_type,exp_base,model", EXPERIMENTS)
 def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     """Current pipeline output matches committed reference (4 decimals)."""
-    import tempfile
 
     key = f"{task_type}/{model}"
 
@@ -65,17 +66,21 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     interface = EntryInterface()
 
     # IMPLEMENTERE CARICAMENTO DA CFG
-    results = interface.train(run_name='test',
-                              model=None,
-                              task_definition=None,
-                              datasource=None,
-                              overrides=['trainer.max_epochs=10',
-                                         "num_threads=1",
-                                         "debug=nox_testing_fit_predict",
-                                         "trainer.accelerator=cpu",
-                                         "seed=42",
-                                         f"experiment={exp_base}/{model}",
-                                         f"hydra.searchpath=[{searchpath}]"])
+    results = interface.train(
+        run_name="test",
+        model=None,
+        task_definition=None,
+        datasource=None,
+        overrides=[
+            "trainer.max_epochs=10",
+            "num_threads=1",
+            "debug=nox_testing_fit_predict",
+            "trainer.accelerator=cpu",
+            "seed=42",
+            f"experiment={exp_base}/{model}",
+            f"hydra.searchpath=[{searchpath}]",
+        ],
+    )
 
     results = results[0]
 
