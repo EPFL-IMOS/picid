@@ -3,7 +3,6 @@
 CLI entry points are defined in `pyproject.toml`:
 
 - `picid-assemble`
-- `picid-generate-web`
 
 Implementation package: `picid.cli`.
 

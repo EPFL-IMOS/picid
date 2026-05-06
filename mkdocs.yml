@@ -117,7 +117,6 @@ nav:
                 - Tooling:
                       - Overview: modules/tooling/index.md
                       - CLI: modules/tooling/cli.md
-                      - Experiment Generator: modules/tooling/experiment-generator.md
                       - Scripts: modules/tooling/scripts.md
     - API Reference:
           - Overview: reference/index.md
@@ -172,9 +171,7 @@ nav:
                 - OmegaConf resolvers: guides/omegaconf_resolvers.md
                 - Adding a new model: guides/how_to_add_a_new_model.md
                 - RunAI (cluster): guides/runai.md
-                - Experiment Generator: guides/experiment_generator.md
                 - Dynamic Config Assembler: guides/dynamic-config-assembler.md
-                # - Submit to Leaderboard: guides/submit_run_to_leaderboard.md
           - Transforms (Legacy):
                 - Quick start: transforms/quick_start.md
                 - 5-minute intro: transforms/intro_5min.md
@@ -183,8 +180,6 @@ nav:
                 - Developer guide: transforms/developer_guide.md
                 - Hooks examples: transforms/HOOKS_EXAMPLES.md
     - Development:
-          - Experiment Generator UI: experiment-generator/index.html
-          # - Leaderboard: leaderboard/index.html
           - Contributing:
                 - Website maintenance: README_WEBSITE.md
                 - Docstring style: contributing/docstring_style.md
