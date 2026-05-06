@@ -10,7 +10,7 @@
 
 ```bash
 git clone <repo-url>
-cd picid
+cd TabPHM
 uv sync
 ```
 

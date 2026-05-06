@@ -9,4 +9,4 @@ source .venv/bin/activate
 python picid/run.py paths=<your_paths> debug=default experiment=unibo/prognostics/raw/cnn_1d
 ```
 
-If you need config composition details, see [Config and Overrides](../guides/configs_and_overrides.md).
+For more details on how configs compose, see [First Run Walkthrough](first-run.md) and the [Interface overview](../interface/index.md).

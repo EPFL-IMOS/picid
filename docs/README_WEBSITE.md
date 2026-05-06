@@ -4,7 +4,7 @@
 
 1. Install deps: `uv sync`
 2. Serve: `uv run mkdocs serve`
-4. Open: http://127.0.0.1:8000/
+3. Open: http://127.0.0.1:8000/
 
 ## Deploy to GitHub Pages
 
@@ -16,7 +16,7 @@ uv run mkdocs gh-deploy
 
 ### Option B: GitHub Actions
 
-The workflow `.github/workflows/docs.yml` (when added) runs on push to `main` when docs or configs change:
+Add `.github/workflows/docs.yml` to auto-deploy on push to `main`:
 
 ```yaml
 # .github/workflows/docs.yml
