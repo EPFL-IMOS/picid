@@ -4,5 +4,4 @@ defaults:
   - dataset: null
   - paths: default
   - datasource: null
-  # - training_strategy: railway_traction.yaml
   # - experiment: default.yaml
