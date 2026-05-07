@@ -13,12 +13,14 @@ When ``group_by_days`` is enabled, the split payload is additionally regrouped
 into ragged day-level sequences.
 """
 
-import warnings
 import logging
+import urllib.error
+import urllib.request
+import warnings
+from pathlib import Path
 
-import pandas as pd
 import awkward as ak
-
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from picid.data.datasources.base.predefined_split_loader import (
@@ -26,9 +28,69 @@ from picid.data.datasources.base.predefined_split_loader import (
 )
 from picid.utils.awkward_utils import ak_unflatten_discontinous_groups
 
-
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
+
+# Stable figshare file IDs for the LBNL MZVAV FDD dataset (CC0).
+# Article: https://figshare.com/articles/dataset/LBNLDataSynthesisInventory_pdf/11752740
+_FIGSHARE_URLS: dict[str, str] = {
+    "MZVAV-1.csv": "https://ndownloader.figshare.com/files/21403008",
+    "MZVAV-2-1.csv": "https://ndownloader.figshare.com/files/21403011",
+    "MZVAV-2-2.csv": "https://ndownloader.figshare.com/files/21403014",
+}
+
+
+def _download_if_missing(path: Path) -> None:
+    """
+    Download the MZVAV CSV from figshare if it is not already present.
+
+    Parameters
+    ----------
+    path : Path
+        Expected location of the CSV file (e.g.
+        ``<data_dir>/building/MZVAV-2-2.csv``).
+
+    Notes
+    -----
+    The download is skipped silently when the file already exists.
+    If the filename is not in the known figshare registry a warning is emitted
+    and the function returns without downloading, allowing downstream code to
+    raise a more descriptive ``FileNotFoundError``.
+    """
+    if path.exists():
+        return
+
+    url = _FIGSHARE_URLS.get(path.name)
+    if url is None:
+        logger.warning(
+            "No figshare URL registered for '%s'. Place the file manually at %s.",
+            path.name,
+            path,
+        )
+        return
+
+    logger.info("MZVAV file not found at %s. Downloading from figshare ...", path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(".csv.tmp")
+    try:
+        with urllib.request.urlopen(url) as response:  # noqa: S310
+            if response.status != 200:
+                raise RuntimeError(
+                    f"Failed to download MZVAV dataset: HTTP {response.status} from {url}"
+                )
+            with open(tmp_path, "wb") as f:
+                while chunk := response.read(1 << 16):  # 64 KiB chunks
+                    f.write(chunk)
+        tmp_path.rename(path)
+    except urllib.error.URLError as exc:
+        tmp_path.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"Failed to download MZVAV dataset from {url}: {exc}"
+        ) from exc
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    logger.info("MZVAV file downloaded to %s.", path)
 
 
 class MZVAVLoader(PredefinedSplitLoaderBase):
@@ -161,6 +223,8 @@ class MZVAVLoader(PredefinedSplitLoaderBase):
         project convention that several calendar dates belong to one grouped
         fault family, for example damper or heating-coil faults.
         """
+        _download_if_missing(Path(self.data_path))
+
         df = pd.read_csv(
             self.data_path,
             sep=",",

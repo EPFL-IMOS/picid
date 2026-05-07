@@ -86,9 +86,9 @@ executed, if the data is not already present locally.
 This covers: UNIBO21, NB14, PHME20, PRONOSTIA, XJTU-SY, HSF-15, N-CMAPSS
 (phmd variant), and ThreeW.
 
-> **Note:** The **N-CMAPSS (concepts variant)** and **MZVAV** datasources do
-> not yet have automatic download support and require manual placement of the
-> raw files. This will be added in a future update.
+> **Note:** The **N-CMAPSS (concepts variant)** datasource does not yet have
+> automatic download support and requires manual placement of the raw NASA HDF5
+> files. This will be added in a future update.
 
 ### Run your first experiment
 
