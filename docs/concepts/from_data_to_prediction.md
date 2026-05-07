@@ -1,6 +1,6 @@
 # From data to prediction: how one PHM run works
 
-This page walks through the data flow of a single PHM experiment in TabPHM. We use the **Unibo battery RUL** setup as a running example (datasource `unibo21_bosello`, task `prognostics/rul`, transforms such as `battery/unibo/raw`, `battery/unibo/combined`, or ablation variants).
+This page walks through the data flow of a single PHM experiment in PICID. We use the **Unibo battery RUL** setup as a running example (datasource `unibo21_bosello`, task `prognostics/rul`, transforms such as `battery/unibo/raw`, `battery/unibo/combined`, or ablation variants).
 
 ---
 

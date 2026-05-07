@@ -5,7 +5,7 @@ Runnable scripts under this directory load a datasource (or a Hydra-composed con
 Run from the repository root so `configs/` and imports resolve:
 
 ```bash
-cd /path/to/TabPHM
+cd /path/to/PICID
 python tutorials/datasources/<script>.py --help
 ```
 
@@ -13,7 +13,7 @@ python tutorials/datasources/<script>.py --help
 
 Most loader tutorials accept:
 
-- **`--data-dir`** — Override the TabPHM datasets root (`paths.data_dir`). Hydra-based tutorials forward this as a `paths.data_dir=...` override; others resolve files or PHMD cache under that root per their YAML.
+- **`--data-dir`** — Override the PICID datasets root (`paths.data_dir`). Hydra-based tutorials forward this as a `paths.data_dir=...` override; others resolve files or PHMD cache under that root per their YAML.
 - **`--no-download`** — Only on loaders that support disabling automatic fetch (**Airbus Helicopter**, **3W**). Other tutorials rely on PHMD or local layout without this toggle.
 
 ## Loader scripts (regression matrix)

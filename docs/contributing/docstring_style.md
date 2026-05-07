@@ -1,6 +1,6 @@
 # Docstring Style Guide
 
-TabPHM uses **NumPy-style** docstrings for API documentation. mkdocstrings is
+PICID uses **NumPy-style** docstrings for API documentation. mkdocstrings is
 configured with `docstring_style: numpy`; other styles (e.g. Google) will not
 render Parameters/Returns correctly.
 

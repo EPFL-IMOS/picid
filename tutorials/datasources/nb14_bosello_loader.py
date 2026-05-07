@@ -131,7 +131,7 @@ def _build_nb14_bosello_notes(container: Any) -> str:
     bullets = [
         "filtering — Train/val/test battery lists in ``picid.data.datasources.nb14.loader`` "
         "omit several RW cells (commented ``train_names`` / ``val_names`` / ``test_names`` "
-        "entries) so the TabPHM split matches the curated NASA subset used in the "
+        "entries) so the PICID split matches the curated NASA subset used in the "
         "Bosello-style benchmark, rather than every channel in the randomized release.",
         "ah-RUL — With ``task_mode: ahRul`` (see ``configs/datasource/nb14_bosello.yaml``), "
         "per-cycle targets are future horizon RUL from ``RulHandler.prepare_y_future`` over "

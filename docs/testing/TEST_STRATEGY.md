@@ -1,4 +1,4 @@
-# TabPHM Test Strategy
+# PICID Test Strategy
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Config and overrides
 
-Experiments in TabPHM are composed from **config groups** via Hydra. You choose an **experiment** key that resolves to a YAML file; that file uses `defaults` and `override` to plug in a datasource, task definition, dataset, transforms, model, and evaluator.
+Experiments in PICID are composed from **config groups** via Hydra. You choose an **experiment** key that resolves to a YAML file; that file uses `defaults` and `override` to plug in a datasource, task definition, dataset, transforms, model, and evaluator.
 
 ---
 

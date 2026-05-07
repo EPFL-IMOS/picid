@@ -2,7 +2,7 @@
 """Tutorial: load Petrobras 3W and inspect baseline-style dataset statistics.
 
 This script demonstrates:
-1) Loading 3W via TabPHM's predefined-split datasource loader.
+1) Loading 3W via PICID's predefined-split datasource loader.
 2) Reproducing key baseline exploration tables from the original 3W notebook.
 3) Showing how ragged unit lengths are handled natively (no padding/truncation).
 """
@@ -28,7 +28,6 @@ from tutorials.datasources._tutorial_cli import (
     normalize_data_dir_override,
 )
 from picid.data.datasources.threew import ThreeWLoader
-
 
 EVENT_NAMES: dict[int, str] = {
     0: "Normal",
@@ -803,7 +802,7 @@ def main() -> None:
         "- ThreeWLoader returns split payloads as list-per-instance, preserving native lengths."
     )
     print(
-        "- TabPHM consumes ragged unit lists directly, so no preprocessing padding/truncation is required."
+        "- PICID consumes ragged unit lists directly, so no preprocessing padding/truncation is required."
     )
     print(
         "- Metadata carries class labels and source names, enabling baseline analyses "

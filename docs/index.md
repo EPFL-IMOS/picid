@@ -1,8 +1,8 @@
-# TabPHM
+# PICID
 
 **A unified, config-driven benchmark arena for Prognostics, Health Management (PHM) and time-series forecasting.**
 
-TabPHM covers the full experiment pipeline in a single run:
+PICID covers the full experiment pipeline in a single run:
 data loading → preprocessing → model training → metric evaluation.
 Experiments are fully reproducible and composable through Hydra configs.
 
@@ -12,7 +12,7 @@ Experiments are fully reproducible and composable through Hydra configs.
 
 ```bash
 git clone <repo-url>
-cd TabPHM
+cd PICID
 uv sync
 ```
 

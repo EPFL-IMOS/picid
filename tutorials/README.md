@@ -1,4 +1,4 @@
-# TabPHM Tutorials
+# PICID Tutorials
 
 Module-based tutorials following Script→Notebook workflow.
 

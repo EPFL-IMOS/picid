@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 _DEFAULT_DATA_DIR_HELP = (
-    "Override the TabPHM datasets root (``paths.data_dir``). When omitted, "
+    "Override the PICID datasets root (``paths.data_dir``). When omitted, "
     "defaults follow ``configs/paths/default.yaml`` and the datasource YAML."
 )
 

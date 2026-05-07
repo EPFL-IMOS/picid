@@ -1,4 +1,4 @@
-# Contributing to TabPHM
+# Contributing to PICID
 
 Thank you for your interest in contributing. This document covers how to get set up and submit changes.
 

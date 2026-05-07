@@ -1,4 +1,4 @@
-"""High-level experiment interface for TabPHM: config composition, data preprocessing, and training."""
+"""High-level experiment interface for PICID: config composition, data preprocessing, and training."""
 
 import logging
 import os

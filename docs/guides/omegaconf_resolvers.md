@@ -1,6 +1,6 @@
 # OmegaConf Resolvers
 
-TabPHM uses **Hydra** and **OmegaConf** for configuration. Custom **resolvers** are registered in **`picid/run.py`** before `hydra.main` is invoked, so they are available in any YAML config loaded via the main entry point (e.g. `python picid/run.py ...`). In configs, use the syntax **`${resolver_name:arg1,arg2,...}`**. Resolvers are evaluated when OmegaConf resolves the config (e.g. when a value is first accessed); the two `infer_*` resolvers are replaced at runtime by the pipeline, so they only return real values after the pipeline has called the corresponding register function.
+PICID uses **Hydra** and **OmegaConf** for configuration. Custom **resolvers** are registered in **`picid/run.py`** before `hydra.main` is invoked, so they are available in any YAML config loaded via the main entry point (e.g. `python picid/run.py ...`). In configs, use the syntax **`${resolver_name:arg1,arg2,...}`**. Resolvers are evaluated when OmegaConf resolves the config (e.g. when a value is first accessed); the two `infer_*` resolvers are replaced at runtime by the pipeline, so they only return real values after the pipeline has called the corresponding register function.
 
 ---
 

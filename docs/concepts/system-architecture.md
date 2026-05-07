@@ -1,6 +1,6 @@
 # System Architecture
 
-TabPHM is configuration-driven around Hydra. Core execution path:
+PICID is configuration-driven around Hydra. Core execution path:
 
 `datasource -> SplitDatasetContainer -> datasets -> transforms -> datamodule -> wrapper/lightning module -> evaluator -> metrics/artifacts`
 

@@ -1,6 +1,6 @@
 # Task Formats: RUL, Forecasting, Fit-Predict
 
-TabPHM provides multiple dataset contracts depending on model regime.
+PICID provides multiple dataset contracts depending on model regime.
 
 ## RULContextBatchDataset
 

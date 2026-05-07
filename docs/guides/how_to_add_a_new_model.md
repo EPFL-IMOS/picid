@@ -1,6 +1,6 @@
 # Adding a New Model
 
-This guide describes how to add a new model to the TabPHM pipeline so it can be
+This guide describes how to add a new model to the PICID pipeline so it can be
 run via Hydra experiments. The repo now uses a family-first layout:
 
 - `picid.model.forecasters` for forecasting families

@@ -119,7 +119,7 @@ def _write_reproduce_guide(cfg: DictConfig) -> None:
             "## 1. Environment setup",
             "",
             "```bash",
-            "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+            "export PROJECT_ROOT=/path/to/PICID  # set to your project root",
             "cd $PROJECT_ROOT",
             "# Install dependencies (use uv.lock from this run dir for exact versions):",
             f"# cp {output_dir_portable}/uv.lock . && uv sync",
@@ -133,7 +133,7 @@ def _write_reproduce_guide(cfg: DictConfig) -> None:
             "**Option A – from repo configs** (uses current configs + overrides):",
             "",
             "```bash",
-            "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+            "export PROJECT_ROOT=/path/to/PICID  # set to your project root",
             "cd $PROJECT_ROOT",
             f"uv run python picid/run.py {run_args}",
             "```",
@@ -141,7 +141,7 @@ def _write_reproduce_guide(cfg: DictConfig) -> None:
             "**Option B – from this run's config** (exact config from logs, for version comparison):",
             "",
             "```bash",
-            "export PROJECT_ROOT=/path/to/TabPHM  # set to your project root",
+            "export PROJECT_ROOT=/path/to/PICID  # set to your project root",
             "cd $PROJECT_ROOT",
             f"uv run python scripts/reproducibility/reproduce_from_run.py {output_dir_portable}",
             "```",
@@ -219,9 +219,9 @@ def _get_git_info(root: Path) -> dict[str, str | bool]:
         return {
             "git_commit": commit.stdout.strip() if commit.returncode == 0 else "",
             "git_branch": branch.stdout.strip() if branch.returncode == 0 else "",
-            "git_dirty": bool(status.stdout.strip())
-            if status.returncode == 0
-            else False,
+            "git_dirty": (
+                bool(status.stdout.strip()) if status.returncode == 0 else False
+            ),
         }
     except Exception:
         return {"git_commit": "", "git_branch": "", "git_dirty": False}

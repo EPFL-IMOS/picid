@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- Initial public release of TabPHM (piCID) framework
+- Initial public release of PICID (piCID) framework
 - Unified config-driven pipeline for PHM and forecasting
 - Support for multiple datasources, transforms, and model types
 - Documentation and getting-started guides
@@ -21,4 +21,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.1.0] - 2025-02-23
 
 ### Added
-- First release of TabPHM benchmark arena
+- First release of PICID benchmark arena

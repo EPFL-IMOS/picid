@@ -11,7 +11,7 @@ fi
 
 # Prepare environment
 source /workspace/setup/.venv/bin/activate
-cd /workspace/projects/TabPHM || exit 1
+cd /workspace/projects/PICID || exit 1
 uv pip install -e ".[dev]"
 
 mkdir -p logs

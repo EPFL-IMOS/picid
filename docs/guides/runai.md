@@ -15,7 +15,7 @@ Steps:
 > ```bash
 > -v ~/datasets:/mnt/storage/${LDAP_USERNAME}/datasets \
 > -v ~/Experiments:/mnt/storage/${LDAP_USERNAME}/experiments \
-> -v ~/Workspaces/work/TabPHM:/mnt/storage/${LDAP_USERNAME}/projects
+> -v ~/Workspaces/work/PICID:/mnt/storage/${LDAP_USERNAME}/projects
 > ```
 > These folders are symlinked to /workspace/datasets, ... in the container due to restrictions in how many PVCs can be mounted on the cluster.
 
@@ -30,7 +30,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH
 export LIBRARY_PATH=$HOME/lib:$LIBRARY_PATH
 export LD_LIBRARY_PATH=$HOME/lib:$LD_LIBRARY_PATH
 source /workspace/setup/.venv/bin/activate
-cd /workspace/projects/TabPHM
+cd /workspace/projects/PICID
 uv sync --group dev
 # uv pip install --upgrade netCDF4 h5py xarray nvitop
 python picid/run.py paths=runai experiment=railway_traction/forecasting/tabpfn_fit_predict

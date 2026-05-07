@@ -40,7 +40,7 @@ uv run python scripts/reproducibility/compare_configs.py \
 
 **How to use:**
 ```bash
-export PROJECT_ROOT=/path/to/TabPHM
+export PROJECT_ROOT=/path/to/PICID
 uv run python scripts/reproducibility/reproduce_from_run.py <run_output_dir>
 ```
 
