@@ -19,10 +19,10 @@ experiment → run_dir → push_run_to_gdrive → Drive link → build_submissio
 
 ### 1. Run experiment
 
-Use the [Experiment Generator](../../docs/experiment-generator/index.html) or run directly:
+Run an experiment directly:
 
 ```bash
-uv run python picid/run.py paths=rt_local experiment=phme20/prognostics/raw/xgboost_fit_predict
+uv run python picid/run.py paths=<your_paths> experiment=phme20/prognostics/raw/xgboost_fit_predict
 ```
 
 This creates a run dir under `artifacts/`, e.g.:
