@@ -26,7 +26,7 @@ Many modules and methods had **specific** explanations (PHMD loading, cache fing
 
 ### Canonical example (illustrative)
 
-File: [`picid/data/datasources/base/phmd_loader.py`](../../picid/data/datasources/base/phmd_loader.py).
+File: `picid/data/datasources/base/phmd_loader.py`.
 
 - **Module doc:** A full paragraph describing PHMD multi-source patterns was replaced by a single vague line.
 - **`PHMDMultiSourceLoader`:** Detailed `**kwargs` (fold, cache, `payload_cache_path`, fingerprint semantics) was replaced by “Description of kwargs.”
@@ -50,14 +50,14 @@ Affected examples (non-exhaustive):
 
 | File | What was reduced or removed |
 |------|-----------------------------|
-| [`picid/data/datasets/sliding_window_batch_dataset.py`](../../picid/data/datasets/sliding_window_batch_dataset.py) | **See dedicated subsection below** — among the worst losses: full **dataset length math** for dense series, `padding_left_flag` semantics, and `__getitem__` batch contract notes. |
-| [`picid/data/datasets/fault_classification_dataset.py`](../../picid/data/datasets/fault_classification_dataset.py) | Extended class doc, parameter semantics, **`pred_len` forced to 0**, full **`Examples`** block; some useful inline comments in `__getitem__`. |
-| [`picid/data/optimization/ak_jagged_sequencer.py`](../../picid/data/optimization/ak_jagged_sequencer.py) | **See dedicated subsection below** — window index math, padding/`warmup_steps` semantics, **`edge` vs `zero`** modes, worked **Examples**, and **tensor shape** + padding notes on batch methods. |
-| [`picid/data/preprocessing/preprocessor.py`](../../picid/data/preprocessing/preprocessor.py) | **See dedicated subsection below** — full **module tutorial** (framework vs library, runners, protocol), and **API migration** note about removed `mode` / `split_mode`. |
-| [`picid/transforms/base_transforms/tabularizers.py`](../../picid/transforms/base_transforms/tabularizers.py) | **See dedicated subsection below** — **Hydra YAML comment recipe** removed; **time-features / `freq` narrative** dropped from class doc; **`transform_data`** shape and return specificity reduced. |
-| [`picid/model/methods/statistical_models.py`](../../picid/model/methods/statistical_models.py) | PHM benchmarking context, **equations**, **`Attributes`**, and detailed `config` / `task_type` semantics for baselines. |
+| `picid/data/datasets/sliding_window_batch_dataset.py` | **See dedicated subsection below** — among the worst losses: full **dataset length math** for dense series, `padding_left_flag` semantics, and `__getitem__` batch contract notes. |
+| `picid/data/datasets/fault_classification_dataset.py` | Extended class doc, parameter semantics, **`pred_len` forced to 0**, full **`Examples`** block; some useful inline comments in `__getitem__`. |
+| `picid/data/optimization/ak_jagged_sequencer.py` | **See dedicated subsection below** — window index math, padding/`warmup_steps` semantics, **`edge` vs `zero`** modes, worked **Examples**, and **tensor shape** + padding notes on batch methods. |
+| `picid/data/preprocessing/preprocessor.py` | **See dedicated subsection below** — full **module tutorial** (framework vs library, runners, protocol), and **API migration** note about removed `mode` / `split_mode`. |
+| `picid/transforms/base_transforms/tabularizers.py` | **See dedicated subsection below** — **Hydra YAML comment recipe** removed; **time-features / `freq` narrative** dropped from class doc; **`transform_data`** shape and return specificity reduced. |
+| `picid/model/methods/statistical_models.py` | PHM benchmarking context, **equations**, **`Attributes`**, and detailed `config` / `task_type` semantics for baselines. |
 
-#### [`picid/data/datasets/sliding_window_batch_dataset.py`](../../picid/data/datasets/sliding_window_batch_dataset.py) (`SlidingWindowBatchDataset`)
+#### `picid/data/datasets/sliding_window_batch_dataset.py` (`SlidingWindowBatchDataset`)
 
 This file is called out explicitly because a **large block of technically important content** was removed from the class docstring and replaced by shorter parameter lines that no longer carry the same meaning.
 
@@ -88,7 +88,7 @@ git show HEAD:picid/data/datasets/sliding_window_batch_dataset.py
 git diff HEAD -- picid/data/datasets/sliding_window_batch_dataset.py
 ```
 
-#### [`picid/data/optimization/ak_jagged_sequencer.py`](../../picid/data/optimization/ak_jagged_sequencer.py) (`AkwardJaggedAutoregressiveSequencer`)
+#### `picid/data/optimization/ak_jagged_sequencer.py` (`AkwardJaggedAutoregressiveSequencer`)
 
 This sequencer sits on the **critical path** for window boundaries, padding, and multi-unit ragged data. The old class docstring was long because it encoded **invariants** and **indexing contracts** that are easy to get wrong when tuning `seq_len`, `label_len`, `pred_len`, and padding.
 
@@ -122,7 +122,7 @@ git show HEAD:picid/data/optimization/ak_jagged_sequencer.py
 git diff HEAD -- picid/data/optimization/ak_jagged_sequencer.py
 ```
 
-#### [`picid/data/preprocessing/preprocessor.py`](../../picid/data/preprocessing/preprocessor.py) (`PreProcessor` module)
+#### `picid/data/preprocessing/preprocessor.py` (`PreProcessor` module)
 
 Here the loss is less about formulas and more about **entry-point documentation** and a **breaking/API note** that used to live on the class.
 
@@ -146,7 +146,7 @@ git show HEAD:picid/data/preprocessing/preprocessor.py
 git diff HEAD -- picid/data/preprocessing/preprocessor.py
 ```
 
-#### [`picid/transforms/base_transforms/tabularizers.py`](../../picid/transforms/base_transforms/tabularizers.py) (`TimeseriesTabularizer`)
+#### `picid/transforms/base_transforms/tabularizers.py` (`TimeseriesTabularizer`)
 
 **What was removed (and why it matters):**
 
@@ -177,7 +177,7 @@ git diff HEAD -- picid/transforms/base_transforms/tabularizers.py
 
 ### 3a. Return type hints disagree with docstrings and behavior
 
-File: [`picid/pipeline/base.py`](../../picid/pipeline/base.py).
+File: `picid/pipeline/base.py`.
 
 `BackboneWrapperLightningModule._validation_step` and `_test_step` are annotated **`-> None`** but the docstrings state they **`Returns` a `dict`**, and the body **`return model_out`**. Meanwhile, `CustomEvaluatorInterface` documents similar steps with **`-> dict[str, torch.Tensor]`**.
 
@@ -190,7 +190,7 @@ File: [`picid/pipeline/base.py`](../../picid/pipeline/base.py).
 
 ### 3b. `Parameters` on exception classes duplicate `__init__`
 
-File: [`picid/exceptions.py`](../../picid/exceptions.py).
+File: `picid/exceptions.py`.
 
 Classes such as `TransformError` and `PreprocessingDatasourceError` have a full **`Parameters`** block on the **class** docstring, then the **same** parameters repeated on **`__init__`**.
 
@@ -201,7 +201,7 @@ Classes such as `TransformError` and `PreprocessingDatasourceError` have a full 
 
 ### 3c. Repeated low-signal metric docstrings
 
-File: [`picid/metrics/metrics.py`](../../picid/metrics/metrics.py).
+File: `picid/metrics/metrics.py`.
 
 Many metric classes repeat nearly identical **`reset`**, **`update`**, and **`compute`** docstrings (“Update the metric with a new batch…”) with only the implementing code differing.
 

@@ -156,7 +156,7 @@ nav:
           - Website maintenance: README_WEBSITE.md
           - Docstring style: contributing/docstring_style.md
           - Docstring audit issues: contributing/docstring_audit_issues.md
-          - Git contributor stats: contributing/git-contributor-stats-scoped.md
+
       - Testing:
           - Test entrypoints: testing/test-entrypoints.md
           - Test matrix: testing/test-matrix.md

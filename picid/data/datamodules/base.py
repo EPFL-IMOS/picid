@@ -1,3 +1,5 @@
+"""Base datamodule implementation for picid experiment pipelines."""
+
 import inspect
 import logging
 import random
@@ -246,7 +248,7 @@ class BaseDataModule(LightningDataModule):
         """
         Load all splits into memory and optionally apply feature extraction.
 
-        The splits are placed inside the [data][rul_datasets.core.RulDataModule.data]
+        The splits are placed inside the `data`
         property. If a split is empty, a tuple of empty tensors with the correct
         number of dimensions is created as a placeholder. This ensures compatibility
         with higher-order data modules.
@@ -272,6 +274,31 @@ class BaseDataModule(LightningDataModule):
         subset_ratio=None,
         split_name=None,
     ):
+        """
+        Build and return a DataLoader for the given dataset split.
+
+        Parameters
+        ----------
+        ds : torch.utils.data.Dataset
+            Dataset to wrap.
+        batch_size : int
+            Number of samples per batch.
+        shuffle : bool, optional
+            Whether to shuffle samples each epoch.
+        drop_last : bool, optional
+            Whether to drop the last incomplete batch.
+        collate_fn : callable or None, optional
+            Custom collate function passed to DataLoader.
+        subset_ratio : float or None, optional
+            If set, randomly subsample this fraction of the dataset.
+        split_name : str or None, optional
+            Name of the split (used for logging).
+
+        Returns
+        -------
+        torch.utils.data.DataLoader
+            Configured DataLoader ready for iteration.
+        """
         loader_args = dict(
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
@@ -455,6 +482,20 @@ class BaseDataModule(LightningDataModule):
         return loader
 
     def profiled_loader(self, dl):
+        """
+        Wrap a DataLoader with a PyTorch profiler and return a profiled iterator.
+
+        Parameters
+        ----------
+        dl : torch.utils.data.DataLoader
+            DataLoader to profile.
+
+        Returns
+        -------
+        callable
+            Zero-argument callable that runs the loader under the profiler schedule
+            configured in ``self.profiler_cfg``.
+        """
         from torch.profiler import (
             ProfilerActivity,
             profile,
@@ -464,6 +505,7 @@ class BaseDataModule(LightningDataModule):
         )
 
         def profiled_loader():
+            """Run the wrapped DataLoader under the configured profiler schedule."""
             sched = schedule(
                 wait=self.profiler_cfg.wait,
                 warmup=self.profiler_cfg.warmup,
