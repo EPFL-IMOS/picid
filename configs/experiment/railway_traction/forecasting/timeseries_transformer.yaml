@@ -1,6 +1,0 @@
-#@package _global_
-
-defaults:
-  - railway_traction/forecasting/base
-  - /model_configs/forecasting/timeseries_transformer
-  - override /transforms: railway/railway_seasonal_leak
