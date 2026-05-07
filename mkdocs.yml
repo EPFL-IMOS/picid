@@ -35,7 +35,6 @@ nav:
   - Getting Started:
       - Overview: getting-started/index.md
       - Install: getting-started/install.md
-      - Datasets: getting-started/datasets.md
       - Quickstart (5 minutes): getting-started/quickstart-5min.md
       - First Run: getting-started/first-run.md
       - Concepts:
