@@ -81,6 +81,7 @@ dev = [
     "viztracer>=1.0.4",
     "panel>=1.8.1",
     "holoviews>=1.21.0",
+    "seaborn>=0.13.2",
 ]
 tabfm = ["tabdpt", "carte-ai", "TabPFN"]
 phmd = ["phmd"]

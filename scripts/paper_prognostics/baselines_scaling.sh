@@ -24,7 +24,7 @@ source "$SCRIPT_DIR/../base/logging.sh"
 max_epochs=200
 check_val_every_n_epoch=1
 device=0
-wandb_log_folder="16_02_2026_scaling"
+wandb_log_folder="16_04_2026_scaling"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
@@ -32,10 +32,10 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 datasets=(
 #   "nb14|raw|prognostics"
 #   "nb14|combined|prognostics"
-#   "unibo|combined|prognostics"
-  "phme20|raw|prognostics"
+  "unibo|combined|prognostics"
+#   "phme20|raw|prognostics"
 #   "concepts_n_cmapss||prognostics"
-#   "concepts_n_cmapss_ds02||prognostics"
+  "concepts_n_cmapss_ds02||prognostics"
 # #   "pronostia|raw|prognostics"
 #   "pronostia|combined|prognostics"
 #   "xjtu_sy|combined|prognostics"
