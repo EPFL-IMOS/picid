@@ -14,6 +14,7 @@ import seaborn as sns
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -36,6 +37,7 @@ REPORTING_METRICS = [
 REPORTING_METRICS_BATTERY = [f"{r}_mean" for r in REPORTING_METRICS] + ["phme_score_mean"]
 
 MODEL_RENAME = {
+    # current picid.model.* paths
     "picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": "TabDPT",
     "picid.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": "TabPFN",
     "picid.model.forecasters.lstm_model.LSTM_Forecaster": "LSTM",
@@ -47,6 +49,30 @@ MODEL_RENAME = {
     "picid.model.forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "TST",
     "picid.model.forecasters.tide_model.TiDE_Forecaster": "TiDE",
     "picid.model.forecasters.patchtst_model.PatchTST_Forecaster": "PatchTST",
+    # intermediate picid.baselines.* / picid.model.wrappers.* paths
+    "picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": "1D-CNN",
+    "picid.model.wrappers.mlp_wrapper.MLPWrapper": "MLP",
+    "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper": "StatBL",
+    "picid.baselines.lstm_model.LSTM_Forecaster": "LSTM",
+    "picid.baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "STF",
+    "picid.baselines.crossformer_model.Crossformer_Forecaster": "CF",
+    "picid.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "TST",
+    "picid.baselines.tide_model.TiDE_Forecaster": "TiDE",
+    "picid.baselines.patchtst_model.PatchTST_Forecaster": "PatchTST",
+    # picid.model.estimators.* paths (another relocation)
+    "picid.model.estimators.tabdpt.wrapper.FitPredictTabDPTWrapper": "TabDPT",
+    # legacy lmetk.* paths
+    "lmetk.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": "TabDPT",
+    "lmetk.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": "TabPFN",
+    "lmetk.baselines.lstm_model.LSTM_Forecaster": "LSTM",
+    "lmetk.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": "1D-CNN",
+    "lmetk.model.wrappers.mlp_wrapper.MLPWrapper": "MLP",
+    "lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper": "StatBL",
+    "lmetk.baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "STF",
+    "lmetk.baselines.crossformer_model.Crossformer_Forecaster": "CF",
+    "lmetk.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "TST",
+    "lmetk.baselines.tide_model.TiDE_Forecaster": "TiDE",
+    "lmetk.baselines.patchtst_model.PatchTST_Forecaster": "PatchTST",
 }
 
 _NORMALIZED_VARS = [
@@ -99,7 +125,11 @@ DATASET_PLOT_CONFIGS: dict[str, dict] = {
     },
 }
 
-_TABDPT_CLASS = "picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper"
+_TABDPT_CLASSES = {
+    "picid.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper",
+    "picid.model.estimators.tabdpt.wrapper.FitPredictTabDPTWrapper",
+    "lmetk.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper",
+}
 
 ALL_PROJECTS = [
     "n_cmapss_scaling",
@@ -129,6 +159,15 @@ def detect_dataset_type(project_name: str) -> str:
         f"Cannot detect dataset type for project '{project_name}'. "
         f"Expected one of: unibo/nb14, n_cmapss_ds02, n_cmapss, phme20, mzvav."
     )
+
+
+def _coerce_list_cells(df: pd.DataFrame) -> pd.DataFrame:
+    """Stringify list-valued cells so pandas groupby can hash them."""
+    df = df.copy()
+    for col in df.select_dtypes(include="object").columns:
+        if df[col].apply(lambda x: isinstance(x, list)).any():
+            df[col] = df[col].apply(lambda x: str(x) if isinstance(x, list) else x)
+    return df
 
 
 def prepare_df_long(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
@@ -172,7 +211,7 @@ def prepare_df_long(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
     )
 
     df_long = df_long[
-        ~((df_long["model._target_"] == _TABDPT_CLASS) & (df_long["task_definition.seq_len"] == 5))
+        ~(df_long["model._target_"].isin(_TABDPT_CLASSES) & (df_long["task_definition.seq_len"] == 5))
     ]
 
     return df_long
@@ -190,21 +229,35 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
         if len(unique_sources) > 1:
             plot_df = df_long[df_long["ds"] == unique_sources[1]]
 
+    present_models = set(plot_df["model._target_"].unique())
+    active_rename = {k: v for k, v in MODEL_RENAME.items() if k in present_models}
+    if not active_rename:
+        raise ValueError(
+            f"No models in the data matched MODEL_RENAME for dataset '{dataset_type}'. "
+            f"Models in data: {sorted(present_models)}"
+        )
+
     with sns.plotting_context("paper", font_scale=2, rc={"font.family": "Helvetica"}):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 7))
 
         sns.lineplot(
             plot_df[
-                plot_df["model._target_"].isin(MODEL_RENAME.keys())
+                plot_df["model._target_"].isin(active_rename.keys())
                 & (plot_df["metric"] == metric)
             ],
             x="task_definition.subset_ratio",
             y="value",
             hue="model._target_",
-            hue_order=list(MODEL_RENAME.keys()),
+            hue_order=list(active_rename.keys()),
             errorbar="sd",
             ax=ax,
         )
+
+        fm_keys = {k for k, v in active_rename.items() if v in {"TabPFN", "TabDPT"}}
+        for i, key in enumerate(active_rename.keys()):
+            if key in fm_keys and i < len(ax.lines):
+                lw = ax.lines[i].get_linewidth()
+                ax.lines[i].set_linewidth(lw * 2)
 
         ax.set_title(f"Performance vs. Randomly Selected Training Data Size [Dataset: {dataset_name}]")
         ax.set_xlabel("Fraction of the Data")
@@ -212,7 +265,7 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
         ax.set_yscale("log")
         ax.set_xscale("log")
         ax.set_axisbelow(True)
-        ax.set_xlim(0.0, 1.0)
+        ax.set_xlim(right=1.0)
         ax.grid()
 
         for spine in ax.spines.values():
@@ -223,9 +276,13 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
         ax.tick_params(axis="x", width=1.5)
         ax.tick_params(axis="y", width=1.5)
 
+        if ax.legend_ is None:
+            raise ValueError(
+                f"No legend was created; the metric '{metric}' may be missing from the filtered data."
+            )
         old_legend = ax.legend_
         handles = old_legend.legend_handles
-        labels = [MODEL_RENAME.get(t.get_text(), t.get_text()) for t in old_legend.get_texts()]
+        labels = [active_rename.get(t.get_text(), t.get_text()) for t in old_legend.get_texts()]
         old_legend.remove()
 
         legend = fig.legend(
@@ -252,6 +309,30 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
         plt.close(fig)
 
     return output_path
+
+
+def display_run_counts_table(df_long: pd.DataFrame, dataset_type: str) -> None:
+    metric = DATASET_PLOT_CONFIGS[dataset_type]["metric"]
+    df_metric = df_long[df_long["metric"] == metric]
+
+    counts = (
+        df_metric.groupby(["model._target_", "task_definition.subset_ratio"])
+        .size()
+        .unstack("task_definition.subset_ratio")
+        .sort_index(axis=1)
+    )
+    counts.index = counts.index.map(lambda x: MODEL_RENAME.get(x, x.split(".")[-1]))
+
+    subset_cols = [f"{c:.4g}" for c in counts.columns]
+    table = Table(title=f"Runs per model × subset ratio  (metric: {metric})", show_lines=True)
+    table.add_column("Model", style="bold", no_wrap=True)
+    for col in subset_cols:
+        table.add_column(col, justify="right")
+
+    for model_name, row in counts.iterrows():
+        table.add_row(model_name, *[str(int(v)) if pd.notna(v) else "-" for v in row])
+
+    console.print(table)
 
 
 def display_summary_table(all_results: dict) -> None:
@@ -283,6 +364,8 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
         f"Detected dataset type: [bold]{dataset_type}[/bold] → optimizing on [cyan]{cfg['optimization_col']}[/cyan]"
     )
 
+    df = _coerce_list_cells(df)
+
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
         t = progress.add_task("Analysing results...", total=None)
         all_results = analyze_results(
@@ -300,6 +383,7 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
         display_summary_table(all_results)
 
     df_long = prepare_df_long(df, dataset_type)
+    display_run_counts_table(df_long, dataset_type)
 
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
         t = progress.add_task("Generating plot...", total=None)
