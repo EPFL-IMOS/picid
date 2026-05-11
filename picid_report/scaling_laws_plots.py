@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -34,7 +36,9 @@ REPORTING_METRICS = [
     "mae_denormalized",
     "rmse_denormalized",
 ]
-REPORTING_METRICS_BATTERY = [f"{r}_mean" for r in REPORTING_METRICS] + ["phme_score_mean"]
+REPORTING_METRICS_BATTERY = [f"{r}_mean" for r in REPORTING_METRICS] + [
+    "phme_score_mean"
+]
 
 MODEL_RENAME = {
     # current picid.model.* paths
@@ -44,6 +48,8 @@ MODEL_RENAME = {
     "picid.model.estimators.cnn1d.wrapper.CNN1D_Wrapper": "1D-CNN",
     "picid.model.estimators.mlp.wrapper.MLPWrapper": "MLP",
     "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper": "StatBL",
+    "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper (linear)": "StatBL-lin",
+    "picid.model.estimators.statistical.wrapper.StatisticalBaselineWrapper (exponential)": "StatBL-exp",
     "picid.model.forecasters.spacetimeformer_model.Spacetimeformer_Forecaster": "STF",
     "picid.model.forecasters.crossformer_model.Crossformer_Forecaster": "CF",
     "picid.model.forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "TST",
@@ -53,6 +59,8 @@ MODEL_RENAME = {
     "picid.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": "1D-CNN",
     "picid.model.wrappers.mlp_wrapper.MLPWrapper": "MLP",
     "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper": "StatBL",
+    "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": "StatBL-lin",
+    "picid.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": "StatBL-exp",
     "picid.baselines.lstm_model.LSTM_Forecaster": "LSTM",
     "picid.baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "STF",
     "picid.baselines.crossformer_model.Crossformer_Forecaster": "CF",
@@ -68,6 +76,8 @@ MODEL_RENAME = {
     "lmetk.model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": "1D-CNN",
     "lmetk.model.wrappers.mlp_wrapper.MLPWrapper": "MLP",
     "lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper": "StatBL",
+    "lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": "StatBL-lin",
+    "lmetk.model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": "StatBL-exp",
     "lmetk.baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "STF",
     "lmetk.baselines.crossformer_model.Crossformer_Forecaster": "CF",
     "lmetk.baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "TST",
@@ -132,15 +142,19 @@ _TABDPT_CLASSES = {
 }
 
 ALL_PROJECTS = [
-    "n_cmapss_scaling",
+    # "n_cmapss_scaling",
+    # PHME20
     "16_02_2026_scaling_phme20_prognostics_raw",
     "16_02_2026_scaling_blockwise_phme20_prognostics_raw",
+    # MZVAV
     "16_04_2026_scaling_mzvav_diagnostics_",
+    "16_04_2026_scaling_blockwise_mzvav_diagnostics_",
+    # Unibo
     "16_04_2026_scaling_blockwise_unibo_prognostics_combined",
+    "16_04_2026_scaling_unibo_prognostics_combined",
+    # Concepts n_cmapss_ds02
     "16_04_2026_scaling_concepts_n_cmapss_ds02_prognostics_",
     "16_04_2026_scaling_blockwise_concepts_n_cmapss_ds02_prognostics_",
-    "16_04_2026_scaling_unibo_prognostics_combined",
-    "16_04_2026_scaling_blockwise_mzvav_diagnostics_",
 ]
 
 
@@ -199,7 +213,12 @@ def prepare_df_long(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
     multisource_col = "datasource.multisource_data_splitter.sources_train"
     if dataset_type == "n_cmapss" and multisource_col in df.columns:
         df["ds"] = df[multisource_col].astype(str)
-        extra_id_vars = ["ds"]
+        extra_id_vars.append("ds")
+
+    # Carry model_type through the melt so we can append it to model._target_ afterwards
+    model_type_col = "model.model_type"
+    if model_type_col in df.columns:
+        extra_id_vars.append(model_type_col)
 
     available_vars = [v for v in value_vars if v in df.columns]
     keep_cols = id_vars + extra_id_vars + available_vars
@@ -210,14 +229,30 @@ def prepare_df_long(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
         value_name="value",
     )
 
+    # Append " (linear)" / " (exponential)" to model._target_ — mirrors preprocess.py:66-74
+    if model_type_col in df_long.columns:
+        mask = df_long[model_type_col].notna()
+        df_long.loc[mask, "model._target_"] = (
+            df_long.loc[mask, "model._target_"]
+            + " ("
+            + df_long.loc[mask, model_type_col]
+            + ")"
+        )
+        df_long = df_long.drop(columns=[model_type_col])
+
     df_long = df_long[
-        ~(df_long["model._target_"].isin(_TABDPT_CLASSES) & (df_long["task_definition.seq_len"] == 5))
+        ~(
+            df_long["model._target_"].isin(_TABDPT_CLASSES)
+            & (df_long["task_definition.seq_len"] == 5)
+        )
     ]
 
     return df_long
 
 
-def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> Path:
+def generate_plot(
+    df_long: pd.DataFrame, dataset_type: str, output_dir: str, project_name: str = ""
+) -> Path:
     cfg = DATASET_PLOT_CONFIGS[dataset_type]
     metric: str = cfg["metric"]
     y_label: str = cfg["y_label"]
@@ -259,7 +294,9 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
                 lw = ax.lines[i].get_linewidth()
                 ax.lines[i].set_linewidth(lw * 2)
 
-        ax.set_title(f"Performance vs. Randomly Selected Training Data Size [Dataset: {dataset_name}]")
+        ax.set_title(
+            f"Performance vs. Randomly Selected Training Data Size [Dataset: {dataset_name}]"
+        )
         ax.set_xlabel("Fraction of the Data")
         ax.set_ylabel(y_label)
         ax.set_yscale("log")
@@ -282,7 +319,10 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
             )
         old_legend = ax.legend_
         handles = old_legend.legend_handles
-        labels = [active_rename.get(t.get_text(), t.get_text()) for t in old_legend.get_texts()]
+        labels = [
+            active_rename.get(t.get_text(), t.get_text())
+            for t in old_legend.get_texts()
+        ]
         old_legend.remove()
 
         legend = fig.legend(
@@ -297,7 +337,13 @@ def generate_plot(df_long: pd.DataFrame, dataset_type: str, output_dir: str) -> 
 
         fig.tight_layout()
 
-        output_path = Path(output_dir) / f"scaling_laws_{dataset_name}_{metric.split('/')[1]}.pdf"
+        blockwise = "_blockwise" if "blockwise" in project_name else ""
+        date_match = re.search(r"\d{2}_\d{2}_\d{4}", project_name)
+        date_prefix = f"{date_match.group()}_" if date_match else ""
+        output_path = (
+            Path(output_dir)
+            / f"{date_prefix}scaling_laws_{dataset_name}{blockwise}_{metric.split('/')[1]}.pdf"
+        )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(
             output_path,
@@ -324,7 +370,9 @@ def display_run_counts_table(df_long: pd.DataFrame, dataset_type: str) -> None:
     counts.index = counts.index.map(lambda x: MODEL_RENAME.get(x, x.split(".")[-1]))
 
     subset_cols = [f"{c:.4g}" for c in counts.columns]
-    table = Table(title=f"Runs per model × subset ratio  (metric: {metric})", show_lines=True)
+    table = Table(
+        title=f"Runs per model × subset ratio  (metric: {metric})", show_lines=True
+    )
     table.add_column("Model", style="bold", no_wrap=True)
     for col in subset_cols:
         table.add_column(col, justify="right")
@@ -338,7 +386,9 @@ def display_run_counts_table(df_long: pd.DataFrame, dataset_type: str) -> None:
 def display_summary_table(all_results: dict) -> None:
     summary_df = create_summary_table(all_results, precision=3)
     summary_df.index = summary_df.index.str.split(".").str[-1].str.replace("_", "-")
-    console.print(Panel(summary_df.to_string(), title="Performance Summary", expand=False))
+    console.print(
+        Panel(summary_df.to_string(), title="Performance Summary", expand=False)
+    )
 
 
 def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> Path:
@@ -353,9 +403,13 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
         )
     )
 
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
+    with Progress(
+        SpinnerColumn(), TextColumn("{task.description}"), console=console
+    ) as progress:
         t = progress.add_task("Loading W&B runs...", total=None)
-        df, config_columns, dropped_columns = load_runs_df(project_name=project, user=user)
+        df, config_columns, dropped_columns = load_runs_df(
+            project_name=project, user=user
+        )
         progress.update(t, description="[green]W&B runs loaded.")
 
     dataset_type = detect_dataset_type(project)
@@ -366,7 +420,9 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
 
     df = _coerce_list_cells(df)
 
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
+    with Progress(
+        SpinnerColumn(), TextColumn("{task.description}"), console=console
+    ) as progress:
         t = progress.add_task("Analysing results...", total=None)
         all_results = analyze_results(
             df=df,
@@ -385,9 +441,11 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
     df_long = prepare_df_long(df, dataset_type)
     display_run_counts_table(df_long, dataset_type)
 
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
+    with Progress(
+        SpinnerColumn(), TextColumn("{task.description}"), console=console
+    ) as progress:
         t = progress.add_task("Generating plot...", total=None)
-        output_path = generate_plot(df_long, dataset_type, output_dir)
+        output_path = generate_plot(df_long, dataset_type, output_dir, project)
         progress.update(t, description="[green]Plot generated.")
 
     console.print(Panel(f"[green]Saved:[/green] {output_path}", expand=False))
@@ -407,14 +465,24 @@ def main() -> None:
     )
     parser.add_argument("--project", "-p", default=None, help="W&B project name")
     parser.add_argument(
-        "--user", "-u", default="imos-buildingenergy-1", help="W&B username (default: imos-buildingenergy-1)"
+        "--user",
+        "-u",
+        default="imos-buildingenergy-1",
+        help="W&B username (default: imos-buildingenergy-1)",
     )
     parser.add_argument(
-        "--output-dir", "-o", default="picid_report_artifacts", help="Output directory for PDFs (default: picid_report_artifacts)"
+        "--output-dir",
+        "-o",
+        default="picid_report_artifacts",
+        help="Output directory for PDFs (default: picid_report_artifacts)",
     )
-    parser.add_argument("--no-summary", action="store_true", help="Skip printing the summary table")
     parser.add_argument(
-        "--all", dest="run_all", action="store_true",
+        "--no-summary", action="store_true", help="Skip printing the summary table"
+    )
+    parser.add_argument(
+        "--all",
+        dest="run_all",
+        action="store_true",
         help=f"Run for all {len(ALL_PROJECTS)} hardcoded projects; overrides --project",
     )
     args = parser.parse_args()
@@ -442,11 +510,13 @@ def main() -> None:
             failed.append((project, str(exc)))
 
     if failed:
-        console.print(Panel(
-            "\n".join(f"[red]{p}[/red]: {e}" for p, e in failed),
-            title=f"[red]{len(failed)} project(s) failed[/red]",
-            expand=False,
-        ))
+        console.print(
+            Panel(
+                "\n".join(f"[red]{p}[/red]: {e}" for p, e in failed),
+                title=f"[red]{len(failed)} project(s) failed[/red]",
+                expand=False,
+            )
+        )
         sys.exit(1)
 
 
