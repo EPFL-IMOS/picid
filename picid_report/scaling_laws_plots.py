@@ -85,6 +85,31 @@ MODEL_RENAME = {
     "lmetk.baselines.patchtst_model.PatchTST_Forecaster": "PatchTST",
 }
 
+FM_LABELS = {"TabDPT", "TabPFN"}
+
+LEGEND_ORDER = [
+    "TabDPT", "TabPFN",
+    "LSTM", "1D-CNN", "MLP",
+    "StatBL", "StatBL-lin", "StatBL-exp",
+    "STF", "CF", "TST", "TiDE", "PatchTST",
+]
+
+MODEL_COLORS = {
+    "TabDPT":     "#e41a1c",
+    "TabPFN":     "#ff7f00",
+    "LSTM":       "#377eb8",
+    "1D-CNN":     "#4daf4a",
+    "MLP":        "#984ea3",
+    "StatBL":     "#a65628",
+    "StatBL-lin": "#a65628",
+    "StatBL-exp": "#f781bf",
+    "STF":        "#999999",
+    "CF":         "#66c2a5",
+    "TST":        "#fc8d62",
+    "TiDE":       "#8da0cb",
+    "PatchTST":   "#e78ac3",
+}
+
 _NORMALIZED_VARS = [
     "test/mae_normalized",
     "test/rmse_normalized",
@@ -272,6 +297,15 @@ def generate_plot(
             f"Models in data: {sorted(present_models)}"
         )
 
+    # Fix legend order and colors across all plots
+    active_rename = dict(
+        sorted(
+            active_rename.items(),
+            key=lambda kv: LEGEND_ORDER.index(kv[1]) if kv[1] in LEGEND_ORDER else len(LEGEND_ORDER),
+        )
+    )
+    palette = {k: MODEL_COLORS.get(v, "#333333") for k, v in active_rename.items()}
+
     with sns.plotting_context("paper", font_scale=2, rc={"font.family": "Helvetica"}):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 7))
 
@@ -284,11 +318,12 @@ def generate_plot(
             y="value",
             hue="model._target_",
             hue_order=list(active_rename.keys()),
+            palette=palette,
             errorbar="sd",
             ax=ax,
         )
 
-        fm_keys = {k for k, v in active_rename.items() if v in {"TabPFN", "TabDPT"}}
+        fm_keys = {k for k, v in active_rename.items() if v in FM_LABELS}
         for i, key in enumerate(active_rename.keys()):
             if key in fm_keys and i < len(ax.lines):
                 lw = ax.lines[i].get_linewidth()
@@ -334,6 +369,10 @@ def generate_plot(
             ncol=4,
             framealpha=1,
         )
+
+        for text in legend.get_texts():
+            if text.get_text() in FM_LABELS:
+                text.set_fontweight("bold")
 
         fig.tight_layout()
 
