@@ -46,6 +46,25 @@ class DummyStatelessTransform(NoFitPerSegmentMixin, DenseTransform):
         return data[key] * 2
 
 
+class ParametrizedScalingTransform(NoFitPerSegmentMixin, DenseTransform):
+    """Stateless transform that multiplies features by a configurable factor.
+
+    Used in boundary-cache regression tests to verify that post-boundary
+    transform instances from the current run are used, not stale ones from
+    the boundary-save run.
+    """
+
+    def __init__(self, factor: float = 1.0):
+        super().__init__()
+        self.factor = factor
+
+    def transform_data(
+        self, data: NamedTransformInput, metadata: Dict[str, Any]
+    ) -> np.ndarray:
+        key = list(data.keys())[0]
+        return data[key] * self.factor
+
+
 class DummyFittableTransform(ConcatFitAndPerSegmentTransformMixin, DenseTransform):
     """A fittable transform that learns a scaling factor."""
 

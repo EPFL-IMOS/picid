@@ -27,7 +27,7 @@ from picid.utils.hash_utils import compute_cache_key, ensure_serializable
 
 from sklearn.utils.validation import check_is_fitted
 
-from test.transforms.base.conftest import DummyStatelessTransform
+from test.transforms.base.conftest import DummyStatelessTransform, ParametrizedScalingTransform
 from test.data.preprocessing.test_preprocessor import _PreprocessingErrorDatasource
 
 
@@ -926,3 +926,472 @@ class TestBoundaryCachePreservesStatefulTransforms:
 
         # check_is_fitted raises NotFittedError if the sklearn scaler was not restored.
         check_is_fitted(inverter.scaler)
+
+
+# -----------------------------------------------------------------------------
+# Boundary bug regression: post-boundary tail instance isolation
+# -----------------------------------------------------------------------------
+
+# _ScalingTransform is defined at module level so it is importable by Hydra.
+_SCALING_TRANSFORM_TARGET = (
+    "test.transforms.base.conftest.ParametrizedScalingTransform"
+)
+
+
+def _scaling_config(factor: float) -> dict:
+    """Config for [t1(×2) → heavy(cache_point, ×2) → light(×factor)]."""
+    return {
+        "t1": {
+            "transform": {
+                "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+            },
+            "metadata": {"apply_to": "features", "assign_to": "features"},
+        },
+        "heavy": {
+            "transform": {
+                "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+            },
+            "metadata": {
+                "apply_to": "features",
+                "assign_to": "features",
+                "cache_point": True,
+            },
+        },
+        "light": {
+            "transform": {
+                "_target_": _SCALING_TRANSFORM_TARGET,
+                "factor": factor,
+            },
+            "metadata": {"apply_to": "features", "assign_to": "features"},
+        },
+    }
+
+
+class TestBoundaryTailInstanceIsolation:
+    """
+    Regression tests for two related boundary-cache bugs:
+
+    Bug 1 (save): boundary metadata stored the full ConfigTransformManager
+        (including post-boundary tabularizers with run-specific config).  When
+        a second run with a different post-boundary config hit the boundary and
+        restored transform instances, it received stale instances from the
+        boundary-save run instead of its own freshly instantiated ones.
+
+    Bug 2 (restore): even if saves were limited to pre-boundary transforms,
+        the restore loop blindly overwrote ALL matching names in current_dts,
+        including post-boundary ones.
+
+    Both are now fixed.  These tests verify:
+      (a) The boundary cache metadata only contains pre-boundary transforms.
+      (b) A run that restores from boundary uses its OWN post-boundary
+          transform instances (correct output), not the stale ones saved with
+          the boundary.
+      (c) use_boundary_cache=False bypasses boundary restore entirely.
+    """
+
+    def test_boundary_cache_saves_only_pre_boundary_transforms(
+        self, cache_dir, library_dir, datasource
+    ):
+        """Boundary metadata must NOT contain post-boundary ('light') transform."""
+        manager = ConfigTransformManager(transforms_config=_scaling_config(factor=2.0))
+        preprocessor = PreProcessor(datasource=datasource, transforms=manager)
+        preprocessor.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        boundary_config = {
+            "datasource": ensure_serializable(datasource.get_cache_fingerprint()),
+            "transforms": manager.get_config_up_to_and_including("heavy"),
+        }
+        boundary_key = compute_cache_key(
+            config=boundary_config,
+            library_dir=[library_dir, library_dir],
+            extensions=[".py"],
+        )
+        cache = FileSystemCache()
+        _, saved = cache.load_data(cache_dir, stage="boundary", cache_key=boundary_key)
+
+        raw = saved["transforms"]
+        saved_dts = raw.get_transforms() if hasattr(raw, "get_transforms") else raw
+
+        assert "t1" in saved_dts, "pre-boundary transform 't1' must be in boundary metadata"
+        assert "heavy" in saved_dts, "boundary transform 'heavy' must be in boundary metadata"
+        assert "light" not in saved_dts, (
+            "post-boundary transform 'light' must NOT be saved in boundary metadata "
+            "(its config is run-specific and must not corrupt future runs)"
+        )
+
+    def test_boundary_restore_uses_current_run_tail_instances(
+        self, cache_dir, library_dir, datasource
+    ):
+        """
+        Run 2 (factor=4) restores from the boundary left by Run 1 (factor=2).
+        The 'light' transform in Run 2 must use factor=4 (its own instance),
+        not factor=2 (the stale instance from the boundary-save run).
+
+        Data flow:
+          original → t1(×2) → heavy(×2) = ×4 at boundary
+          Run 1 tail: light(×2) → final = ×8
+          Run 2 tail: light(×4) → final should be ×16, not ×8
+        """
+        rng = np.random.default_rng(0)
+        original_train = rng.standard_normal((20, 3))
+
+        # Run 1: full pipeline with factor=2 — writes boundary + preprocessed.
+        manager1 = ConfigTransformManager(transforms_config=_scaling_config(factor=2.0))
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager1)
+        preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Run 2: post-boundary 'light' changed to factor=4.
+        # Preprocessed cache misses (different config), boundary is hit.
+        manager2 = ConfigTransformManager(transforms_config=_scaling_config(factor=4.0))
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager2)
+        result2 = preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+            use_boundary_cache=True,
+        )
+
+        from picid.data.data_objects import SplitViewPolicy
+        split2 = result2.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)
+        train_features = np.concatenate(split2["train"]["features"], axis=0)
+
+        # With the fix:  original × t1(2) × heavy(2) × light(4) = ×16
+        # Before the fix: original × t1(2) × heavy(2) × light(2) = ×8  (wrong)
+        datasource_train = np.concatenate(
+            datasource.get_data().features["train"], axis=0
+        )
+        expected = datasource_train * 2 * 2 * 4  # t1 × heavy × light(run2)
+        np.testing.assert_array_almost_equal(
+            train_features,
+            expected,
+            err_msg="Run 2 must use its own 'light' transform (factor=4), not the stale factor=2 from the boundary",
+        )
+
+    def test_use_boundary_cache_false_forces_full_recompute(
+        self, cache_dir, library_dir, datasource
+    ):
+        """With use_boundary_cache=False the pipeline must skip boundary restore and
+        rerun ALL transforms from the loaded/split data regardless of what is cached."""
+        manager1 = ConfigTransformManager(transforms_config=_scaling_config(factor=2.0))
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager1)
+        result1 = preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        # Change light factor; boundary would be valid but must NOT be restored.
+        manager2 = ConfigTransformManager(transforms_config=_scaling_config(factor=4.0))
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager2)
+        result2 = preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=False,
+            use_boundary_cache=False,
+        )
+
+        from picid.data.data_objects import SplitViewPolicy
+        split2 = result2.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)
+        train_features2 = np.concatenate(split2["train"]["features"], axis=0)
+
+        datasource_train = np.concatenate(
+            datasource.get_data().features["train"], axis=0
+        )
+        # Full recompute with factor=4: ×2 × ×2 × ×4 = ×16
+        expected = datasource_train * 2 * 2 * 4
+        np.testing.assert_array_almost_equal(train_features2, expected)
+
+    def test_pre_boundary_stateful_transforms_still_restored(
+        self, cache_dir, library_dir, datasource
+    ):
+        """Fixing the tail-isolation bug must not regress stateful pre-boundary
+        transforms: scalers fitted before the boundary must still have their
+        fitted state after restoration (guards against over-restricting the restore)."""
+        config = {
+            "scaler": {
+                "transform": {
+                    "_target_": "picid.transforms.base_transforms.scaler.MinMaxScalerSklearn"
+                },
+                "metadata": {
+                    "apply_to": "target",
+                    "assign_to": "target",
+                    "fit_on": "train",
+                },
+            },
+            "heavy": {
+                "transform": {
+                    "_target_": "test.transforms.base.conftest.DummyStatelessTransform"
+                },
+                "metadata": {
+                    "apply_to": "features",
+                    "assign_to": "features",
+                    "cache_point": True,
+                },
+            },
+            "light": {
+                "transform": {
+                    "_target_": _SCALING_TRANSFORM_TARGET,
+                    "factor": 3.0,
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+        }
+        config_light_changed = {
+            **config,
+            "light": {
+                "transform": {
+                    "_target_": _SCALING_TRANSFORM_TARGET,
+                    "factor": 5.0,
+                },
+                "metadata": {"apply_to": "features", "assign_to": "features"},
+            },
+        }
+
+        manager1 = ConfigTransformManager(transforms_config=config)
+        preprocessor1 = PreProcessor(datasource=datasource, transforms=manager1)
+        preprocessor1.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        manager2 = ConfigTransformManager(transforms_config=config_light_changed)
+        preprocessor2 = PreProcessor(datasource=datasource, transforms=manager2)
+        preprocessor2.pipeline(
+            data_cache_path=cache_dir,
+            data_library_part_path=library_dir,
+            transform_library_part_path=library_dir,
+            cache_preprocessed=True,
+            save_boundary_caches=True,
+        )
+
+        restored_manager = preprocessor2.get_cached_transform_manager()
+        inverter = restored_manager.get_inverter_for_key("target")
+        assert inverter is not None
+        check_is_fitted(inverter.scaler)
+
+
+# -----------------------------------------------------------------------------
+# Flag interaction tests: use_cache_after_transfroms × use_cache_after_boundary
+# -----------------------------------------------------------------------------
+
+
+def _run_pipeline(
+    datasource,
+    manager,
+    cache_dir,
+    library_dir,
+    *,
+    cache_preprocessed: bool = True,
+    use_boundary_cache: bool = True,
+    save_boundary_caches: bool = True,
+):
+    """Helper: run PreProcessor.pipeline() with the given flag combination."""
+    preprocessor = PreProcessor(datasource=datasource, transforms=manager)
+    result = preprocessor.pipeline(
+        data_cache_path=cache_dir,
+        data_library_part_path=library_dir,
+        transform_library_part_path=library_dir,
+        cache_preprocessed=cache_preprocessed,
+        save_boundary_caches=save_boundary_caches,
+        use_boundary_cache=use_boundary_cache,
+    )
+    return result, preprocessor
+
+
+class TestCacheFlagInteractions:
+    """
+    Tests for the two caching flags and their interactions.
+
+    Config keys → pipeline arguments:
+      use_cache_after_transfroms        → cache_preprocessed
+      use_cache_after_boundary_conditions → use_boundary_cache
+
+    ┌──────────────────────┬───────────────────┬────────────────────────────────────────────────────────────────┐
+    │ cache_preprocessed   │ use_boundary_cache│ Behaviour                                                      │
+    ├──────────────────────┼───────────────────┼────────────────────────────────────────────────────────────────┤
+    │ True                 │ True              │ Full caching. Second run with same config hits preprocessed.    │
+    │                      │                   │ Preprocessed miss + valid boundary → only tail transforms run. │
+    ├──────────────────────┼───────────────────┼────────────────────────────────────────────────────────────────┤
+    │ True                 │ False             │ Preprocessed cache hit still served normally.                  │
+    │                      │                   │ Preprocessed miss → full transform chain from stage-1 data;    │
+    │                      │                   │ boundary is ignored even if valid on disk.                     │
+    ├──────────────────────┼───────────────────┼────────────────────────────────────────────────────────────────┤
+    │ False                │ (irrelevant)      │ DirectPipelineRunner used; no preprocessed or boundary cache   │
+    │                      │                   │ is written or read. Every run recomputes from scratch.         │
+    └──────────────────────┴───────────────────┴────────────────────────────────────────────────────────────────┘
+
+    Test mapping:
+      both_enabled_second_run_hits_preprocessed          → (True,  True)  same config: preprocessed hit
+      both_enabled_light_changed_uses_boundary           → (True,  True)  different light: boundary used
+      boundary_disabled_preprocessed_hit_still_works     → (True,  False) preprocessed hit unaffected
+      boundary_disabled_preprocessed_miss_runs_full_chain→ (True,  False) preprocessed miss: full chain
+      boundary_disabled_no_boundary_restore_log          → (True,  False) skip log emitted, no restore
+      cache_preprocessed_false_no_cache_written          → (False, *)     nothing written to disk
+      cache_preprocessed_false_two_runs_same_result      → (False, *)     two direct runs match
+    """
+
+    # ------------------------------------------------------------------
+    # cache_preprocessed=True, use_boundary_cache=True (default)
+    # ------------------------------------------------------------------
+
+    def test_both_enabled_second_run_hits_preprocessed(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point
+    ):
+        """Same config twice: second run loads from preprocessed cache (no transforms run)."""
+        r1, _ = _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        r2, _ = _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        _assert_containers_equal(r1, r2)
+        # Preprocessed dir must exist
+        assert (Path(cache_dir) / "preprocessed").exists()
+
+    def test_both_enabled_light_changed_uses_boundary(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point, manager_light_changed
+    ):
+        """Preprocessed miss + boundary hit: only the light tail transform is re-run."""
+        _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        r2, _ = _run_pipeline(
+            datasource, manager_light_changed, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        # Result must be a valid container
+        assert r2 is not None
+        assert {"features", "target"} <= set(r2.keys())
+        # Boundary dir must have been written
+        assert (Path(cache_dir) / "boundary").exists()
+
+    # ------------------------------------------------------------------
+    # cache_preprocessed=True, use_boundary_cache=False
+    # ------------------------------------------------------------------
+
+    def test_boundary_disabled_preprocessed_hit_still_works(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point
+    ):
+        """Even with use_boundary_cache=False, a preprocessed cache HIT is served normally."""
+        r1, _ = _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        # Second run: same config, boundary disabled — preprocessed still hits
+        r2, _ = _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=False,
+        )
+        _assert_containers_equal(r1, r2)
+
+    def test_boundary_disabled_preprocessed_miss_runs_full_chain(
+        self, cache_dir, library_dir, datasource
+    ):
+        """Preprocessed miss + use_boundary_cache=False: all transforms run from stage-1 data.
+
+        Specifically: the tail transform from Run 2 (factor=4) must be applied,
+        not the stale boundary-saved instance from Run 1 (factor=2).
+        """
+        manager1 = ConfigTransformManager(transforms_config=_scaling_config(factor=2.0))
+        manager2 = ConfigTransformManager(transforms_config=_scaling_config(factor=4.0))
+
+        _run_pipeline(
+            datasource, manager1, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True, save_boundary_caches=True,
+        )
+
+        # Run 2: boundary is valid but use_boundary_cache=False → full chain from stage-1
+        r2, _ = _run_pipeline(
+            datasource, manager2, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=False, save_boundary_caches=False,
+        )
+
+        from picid.data.data_objects import SplitViewPolicy
+        split2 = r2.to_split_dict(SplitViewPolicy.KEEP_UNIT_LISTS)
+        train_features = np.concatenate(split2["train"]["features"], axis=0)
+
+        datasource_train = np.concatenate(datasource.get_data().features["train"], axis=0)
+        # Full chain with factor=4: t1(×2) × heavy(×2) × light(×4) = ×16
+        np.testing.assert_array_almost_equal(train_features, datasource_train * 16)
+
+    def test_boundary_disabled_no_boundary_restore_log(
+        self, cache_dir, library_dir, datasource, manager_with_cache_point, manager_light_changed, caplog
+    ):
+        """use_boundary_cache=False must emit the skip log message and not restore from boundary."""
+        import logging
+        _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=True, use_boundary_cache=True,
+        )
+        with caplog.at_level(logging.INFO, logger="picid.data.preprocessing.pipeline_runners"):
+            _run_pipeline(
+                datasource, manager_light_changed, cache_dir, library_dir,
+                cache_preprocessed=True, use_boundary_cache=False,
+            )
+        assert any(
+            "use_cache_after_boundary_conditions=False" in record.message
+            for record in caplog.records
+        ), "Expected skip log when use_boundary_cache=False"
+        assert not any(
+            "Restored from boundary cache" in record.message
+            for record in caplog.records
+        ), "Must NOT restore from boundary when use_boundary_cache=False"
+
+    # ------------------------------------------------------------------
+    # cache_preprocessed=False (DirectPipelineRunner, no caching at all)
+    # ------------------------------------------------------------------
+
+    def test_cache_preprocessed_false_no_cache_written(
+        self, tmp_path, datasource, manager_with_cache_point
+    ):
+        """cache_preprocessed=False uses DirectPipelineRunner: nothing persisted."""
+        cache_dir = str(tmp_path / "cache")
+        library_dir = str(tmp_path / "lib")
+        Path(library_dir).mkdir()
+        (Path(library_dir) / "dummy.py").write_text("# seed")
+
+        result, _ = _run_pipeline(
+            datasource, manager_with_cache_point, cache_dir, library_dir,
+            cache_preprocessed=False, use_boundary_cache=True,
+        )
+        assert result is not None
+        assert not Path(cache_dir).exists() or not (Path(cache_dir) / "preprocessed").exists()
+        assert not Path(cache_dir).exists() or not (Path(cache_dir) / "boundary").exists()
+
+    def test_cache_preprocessed_false_two_runs_same_result(
+        self, datasource, manager_with_cache_point
+    ):
+        """cache_preprocessed=False: two back-to-back runs (no cache) produce the same data."""
+        r1, _ = _run_pipeline(
+            datasource, manager_with_cache_point, None, None,
+            cache_preprocessed=False, use_boundary_cache=False,
+        )
+        r2, _ = _run_pipeline(
+            datasource, manager_with_cache_point, None, None,
+            cache_preprocessed=False, use_boundary_cache=False,
+        )
+        _assert_containers_equal(r1, r2)

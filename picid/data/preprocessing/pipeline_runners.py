@@ -145,12 +145,14 @@ class CachingPipelineRunner:
         data_library_part_path: str,
         transform_library_part_path: str,
         save_boundary_caches: bool,
+        use_boundary_cache: bool = True,
     ):
         self._pp = preprocessor
         self._cache_dir = data_cache_path
         self._data_lib = data_library_part_path
         self._transform_lib = transform_library_part_path
         self._save_boundaries = save_boundary_caches
+        self._use_boundary_cache = use_boundary_cache
         self._combined_paths = [data_library_part_path, transform_library_part_path]
 
         pp = preprocessor
@@ -294,6 +296,10 @@ class CachingPipelineRunner:
             Restored and completed dataset container, or ``None`` when no
             boundary cache matched.
         """
+        if not self._use_boundary_cache:
+            logger.info("Boundary cache restore disabled (use_cache_after_boundary_conditions=False).")
+            return None
+
         pp = self._pp
         cache_point_names = pp.transforms.get_cache_point_names()
         if not cache_point_names:
@@ -325,16 +331,21 @@ class CachingPipelineRunner:
             pp.meta_data = saved["meta_data"]
 
             # Restore fitted transform instances from the saved boundary into the
-            # current manager.  Only transforms that exist in both the saved manager
-            # and the current chain are updated; transforms added after the boundary
-            # was originally written are left unfitted and will be run via the tail.
-            saved_dts = saved["transforms"].get_transforms()
+            # current manager.  Only restore transforms AT OR BEFORE the boundary
+            # point — tail transforms (after the boundary) must keep their freshly
+            # instantiated instances so that config values like subset_ratio that
+            # vary per run are applied correctly rather than being overwritten with
+            # stale instances from when the boundary was first saved.
+            # Support both the new format (plain dict of pre-boundary DataTransforms)
+            # and the legacy format (full ConfigTransformManager) for existing caches.
+            raw = saved["transforms"]
+            saved_dts = raw.get_transforms() if hasattr(raw, "get_transforms") else raw
             current_dts = full_transforms.get_transforms()
-            for name, saved_dt in saved_dts.items():
-                if name in current_dts:
-                    current_dts[name].transform_instance = saved_dt.transform_instance
-
             names_after = full_transforms.get_transform_names_after(boundary_name)
+            names_after_boundary = set(names_after)
+            for name, saved_dt in saved_dts.items():
+                if name in current_dts and name not in names_after_boundary:
+                    current_dts[name].transform_instance = saved_dt.transform_instance
             tail = OrderedDict(
                 (n, current_dts[n]) for n in names_after if n in current_dts
             )
@@ -396,11 +407,25 @@ class CachingPipelineRunner:
                         transform_name
                     ),
                 }
+                # Only persist transform instances up to and including the boundary
+                # point.  Saving the full manager would include post-boundary
+                # tabularizers whose config values (e.g. subset_ratio) are
+                # specific to the current run and must not be replayed in future
+                # runs that restore from this boundary with a different config.
+                names_after_this = set(
+                    pp.transforms.get_transform_names_after(transform_name)
+                )
+                all_dts = pp.transforms.get_transforms()
+                pre_boundary_dts = {
+                    name: dt
+                    for name, dt in all_dts.items()
+                    if name not in names_after_this
+                }
                 pp.cache.save(
                     cache_dir=self._cache_dir,
                     stage="boundary",
                     data=data,
-                    metadata={"transforms": pp.transforms, "meta_data": pp.meta_data},
+                    metadata={"transforms": pre_boundary_dts, "meta_data": pp.meta_data},
                     config=boundary_config,
                     library_dir=self._combined_paths,
                     extensions=[".py"],

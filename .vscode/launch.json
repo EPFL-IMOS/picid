@@ -1270,7 +1270,7 @@
             "args": [
                 "paths=rt_local",
                 "experiment=phme20/prognostics/raw/xgboost_fit_predict",
-                "task_definition.subset_ratio=0.1",
+                "task_definition.subset_ratio=0.2",
                 "+task_definition.subset_blocks=20",
                 "debug=default"
                 // "debug=pronostia"
@@ -1506,6 +1506,29 @@
             "args": [
                 "experiment=unibo/prognostics/combined/patchtst",
             ],
+        },
+        {
+            "name": "Debug Subset Ratio",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                // "experiment=phme20/prognostics/raw/xgboost_fit_predict",
+                // "experiment=concepts_n_cmapss_ds02/prognostics/xgboost_fit_predict",
+                // "experiment=mzvav/diagnostics/xgboost_fit_predict",
+                "experiment=unibo/prognostics/combined/xgboost_fit_predict",
+                "task_definition.subset_ratio=0.03",
+                // "+task_definition.subset_blocks=20",
+                "debug=default"
+                // "debug=pronostia"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
         },
     ]
 }

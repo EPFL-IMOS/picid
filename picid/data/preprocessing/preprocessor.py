@@ -498,6 +498,7 @@ class PreProcessor(PreProcessorInterface):
         transform_library_part_path: str = None,
         cache_preprocessed: bool = False,
         save_boundary_caches: bool = True,
+        use_boundary_cache: bool = True,
     ) -> DatasetContainer:
         """
         Run the full preprocessing pipeline.
@@ -546,6 +547,7 @@ class PreProcessor(PreProcessorInterface):
                     data_library_part_path=data_library_part_path,
                     transform_library_part_path=transform_library_part_path,
                     save_boundary_caches=save_boundary_caches,
+                    use_boundary_cache=use_boundary_cache,
                 )
             )
         else:

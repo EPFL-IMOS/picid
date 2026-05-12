@@ -158,6 +158,7 @@ class TimeseriesTabularizer(NoFitPerSegmentMixin, RaggedOrDenseTransform):
         self.warmup_steps = warmup_steps
         self.subset_blocks = subset_blocks
 
+
         # Store initial kwargs for __repr__, if BaseTransform doesn't already do this comprehensively
         # (your provided BaseTransform doesn't show _init_kwargs in its __init__,
         # but the base transform pattern does, so keeping it consistent for your repr)

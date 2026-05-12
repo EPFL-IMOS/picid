@@ -949,6 +949,7 @@ def run(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
                 data_library_part_path=data_library_part_path,
                 transform_library_part_path=transform_library_part_path,
                 cache_preprocessed=cache_preprocessed_flag,
+                use_boundary_cache=cfg.cache.get("use_cache_after_boundary_conditions", True),
             )
         except PreprocessingDatasourceError as exc:
             _log_preprocessing_datasource_error(exc)
