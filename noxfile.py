@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from rich.console import Console
 from rich.table import Table
 
-
 # For later with UV:
 # import nox
 
@@ -39,14 +38,14 @@ class Info:
 
 
 DEEP_LEARNING_MODELS = [
-    "stf",
-    "crossformer",
-    "timeseries_transformer",
-    "tide",
-    "patchtst",
-    "lstm",
-    "cnn_1d",
-    "mlp",
+    # "stf",
+    # "crossformer",
+    # "timeseries_transformer",
+    # "tide",
+    # "patchtst",
+    # "lstm",
+    # "cnn_1d",
+    # "mlp",
 ]
 
 
@@ -82,19 +81,19 @@ DIAGNOSTICS_MODELS = DEEP_LEARNING_MODELS + ["linear_classifier"] + TABULAR_STYL
 
 
 DATASETS_PROGNOSTICS = [
-    # We want to test raw for nb14 to show that it is basically impossible
+    We want to test raw for nb14 to show that it is basically impossible
+    to fine tune in reasonable time because one epoch takes around 2-5 hours.
+    Info(ds="nb14", subexp="raw", type="prognostics"),
+    Info(ds="nb14", subexp="combined", type="prognostics"),
+    Info(ds="unibo", subexp="combined", type="prognostics"),
+    Info(ds="phme20", subexp="raw", type="prognostics"),
+    Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
+    Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
+    # We want to test raw for pronostia to show that it is basically impossible
     # to fine tune in reasonable time because one epoch takes around 2-5 hours.
-    # Info(ds="nb14", subexp="raw", type="prognostics"),
-    # Info(ds="nb14", subexp="combined", type="prognostics"),
-    # Info(ds="unibo", subexp="combined", type="prognostics"),
-    # Info(ds="phme20", subexp="raw", type="prognostics"),
-    # Info(ds="concepts_n_cmapss", subexp="", type="prognostics"),
-    # Info(ds="concepts_n_cmapss_ds02", subexp="", type="prognostics"),
-    # # We want to test raw for pronostia to show that it is basically impossible
-    # # to fine tune in reasonable time because one epoch takes around 2-5 hours.
-    # # Info(ds="pronostia", subexp="raw", type="prognostics"),
-    # Info(ds="pronostia", subexp="in_domain/combined", type="prognostics"),
-    # Info(ds="xjtu_sy", subexp="in_domain/combined", type="prognostics"),
+    # Info(ds="pronostia", subexp="raw", type="prognostics"),
+    Info(ds="pronostia", subexp="in_domain/combined", type="prognostics"),
+    Info(ds="xjtu_sy", subexp="in_domain/combined", type="prognostics"),
     Info(ds="xjtu_sy", subexp="phmd_split/combined", type="prognostics"),
 ]
 
