@@ -10,3 +10,6 @@ defaults:
 
 task_definition:
   requires_training: true
+
+model:
+  num_classes: ${task_definition.num_classes}

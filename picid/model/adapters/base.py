@@ -56,6 +56,7 @@ class AbstractFitPredictWrapper(ABC):
         profile_predict_cfg: OmegaConf = None,
         reinit_on_fit: bool = False,
         verbose: bool = False,
+        num_classes: int | None = None,
         **kwargs,
     ):
         """
@@ -77,6 +78,11 @@ class AbstractFitPredictWrapper(ABC):
             Whether to rebuild the backbone from a factory before fitting.
         verbose : bool, default=False
             Whether to show a progress bar during batched prediction.
+        num_classes : int, optional
+            Expected number of output classes. When set, the seen classes are
+            recorded from the training labels at fit time and the probability
+            matrix is zero-padded to this width at predict time so downstream
+            evaluators always receive a consistent shape.
         **kwargs : dict
             Extra wrapper metadata stored in ``self.kwargs``.
         """
@@ -117,6 +123,7 @@ class AbstractFitPredictWrapper(ABC):
         self.profile_started_flag = False
         self.reinit_on_fit = reinit_on_fit
         self.verbose = verbose
+        self.num_classes = num_classes
 
         if self.profile_fit_cfg or self.profile_predict_cfg:
             assert not (
@@ -152,6 +159,10 @@ class AbstractFitPredictWrapper(ABC):
             self._reinit_backbone()
 
         self.backbone.fit(X, y)
+
+        if self.num_classes is not None:
+            y_np = y.numpy() if isinstance(y, torch.Tensor) else np.asarray(y)
+            self._seen_classes = np.unique(y_np.ravel()).astype(int)
 
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -273,6 +284,20 @@ class AbstractFitPredictWrapper(ABC):
         if y.ndim == 1:
             y = rearrange(y, "a -> a 1")
         assert y.ndim == 2, "Predicted output must be 2-dimensional."
+
+        if self.num_classes is not None and hasattr(self, "_seen_classes"):
+            seen = self._seen_classes
+            if y.shape[1] < self.num_classes:
+                logger.warning(
+                    "predict: backbone saw only %d of %d classes (%s); "
+                    "zero-padding probability matrix to full width.",
+                    len(seen), self.num_classes, seen,
+                )
+                padded = np.zeros((y.shape[0], self.num_classes), dtype=np.float32)
+                for col, cls in enumerate(seen):
+                    padded[:, int(cls)] = y[:, col].numpy()
+                y = torch.from_numpy(padded)
+
         return y
 
     @abstractmethod

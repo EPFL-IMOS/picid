@@ -63,7 +63,6 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         self.classification_tasks = CLASSIFICATION_TASKS
         self.supported_types = self.regression_tasks + self.classification_tasks
         self.task_type = task_type
-        self.num_classes = num_classes
 
         if task_type not in self.supported_types:
             raise ValueError(
@@ -74,7 +73,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
         # 1. Determine the model's task_type and num_classes
         if task_type in self.classification_tasks:
             assert (
-                self.num_classes is not None
+                num_classes is not None
             ), "num_classes must be provided for classification tasks."
 
             backbone = GradientBoostingClassifier(
@@ -86,7 +85,7 @@ class FitPredictXGBoostWrapper(AbstractFitPredictWrapper):
             )
 
         self.model_cache_path = model_cache_path
-        super().__init__(backbone=backbone, task_type=task_type, **kwargs)
+        super().__init__(backbone=backbone, task_type=task_type, num_classes=num_classes, **kwargs)
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:

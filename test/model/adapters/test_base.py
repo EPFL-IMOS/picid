@@ -432,3 +432,139 @@ def test_abstract_feed_forward_training_wrapper_repr():
     backbone = torch.nn.Linear(2, 2)
     w = _FFTrainingWrapper(backbone=backbone, out_channels=2, num_cell_dimensions=1)
     assert repr(w) == f"_FFTrainingWrapper(backbone={backbone})"
+
+
+# ---------------------------------------------------------------------------
+# Class-padding tests  (num_classes + _seen_classes)
+# ---------------------------------------------------------------------------
+
+
+class _TruncatedProbaBackbone:
+    """Backbone that returns probabilities for only the seen classes (k_seen < num_classes)."""
+
+    def __init__(self, seen_classes: list[int]):
+        self.seen_classes = seen_classes
+
+    def fit(self, X, y):
+        pass
+
+    def predict(self, X):
+        k = len(self.seen_classes)
+        n = X.shape[0] if hasattr(X, "shape") else len(X)
+        return np.full((n, k), 1.0 / k, dtype=np.float32)
+
+
+def test_seen_classes_recorded_from_training_labels_after_fit():
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([0, 2, 3]), num_classes=4)
+    X = torch.zeros(6, 2)
+    y = torch.tensor([0, 0, 2, 2, 3, 3], dtype=torch.float32).unsqueeze(1)
+    w.fit(X, y)
+    assert hasattr(w, "_seen_classes")
+    np.testing.assert_array_equal(w._seen_classes, [0, 2, 3])
+
+
+def test_seen_classes_not_set_when_num_classes_is_none():
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([0, 1, 2]))
+    X = torch.zeros(3, 2)
+    y = torch.tensor([0, 1, 2], dtype=torch.float32).unsqueeze(1)
+    w.fit(X, y)
+    assert not hasattr(w, "_seen_classes")
+
+
+def test_predict_pads_missing_class_column_to_zero():
+    # Training saw classes [0, 2, 3] — class 1 is absent.
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([0, 2, 3]), num_classes=4)
+    X = torch.zeros(6, 2)
+    y = torch.tensor([0, 0, 2, 2, 3, 3], dtype=torch.float32).unsqueeze(1)
+    w.fit(X, y)
+
+    out = w.predict(torch.zeros(3, 2))
+
+    assert out.shape == (3, 4), f"expected (3, 4), got {out.shape}"
+    # Column 1 (missing class) must be all zeros.
+    assert (out[:, 1] == 0).all()
+    # Seen-class columns must carry the backbone's uniform probabilities.
+    expected_val = 1.0 / 3
+    for col in [0, 2, 3]:
+        assert torch.allclose(out[:, col], torch.full((3,), expected_val))
+
+
+def test_predict_places_seen_classes_at_correct_indices():
+    # Training saw only classes [1, 3] — non-contiguous, skipping 0 and 2.
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([1, 3]), num_classes=4)
+    X = torch.zeros(4, 2)
+    y = torch.tensor([1, 1, 3, 3], dtype=torch.float32).unsqueeze(1)
+    w.fit(X, y)
+
+    out = w.predict(torch.zeros(2, 2))
+
+    assert out.shape == (2, 4)
+    assert (out[:, 0] == 0).all()   # class 0 absent
+    assert (out[:, 2] == 0).all()   # class 2 absent
+    assert (out[:, 1] > 0).all()    # class 1 present
+    assert (out[:, 3] > 0).all()    # class 3 present
+    # Probabilities for seen classes sum to 1 per row.
+    assert torch.allclose(out.sum(dim=1), torch.ones(2))
+
+
+def test_predict_no_padding_when_all_classes_present():
+    # All 3 classes seen — no padding needed.
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([0, 1, 2]), num_classes=3)
+    X = torch.zeros(3, 2)
+    y = torch.tensor([0, 1, 2], dtype=torch.float32).unsqueeze(1)
+    w.fit(X, y)
+
+    out = w.predict(torch.zeros(4, 2))
+
+    assert out.shape == (4, 3)
+    # All values should equal 1/3 (backbone's uniform output).
+    assert torch.allclose(out, torch.full((4, 3), 1.0 / 3))
+
+
+def test_predict_no_padding_when_num_classes_is_none():
+    # Regression / no num_classes — output passes through unchanged.
+    class _TwoColumnBackbone:
+        def fit(self, X, y): pass
+        def predict(self, X):
+            return np.ones((X.shape[0], 2), dtype=np.float32)
+
+    w = _DummyFitPredictWrapper(backbone=_TwoColumnBackbone())
+    w.fit(torch.zeros(3, 2), torch.zeros(3, 1))
+
+    out = w.predict(torch.zeros(5, 2))
+
+    assert out.shape == (5, 2)
+
+
+def test_predict_padding_emits_warning(caplog):
+    import logging
+
+    w = _DummyFitPredictWrapper(backbone=_TruncatedProbaBackbone([0, 2]), num_classes=4)
+    w.fit(
+        torch.zeros(4, 2),
+        torch.tensor([0, 0, 2, 2], dtype=torch.float32).unsqueeze(1),
+    )
+
+    with caplog.at_level(logging.WARNING, logger="picid.model.adapters.base"):
+        w.predict(torch.zeros(2, 2))
+
+    assert any("2 of 4" in r.message for r in caplog.records)
+
+
+def test_predict_padding_works_with_yield_strategy():
+    # Padding must also apply when predictions are batched and concatenated.
+    w = _DummyFitPredictWrapper(
+        backbone=_TruncatedProbaBackbone([0, 2, 3]),
+        num_classes=4,
+        yield_strategy=True,
+        yield_batch_size=2,
+    )
+    w.fit(
+        torch.zeros(6, 2),
+        torch.tensor([0, 0, 2, 2, 3, 3], dtype=torch.float32).unsqueeze(1),
+    )
+
+    out = w.predict(torch.zeros(5, 2))
+
+    assert out.shape == (5, 4)
+    assert (out[:, 1] == 0).all()
