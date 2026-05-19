@@ -69,6 +69,7 @@ MODEL_RENAME = {
     "picid.baselines.patchtst_model.PatchTST_Forecaster": "PatchTST",
     # picid.model.estimators.* paths (another relocation)
     "picid.model.estimators.tabdpt.wrapper.FitPredictTabDPTWrapper": "TabDPT",
+    "picid.model.estimators.tabpfn.wrapper.FitPredictTabPFNWrapper": "TabPFN",
     # legacy lmetk.* paths
     "lmetk.model.wrappers.fit_predict_tabdpt_wrapper.FitPredictTabDPTWrapper": "TabDPT",
     "lmetk.model.wrappers.fit_predict_tabpfn_wrapper.FitPredictTabPFNWrapper": "TabPFN",
