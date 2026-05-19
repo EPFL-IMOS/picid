@@ -1519,9 +1519,10 @@
                 // "experiment=phme20/prognostics/raw/xgboost_fit_predict",
                 // "experiment=concepts_n_cmapss_ds02/prognostics/xgboost_fit_predict",
                 // "experiment=mzvav/diagnostics/xgboost_fit_predict",
-                "experiment=unibo/prognostics/combined/xgboost_fit_predict",
-                "task_definition.subset_ratio=0.03",
-                // "+task_definition.subset_blocks=20",
+                // "experiment=unibo/prognostics/combined/xgboost_fit_predict",
+                "experiment=mzvav/diagnostics/tabpfn_fit_predict",
+                "+task_definition.subset_ratio=0.01",
+                "+task_definition.subset_blocks=20",
                 "debug=default"
                 // "debug=pronostia"
             ],
