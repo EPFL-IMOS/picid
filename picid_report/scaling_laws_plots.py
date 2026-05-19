@@ -276,8 +276,28 @@ def prepare_df_long(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
     return df_long
 
 
+def _parse_errorbar(value: str):
+    """Parse CLI errorbar string into a value accepted by seaborn.
+
+    Accepts:
+      "sd", "se", "ci", "pi"        → passed as-is
+      "pi,95" / "ci,95"             → ("pi", 95)
+      "none"                        → None
+    """
+    if value.lower() == "none":
+        return None
+    if "," in value:
+        kind, level = value.split(",", 1)
+        return (kind.strip(), int(level.strip()))
+    return value
+
+
 def generate_plot(
-    df_long: pd.DataFrame, dataset_type: str, output_dir: str, project_name: str = ""
+    df_long: pd.DataFrame,
+    dataset_type: str,
+    output_dir: str,
+    project_name: str = "",
+    errorbar: str | tuple | None = "sd",
 ) -> Path:
     cfg = DATASET_PLOT_CONFIGS[dataset_type]
     metric: str = cfg["metric"]
@@ -320,7 +340,7 @@ def generate_plot(
             hue="model._target_",
             hue_order=list(active_rename.keys()),
             palette=palette,
-            errorbar="sd",
+            errorbar=errorbar,
             ax=ax,
         )
 
@@ -418,7 +438,15 @@ def display_run_counts_table(df_long: pd.DataFrame, dataset_type: str) -> None:
         table.add_column(col, justify="right")
 
     for model_name, row in counts.iterrows():
-        table.add_row(model_name, *[str(int(v)) if pd.notna(v) else "-" for v in row])
+        cells = []
+        for v in row:
+            if pd.isna(v):
+                cells.append("[yellow]-[/yellow]")
+            elif int(v) != 5:
+                cells.append(f"[yellow]{int(v)}[/yellow]")
+            else:
+                cells.append(str(int(v)))
+        table.add_row(model_name, *cells)
 
     console.print(table)
 
@@ -431,7 +459,7 @@ def display_summary_table(all_results: dict) -> None:
     )
 
 
-def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> Path:
+def run_project(project: str, user: str, output_dir: str, no_summary: bool, errorbar: str | tuple | None = "sd") -> Path:
     """Run the full pipeline for a single W&B project and return the saved plot path."""
     console.print(
         Panel(
@@ -485,7 +513,7 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool) -> P
         SpinnerColumn(), TextColumn("{task.description}"), console=console
     ) as progress:
         t = progress.add_task("Generating plot...", total=None)
-        output_path = generate_plot(df_long, dataset_type, output_dir, project)
+        output_path = generate_plot(df_long, dataset_type, output_dir, project, errorbar=errorbar)
         progress.update(t, description="[green]Plot generated.")
 
     console.print(Panel(f"[green]Saved:[/green] {output_path}", expand=False))
@@ -520,6 +548,14 @@ def main() -> None:
         "--no-summary", action="store_true", help="Skip printing the summary table"
     )
     parser.add_argument(
+        "--errorbar",
+        default="sd",
+        help=(
+            "Seaborn errorbar style (default: sd). "
+            "Examples: sd, se, ci, pi, 'pi,95', 'ci,95', none"
+        ),
+    )
+    parser.add_argument(
         "--all",
         dest="run_all",
         action="store_true",
@@ -544,7 +580,7 @@ def main() -> None:
     failed: list[tuple[str, str]] = []
     for project in projects:
         try:
-            run_project(project, args.user, args.output_dir, args.no_summary)
+            run_project(project, args.user, args.output_dir, args.no_summary, errorbar=_parse_errorbar(args.errorbar))
         except Exception as exc:
             console.print(f"[red]FAILED {project}: {exc}[/red]")
             failed.append((project, str(exc)))
