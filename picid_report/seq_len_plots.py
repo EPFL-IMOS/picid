@@ -285,6 +285,7 @@ def generate_plot(
     output_dir: str,
     project_name: str = "",
     errorbar: str | tuple | None = "sd",
+    no_title: bool = False,
 ) -> Path:
     cfg = DATASET_PLOT_CONFIGS[dataset_type]
     metric: str = cfg["metric"]
@@ -336,9 +337,10 @@ def generate_plot(
                 lw = ax.lines[i].get_linewidth()
                 ax.lines[i].set_linewidth(lw * 2)
 
-        ax.set_title(
-            f"Performance vs. Sequence Length [Dataset: {dataset_name}]"
-        )
+        if not no_title:
+            ax.set_title(
+                f"Performance vs. Sequence Length [Dataset: {dataset_name}]"
+            )
         ax.set_xlabel("Sequence Length")
         ax.set_ylabel(y_label)
         ax.set_axisbelow(True)
@@ -441,7 +443,7 @@ def display_summary_table(all_results: dict) -> None:
     )
 
 
-def run_project(project: str, user: str, output_dir: str, no_summary: bool, errorbar: str | tuple | None = "sd") -> Path:
+def run_project(project: str, user: str, output_dir: str, no_summary: bool, errorbar: str | tuple | None = "sd", no_title: bool = False) -> Path:
     """Run the full pipeline for a single W&B project and return the saved plot path."""
     console.print(
         Panel(
@@ -495,7 +497,7 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool, erro
         SpinnerColumn(), TextColumn("{task.description}"), console=console
     ) as progress:
         t = progress.add_task("Generating plot...", total=None)
-        output_path = generate_plot(df_long, dataset_type, output_dir, project, errorbar=errorbar)
+        output_path = generate_plot(df_long, dataset_type, output_dir, project, errorbar=errorbar, no_title=no_title)
         progress.update(t, description="[green]Plot generated.")
 
     console.print(Panel(f"[green]Saved:[/green] {output_path}", expand=False))
@@ -530,6 +532,9 @@ def main() -> None:
         "--no-summary", action="store_true", help="Skip printing the summary table"
     )
     parser.add_argument(
+        "--no-title", action="store_true", help="Omit plot title (for publication figures)"
+    )
+    parser.add_argument(
         "--errorbar",
         default="sd",
         help=(
@@ -562,7 +567,7 @@ def main() -> None:
     failed: list[tuple[str, str]] = []
     for project in projects:
         try:
-            run_project(project, args.user, args.output_dir, args.no_summary, errorbar=_parse_errorbar(args.errorbar))
+            run_project(project, args.user, args.output_dir, args.no_summary, errorbar=_parse_errorbar(args.errorbar), no_title=args.no_title)
         except Exception as exc:
             console.print(f"[red]FAILED {project}: {exc}[/red]")
             failed.append((project, str(exc)))

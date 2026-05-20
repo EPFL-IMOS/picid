@@ -52,7 +52,7 @@ DEFAULT_SUBSET_BLOCKS = 3
 DEFAULT_SUBSET_SEED = 0
 
 
-def _compose_cfg(data_dir: str, subset_ratio: float, subset_blocks: int, subset_seed: int):
+def _compose_cfg(data_dir: str, subset_ratio: float, subset_blocks: int | None, subset_seed: int):
     """Compose the full Hydra config for MZVAV diagnostics with the given subset params."""
     import hydra
     from hydra import compose
@@ -71,8 +71,12 @@ def _compose_cfg(data_dir: str, subset_ratio: float, subset_blocks: int, subset_
                 "experiment=mzvav/diagnostics/tabpfn_fit_predict",
                 f"paths.data_dir={data_dir}",
                 f"+task_definition.subset_ratio={subset_ratio}",
-                f"+task_definition.subset_blocks={subset_blocks}",
                 f"+task_definition.subset_seed={subset_seed}",
+                *(
+                    [f"+task_definition.subset_blocks={subset_blocks}"]
+                    if subset_blocks is not None
+                    else []
+                ),
                 "hydra/job_logging=default",
                 "hydra/hydra_logging=default",
             ],
@@ -83,7 +87,7 @@ def _compose_cfg(data_dir: str, subset_ratio: float, subset_blocks: int, subset_
 def get_labels_for_ratio(
     data_dir: str,
     subset_ratio: float,
-    subset_blocks: int,
+    subset_blocks: int | None,
     subset_seed: int,
 ) -> np.ndarray:
     """Run the full MZVAV pipeline and return the flat training label array."""
@@ -161,6 +165,9 @@ def generate_plot(
     subset_ratios: list[float],
     counts_per_ratio: dict[float, np.ndarray],
     output_dir: str,
+    subset_blocks: int | None = None,
+    subset_seed: int = 0,
+    no_title: bool = False,
 ) -> Path:
     x_pos = np.arange(len(subset_ratios))
     x_labels = [f"{r:.4g}" for r in subset_ratios]
@@ -187,7 +194,8 @@ def generate_plot(
         ax.set_xticklabels(x_labels, rotation=45, ha="right")
         ax.set_xlabel("Subset Ratio")
         ax.set_ylabel("Number of Training Samples")
-        ax.set_title("Training Class Balance vs. Subset Ratio [Dataset: MZVAV]")
+        if not no_title:
+            ax.set_title("Training Class Balance vs. Subset Ratio [Dataset: MZVAV]")
         ax.set_axisbelow(True)
         ax.grid(axis="y")
 
@@ -203,7 +211,8 @@ def generate_plot(
 
         fig.tight_layout()
 
-        output_path = Path(output_dir) / "class_balance_mzvav_subset_ratio.pdf"
+        blocks_tag = f"blocks{subset_blocks}" if subset_blocks is not None else "blocks_none"
+        output_path = Path(output_dir) / f"class_balance_mzvav_subset_ratio_{blocks_tag}_seed{subset_seed}.pdf"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(
             output_path,
@@ -247,9 +256,14 @@ def main() -> None:
     )
     parser.add_argument(
         "--subset-blocks",
-        type=int,
+        type=lambda v: None if v.lower() == "none" else int(v),
         default=DEFAULT_SUBSET_BLOCKS,
-        help=f"Number of contiguous blocks for block-based subsetting (default: {DEFAULT_SUBSET_BLOCKS}).",
+        metavar="N",
+        help=(
+            f"Number of contiguous blocks for block-based subsetting "
+            f"(default: {DEFAULT_SUBSET_BLOCKS}). Pass 'none' to use plain subset_ratio "
+            f"without block structure."
+        ),
     )
     parser.add_argument(
         "--subset-seed",
@@ -267,6 +281,9 @@ def main() -> None:
         "--no-summary",
         action="store_true",
         help="Skip printing the counts table.",
+    )
+    parser.add_argument(
+        "--no-title", action="store_true", help="Omit plot title (for publication figures)"
     )
     args = parser.parse_args()
 
@@ -319,7 +336,7 @@ def main() -> None:
         SpinnerColumn(), TextColumn("{task.description}"), console=console
     ) as progress:
         t = progress.add_task("Generating plot...", total=None)
-        output_path = generate_plot(args.subset_ratios, counts_per_ratio, args.output_dir)
+        output_path = generate_plot(args.subset_ratios, counts_per_ratio, args.output_dir, subset_blocks=args.subset_blocks, subset_seed=args.subset_seed, no_title=args.no_title)
         progress.update(t, description="[green]Plot generated.")
 
     console.print(Panel(f"[green]Saved:[/green] {output_path}", expand=False))
