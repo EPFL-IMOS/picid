@@ -21,7 +21,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 console = Console()
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUTS = [
+DEFAULT_INPUT_DIR = Path("~/Experiments/TabPHM").expanduser()
+FALLBACK_INPUTS = [
     _REPO_ROOT / "lmetk_report_artifacts" / "predictions_LB20.pt",
     _REPO_ROOT / "lmetk_report_artifacts" / "predictions_LB1.pt",
 ]
@@ -43,23 +44,104 @@ class DistributionHeatmapData:
     selected_bin_count: int
 
 
+@dataclass(frozen=True)
+class PredictionFile:
+    path: Path
+    project: str | None
+    lookback: int | None
+
+
+def _parse_prediction_file(path: Path) -> PredictionFile:
+    stem = path.stem
+    prefixed = re.fullmatch(
+        r"(?P<project>.+?)_predictions_(?P<lookback>\d+)",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    if prefixed:
+        return PredictionFile(
+            path=path,
+            project=prefixed.group("project"),
+            lookback=int(prefixed.group("lookback")),
+        )
+
+    legacy = re.search(r"LB(?P<lookback>\d+)", stem, flags=re.IGNORECASE)
+    return PredictionFile(
+        path=path,
+        project=None,
+        lookback=int(legacy.group("lookback")) if legacy else None,
+    )
+
+
+def _discover_default_inputs(input_dir: Path) -> list[Path]:
+    paths = sorted(input_dir.expanduser().glob("*_predictions_*.pt"))
+    if paths:
+        return paths
+    return FALLBACK_INPUTS
+
+
+def _project_sort_key(project: str | None) -> tuple[int, str]:
+    if project is None:
+        return (1, "")
+    return (0, project.lower())
+
+
+def _file_sort_key(item: PredictionFile) -> tuple[int, int, str]:
+    # Higher lookback first, matching the original notebook panel order.
+    lookback_key = -item.lookback if item.lookback is not None else 0
+    return (_project_sort_key(item.project)[0], lookback_key, item.path.name)
+
+
+def _safe_slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+
+
+def _project_display_name(project: str | None) -> str:
+    if project is None:
+        return "default"
+    names = {
+        "phme20": "PHME20",
+        "unibo": "Unibo",
+    }
+    return names.get(project.lower(), project.replace("_", " ").title())
+
+
 def _infer_label(path: Path) -> str:
-    match = re.search(r"LB(\d+)", path.stem, flags=re.IGNORECASE)
-    if match:
-        lookback = int(match.group(1))
+    parsed = _parse_prediction_file(path)
+    if parsed.lookback is not None:
+        lookback = parsed.lookback
         unit = "step" if lookback == 1 else "steps"
         return f"{lookback} lookback {unit}"
     return path.stem.replace("_", " ")
 
 
-def _validate_labels(paths: list[Path], labels: list[str] | None) -> list[str]:
+def _validate_labels(
+    files: list[PredictionFile], labels: list[str] | None
+) -> list[str]:
     if labels is None:
-        return [_infer_label(path) for path in paths]
-    if len(labels) != len(paths):
+        return [_infer_label(item.path) for item in files]
+    if len(labels) != len(files):
         raise ValueError(
-            f"Expected {len(paths)} labels for {len(paths)} inputs, got {len(labels)}."
+            f"Expected {len(files)} labels for {len(files)} inputs, got {len(labels)}."
         )
     return labels
+
+
+def _group_files(
+    paths: list[Path],
+    labels: list[str] | None,
+) -> dict[str | None, list[tuple[Path, str]]]:
+    files = [_parse_prediction_file(path.expanduser().resolve()) for path in paths]
+    resolved_labels = _validate_labels(files, labels)
+    grouped_files = sorted(
+        zip(files, resolved_labels),
+        key=lambda pair: (_project_sort_key(pair[0].project), _file_sort_key(pair[0])),
+    )
+
+    groups: dict[str | None, list[tuple[Path, str]]] = {}
+    for item, label in grouped_files:
+        groups.setdefault(item.project, []).append((item.path, label))
+    return groups
 
 
 def _downsample_bins(
@@ -228,6 +310,7 @@ def parse_args() -> argparse.Namespace:
         epilog=(
             "Examples:\n"
             "  python quantile_distribution_plots.py\n"
+            "  python quantile_distribution_plots.py --input-dir ~/Experiments/TabPHM\n"
             "  python quantile_distribution_plots.py lmetk_report_artifacts/predictions_LB20.pt lmetk_report_artifacts/predictions_LB1.pt\n"
             '  python quantile_distribution_plots.py --labels "20 lookback steps" "1 lookback step" --formats pdf png\n'
         ),
@@ -236,7 +319,19 @@ def parse_args() -> argparse.Namespace:
         "prediction_files",
         nargs="*",
         type=Path,
-        help="Prediction .pt files. Defaults to the bundled LB20 and LB1 artifacts.",
+        help=(
+            "Prediction .pt files. If omitted, files are discovered from --input-dir "
+            "and grouped by the prefix before '_predictions_'."
+        ),
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=DEFAULT_INPUT_DIR,
+        help=(
+            "Default directory scanned for '*_predictions_*.pt' files "
+            f"(default: {DEFAULT_INPUT_DIR})."
+        ),
     )
     parser.add_argument(
         "--labels",
@@ -323,19 +418,20 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    paths = args.prediction_files or DEFAULT_INPUTS
-    paths = [path.expanduser().resolve() for path in paths]
-    labels = _validate_labels(paths, args.labels)
+    paths = args.prediction_files or _discover_default_inputs(args.input_dir)
+    groups = _group_files(paths, args.labels)
 
     console.print(
         Panel(
             "\n".join(
                 [
-                    f"[bold]Inputs:[/bold]      {len(paths)} files",
-                    f"[bold]Bin range:[/bold]   [{args.bin_start}, {args.bin_stop})",
+                    f"[bold]Inputs:[/bold]       {sum(len(v) for v in groups.values())} files",
+                    f"[bold]Projects:[/bold]     {', '.join(_project_display_name(project) for project in groups)}",
+                    f"[bold]Input dir:[/bold]    {args.input_dir.expanduser()}",
+                    f"[bold]Bin range:[/bold]    [{args.bin_start}, {args.bin_stop})",
                     f"[bold]Display bins:[/bold] {args.num_bins}",
-                    f"[bold]Time stride:[/bold] {args.time_stride}",
-                    f"[bold]Output:[/bold]      {args.output_dir / args.output_name}",
+                    f"[bold]Time stride:[/bold]  {args.time_stride}",
+                    f"[bold]Output base:[/bold]  {args.output_dir / args.output_name}",
                 ]
             ),
             title="Quantile Distribution Plots",
@@ -343,54 +439,77 @@ def main() -> None:
         )
     )
 
-    heatmaps: list[DistributionHeatmapData] = []
-    with Progress(
-        SpinnerColumn(), TextColumn("{task.description}"), console=console
-    ) as progress:
-        task = progress.add_task("Loading prediction files...", total=len(paths))
-        for path, label in zip(paths, labels):
-            progress.update(task, description=f"Loading {path.name}...")
-            heatmaps.append(
-                load_distribution_heatmap_data(
-                    path=path,
-                    label=label,
-                    bin_start=args.bin_start,
-                    bin_stop=args.bin_stop,
-                    num_bins=args.num_bins,
-                    time_stride=args.time_stride,
-                )
-            )
-            progress.advance(task)
+    all_output_paths: list[Path] = []
+    for project, project_files in groups.items():
+        project_name = _project_display_name(project)
+        output_name = args.output_name
+        if project is not None:
+            output_name = f"{args.output_name}_{_safe_slug(project)}"
 
-    for data in heatmaps:
         console.print(
-            f"[green]{data.path.name}[/green]: "
-            f"{data.original_time_steps} time steps, "
-            f"{data.selected_bin_count} selected bins -> "
-            f"{data.probabilities.shape[1]} displayed bins"
+            Panel(
+                "\n".join(f"{path.name} -> {label}" for path, label in project_files),
+                title=f"Project: {project_name}",
+                expand=False,
+            )
         )
 
-    with Progress(
-        SpinnerColumn(), TextColumn("{task.description}"), console=console
-    ) as progress:
-        task = progress.add_task("Generating plot...", total=None)
-        output_paths = plot_distribution_heatmaps(
-            heatmaps=heatmaps,
-            output_dir=args.output_dir,
-            output_name=args.output_name,
-            formats=args.formats,
-            title=args.title,
-            no_title=args.no_title,
-            cmap=args.cmap,
-            max_yticks=args.max_yticks,
-            y_label=args.y_label,
-            x_label=args.x_label,
-        )
-        progress.update(task, description="[green]Plot generated.")
+        heatmaps: list[DistributionHeatmapData] = []
+        with Progress(
+            SpinnerColumn(), TextColumn("{task.description}"), console=console
+        ) as progress:
+            task = progress.add_task(
+                f"Loading {project_name} prediction files...",
+                total=len(project_files),
+            )
+            for path, label in project_files:
+                progress.update(task, description=f"Loading {path.name}...")
+                heatmaps.append(
+                    load_distribution_heatmap_data(
+                        path=path,
+                        label=label,
+                        bin_start=args.bin_start,
+                        bin_stop=args.bin_stop,
+                        num_bins=args.num_bins,
+                        time_stride=args.time_stride,
+                    )
+                )
+                progress.advance(task)
+
+        for data in heatmaps:
+            console.print(
+                f"[green]{data.path.name}[/green]: "
+                f"{data.original_time_steps} time steps, "
+                f"{data.selected_bin_count} selected bins -> "
+                f"{data.probabilities.shape[1]} displayed bins"
+            )
+
+        title = args.title
+        if project is not None:
+            title = f"{args.title} [{project_name}]"
+
+        with Progress(
+            SpinnerColumn(), TextColumn("{task.description}"), console=console
+        ) as progress:
+            task = progress.add_task(f"Generating {project_name} plot...", total=None)
+            output_paths = plot_distribution_heatmaps(
+                heatmaps=heatmaps,
+                output_dir=args.output_dir,
+                output_name=output_name,
+                formats=args.formats,
+                title=title,
+                no_title=args.no_title,
+                cmap=args.cmap,
+                max_yticks=args.max_yticks,
+                y_label=args.y_label,
+                x_label=args.x_label,
+            )
+            all_output_paths.extend(output_paths)
+            progress.update(task, description="[green]Plot generated.")
 
     console.print(
         Panel(
-            "\n".join(f"[green]Saved:[/green] {path}" for path in output_paths),
+            "\n".join(f"[green]Saved:[/green] {path}" for path in all_output_paths),
             expand=False,
         )
     )
