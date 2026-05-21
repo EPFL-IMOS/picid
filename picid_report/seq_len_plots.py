@@ -108,7 +108,7 @@ MODEL_COLORS = {
     "CF":         "#66c2a5",
     "TST":        "#fc8d62",
     "TiDE":       "#8da0cb",
-    "PatchTST":   "#e78ac3",
+    "PatchTST":   "#a6d854",
 }
 
 _NORMALIZED_VARS = [
