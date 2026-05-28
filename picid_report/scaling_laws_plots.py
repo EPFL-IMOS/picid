@@ -292,6 +292,26 @@ def _parse_errorbar(value: str):
     return value
 
 
+def _select_topk_models(
+    plot_df: pd.DataFrame,
+    active_rename: dict,
+    metric: str,
+    topk: int,
+) -> dict:
+    """Return a subset of active_rename with only the top-k models by mean metric."""
+    higher_is_better = "f1" in metric
+    metric_df = plot_df[
+        plot_df["model._target_"].isin(active_rename.keys())
+        & (plot_df["metric"] == metric)
+    ]
+    mean_per_model = (
+        metric_df.groupby("model._target_")["value"].mean()
+    )
+    ranked = mean_per_model.sort_values(ascending=not higher_is_better)
+    top_keys = set(ranked.head(topk).index)
+    return {k: v for k, v in active_rename.items() if k in top_keys}
+
+
 def generate_plot(
     df_long: pd.DataFrame,
     dataset_type: str,
@@ -299,6 +319,7 @@ def generate_plot(
     project_name: str = "",
     errorbar: str | tuple | None = "sd",
     no_title: bool = False,
+    topk: int | None = None,
 ) -> Path:
     cfg = DATASET_PLOT_CONFIGS[dataset_type]
     metric: str = cfg["metric"]
@@ -318,6 +339,11 @@ def generate_plot(
             f"No models in the data matched MODEL_RENAME for dataset '{dataset_type}'. "
             f"Models in data: {sorted(present_models)}"
         )
+
+    if topk is not None:
+        active_rename = _select_topk_models(plot_df, active_rename, metric, topk)
+        if not active_rename:
+            raise ValueError(f"--topk {topk} filtered out all models.")
 
     # Fix legend order and colors across all plots
     active_rename = dict(
@@ -389,7 +415,7 @@ def generate_plot(
             title="",
             loc="upper center",
             bbox_to_anchor=(0.5, 0.02),
-            ncol=4,
+            ncol=min(len(labels), 5),
             framealpha=1,
         )
 
@@ -402,9 +428,10 @@ def generate_plot(
         blockwise = "_blockwise" if "blockwise" in project_name else ""
         date_match = re.search(r"\d{2}_\d{2}_\d{4}", project_name)
         date_prefix = f"{date_match.group()}_" if date_match else ""
+        topk_suffix = f"_top{topk}" if topk is not None else ""
         output_path = (
             Path(output_dir)
-            / f"{date_prefix}scaling_laws_{dataset_name}{blockwise}_{metric.split('/')[1]}.pdf"
+            / f"{date_prefix}scaling_laws_{dataset_name}{blockwise}_{metric.split('/')[1]}{topk_suffix}.pdf"
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(
@@ -461,7 +488,7 @@ def display_summary_table(all_results: dict) -> None:
     )
 
 
-def run_project(project: str, user: str, output_dir: str, no_summary: bool, errorbar: str | tuple | None = "sd", no_title: bool = False) -> Path:
+def run_project(project: str, user: str, output_dir: str, no_summary: bool, errorbar: str | tuple | None = "sd", no_title: bool = False, topk: int | None = None) -> Path:
     """Run the full pipeline for a single W&B project and return the saved plot path."""
     console.print(
         Panel(
@@ -515,7 +542,7 @@ def run_project(project: str, user: str, output_dir: str, no_summary: bool, erro
         SpinnerColumn(), TextColumn("{task.description}"), console=console
     ) as progress:
         t = progress.add_task("Generating plot...", total=None)
-        output_path = generate_plot(df_long, dataset_type, output_dir, project, errorbar=errorbar, no_title=no_title)
+        output_path = generate_plot(df_long, dataset_type, output_dir, project, errorbar=errorbar, no_title=no_title, topk=topk)
         progress.update(t, description="[green]Plot generated.")
 
     console.print(Panel(f"[green]Saved:[/green] {output_path}", expand=False))
@@ -566,6 +593,17 @@ def main() -> None:
         action="store_true",
         help=f"Run for all {len(ALL_PROJECTS)} hardcoded projects; overrides --project",
     )
+    parser.add_argument(
+        "--topk",
+        type=int,
+        default=None,
+        metavar="K",
+        help=(
+            "Only plot the top K models ranked by their mean metric across all subset ratios. "
+            "For F1 (higher-is-better) the top K highest are kept; "
+            "for MAE/RMSE (lower-is-better) the top K lowest are kept."
+        ),
+    )
     args = parser.parse_args()
 
     if not args.run_all and args.project is None:
@@ -585,7 +623,7 @@ def main() -> None:
     failed: list[tuple[str, str]] = []
     for project in projects:
         try:
-            run_project(project, args.user, args.output_dir, args.no_summary, errorbar=_parse_errorbar(args.errorbar), no_title=args.no_title)
+            run_project(project, args.user, args.output_dir, args.no_summary, errorbar=_parse_errorbar(args.errorbar), no_title=args.no_title, topk=args.topk)
         except Exception as exc:
             console.print(f"[red]FAILED {project}: {exc}[/red]")
             failed.append((project, str(exc)))
