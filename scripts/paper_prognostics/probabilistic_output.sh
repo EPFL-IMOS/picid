@@ -25,11 +25,12 @@ source "$SCRIPT_DIR/../base/logging.sh"
 
 max_epochs=1
 device=0
-wandb_log_folder="24_02_2026_proba"
+wandb_log_folder="19_05_2026_proba"
 # Set DEBUG_SKIP to any non-empty value to log runs without executing commands
 DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
 datasets=(
+    "unibo|combined|prognostics" 
     "phme20|raw|prognostics"
 )
 
@@ -43,10 +44,7 @@ SEEDS=(666)
 # Pairs: "seq_len:stride_train"
 context_stride_pairs=(
   "1:1"
-  "5:1"
-  "10:5"
-  "20:5"
-  "50:50"
+  "20:1"
 )
 
 # ========================================================================

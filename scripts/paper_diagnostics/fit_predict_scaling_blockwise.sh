@@ -118,7 +118,7 @@ for seed in "${SEEDS[@]}"; do
                         # task_definition.stride_train=${train_set_stride} \
                         cache.use_cache_after_loading=True \
                         cache.use_cache_after_transfroms=True \
-                        +task_definition.subset_ratio=${ratio} \
+                        task_definition.subset_ratio=${ratio} \
                         +task_definition.subset_blocks=${subset_blocks} \
                         task_definition.seq_len=${context_length} \
                         experiment_group=${ratio} \
