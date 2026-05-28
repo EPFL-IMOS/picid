@@ -160,10 +160,6 @@ class AbstractFitPredictWrapper(ABC):
 
         self.backbone.fit(X, y)
 
-        if self.num_classes is not None:
-            y_np = y.numpy() if isinstance(y, torch.Tensor) else np.asarray(y)
-            self._seen_classes = np.unique(y_np.ravel()).astype(int)
-
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
         """
         Predict with the wrapped backbone.
@@ -203,6 +199,10 @@ class AbstractFitPredictWrapper(ABC):
             self._check_stop_profiler(self.profile_fit_cfg)
         else:
             self._call_fit(X.cpu(), y.cpu())
+
+        if self.num_classes is not None:
+            y_np = y.cpu().numpy() if isinstance(y, torch.Tensor) else np.asarray(y)
+            self._seen_classes = np.unique(y_np.ravel()).astype(int)
 
     def _iterate_batches(self, X: torch.Tensor):
         """
