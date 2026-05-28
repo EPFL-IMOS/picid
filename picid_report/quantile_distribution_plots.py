@@ -241,9 +241,9 @@ def plot_distribution_heatmaps(
         raise ValueError("At least one heatmap is required.")
 
     nrows = len(heatmaps)
-    figsize = (20, max(4.5, 4.8 * nrows))
+    figsize = (28, max(4.5, 4.8 * nrows))
 
-    with sns.plotting_context("paper", font_scale=1.6, rc={"font.family": "Helvetica"}):
+    with sns.plotting_context("paper", font_scale=2, rc={"font.family": "Helvetica"}):
         fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=figsize, squeeze=False)
 
         for ax, data in zip(axes[:, 0], heatmaps):
