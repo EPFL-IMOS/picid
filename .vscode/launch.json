@@ -1300,6 +1300,46 @@
             }
         },
         {
+            "name": "PHM20: TabPFN Full Outputs (LB20)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/raw/tabpfn_fit_predict",
+                "debug=nox_testing_fit_predict",
+                "task_definition.seq_len=20",
+                "+model.full_outputs_path='${paths.output_dir}'",
+                "+model.output_type='full'"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
+            "name": "PHM20: TabPFN Full Outputs (LB1)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "picid/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "paths=rt_local",
+                "experiment=phme20/prognostics/raw/tabpfn_fit_predict",
+                "debug=nox_testing_fit_predict",
+                "task_definition.seq_len=1",
+                "+model.full_outputs_path='${paths.output_dir}'",
+                "+model.output_type='full'"
+            ],
+            "env": {
+                "HYDRA_FULL_ERROR": "1",
+                "PYTHONFAULTHANDLER": "1"
+            }
+        },
+        {
             "name": "NOX debugging",
             "type": "debugpy",
             "request": "launch",
