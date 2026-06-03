@@ -106,4 +106,4 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## License
 
-This project is licensed under the Apache License 2.0 with Commons Clause.
+This project is licensed under a non-commercial license. Use is permitted for academic and government-funded research only. Commercial use is prohibited. See [LICENSE.txt](LICENSE.txt) for full terms.
