@@ -104,6 +104,35 @@ uv run mkdocs serve
 Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 
+## Citation
+
+Several works have been implemented in Picid. If you wish to cite us please use:
+
+- [Picid: A Modular Evaluation Infrastructure for Reproducible PHM Across Tasks and Domains (05/2026)](https://arxiv.org/abs/2605.28345)
+- [From paper to benchmark: agentic, framework-based reproduction of under-specified methods in machine health intelligence (05/2026)](https://arxiv.org/abs/2605.28371)
+- Towards Unified and Data-Efficient Prognostics and Health Management with Tabular Foundation Models (upcoming!)
+
+
+```
+@article{telyatnikov2026picid,
+  title={Picid: A Modular Evaluation Infrastructure for Reproducible PHM Across Tasks and Domains},
+  author={Telyatnikov, Lev and Theiler, Raffael and Von Krannichfeldt, Leandro and Fink, Olga},
+  journal={arXiv preprint arXiv:2605.28345},
+  year={2026}
+}
+
+@article{theiler2026paper,
+  title={From paper to benchmark: agentic, framework-based reproduction of under-specified methods in machine health intelligence},
+  author={Theiler, Raffael and Comito, Ludovico and Leko, David and Von Krannichfeldt, Leandro and Telyatnikov, Lev and Fink, Olga},
+  journal={arXiv preprint arXiv:2605.28371},
+  year={2026}
+}
+```
+
+
+
+
+
 ## License
 
 This project is licensed under a non-commercial license. Use is permitted for academic and government-funded research only. Commercial use is prohibited. See [LICENSE.txt](LICENSE.txt) for full terms.
