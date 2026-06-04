@@ -122,7 +122,7 @@ Several works have been implemented in Picid. If you wish to cite us please use:
 
 - [Picid: A Modular Evaluation Infrastructure for Reproducible PHM Across Tasks and Domains (05/2026)](https://arxiv.org/abs/2605.28345)
 - [From paper to benchmark: agentic, framework-based reproduction of under-specified methods in machine health intelligence (05/2026)](https://arxiv.org/abs/2605.28371)
-- Towards Unified and Data-Efficient Prognostics and Health Management with Tabular Foundation Models (upcoming!)
+- [Towards Unified and Data-Efficient Prognostics and Health Management with Tabular Foundation Models (upcoming!)](papers/2025_TabPHM_Paper_ArXiv.pdf)
 
 
 ```
