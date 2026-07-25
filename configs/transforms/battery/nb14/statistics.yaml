@@ -1,0 +1,84 @@
+scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+
+scaler_target:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: target
+    fit_on: train
+    assign_to: rul
+
+time_domain_features:
+  transform:
+    _target_: picid.transforms.base_transforms.time_statistics.TimeStatsTransform
+    hankel_window_size: 10
+    stats_to_compute: [
+        "mean",
+        "maximum",
+        "minimum",
+        "root_mean_square",
+        "abs_avg", # Defined as a wrapper for root_mean_square in the source
+        "peak_to_peak_value",
+        "standard_deviation",
+        #"skewness", # Gives NaNs on battery NB14 dataset
+        # "kurtosis",
+        "variance",
+        "peak_factor",
+        "change_coefficient", # Note: This is mean / std
+        "clearance_factor",
+        "abs_energy",
+        # "hankel_svd",
+      ]
+
+  metadata:
+    apply_to: "features"
+
+ragged2regular_features:
+  transform:
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: "features"
+
+# This transform is from the pronostia/combined, but dim is 0 becase the issue of ragged and dense data. NB14 is ragged dataset hence the iteration o
+take_last_target:
+  transform:
+    _target_: picid.transforms.base_transforms.subsample.WindowedAggregationTransform
+    step: 1
+    window_size: full
+    aggregation: last
+    dim: 0
+  metadata:
+    apply_to: rul
+
+# Why do we have this transform now? To make dataset batching work over the dim=0 (in other words the first unraged dimension)
+ragged_regular_ragged_target:
+  transform:
+    _target_: picid.transforms.base_transforms.shape_manipulations.RegularizeRaggedDataTransform
+
+  metadata:
+    apply_to: rul
+
+reshape_target_second_time:
+  transform:
+    _target_: picid.transforms.base_transforms.reshaping.ReshapeTransform
+    pattern: "a 1 1 -> a 1"
+
+  metadata:
+    apply_to: rul
+
+final_scaler_features:
+  transform:
+    _target_: picid.transforms.base_transforms.scaler.MinMaxScalerSklearn
+
+  metadata:
+    apply_to: features
+    fit_on: train
+    cache_point: True
