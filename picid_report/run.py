@@ -20,37 +20,35 @@ from collections import defaultdict
 from typing import Callable, List, Optional, Set, Tuple
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
-import pandas as pd
-
-logger = logging.getLogger(__name__)
-
-from picid_report.core.analysis import _ds_is_empty
 from picid_report import (
     PipelineConfig,
-    config,
     analyze_results,
+    clean_and_rename_models,
+    config,
     create_summary_table,
     display_experiment_stats,
     display_hp_impact,
     display_performance_tables,
-    export_summary_table,
     export_experiment_stats,
     export_hp_impact_tables,
+    export_summary_table,
     get_experiment_stats_df,
     iter_hp_impact_tables,
-    write_tables_tex,
-    write_report_html,
     load_runs_df,
     plot_best_metric_bars,
     plot_hp_impact,
     plot_summary,
     validate_schema,
-    clean_and_rename_models,
+    write_report_html,
+    write_tables_tex,
 )
+from picid_report.core.analysis import _ds_is_empty
 from picid_report.logging_config import configure_logging
 
+logger = logging.getLogger(__name__)
 
 # --- Default configuration (override via run_pipeline() or CLI) ---
 DEFAULT_PROJECT_NAME = "29_01_2026_unibo_prognostics_combined"
@@ -198,7 +196,7 @@ def all_results_to_xarray(
         attrs={
             "project_name": project_name,
             "reporting_metrics": list(reporting_metrics or []),
-            "created_at": datetime.datetime.utcnow().isoformat(),
+            "created_at": datetime.datetime.now(datetime.UTC).isoformat(),
         },
     )
 
@@ -338,8 +336,8 @@ def run_pipeline(
         try:
             from picid_report.configs import (
                 get_sort_metric,
-                infer_task_type_from_dataset,
                 infer_dataset_category_from_name,
+                infer_task_type_from_dataset,
             )
 
             def resolver(
@@ -511,7 +509,9 @@ def combine_results_nc(output_base: str) -> xr.Dataset:
 
     datasets = [xr.open_dataset(p) for p in paths]
     logger.info("combine_results_nc: merging %d files from %s", len(paths), output_base)
-    combined = xr.concat(datasets, dim="dataset", join="outer", combine_attrs="drop_conflicts")
+    combined = xr.concat(
+        datasets, dim="dataset", join="outer", combine_attrs="drop_conflicts"
+    )
     for ds in datasets:
         ds.close()
     return combined
@@ -522,6 +522,20 @@ def _safe_basename(dataset: str, model: str, max_len: int = 80) -> str:
     safe_ds = re.sub(r"[^\w\-.]", "_", str(dataset))[:max_len]
     safe_m = re.sub(r"[^\w\-.]", "_", str(model))[:max_len]
     return f"{safe_ds}_{safe_m}"
+
+
+def _prepare_hp_dataset_for_netcdf(dataset: xr.Dataset) -> xr.Dataset:
+    """Drop unsupported values and stringify object coordinates element by element."""
+    prepared = dataset.drop_vars("run_names", errors="ignore")
+    for coord_name in list(prepared.coords):
+        coord = prepared.coords[coord_name]
+        if coord.dtype != object:
+            continue
+        string_values = np.asarray(
+            [str(value) for value in coord.values.flat], dtype=str
+        ).reshape(coord.shape)
+        prepared = prepared.assign_coords({coord_name: (coord.dims, string_values)})
+    return prepared
 
 
 def _save_outputs(
@@ -611,15 +625,9 @@ def _save_outputs(
             _agg_ds = _res.get("sorted_aggregated_results")
             if _agg_ds is not None and not _ds_is_empty(_agg_ds):
                 _safe_ds = re.sub(r"[^\w\-.]", "_", str(_ds_name))[:80]
-                _safe_m  = re.sub(r"[^\w\-.]", "_", str(_model_name))[:80]
-                # Prepare for netCDF: drop run_names (variable-length strings),
-                # cast any remaining object-dtype coords to str
-                _to_save = _agg_ds.drop_vars("run_names", errors="ignore")
-                for _cn in list(_to_save.coords):
-                    if _to_save.coords[_cn].dtype == object:
-                        _to_save = _to_save.assign_coords(
-                            {_cn: _to_save.coords[_cn].astype(str)}
-                        )
+                _safe_m = re.sub(r"[^\w\-.]", "_", str(_model_name))[:80]
+                # netCDF cannot encode sequence-valued object coordinates directly.
+                _to_save = _prepare_hp_dataset_for_netcdf(_agg_ds)
                 _to_save.to_netcdf(os.path.join(hp_nc_dir, f"{_safe_ds}_{_safe_m}.nc"))
 
     global_plots: List[Tuple[str, str]] = []
@@ -628,19 +636,28 @@ def _save_outputs(
     if show_plots:
         # Summary heatmap (model × dataset) from xarray
         _CLASSIFICATION_HINTS = ("accuracy", "auroc", "f1", "precision", "recall")
-        summary_mode = "max" if any(h in plot_metric for h in _CLASSIFICATION_HINTS) else "min"
+        summary_mode = (
+            "max" if any(h in plot_metric for h in _CLASSIFICATION_HINTS) else "min"
+        )
         # Derive a fallback prefix: strip _best_rerun so fit-predict models (XGBoost,
         # TabPFN, TabDPT) fill in from their plain test/* or val/* metrics.
-        _fallback = plot_metric.replace("_best_rerun", "") if "_best_rerun" in plot_metric else None
+        _fallback = (
+            plot_metric.replace("_best_rerun", "")
+            if "_best_rerun" in plot_metric
+            else None
+        )
         summary_path = os.path.join(plots_dir, "summary.png")
         fig_summary = plot_summary(
-            all_results_xarr, metric_key=plot_metric, mode=summary_mode,
+            all_results_xarr,
+            metric_key=plot_metric,
+            mode=summary_mode,
             fallback_metric_keys=[_fallback] if _fallback else None,
             save_path=summary_path,
         )
         if fig_summary is not None:
             try:
                 import matplotlib.pyplot as plt
+
                 plt.close(fig_summary)
             except Exception:
                 pass
