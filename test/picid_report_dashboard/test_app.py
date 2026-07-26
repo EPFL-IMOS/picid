@@ -163,6 +163,69 @@ def test_serialize_state_contains_expected_keys(monkeypatch):
     assert state["active_tab"] == 3
 
 
+def test_named_view_roundtrip_preserves_name_date_and_state(monkeypatch):
+    loader_map = {
+        "report_a": {
+            "metric_keys": [
+                dashboard_app._DEFAULT_METRIC,
+                "test/mae_denormalized",
+            ],
+            "datasets": ["dataset_a"],
+            "models": ["model_a", "model_b"],
+        }
+    }
+    dash = _make_dashboard(monkeypatch, loader_map)
+    dash.show_rank = True
+    dash.selected_model = "model_b"
+
+    dash._save_named_view(
+        "Prognostics overview",
+        saved_at="2026-07-26T12:34:56Z",
+    )
+
+    restored = _make_dashboard(monkeypatch, loader_map)
+    views = restored._parse_named_views_json(dash._serialize_named_views_json())
+    assert views is not None
+    assert views[0]["name"] == "Prognostics overview"
+    assert views[0]["saved_at"] == "2026-07-26T12:34:56Z"
+    assert (
+        restored._format_saved_view_date(views[0]["saved_at"]) == "2026-07-26 12:34 UTC"
+    )
+
+    restored._named_views = views
+    assert restored._recall_named_view("Prognostics overview") is True
+    assert restored.show_rank is True
+    assert restored.selected_model == "model_b"
+
+
+def test_saving_same_named_view_replaces_and_delete_removes_it(monkeypatch):
+    dash = _make_dashboard(
+        monkeypatch,
+        {
+            "report_a": {
+                "metric_keys": [
+                    dashboard_app._DEFAULT_METRIC,
+                    "test/mae_denormalized",
+                ],
+                "datasets": ["dataset_a"],
+                "models": ["model_a"],
+            }
+        },
+    )
+    dash.show_rank = False
+    dash._save_named_view("Overview", saved_at="2026-07-25T10:00:00Z")
+    dash.show_rank = True
+
+    dash._save_named_view("Overview", saved_at="2026-07-26T10:00:00Z")
+
+    assert len(dash._named_views) == 1
+    assert dash._named_views[0]["saved_at"] == "2026-07-26T10:00:00Z"
+    assert dash._named_views[0]["state"]["show_rank"] is True
+    assert dash._delete_named_view("Overview") is True
+    assert dash._named_views == []
+    assert dash._delete_named_view("Overview") is False
+
+
 def test_enabled_models_filter_focus_selector_and_restore(monkeypatch):
     loader_map = {
         "report_a": {

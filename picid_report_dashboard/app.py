@@ -13,6 +13,7 @@ Or run directly:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -72,6 +73,7 @@ _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_outp
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
 _PERSISTED_STATE_VERSION = 9
 _STORAGE_PREFIX = "picid_dashboard_state"
+_NAMED_VIEWS_STORAGE_PREFIX = "picid_dashboard_named_views"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
     "Heatmap",
@@ -287,6 +289,8 @@ class PiCIDDashboard(param.Parameterized):
         self._alias_warnings: list[tuple[str, str]] = []
         self._restore_in_progress = False
         self._state_store: pn.widgets.TextInput | None = None
+        self._named_views: list[dict[str, Any]] = []
+        self._named_views_store: pn.widgets.TextInput | None = None
         self._sync_selectors_in_progress = False
         self._datasets_initialized = False
         self._models_initialized = False
@@ -434,6 +438,7 @@ class PiCIDDashboard(param.Parameterized):
         if self._sync_selectors_in_progress or self._restore_in_progress:
             return
         self._sync_selectors()
+
     def _set_selector_value(
         self,
         name: str,
@@ -828,6 +833,115 @@ class PiCIDDashboard(param.Parameterized):
             return
         self._state_store.value = self._serialize_state_json()
 
+    def _serialize_named_views_json(self) -> str:
+        return json.dumps(
+            {"version": 1, "views": self._named_views},
+            sort_keys=True,
+        )
+
+    def _parse_named_views_json(self, views_json: str) -> list[dict[str, Any]] | None:
+        if not views_json:
+            return None
+        try:
+            payload = json.loads(views_json)
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(payload, dict) or payload.get("version") != 1:
+            return None
+        raw_views = payload.get("views")
+        if not isinstance(raw_views, list):
+            return None
+
+        views: list[dict[str, Any]] = []
+        seen_names: set[str] = set()
+        for raw_view in raw_views:
+            if not isinstance(raw_view, dict):
+                continue
+            name = raw_view.get("name")
+            saved_at = raw_view.get("saved_at")
+            raw_state = raw_view.get("state")
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or len(name.strip()) > 80
+                or name.strip() in seen_names
+                or not isinstance(saved_at, str)
+                or not isinstance(raw_state, dict)
+            ):
+                continue
+            try:
+                parsed_date = datetime.fromisoformat(saved_at.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if parsed_date.tzinfo is None:
+                continue
+            state = self._parse_saved_state(json.dumps(raw_state))
+            if state is None:
+                continue
+            normalized_name = name.strip()
+            seen_names.add(normalized_name)
+            views.append(
+                {
+                    "name": normalized_name,
+                    "saved_at": saved_at,
+                    "state": state,
+                }
+            )
+        return views
+
+    def _sync_named_views_store(self) -> None:
+        if self._named_views_store is not None:
+            self._named_views_store.value = self._serialize_named_views_json()
+
+    def _save_named_view(self, name: str, *, saved_at: str | None = None) -> None:
+        normalized_name = name.strip()
+        if not normalized_name:
+            raise ValueError("Enter a name for this view.")
+        if len(normalized_name) > 80:
+            raise ValueError("View names must be 80 characters or fewer.")
+        if saved_at is None:
+            saved_at = (
+                datetime.now(timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+        self._named_views = [
+            view for view in self._named_views if view["name"] != normalized_name
+        ]
+        self._named_views.insert(
+            0,
+            {
+                "name": normalized_name,
+                "saved_at": saved_at,
+                "state": self._serialize_state(),
+            },
+        )
+        self._sync_named_views_store()
+
+    def _recall_named_view(self, name: str) -> bool:
+        view = next(
+            (view for view in self._named_views if view["name"] == name),
+            None,
+        )
+        if view is None:
+            return False
+        self._apply_saved_state(view["state"])
+        return True
+
+    def _delete_named_view(self, name: str) -> bool:
+        remaining = [view for view in self._named_views if view["name"] != name]
+        if len(remaining) == len(self._named_views):
+            return False
+        self._named_views = remaining
+        self._sync_named_views_store()
+        return True
+
+    @staticmethod
+    def _format_saved_view_date(saved_at: str) -> str:
+        date = datetime.fromisoformat(saved_at.replace("Z", "+00:00"))
+        return date.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
     # ------------------------------------------------------------------
     # View methods (reactive)
     # ------------------------------------------------------------------
@@ -1114,9 +1228,7 @@ class PiCIDDashboard(param.Parameterized):
             sizing_mode="stretch_width",
         )
 
-    @param.depends(
-        "report_dir", "enabled_models", "selected_dataset", "selected_model"
-    )
+    @param.depends("report_dir", "enabled_models", "selected_dataset", "selected_model")
     def _stats_view(self):
         if self._load_error:
             return pn.pane.Alert(self._load_error, alert_type="danger")
@@ -1473,6 +1585,90 @@ class PiCIDDashboard(param.Parameterized):
         spiderweb_plot_sel = pn.widgets.Select.from_param(
             self.param.spiderweb_plot_mode, name="Spiderweb Plot", width=280
         )
+        view_manager_button = pn.widgets.Button(
+            name="View manager",
+            button_type="primary",
+            width=280,
+        )
+        view_name_input = pn.widgets.TextInput(
+            name="View name",
+            placeholder="e.g. Prognostics overview",
+            max_length=80,
+            width=400,
+        )
+        save_view_button = pn.widgets.Button(
+            name="Save current view",
+            button_type="primary",
+            width=180,
+        )
+        saved_view_select = pn.widgets.Select(
+            name="Saved view",
+            options={},
+            width=400,
+        )
+        saved_view_date = pn.pane.Markdown("**Saved:** —")
+        recall_view_button = pn.widgets.Button(
+            name="Recall view",
+            button_type="primary",
+            disabled=True,
+            width=140,
+        )
+        delete_view_button = pn.widgets.Button(
+            name="Delete",
+            button_type="danger",
+            disabled=True,
+            width=100,
+        )
+        view_manager_status = pn.pane.Alert("", visible=False, width=400)
+
+        def _selected_named_view() -> dict[str, Any] | None:
+            selected_name = saved_view_select.value
+            return next(
+                (view for view in self._named_views if view["name"] == selected_name),
+                None,
+            )
+
+        def _refresh_named_view_controls(*_events: Any) -> None:
+            current_name = saved_view_select.value
+            saved_view_select.options = {
+                f"{view['name']} — {self._format_saved_view_date(view['saved_at'])}": (
+                    view["name"]
+                )
+                for view in self._named_views
+            }
+            available_names = {view["name"] for view in self._named_views}
+            saved_view_select.value = (
+                current_name
+                if current_name in available_names
+                else self._named_views[0]["name"]
+                if self._named_views
+                else None
+            )
+            selected_view = _selected_named_view()
+            has_selection = selected_view is not None
+            recall_view_button.disabled = not has_selection
+            delete_view_button.disabled = not has_selection
+            saved_view_date.object = (
+                f"**Saved:** {self._format_saved_view_date(selected_view['saved_at'])}"
+                if selected_view is not None
+                else "**Saved:** —"
+            )
+
+        saved_view_select.param.watch(_refresh_named_view_controls, "value")
+        _refresh_named_view_controls()
+
+        view_manager = pn.Column(
+            "## View manager",
+            "Save the current dashboard settings under a name, or recall a saved view.",
+            view_name_input,
+            save_view_button,
+            pn.layout.Divider(),
+            saved_view_select,
+            saved_view_date,
+            pn.Row(recall_view_button, delete_view_button),
+            view_manager_status,
+            width=660,
+        )
         state_store = pn.widgets.TextInput(
             value=self._serialize_state_json(),
             width=0,
@@ -1492,15 +1688,37 @@ class PiCIDDashboard(param.Parameterized):
         )
         self._state_store = state_store
         self._sync_state_store()
+        named_views_store = pn.widgets.TextInput(
+            value=self._serialize_named_views_json(),
+            width=0,
+            height=0,
+            margin=0,
+            styles={"display": "none"},
+        )
+        named_views_store.jscallback(
+            value=f"""
+            const key = `{_NAMED_VIEWS_STORAGE_PREFIX}:${{window.location.pathname}}`;
+            try {{
+                window.localStorage.setItem(key, cb_obj.value);
+            }} catch (err) {{
+                console.debug("Unable to persist named dashboard views.", err);
+            }}
+            """
+        )
+        self._named_views_store = named_views_store
 
         # On-load restore: a hidden IntInput whose value is bumped to 1 after the
         # WebSocket is established (via pn.state.onload). The jscallback reads
         # localStorage and pushes the JSON to restore_store, which Python then
         # applies via _apply_saved_state.
         restore_store = pn.widgets.TextInput(value="", visible=False)
+        named_views_restore_store = pn.widgets.TextInput(value="", visible=False)
         load_trigger = pn.widgets.IntInput(value=0, visible=False)
         load_trigger.jscallback(
-            args={"restore": restore_store},
+            args={
+                "restore": restore_store,
+                "named_views_restore": named_views_restore_store,
+            },
             value=f"""
             const key = `{_STORAGE_PREFIX}:${{window.location.pathname}}`;
             let saved = null;
@@ -1511,6 +1729,16 @@ class PiCIDDashboard(param.Parameterized):
             }}
             if (saved) {{
                 restore.value = saved;
+            }}
+            const namedViewsKey = `{_NAMED_VIEWS_STORAGE_PREFIX}:${{window.location.pathname}}`;
+            let namedViews = null;
+            try {{
+                namedViews = window.localStorage.getItem(namedViewsKey);
+            }} catch (err) {{
+                console.debug("Unable to read named dashboard views.", err);
+            }}
+            if (namedViews) {{
+                named_views_restore.value = namedViews;
             }}
             """,
         )
@@ -1525,9 +1753,24 @@ class PiCIDDashboard(param.Parameterized):
 
         restore_store.param.watch(_on_restore, "value")
 
+        def _on_named_views_restore(event: param.parameterized.Event) -> None:
+            if not event.new:
+                return
+            views = self._parse_named_views_json(event.new)
+            if views is not None:
+                self._named_views = views
+                _refresh_named_view_controls()
+            named_views_restore_store.value = ""
+
+        named_views_restore_store.param.watch(
+            _on_named_views_restore,
+            "value",
+        )
+
         sidebar = pn.Column(
             pn.pane.Markdown("## piCID Results", styles={"font-size": "1.1em"}),
             pn.layout.Divider(),
+            view_manager_button,
             "**Data source**",
             dir_input,
             pn.layout.Divider(),
@@ -1564,6 +1807,8 @@ class PiCIDDashboard(param.Parameterized):
             state_store,
             load_trigger,
             restore_store,
+            named_views_store,
+            named_views_restore_store,
             width=300,
         )
 
@@ -1598,12 +1843,54 @@ class PiCIDDashboard(param.Parameterized):
             main=[tabs],
             accent="#0072B2",
         )
+        modal_content = pn.Column(width=720)
+        template.modal.append(modal_content)
+
+        def _show_manager(*_events: Any) -> None:
+            view_manager_status.visible = False
+            _refresh_named_view_controls()
+            modal_content.objects = [view_manager]
+            template.open_modal()
+
+        def _save_view(*_events: Any) -> None:
+            try:
+                self._save_named_view(view_name_input.value)
+            except ValueError as exc:
+                view_manager_status.object = str(exc)
+                view_manager_status.alert_type = "danger"
+                view_manager_status.visible = True
+                return
+            saved_name = view_name_input.value.strip()
+            _refresh_named_view_controls()
+            saved_view_select.value = saved_name
+            view_name_input.value = ""
+            view_manager_status.object = f"Saved **{saved_name}**."
+            view_manager_status.alert_type = "success"
+            view_manager_status.visible = True
+
+        def _recall_view(*_events: Any) -> None:
+            selected_name = saved_view_select.value
+            if selected_name and self._recall_named_view(selected_name):
+                template.close_modal()
+
+        def _delete_view(*_events: Any) -> None:
+            selected_name = saved_view_select.value
+            if selected_name and self._delete_named_view(selected_name):
+                _refresh_named_view_controls()
+                view_manager_status.object = f"Deleted **{selected_name}**."
+                view_manager_status.alert_type = "success"
+                view_manager_status.visible = True
+
+        view_manager_button.on_click(_show_manager)
+        save_view_button.on_click(_save_view)
+        recall_view_button.on_click(_recall_view)
+        delete_view_button.on_click(_delete_view)
 
         if self._alias_warnings:
             rows = "\n".join(
                 f"| `{old}` | `{new}` |" for old, new in self._alias_warnings
             )
-            modal_content = pn.pane.Markdown(
+            alias_markdown = pn.pane.Markdown(
                 "## ⚠️ Model Name Aliases Applied\n\n"
                 "Both old and new module paths were found simultaneously in the loaded data. "
                 "Runs under the **new name** were merged into the **old name** "
@@ -1612,8 +1899,13 @@ class PiCIDDashboard(param.Parameterized):
                 "|---|---|\n" + rows,
                 width=700,
             )
-            template.modal.append(pn.Column(modal_content, width=720))
-            pn.state.onload(template.open_modal)
+            alias_content = pn.Column(alias_markdown, width=720)
+
+            def _show_alias_warnings() -> None:
+                modal_content.objects = [alias_content]
+                template.open_modal()
+
+            pn.state.onload(_show_alias_warnings)
 
         return template
 
