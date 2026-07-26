@@ -1768,3 +1768,94 @@ def test_build_latex_table_multiplier_in_header_and_caption():
     assert "% Values multiplied by 100" in latex_scaled
     caption = _extract_caption(latex_scaled)
     assert "Values multiplied by 100." in caption
+
+
+def _make_virtual_dataset_loader() -> tuple[FakeResultsLoader, str]:
+    loader = _make_loader()
+    labels = loader.configure_hp_comparison(
+        DATASET,
+        ["task_definition.seq_len"],
+        [PRIMARY_MODEL],
+    )
+    return loader, labels[0]
+
+
+def test_virtual_dataset_flows_through_overview_frames() -> None:
+    loader, virtual_dataset = _make_virtual_dataset_loader()
+
+    long, model_order, dataset_order = views._build_heatmap_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        enabled_datasets=[virtual_dataset],
+        enabled_models=[PRIMARY_MODEL],
+    )
+
+    assert dataset_order == [virtual_dataset, "Average", "Average rank"]
+    assert model_order == [PRIMARY_MODEL]
+    assert long.loc[long["dataset"] == virtual_dataset, "value"].item() == 10.0
+
+
+def test_bar_and_hp_impact_accept_filtered_virtual_dataset() -> None:
+    loader, virtual_dataset = _make_virtual_dataset_loader()
+
+    bar = views.build_bar_chart(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        virtual_dataset,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_models=[PRIMARY_MODEL],
+    )
+    hp_frame, _selection, _hp_columns, _metric_columns = views._build_hp_impact_frame(
+        loader,
+        virtual_dataset,
+        PRIMARY_MODEL,
+        metric_key=PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        precision=4,
+    )
+
+    assert isinstance(bar, pn.pane.HoloViews)
+    assert hp_frame is not None
+    assert hp_frame["task_definition.seq_len"].tolist() == [16]
+
+
+def test_virtual_summary_stats_and_model_summary_are_derived_from_slice() -> None:
+    loader, virtual_dataset = _make_virtual_dataset_loader()
+
+    summary = views.build_summary_table(
+        loader,
+        virtual_dataset,
+        metric=PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_models=[PRIMARY_MODEL],
+    )
+    stats = views.build_stats_table(
+        loader,
+        virtual_dataset,
+        enabled_models=[PRIMARY_MODEL],
+        metric_key=PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+    )
+    model_summary = views.build_model_summary_table(
+        loader,
+        virtual_dataset,
+        metric_key=PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_models=[PRIMARY_MODEL],
+    )
+
+    assert summary.value.loc[0, "HP constraints"] == "task_definition.seq_len=16"
+    assert summary.value.loc[0, "Selected Config"] == 0
+    assert summary.value.loc[0, "Mean"] == 10.0
+    assert stats.value.loc[0, "Matching Configs"] == 1
+    assert stats.value.loc[0, "Runs in Selected Config"] == 5.0
+    assert model_summary.value.loc[0, "HP constraints"] == "task_definition.seq_len=16"
+    assert model_summary.value.loc[0, "Displayed score"] == "10.0"

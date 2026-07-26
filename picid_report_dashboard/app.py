@@ -71,7 +71,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 10
+_PERSISTED_STATE_VERSION = 11
 _STORAGE_PREFIX = "picid_dashboard_state"
 _NAMED_VIEWS_STORAGE_PREFIX = "picid_dashboard_named_views"
 _ALL_MODELS_OPTION = "— All models —"
@@ -99,6 +99,8 @@ _PERSISTED_STATE_PARAMS = (
     "show_n",
     "show_rank",
     "spiderweb_plot_mode",
+    "hp_comparison_source",
+    "hp_comparison_dimensions",
     "enabled_datasets",
     "enabled_models",
     "selected_dataset",
@@ -245,6 +247,16 @@ class PiCIDDashboard(param.Parameterized):
     enabled_datasets = param.ListSelector(
         default=[], objects=[], doc="Datasets included in overview visualisations"
     )
+    hp_comparison_source = param.Selector(
+        default=None,
+        objects=[],
+        doc="Physical dataset expanded into HP-constrained virtual datasets",
+    )
+    hp_comparison_dimensions = param.ListSelector(
+        default=[],
+        objects=[],
+        doc="Hyperparameters used to differentiate virtual datasets",
+    )
     enabled_models = param.ListSelector(
         default=[], objects=[], doc="Models included in dashboard visualisations"
     )
@@ -298,6 +310,7 @@ class PiCIDDashboard(param.Parameterized):
         self._sync_selectors_in_progress = False
         self._datasets_initialized = False
         self._models_initialized = False
+        self._hp_comparison_error: str | None = None
         self._suspend_alt_metric_tracking = False
         self._suspend_alt_sort_metric_tracking = False
         self._load_data()
@@ -468,12 +481,139 @@ class PiCIDDashboard(param.Parameterized):
         """Resolve the best dataset to keep when display-metric validity changes."""
         if current_dataset in valid_datasets:
             return str(current_dataset)
-        current_base = _dataset_base_name(current_dataset)
-        if current_base is not None:
-            for dataset_name in valid_datasets:
-                if _dataset_base_name(dataset_name) == current_base:
-                    return dataset_name
+        if self._loader is None:
+            return None
+        source_dataset = getattr(self._loader, "source_dataset", None)
+        current_source = (
+            source_dataset(str(current_dataset))
+            if callable(source_dataset)
+            else _dataset_base_name(current_dataset)
+        )
+        for dataset_name in valid_datasets:
+            candidate_source = (
+                source_dataset(dataset_name)
+                if callable(source_dataset)
+                else _dataset_base_name(dataset_name)
+            )
+            if candidate_source == current_source:
+                return dataset_name
         return None
+
+    def _configure_hp_comparison_catalog(self) -> list[str]:
+        if self._loader is None:
+            return []
+        loader = self._loader
+        if not all(
+            hasattr(loader, method)
+            for method in (
+                "clear_hp_comparison",
+                "configure_hp_comparison",
+                "hp_comparison_options",
+            )
+        ):
+            self.param["hp_comparison_source"].objects = list(loader.datasets)
+            self.hp_comparison_source = None
+            self.hp_comparison_dimensions = []
+            self.param["hp_comparison_dimensions"].objects = []
+            return []
+        physical_datasets = [str(dataset) for dataset in loader.datasets]
+        self.param["hp_comparison_source"].objects = physical_datasets
+        if self.hp_comparison_source not in physical_datasets:
+            self.hp_comparison_source = None
+            self.hp_comparison_dimensions = []
+            self.param["hp_comparison_dimensions"].objects = []
+            loader.clear_hp_comparison()
+            self._hp_comparison_error = None
+            return []
+
+        dimensions, missing_models = loader.hp_comparison_options(
+            self.hp_comparison_source,
+            self.enabled_models,
+        )
+        if missing_models:
+            loader.clear_hp_comparison()
+            self._hp_comparison_error = (
+                "HP comparison data is missing for: " + ", ".join(missing_models)
+            )
+            return []
+        self.param["hp_comparison_dimensions"].objects = dimensions
+        selected_dimensions = [
+            dimension
+            for dimension in self.hp_comparison_dimensions
+            if dimension in dimensions
+        ]
+        if self.hp_comparison_dimensions != selected_dimensions:
+            self.hp_comparison_dimensions = selected_dimensions
+        if not selected_dimensions:
+            loader.clear_hp_comparison()
+            self._hp_comparison_error = None
+            return []
+        try:
+            labels = loader.configure_hp_comparison(
+                self.hp_comparison_source,
+                selected_dimensions,
+                self.enabled_models,
+            )
+        except ValueError as exc:
+            loader.clear_hp_comparison()
+            self._hp_comparison_error = str(exc)
+            return []
+        self._hp_comparison_error = None
+        return labels
+
+    def _apply_hp_comparison(
+        self,
+        source_dataset: str,
+        dimensions: list[str],
+    ) -> list[str]:
+        if self._loader is None:
+            return []
+        labels = self._loader.configure_hp_comparison(
+            source_dataset,
+            dimensions,
+            self.enabled_models,
+        )
+        previous_enabled = [
+            dataset
+            for dataset in self.enabled_datasets
+            if dataset in self._loader.datasets and dataset != source_dataset
+        ]
+        self.hp_comparison_source = source_dataset
+        self.param[
+            "hp_comparison_dimensions"
+        ].objects = self._loader.hp_comparison_options(
+            source_dataset,
+            self.enabled_models,
+        )[0]
+        self.hp_comparison_dimensions = list(dimensions)
+        self._datasets_initialized = True
+        self.enabled_datasets = [*previous_enabled, *labels]
+        self._sync_selectors(preferred_dataset=labels[0] if labels else _UNSET)
+        self._sync_state_store()
+        return labels
+
+    def _clear_hp_comparison(self) -> None:
+        if self._loader is None:
+            return
+        source_dataset = self.hp_comparison_source
+        enabled_physical = [
+            dataset
+            for dataset in self.enabled_datasets
+            if self._loader.expanded_dataset(dataset) is None
+        ]
+        self._loader.clear_hp_comparison()
+        if (
+            source_dataset in self._loader.datasets
+            and source_dataset not in enabled_physical
+        ):
+            enabled_physical.append(source_dataset)
+        self.hp_comparison_source = None
+        self.hp_comparison_dimensions = []
+        self.param["hp_comparison_dimensions"].objects = []
+        self._datasets_initialized = True
+        self.enabled_datasets = enabled_physical
+        self._sync_selectors(preferred_dataset=source_dataset)
+        self._sync_state_store()
 
     def _sync_selectors(self, *, preferred_dataset: Any = _UNSET) -> None:
         if self._loader is None or self._sync_selectors_in_progress:
@@ -557,7 +697,11 @@ class PiCIDDashboard(param.Parameterized):
                 self._models_initialized = True
             if self.enabled_models != enabled_models:
                 self.enabled_models = enabled_models
-            available_datasets = loader.datasets
+            comparison_was_invalid = self._hp_comparison_error is not None
+            comparison_labels = self._configure_hp_comparison_catalog()
+            available_datasets = list(
+                getattr(loader, "dashboard_datasets", loader.datasets)
+            )
             self.param["enabled_datasets"].objects = available_datasets
             if self._datasets_initialized:
                 enabled_datasets = [
@@ -565,6 +709,12 @@ class PiCIDDashboard(param.Parameterized):
                     for dataset_name in available_datasets
                     if dataset_name in self.enabled_datasets
                 ]
+                if comparison_was_invalid and comparison_labels:
+                    enabled_datasets.extend(
+                        label
+                        for label in comparison_labels
+                        if label not in enabled_datasets
+                    )
             else:
                 enabled_datasets = list(available_datasets)
                 self._datasets_initialized = True
@@ -668,7 +818,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, 4, 5, 6, 7, 8, 9, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, 5, 6, 7, 8, 9, 10, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -683,6 +833,7 @@ class PiCIDDashboard(param.Parameterized):
             "selected_dataset",
             "selected_model",
             "latex_rename_json",
+            "hp_comparison_source",
         )
         bool_fields = (
             "use_alt_metric",
@@ -716,6 +867,11 @@ class PiCIDDashboard(param.Parameterized):
             isinstance(model_name, str) for model_name in enabled_models
         ):
             parsed["enabled_models"] = enabled_models
+        hp_comparison_dimensions = payload.get("hp_comparison_dimensions")
+        if isinstance(hp_comparison_dimensions, list) and all(
+            isinstance(dimension, str) for dimension in hp_comparison_dimensions
+        ):
+            parsed["hp_comparison_dimensions"] = hp_comparison_dimensions
         latex_precision = payload.get("latex_precision")
         if isinstance(latex_precision, int) and not isinstance(latex_precision, bool):
             parsed["latex_precision"] = max(1, min(8, latex_precision))
@@ -765,16 +921,6 @@ class PiCIDDashboard(param.Parameterized):
                     setattr(self, name, state[name])
 
             if self._loader is not None:
-                saved_enabled_datasets = state.get("enabled_datasets", _UNSET)
-                if isinstance(saved_enabled_datasets, list):
-                    saved_enabled_set = set(saved_enabled_datasets)
-                    self.enabled_datasets = [
-                        dataset_name
-                        for dataset_name in self._loader.datasets
-                        if dataset_name in saved_enabled_set
-                    ]
-                    self._datasets_initialized = True
-
                 saved_enabled_models = state.get("enabled_models", _UNSET)
                 if isinstance(saved_enabled_models, list):
                     saved_enabled_set = set(saved_enabled_models)
@@ -784,6 +930,57 @@ class PiCIDDashboard(param.Parameterized):
                         if model_name in saved_enabled_set
                     ]
                     self._models_initialized = True
+
+                source_dataset = state.get("hp_comparison_source")
+                dimensions = state.get("hp_comparison_dimensions")
+                hp_comparison_supported = hasattr(
+                    self._loader,
+                    "hp_comparison_options",
+                )
+                if (
+                    isinstance(source_dataset, str)
+                    and source_dataset in self._loader.datasets
+                    and isinstance(dimensions, list)
+                    and hp_comparison_supported
+                ):
+                    self.hp_comparison_source = source_dataset
+                    available_dimensions, _missing_models = (
+                        self._loader.hp_comparison_options(
+                            source_dataset,
+                            self.enabled_models,
+                        )
+                    )
+                    self.param[
+                        "hp_comparison_dimensions"
+                    ].objects = available_dimensions
+                    self.hp_comparison_dimensions = [
+                        dimension
+                        for dimension in dimensions
+                        if dimension in available_dimensions
+                    ]
+                    self._configure_hp_comparison_catalog()
+                else:
+                    self.hp_comparison_source = None
+                    self.hp_comparison_dimensions = []
+                    if hp_comparison_supported:
+                        self._loader.clear_hp_comparison()
+
+                saved_enabled_datasets = state.get("enabled_datasets", _UNSET)
+                if isinstance(saved_enabled_datasets, list):
+                    saved_enabled_set = set(saved_enabled_datasets)
+                    available_datasets = getattr(
+                        self._loader,
+                        "dashboard_datasets",
+                        self._loader.datasets,
+                    )
+                    available_datasets = list(available_datasets)
+                    self.param["enabled_datasets"].objects = available_datasets
+                    self.enabled_datasets = [
+                        dataset_name
+                        for dataset_name in available_datasets
+                        if dataset_name in saved_enabled_set
+                    ]
+                    self._datasets_initialized = True
                 for name in ("metric_key", "sort_metric_key"):
                     self._apply_selector_state(name, state.get(name))
 
@@ -1213,6 +1410,9 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 use_alt_metric=self.use_alt_metric,
                 enabled_models=self.enabled_models,
+                sort_metric_key=self.sort_metric_key,
+                alt_sort_metric_key=self._active_alt_sort_metric(),
+                mode=self.mode,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -1243,6 +1443,11 @@ class PiCIDDashboard(param.Parameterized):
             self.selected_dataset,
             self._active_model(),
             enabled_models=self.enabled_models,
+            metric_key=self.metric_key,
+            sort_metric_key=self.sort_metric_key,
+            alt_metric_key=self._active_alt_metric(),
+            alt_sort_metric_key=self._active_alt_sort_metric(),
+            use_alt_metric=self.use_alt_metric,
         )
 
     def _latex_configurator_panel(self) -> pn.viewable.Viewable:
@@ -1599,6 +1804,11 @@ class PiCIDDashboard(param.Parameterized):
         enabled_model_sel = pn.widgets.MultiChoice.from_param(
             self.param.enabled_models, name="Models shown", width=280
         )
+        hp_comparison_button = pn.widgets.Button(
+            name="Compare HP configurations",
+            button_type="primary",
+            width=280,
+        )
         dataset_sel = pn.widgets.Select.from_param(
             self.param.selected_dataset, name="Dataset", width=280
         )
@@ -1692,6 +1902,136 @@ class PiCIDDashboard(param.Parameterized):
             view_manager_status,
             width=660,
         )
+        hp_source_select = pn.widgets.Select(
+            name="Source dataset",
+            options=list(self._loader.datasets) if self._loader is not None else [],
+            width=660,
+        )
+        hp_dimension_select = pn.widgets.MultiChoice(
+            name="Differentiate by hyperparameters",
+            options=[],
+            value=[],
+            width=660,
+        )
+        hp_comparison_status = pn.pane.Alert(
+            "",
+            alert_type="light",
+            visible=True,
+            width=660,
+        )
+        hp_comparison_preview = pn.pane.Markdown(width=660)
+        apply_hp_comparison_button = pn.widgets.Button(
+            name="Apply comparison",
+            button_type="primary",
+            disabled=True,
+            width=180,
+        )
+        clear_hp_comparison_button = pn.widgets.Button(
+            name="Clear comparison",
+            button_type="default",
+            disabled=self.hp_comparison_source is None,
+            width=180,
+        )
+        hp_comparison_panel = pn.Column(
+            "## Compare HP configurations",
+            (
+                "Split one physical dataset into virtual datasets using selected "
+                "hyperparameter values. Each enabled model must provide every "
+                "generated slice. Unselected hyperparameters remain optimized "
+                "independently within each slice."
+            ),
+            hp_source_select,
+            hp_dimension_select,
+            hp_comparison_status,
+            hp_comparison_preview,
+            pn.Row(apply_hp_comparison_button, clear_hp_comparison_button),
+            width=680,
+        )
+        hp_refreshing = False
+
+        def _refresh_hp_comparison_preview(*_events: Any) -> None:
+            nonlocal hp_refreshing
+            if hp_refreshing:
+                return
+            hp_refreshing = True
+            try:
+                loader = self._loader
+                if loader is None:
+                    hp_comparison_status.object = "No report data is loaded."
+                    hp_comparison_status.alert_type = "danger"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                source_dataset = hp_source_select.value
+                if source_dataset not in loader.datasets:
+                    hp_comparison_status.object = "Select a source dataset."
+                    hp_comparison_status.alert_type = "warning"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                dimensions, missing_models = loader.hp_comparison_options(
+                    source_dataset,
+                    self.enabled_models,
+                )
+                hp_dimension_select.options = dimensions
+                hp_dimension_select.value = [
+                    dimension
+                    for dimension in hp_dimension_select.value
+                    if dimension in dimensions
+                ]
+                if missing_models:
+                    hp_comparison_status.object = (
+                        "HP configuration data is missing for these enabled models: "
+                        + ", ".join(missing_models)
+                        + ". Remove them from Models shown or choose another dataset."
+                    )
+                    hp_comparison_status.alert_type = "danger"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                if not dimensions:
+                    hp_comparison_status.object = (
+                        "No varying HP dimensions are shared by all enabled models."
+                    )
+                    hp_comparison_status.alert_type = "warning"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                if not hp_dimension_select.value:
+                    hp_comparison_status.object = (
+                        "Choose one or more shared hyperparameters."
+                    )
+                    hp_comparison_status.alert_type = "light"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                try:
+                    labels = loader.preview_hp_comparison(
+                        source_dataset,
+                        hp_dimension_select.value,
+                        self.enabled_models,
+                    )
+                except ValueError as exc:
+                    hp_comparison_status.object = str(exc)
+                    hp_comparison_status.alert_type = "danger"
+                    hp_comparison_preview.object = ""
+                    apply_hp_comparison_button.disabled = True
+                    return
+                preview_labels = "\n".join(f"- `{label}`" for label in labels[:20])
+                if len(labels) > 20:
+                    preview_labels += f"\n- ... and {len(labels) - 20} more"
+                hp_comparison_status.object = (
+                    f"{len(labels)} comparable virtual datasets across "
+                    f"{len(self.enabled_models)} enabled models."
+                )
+                hp_comparison_status.alert_type = "success"
+                hp_comparison_preview.object = (
+                    "### Generated datasets\n" + preview_labels
+                )
+                apply_hp_comparison_button.disabled = not labels
+            finally:
+                hp_refreshing = False
+
         state_store = pn.widgets.TextInput(
             value=self._serialize_state_json(),
             width=0,
@@ -1819,6 +2159,7 @@ class PiCIDDashboard(param.Parameterized):
             pn.layout.Divider(),
             "**Datasets**",
             enabled_dataset_sel,
+            hp_comparison_button,
             "**Models**",
             enabled_model_sel,
             pn.layout.Divider(),
@@ -1875,6 +2216,51 @@ class PiCIDDashboard(param.Parameterized):
             modal_content.objects = [view_manager]
             template.open_modal()
 
+        def _show_hp_comparison(*_events: Any) -> None:
+            if self._loader is None:
+                return
+            hp_source_select.options = list(self._loader.datasets)
+            source_dataset = self.hp_comparison_source
+            if source_dataset not in self._loader.datasets:
+                focused_source = self._loader.source_dataset(str(self.selected_dataset))
+                source_dataset = (
+                    focused_source
+                    if focused_source in self._loader.datasets
+                    else next(iter(self._loader.datasets), None)
+                )
+            hp_source_select.value = source_dataset
+            dimensions, _missing_models = self._loader.hp_comparison_options(
+                source_dataset,
+                self.enabled_models,
+            )
+            hp_dimension_select.options = dimensions
+            hp_dimension_select.value = (
+                list(self.hp_comparison_dimensions)
+                if source_dataset == self.hp_comparison_source
+                else []
+            )
+            clear_hp_comparison_button.disabled = self.hp_comparison_source is None
+            _refresh_hp_comparison_preview()
+            modal_content.objects = [hp_comparison_panel]
+            template.open_modal()
+
+        def _apply_hp_comparison_from_overlay(*_events: Any) -> None:
+            try:
+                self._apply_hp_comparison(
+                    str(hp_source_select.value),
+                    list(hp_dimension_select.value),
+                )
+            except ValueError as exc:
+                hp_comparison_status.object = str(exc)
+                hp_comparison_status.alert_type = "danger"
+                apply_hp_comparison_button.disabled = True
+                return
+            template.close_modal()
+
+        def _clear_hp_comparison_from_overlay(*_events: Any) -> None:
+            self._clear_hp_comparison()
+            template.close_modal()
+
         def _save_view(*_events: Any) -> None:
             try:
                 self._save_named_view(view_name_input.value)
@@ -1905,6 +2291,12 @@ class PiCIDDashboard(param.Parameterized):
                 view_manager_status.visible = True
 
         view_manager_button.on_click(_show_manager)
+        hp_comparison_button.on_click(_show_hp_comparison)
+        apply_hp_comparison_button.on_click(_apply_hp_comparison_from_overlay)
+        clear_hp_comparison_button.on_click(_clear_hp_comparison_from_overlay)
+        hp_source_select.param.watch(_refresh_hp_comparison_preview, "value")
+        hp_dimension_select.param.watch(_refresh_hp_comparison_preview, "value")
+        self.param.watch(_refresh_hp_comparison_preview, "enabled_models")
         save_view_button.on_click(_save_view)
         recall_view_button.on_click(_recall_view)
         delete_view_button.on_click(_delete_view)

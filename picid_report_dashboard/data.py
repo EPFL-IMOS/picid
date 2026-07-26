@@ -19,6 +19,7 @@ import glob
 import os
 import re
 from collections.abc import Collection
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Optional
 
@@ -173,6 +174,20 @@ def _normalize_scalar(value: Any) -> Any:
     return value
 
 
+@dataclass(frozen=True)
+class ExpandedDataset:
+    """One physical dataset constrained to a selected HP-value tuple."""
+
+    source_dataset: str
+    dimensions: tuple[str, ...]
+    values: tuple[str, ...]
+    label: str
+
+    @property
+    def constraints(self) -> dict[str, str]:
+        return dict(zip(self.dimensions, self.values, strict=True))
+
+
 class ResultsLoader:
     """Load and merge all results.nc files under a report_output base directory."""
 
@@ -180,6 +195,7 @@ class ResultsLoader:
         self.base_dir = os.path.abspath(base_dir)
         self._hp_ds_cache: dict[tuple[str, str], xr.Dataset | None] = {}
         self._applied_model_aliases: list[tuple[str, str]] = []
+        self._expanded_datasets: dict[str, ExpandedDataset] = {}
         self._check_base_dir()
 
     def _check_base_dir(self) -> None:
@@ -249,6 +265,169 @@ class ResultsLoader:
     def datasets(self) -> list[str]:
         """Unique dataset coordinate labels (may include project suffix for duplicates)."""
         return list(self.xarray_dataset.coords["dataset"].values)
+
+    @property
+    def dashboard_datasets(self) -> list[str]:
+        """Physical datasets followed by configured HP-constrained datasets."""
+        return [str(dataset) for dataset in self.datasets] + list(
+            getattr(self, "_expanded_datasets", {})
+        )
+
+    def expanded_dataset(self, dataset: str) -> ExpandedDataset | None:
+        """Return the expansion specification for a virtual dataset label."""
+        return getattr(self, "_expanded_datasets", {}).get(str(dataset))
+
+    def source_dataset(self, dataset: str) -> str:
+        """Resolve a dashboard dataset label to its physical source dataset."""
+        expanded = self.expanded_dataset(dataset)
+        return expanded.source_dataset if expanded is not None else str(dataset)
+
+    def clear_hp_comparison(self) -> None:
+        """Remove all configured virtual HP datasets."""
+        self._expanded_datasets = {}
+
+    def hp_comparison_options(
+        self,
+        source_dataset: str,
+        models: Collection[str],
+    ) -> tuple[list[str], list[str]]:
+        """Return common varying HP dimensions and models without HP data."""
+        coord_sets: list[set[str]] = []
+        datasets: list[xr.Dataset] = []
+        missing_models: list[str] = []
+        for model in models:
+            hp_ds = self.hp_impact_ds(source_dataset, str(model))
+            if _is_empty_hp_dataset(hp_ds):
+                missing_models.append(str(model))
+                continue
+            assert hp_ds is not None
+            coord_sets.append(
+                {
+                    str(coord)
+                    for coord in hp_ds.coords
+                    if coord not in {"config", "metric", "Model"}
+                    and hp_ds.coords[coord].dims == ("config",)
+                }
+            )
+            datasets.append(hp_ds)
+        if missing_models or not coord_sets:
+            return [], missing_models
+
+        common_dimensions = set.intersection(*coord_sets)
+        varying_dimensions = []
+        for dimension in sorted(common_dimensions):
+            values = {
+                str(_normalize_scalar(value))
+                for hp_ds in datasets
+                for value in hp_ds.coords[dimension].values.tolist()
+            }
+            if len(values) > 1:
+                varying_dimensions.append(dimension)
+        return varying_dimensions, []
+
+    def configure_hp_comparison(
+        self,
+        source_dataset: str,
+        dimensions: Collection[str],
+        models: Collection[str],
+    ) -> list[str]:
+        """Create comparable virtual datasets for common selected HP tuples."""
+        normalized_source = str(source_dataset)
+        normalized_dimensions = tuple(dict.fromkeys(str(name) for name in dimensions))
+        normalized_models = [str(model) for model in models]
+        self.clear_hp_comparison()
+        if not normalized_dimensions:
+            return []
+        if normalized_source not in self.datasets:
+            raise ValueError(f"Dataset {normalized_source!r} is not available.")
+
+        tuple_sets: list[set[tuple[str, ...]]] = []
+        missing_models: list[str] = []
+        for model in normalized_models:
+            hp_ds = self.hp_impact_ds(normalized_source, model)
+            if _is_empty_hp_dataset(hp_ds) or any(
+                dimension not in hp_ds.coords for dimension in normalized_dimensions
+            ):
+                missing_models.append(model)
+                continue
+            assert hp_ds is not None
+            tuple_sets.append(
+                {
+                    tuple(
+                        str(_normalize_scalar(hp_ds.coords[dimension].values[index]))
+                        for dimension in normalized_dimensions
+                    )
+                    for index in range(hp_ds.sizes["config"])
+                }
+            )
+        if missing_models:
+            missing = ", ".join(missing_models)
+            raise ValueError(
+                "HP comparison is unavailable for these enabled models: "
+                f"{missing}. Disable them or choose another dataset."
+            )
+        if not tuple_sets:
+            raise ValueError("No HP configurations are available for this dataset.")
+
+        common_tuples = sorted(set.intersection(*tuple_sets))
+        if not common_tuples:
+            raise ValueError(
+                "The enabled models do not share any selected HP-value tuples."
+            )
+        for values in common_tuples:
+            suffix = " · ".join(
+                f"{dimension}={value}"
+                for dimension, value in zip(
+                    normalized_dimensions,
+                    values,
+                    strict=True,
+                )
+            )
+            label = f"{normalized_source} · {suffix}"
+            self._expanded_datasets[label] = ExpandedDataset(
+                source_dataset=normalized_source,
+                dimensions=normalized_dimensions,
+                values=values,
+                label=label,
+            )
+        return list(self._expanded_datasets)
+
+    def preview_hp_comparison(
+        self,
+        source_dataset: str,
+        dimensions: Collection[str],
+        models: Collection[str],
+    ) -> list[str]:
+        """Return prospective virtual labels without changing the active catalog."""
+        active = self._expanded_datasets
+        try:
+            return self.configure_hp_comparison(
+                source_dataset,
+                dimensions,
+                models,
+            )
+        finally:
+            self._expanded_datasets = active
+
+    def filter_hp_configs(self, dataset: str, model: str) -> xr.Dataset | None:
+        """Return HP configs constrained by a virtual dataset specification."""
+        hp_ds = self.hp_impact_ds(self.source_dataset(dataset), model)
+        expanded = self.expanded_dataset(dataset)
+        if _is_empty_hp_dataset(hp_ds) or expanded is None:
+            return hp_ds
+        assert hp_ds is not None
+        mask = np.ones(hp_ds.sizes["config"], dtype=bool)
+        for dimension, value in expanded.constraints.items():
+            if dimension not in hp_ds.coords:
+                return hp_ds.isel(config=[])
+            coord_values = np.asarray(
+                [
+                    str(_normalize_scalar(coord_value))
+                    for coord_value in hp_ds.coords[dimension].values.tolist()
+                ]
+            )
+            mask &= coord_values == value
+        return hp_ds.isel(config=np.flatnonzero(mask).tolist())
 
     @property
     def models(self) -> list[str]:
@@ -388,6 +567,7 @@ class ResultsLoader:
         coordinate labelling. The suffix is stripped for filename lookup and
         used to restrict the search to the matching project directory.
         """
+        dataset = self.source_dataset(dataset)
         cache_key = (dataset, model)
         if cache_key in self._hp_ds_cache:
             return self._hp_ds_cache[cache_key]
@@ -423,7 +603,12 @@ class ResultsLoader:
         """Return a single metadata value from results.nc for one dataset/model."""
         try:
             value = (
-                self.xarray_dataset[variable].sel(dataset=dataset, model=model).values
+                self.xarray_dataset[variable]
+                .sel(
+                    dataset=self.source_dataset(dataset),
+                    model=model,
+                )
+                .values
             )
         except Exception:
             return None
@@ -483,7 +668,7 @@ class ResultsLoader:
                 alt_metric_key=alt_metric_key,
                 use_alt_metric=use_alt_metric,
             )
-            hp_ds = self.hp_impact_ds(dataset, model_name)
+            hp_ds = self.filter_hp_configs(dataset, model_name)
             if self._metric_has_finite_hp_values(hp_ds, display_metric_key):
                 return True
         return False
@@ -499,7 +684,7 @@ class ResultsLoader:
         """Return datasets that have at least one finite display metric value."""
         return [
             dataset_name
-            for dataset_name in self.datasets
+            for dataset_name in self.dashboard_datasets
             if self.dataset_has_display_metric(
                 dataset_name,
                 metric_key=metric_key,
@@ -558,9 +743,12 @@ class ResultsLoader:
             else sort_metric_key
         )
 
-        hp_ds = self.hp_impact_ds(dataset, model)
-        opt_metric_key = self.metadata_value("opt_metric", dataset, model)
-        stored_sort_metric_key = self.metadata_value("sort_metric", dataset, model)
+        hp_ds = self.filter_hp_configs(dataset, model)
+        source_dataset = self.source_dataset(dataset)
+        opt_metric_key = self.metadata_value("opt_metric", source_dataset, model)
+        stored_sort_metric_key = self.metadata_value(
+            "sort_metric", source_dataset, model
+        )
         effective_sort_metric_key = (
             requested_sort_metric_key or opt_metric_key or stored_sort_metric_key
         )
@@ -622,7 +810,7 @@ class ResultsLoader:
         use_alt_metric: bool = True,
     ) -> tuple[xr.Dataset | None, dict[str, Any]]:
         """Return the HP dataset sorted by the active dashboard sort metric."""
-        hp_ds = self.hp_impact_ds(dataset, model)
+        hp_ds = self.filter_hp_configs(dataset, model)
         selection = self.resolve_metric_selection(
             dataset,
             model,
@@ -666,14 +854,19 @@ class ResultsLoader:
             alt_sort_metric_key=alt_sort_metric_key,
             use_alt_metric=use_alt_metric,
         )
+        expanded = self.expanded_dataset(dataset)
         record = {
             **selection,
             "value": np.nan,
             "std": np.nan,
             "n": np.nan,
             "config_index": None,
+            "source_dataset": self.source_dataset(dataset),
+            "hp_constraints": expanded.constraints if expanded is not None else {},
+            "matching_configs": (
+                0 if sorted_hp_ds is None else sorted_hp_ds.sizes.get("config", 0)
+            ),
         }
-
         if _is_empty_hp_dataset(sorted_hp_ds):
             return record
         if sorted_hp_ds.sizes.get("config", 0) == 0:

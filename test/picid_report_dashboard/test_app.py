@@ -10,6 +10,7 @@ import xarray as xr
 from panel.io.location import Location
 
 from picid_report_dashboard import app as dashboard_app
+from picid_report_dashboard.data import ResultsLoader as DataResultsLoader
 
 
 def _loader_factory(loader_map):
@@ -1316,6 +1317,9 @@ def test_summary_view_includes_verification_model_summary(monkeypatch):
         "alt_metric_key": "test/mae_denormalized",
         "use_alt_metric": True,
         "enabled_models": ["model_a"],
+        "sort_metric_key": dashboard_app._DEFAULT_METRIC,
+        "alt_sort_metric_key": "test/mae_denormalized",
+        "mode": "min",
     }
     assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
     assert (
@@ -1326,3 +1330,106 @@ def test_summary_view_includes_verification_model_summary(monkeypatch):
         model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
     )
     assert model_summary_call["kwargs"]["enabled_models"] == ["model_a"]
+
+
+class _HpStateResultsLoader(DataResultsLoader):
+    DATASET = "Dataset A [project]"
+    MODEL = "model_a"
+
+    def __init__(self, base_dir: str) -> None:
+        self.base_dir = base_dir
+        self._expanded_datasets = {}
+        self._hp_ds_cache = {}
+        self._applied_model_aliases = []
+        coords = {
+            "dataset": [self.DATASET],
+            "model": [self.MODEL],
+            "metric_key": [dashboard_app._DEFAULT_METRIC],
+        }
+        metadata_coords = {
+            "dataset": [self.DATASET],
+            "model": [self.MODEL],
+        }
+        self._xarray_dataset = xr.Dataset(
+            {
+                "mean": xr.DataArray(
+                    [[[1.0]]],
+                    dims=("dataset", "model", "metric_key"),
+                    coords=coords,
+                ),
+                "std": xr.DataArray(
+                    [[[0.1]]],
+                    dims=("dataset", "model", "metric_key"),
+                    coords=coords,
+                ),
+                "n": xr.DataArray(
+                    [[[5.0]]],
+                    dims=("dataset", "model", "metric_key"),
+                    coords=coords,
+                ),
+                "sort_metric": xr.DataArray(
+                    [[dashboard_app._DEFAULT_METRIC]],
+                    dims=("dataset", "model"),
+                    coords=metadata_coords,
+                ),
+                "opt_metric": xr.DataArray(
+                    [[dashboard_app._DEFAULT_METRIC]],
+                    dims=("dataset", "model"),
+                    coords=metadata_coords,
+                ),
+                "opt_mode": xr.DataArray(
+                    [["min"]],
+                    dims=("dataset", "model"),
+                    coords=metadata_coords,
+                ),
+            }
+        )
+        self._hp_map = {
+            (self.DATASET, self.MODEL): xr.Dataset(
+                {
+                    "mean": xr.DataArray(
+                        [[2.0], [1.0]],
+                        dims=("config", "metric"),
+                    ),
+                    "std": xr.DataArray(
+                        [[0.2], [0.1]],
+                        dims=("config", "metric"),
+                    ),
+                    "count": xr.DataArray(
+                        [[5.0], [5.0]],
+                        dims=("config", "metric"),
+                    ),
+                },
+                coords={
+                    "config": [0, 1],
+                    "metric": [dashboard_app._DEFAULT_METRIC],
+                    "task_definition.seq_len": ("config", [10, 50]),
+                },
+            )
+        }
+
+    @property
+    def xarray_dataset(self) -> xr.Dataset:
+        return self._xarray_dataset
+
+    def hp_impact_ds(self, dataset: str, model: str) -> xr.Dataset | None:
+        return self._hp_map.get((self.source_dataset(dataset), model))
+
+
+def test_hp_comparison_state_roundtrip_restores_virtual_dataset(monkeypatch) -> None:
+    monkeypatch.setattr(dashboard_app, "ResultsLoader", _HpStateResultsLoader)
+    dash = dashboard_app.PiCIDDashboard(report_dir="report_a")
+    labels = dash._apply_hp_comparison(
+        _HpStateResultsLoader.DATASET,
+        ["task_definition.seq_len"],
+    )
+    state = dash._parse_saved_state(dash._serialize_state_json())
+
+    restored = dashboard_app.PiCIDDashboard(report_dir="report_a")
+    assert state is not None
+    restored._apply_saved_state(state)
+
+    assert restored.hp_comparison_source == _HpStateResultsLoader.DATASET
+    assert restored.hp_comparison_dimensions == ["task_definition.seq_len"]
+    assert restored.enabled_datasets == labels
+    assert restored.selected_dataset == labels[0]

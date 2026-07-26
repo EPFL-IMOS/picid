@@ -82,6 +82,19 @@ def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
     return name if len(name) <= max_len else name[: max_len - 1] + "…"
 
 
+def _dashboard_datasets(loader: ResultsLoader) -> list[str]:
+    """Return the full catalog while tolerating minimal test loaders."""
+    return list(getattr(loader, "dashboard_datasets", loader.datasets))
+
+
+def _expanded_dataset(loader: ResultsLoader, dataset: str | None) -> object | None:
+    """Resolve a virtual dataset spec when the loader supports expansion."""
+    resolver = getattr(loader, "expanded_dataset", None)
+    if dataset is None or not callable(resolver):
+        return None
+    return resolver(dataset)
+
+
 # ---------------------------------------------------------------------------
 # Heatmap (model × dataset)
 # ---------------------------------------------------------------------------
@@ -1315,7 +1328,7 @@ def build_bar_chart(
 
     hv.extension("bokeh")
 
-    if dataset not in loader.datasets:
+    if dataset not in _dashboard_datasets(loader):
         return pn.pane.Markdown(f"Dataset **{dataset}** not found.")
 
     df = _selected_metric_frame(
@@ -1401,7 +1414,54 @@ def build_summary_table(
     alt_metric_key: str | None = None,
     use_alt_metric: bool = True,
     enabled_models: Collection[str] | None = None,
+    sort_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    mode: str = "min",
 ) -> pn.viewable.Viewable:
+    expanded = _expanded_dataset(loader, dataset)
+    if expanded is not None:
+        records = loader.selected_metric_records(
+            metric_key=metric or "",
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+            dataset=dataset,
+            enabled_models=enabled_models,
+        )
+        rows = []
+        for record in records:
+            constraints = ", ".join(
+                f"{name}={value}" for name, value in record["hp_constraints"].items()
+            )
+            rows.append(
+                {
+                    "Dataset": dataset,
+                    "Source Dataset": record["source_dataset"],
+                    "Model": record["model"],
+                    "Metric": record["display_metric_key"],
+                    "Mean": record["value"],
+                    "Std": record["std"],
+                    "Runs": record["n"],
+                    "HP constraints": constraints,
+                    "Matching Configs": record["matching_configs"],
+                    "Selected Config": record["config_index"],
+                }
+            )
+        dynamic = pd.DataFrame(rows)
+        if not dynamic.empty:
+            dynamic["Rank"] = dynamic["Mean"].rank(
+                method="min",
+                ascending=mode == "min",
+                na_option="bottom",
+            )
+        return pn.widgets.Tabulator(
+            dynamic,
+            pagination="local",
+            page_size=25,
+            show_index=False,
+            sizing_mode="stretch_width",
+        )
     df = loader.summary_df
     if df is None:
         return pn.pane.Markdown("No `summary.csv` found in report output.")
@@ -1443,7 +1503,48 @@ def build_stats_table(
     dataset: str | None = None,
     model: str | None = None,
     enabled_models: Collection[str] | None = None,
+    metric_key: str | None = None,
+    sort_metric_key: str | None = None,
+    alt_metric_key: str | None = None,
+    alt_sort_metric_key: str | None = None,
+    use_alt_metric: bool = True,
 ) -> pn.viewable.Viewable:
+    expanded = _expanded_dataset(loader, dataset)
+    if expanded is not None:
+        records = loader.selected_metric_records(
+            metric_key=metric_key or "",
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+            dataset=dataset,
+            enabled_models=enabled_models,
+        )
+        if model is not None:
+            records = [record for record in records if record["model"] == model]
+        rows = []
+        for record in records:
+            constraints = ", ".join(
+                f"{name}={value}" for name, value in record["hp_constraints"].items()
+            )
+            rows.append(
+                {
+                    "Dataset": dataset,
+                    "Source Dataset": record["source_dataset"],
+                    "Model": record["model"],
+                    "Matching Configs": record["matching_configs"],
+                    "Selected Config": record["config_index"],
+                    "Runs in Selected Config": record["n"],
+                    "HP constraints": constraints,
+                }
+            )
+        return pn.widgets.Tabulator(
+            pd.DataFrame(rows),
+            pagination="local",
+            page_size=25,
+            show_index=False,
+            sizing_mode="stretch_width",
+        )
     df = loader.stats_df
     if df is None:
         return pn.pane.Markdown("No `experiment_stats.csv` found in report output.")
@@ -1658,7 +1759,21 @@ def build_hp_impact_table(
             stylesheets=[rotated_header_css, highlight_css],
         )
 
+    expanded = _expanded_dataset(loader, dataset)
+    if expanded is not None:
+        constraints = ", ".join(
+            f"`{name}={value}`" for name, value in expanded.constraints.items()
+        )
+        filter_notice = pn.pane.Alert(
+            f"Filtered to {constraints}. Unselected hyperparameters remain "
+            f"visible and are ranked by `{selection['effective_sort_metric_key']}`.",
+            alert_type="info",
+        )
+    else:
+        filter_notice = pn.layout.Spacer(height=0)
+
     return pn.Column(
+        filter_notice,
         col_selector,
         pn.bind(_table, col_selector),
         sizing_mode="stretch_width",
@@ -1704,7 +1819,7 @@ def _metadata_rows(
     use_alt_metric: bool = True,
 ) -> dict[str, str]:
     """Build the metadata property/value mapping for one dataset/model pair."""
-    if dataset not in loader.datasets or model not in loader.models:
+    if dataset not in _dashboard_datasets(loader) or model not in loader.models:
         return {}
 
     selection = loader.resolve_metric_selection(
@@ -1723,6 +1838,30 @@ def _metadata_rows(
             f"{active_sort_metric} "
             f"(fallback from {selection['fallback_from_sort_metric_key']})"
         )
+
+    expanded = _expanded_dataset(loader, dataset)
+    expanded_metadata: dict[str, str] = {}
+    if expanded is not None:
+        record = loader.selected_metric_record(
+            dataset,
+            model,
+            metric_key=metric_key,
+            sort_metric_key=sort_metric_key,
+            alt_metric_key=alt_metric_key,
+            alt_sort_metric_key=alt_sort_metric_key,
+            use_alt_metric=use_alt_metric,
+        )
+        expanded_metadata = {
+            "Source dataset": record["source_dataset"],
+            "HP constraints": ", ".join(
+                f"{name}={value}" for name, value in record["hp_constraints"].items()
+            ),
+            "Matching configs": _display_metadata_value(record["matching_configs"]),
+            "Selected config": _display_metadata_value(record["config_index"]),
+            "Displayed score": _display_metadata_value(record["value"]),
+            "Displayed std": _display_metadata_value(record["std"]),
+            "Runs in selected config": _display_metadata_value(record["n"]),
+        }
 
     return {
         "Dashboard metric": _display_metadata_value(selection["display_metric_key"]),
@@ -1748,6 +1887,7 @@ def _metadata_rows(
         "Configs failed (metric)": _display_metadata_value(
             loader.metadata_value("configs_failed_metric", dataset, model)
         ),
+        **expanded_metadata,
     }
 
 
@@ -1766,9 +1906,8 @@ def build_model_summary_table(
     """Build a model-summary table for one dataset using metadata-panel properties."""
     if dataset is None:
         return pn.pane.Markdown("Select a dataset to view model summary.")
-    if dataset not in loader.datasets:
+    if dataset not in _dashboard_datasets(loader):
         return pn.pane.Markdown(f"Dataset **{dataset}** not found.")
-
     models = loader.models
     if enabled_models is not None:
         enabled = set(enabled_models)
