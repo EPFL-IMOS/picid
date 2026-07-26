@@ -70,7 +70,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 9
+_PERSISTED_STATE_VERSION = 10
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -106,6 +106,7 @@ _PERSISTED_STATE_PARAMS = (
     "latex_multiplier",
     "latex_show_std",
     "latex_show_n",
+    "latex_show_rank",
     "latex_highlight_best_bg",
     "latex_underline_2nd_best",
     "latex_highlight_within_1std",
@@ -262,6 +263,9 @@ class PiCIDDashboard(param.Parameterized):
     latex_show_std = param.Boolean(default=True, doc="Show ± std in LaTeX table cells")
     latex_show_n = param.Boolean(
         default=True, doc="Show (n=…) count in LaTeX table cells"
+    )
+    latex_show_rank = param.Boolean(
+        default=False, doc="Show rank within dataset in exported table cells"
     )
     latex_highlight_best_bg = param.Boolean(
         default=True, doc="Light-grey background on the best cell per dataset"
@@ -434,6 +438,7 @@ class PiCIDDashboard(param.Parameterized):
         if self._sync_selectors_in_progress or self._restore_in_progress:
             return
         self._sync_selectors()
+
     def _set_selector_value(
         self,
         name: str,
@@ -659,7 +664,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, 4, 5, 6, 7, 8, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, 5, 6, 7, 8, 9, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -683,6 +688,7 @@ class PiCIDDashboard(param.Parameterized):
             "show_rank",
             "latex_show_std",
             "latex_show_n",
+            "latex_show_rank",
             "latex_highlight_best_bg",
             "latex_underline_2nd_best",
             "latex_highlight_within_1std",
@@ -810,6 +816,7 @@ class PiCIDDashboard(param.Parameterized):
             for name in (
                 "latex_show_std",
                 "latex_show_n",
+                "latex_show_rank",
                 "latex_highlight_best_bg",
                 "latex_underline_2nd_best",
                 "latex_highlight_within_1std",
@@ -1114,9 +1121,7 @@ class PiCIDDashboard(param.Parameterized):
             sizing_mode="stretch_width",
         )
 
-    @param.depends(
-        "report_dir", "enabled_models", "selected_dataset", "selected_model"
-    )
+    @param.depends("report_dir", "enabled_models", "selected_dataset", "selected_model")
     def _stats_view(self):
         if self._load_error:
             return pn.pane.Alert(self._load_error, alert_type="danger")
@@ -1218,6 +1223,17 @@ class PiCIDDashboard(param.Parameterized):
             lambda e: setattr(self, "latex_show_n", e.new), "value"
         )
 
+        show_rank_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Show rank",
+                value=self.latex_show_rank,
+                width=120,
+            )
+        )
+        show_rank_toggle.param.watch(
+            lambda e: setattr(self, "latex_show_rank", e.new), "value"
+        )
+
         shorten_names_toggle = _selected_primary_button(
             pn.widgets.Toggle(
                 name="Shorten names",
@@ -1267,7 +1283,10 @@ class PiCIDDashboard(param.Parameterized):
             pn.Row(
                 pn.Column("**Precision**", precision_input),
                 pn.Column("**Scale**", multiplier_input),
-                pn.Column("**Columns**", pn.Row(show_std_toggle, show_n_toggle)),
+                pn.Column(
+                    "**Columns**",
+                    pn.Row(show_std_toggle, show_n_toggle, show_rank_toggle),
+                ),
                 pn.Column("**Names**", shorten_names_toggle),
                 pn.Column(
                     "**Highlights**",
@@ -1297,6 +1316,7 @@ class PiCIDDashboard(param.Parameterized):
         "alt_metric_key",
         "alt_sort_metric_key",
         "latex_show_n",
+        "latex_show_rank",
         "latex_show_std",
         "latex_highlight_best_bg",
         "latex_underline_2nd_best",
@@ -1326,6 +1346,7 @@ class PiCIDDashboard(param.Parameterized):
             enabled_datasets=self.enabled_datasets,
             enabled_models=self.enabled_models,
             show_n=self.latex_show_n,
+            show_rank=self.latex_show_rank,
             show_std=self.latex_show_std,
             highlight_best_bg=self.latex_highlight_best_bg,
             underline_2nd_best=self.latex_underline_2nd_best,
@@ -1347,6 +1368,7 @@ class PiCIDDashboard(param.Parameterized):
         "alt_metric_key",
         "alt_sort_metric_key",
         "latex_show_n",
+        "latex_show_rank",
         "latex_show_std",
         "latex_highlight_best_bg",
         "latex_underline_2nd_best",
