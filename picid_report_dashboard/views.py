@@ -126,6 +126,23 @@ def _selected_metric_frame(
     return pd.DataFrame(records)
 
 
+def _average_duplicate_model_rows(long: pd.DataFrame) -> pd.DataFrame:
+    """Average rows that share a dataset and canonical model label."""
+    group_columns = ["dataset", "model"]
+    mean_columns = {"value", "std", "n"}
+    aggregations = {
+        column: "mean" if column in mean_columns else "first"
+        for column in long.columns
+        if column not in group_columns
+    }
+    return long.groupby(
+        group_columns,
+        as_index=False,
+        sort=False,
+        dropna=False,
+    ).agg(aggregations)
+
+
 def _build_heatmap_frame(
     loader: ResultsLoader,
     metric_key: str,
@@ -137,8 +154,9 @@ def _build_heatmap_frame(
     use_alt_metric: bool = True,
     enabled_datasets: Collection[str] | None = None,
     enabled_models: Collection[str] | None = None,
+    shorten_model_names: bool = False,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
-    """Build the heatmap frame including Average and Average rank summary columns."""
+    """Build summary columns after optional model-name canonicalization."""
     long = _selected_metric_frame(
         loader,
         metric_key,
@@ -152,6 +170,10 @@ def _build_heatmap_frame(
     long = long.dropna(subset=["value"]).copy()
     if long.empty:
         return long, [], []
+
+    if shorten_model_names:
+        long["model"] = long["model"].map(_shorten_model_name)
+        long = _average_duplicate_model_rows(long)
 
     # Column-normalise: within each dataset, rank models 0→1
     def _col_norm(x: pd.Series) -> pd.Series:
@@ -261,15 +283,15 @@ def build_heatmap(
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
         enabled_models=enabled_models,
+        shorten_model_names=True,
     )
 
     if long.empty:
         return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
 
-    # Shorten model and dataset names for readability
-    long["model"] = long["model"].map(_shorten_model_name)
+    # Model names were shortened before ranking and summary aggregation.
+    # Dataset names are shortened only for axis readability.
     long["dataset"] = long["dataset"].map(_shorten_dataset_name)
-    model_order = [_shorten_model_name(model_name) for model_name in model_order]
     dataset_label_map = {
         dataset_name: _shorten_dataset_name(dataset_name)
         for dataset_name in dataset_order
