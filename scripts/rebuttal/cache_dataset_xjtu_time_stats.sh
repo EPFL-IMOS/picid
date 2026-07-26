@@ -37,7 +37,7 @@ DEBUG_SKIP="${DEBUG_SKIP:-}"
 # Define a list of datasets to run
 
 datasets=(
-  "xjtu_sy|in_domain/combined|prognostics"
+  "xjtu_sy|in_domain/combined|prognostics|bearings/xjtu_sy/statistics"
 )
 
 model_names=(
@@ -56,7 +56,7 @@ MAX_LEARNING_RATE=(0.001)
 # --- 2. Initialize counters for tracking runs and managing parallel jobs ---
 run_counter=1
 job_counter=0
-MAX_PARALLEL=3 # Set the max number of jobs to run at once
+MAX_PARALLEL=1 # Set the max number of jobs to run at once
 
 SUCCESS_LOG="${LOG_DIR}/SUCCESSFUL_RUNS.log"
 
@@ -87,7 +87,7 @@ for dataset in "${datasets[@]}"; do
                         # --- 3. Create a unique and descriptive name for this specific run ---
                         # Formatted with leading zeros (e.g., 001, 002) for proper sorting.
 
-                        IFS='|' read -r dataset_key subexp task_type <<< "$dataset"
+                        IFS='|' read -r dataset_key subexp task_type transforms_override <<< "$dataset"
                         exp_name="$(build_exp_name "$dataset_key" "$task_type" "$subexp" "$model_name")"
                         dataset_run_name="${dataset_key//\//_}"
                         subexp_run_name="${subexp//\//_}"
@@ -107,7 +107,7 @@ for dataset in "${datasets[@]}"; do
                             python picid/run.py \
                             paths=runai \
                             experiment=${exp_name} \
-                            transforms=bearings/xjtu_sy/statistics \
+                            transforms=${transforms_override} \
                             datamodule.train_batch_size=${batch_size} \
                             datamodule.val_batch_size=1024 \
                             datamodule.test_batch_size=1024 \
