@@ -363,6 +363,7 @@ def build_latex_table(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     show_n: bool = True,
+    show_rank: bool = False,
     show_std: bool = True,
     highlight_best_bg: bool = True,
     underline_2nd_best: bool = True,
@@ -473,6 +474,13 @@ def build_latex_table(
         )
         n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
         txt = f"{scaled_value:{fmt}}{std_str}{n_str}"
+        if show_rank and kind == "dataset" and pd.notna(r.get("rank")):
+            rank_prefix = (
+                f"\\#{int(r['rank'])} "
+                if output_format == "latex"
+                else f"#{int(r['rank'])} "
+            )
+            txt = rank_prefix + txt
 
         stats = ds_stats.get(str(r["dataset"]))
         if stats is None:
