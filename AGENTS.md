@@ -4,7 +4,7 @@
 `picid/` is the main Python package. Core areas include `data/` for datasources, datasets, and preprocessing, `transforms/` for feature pipelines, `model/` and `baselines/` for training logic, `evaluator/` for metrics and hooks, and `cli/` for entry points. Hydra configuration lives in `configs/`, especially `experiment/`, `datasource/`, `model/`, `task_definition/`, and `paths/`. Tests mirror the package layout under `test/`; snapshot fixtures and generators live in `test/fixtures/snapshot/` and `test/scripts/snapshot/`. Use `docs/` for reference material, `tutorials/` for runnable examples, and treat `_archive/` and most notebooks as non-production references.
 
 ## Worktree & Commit Workflow
-Before making any repository change, create a dedicated Git worktree under `.worktrees/` and perform all edits from that worktree. Commit the completed changes before finishing. Use the configured human Git identity for the commit; do not name an agent or automation tool as the author, co-author, or in commit trailers.
+Before making any repository change, create a dedicated Git worktree under `.worktrees/` and perform all edits from that worktree. Commit the completed changes, then merge the worktree branch back into the originating branch before finishing. Use the configured human Git identity for the commit; do not name an agent or automation tool as the author, co-author, or in commit trailers.
 
 ## Build, Test, and Development Commands
 Initialize submodules before installing:
