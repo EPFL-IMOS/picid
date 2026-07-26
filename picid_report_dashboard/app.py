@@ -109,6 +109,7 @@ _PERSISTED_STATE_PARAMS = (
     "latex_highlight_best_bg",
     "latex_underline_2nd_best",
     "latex_highlight_within_1std",
+    "latex_shorten_names",
     "latex_rename_json",
 )
 _UNSET = object()
@@ -259,7 +260,9 @@ class PiCIDDashboard(param.Parameterized):
         doc="Scalar applied to all metric values and stds in the LaTeX table",
     )
     latex_show_std = param.Boolean(default=True, doc="Show ± std in LaTeX table cells")
-    latex_show_n = param.Boolean(default=True, doc="Show (n=…) count in LaTeX table cells")
+    latex_show_n = param.Boolean(
+        default=True, doc="Show (n=…) count in LaTeX table cells"
+    )
     latex_highlight_best_bg = param.Boolean(
         default=True, doc="Light-grey background on the best cell per dataset"
     )
@@ -270,8 +273,11 @@ class PiCIDDashboard(param.Parameterized):
         default=True,
         doc="Light-blue background on cells within 1σ of the best (using best's std)",
     )
+    latex_shorten_names = param.Boolean(
+        default=True, doc="Shorten model and dataset names in exported tables"
+    )
     latex_rename_json = param.String(
-        default="{}", doc="JSON map of shortened name → display name for LaTeX table"
+        default="{}", doc="JSON map of default table name → display name"
     )
 
     def __init__(self, report_dir: str = _DEFAULT_REPORT_DIR, **params):
@@ -680,6 +686,7 @@ class PiCIDDashboard(param.Parameterized):
             "latex_highlight_best_bg",
             "latex_underline_2nd_best",
             "latex_highlight_within_1std",
+            "latex_shorten_names",
         )
         for field in string_fields:
             value = payload.get(field)
@@ -703,9 +710,8 @@ class PiCIDDashboard(param.Parameterized):
         if isinstance(latex_precision, int) and not isinstance(latex_precision, bool):
             parsed["latex_precision"] = max(1, min(8, latex_precision))
         latex_multiplier = payload.get("latex_multiplier")
-        if (
-            isinstance(latex_multiplier, (int, float))
-            and not isinstance(latex_multiplier, bool)
+        if isinstance(latex_multiplier, (int, float)) and not isinstance(
+            latex_multiplier, bool
         ):
             parsed["latex_multiplier"] = float(latex_multiplier)
         active_tab = payload.get("active_tab")
@@ -807,6 +813,7 @@ class PiCIDDashboard(param.Parameterized):
                 "latex_highlight_best_bg",
                 "latex_underline_2nd_best",
                 "latex_highlight_within_1std",
+                "latex_shorten_names",
             ):
                 if name in state:
                     setattr(self, name, state[name])
@@ -1121,7 +1128,7 @@ class PiCIDDashboard(param.Parameterized):
         )
 
     def _latex_configurator_panel(self) -> pn.viewable.Viewable:
-        """Precision input + rename table. Built once per tab activation; not itself reactive."""
+        """Build the exported-table controls and name configurator."""
         loader = self._loader
         if loader is None:
             return pn.pane.Markdown("No data loaded.")
@@ -1131,15 +1138,18 @@ class PiCIDDashboard(param.Parameterized):
         except json.JSONDecodeError:
             rename_map = {}
 
-        short_models = [
-            _shorten_model_name(model_name) for model_name in self.enabled_models
+        default_models = [
+            _shorten_model_name(model_name) if self.latex_shorten_names else model_name
+            for model_name in self.enabled_models
         ]
-        short_datasets = [
+        default_datasets = [
             _shorten_dataset_name(dataset_name)
+            if self.latex_shorten_names
+            else dataset_name
             for dataset_name in self.enabled_datasets
         ]
-        all_names = short_models + short_datasets
-        types = ["Model"] * len(short_models) + ["Dataset"] * len(short_datasets)
+        all_names = default_models + default_datasets
+        types = ["Model"] * len(default_models) + ["Dataset"] * len(default_datasets)
 
         df = pd.DataFrame(
             {
@@ -1195,21 +1205,28 @@ class PiCIDDashboard(param.Parameterized):
         )
 
         show_std_toggle = _selected_primary_button(
-            pn.widgets.Toggle(
-                name="Show ± std", value=self.latex_show_std, width=120
-            )
+            pn.widgets.Toggle(name="Show ± std", value=self.latex_show_std, width=120)
         )
         show_std_toggle.param.watch(
             lambda e: setattr(self, "latex_show_std", e.new), "value"
         )
 
         show_n_toggle = _selected_primary_button(
-            pn.widgets.Toggle(
-                name="Show (n=…)", value=self.latex_show_n, width=120
-            )
+            pn.widgets.Toggle(name="Show (n=…)", value=self.latex_show_n, width=120)
         )
         show_n_toggle.param.watch(
             lambda e: setattr(self, "latex_show_n", e.new), "value"
+        )
+
+        shorten_names_toggle = _selected_primary_button(
+            pn.widgets.Toggle(
+                name="Shorten names",
+                value=self.latex_shorten_names,
+                width=130,
+            )
+        )
+        shorten_names_toggle.param.watch(
+            lambda e: setattr(self, "latex_shorten_names", e.new), "value"
         )
 
         best_bg_toggle = _selected_primary_button(
@@ -1251,6 +1268,7 @@ class PiCIDDashboard(param.Parameterized):
                 pn.Column("**Precision**", precision_input),
                 pn.Column("**Scale**", multiplier_input),
                 pn.Column("**Columns**", pn.Row(show_std_toggle, show_n_toggle)),
+                pn.Column("**Names**", shorten_names_toggle),
                 pn.Column(
                     "**Highlights**",
                     pn.Row(
@@ -1285,6 +1303,7 @@ class PiCIDDashboard(param.Parameterized):
         "latex_highlight_within_1std",
         "latex_precision",
         "latex_multiplier",
+        "latex_shorten_names",
         "latex_rename_json",
     )
     def _latex_output_view(self) -> pn.viewable.Viewable:
@@ -1313,6 +1332,7 @@ class PiCIDDashboard(param.Parameterized):
             highlight_within_1std=self.latex_highlight_within_1std,
             precision=self.latex_precision,
             multiplier=self.latex_multiplier,
+            shorten_names=self.latex_shorten_names,
             rename_map=rename_map,
         )
 
@@ -1333,6 +1353,7 @@ class PiCIDDashboard(param.Parameterized):
         "latex_highlight_within_1std",
         "latex_precision",
         "latex_multiplier",
+        "latex_shorten_names",
         "latex_rename_json",
     )
     def _latex_table_view(self) -> pn.viewable.Viewable:

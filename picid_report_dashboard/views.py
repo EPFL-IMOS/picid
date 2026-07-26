@@ -369,11 +369,12 @@ def build_latex_table(
     highlight_within_1std: bool = True,
     precision: int = 4,
     multiplier: float = 1.0,
+    shorten_names: bool = True,
     rename_map: dict[str, str] | None = None,
     enabled_datasets: Collection[str] | None = None,
     enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
-    """Booktabs LaTeX table of mean ± std values (models × datasets) for one metric."""
+    """Build LaTeX and Markdown tables, optionally preserving source names."""
     long, model_order, dataset_order = _build_heatmap_frame(
         loader,
         metric_key,
@@ -389,21 +390,21 @@ def build_latex_table(
     if long.empty:
         return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
 
-    # Apply shortening then optional user rename
+    # Apply optional shortening before any user-defined rename.
     _renames = rename_map or {}
 
     def _display_model(name: str) -> str:
-        short = _shorten_model_name(name)
-        return _renames.get(short) or short
+        default = _shorten_model_name(name) if shorten_names else name
+        return _renames.get(default) or default
 
     def _display_dataset(name: str) -> str:
-        short = _shorten_dataset_name(name)
-        return _renames.get(short) or short
+        default = _shorten_dataset_name(name) if shorten_names else name
+        return _renames.get(default) or default
 
     long["model"] = long["model"].map(_display_model)
     long["dataset"] = long["dataset"].map(_display_dataset)
     model_order = [_display_model(m) for m in model_order]
-    dataset_order_short = [_display_dataset(d) for d in dataset_order]
+    dataset_order_display = [_display_dataset(d) for d in dataset_order]
 
     # Reverse so the best model (lowest avg rank from _build_heatmap_frame)
     # ends up at the bottom of the LaTeX table.
@@ -510,7 +511,7 @@ def build_latex_table(
         result = long.pivot_table(
             index="model", columns="dataset", values=column, aggfunc="first"
         )
-        result = result.reindex(index=model_order, columns=dataset_order_short)
+        result = result.reindex(index=model_order, columns=dataset_order_display)
         result.index.name = "Model"
         result.columns.name = None
         return result
@@ -543,10 +544,10 @@ def build_latex_table(
         header_comment += f"% Values multiplied by {multiplier:g}\n"
     header_comment += "\n"
 
-    # Caption: display metric + sort metric + a "shortcut = full name" dataset legend
-    # for any dataset whose displayed shortcut differs from its full name.
+    # Caption: display metric + sort metric + a "display = full name" dataset legend
+    # for any dataset whose displayed label differs from its full name.
     legend_entries: list[str] = []
-    for full, short in zip(dataset_order, dataset_order_short, strict=False):
+    for full, short in zip(dataset_order, dataset_order_display, strict=False):
         if full in ("Average", "Average rank"):
             continue
         if short != full:
@@ -606,7 +607,7 @@ def build_latex_table(
         )
 
     markdown_legend = []
-    for full, short in zip(dataset_order, dataset_order_short, strict=False):
+    for full, short in zip(dataset_order, dataset_order_display, strict=False):
         if full not in ("Average", "Average rank") and short != full:
             markdown_legend.append(f"{_markdown_code(short)} = {_markdown_code(full)}")
     if markdown_legend:

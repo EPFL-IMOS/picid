@@ -1295,7 +1295,9 @@ def _latex_row(latex_str: str, model_label: str) -> str:
     for line in latex_str.splitlines():
         if line.lstrip().startswith(model_label):
             return line
-    raise AssertionError(f"row for {model_label!r} not found in LaTeX output:\n{latex_str}")
+    raise AssertionError(
+        f"row for {model_label!r} not found in LaTeX output:\n{latex_str}"
+    )
 
 
 _HL_MEANS_BASIC = {HL_MODEL_BEST: 1.0, HL_MODEL_NEAR: 1.3, HL_MODEL_FAR: 2.5}
@@ -1573,6 +1575,33 @@ def test_build_latex_table_caption_lists_dataset_shortcuts_to_full_names():
     escaped_short = expected_short.replace("_", "\\_")
     escaped_full = full_dataset.replace("_", "\\_")
     assert f"{escaped_short} = {escaped_full}" in caption
+
+
+def test_build_latex_table_can_preserve_full_names():
+    full_dataset = (
+        "HSF15 [rebuttal_time_stats_ablation_hsf15_hsf15_accumulator_diagnostics_]"
+    )
+    loader = _make_highlight_loader(
+        _HL_MEANS_BASIC,
+        _HL_STDS_BASIC,
+        dataset=full_dataset,
+    )
+
+    pane = views.build_latex_table(
+        loader,
+        HL_METRIC,
+        sort_metric_key=HL_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        shorten_names=False,
+    )
+    latex_str = _latex_value(pane)
+    caption = _extract_caption(latex_str)
+
+    assert full_dataset.replace("_", "\\_") in latex_str
+    assert f"{HL_MODEL_BEST} &" in latex_str
+    assert "HSF15 [accumulator\\_diagnostics]" not in latex_str
+    assert "Datasets:" not in caption
 
 
 def test_build_latex_table_wraps_tabular_in_adjustbox():
