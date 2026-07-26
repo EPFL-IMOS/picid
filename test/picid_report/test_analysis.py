@@ -646,6 +646,32 @@ class TestAnalyzeResultsDataFirst:
         assert tbl.sizes["config"] == 2
         assert sorted(tbl.coords["task_definition.seq_len"].values.astype(float).astype(int).tolist()) == [10, 20]
 
+    def test_list_valued_hyperparameter_with_required_seeds(
+        self, mock_df_multi_seed_runs, default_analysis_kwargs
+    ):
+        """List-valued hyperparameters remain distinct and support seed validation."""
+        units_col = "datasource.train1.load_arguments.units"
+        df = mock_df_multi_seed_runs.copy()
+        df[units_col] = df["task_definition.seq_len"].map(
+            {10: [2, 5, 10, 16], 20: [2, 5, 10, 20]}
+        )
+        kwargs = {
+            **default_analysis_kwargs,
+            "config_columns": [*default_analysis_kwargs["config_columns"], units_col],
+            "required_model_seeds": {1, 2, 3},
+        }
+
+        with patch.object(config, "EXPECTED_SEARCH_SPACE", None):
+            results = analysis.analyze_results(df, **kwargs)
+
+        model_key = "baselines.lstm_model.LSTM_Forecaster"
+        aggregated = results["DS1"][model_key]["sorted_aggregated_results"]
+        assert aggregated.sizes["config"] == 2
+        assert set(aggregated.coords[units_col].values) == {
+            (2, 5, 10, 16),
+            (2, 5, 10, 20),
+        }
+
 
 # --- Model wrapper splitting (model_type differentiation) ---
 

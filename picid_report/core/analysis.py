@@ -452,6 +452,24 @@ def get_varying_hyperparameters(
     return varying_params
 
 
+def _make_grouping_columns_hashable(
+    df: pd.DataFrame, grouping_cols: List[str]
+) -> None:
+    """Normalize sequence-valued grouping keys in place for pandas groupby."""
+
+    def make_hashable(value: Any) -> Any:
+        if isinstance(value, np.ndarray):
+            value = value.tolist()
+        if isinstance(value, (list, tuple)):
+            return tuple(make_hashable(item) for item in value)
+        return value
+
+    for col in grouping_cols:
+        if col in df.columns:
+            df[col] = df[col].map(make_hashable)
+
+
+
 def _ds_is_empty(ds: xr.Dataset) -> bool:
     """Return True when ds carries no data.
 
@@ -566,15 +584,7 @@ def aggregate_and_find_best(
         if col in subset_copy.columns:
             subset_copy[col] = pd.to_numeric(subset_copy[col], errors="coerce")
 
-    for col in aggregation_cols:
-        if (
-            col in subset_copy.columns
-            and not subset_copy[col].dropna().empty
-            and isinstance(subset_copy[col].dropna().iloc[0], (list, np.ndarray))
-        ):
-            subset_copy[col] = subset_copy[col].apply(
-                lambda x: tuple(x) if isinstance(x, (list, np.ndarray)) else x
-            )
+    _make_grouping_columns_hashable(subset_copy, aggregation_cols)
 
     perf_cols = [
         col for col in all_performance_cols
@@ -889,6 +899,7 @@ def analyze_results(
                 subset, hp_search_columns, _special_cols
             )
             aggregation_cols = ["Model"] + list(varying_hyperparams.keys())
+            _make_grouping_columns_hashable(subset, aggregation_cols)
             logger.debug(
                 "(%s | %s) varying_hyperparams: %s",
                 dataset,
