@@ -31,35 +31,46 @@ _ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
 
 # ---------------------------------------------------------------------------
 # Model name aliases
-# Maps old model name → new model name. Aliasing fires ONLY when both sides
-# are present in the same loaded dataset; the old name is kept as canonical
-# and the new-name slice is merged into it (old data wins on conflict).
-# If only one side is present, no renaming occurs.
+# Maps superseded model names to the old dashboard canonical name. Aliasing
+# fires only when both names are present in the loaded dataset; the alias slice
+# is merged into the canonical slice (canonical data wins on conflict).
 # ---------------------------------------------------------------------------
 MODEL_ALIASES: dict[str, str] = {
-    "baselines.crossformer_model.Crossformer_Forecaster": "model.forecasters.crossformer_model.Crossformer_Forecaster",
-    "baselines.patchtst_model.PatchTST_Forecaster": "model.forecasters.patchtst_model.PatchTST_Forecaster",
+    "model.forecasters.crossformer_model.Crossformer_Forecaster": "baselines.crossformer_model.Crossformer_Forecaster",
+    "forecasters.crossformer_model.Crossformer_Forecaster": "baselines.crossformer_model.Crossformer_Forecaster",
+    "forecasters.lstm_model.LSTM_Forecaster": "baselines.lstm_model.LSTM_Forecaster",
+    "model.forecasters.patchtst_model.PatchTST_Forecaster": "baselines.patchtst_model.PatchTST_Forecaster",
+    "forecasters.patchtst_model.PatchTST_Forecaster": "baselines.patchtst_model.PatchTST_Forecaster",
+    "forecasters.spacetimeformer_model.Spacetimeformer_Forecaster": "baselines.spacetimeformer_model.Spacetimeformer_Forecaster",
+    "forecasters.tide_model.TiDE_Forecaster": "baselines.tide_model.TiDE_Forecaster",
+    "forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster",
 }
+
+
+def _model_name_candidates(model: str) -> list[str]:
+    """Return a model name followed by its canonical and sibling aliases."""
+    canonical = MODEL_ALIASES.get(model, model)
+    candidates = [
+        model,
+        canonical,
+        *(alias for alias, target in MODEL_ALIASES.items() if target == canonical),
+    ]
+    return list(dict.fromkeys(candidates))
 
 
 def _apply_model_aliases(
     ds: xr.Dataset,
 ) -> tuple[xr.Dataset, list[tuple[str, str]]]:
-    """Apply MODEL_ALIASES only when both old (key) and new (value) names coexist.
+    """Merge coexisting alias slices into their canonical model slices.
 
-    Falls back to the old name as canonical: the new-name slice is merged into
-    the old-name slice via combine_first (old data wins on conflict).
-    When only one side is present, no renaming occurs.
-
-    Returns (dataset, applied) where applied is a list of (old_name, new_name)
-    pairs that were actually unified.
+    Returns ``(dataset, applied)`` where each applied entry is a
+    ``(canonical_name, alias_name)`` pair.
     """
     current_models = set(ds.coords["model"].values)
-    # Build new_name → old_name map, but only for pairs where both sides exist.
-    active: dict[str, str] = {
-        new: old
-        for old, new in MODEL_ALIASES.items()
-        if old in current_models and new in current_models
+    active = {
+        alias: canonical
+        for alias, canonical in MODEL_ALIASES.items()
+        if alias in current_models and canonical in current_models
     }
     if not active:
         return ds, []
@@ -67,14 +78,14 @@ def _apply_model_aliases(
     slices = []
     for model in ds.coords["model"].values:
         if model in active:
-            continue  # "new" name — gets folded into the "old" name below
+            continue
         model_slice = ds.sel(model=model)
-        for new_name, old_name in active.items():
-            if old_name == model:
-                model_slice = model_slice.combine_first(ds.sel(model=new_name))
+        for alias, canonical in active.items():
+            if canonical == model:
+                model_slice = model_slice.combine_first(ds.sel(model=alias))
         slices.append(model_slice.expand_dims("model").assign_coords(model=[model]))
 
-    applied = [(old, new) for new, old in active.items()]
+    applied = [(canonical, alias) for alias, canonical in active.items()]
     return xr.concat(slices, dim="model"), applied
 
 
@@ -212,7 +223,9 @@ class ResultsLoader:
         relabeled = []
         for proj_dir, proj_name in zip(self.project_dirs, self.project_names):
             ds = xr.open_dataset(os.path.join(proj_dir, "results.nc"))
-            new_coords = [f"{coord} [{proj_name}]" for coord in ds.coords["dataset"].values]
+            new_coords = [
+                f"{coord} [{proj_name}]" for coord in ds.coords["dataset"].values
+            ]
             ds = ds.assign_coords(dataset=new_coords)
             relabeled.append(ds)
 
@@ -327,9 +340,7 @@ class ResultsLoader:
             # future_stack=True opts into the new pandas-2 implementation; dropna(how="all")
             # preserves the old default of dropping (Model, Dataset) pairs with no metrics.
             stacked = (
-                data.stack(level=0, future_stack=True)
-                .dropna(how="all")
-                .reset_index()
+                data.stack(level=0, future_stack=True).dropna(how="all").reset_index()
             )
             stacked.columns = ["Model", "Dataset"] + list(stacked.columns[2:])
             # Melt the remaining metric columns into long form
@@ -360,9 +371,7 @@ class ResultsLoader:
             return None
         return pd.concat(frames, ignore_index=True)
 
-    def hp_impact_ds(
-        self, dataset: str, model: str
-    ) -> Optional[xr.Dataset]:
+    def hp_impact_ds(self, dataset: str, model: str) -> Optional[xr.Dataset]:
         """Load the sorted_aggregated_results xr.Dataset for a (dataset, model) combination.
 
         ``dataset`` may carry a ' [project_name]' suffix from the dashboard
@@ -378,20 +387,20 @@ class ResultsLoader:
 
         # Search only the matching project directory when we know the project
         search_dirs = [
-            d for d in self.project_dirs
+            d
+            for d in self.project_dirs
             if project_name is None or os.path.basename(d) == project_name
         ]
 
-        # Try the given model name first, then any aliased names from MODEL_ALIASES.
-        # Aliasing may have renamed the model to an old canonical name while the HP
-        # config files on disk were written by the pipeline using the new name.
-        model_names_to_try = [model] + [
-            new for old, new in MODEL_ALIASES.items() if old == model
-        ]
+        # The merged results use canonical model names, while per-project HP
+        # files retain whichever module path was active when the report ran.
+        model_names_to_try = _model_name_candidates(model)
         for model_candidate in model_names_to_try:
             candidate_safe = _safe_path_fragment(model_candidate)
             for d in search_dirs:
-                p = os.path.join(d, "tables", "hp_configs", f"{ds_safe}_{candidate_safe}.nc")
+                p = os.path.join(
+                    d, "tables", "hp_configs", f"{ds_safe}_{candidate_safe}.nc"
+                )
                 if os.path.isfile(p):
                     loaded = xr.load_dataset(p)
                     self._hp_ds_cache[cache_key] = loaded
@@ -403,12 +412,16 @@ class ResultsLoader:
     def metadata_value(self, variable: str, dataset: str, model: str) -> Any:
         """Return a single metadata value from results.nc for one dataset/model."""
         try:
-            value = self.xarray_dataset[variable].sel(dataset=dataset, model=model).values
+            value = (
+                self.xarray_dataset[variable].sel(dataset=dataset, model=model).values
+            )
         except Exception:
             return None
         return _normalize_scalar(value)
 
-    def metric_in_hp_dataset(self, hp_ds: xr.Dataset | None, metric_key: str | None) -> bool:
+    def metric_in_hp_dataset(
+        self, hp_ds: xr.Dataset | None, metric_key: str | None
+    ) -> bool:
         """Return whether *metric_key* exists in the given HP config dataset."""
         if metric_key is None or _is_empty_hp_dataset(hp_ds):
             return False
@@ -433,7 +446,9 @@ class ResultsLoader:
         """Return whether the HP dataset contains any finite values for *metric_key*."""
         if not self.metric_in_hp_dataset(hp_ds, metric_key):
             return False
-        metric_values = np.asarray(hp_ds.sel(metric=metric_key)["mean"].values, dtype=float)
+        metric_values = np.asarray(
+            hp_ds.sel(metric=metric_key)["mean"].values, dtype=float
+        )
         return bool(np.isfinite(metric_values).any())
 
     def dataset_has_display_metric(
@@ -499,7 +514,9 @@ class ResultsLoader:
             size = 0 if hp_ds is None else hp_ds.sizes.get("config", 0)
             return np.arange(size, dtype=int)
 
-        sort_values = np.asarray(hp_ds.sel(metric=sort_metric_key)["mean"].values, dtype=float)
+        sort_values = np.asarray(
+            hp_ds.sel(metric=sort_metric_key)["mean"].values, dtype=float
+        )
         valid_mask = np.isfinite(sort_values)
         valid_indices = np.flatnonzero(valid_mask)
         invalid_indices = np.flatnonzero(~valid_mask)
@@ -522,9 +539,13 @@ class ResultsLoader:
     ) -> dict[str, Any]:
         """Resolve effective display/sort metrics for one dataset/model pair."""
         use_alt = bool(use_alt_metric and is_alt_model(model))
-        display_metric_key = alt_metric_key if (use_alt and alt_metric_key) else metric_key
+        display_metric_key = (
+            alt_metric_key if (use_alt and alt_metric_key) else metric_key
+        )
         requested_sort_metric_key = (
-            alt_sort_metric_key if (use_alt and alt_sort_metric_key) else sort_metric_key
+            alt_sort_metric_key
+            if (use_alt and alt_sort_metric_key)
+            else sort_metric_key
         )
 
         hp_ds = self.hp_impact_ds(dataset, model)
@@ -547,7 +568,9 @@ class ResultsLoader:
                     break
             else:
                 if not _is_empty_hp_dataset(hp_ds):
-                    available = [str(metric) for metric in hp_ds.coords["metric"].values]
+                    available = [
+                        str(metric) for metric in hp_ds.coords["metric"].values
+                    ]
                     if available:
                         fallback_from_sort_metric_key = effective_sort_metric_key
                         effective_sort_metric_key = available[0]
@@ -572,7 +595,9 @@ class ResultsLoader:
             "opt_metric_key": opt_metric_key,
             "stored_sort_metric_key": stored_sort_metric_key,
             "hp_dataset_available": not _is_empty_hp_dataset(hp_ds),
-            "display_metric_available": self.metric_in_hp_dataset(hp_ds, display_metric_key),
+            "display_metric_available": self.metric_in_hp_dataset(
+                hp_ds, display_metric_key
+            ),
         }
 
     def sorted_hp_configs(
@@ -597,7 +622,10 @@ class ResultsLoader:
             alt_sort_metric_key=alt_sort_metric_key,
             use_alt_metric=use_alt_metric,
         )
-        if _is_empty_hp_dataset(hp_ds) or selection["effective_sort_metric_key"] is None:
+        if (
+            _is_empty_hp_dataset(hp_ds)
+            or selection["effective_sort_metric_key"] is None
+        ):
             return hp_ds, selection
 
         sort_idx = self.sort_config_indices(
