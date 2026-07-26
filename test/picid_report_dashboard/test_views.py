@@ -695,7 +695,6 @@ def test_build_heatmap_frame_only_uses_enabled_models():
     assert dataset_order == [DATASET, SECOND_DATASET, "Average", "Average rank"]
     assert set(long["model"]) == {ALT_MODEL}
 
-
 def test_build_heatmap_frame_orders_models_by_average_rank_not_average_value():
     loader = _make_rank_order_loader()
 

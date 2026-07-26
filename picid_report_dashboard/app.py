@@ -428,7 +428,6 @@ class PiCIDDashboard(param.Parameterized):
         if self._sync_selectors_in_progress or self._restore_in_progress:
             return
         self._sync_selectors()
-
     def _set_selector_value(
         self,
         name: str,
@@ -543,7 +542,6 @@ class PiCIDDashboard(param.Parameterized):
                 self._models_initialized = True
             if self.enabled_models != enabled_models:
                 self.enabled_models = enabled_models
-
             available_datasets = loader.datasets
             self.param["enabled_datasets"].objects = available_datasets
             if self._datasets_initialized:
@@ -770,7 +768,6 @@ class PiCIDDashboard(param.Parameterized):
                         if model_name in saved_enabled_set
                     ]
                     self._models_initialized = True
-
                 for name in ("metric_key", "sort_metric_key"):
                     self._apply_selector_state(name, state.get(name))
 

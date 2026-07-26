@@ -687,7 +687,6 @@ class ResultsLoader:
         if enabled_models is not None:
             enabled = set(enabled_models)
             models = [model_name for model_name in models if model_name in enabled]
-
         records: list[dict[str, Any]] = []
         for dataset_name in datasets:
             for model_name in models:
