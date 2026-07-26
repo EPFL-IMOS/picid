@@ -18,6 +18,7 @@ from __future__ import annotations
 import glob
 import os
 import re
+from collections.abc import Collection
 from functools import cached_property
 from typing import Any, Optional
 
@@ -657,17 +658,21 @@ class ResultsLoader:
         alt_sort_metric_key: str | None = None,
         use_alt_metric: bool = True,
         dataset: str | None = None,
+        enabled_datasets: Collection[str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Return dashboard display records for all dataset/model combinations."""
-        datasets = (
-            [dataset]
-            if dataset is not None
-            else self.datasets_with_display_metric(
+        """Return dashboard display records for the requested datasets and models."""
+        if dataset is not None:
+            datasets = [dataset]
+        else:
+            datasets = self.datasets_with_display_metric(
                 metric_key=metric_key,
                 alt_metric_key=alt_metric_key,
                 use_alt_metric=use_alt_metric,
             )
-        )
+            if enabled_datasets is not None:
+                enabled = set(enabled_datasets)
+                datasets = [name for name in datasets if name in enabled]
+
         records: list[dict[str, Any]] = []
         for dataset_name in datasets:
             for model_name in self.models:
