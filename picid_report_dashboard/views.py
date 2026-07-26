@@ -7,7 +7,7 @@ Each function takes a ResultsLoader and widget selections, returns a Panel objec
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -96,6 +96,7 @@ def _selected_metric_frame(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     dataset: str | None = None,
+    enabled_datasets: Collection[str] | None = None,
 ) -> pd.DataFrame:
     """Build a long-form frame of dynamic dashboard values."""
     records = loader.selected_metric_records(
@@ -105,6 +106,7 @@ def _selected_metric_frame(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         dataset=dataset,
+        enabled_datasets=enabled_datasets,
     )
     if not records:
         return pd.DataFrame(
@@ -131,6 +133,7 @@ def _build_heatmap_frame(
     alt_metric_key: str | None = None,
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_datasets: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Build the heatmap frame including Average and Average rank summary columns."""
     long = _selected_metric_frame(
@@ -140,6 +143,7 @@ def _build_heatmap_frame(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
     long = long.dropna(subset=["value"]).copy()
     if long.empty:
@@ -235,6 +239,7 @@ def build_heatmap(
     use_alt_metric: bool = True,
     show_n: bool = True,
     show_rank: bool = False,
+    enabled_datasets: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Color-coded heatmap of mean metric values across datasets and models."""
     import holoviews as hv
@@ -249,6 +254,7 @@ def build_heatmap(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
 
     if long.empty:
@@ -353,6 +359,7 @@ def build_latex_table(
     precision: int = 4,
     multiplier: float = 1.0,
     rename_map: dict[str, str] | None = None,
+    enabled_datasets: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Booktabs LaTeX table of mean ± std values (models × datasets) for one metric."""
     long, model_order, dataset_order = _build_heatmap_frame(
@@ -363,6 +370,7 @@ def build_latex_table(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
 
     if long.empty:
@@ -574,6 +582,7 @@ def _build_parallel_coordinates_frame(
     alt_metric_key: str | None = None,
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_datasets: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Build a wide overview frame for the parallel-coordinates plot."""
     long, model_order, axis_order = _build_heatmap_frame(
@@ -584,6 +593,7 @@ def _build_parallel_coordinates_frame(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
     if long.empty:
         return pd.DataFrame(columns=["model", "Model"]), [], axis_order
@@ -674,6 +684,7 @@ def build_parallel_coordinates(
     alt_metric_key: str | None = None,
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_datasets: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Parallel-coordinates overview of per-model selected metric values."""
     import plotly.graph_objects as go
@@ -686,6 +697,7 @@ def build_parallel_coordinates(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
 
     if frame.empty:
@@ -789,6 +801,7 @@ def _build_spiderweb_frame(
     alt_metric_key: str | None = None,
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_datasets: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     """Build raw and normalized dataset-by-model frames for the spiderweb view."""
     raw_long = _selected_metric_frame(
@@ -798,6 +811,7 @@ def _build_spiderweb_frame(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
     if raw_long.empty:
         empty = pd.DataFrame()
@@ -811,6 +825,7 @@ def _build_spiderweb_frame(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
     if not model_order:
         empty = pd.DataFrame()
@@ -1120,6 +1135,7 @@ def build_spiderweb(
     use_alt_metric: bool = True,
     selected_dataset: str | None = None,
     plot_mode: Literal["interactive", "matplotlib"] = "interactive",
+    enabled_datasets: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Spiderweb overview with dataset spokes and one polygon per model."""
     raw_matrix, normalized_matrix, model_order, dataset_order = _build_spiderweb_frame(
@@ -1130,6 +1146,7 @@ def build_spiderweb(
         alt_metric_key=alt_metric_key,
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
+        enabled_datasets=enabled_datasets,
     )
 
     if raw_matrix.empty or normalized_matrix.empty:
