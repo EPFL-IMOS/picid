@@ -47,16 +47,19 @@ class TestSaveOutputs:
             "metrics": {"mse": {"test": {"mean": 0.5, "std": 0.1, "count": 3}}},
         }
         # Include sorted_aggregated_results so the .nc save loop fires
+        units = np.empty(1, dtype=object)
+        units[0] = (2, 5, 10, 16)
         agg_ds = xr.Dataset(
             {
-                "mean":  (["config", "metric"], np.array([[0.5, 0.4]])),
-                "std":   (["config", "metric"], np.array([[0.1, 0.05]])),
+                "mean": (["config", "metric"], np.array([[0.5, 0.4]])),
+                "std": (["config", "metric"], np.array([[0.1, 0.05]])),
                 "count": (["config", "metric"], np.array([[3.0, 3.0]])),
             },
             coords={
                 "config": [0],
                 "metric": ["test/mse", "test/mse_denormalized_mean"],
                 "task_definition.seq_len": ("config", [10]),
+                "datasource.train1.load_arguments.units": ("config", units),
             },
             attrs={"optimization_col": "test/mse", "optimization_mode": "min"},
         )
@@ -89,8 +92,13 @@ class TestSaveOutputs:
             assert os.path.isfile(nc_path)
             loaded = xr.load_dataset(nc_path)
             assert "test/mse_denormalized_mean" in loaded.coords["metric"].values
+            assert loaded.coords["datasource.train1.load_arguments.units"].item() == (
+                "(2, 5, 10, 16)"
+            )
             # No _mean_mean in metric coordinates
-            assert not any("_mean_mean" in str(m) for m in loaded.coords["metric"].values)
+            assert not any(
+                "_mean_mean" in str(m) for m in loaded.coords["metric"].values
+            )
 
 
 class TestMain:
