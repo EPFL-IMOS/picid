@@ -31,19 +31,19 @@ _ALT_METRIC_MODELS = ("tabpfn", "tabdpt", "xgboost")
 
 # ---------------------------------------------------------------------------
 # Model name aliases
-# Maps superseded model names to the old dashboard canonical name. Aliasing
-# fires only when both names are present in the loaded dataset; the alias slice
-# is merged into the canonical slice (canonical data wins on conflict).
+# Maps historical report names to the current package-aligned name. Aliasing
+# fires only when both names are present in the loaded dataset; the historical
+# slice is merged into the current canonical slice (canonical data wins).
 # ---------------------------------------------------------------------------
 MODEL_ALIASES: dict[str, str] = {
-    "model.forecasters.crossformer_model.Crossformer_Forecaster": "baselines.crossformer_model.Crossformer_Forecaster",
-    "forecasters.crossformer_model.Crossformer_Forecaster": "baselines.crossformer_model.Crossformer_Forecaster",
-    "forecasters.lstm_model.LSTM_Forecaster": "baselines.lstm_model.LSTM_Forecaster",
-    "model.forecasters.patchtst_model.PatchTST_Forecaster": "baselines.patchtst_model.PatchTST_Forecaster",
-    "forecasters.patchtst_model.PatchTST_Forecaster": "baselines.patchtst_model.PatchTST_Forecaster",
-    "forecasters.spacetimeformer_model.Spacetimeformer_Forecaster": "baselines.spacetimeformer_model.Spacetimeformer_Forecaster",
-    "forecasters.tide_model.TiDE_Forecaster": "baselines.tide_model.TiDE_Forecaster",
-    "forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster",
+    "baselines.crossformer_model.Crossformer_Forecaster": "forecasters.crossformer_model.Crossformer_Forecaster",
+    "model.forecasters.crossformer_model.Crossformer_Forecaster": "forecasters.crossformer_model.Crossformer_Forecaster",
+    "baselines.lstm_model.LSTM_Forecaster": "forecasters.lstm_model.LSTM_Forecaster",
+    "baselines.patchtst_model.PatchTST_Forecaster": "forecasters.patchtst_model.PatchTST_Forecaster",
+    "model.forecasters.patchtst_model.PatchTST_Forecaster": "forecasters.patchtst_model.PatchTST_Forecaster",
+    "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "forecasters.spacetimeformer_model.Spacetimeformer_Forecaster",
+    "baselines.tide_model.TiDE_Forecaster": "forecasters.tide_model.TiDE_Forecaster",
+    "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster",
 }
 
 
