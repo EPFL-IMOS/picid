@@ -7,8 +7,8 @@ import xarray as xr
 from picid_report_dashboard.data import ResultsLoader, _safe_path_fragment
 
 
-CANONICAL_LSTM = "baselines.lstm_model.LSTM_Forecaster"
-MOVED_LSTM = "forecasters.lstm_model.LSTM_Forecaster"
+CANONICAL_LSTM = "forecasters.lstm_model.LSTM_Forecaster"
+LEGACY_LSTM = "baselines.lstm_model.LSTM_Forecaster"
 
 
 def _write_results(path, dataset: str, model: str, value: float) -> None:
@@ -28,19 +28,21 @@ def _write_results(path, dataset: str, model: str, value: float) -> None:
     ).to_netcdf(path)
 
 
-def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
+def test_legacy_lstm_uses_package_canonical_model_and_finds_hp_config(
+    tmp_path,
+) -> None:
     old_project = tmp_path / "old_project"
     moved_project = tmp_path / "padding_project"
     padding_dataset = "MultiSource_concepts_N-CMAPSS"
-    _write_results(old_project / "results.nc", "Legacy dataset", CANONICAL_LSTM, 1.0)
-    _write_results(moved_project / "results.nc", padding_dataset, MOVED_LSTM, 2.0)
+    _write_results(old_project / "results.nc", "Legacy dataset", LEGACY_LSTM, 1.0)
+    _write_results(moved_project / "results.nc", padding_dataset, CANONICAL_LSTM, 2.0)
 
-    stats_dir = moved_project / "tables"
+    stats_dir = old_project / "tables"
     stats_dir.mkdir(parents=True)
     pd.DataFrame(
         {
-            "Dataset": [padding_dataset],
-            "Model": [MOVED_LSTM],
+            "Dataset": ["Legacy dataset"],
+            "Model": [LEGACY_LSTM],
             "Total Runs": [10],
         }
     ).to_csv(stats_dir / "experiment_stats.csv", index=False)
@@ -48,7 +50,7 @@ def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
     hp_dir = moved_project / "tables" / "hp_configs"
     hp_dir.mkdir(parents=True)
     hp_path = hp_dir / (
-        f"{_safe_path_fragment(padding_dataset)}_{_safe_path_fragment(MOVED_LSTM)}.nc"
+        f"{_safe_path_fragment(padding_dataset)}_{_safe_path_fragment(CANONICAL_LSTM)}.nc"
     )
     xr.Dataset(
         coords={
@@ -64,7 +66,7 @@ def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
     dashboard_dataset = f"{padding_dataset} [padding_project]"
 
     assert CANONICAL_LSTM in loader.models
-    assert MOVED_LSTM not in loader.models
+    assert LEGACY_LSTM not in loader.models
     assert (
         loader.xarray_dataset["mean"]
         .sel(
@@ -75,7 +77,7 @@ def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
         .item()
         == 2.0
     )
-    assert (CANONICAL_LSTM, MOVED_LSTM) in loader.applied_model_aliases
+    assert (CANONICAL_LSTM, LEGACY_LSTM) in loader.applied_model_aliases
 
     stats = loader.stats_df
     assert stats is not None

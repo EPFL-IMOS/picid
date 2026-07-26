@@ -2303,14 +2303,16 @@ class PiCIDDashboard(param.Parameterized):
 
         if self._alias_warnings:
             rows = "\n".join(
-                f"| `{old}` | `{new}` |" for old, new in self._alias_warnings
+                f"| `{canonical}` | `{alias}` |"
+                for canonical, alias in self._alias_warnings
             )
             alias_markdown = pn.pane.Markdown(
-                "## ⚠️ Model Name Aliases Applied\n\n"
-                "Both old and new module paths were found simultaneously in the loaded data. "
-                "Runs under the **new name** were merged into the **old name** "
-                "(old data takes priority on conflict).\n\n"
-                "| Canonical name (old, kept) | Merged away (new) |\n"
+                "## Model Name Aliases Applied\n\n"
+                "Historical and current module paths were found simultaneously. "
+                "Runs under each **historical name** were merged into the "
+                "**current package-aligned name** "
+                "(current-name data takes priority on conflict).\n\n"
+                "| Canonical name (current, kept) | Merged historical name |\n"
                 "|---|---|\n" + rows,
                 width=700,
             )
