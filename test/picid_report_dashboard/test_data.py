@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from picid_report_dashboard.data import ResultsLoader, _safe_path_fragment
@@ -34,6 +35,16 @@ def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
     _write_results(old_project / "results.nc", "Legacy dataset", CANONICAL_LSTM, 1.0)
     _write_results(moved_project / "results.nc", padding_dataset, MOVED_LSTM, 2.0)
 
+    stats_dir = moved_project / "tables"
+    stats_dir.mkdir(parents=True)
+    pd.DataFrame(
+        {
+            "Dataset": [padding_dataset],
+            "Model": [MOVED_LSTM],
+            "Total Runs": [10],
+        }
+    ).to_csv(stats_dir / "experiment_stats.csv", index=False)
+
     hp_dir = moved_project / "tables" / "hp_configs"
     hp_dir.mkdir(parents=True)
     hp_path = hp_dir / (
@@ -65,6 +76,10 @@ def test_moved_lstm_uses_canonical_model_and_finds_hp_config(tmp_path) -> None:
         == 2.0
     )
     assert (CANONICAL_LSTM, MOVED_LSTM) in loader.applied_model_aliases
+
+    stats = loader.stats_df
+    assert stats is not None
+    assert stats.loc[0, "Model"] == CANONICAL_LSTM
 
     hp_ds = loader.hp_impact_ds(dashboard_dataset, CANONICAL_LSTM)
     assert hp_ds is not None
