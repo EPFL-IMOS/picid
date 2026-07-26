@@ -443,9 +443,15 @@ class ResultsLoader:
         metric_key: str,
         alt_metric_key: str | None = None,
         use_alt_metric: bool = True,
+        enabled_models: Collection[str] | None = None,
     ) -> bool:
         """Return whether *dataset* has any finite display metric values."""
-        for model_name in self.models:
+        models = self.models
+        if enabled_models is not None:
+            enabled = set(enabled_models)
+            models = [model_name for model_name in models if model_name in enabled]
+
+        for model_name in models:
             display_metric_key = self._display_metric_key_for_model(
                 model_name,
                 metric_key=metric_key,
@@ -463,6 +469,7 @@ class ResultsLoader:
         metric_key: str,
         alt_metric_key: str | None = None,
         use_alt_metric: bool = True,
+        enabled_models: Collection[str] | None = None,
     ) -> list[str]:
         """Return datasets that have at least one finite display metric value."""
         return [
@@ -473,6 +480,7 @@ class ResultsLoader:
                 metric_key=metric_key,
                 alt_metric_key=alt_metric_key,
                 use_alt_metric=use_alt_metric,
+                enabled_models=enabled_models,
             )
         ]
 
@@ -659,6 +667,7 @@ class ResultsLoader:
         use_alt_metric: bool = True,
         dataset: str | None = None,
         enabled_datasets: Collection[str] | None = None,
+        enabled_models: Collection[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Return dashboard display records for the requested datasets and models."""
         if dataset is not None:
@@ -668,14 +677,20 @@ class ResultsLoader:
                 metric_key=metric_key,
                 alt_metric_key=alt_metric_key,
                 use_alt_metric=use_alt_metric,
+                enabled_models=enabled_models,
             )
             if enabled_datasets is not None:
                 enabled = set(enabled_datasets)
                 datasets = [name for name in datasets if name in enabled]
 
+        models = self.models
+        if enabled_models is not None:
+            enabled = set(enabled_models)
+            models = [model_name for model_name in models if model_name in enabled]
+
         records: list[dict[str, Any]] = []
         for dataset_name in datasets:
-            for model_name in self.models:
+            for model_name in models:
                 records.append(
                     self.selected_metric_record(
                         dataset_name,

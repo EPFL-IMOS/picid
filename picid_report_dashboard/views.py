@@ -97,6 +97,7 @@ def _selected_metric_frame(
     use_alt_metric: bool = True,
     dataset: str | None = None,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pd.DataFrame:
     """Build a long-form frame of dynamic dashboard values."""
     records = loader.selected_metric_records(
@@ -107,6 +108,7 @@ def _selected_metric_frame(
         use_alt_metric=use_alt_metric,
         dataset=dataset,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
     if not records:
         return pd.DataFrame(
@@ -134,6 +136,7 @@ def _build_heatmap_frame(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Build the heatmap frame including Average and Average rank summary columns."""
     long = _selected_metric_frame(
@@ -144,6 +147,7 @@ def _build_heatmap_frame(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
     long = long.dropna(subset=["value"]).copy()
     if long.empty:
@@ -240,6 +244,7 @@ def build_heatmap(
     show_n: bool = True,
     show_rank: bool = False,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Color-coded heatmap of mean metric values across datasets and models."""
     import holoviews as hv
@@ -255,6 +260,7 @@ def build_heatmap(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
 
     if long.empty:
@@ -360,6 +366,7 @@ def build_latex_table(
     multiplier: float = 1.0,
     rename_map: dict[str, str] | None = None,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Booktabs LaTeX table of mean ± std values (models × datasets) for one metric."""
     long, model_order, dataset_order = _build_heatmap_frame(
@@ -371,6 +378,7 @@ def build_latex_table(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
 
     if long.empty:
@@ -583,6 +591,7 @@ def _build_parallel_coordinates_frame(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Build a wide overview frame for the parallel-coordinates plot."""
     long, model_order, axis_order = _build_heatmap_frame(
@@ -594,6 +603,7 @@ def _build_parallel_coordinates_frame(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
     if long.empty:
         return pd.DataFrame(columns=["model", "Model"]), [], axis_order
@@ -685,6 +695,7 @@ def build_parallel_coordinates(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Parallel-coordinates overview of per-model selected metric values."""
     import plotly.graph_objects as go
@@ -698,6 +709,7 @@ def build_parallel_coordinates(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
 
     if frame.empty:
@@ -802,6 +814,7 @@ def _build_spiderweb_frame(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
     """Build raw and normalized dataset-by-model frames for the spiderweb view."""
     raw_long = _selected_metric_frame(
@@ -812,6 +825,7 @@ def _build_spiderweb_frame(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
     if raw_long.empty:
         empty = pd.DataFrame()
@@ -826,6 +840,7 @@ def _build_spiderweb_frame(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
     if not model_order:
         empty = pd.DataFrame()
@@ -1136,6 +1151,7 @@ def build_spiderweb(
     selected_dataset: str | None = None,
     plot_mode: Literal["interactive", "matplotlib"] = "interactive",
     enabled_datasets: Collection[str] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Spiderweb overview with dataset spokes and one polygon per model."""
     raw_matrix, normalized_matrix, model_order, dataset_order = _build_spiderweb_frame(
@@ -1147,6 +1163,7 @@ def build_spiderweb(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         enabled_datasets=enabled_datasets,
+        enabled_models=enabled_models,
     )
 
     if raw_matrix.empty or normalized_matrix.empty:
@@ -1189,6 +1206,7 @@ def build_bar_chart(
     alt_metric_key: str | None = None,
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Horizontal bar chart with error bars for a single dataset."""
     import holoviews as hv
@@ -1206,6 +1224,7 @@ def build_bar_chart(
         alt_sort_metric_key=alt_sort_metric_key,
         use_alt_metric=use_alt_metric,
         dataset=dataset,
+        enabled_models=enabled_models,
     ).rename(columns={"value": "mean"})
 
     df = df.dropna(subset=["mean"]).sort_values("mean", ascending=(mode == "min"))
@@ -1279,6 +1298,7 @@ def build_summary_table(
     *,
     alt_metric_key: str | None = None,
     use_alt_metric: bool = True,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     df = loader.summary_df
     if df is None:
@@ -1288,6 +1308,8 @@ def build_summary_table(
         df = df[df["Dataset"] == ds_base]
         if project:
             df = df[df["Project"] == project]
+    if enabled_models is not None:
+        df = df[df["Model"].isin(enabled_models)]
     if model:
         df = df[df["Model"] == model]
     if metric:
@@ -1318,6 +1340,7 @@ def build_stats_table(
     loader: ResultsLoader,
     dataset: str | None = None,
     model: str | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     df = loader.stats_df
     if df is None:
@@ -1327,6 +1350,8 @@ def build_stats_table(
         df = df[df["Dataset"] == ds_base]
         if project:
             df = df[df["Project"] == project]
+    if enabled_models is not None:
+        df = df[df["Model"].isin(enabled_models)]
     if model:
         df = df[df["Model"] == model]
     return pn.widgets.Tabulator(
@@ -1634,6 +1659,7 @@ def build_model_summary_table(
     alt_sort_metric_key: str | None = None,
     use_alt_metric: bool = True,
     on_model_click: Callable[[str], None] | None = None,
+    enabled_models: Collection[str] | None = None,
 ) -> pn.viewable.Viewable:
     """Build a model-summary table for one dataset using metadata-panel properties."""
     if dataset is None:
@@ -1641,8 +1667,13 @@ def build_model_summary_table(
     if dataset not in loader.datasets:
         return pn.pane.Markdown(f"Dataset **{dataset}** not found.")
 
+    models = loader.models
+    if enabled_models is not None:
+        enabled = set(enabled_models)
+        models = [model for model in models if model in enabled]
+
     rows = []
-    for model in loader.models:
+    for model in models:
         metadata = _metadata_rows(
             loader,
             dataset,

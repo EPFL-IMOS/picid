@@ -70,7 +70,7 @@ pn.extension("tabulator", "plotly", sizing_mode="stretch_width")
 
 _DEFAULT_REPORT_DIR = os.path.join(os.path.dirname(__file__), "..", "report_output")
 _DEFAULT_METRIC = "test_best_rerun/mae_denormalized"
-_PERSISTED_STATE_VERSION = 8
+_PERSISTED_STATE_VERSION = 9
 _STORAGE_PREFIX = "picid_dashboard_state"
 _ALL_MODELS_OPTION = "— All models —"
 _MAIN_TAB_TITLES = (
@@ -98,6 +98,7 @@ _PERSISTED_STATE_PARAMS = (
     "show_rank",
     "spiderweb_plot_mode",
     "enabled_datasets",
+    "enabled_models",
     "selected_dataset",
     "selected_model",
     "active_tab",
@@ -240,6 +241,9 @@ class PiCIDDashboard(param.Parameterized):
     enabled_datasets = param.ListSelector(
         default=[], objects=[], doc="Datasets included in overview visualisations"
     )
+    enabled_models = param.ListSelector(
+        default=[], objects=[], doc="Models included in dashboard visualisations"
+    )
     selected_dataset = param.Selector(
         default=None, objects=[], doc="Dataset for bar chart / HP impact"
     )
@@ -279,6 +283,7 @@ class PiCIDDashboard(param.Parameterized):
         self._state_store: pn.widgets.TextInput | None = None
         self._sync_selectors_in_progress = False
         self._datasets_initialized = False
+        self._models_initialized = False
         self._suspend_alt_metric_tracking = False
         self._suspend_alt_sort_metric_tracking = False
         self._load_data()
@@ -306,6 +311,7 @@ class PiCIDDashboard(param.Parameterized):
     @param.depends("report_dir", watch=True)
     def _on_report_dir_change(self) -> None:
         self._datasets_initialized = False
+        self._models_initialized = False
         self._load_data()
         self._sync_selectors()
         self.param.trigger(
@@ -417,6 +423,12 @@ class PiCIDDashboard(param.Parameterized):
             return
         self._sync_selectors()
 
+    @param.depends("enabled_models", watch=True)
+    def _on_enabled_models_change(self) -> None:
+        if self._sync_selectors_in_progress or self._restore_in_progress:
+            return
+        self._sync_selectors()
+
     def _set_selector_value(
         self,
         name: str,
@@ -518,6 +530,20 @@ class PiCIDDashboard(param.Parameterized):
                 and self.alt_sort_metric_key == current_alt_sort_metric
             )
 
+            available_models = loader.models
+            self.param["enabled_models"].objects = available_models
+            if self._models_initialized:
+                enabled_models = [
+                    model_name
+                    for model_name in available_models
+                    if model_name in self.enabled_models
+                ]
+            else:
+                enabled_models = list(available_models)
+                self._models_initialized = True
+            if self.enabled_models != enabled_models:
+                self.enabled_models = enabled_models
+
             available_datasets = loader.datasets
             self.param["enabled_datasets"].objects = available_datasets
             if self._datasets_initialized:
@@ -539,6 +565,7 @@ class PiCIDDashboard(param.Parameterized):
                     metric_key=self.metric_key,
                     alt_metric_key=self._active_alt_metric(),
                     use_alt_metric=self.use_alt_metric,
+                    enabled_models=enabled_models,
                 )
                 if dataset_name in enabled_dataset_set
             ]
@@ -554,10 +581,9 @@ class PiCIDDashboard(param.Parameterized):
                 else _UNSET,
             )
 
-            models = loader.models or []
             self._set_selector_value(
                 "selected_model",
-                [_ALL_MODELS_OPTION, *models],
+                [_ALL_MODELS_OPTION, *enabled_models],
                 preferred=current_model,
                 fallback=_ALL_MODELS_OPTION,
             )
@@ -571,7 +597,7 @@ class PiCIDDashboard(param.Parameterized):
         active_model = self._active_model()
         if active_model is not None and is_alt_model(active_model) == alt:
             return [active_model]
-        return [model for model in self._loader.models if is_alt_model(model) == alt]
+        return [model for model in self.enabled_models if is_alt_model(model) == alt]
 
     def _available_hp_metrics_for_family(self, *, alt: bool) -> set[str]:
         """Return union of HP metric names for the active dataset and model family."""
@@ -629,7 +655,7 @@ class PiCIDDashboard(param.Parameterized):
         if not isinstance(payload, dict):
             return None
         version = payload.get("version", _PERSISTED_STATE_VERSION)
-        if version not in {2, 3, 4, 5, 6, 7, _PERSISTED_STATE_VERSION}:
+        if version not in {2, 3, 4, 5, 6, 7, 8, _PERSISTED_STATE_VERSION}:
             return None
 
         parsed: dict[str, Any] = {}
@@ -670,6 +696,11 @@ class PiCIDDashboard(param.Parameterized):
             isinstance(dataset_name, str) for dataset_name in enabled_datasets
         ):
             parsed["enabled_datasets"] = enabled_datasets
+        enabled_models = payload.get("enabled_models")
+        if isinstance(enabled_models, list) and all(
+            isinstance(model_name, str) for model_name in enabled_models
+        ):
+            parsed["enabled_models"] = enabled_models
         latex_precision = payload.get("latex_precision")
         if isinstance(latex_precision, int) and not isinstance(latex_precision, bool):
             parsed["latex_precision"] = max(1, min(8, latex_precision))
@@ -729,6 +760,16 @@ class PiCIDDashboard(param.Parameterized):
                         if dataset_name in saved_enabled_set
                     ]
                     self._datasets_initialized = True
+
+                saved_enabled_models = state.get("enabled_models", _UNSET)
+                if isinstance(saved_enabled_models, list):
+                    saved_enabled_set = set(saved_enabled_models)
+                    self.enabled_models = [
+                        model_name
+                        for model_name in self._loader.models
+                        if model_name in saved_enabled_set
+                    ]
+                    self._models_initialized = True
 
                 for name in ("metric_key", "sort_metric_key"):
                     self._apply_selector_state(name, state.get(name))
@@ -798,6 +839,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "enabled_datasets",
+        "enabled_models",
         "selected_dataset",
         "use_alt_metric",
         "alt_metric_key",
@@ -820,6 +862,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
                 enabled_datasets=self.enabled_datasets,
+                enabled_models=self.enabled_models,
                 show_n=self.show_n,
                 show_rank=self.show_rank,
             ),
@@ -837,6 +880,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
+                enabled_models=self.enabled_models,
                 on_model_click=self._show_hp_impact_for_model,
             ),
             sizing_mode="stretch_width",
@@ -846,6 +890,7 @@ class PiCIDDashboard(param.Parameterized):
         "metric_key",
         "sort_metric_key",
         "mode",
+        "enabled_models",
         "selected_dataset",
         "use_alt_metric",
         "alt_metric_key",
@@ -863,6 +908,7 @@ class PiCIDDashboard(param.Parameterized):
             alt_metric_key=self._active_alt_metric(),
             alt_sort_metric_key=self._active_alt_sort_metric(),
             use_alt_metric=self.use_alt_metric,
+            enabled_models=self.enabled_models,
         )
 
     def _active_model(self) -> str | None:
@@ -881,6 +927,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "enabled_datasets",
+        "enabled_models",
         "selected_dataset",
         "use_alt_metric",
         "alt_metric_key",
@@ -901,6 +948,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
                 enabled_datasets=self.enabled_datasets,
+                enabled_models=self.enabled_models,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -916,6 +964,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
+                enabled_models=self.enabled_models,
                 on_model_click=self._show_hp_impact_for_model,
             ),
             sizing_mode="stretch_width",
@@ -926,6 +975,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "enabled_datasets",
+        "enabled_models",
         "selected_dataset",
         "spiderweb_plot_mode",
         "use_alt_metric",
@@ -949,6 +999,7 @@ class PiCIDDashboard(param.Parameterized):
                 selected_dataset=self.selected_dataset,
                 plot_mode=self.spiderweb_plot_mode,
                 enabled_datasets=self.enabled_datasets,
+                enabled_models=self.enabled_models,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -964,6 +1015,7 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
+                enabled_models=self.enabled_models,
                 on_model_click=self._show_hp_impact_for_model,
             ),
             sizing_mode="stretch_width",
@@ -1009,6 +1061,7 @@ class PiCIDDashboard(param.Parameterized):
 
     @param.depends(
         "report_dir",
+        "enabled_models",
         "selected_dataset",
         "selected_model",
         "metric_key",
@@ -1035,6 +1088,7 @@ class PiCIDDashboard(param.Parameterized):
                 self.metric_key,
                 alt_metric_key=self._active_alt_metric(),
                 use_alt_metric=self.use_alt_metric,
+                enabled_models=self.enabled_models,
             ),
             pn.layout.Divider(),
             pn.pane.Markdown(
@@ -1050,17 +1104,23 @@ class PiCIDDashboard(param.Parameterized):
                 alt_metric_key=self._active_alt_metric(),
                 alt_sort_metric_key=self._active_alt_sort_metric(),
                 use_alt_metric=self.use_alt_metric,
+                enabled_models=self.enabled_models,
                 on_model_click=self._show_hp_impact_for_model,
             ),
             sizing_mode="stretch_width",
         )
 
-    @param.depends("report_dir", "selected_dataset", "selected_model")
+    @param.depends(
+        "report_dir", "enabled_models", "selected_dataset", "selected_model"
+    )
     def _stats_view(self):
         if self._load_error:
             return pn.pane.Alert(self._load_error, alert_type="danger")
         return build_stats_table(
-            self._loader, self.selected_dataset, self._active_model()
+            self._loader,
+            self.selected_dataset,
+            self._active_model(),
+            enabled_models=self.enabled_models,
         )
 
     def _latex_configurator_panel(self) -> pn.viewable.Viewable:
@@ -1074,7 +1134,9 @@ class PiCIDDashboard(param.Parameterized):
         except json.JSONDecodeError:
             rename_map = {}
 
-        short_models = [_shorten_model_name(m) for m in loader.models]
+        short_models = [
+            _shorten_model_name(model_name) for model_name in self.enabled_models
+        ]
         short_datasets = [
             _shorten_dataset_name(dataset_name)
             for dataset_name in self.enabled_datasets
@@ -1215,6 +1277,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "enabled_datasets",
+        "enabled_models",
         "use_alt_metric",
         "alt_metric_key",
         "alt_sort_metric_key",
@@ -1245,6 +1308,7 @@ class PiCIDDashboard(param.Parameterized):
             alt_sort_metric_key=self._active_alt_sort_metric(),
             use_alt_metric=self.use_alt_metric,
             enabled_datasets=self.enabled_datasets,
+            enabled_models=self.enabled_models,
             show_n=self.latex_show_n,
             show_std=self.latex_show_std,
             highlight_best_bg=self.latex_highlight_best_bg,
@@ -1261,6 +1325,7 @@ class PiCIDDashboard(param.Parameterized):
         "sort_metric_key",
         "mode",
         "enabled_datasets",
+        "enabled_models",
         "use_alt_metric",
         "alt_metric_key",
         "alt_sort_metric_key",
@@ -1378,6 +1443,9 @@ class PiCIDDashboard(param.Parameterized):
         enabled_dataset_sel = pn.widgets.MultiChoice.from_param(
             self.param.enabled_datasets, name="Datasets shown", width=280
         )
+        enabled_model_sel = pn.widgets.MultiChoice.from_param(
+            self.param.enabled_models, name="Models shown", width=280
+        )
         dataset_sel = pn.widgets.Select.from_param(
             self.param.selected_dataset, name="Dataset", width=280
         )
@@ -1467,6 +1535,8 @@ class PiCIDDashboard(param.Parameterized):
             pn.layout.Divider(),
             "**Datasets**",
             enabled_dataset_sel,
+            "**Models**",
+            enabled_model_sel,
             pn.layout.Divider(),
             "**Focus**",
             dataset_sel,

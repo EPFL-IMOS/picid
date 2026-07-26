@@ -38,10 +38,16 @@ def _loader_factory(loader_map):
             metric_key: str,
             alt_metric_key: str | None = None,
             use_alt_metric: bool = True,
+            enabled_models: list[str] | None = None,
         ) -> bool:
+            models = self.models
+            if enabled_models is not None:
+                enabled = set(enabled_models)
+                models = [model_name for model_name in models if model_name in enabled]
+
             if not self._hp_map:
-                return dataset in self.datasets
-            for model_name in self.models:
+                return dataset in self.datasets and bool(models)
+            for model_name in models:
                 display_metric_key = (
                     alt_metric_key
                     if (
@@ -73,6 +79,7 @@ def _loader_factory(loader_map):
             metric_key: str,
             alt_metric_key: str | None = None,
             use_alt_metric: bool = True,
+            enabled_models: list[str] | None = None,
         ) -> list[str]:
             return [
                 dataset_name
@@ -82,6 +89,7 @@ def _loader_factory(loader_map):
                     metric_key=metric_key,
                     alt_metric_key=alt_metric_key,
                     use_alt_metric=use_alt_metric,
+                    enabled_models=enabled_models,
                 )
             ]
 
@@ -153,6 +161,38 @@ def test_serialize_state_contains_expected_keys(monkeypatch):
     assert state["spiderweb_plot_mode"] == "interactive"
     assert state["selected_model"] == "model_b"
     assert state["active_tab"] == 3
+
+
+def test_enabled_models_filter_focus_selector_and_restore(monkeypatch):
+    loader_map = {
+        "report_a": {
+            "metric_keys": [
+                dashboard_app._DEFAULT_METRIC,
+                "test/mae_denormalized",
+            ],
+            "datasets": ["dataset_a"],
+            "models": ["model_a", "model_b", "model_c"],
+        }
+    }
+    dash = _make_dashboard(monkeypatch, loader_map)
+
+    assert dash.enabled_models == ["model_a", "model_b", "model_c"]
+    dash.enabled_models = ["model_b"]
+    assert list(dash.param["selected_model"].objects) == [
+        dashboard_app._ALL_MODELS_OPTION,
+        "model_b",
+    ]
+    dash.selected_model = "model_b"
+
+    restored = _make_dashboard(monkeypatch, loader_map)
+    restored._apply_saved_state(dash._serialize_state())
+
+    assert restored.enabled_models == ["model_b"]
+    assert restored.selected_model == "model_b"
+    assert list(restored.param["selected_model"].objects) == [
+        dashboard_app._ALL_MODELS_OPTION,
+        "model_b",
+    ]
 
 
 def test_dashboard_initializes_alt_selectors_from_derived_metric(monkeypatch):
@@ -278,8 +318,7 @@ def test_sync_selectors_preserves_valid_values_and_falls_back(monkeypatch):
     assert dash.selected_dataset == "dataset_b"
     assert dash.selected_model == "model_b"
 
-    dash._loader = dashboard_app.ResultsLoader("report_fallback")
-    dash._sync_selectors()
+    dash.report_dir = "report_fallback"
 
     assert dash.metric_key == dashboard_app._DEFAULT_METRIC
     assert dash.sort_metric_key == dashboard_app._DEFAULT_METRIC
@@ -1025,6 +1064,8 @@ def test_parallel_coordinates_view_includes_verification_model_summary(monkeypat
         "alt_metric_key": "test/mae_denormalized",
         "alt_sort_metric_key": "test/mae_denormalized",
         "use_alt_metric": True,
+        "enabled_datasets": ["dataset_a"],
+        "enabled_models": ["model_a"],
     }
     assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
     assert (
@@ -1034,6 +1075,7 @@ def test_parallel_coordinates_view_includes_verification_model_summary(monkeypat
     assert (
         model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
     )
+    assert model_summary_call["kwargs"]["enabled_models"] == ["model_a"]
 
 
 def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
@@ -1090,6 +1132,8 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
         "use_alt_metric": True,
         "selected_dataset": "dataset_a",
         "plot_mode": "interactive",
+        "enabled_datasets": ["dataset_a"],
+        "enabled_models": ["model_a"],
     }
     assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
     assert (
@@ -1099,6 +1143,7 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
     assert (
         model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
     )
+    assert model_summary_call["kwargs"]["enabled_models"] == ["model_a"]
 
 
 def test_spiderweb_view_reacts_to_plot_mode_changes():
@@ -1203,6 +1248,7 @@ def test_summary_view_includes_verification_model_summary(monkeypatch):
     assert summary_call["kwargs"] == {
         "alt_metric_key": "test/mae_denormalized",
         "use_alt_metric": True,
+        "enabled_models": ["model_a"],
     }
     assert model_summary_call["kwargs"]["metric_key"] == dashboard_app._DEFAULT_METRIC
     assert (
@@ -1212,3 +1258,4 @@ def test_summary_view_includes_verification_model_summary(monkeypatch):
     assert (
         model_summary_call["kwargs"]["alt_sort_metric_key"] == "test/mae_denormalized"
     )
+    assert model_summary_call["kwargs"]["enabled_models"] == ["model_a"]

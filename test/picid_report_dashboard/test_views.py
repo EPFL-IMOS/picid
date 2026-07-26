@@ -677,6 +677,25 @@ def test_build_heatmap_frame_only_uses_enabled_datasets():
     assert average_values[ALT_MODEL] == pytest.approx(3.0)
 
 
+def test_build_heatmap_frame_only_uses_enabled_models():
+    loader = _make_average_rank_loader()
+
+    long, model_order, dataset_order = views._build_heatmap_frame(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        alt_metric_key=ALT_DISPLAY_METRIC,
+        alt_sort_metric_key=ALT_DISPLAY_METRIC,
+        use_alt_metric=True,
+        enabled_models=[ALT_MODEL],
+    )
+
+    assert model_order == [ALT_MODEL]
+    assert dataset_order == [DATASET, SECOND_DATASET, "Average", "Average rank"]
+    assert set(long["model"]) == {ALT_MODEL}
+
+
 def test_build_heatmap_frame_orders_models_by_average_rank_not_average_value():
     loader = _make_rank_order_loader()
 
