@@ -313,6 +313,16 @@ class ResultsLoader:
     # CSV table accessors
     # ------------------------------------------------------------------
 
+    def _canonicalize_model_column(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Match CSV model names to the canonical names in ``xarray_dataset``."""
+        _ = self.xarray_dataset
+        alias_to_canonical = {
+            alias: canonical for canonical, alias in self.applied_model_aliases
+        }
+        if alias_to_canonical and "Model" in df.columns:
+            df["Model"] = df["Model"].replace(alias_to_canonical)
+        return df
+
     @cached_property
     def summary_df(self) -> Optional[pd.DataFrame]:
         """Merged summary.csv reshaped to long form (Dataset, Metric, Model, Value).
@@ -355,7 +365,7 @@ class ResultsLoader:
             frames.append(melted[["Project", "Dataset", "Metric", "Model", "Value"]])
         if not frames:
             return None
-        return pd.concat(frames, ignore_index=True)
+        return self._canonicalize_model_column(pd.concat(frames, ignore_index=True))
 
     @cached_property
     def stats_df(self) -> Optional[pd.DataFrame]:
@@ -369,7 +379,7 @@ class ResultsLoader:
                 frames.append(df)
         if not frames:
             return None
-        return pd.concat(frames, ignore_index=True)
+        return self._canonicalize_model_column(pd.concat(frames, ignore_index=True))
 
     def hp_impact_ds(self, dataset: str, model: str) -> Optional[xr.Dataset]:
         """Load the sorted_aggregated_results xr.Dataset for a (dataset, model) combination.
