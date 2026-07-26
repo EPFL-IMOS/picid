@@ -343,6 +343,11 @@ def _latex_escape(s: str) -> str:
     return s
 
 
+def _markdown_escape(s: str) -> str:
+    """Escape plain text for use in a Markdown table cell."""
+    return str(s).replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
+
+
 def build_latex_table(
     loader: ResultsLoader,
     metric_key: str,
@@ -440,10 +445,10 @@ def build_latex_table(
             within_1std_models=within_models,
         )
 
-    # Format each cell
+    # Format each cell for both export formats.
     fmt = f".{precision}f"
 
-    def _fmt_cell(r: pd.Series) -> str:
+    def _fmt_cell(r: pd.Series, output_format: Literal["latex", "markdown"]) -> str:
         if pd.isna(r["value"]):
             return "—"
         kind = r.get("summary_kind", "dataset")
@@ -454,7 +459,9 @@ def build_latex_table(
         scaled_std = (
             float(r["std"]) * multiplier if pd.notna(r.get("std")) else r.get("std")
         )
-        std_str = f" ± {scaled_std:{fmt}}" if (show_std and pd.notna(scaled_std)) else ""
+        std_str = (
+            f" ± {scaled_std:{fmt}}" if (show_std and pd.notna(scaled_std)) else ""
+        )
         n_str = f" (n={int(r['n'])})" if (show_n and pd.notna(r.get("n"))) else ""
         txt = f"{scaled_value:{fmt}}{std_str}{n_str}"
 
@@ -467,35 +474,53 @@ def build_latex_table(
         is_second = (not is_best) and stats.second_best_model == model
         is_within = (not is_best) and (model in stats.within_1std_models)
 
-        # Text decorations: bold best (unconditional), underline 2nd best (toggle).
+        if output_format == "latex":
+            if is_best:
+                txt = f"\\textbf{{{txt}}}"
+            if is_second and underline_2nd_best:
+                txt = f"\\underline{{{txt}}}"
+            if is_best and highlight_best_bg:
+                txt = f"\\cellcolor[gray]{{0.85}}{txt}"
+            elif is_within and highlight_within_1std:
+                txt = f"\\cellcolor{{blue!15}}{txt}"
+            return txt
+
         if is_best:
-            txt = f"\\textbf{{{txt}}}"
+            txt = f"**{txt}**"
         if is_second and underline_2nd_best:
-            txt = f"\\underline{{{txt}}}"
-
-        # Background colors: best wins over within-1σ (mutually exclusive by construction).
+            txt = f"<u>{txt}</u>"
         if is_best and highlight_best_bg:
-            txt = f"\\cellcolor[gray]{{0.85}}{txt}"
+            txt = f'<span style="background-color:#d9d9d9">{txt}</span>'
         elif is_within and highlight_within_1std:
-            txt = f"\\cellcolor{{blue!15}}{txt}"
-
+            txt = f'<span style="background-color:#dbeafe">{txt}</span>'
         return txt
 
-    long["cell"] = long.apply(_fmt_cell, axis=1)
+    long["latex_cell"] = long.apply(lambda row: _fmt_cell(row, "latex"), axis=1)
+    long["markdown_cell"] = long.apply(lambda row: _fmt_cell(row, "markdown"), axis=1)
 
-    # Pivot: models as rows, datasets as columns
-    pivot = long.pivot_table(
-        index="model", columns="dataset", values="cell", aggfunc="first"
-    )
-    pivot = pivot.reindex(index=model_order, columns=dataset_order_short)
-    pivot.index.name = "Model"
-    pivot.columns.name = None
+    def _pivot_cells(column: str) -> pd.DataFrame:
+        result = long.pivot_table(
+            index="model", columns="dataset", values=column, aggfunc="first"
+        )
+        result = result.reindex(index=model_order, columns=dataset_order_short)
+        result.index.name = "Model"
+        result.columns.name = None
+        return result
 
-    # Escape special chars in row/column labels
+    pivot = _pivot_cells("latex_cell")
+    markdown_pivot = _pivot_cells("markdown_cell")
+
     pivot.index = pd.Index(
         [_latex_escape(m) for m in pivot.index], name=pivot.index.name
     )
     pivot.columns = pd.Index([_latex_escape(d) for d in pivot.columns])
+    markdown_pivot.index = pd.Index(
+        [_markdown_escape(m) for m in markdown_pivot.index],
+        name=markdown_pivot.index.name,
+    )
+    markdown_pivot.columns = pd.Index(
+        [_markdown_escape(d) for d in markdown_pivot.columns]
+    )
 
     # Build LaTeX string
     effective_sort = sort_metric_key or metric_key
@@ -517,9 +542,7 @@ def build_latex_table(
         if full in ("Average", "Average rank"):
             continue
         if short != full:
-            legend_entries.append(
-                f"{_latex_escape(short)} = {_latex_escape(full)}"
-            )
+            legend_entries.append(f"{_latex_escape(short)} = {_latex_escape(full)}")
 
     caption_parts = [
         f"Results for display metric \\texttt{{{_latex_escape(metric_key)}}} "
@@ -549,13 +572,57 @@ def build_latex_table(
     )
     latex_str = header_comment + latex_body
 
-    # Panel UI: copy button + read-only textarea
+    def _markdown_code(value: str) -> str:
+        escaped = _markdown_escape(value).replace("`", "&#96;")
+        return f"`{escaped}`"
+
+    markdown_lines = [
+        f"**Display metric:** {_markdown_code(metric_key)}  ",
+        f"**Sort metric:** {_markdown_code(effective_sort)}  ",
+        f"**Mode:** {_markdown_code(mode)}",
+    ]
+    if multiplier != 1.0:
+        markdown_lines.append(f"**Values multiplied by:** {multiplier:g}")
+    markdown_lines.append("")
+
+    headers = ["Model", *[str(column) for column in markdown_pivot.columns]]
+    markdown_lines.append("| " + " | ".join(headers) + " |")
+    markdown_lines.append(
+        "| " + " | ".join([":---", *(["---:"] * len(markdown_pivot.columns))]) + " |"
+    )
+    for model_name, row in markdown_pivot.iterrows():
+        markdown_lines.append(
+            "| "
+            + " | ".join([str(model_name), *[str(value) for value in row.tolist()]])
+            + " |"
+        )
+
+    markdown_legend = []
+    for full, short in zip(dataset_order, dataset_order_short, strict=False):
+        if full not in ("Average", "Average rank") and short != full:
+            markdown_legend.append(f"{_markdown_code(short)} = {_markdown_code(full)}")
+    if markdown_legend:
+        markdown_lines.extend(["", "**Datasets:** " + "; ".join(markdown_legend)])
+    markdown_str = "\n".join(markdown_lines)
+
     textarea = pn.widgets.TextAreaInput(
         value=latex_str,
         disabled=True,
         height=500,
         sizing_mode="stretch_width",
     )
+    format_btn = pn.widgets.Button(
+        name="Show Markdown",
+        button_type="default",
+        width=160,
+    )
+
+    def _toggle_output_format(_event: object) -> None:
+        showing_latex = textarea.value == latex_str
+        textarea.value = markdown_str if showing_latex else latex_str
+        format_btn.name = "Show LaTeX" if showing_latex else "Show Markdown"
+
+    format_btn.on_click(_toggle_output_format)
     copy_btn = pn.widgets.Button(
         name="Copy to clipboard",
         button_type="primary",
@@ -565,7 +632,11 @@ def build_latex_table(
         args={"ta": textarea},
         code="navigator.clipboard.writeText(ta.value)",
     )
-    return pn.Column(copy_btn, textarea, sizing_mode="stretch_width")
+    return pn.Column(
+        pn.Row(format_btn, copy_btn),
+        textarea,
+        sizing_mode="stretch_width",
+    )
 
 
 # ---------------------------------------------------------------------------
