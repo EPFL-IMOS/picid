@@ -775,8 +775,10 @@ def test_latex_multiplier_persistence_roundtrip(monkeypatch):
     )
 
     dash.latex_multiplier = 100.0
+    dash.latex_shorten_names = False
     state = dash._serialize_state()
     assert state["latex_multiplier"] == 100.0
+    assert state["latex_shorten_names"] is False
 
     restored = _make_dashboard(
         monkeypatch,
@@ -791,8 +793,11 @@ def test_latex_multiplier_persistence_roundtrip(monkeypatch):
             }
         },
     )
-    restored._apply_saved_state(state)
+    parsed = restored._parse_saved_state(dash._serialize_state_json())
+    assert parsed is not None
+    restored._apply_saved_state(parsed)
     assert restored.latex_multiplier == 100.0
+    assert restored.latex_shorten_names is False
 
 
 def test_parse_saved_state_v6_payload_omits_latex_multiplier(monkeypatch):
@@ -835,9 +840,7 @@ def test_parse_saved_state_rejects_bool_latex_multiplier(monkeypatch):
         },
     )
 
-    parsed = dash._parse_saved_state(
-        '{"version": 7, "latex_multiplier": true}'
-    )
+    parsed = dash._parse_saved_state('{"version": 7, "latex_multiplier": true}')
     assert "latex_multiplier" not in parsed
 
 
@@ -1102,9 +1105,10 @@ def test_spiderweb_view_includes_verification_model_summary(monkeypatch):
 
 
 def test_spiderweb_view_reacts_to_plot_mode_changes():
-    assert "spiderweb_plot_mode" in dashboard_app.PiCIDDashboard._spiderweb_view._dinfo[
-        "dependencies"
-    ]
+    assert (
+        "spiderweb_plot_mode"
+        in dashboard_app.PiCIDDashboard._spiderweb_view._dinfo["dependencies"]
+    )
     assert (
         "spiderweb_plot_mode"
         not in dashboard_app.PiCIDDashboard._parallel_coordinates_view._dinfo[
