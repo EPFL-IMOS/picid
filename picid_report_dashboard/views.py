@@ -65,6 +65,21 @@ def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
     'MultiSource_concepts_N-CMAPSS [16_03_2026_concepts_n_cmapss_prognostics_]'
         -> 'N-CMAPSS [concepts_n_cmapss_prognostics]'
     """
+    if " · " in name:
+        source, *constraints = name.split(" · ")
+        compact_constraints = []
+        for constraint in constraints:
+            hp_name, separator, value = constraint.partition("=")
+            compact_name = hp_name.rsplit(".", 1)[-1]
+            compact_constraints.append(
+                f"{compact_name}={value}" if separator else constraint
+            )
+        constraint_label = " · ".join(compact_constraints)
+        source_budget = max(8, max_len - len(constraint_label) - 3)
+        source_label = _shorten_dataset_name(source, max_len=source_budget)
+        if len(source_label) > source_budget:
+            source_label = source_label[: source_budget - 1] + "…"
+        return f"{source_label} · {constraint_label}"
     if " [" in name and name.endswith("]"):
         ds_part, bracket = name.rsplit(" [", 1)
         suffix = bracket.rstrip("]")
@@ -80,6 +95,30 @@ def _shorten_dataset_name(name: str, max_len: int = 40) -> str:
         abbrev = "_".join(parts[-2:]) if len(parts) >= 2 else suffix[:12]
         return f"{ds_part} [{abbrev}]"
     return name if len(name) <= max_len else name[: max_len - 1] + "…"
+
+
+def _dataset_display_labels(
+    dataset_names: Collection[str], *, shorten_names: bool = True
+) -> dict[str, str]:
+    """Build readable labels without merging datasets that shorten identically."""
+    names = list(dataset_names)
+    base_labels = {
+        name: _shorten_dataset_name(name) if shorten_names else name for name in names
+    }
+    label_counts: dict[str, int] = {}
+    for label in base_labels.values():
+        label_counts[label] = label_counts.get(label, 0) + 1
+
+    occurrences: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    for name in names:
+        base = base_labels[name]
+        if label_counts[base] == 1:
+            labels[name] = base
+            continue
+        occurrences[base] = occurrences.get(base, 0) + 1
+        labels[name] = f"{base} ({occurrences[base]})"
+    return labels
 
 
 def _dashboard_datasets(loader: ResultsLoader) -> list[str]:
@@ -303,12 +342,10 @@ def build_heatmap(
         return pn.pane.Markdown(f"No data for metric **{metric_key}**.")
 
     # Model names were shortened before ranking and summary aggregation.
-    # Dataset names are shortened only for axis readability.
-    long["dataset"] = long["dataset"].map(_shorten_dataset_name)
-    dataset_label_map = {
-        dataset_name: _shorten_dataset_name(dataset_name)
-        for dataset_name in dataset_order
-    }
+    # Dataset labels stay unique even when project-name abbreviation collides.
+    long["source_dataset"] = long["dataset"]
+    dataset_label_map = _dataset_display_labels(dataset_order)
+    long["dataset"] = long["dataset"].map(dataset_label_map)
     dataset_order = [dataset_label_map[dataset_name] for dataset_name in dataset_order]
 
     n_models = len(model_order)
@@ -335,7 +372,9 @@ def build_heatmap(
     model_dim = hv.Dimension("model", values=model_order)
     dataset_dim = hv.Dimension("dataset", values=dataset_order)
     heatmap = hv.HeatMap(
-        long, kdims=[dataset_dim, model_dim], vdims=["color", "value"]
+        long,
+        kdims=[dataset_dim, model_dim],
+        vdims=["color", "value", "source_dataset"],
     ).opts(
         responsive=True,
         frame_height=plot_height,
@@ -433,12 +472,15 @@ def build_latex_table(
         default = _shorten_model_name(name) if shorten_names else name
         return _renames.get(default) or default
 
+    dataset_label_map = _dataset_display_labels(
+        dataset_order, shorten_names=shorten_names
+    )
+
     def _display_dataset(name: str) -> str:
-        default = _shorten_dataset_name(name) if shorten_names else name
+        default = dataset_label_map[name]
         return _renames.get(default) or default
 
     long["model"] = long["model"].map(_display_model)
-    long["dataset"] = long["dataset"].map(_display_dataset)
     model_order = [_display_model(m) for m in model_order]
     dataset_order_display = [_display_dataset(d) for d in dataset_order]
 
@@ -554,7 +596,8 @@ def build_latex_table(
         result = long.pivot_table(
             index="model", columns="dataset", values=column, aggfunc="first"
         )
-        result = result.reindex(index=model_order, columns=dataset_order_display)
+        result = result.reindex(index=model_order, columns=dataset_order)
+        result.columns = dataset_order_display
         result.index.name = "Model"
         result.columns.name = None
         return result

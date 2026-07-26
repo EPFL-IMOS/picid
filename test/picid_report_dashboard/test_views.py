@@ -1798,6 +1798,100 @@ def test_virtual_dataset_flows_through_overview_frames() -> None:
     assert long.loc[long["dataset"] == virtual_dataset, "value"].item() == 10.0
 
 
+def test_heatmap_keeps_distinct_virtual_dataset_columns() -> None:
+    loader = _make_loader()
+    virtual_datasets = loader.configure_hp_comparison(
+        DATASET,
+        ["task_definition.seq_len"],
+        [PRIMARY_MODEL],
+    )
+
+    pane = views.build_heatmap(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_datasets=virtual_datasets,
+        enabled_models=[PRIMARY_MODEL],
+    )
+
+    heatmap = pane.object.get(0)
+    displayed_datasets = list(dict.fromkeys(heatmap.data["dataset"]))
+    assert displayed_datasets == [
+        views._shorten_dataset_name(virtual_datasets[0]),
+        views._shorten_dataset_name(virtual_datasets[1]),
+        "Average",
+        "Average rank",
+    ]
+    assert len(set(displayed_datasets)) == 4
+
+
+def test_latex_table_keeps_each_virtual_dataset_score() -> None:
+    loader = _make_loader()
+    virtual_datasets = loader.configure_hp_comparison(
+        DATASET,
+        ["task_definition.seq_len"],
+        [PRIMARY_MODEL],
+    )
+
+    pane = views.build_latex_table(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_datasets=virtual_datasets,
+        enabled_models=[PRIMARY_MODEL],
+        precision=1,
+        show_std=False,
+        show_n=False,
+    )
+
+    latex = _latex_value(pane)
+    model_row = _latex_row(latex, "LSTM")
+    assert "seq\\_len=16" in latex
+    assert "seq\\_len=32" in latex
+    assert model_row.count("10.0") == 1
+    assert model_row.count("5.0") == 1
+
+
+def test_latex_table_keeps_scores_for_colliding_short_dataset_names() -> None:
+    loader = _make_average_rank_loader()
+    renamed_datasets = {
+        DATASET: "Dataset A [16_03_2026_concepts_n_cmapss_ds02_prognostics_]",
+        SECOND_DATASET: (
+            "Dataset A "
+            "[rebuttal_ncmapss_padding_ablation_concepts_n_cmapss_ds02_prognostics_]"
+        ),
+    }
+    loader._xarray_dataset = loader.xarray_dataset.assign_coords(
+        dataset=[renamed_datasets[DATASET], renamed_datasets[SECOND_DATASET]]
+    )
+    loader._hp_map = {
+        (renamed_datasets[dataset], model): hp_ds
+        for (dataset, model), hp_ds in loader._hp_map.items()
+    }
+
+    pane = views.build_latex_table(
+        loader,
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_OPT_METRIC,
+        use_alt_metric=False,
+        enabled_datasets=list(renamed_datasets.values()),
+        enabled_models=[PRIMARY_MODEL],
+        precision=1,
+        show_std=False,
+        show_n=False,
+    )
+
+    latex = _latex_value(pane)
+    model_row = _latex_row(latex, "LSTM")
+    assert "Dataset A [ds02\\_prognostics] (1)" in latex
+    assert "Dataset A [ds02\\_prognostics] (2)" in latex
+    dataset_cells = model_row.split(" & ")[1:3]
+    assert "1.0" in dataset_cells[0] and "100.0" not in dataset_cells[0]
+    assert "100.0" in dataset_cells[1]
+
+
 def test_bar_and_hp_impact_accept_filtered_virtual_dataset() -> None:
     loader, virtual_dataset = _make_virtual_dataset_loader()
 
