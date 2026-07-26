@@ -9,6 +9,18 @@ from picid_report_dashboard.data import ResultsLoader, _safe_path_fragment
 
 CANONICAL_LSTM = "forecasters.lstm_model.LSTM_Forecaster"
 LEGACY_LSTM = "baselines.lstm_model.LSTM_Forecaster"
+WRAPPER_ALIASES = {
+    "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": (
+        "estimators.cnn1d.wrapper.CNN1D_Wrapper"
+    ),
+    "model.wrappers.mlp_wrapper.MLPWrapper": "estimators.mlp.wrapper.MLPWrapper",
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": (
+        "estimators.statistical.wrapper.StatisticalBaselineWrapper (exponential)"
+    ),
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": (
+        "estimators.statistical.wrapper.StatisticalBaselineWrapper (linear)"
+    ),
+}
 
 
 def _write_results(path, dataset: str, model: str, value: float) -> None:
@@ -21,6 +33,28 @@ def _write_results(path, dataset: str, model: str, value: float) -> None:
                 coords={
                     "dataset": [dataset],
                     "model": [model],
+                    "metric_key": ["test/mae"],
+                },
+            )
+        }
+    ).to_netcdf(path)
+
+
+def _write_multi_model_results(
+    path,
+    dataset: str,
+    models: list[str],
+    values: list[float],
+) -> None:
+    path.parent.mkdir(parents=True)
+    xr.Dataset(
+        {
+            "mean": xr.DataArray(
+                np.asarray(values, dtype=float).reshape(1, len(models), 1),
+                dims=("dataset", "model", "metric_key"),
+                coords={
+                    "dataset": [dataset],
+                    "model": models,
                     "metric_key": ["test/mae"],
                 },
             )
@@ -89,6 +123,60 @@ def test_legacy_lstm_uses_package_canonical_model_and_finds_hp_config(
         "False",
         "True",
     ]
+
+
+def test_wrapper_aliases_merge_models_and_find_legacy_hp_configs(tmp_path) -> None:
+    dataset = "Dataset"
+    legacy_project = tmp_path / "legacy_project"
+    current_project = tmp_path / "current_project"
+    legacy_models = list(WRAPPER_ALIASES)
+    canonical_models = list(WRAPPER_ALIASES.values())
+    _write_multi_model_results(
+        legacy_project / "results.nc",
+        dataset,
+        legacy_models,
+        [1.0, 2.0, 3.0, 4.0],
+    )
+    _write_multi_model_results(
+        current_project / "results.nc",
+        dataset,
+        canonical_models,
+        [10.0, 20.0, 30.0, 40.0],
+    )
+
+    hp_dir = legacy_project / "tables" / "hp_configs"
+    hp_dir.mkdir(parents=True)
+    for legacy_model in legacy_models:
+        hp_path = hp_dir / (
+            f"{_safe_path_fragment(dataset)}_{_safe_path_fragment(legacy_model)}.nc"
+        )
+        xr.Dataset(
+            coords={
+                "config": [0],
+                "task_definition.seq_len": ("config", [10]),
+            }
+        ).to_netcdf(hp_path)
+
+    loader = ResultsLoader(str(tmp_path))
+    legacy_dashboard_dataset = f"{dataset} [legacy_project]"
+
+    for legacy_model, canonical_model in WRAPPER_ALIASES.items():
+        assert canonical_model in loader.models
+        assert legacy_model not in loader.models
+        assert (canonical_model, legacy_model) in loader.applied_model_aliases
+        assert (
+            loader.xarray_dataset["mean"]
+            .sel(
+                dataset=legacy_dashboard_dataset,
+                model=canonical_model,
+                metric_key="test/mae",
+            )
+            .item()
+            == legacy_models.index(legacy_model) + 1
+        )
+        hp_ds = loader.hp_impact_ds(legacy_dashboard_dataset, canonical_model)
+        assert hp_ds is not None
+        assert hp_ds.coords["task_definition.seq_len"].item() == 10
 
 
 class _MemoryResultsLoader(ResultsLoader):

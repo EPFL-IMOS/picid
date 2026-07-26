@@ -45,6 +45,10 @@ MODEL_ALIASES: dict[str, str] = {
     "baselines.spacetimeformer_model.Spacetimeformer_Forecaster": "forecasters.spacetimeformer_model.Spacetimeformer_Forecaster",
     "baselines.tide_model.TiDE_Forecaster": "forecasters.tide_model.TiDE_Forecaster",
     "baselines.timeseries_transformer_model.Timeseries_Transformer_Forecaster": "forecasters.timeseries_transformer_model.Timeseries_Transformer_Forecaster",
+    "model.wrappers.cnn1d_wrapper.CNN1D_Wrapper": "estimators.cnn1d.wrapper.CNN1D_Wrapper",
+    "model.wrappers.mlp_wrapper.MLPWrapper": "estimators.mlp.wrapper.MLPWrapper",
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (exponential)": "estimators.statistical.wrapper.StatisticalBaselineWrapper (exponential)",
+    "model.wrappers.statistical_models_wrapper.StatisticalBaselineWrapper (linear)": "estimators.statistical.wrapper.StatisticalBaselineWrapper (linear)",
 }
 
 
