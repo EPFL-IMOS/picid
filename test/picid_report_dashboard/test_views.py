@@ -654,6 +654,55 @@ def test_build_heatmap_frame_adds_average_rank_from_dataset_ranks():
     assert average_rank_values[ALT_MODEL] == pytest.approx(1.5)
 
 
+def test_build_heatmap_averages_after_model_name_shortening():
+    records = [
+        {
+            "dataset": DATASET,
+            "model": "baselines.lstm_model.LSTM_Forecaster",
+            "value": 10.0,
+            "std": 1.0,
+            "n": 5.0,
+        },
+        {
+            "dataset": DATASET,
+            "model": "forecasters.lstm_model.LSTM_Forecaster",
+            "value": 14.0,
+            "std": 1.0,
+            "n": 5.0,
+        },
+        {
+            "dataset": SECOND_DATASET,
+            "model": "forecasters.lstm_model.LSTM_Forecaster",
+            "value": 30.0,
+            "std": 2.0,
+            "n": 5.0,
+        },
+    ]
+
+    class StaticRecordsLoader:
+        def selected_metric_records(self, **_kwargs):
+            return records
+
+    pane = views.build_heatmap(
+        StaticRecordsLoader(),
+        PRIMARY_DISPLAY_METRIC,
+        sort_metric_key=PRIMARY_DISPLAY_METRIC,
+        mode="min",
+        use_alt_metric=False,
+        show_n=False,
+    )
+    labels = next(
+        element for element in pane.object if element.__class__.__name__ == "Labels"
+    ).data
+
+    assert not labels.duplicated(["dataset", "model"]).any()
+    assert set(labels["model"]) == {"LSTM"}
+    dataset_value = labels.loc[labels["dataset"] == DATASET, "value"].item()
+    average_value = labels.loc[labels["dataset"] == "Average", "value"].item()
+    assert dataset_value == pytest.approx(12.0)
+    assert average_value == pytest.approx(21.0)
+
+
 def test_build_heatmap_frame_only_uses_enabled_datasets():
     loader = _make_average_rank_loader()
 
@@ -694,6 +743,7 @@ def test_build_heatmap_frame_only_uses_enabled_models():
     assert model_order == [ALT_MODEL]
     assert dataset_order == [DATASET, SECOND_DATASET, "Average", "Average rank"]
     assert set(long["model"]) == {ALT_MODEL}
+
 
 def test_build_heatmap_frame_orders_models_by_average_rank_not_average_value():
     loader = _make_rank_order_loader()
