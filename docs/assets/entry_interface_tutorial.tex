@@ -1,0 +1,196 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{Boadilla}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{picidorange}{HTML}{F04A24}
+\definecolor{piciddark}{HTML}{263238}
+\definecolor{codebackground}{HTML}{F5F6F7}
+\setbeamercolor{structure}{fg=picidorange}
+\setbeamercolor{frametitle}{fg=piciddark}
+\setbeamercolor{title}{fg=piciddark}
+\setbeamercolor{block title}{bg=picidorange!15,fg=piciddark}
+\setbeamercolor{block body}{bg=picidorange!4}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\lstdefinestyle{python}{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{picidorange}\bfseries,
+  commentstyle=\color{gray!80!black},
+  stringstyle=\color{blue!55!black},
+  backgroundcolor=\color{codebackground},
+  frame=single,
+  rulecolor=\color{gray!30},
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  aboveskip=0.4em,
+  belowskip=0.2em
+}
+
+\title{A Quick Tour of \texttt{EntryInterface}}
+\subtitle{From synthetic signals to an evaluated model with picid}
+\author{TabPHM / picid}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+  \begin{picture}(0,0)
+    \put(302,28){\includegraphics[width=2.1cm]{logo.png}}
+  \end{picture}
+\end{frame}
+
+\begin{frame}{Why use \texttt{EntryInterface}?}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.47\textwidth}
+      \begin{block}{Python-facing API}
+        Describe the experiment with ordinary Python objects: a datasource,
+        transforms, a task definition, and a model name or config.
+      \end{block}
+      \begin{block}{Hydra underneath}
+        The interface composes the internal configuration, creates the
+        Lightning objects, trains the model, and runs evaluation.
+      \end{block}
+    \column{0.48\textwidth}
+      \textbf{Tutorial outcome}
+      \begin{enumerate}
+        \item Generate a small synthetic RUL dataset.
+        \item Split and scale it without external files.
+        \item Train a built-in MLP for one CPU epoch.
+        \item Receive the test metrics as Python data.
+      \end{enumerate}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{1. Create a small datasource}
+\begin{lstlisting}[style=python]
+import numpy as np
+import pandas as pd
+from picid.data.preprocessing import TimeSplitter
+from picid.interface import CustomSingleSourceLoader
+
+rng = np.random.default_rng(7)
+frame = pd.DataFrame(rng.normal(size=(240, 4)),
+                     columns=["signal_0", "signal_1",
+                              "signal_2", "rul"])
+
+splitter = TimeSplitter(
+    train=0.6, val=0.2, test=None, seq_len=12, pred_len=0,
+    create_splits_for=["features", "timestamps", "rul"],
+)
+datasource = CustomSingleSourceLoader.load_from_csv(
+    frame, target_column="rul", task_mode="rul",
+    data_splitter=splitter, data_name="synthetic_rul",
+)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{2. Preprocess once, then inspect or reuse}
+\begin{lstlisting}[style=python]
+from picid.interface import EntryInterface
+from picid.transforms.base import DataTransform
+from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
+
+scale_features = DataTransform(
+    transform_name="scale_features",
+    transform=MinMaxScalerSklearn(),
+    metadata={"apply_to": "features", "fit_on": "train"},
+)
+
+interface = EntryInterface()
+processed = interface.process_datasource(
+    datasource, transforms=[scale_features], cache=False
+)
+
+print(processed.data_dict.keys())  # train, val, test
+\end{lstlisting}
+
+\vspace{0.2em}
+\begin{block}{Important}
+The scaler is fitted only on the training split. Passing the resulting
+\texttt{ProcessedDatasource} to multiple runs avoids repeating preprocessing.
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{3. Define the task and train}
+\begin{lstlisting}[style=python]
+from picid.interface.schemas.loggers import CsvLogger
+from picid.interface.schemas.task_definition import Prognostic
+
+task = Prognostic(task_type="rul", seq_len=12,
+                  stride=4, stride_train=4)
+
+results = interface.train(
+    run_name="quick_entry_interface",
+    model="mlp",
+    task_definition=task,
+    datasource=processed,
+    transforms=[],                 # already applied above
+    evaluators="default",
+    loggers=[CsvLogger(name="quick_entry_interface")],
+    overrides=["trainer.max_epochs=1",
+               "trainer.accelerator=cpu",
+               "datamodule.num_workers=0"],
+    enable_progress_bar=False,
+    seed=7,
+)
+print(results)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{What happens inside the call?}
+  \centering
+  \setlength{\tabcolsep}{7pt}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{cll}
+    \toprule
+    & \textbf{Stage} & \textbf{Result} \\
+    \midrule
+    1 & Compose configuration & Python inputs become a Hydra experiment \\
+    2 & Build datasets & Windows follow the prognostics task definition \\
+    3 & Instantiate model & \texttt{"mlp"} resolves to the built-in MLP config \\
+    4 & Fit & Lightning trains for one epoch on CPU \\
+    5 & Test & Evaluators return a list of metric dictionaries \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \begin{block}{The key separation}
+    \texttt{process\_datasource()} prepares data; \texttt{train()} composes and
+    executes the experiment. Keeping the processed object makes both stages
+    visible and easy to debug.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Run it and continue exploring}
+  \begin{block}{Complete repository tutorial}
+    \texttt{tutorials/interface/01\_random\_signal\_rul\_entry\_interface.py}
+  \end{block}
+
+\begin{lstlisting}[style=python,language=bash]
+uv run python tutorials/interface/01_random_signal_rul_entry_interface.py
+\end{lstlisting}
+
+  \textbf{Useful next steps}
+  \begin{itemize}
+    \item Replace the synthetic frame with a CSV or in-memory NumPy array.
+    \item Replace \texttt{"mlp"} with another registered model or a typed config.
+    \item Add transforms, callbacks, or per-split evaluators incrementally.
+    \item Use \texttt{debug=True} to validate composition without fitting.
+  \end{itemize}
+
+  \vfill
+  \centering\color{picidorange}\Large
+  Data in, experiment composed, metrics out.
+\end{frame}
+
+\end{document}
