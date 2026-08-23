@@ -42,5 +42,6 @@
     "tag:yaml.org,2002:python/object/apply:pymdownx.slugs.slugify mapping"
   ],
   "explorer.autoReveal": "focusNoScroll",
-  "latex-workshop.latex.outDir": "%DIR%/build"
+  "latex-workshop.latex.outDir": "%DIR%/build",
+  "latex-workshop.formatting.latex": "latexindent"
 }
