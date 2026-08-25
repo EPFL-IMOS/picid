@@ -63,7 +63,7 @@ from picid_report.run import run_pipeline
 
 df, all_results, summary_df = run_pipeline(
     project_name="29_01_2026_unibo_prognostics_combined",
-    user="imos-buildingenergy-1",
+    user="anonlab-buildingenergy-1",
     output_dir="report_output",
     export_laTeX=True,
 )
@@ -195,7 +195,7 @@ python -m picid_report.run [options]
 | Argument | Short | Default | Description |
 |----------|--------|---------|-------------|
 | `--project` | | `29_01_2026_unibo_prognostics_combined` | W&B project name |
-| `--user` | | `imos-buildingenergy-1` | W&B user/entity |
+| `--user` | | `anonlab-buildingenergy-1` | W&B user/entity |
 | `--cache-dir` | | `csv_files` | CSV cache directory |
 | `--output-dir` | `-o` | None | Save tables, plots, and report here |
 | `--report-name` | | None | Report HTML filename (e.g. `my_project.html`); default `report.html` |

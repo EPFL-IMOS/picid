@@ -13,9 +13,9 @@ Steps:
 > **Warning**
 > We assume that you have access to persistent storage mounted to the docker container. An example:
 > ```bash
-> -v ~/datasets:/mnt/imos-students/${LDAP_USERNAME}/datasets \
-> -v ~/Experiments:/mnt/imos-students/${LDAP_USERNAME}/experiments \
-> -v ~/Workspaces/work/TabPHM:/mnt/imos-students/${LDAP_USERNAME}/projects
+> -v ~/datasets:/mnt/anonlab-students/${LDAP_USERNAME}/datasets \
+> -v ~/Experiments:/mnt/anonlab-students/${LDAP_USERNAME}/experiments \
+> -v ~/Workspaces/work/TabPHM:/mnt/anonlab-students/${LDAP_USERNAME}/projects
 > ```
 > These folders are symlinked to /workspace/datasets, ... in the container due to restrictions in how many pvc can be mounted on the XXX RunAI cluster.
 

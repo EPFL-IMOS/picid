@@ -10,7 +10,7 @@ wandb:
   project: "best_runs"
   log_model: False # upload lightning ckpts
   prefix: "" # a string to put at the beginning of metric keys
-  entity: imos-buildingenergy-1 # set to name of your wandb team
+  entity: anonlab-buildingenergy-1 # set to name of your wandb team
   group: ""
   tags: []
   job_type: ""

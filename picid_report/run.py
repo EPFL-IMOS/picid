@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 # --- Default configuration (override via run_pipeline() or CLI) ---
 DEFAULT_PROJECT_NAME = "29_01_2026_unibo_prognostics_combined"
-DEFAULT_USER = "imos-buildingenergy-1"
+DEFAULT_USER = "anonlab-buildingenergy-1"
 DEFAULT_METRIC_PREFIXES = ["val/", "test/", "test_best_rerun/", "val_best_rerun/"]
 DEFAULT_REPORTING_METRICS = ["loss", "mse", "mae", "rmse", "f1", "accuracy"]
 DEFAULT_REQUIRED_DATA_SEEDS: Optional[Set[int]] = None
