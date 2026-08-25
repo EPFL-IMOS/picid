@@ -10,6 +10,8 @@
 \definecolor{picidorange}{HTML}{F04A24}
 \definecolor{piciddark}{HTML}{263238}
 \definecolor{codebackground}{HTML}{F5F6F7}
+\definecolor{fitblue}{HTML}{2F6B9A}
+\definecolor{deepgreen}{HTML}{377A52}
 \setbeamercolor{structure}{fg=picidorange}
 \setbeamercolor{frametitle}{fg=piciddark}
 \setbeamercolor{title}{fg=piciddark}
@@ -36,8 +38,8 @@
 }
 
 \title{A Quick Tour of \texttt{EntryInterface}}
-\subtitle{From synthetic signals to an evaluated model with picid}
-\author{TabPHM / picid}
+\subtitle{Ragged multi-unit data and two model families}
+\author{TabPHM / PICID}
 \date{}
 
 \begin{document}
@@ -49,126 +51,265 @@
   \end{picture}
 \end{frame}
 
-\begin{frame}{Why use \texttt{EntryInterface}?}
+\begin{frame}{What will we build?}
   \begin{columns}[T,onlytextwidth]
-    \column{0.47\textwidth}
-      \begin{block}{Python-facing API}
-        Describe the experiment with ordinary Python objects: a datasource,
-        transforms, a task definition, and a model name or config.
-      \end{block}
-      \begin{block}{Hydra underneath}
-        The interface composes the internal configuration, creates the
-        Lightning objects, trains the model, and runs evaluation.
-      \end{block}
     \column{0.48\textwidth}
-      \textbf{Tutorial outcome}
-      \begin{enumerate}
-        \item Generate a small synthetic RUL dataset.
-        \item Split and scale it without external files.
-        \item Train a built-in MLP for one CPU epoch.
-        \item Receive the test metrics as Python data.
-      \end{enumerate}
+      \begin{block}{One datasource, several units}
+        Create three in-memory run-to-failure units and compose their
+        \texttt{CustomSingleSourceLoader}s by hand.
+      \end{block}
+      \begin{block}{Ragged by design}
+        Keep every unit at its natural length---without padding or truncation.
+      \end{block}
+    \column{0.47\textwidth}
+      \begin{block}{Two execution styles}
+        Compare a classical \texttt{fit}/\texttt{predict} estimator with a
+        deep-learning model trained on sliding windows.
+      \end{block}
+      \begin{block}{One public API}
+        Preprocess, train, test, and receive metrics through
+        \texttt{EntryInterface} in both cases.
+      \end{block}
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile]{1. Create a small datasource}
+\begin{frame}[fragile]{1. Create units with different lifetimes}
 \begin{lstlisting}[style=python]
-import numpy as np
-import pandas as pd
-from picid.data.preprocessing import TimeSplitter
-from picid.interface import CustomSingleSourceLoader
+UNIT_LENGTHS = {
+    "unit_short": 180,
+    "unit_medium": 240,
+    "unit_long": 300,
+}
 
-rng = np.random.default_rng(7)
-frame = pd.DataFrame(rng.normal(size=(240, 4)),
-                     columns=["signal_0", "signal_1",
-                              "signal_2", "rul"])
-
-splitter = TimeSplitter(
-    train=0.6, val=0.2, test=None, seq_len=12, pred_len=0,
-    create_splits_for=["features", "timestamps", "rul"],
-)
-datasource = CustomSingleSourceLoader.load_from_csv(
-    frame, target_column="rul", task_mode="rul",
-    data_splitter=splitter, data_name="synthetic_rul",
-)
-\end{lstlisting}
-\end{frame}
-
-\begin{frame}[fragile]{2. Preprocess once, then inspect or reuse}
-\begin{lstlisting}[style=python]
-from picid.interface import EntryInterface
-from picid.transforms.base import DataTransform
-from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
-
-scale_features = DataTransform(
-    transform_name="scale_features",
-    transform=MinMaxScalerSklearn(),
-    metadata={"apply_to": "features", "fit_on": "train"},
-)
-
-interface = EntryInterface()
-processed = interface.process_datasource(
-    datasource, transforms=[scale_features], cache=False
-)
-
-print(processed.data_dict.keys())  # train, val, test
+unit_frames = {
+    unit_name: make_unit_frame(
+        unit_index=unit_index,
+        n_steps=n_steps,
+        rng=rng,
+    )
+    for unit_index, (unit_name, n_steps)
+    in enumerate(UNIT_LENGTHS.items())
+}
 \end{lstlisting}
 
-\vspace{0.2em}
-\begin{block}{Important}
-The scaler is fitted only on the training split. Passing the resulting
-\texttt{ProcessedDatasource} to multiple runs avoids repeating preprocessing.
-\end{block}
+  \begin{block}{Same schema, unequal time axes}
+    Every frame contains \texttt{signal\_0}, \texttt{signal\_1},
+    \texttt{signal\_2}, and \texttt{rul}; only the number of rows changes.
+  \end{block}
 \end{frame}
 
-\begin{frame}[fragile]{3. Define the task and train}
+\begin{frame}[fragile]{2. Compose the units by hand}
 \begin{lstlisting}[style=python]
-from picid.interface.schemas.loggers import CsvLogger
-from picid.interface.schemas.task_definition import Prognostic
-
-task = Prognostic(task_type="rul", seq_len=12,
-                  stride=4, stride_train=4)
-
-results = interface.train(
-    run_name="quick_entry_interface",
-    model="mlp",
-    task_definition=task,
-    datasource=processed,
-    transforms=[],                 # already applied above
-    evaluators="default",
-    loggers=[CsvLogger(name="quick_entry_interface")],
-    overrides=["trainer.max_epochs=1",
-               "trainer.accelerator=cpu",
-               "datamodule.num_workers=0"],
-    enable_progress_bar=False,
-    seed=7,
+from copy import deepcopy
+from picid.interface import (
+    CustomMultiSourceLoader,
+    CustomSingleSourceLoader,
 )
-print(results)
+
+unit_loaders = {
+    name: CustomSingleSourceLoader.load_from_csv(
+        source=frame, target_column="rul", task_mode="rul",
+        data_splitter=deepcopy(splitter_template), data_name=name,
+    )
+    for name, frame in unit_frames.items()
+}
+
+datasource = CustomMultiSourceLoader(
+    sources=unit_loaders,
+    task_mode="rul",
+    data_name="manual_ragged_units",
+)
 \end{lstlisting}
+
+  \small The dictionary key is the unit identity. Each unit receives its own
+  splitter because splitters carry configuration and state.
 \end{frame}
 
-\begin{frame}{What happens inside the call?}
+\begin{frame}{3. What is ragged data?}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.53\textwidth}
+      \centering
+      \renewcommand{\arraystretch}{1.25}
+      \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Unit} & \textbf{Train} & \textbf{Val} & \textbf{Test} \\
+        \midrule
+        short  & 108 & 48 & 48 \\
+        medium & 144 & 60 & 60 \\
+        long   & 180 & 72 & 72 \\
+        \bottomrule
+      \end{tabular}
+
+      \vspace{0.8em}
+      \texttt{[(108, 3), (144, 3), (180, 3)]}
+    \column{0.42\textwidth}
+      \begin{block}{Definition}
+        Ragged data has a shared feature width but a different number of time
+        steps per unit.
+      \end{block}
+      \begin{block}{PICID representation}
+        A \texttt{list[np.ndarray]} preserves those unequal lengths. Calling
+        \texttt{np.stack()} would fail unless we padded or truncated first.
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{4. Build a shared preprocessed view}
+\begin{lstlisting}[style=python]
+def scaling_transforms():
+    return [
+        DataTransform(
+            transform_name="scale_features",
+            transform=MinMaxScalerSklearn(),
+            metadata={"apply_to": "features", "fit_on": "train"},
+        ),
+        DataTransform(
+            transform_name="scale_rul",
+            transform=MinMaxScalerSklearn(),
+            metadata={"apply_to": "rul", "fit_on": "train"},
+        ),
+    ]
+
+deep_processed = interface.process_datasource(
+    datasource, transforms=scaling_transforms(), cache=False
+)
+\end{lstlisting}
+
+  \begin{block}{No leakage}
+    Both scalers fit on the training split only. Fresh transform instances are
+    created for each model-specific preprocessing run.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{5. Give each model the view it expects}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.46\textwidth}
+      \textcolor{deepgreen}{\textbf{Deep-learning view}}
+\begin{lstlisting}[style=python]
+# One 2D array per unit
+(time, features)
+
+# Examples
+(108, 3)
+(144, 3)
+(180, 3)
+\end{lstlisting}
+      Units stay separate and are windowed independently downstream.
+    \column{0.50\textwidth}
+      \textcolor{fitblue}{\textbf{Fit/predict view}}
+\begin{lstlisting}[style=python]
+DataTransform(
+    transform_name="add_task_dim_features",
+    transform=ReshapeTransform(
+        "time feature -> 1 time feature"
+    ),
+    metadata={"apply_to": "features",
+              "assign_to": "features"},
+)
+\end{lstlisting}
+      The leading task dimension gives \texttt{(1, time, features)}; the
+      tabular dataset then concatenates units without padding.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{6. Fit/predict versus deep learning}
   \centering
-  \setlength{\tabcolsep}{7pt}
-  \renewcommand{\arraystretch}{1.3}
-  \begin{tabular}{cll}
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.32}
+  \begin{tabular}{p{0.20\textwidth}p{0.34\textwidth}p{0.34\textwidth}}
     \toprule
-    & \textbf{Stage} & \textbf{Result} \\
+    \textbf{Aspect} & \textcolor{fitblue}{\textbf{Fit/predict}} &
+    \textcolor{deepgreen}{\textbf{Deep learning}} \\
     \midrule
-    1 & Compose configuration & Python inputs become a Hydra experiment \\
-    2 & Build datasets & Windows follow the prognostics task definition \\
-    3 & Instantiate model & \texttt{"mlp"} resolves to the built-in MLP config \\
-    4 & Fit & Lightning trains for one epoch on CPU \\
-    5 & Test & Evaluators return a list of metric dictionaries \\
+    Model & \texttt{xgboost\_fit\_predict} & \texttt{mlp} \\
+    Input & Complete tabular task & Sliding windows per unit \\
+    Training & \texttt{fit(X, y)} & Minibatches + backpropagation \\
+    Ragged units & Concatenated, no padding & Windowed separately \\
+    Tutorial budget & 25 estimators & One epoch \\
     \bottomrule
   \end{tabular}
 
   \vspace{1em}
-  \begin{block}{The key separation}
-    \texttt{process\_datasource()} prepares data; \texttt{train()} composes and
-    executes the experiment. Keeping the processed object makes both stages
-    visible and easy to debug.
+  \begin{block}{The important comparison}
+    The data adapter and optimisation loop differ, but the experiment-facing
+    call remains \texttt{interface.train(...)}.
   \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{7. Train the fit/predict model}
+\begin{lstlisting}[style=python]
+fit_predict_results = interface.train(
+    run_name="entry_interface_fit_predict",
+    model="xgboost_fit_predict",
+    task_definition=task,
+    datasource=fit_predict_processed,
+    transforms=[],
+    evaluators="default",
+    loggers=[CsvLogger(name="entry_interface_fit_predict")],
+    overrides=[
+        "trainer.max_epochs=1",
+        "trainer.accelerator=cpu",
+        "trainer.devices=1",
+        "datamodule.num_workers=0",
+        "+model.n_estimators=25",
+    ],
+    enable_progress_bar=False,
+    seed=7,
+)
+\end{lstlisting}
+
+  \small Lightning provides orchestration here; the estimator itself follows
+  the familiar \texttt{fit}/\texttt{predict} contract.
+\end{frame}
+
+\begin{frame}[fragile]{8. Train the deep-learning model}
+\begin{lstlisting}[style=python]
+deep_learning_results = interface.train(
+    run_name="entry_interface_deep_learning",
+    model="mlp",
+    task_definition=task,
+    datasource=deep_processed,
+    transforms=[],
+    evaluators="default",
+    loggers=[CsvLogger(name="entry_interface_deep_learning")],
+    overrides=[
+        "trainer.max_epochs=1",
+        "trainer.accelerator=cpu",
+        "trainer.devices=1",
+        "datamodule.num_workers=0",
+    ],
+    enable_progress_bar=False,
+    seed=7,
+)
+\end{lstlisting}
+
+  \small The MLP consumes \texttt{seq\_len}-sized windows and updates its
+  weights through backpropagation. Increase epochs for a real experiment.
+\end{frame}
+
+\begin{frame}{One pipeline, two paths}
+  \centering
+  \begin{tabular}{c@{\hspace{0.7em}}c@{\hspace{0.7em}}c@{\hspace{0.7em}}c}
+    \fbox{unit frames} & $\longrightarrow$ & \fbox{manual composition} &
+    $\longrightarrow$ \\
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.48\textwidth}
+      \begin{block}{Fit/predict branch}
+        Scale $\rightarrow$ add task dimension $\rightarrow$ concatenate
+        ragged units $\rightarrow$ \texttt{fit}/\texttt{predict}
+      \end{block}
+    \column{0.48\textwidth}
+      \begin{block}{Deep-learning branch}
+        Scale $\rightarrow$ retain per-unit arrays $\rightarrow$ create
+        windows $\rightarrow$ minibatch training
+      \end{block}
+  \end{columns}
+
+  \vspace{0.7em}
+  \fbox{same task definition, evaluators, loggers, and returned metric format}
 \end{frame}
 
 \begin{frame}[fragile]{Run it and continue exploring}
@@ -180,17 +321,17 @@ print(results)
 uv run python tutorials/interface/01_random_signal_rul_entry_interface.py
 \end{lstlisting}
 
-  \textbf{Useful next steps}
+  \textbf{Try next}
   \begin{itemize}
-    \item Replace the synthetic frame with a CSV or in-memory NumPy array.
-    \item Replace \texttt{"mlp"} with another registered model or a typed config.
-    \item Add transforms, callbacks, or per-split evaluators incrementally.
-    \item Use \texttt{debug=True} to validate composition without fitting.
+    \item Add a fourth unit with a new lifetime and inspect the printed shapes.
+    \item Replace the synthetic frames with CSV-backed physical units.
+    \item Increase estimators and epochs, then compare meaningful metrics.
+    \item Add a transform while keeping its fitted state training-only.
   \end{itemize}
 
   \vfill
   \centering\color{picidorange}\Large
-  Data in, experiment composed, metrics out.
+  Preserve each unit, adapt the view, reuse the interface.
 \end{frame}
 
 \end{document}
