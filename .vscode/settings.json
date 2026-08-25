@@ -25,6 +25,9 @@
   ],
   "python-envs.pythonProjects": [],
   "editor.formatOnSave": true,
+  "[latex]": {
+    "editor.formatOnSave": false
+  },
   // "editor.codeActionsOnSave": {
   //   "source.organizeImports": "explicit"
   // }
