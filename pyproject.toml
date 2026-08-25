@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["picid"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"configs" = "picid/configs"
+
 [project]
 name = "picid"
 version = "0.1.0"

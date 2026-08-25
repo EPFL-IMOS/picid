@@ -1,16 +1,25 @@
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pathlib import Path
 
 __all__ = ["Settings", "project_config"]
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='TAB_PHM_', extra='ignore')
 
-    root_dir: Path = Path('.').resolve()
-    user_home: Path = Path("~").expanduser() / 'picid'
+PACKAGE_ROOT = Path(__file__).resolve().parent
+PACKAGED_CONFIG_PATH = PACKAGE_ROOT / "configs"
+SOURCE_CONFIG_PATH = PACKAGE_ROOT.parent / "configs"
+DEFAULT_CONFIG_PATH = (
+    PACKAGED_CONFIG_PATH if PACKAGED_CONFIG_PATH.is_dir() else SOURCE_CONFIG_PATH
+)
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="TAB_PHM_", extra="ignore")
+
+    root_dir: Path = Path(".").resolve()
+    user_home: Path = Path("~").expanduser() / "picid"
 
     output_dir: Path = user_home
 
@@ -29,7 +38,7 @@ class Settings(BaseSettings):
     model_cache_dir: Path = output_dir / "model_cache_dir"
     save_dir: Path = output_dir / "save_dir"
 
-    config_path: Path = Field(root_dir / "configs", frozen=False)
+    config_path: Path = Field(DEFAULT_CONFIG_PATH, frozen=False)
 
     enable_logging: bool = True
     log_level: str = "INFO"
@@ -37,6 +46,7 @@ class Settings(BaseSettings):
 
 
 project_config = Settings()
+
 
 def get_config():
     """Read-only access to config"""
