@@ -13,7 +13,7 @@ Everything uses defaults — the minimum viable call to `train()`.
 ```python
 from lightning.pytorch.callbacks import EarlyStopping, RichModelSummary
 
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -41,8 +41,8 @@ loggers         = [CsvLogger(name="phme20_lstm")]
 callbacks       = [EarlyStopping(monitor="val/loss"), RichModelSummary()]
 
 # --- run ---
-interface = EntryInterface()
-interface.train(
+experiment = PicidExperiment()
+experiment.train(
     run_name="phme20_lstm_rul",
     model=model,
     task_definition=task_definition,
@@ -56,7 +56,7 @@ interface.train(
 
 **Key points:**
 
-- `datasource="phme20"` — reference a built-in datasource by name. Run `EntryInterface.get_available_datasources()` to list all available names.
+- `datasource="phme20"` — reference a built-in datasource by name. Run `PicidExperiment.get_available_datasources()` to list all available names.
 - `transforms` are applied inside `train()` automatically.
 - `overrides` is omitted — trainer defaults (CPU, 10 epochs) are used.
 
@@ -68,7 +68,7 @@ Separate the preprocessing step from training.
 Useful when you want to inspect the preprocessed data or reuse it across multiple runs.
 
 ```python
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -88,11 +88,11 @@ scaler_target = DataTransform(
 )
 transforms = [scaler, scaler_target]
 
-interface = EntryInterface()
+experiment = PicidExperiment()
 
 # Step 1: load and preprocess
-datasource          = interface.get_datasource("phme20")
-processed_datasource = interface.process_datasource(datasource, transforms)
+datasource          = experiment.get_datasource("phme20")
+processed_datasource = experiment.process_datasource(datasource, transforms)
 
 # Optional: inspect the data
 print(processed_datasource.data_dict["train"]["features"].shape)
@@ -101,7 +101,7 @@ print(processed_datasource.data_dict["train"]["features"].shape)
 model           = LSTMConfig(n_layers=8)
 task_definition = Prognostic(task_type="rul")
 
-interface.train(
+experiment.train(
     run_name="phme20_preprocessed",
     model=model,
     task_definition=task_definition,
@@ -120,7 +120,7 @@ Use your own NumPy array instead of a built-in dataset.
 ```python
 import numpy as np
 from picid.data.preprocessing import TimeSplitter
-from picid.interface import EntryInterface, CustomSingleSourceLoader
+from picid.interface import PicidExperiment, CustomSingleSourceLoader
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -163,10 +163,10 @@ scaler_target = DataTransform(
 )
 
 # --- preprocess and train ---
-interface = EntryInterface()
-processed = interface.process_datasource(datasource, [scaler, scaler_target])
+experiment = PicidExperiment()
+processed = experiment.process_datasource(datasource, [scaler, scaler_target])
 
-interface.train(
+experiment.train(
     run_name="custom_numpy_rul",
     model=LSTMConfig(n_layers=4),
     task_definition=Prognostic(task_type="rul", seq_len=16),
@@ -205,7 +205,7 @@ Two splitting strategies are shown.
 import numpy as np
 from copy import deepcopy
 from picid.data.preprocessing import TimeSplitter
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.datasources import CustomMultiSourceLoader
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
@@ -247,10 +247,10 @@ scaler_target = DataTransform(
     metadata={"apply_to": "rul", "fit_on": "train"},
 )
 
-interface = EntryInterface()
-processed = interface.process_datasource(datasource, [scaler, scaler_target])
+experiment = PicidExperiment()
+processed = experiment.process_datasource(datasource, [scaler, scaler_target])
 
-interface.train(
+experiment.train(
     run_name="multi_source_per_unit",
     model=LSTMConfig(n_layers=4),
     task_definition=Prognostic(task_type="rul", seq_len=16),
@@ -295,7 +295,7 @@ Bring your own `nn.Module` for a RUL task.
 import torch.nn as nn
 import numpy as np
 from picid.data.preprocessing import TimeSplitter
-from picid.interface import EntryInterface, CustomSingleSourceLoader
+from picid.interface import PicidExperiment, CustomSingleSourceLoader
 from picid.interface.model import CustomModelTrainer
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.schemas.task_definition import Prognostic
@@ -356,11 +356,11 @@ scaler_target = DataTransform(
     metadata={"apply_to": "rul", "fit_on": "train"},
 )
 
-interface = EntryInterface()
-processed = interface.process_datasource(datasource, [scaler, scaler_target])
+experiment = PicidExperiment()
+processed = experiment.process_datasource(datasource, [scaler, scaler_target])
 
 # --- 5. train ---
-interface.train(
+experiment.train(
     run_name="custom_mlp_rul",
     model=custom_model,        # CustomModelTrainer instance
     task_definition=task,      # required when using a custom model

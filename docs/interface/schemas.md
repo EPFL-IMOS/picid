@@ -82,13 +82,13 @@ When omitted, the project's default trainer YAML is used.
 from picid.interface.schemas import TrainerConfig
 
 cfg = TrainerConfig(max_epochs=50, accelerator="gpu", devices=[0])
-interface.train(..., training_config=cfg)
+experiment.train(..., training_config=cfg)
 ```
 
 Alternatively, use raw Hydra overrides for one-off changes:
 
 ```python
-interface.train(..., overrides=["trainer.max_epochs=50", "trainer.accelerator=gpu"])
+experiment.train(..., overrides=["trainer.max_epochs=50", "trainer.accelerator=gpu"])
 ```
 
 | Field | Type | Default | Description |
@@ -279,7 +279,7 @@ Pass them as a dict keyed by split name:
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
 
 evaluators = {s: RulEvaluatorConfig() for s in ["train", "val", "test"]}
-interface.train(..., evaluators=evaluators)
+experiment.train(..., evaluators=evaluators)
 ```
 
 All evaluator configs share these base fields:

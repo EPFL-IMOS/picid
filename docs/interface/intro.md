@@ -1,20 +1,20 @@
 # Introduction
 
-## What the interface is
+## What `PicidExperiment` is
 
 `picid` uses [Hydra](https://hydra.cc/) configuration files internally to assemble experiments.
 Hydra is powerful, but learning its YAML conventions is a barrier when you just want to run a quick experiment or plug in your own data.
-The interface is a helper class for building custom pipelines in the project.
+`PicidExperiment` is a helper class for building custom pipelines in the project.
 
-The interface class is `EntryInterface`, implemented in `picid/interface/interface.py`, and it manages the training pipeline.
+The class is implemented in `picid/interface/interface.py` and manages the training pipeline.
 
-The `picid.interface` package also exposes lightweight datasource helpers (`CustomSingleSourceLoader`, `CustomMultiSourceLoader`) without importing the full training stack. `EntryInterface` is loaded lazily, so datasource-only workflows and tests can run without pulling plotting/evaluator extras at import time.
+The `picid.interface` package also exposes lightweight datasource helpers (`CustomSingleSourceLoader`, `CustomMultiSourceLoader`) without importing the full training stack. `PicidExperiment` is loaded lazily, so datasource-only workflows and tests can run without pulling plotting/evaluator extras at import time.
 
-`EntryInterface` is a single Python class that accepts ordinary Python objects — Pydantic configs, NumPy arrays, PyTorch modules — and handles the Hydra plumbing for you.
-You describe an experiment in Python; the interface translates it into the internal format and runs it.
+`PicidExperiment` is a single Python class that accepts ordinary Python objects — Pydantic configs, NumPy arrays, PyTorch modules — and handles the Hydra plumbing for you.
+You describe an experiment in Python; `PicidExperiment` translates it into the internal format and runs it.
 
 ```python
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.schemas.model import LSTMConfig
 from picid.interface.schemas.task_definition import Prognostic
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -26,10 +26,10 @@ from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 To check the available datasources, use the static function `get_available_datasources()`, which returns a list of strings.
 
 ```python
-interface = EntryInterface()
-datasource_names = EntryInterface.get_available_datasources()
+experiment = PicidExperiment()
+datasource_names = PicidExperiment.get_available_datasources()
 
-interface.train(
+experiment.train(
     run_name="my_first_run",
     model=LSTMConfig(n_layers=4),
     task_definition=Prognostic(task_type="rul"),
@@ -60,14 +60,14 @@ Transforms, loggers, callbacks, and trainer settings are optional.
 
 ---
 
-## `EntryInterface` methods
+## `PicidExperiment` methods
 
 ### `train()`
 
 The main entry point. Runs the full pipeline: config composition → data preprocessing → training → testing.
 
 ```python
-interface.train(
+experiment.train(
     run_name: str,                            # unique name for this run
     model,                                    # AbsModelConfig | CustomModelTrainer | str
     task_definition,                          # BaseTaskDefinition | tuple[str, str]
@@ -111,7 +111,7 @@ interface.train(
 Applies a list of transforms to a datasource and returns a `ProcessedDatasource` object ready to pass to `train()`.
 
 ```python
-processed = interface.process_datasource(
+processed = experiment.process_datasource(
     datasource,             # str | AbstractDataSourceLoader
     transforms,             # list[DataTransform]
 )
@@ -125,17 +125,17 @@ Use this when you want to inspect or cache the preprocessed data before training
 
 ```python
 # Get a datasource object by name
-ds = interface.get_datasource("phme20")
+ds = experiment.get_datasource("phme20")
 
 # List all available built-in datasource names
-names = EntryInterface.get_available_datasources()
+names = PicidExperiment.get_available_datasources()
 ```
 
 ---
 
 ## Execution flow
 
-When you call `train()`, the interface:
+When you call `PicidExperiment.train()`, the experiment:
 
 1. **Composes the config** — converts every Python object into a Hydra `DictConfig` and calls `hydra.compose()`.
 2. **Loads and preprocesses data** — if you passed a raw datasource, it calls `process_datasource()` automatically.
@@ -149,7 +149,7 @@ When you call `train()`, the interface:
 ## When to use built-in vs custom components
 
 **Use a built-in datasource** (`datasource="phme20"`) when the dataset is already registered in `picid/config/datasource/`.
-Run `EntryInterface.get_available_datasources()` to see the full list.
+Run `PicidExperiment.get_available_datasources()` to see the full list.
 
 **Use a custom datasource** (`CustomSingleSourceLoader`, `CustomMultiSourceLoader`) when you have your own NumPy arrays or DataFrames.
 See [Custom datasources](datasources.md).

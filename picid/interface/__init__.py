@@ -1,7 +1,11 @@
-from .interface import EntryInterface
-from .datasources import CustomSingleSourceLoader, CustomMultiSourceLoader
+from typing import TYPE_CHECKING
 
-__all__ = ["EntryInterface", "CustomSingleSourceLoader", "CustomMultiSourceLoader"]
+from .datasources import CustomMultiSourceLoader, CustomSingleSourceLoader
+
+if TYPE_CHECKING:
+    from .interface import PicidExperiment
+
+__all__ = ["PicidExperiment", "CustomSingleSourceLoader", "CustomMultiSourceLoader"]
 
 
 def __getattr__(name: str):
@@ -16,15 +20,15 @@ def __getattr__(name: str):
     Returns
     -------
     Any
-        ``EntryInterface`` when ``name == "EntryInterface"``.
+        ``PicidExperiment`` when ``name == "PicidExperiment"``.
 
     Raises
     ------
     AttributeError
         If ``name`` is not a supported lazy export.
     """
-    if name == "EntryInterface":
-        from .interface import EntryInterface
+    if name == "PicidExperiment":
+        from .interface import PicidExperiment
 
-        return EntryInterface
+        return PicidExperiment
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

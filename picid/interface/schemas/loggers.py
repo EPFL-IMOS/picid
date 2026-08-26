@@ -17,7 +17,7 @@ class WandbLogger(BaseLogger):
 
     Requires a W&B account. The ``entity`` field (team or user name) is
     mandatory. Pass instances in the ``loggers=`` list of
-    ``EntryInterface.train()``.
+    ``PicidExperiment.train()``.
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ class CsvLogger(BaseLogger):
 
     Writes metrics to a CSV file in the run output directory. No external
     service required. Pass instances in the ``loggers=`` list of
-    ``EntryInterface.train()``.
+    ``PicidExperiment.train()``.
 
     Parameters
     ----------

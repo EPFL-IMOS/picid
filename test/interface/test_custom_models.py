@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import RichModelSummary
 
 
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.model import CustomModelTrainer
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
@@ -60,11 +60,11 @@ def test_mlp_model():
 
     evaluators = {s: RulEvaluatorConfig() for s in ["train", "test", "val"]}
 
-    interface = EntryInterface()
-    datasource = interface.get_datasource("phme20")
-    processed_datasource = interface.process_datasource(datasource, transforms)
+    experiment = PicidExperiment()
+    datasource = experiment.get_datasource("phme20")
+    processed_datasource = experiment.process_datasource(datasource, transforms)
 
-    interface.train(
+    experiment.train(
         run_name="test",
         task_definition=task_definition,
         model=custom_model,
@@ -131,11 +131,11 @@ def test_1dcnn_model():
 
     evaluators = {s: RulEvaluatorConfig() for s in ["train", "test", "val"]}
 
-    interface = EntryInterface()
-    datasource = interface.get_datasource("phme20")
-    processed_datasource = interface.process_datasource(datasource, transforms)
+    experiment = PicidExperiment()
+    datasource = experiment.get_datasource("phme20")
+    processed_datasource = experiment.process_datasource(datasource, transforms)
 
-    interface.train(
+    experiment.train(
         run_name="test",
         task_definition=task_definition,
         model=custom_model,

@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from picid.config import project_config
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 REF_PATH = (
@@ -60,10 +60,10 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     root = project_config.root_dir
     searchpath = f"{root}/test/configs,{project_config.config_path}"
 
-    interface = EntryInterface()
+    experiment = PicidExperiment()
 
     # IMPLEMENTERE CARICAMENTO DA CFG
-    results = interface.train(run_name='test',
+    results = experiment.train(run_name='test',
                               model=None,
                               task_definition=None,
                               datasource=None,

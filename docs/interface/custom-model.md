@@ -1,6 +1,6 @@
 # Custom Models
 
-The interface lets you plug in any PyTorch `nn.Module` through two adapters:
+`PicidExperiment` lets you plug in any PyTorch `nn.Module` through two adapters:
 
 - **`ModelWrapper`** — adds optional pre/post-processing to any module.
 - **`CustomModelTrainer`** — connects the wrapped model to the training pipeline.
@@ -114,7 +114,7 @@ Pass the `CustomModelTrainer` instance directly as the `model=` argument.
 You **must** also provide a `task_definition` (it cannot be a raw dict when using a custom model).
 
 ```python
-interface.train(
+experiment.train(
     run_name="custom_model_run",
     model=trainer_model,            # CustomModelTrainer instance
     task_definition=task,           # required; must be a BaseTaskDefinition
@@ -131,7 +131,7 @@ interface.train(
 
 ```python
 import torch.nn as nn
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.model import CustomModelTrainer, default_pre_process
 from picid.interface.model.wrapper import ModelWrapper
 from picid.interface.schemas.task_definition import Prognostic
@@ -171,12 +171,12 @@ wrapped = ModelWrapper(
 custom_model = CustomModelTrainer(task_type=task.task_type, model=wrapped, pre_process_function=default_pre_process)
 
 # 6. Train
-interface = EntryInterface()
-interface.train(
+experiment = PicidExperiment()
+experiment.train(
     run_name="mlp_rul",
     model=custom_model,
     task_definition=task,
-    datasource=interface.process_datasource(...),
+    datasource=experiment.process_datasource(...),
     evaluators={s: RulEvaluatorConfig() for s in ["train", "val", "test"]},
     loggers=[CsvLogger(name="mlp_rul")],
     overrides=["trainer.max_epochs=30"],

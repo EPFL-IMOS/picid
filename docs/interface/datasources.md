@@ -1,6 +1,6 @@
 # Custom Datasources
 
-The interface provides two loader classes so you can bring your own data:
+The `picid.interface` package provides two loader classes so you can bring your own data:
 
 - **`CustomSingleSourceLoader`** — one contiguous dataset (a single machine, a single trial, etc.).
 - **`CustomMultiSourceLoader`** — multiple independent datasets combined into one (e.g. multiple machines measured separately).
@@ -211,11 +211,11 @@ Use only with `CustomMultiSourceLoader`.
 After creating a loader you pass it to `process_datasource()`, which runs the full preprocessing pipeline (load → split → apply transforms) and returns a `ProcessedDatasource`.
 
 ```python
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.transforms.base import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
-interface = EntryInterface()
+experiment = PicidExperiment()
 
 scaler = DataTransform(
     transform_name="scaler_features",
@@ -223,10 +223,10 @@ scaler = DataTransform(
     metadata={"apply_to": "features", "fit_on": "train"},
 )
 
-processed = interface.process_datasource(loader, transforms=[scaler])
+processed = experiment.process_datasource(loader, transforms=[scaler])
 
 # processed is a ProcessedDatasource — pass it directly to train()
-interface.train(
+experiment.train(
     ...,
     datasource=processed,
     # no transforms= needed here — data is already transformed

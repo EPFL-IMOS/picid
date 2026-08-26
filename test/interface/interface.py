@@ -1,12 +1,12 @@
 import pytest
 
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.transforms.base import DataTransform
 from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
 def test_pydantic_minimal_interface_asserts():
-    interface = EntryInterface()
+    experiment = PicidExperiment()
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
@@ -16,28 +16,28 @@ def test_pydantic_minimal_interface_asserts():
     transforms = [scaler, scaler_target]
 
     with pytest.raises(AssertionError):
-        interface.train(run_name='test',task_definition=('prognostics', 'lstm'),
+        experiment.train(run_name='test',task_definition=('prognostics', 'lstm'),
                         model='testing_assert',
                         datasource='phme20',
                         overrides='trainer.max_epochs=1',
                         transforms=transforms)
 
     with pytest.raises(AssertionError):
-        interface.train(run_name='test',task_definition=('testing_assert', 'lstm'),
+        experiment.train(run_name='test',task_definition=('testing_assert', 'lstm'),
                         model='lstm',
                         datasource='phme20',
                         overrides='trainer.max_epochs=1',
                         transforms=transforms)
 
     with pytest.raises(AssertionError):
-        interface.train(run_name='test',task_definition=('prognostics', 'testing_assert'),
+        experiment.train(run_name='test',task_definition=('prognostics', 'testing_assert'),
                         model='lstm',
                         datasource='phme20',
                         overrides='trainer.max_epochs=1',
                         transforms=transforms)
 
     with pytest.raises(AssertionError):
-        interface.train(run_name='test',task_definition=('prognostics', 'rul'),
+        experiment.train(run_name='test',task_definition=('prognostics', 'rul'),
                         model='lstm',
                         evaluators='testing_assert',
                         datasource='phme20',
@@ -45,7 +45,7 @@ def test_pydantic_minimal_interface_asserts():
                         transforms=transforms)
 
     with pytest.raises(AssertionError):
-        interface.train(run_name='test', task_definition=('prognostics', 'rul'),
+        experiment.train(run_name='test', task_definition=('prognostics', 'rul'),
                         model='lstm',
                         evaluators='prova',
                         datasource=('phme20', 'raw'),

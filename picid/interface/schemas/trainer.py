@@ -6,7 +6,7 @@ from pydantic import Field, model_validator, BaseModel
 class TrainerConfig(BaseModel):
     """Configuration for the PyTorch Lightning Trainer.
 
-    Pass an instance as ``training_config=`` to ``EntryInterface.train()``.
+    Pass an instance as ``training_config=`` to ``PicidExperiment.train()``.
     When omitted, the project's default trainer YAML is used instead.
     For one-off tweaks you can also use raw Hydra override strings (e.g.
     ``overrides=["trainer.max_epochs=50", "trainer.accelerator=gpu"]``).
@@ -34,7 +34,7 @@ class TrainerConfig(BaseModel):
     Examples
     --------
     >>> cfg = TrainerConfig(max_epochs=50, accelerator="gpu", devices=[0])
-    >>> interface.train(..., training_config=cfg)
+    >>> experiment.train(..., training_config=cfg)
     """
 
     model_class: str = Field('lightning.pytorch.trainer.Trainer',

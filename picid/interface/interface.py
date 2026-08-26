@@ -211,7 +211,7 @@ OmegaConf.register_new_resolver("int_div", lambda a, b: int(a) // int(b))
 OmegaConf.register_new_resolver("prod", lambda *args: np.prod(args))
 
 
-class EntryInterface:
+class PicidExperiment:
     """
     A high-level interface for managing machine learning experiments.
 
@@ -293,7 +293,7 @@ class EntryInterface:
             Names of all registered datasources (each is a valid argument to
             ``get_datasource()``).
         """
-        return EntryInterface.get_available_resource("datasource")
+        return PicidExperiment.get_available_resource("datasource")
 
     @staticmethod
     def load_resource(v: str | Path | dict = None, resource_type: str = None):
@@ -335,7 +335,7 @@ class EntryInterface:
             if resource_type == "datasource":
                 max_level = 1
 
-            resources = EntryInterface.get_available_resource(
+            resources = PicidExperiment.get_available_resource(
                 str(resource_type), max_level=max_level
             )
 

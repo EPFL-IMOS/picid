@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.config import project_config
 
 
@@ -58,7 +58,7 @@ EXPERIMENTS = [
 PRECISION = 4
 
 # Fit-predict models (XGBoost etc.) use a one-epoch trainer with no ModelCheckpoint;
-# interface.train() must use max_epochs=1 to avoid the ckpt_path="best" branch.
+# experiment.train() must use max_epochs=1 to avoid the ckpt_path="best" branch.
 _FIT_PREDICT_MODELS: frozenset[str] = frozenset({"xgboost_fit_predict"})
 
 # Allow small cross-platform variance for neural nets (patchtst, lstm, crossformer)
@@ -125,14 +125,14 @@ def test_pipeline_snapshot_matches_reference(task_type, exp_base, model):
     root = project_config.root_dir
     searchpath = f"{root}/test/configs,{project_config.config_path}"
 
-    interface = EntryInterface()
+    experiment = PicidExperiment()
 
     # Fit-predict models use a one-epoch trainer with no ModelCheckpoint;
-    # max_epochs=1 keeps interface.train() out of the ckpt_path="best" branch.
+    # max_epochs=1 keeps experiment.train() out of the ckpt_path="best" branch.
     max_epochs = "1" if model in _FIT_PREDICT_MODELS else "10"
 
     # IMPLEMENTERE CARICAMENTO DA CFG
-    results = interface.train(
+    results = experiment.train(
         run_name=f"test_{key}",
         model=None,
         task_definition=None,

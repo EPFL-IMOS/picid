@@ -5,7 +5,7 @@ import torch
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import RichModelSummary
 
-from picid.interface import EntryInterface
+from picid.interface import PicidExperiment
 from picid.interface.schemas.evaluators import RulEvaluatorConfig
 from picid.interface.schemas.loggers import CsvLogger
 from picid.interface.schemas.model import LSTMConfig
@@ -15,7 +15,7 @@ from picid.transforms.base_transforms.scaler import MinMaxScalerSklearn
 
 
 @pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
-def test_pydantic_easy_interface():
+def test_pydantic_easy_experiment():
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
@@ -36,18 +36,18 @@ def test_pydantic_easy_interface():
 
     evaluators = {s: RulEvaluatorConfig() for s in ['train', 'test', 'val']}
 
-    interface = EntryInterface()
-    interface.train(run_name='test',task_definition=task_definition, model=model,
+    experiment = PicidExperiment()
+    experiment.train(run_name='test',task_definition=task_definition, model=model,
                     datasource=('phme20', 'raw'), callbacks=callbacks,
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', 'trainer.devices=1'],
                     loggers=loggers, evaluators=evaluators, transforms=transforms)
 
 
 @pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
-def test_pydantic_minimal_interface_train():
-    interface = EntryInterface()
+def test_pydantic_minimal_experiment_train():
+    experiment = PicidExperiment()
 
-    interface.train(run_name='test',model='lstm',
+    experiment.train(run_name='test',model='lstm',
                     task_definition=('prognostics', 'rul'),
                     datasource=('phme20', 'raw'),
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', 'trainer.devices=1'],
@@ -56,8 +56,8 @@ def test_pydantic_minimal_interface_train():
 
 
 @pytest.mark.skipif(os.environ.get('TEST_SKIP_TRAINING', True), reason="Not testing training right now.")
-def test_pydantic_easy_interface_input_processed_datasource():
-    interface = EntryInterface()
+def test_pydantic_easy_experiment_input_processed_datasource():
+    experiment = PicidExperiment()
 
     scaler = DataTransform(transform_name='scaler_features', transform=MinMaxScalerSklearn(),
                            metadata={'apply_to': 'features', 'fit_on': 'train'})
@@ -66,8 +66,8 @@ def test_pydantic_easy_interface_input_processed_datasource():
 
     transforms = [scaler, scaler_target]
 
-    datasource = interface.get_datasource('phme20')
-    processed_datasource = interface.process_datasource(datasource, transforms)
+    datasource = experiment.get_datasource('phme20')
+    processed_datasource = experiment.process_datasource(datasource, transforms)
 
     model = LSTMConfig(n_layers=4)
 
@@ -80,6 +80,6 @@ def test_pydantic_easy_interface_input_processed_datasource():
     callbacks = [EarlyStopping(monitor='val/loss'),
                  RichModelSummary()]
 
-    interface.train(run_name='test',task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
+    experiment.train(run_name='test',task_definition=task_definition, model=model, datasource=processed_datasource, callbacks=callbacks,
                     overrides=['trainer.max_epochs=1', f'trainer.accelerator={'gpu' if torch.cuda.is_available() else 'cpu'}', 'trainer.devices=1'],
                     loggers=loggers)

@@ -149,7 +149,7 @@ def test_training(get_sources):
     from lightning.pytorch.callbacks import EarlyStopping
     from lightning.pytorch.callbacks import RichModelSummary
 
-    from picid.interface import EntryInterface
+    from picid.interface import PicidExperiment
     from picid.interface.schemas import TrainerConfig
     from picid.interface.schemas.evaluators import RulEvaluatorConfig
     from picid.interface.schemas.loggers import CsvLogger
@@ -189,9 +189,9 @@ def test_training(get_sources):
     )
 
     transforms = [scaler, scaler_target]
-    interface = EntryInterface()
+    experiment = PicidExperiment()
 
-    processed_datasource = interface.process_datasource(datasource, transforms)
+    processed_datasource = experiment.process_datasource(datasource, transforms)
 
     model = LSTMConfig(n_layers=8)
 
@@ -207,7 +207,7 @@ def test_training(get_sources):
         accelerator="gpu" if torch.cuda.is_available() else "cpu", devices=[1]
     )
 
-    interface.train(
+    experiment.train(
         run_name="test",
         training_config=tconf,
         task_definition=task_definition,

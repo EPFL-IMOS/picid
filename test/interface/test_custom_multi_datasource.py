@@ -88,7 +88,7 @@ def test_training(get_sources):
     from lightning.pytorch.callbacks import EarlyStopping
     from lightning.pytorch.callbacks import RichModelSummary
 
-    from picid.interface import EntryInterface
+    from picid.interface import PicidExperiment
     from picid.interface.schemas.evaluators import RulEvaluatorConfig
     from picid.interface.schemas.loggers import CsvLogger
     from picid.interface.schemas.model import LSTMConfig
@@ -128,9 +128,9 @@ def test_training(get_sources):
     )
 
     transforms = [scaler, scaler_target]
-    interface = EntryInterface()
+    experiment = PicidExperiment()
 
-    processed_datasource = interface.process_datasource(datasource, transforms)
+    processed_datasource = experiment.process_datasource(datasource, transforms)
 
     model = LSTMConfig(n_layers=8)
 
@@ -142,7 +142,7 @@ def test_training(get_sources):
 
     evaluators = {s: RulEvaluatorConfig() for s in ["train", "test", "val"]}
 
-    interface.train(
+    experiment.train(
         run_name="test",
         task_definition=task_definition,
         model=model,

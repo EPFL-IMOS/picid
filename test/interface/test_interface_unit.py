@@ -4,11 +4,13 @@ Coverage target: >=95% of picid/interface/interface.py and picid/interface/__ini
 
 Tests cover:
 - Standalone helper functions (safe_div, diff_if_not_string, _uuid, etc.)
-- EntryInterface class methods with mocked filesystem/Hydra/Lightning
+- PicidExperiment class methods with mocked filesystem/Hydra/Lightning
 - Lazy-loading exports from __init__.py
 """
 
 import logging
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -20,7 +22,7 @@ from omegaconf import DictConfig, OmegaConf
 from omegaconf.errors import InterpolationResolutionError
 
 from picid.interface.interface import (
-    EntryInterface,
+    PicidExperiment,
     _uuid,
     diff_if_not_string,
     register_infer_dataloader_length_resolver,
@@ -177,11 +179,53 @@ class TestRegisterInferDataloaderLengthResolver:
 class TestInterfaceLazyLoading:
     """Tests for picid.interface.__init__.py lazy-loading."""
 
-    def test_entry_interface_importable(self):
-        """EntryInterface is importable from picid.interface."""
-        from picid.interface import EntryInterface as EI
+    def test_picid_experiment_importable(self):
+        """PicidExperiment is importable from picid.interface."""
+        from picid.interface import PicidExperiment as PublicPicidExperiment
 
-        assert EI is not None
+        assert PublicPicidExperiment is PicidExperiment
+
+    def test_public_exports_contain_only_new_experiment_name(self):
+        """The package export list contains the new class name, not the removed one."""
+        import picid.interface as mod
+
+        removed_name = "Entry" + "Interface"
+        assert "PicidExperiment" in mod.__all__
+        assert removed_name not in mod.__all__
+
+    def test_removed_class_name_is_not_available(self):
+        """The removed class name has no package compatibility path."""
+        import picid.interface as mod
+        import picid.interface.interface as implementation_module
+
+        removed_name = "Entry" + "Interface"
+        assert not hasattr(mod, removed_name)
+        assert not hasattr(implementation_module, removed_name)
+        with pytest.raises(ImportError):
+            exec(f"from picid.interface import {removed_name}", {})
+
+    def test_datasource_helpers_do_not_load_experiment_module(self):
+        """Datasource-only imports leave the heavy experiment module unloaded."""
+        script = """
+import sys
+import picid.interface as interface_package
+
+assert "picid.interface.interface" not in sys.modules
+assert interface_package.CustomSingleSourceLoader is not None
+assert interface_package.CustomMultiSourceLoader is not None
+
+experiment_class = interface_package.PicidExperiment
+assert "picid.interface.interface" in sys.modules
+assert experiment_class.__name__ == "PicidExperiment"
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0, result.stderr
 
     def test_unknown_attr_raises(self):
         """Unknown attribute raises AttributeError."""
@@ -190,22 +234,22 @@ class TestInterfaceLazyLoading:
         with pytest.raises(AttributeError, match="has no attribute"):
             _ = mod.TotallyFakeAttribute
 
-    def test_getattr_entry_interface_returns_class(self):
-        """__getattr__('EntryInterface') returns the EntryInterface class."""
+    def test_getattr_picid_experiment_returns_class(self):
+        """__getattr__('PicidExperiment') returns the PicidExperiment class."""
         import picid.interface as mod
 
-        result = mod.__getattr__("EntryInterface")
-        assert result is EntryInterface
+        result = mod.__getattr__("PicidExperiment")
+        assert result is PicidExperiment
 
 
 # ============================================================================
-# EntryInterface — get_available_resource
+# PicidExperiment — get_available_resource
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestGetAvailableResource:
-    """Tests for EntryInterface.get_available_resource with mocked filesystem."""
+    """Tests for PicidExperiment.get_available_resource with mocked filesystem."""
 
     def test_scans_directory(self, monkeypatch, tmp_path):
         """Returns list of files from directory walk.
@@ -223,7 +267,7 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("model")
+        result = PicidExperiment.get_available_resource("model")
         assert "mlp.yaml" in result
         assert "cnn.yaml" in result
 
@@ -245,7 +289,7 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("datasource", max_level=1)
+        result = PicidExperiment.get_available_resource("datasource", max_level=1)
         assert any("top" in r for r in result)
 
     def test_max_level_none_uses_inf(self, monkeypatch, tmp_path):
@@ -266,7 +310,7 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("model", max_level=None)
+        result = PicidExperiment.get_available_resource("model", max_level=None)
         assert any("top.yaml" in r for r in result)
         assert any("bottom.yaml" in r for r in result)
 
@@ -286,7 +330,7 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("model_configs", as_tuple=True)
+        result = PicidExperiment.get_available_resource("model_configs", as_tuple=True)
         assert any(isinstance(r, tuple) for r in result)
 
     def test_as_tuple_single_component_returns_string(self, monkeypatch, tmp_path):
@@ -304,7 +348,7 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("evaluator", as_tuple=True)
+        result = PicidExperiment.get_available_resource("evaluator", as_tuple=True)
         assert "default" in result
 
     def test_datasource_strips_yaml(self, monkeypatch, tmp_path):
@@ -322,26 +366,26 @@ class TestGetAvailableResource:
             "picid.interface.interface.project_config.config_path", tmp_path
         )
 
-        result = EntryInterface.get_available_resource("datasource")
+        result = PicidExperiment.get_available_resource("datasource")
         assert "phme20" in result
         assert "phme20.yaml" not in result
 
 
 # ============================================================================
-# EntryInterface — load_resource
+# PicidExperiment — load_resource
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestLoadResource:
-    """Tests for EntryInterface.load_resource."""
+    """Tests for PicidExperiment.load_resource."""
 
     def test_dict_input(self):
         """Dict input is wrapped in OmegaConf.create.
 
         **Expected**: Returns DictConfig with same keys.
         """
-        cfg = EntryInterface.load_resource({"_target_": "my.Class"}, "model")
+        cfg = PicidExperiment.load_resource({"_target_": "my.Class"}, "model")
         assert isinstance(cfg, DictConfig)
         assert cfg["_target_"] == "my.Class"
 
@@ -364,7 +408,7 @@ class TestLoadResource:
 
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        cfg = EntryInterface.load_resource("phme20", "datasource")
+        cfg = PicidExperiment.load_resource("phme20", "datasource")
         assert cfg["_target_"] == "picid.data.datasources.Phme20"
         assert cfg["cache_dir"] == "/cache"
 
@@ -384,7 +428,7 @@ class TestLoadResource:
 
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        cfg = EntryInterface.load_resource("default.yaml", "evaluator")
+        cfg = PicidExperiment.load_resource("default.yaml", "evaluator")
         assert "cache_dir" not in cfg
 
     def test_invalid_resource_name_raises(self, monkeypatch, tmp_path):
@@ -402,12 +446,12 @@ class TestLoadResource:
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
         with pytest.raises(AssertionError, match="not present"):
-            EntryInterface.load_resource("nonexistent", "datasource")
+            PicidExperiment.load_resource("nonexistent", "datasource")
 
     def test_unsupported_type_raises(self):
         """Non str/Path/dict raises TypeError."""
         with pytest.raises(TypeError, match="load_resource expects"):
-            EntryInterface.load_resource(42, "model")
+            PicidExperiment.load_resource(42, "model")
 
     def test_path_relative_to_root(self, monkeypatch, tmp_path):
         """Path that is relative_to config root gets stripped.
@@ -428,23 +472,23 @@ class TestLoadResource:
 
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        cfg = EntryInterface.load_resource(ds_dir / "test_ds", "datasource")
+        cfg = PicidExperiment.load_resource(ds_dir / "test_ds", "datasource")
         assert cfg["_target_"] == "picid.data.TestDS"
 
 
 # ============================================================================
-# EntryInterface — get_model_cfg
+# PicidExperiment — get_model_cfg
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestGetModelCfg:
-    """Tests for EntryInterface.get_model_cfg."""
+    """Tests for PicidExperiment.get_model_cfg."""
 
     def test_dict_passthrough(self):
         """Dict model returns (dict, None)."""
-        iface = EntryInterface()
-        cfg, name = iface.get_model_cfg({"layers": 3}, task="prog")
+        experiment = PicidExperiment()
+        cfg, name = experiment.get_model_cfg({"layers": 3}, task="prog")
         assert cfg == {"layers": 3}
         assert name is None
 
@@ -452,10 +496,10 @@ class TestGetModelCfg:
         """CustomModelTrainer returns (trainer, None)."""
         from picid.interface.model.custom_model import CustomModelTrainer
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         mock_model = MagicMock()
         trainer = CustomModelTrainer(task_type="rul", model=mock_model)
-        cfg, name = iface.get_model_cfg(trainer, task="prog")
+        cfg, name = experiment.get_model_cfg(trainer, task="prog")
         assert cfg is trainer
         assert name is None
 
@@ -474,29 +518,29 @@ class TestGetModelCfg:
         mock_config.config_path = tmp_path
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         monkeypatch.setattr(
-            iface,
+            experiment,
             "get_available_resource",
             lambda *a, **kw: ["mlp"] if kw.get("as_tuple") else ["mlp.yaml"],
         )
 
-        cfg, name = iface.get_model_cfg("mlp", task="prognostics")
+        cfg, name = experiment.get_model_cfg("mlp", task="prognostics")
         assert cfg["hidden_dim"] == 64
         assert name == "mlp"
 
     def test_unsupported_type_raises(self):
         """Invalid model type raises TypeError."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(TypeError, match="Invalid model type"):
-            iface.get_model_cfg(42, task="prog")
+            experiment.get_model_cfg(42, task="prog")
 
     def test_str_not_found_raises(self, monkeypatch):
         """Unknown model string raises AssertionError."""
-        iface = EntryInterface()
-        monkeypatch.setattr(iface, "get_available_resource", lambda *a, **kw: [])
+        experiment = PicidExperiment()
+        monkeypatch.setattr(experiment, "get_available_resource", lambda *a, **kw: [])
         with pytest.raises(AssertionError, match="does not exist"):
-            iface.get_model_cfg("nonexistent", task="prog")
+            experiment.get_model_cfg("nonexistent", task="prog")
 
     def test_abs_model_config_merges_model_dump(self, monkeypatch, tmp_path):
         """AbsModelConfig merges model_dump into loaded YAML (line 398)."""
@@ -510,26 +554,26 @@ class TestGetModelCfg:
         mock_config.config_path = tmp_path
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         model = MLPConfig(input_channels=10, num_targets=1)
-        cfg, name = iface.get_model_cfg(model, task="prog")
+        cfg, name = experiment.get_model_cfg(model, task="prog")
         assert name == "mlp"
         assert cfg is not None
 
 
 # ============================================================================
-# EntryInterface — get_task_definition_cfg
+# PicidExperiment — get_task_definition_cfg
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestGetTaskDefinitionCfg:
-    """Tests for EntryInterface.get_task_definition_cfg."""
+    """Tests for PicidExperiment.get_task_definition_cfg."""
 
     def test_dict_passthrough(self):
         """Dict task definition → passthrough, name=None."""
-        iface = EntryInterface()
-        cfg, name = iface.get_task_definition_cfg({"task_type": "rul"})
+        experiment = PicidExperiment()
+        cfg, name = experiment.get_task_definition_cfg({"task_type": "rul"})
         assert cfg == {"task_type": "rul"}
         assert name is None
 
@@ -548,14 +592,14 @@ class TestGetTaskDefinitionCfg:
         mock_config.config_path = tmp_path
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         monkeypatch.setattr(
-            iface,
+            experiment,
             "get_available_resource",
             lambda *a, **kw: [("prognostics", "rul")] if kw.get("as_tuple") else [],
         )
 
-        cfg, name = iface.get_task_definition_cfg(("prognostics", "rul"))
+        cfg, name = experiment.get_task_definition_cfg(("prognostics", "rul"))
         assert cfg["task_type"] == "rul"
 
     def test_base_task_definition_model_dump(self, monkeypatch):
@@ -566,48 +610,48 @@ class TestGetTaskDefinitionCfg:
         mock_td.model_dump.return_value = {"task_type": "rul", "pred_len": 0}
         mock_td.config_name = "prognostics"
 
-        iface = EntryInterface()
-        cfg, name = iface.get_task_definition_cfg(mock_td)
+        experiment = PicidExperiment()
+        cfg, name = experiment.get_task_definition_cfg(mock_td)
         assert cfg["task_type"] == "rul"
         assert name == "prognostics"
 
     def test_unsupported_type_raises(self):
         """Invalid type raises TypeError."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(TypeError, match="Invalid task definition type"):
-            iface.get_task_definition_cfg(42)
+            experiment.get_task_definition_cfg(42)
 
     def test_tuple_not_found_raises(self, monkeypatch):
         """Tuple not in available raises AssertionError."""
-        iface = EntryInterface()
-        monkeypatch.setattr(iface, "get_available_resource", lambda *a, **kw: [])
+        experiment = PicidExperiment()
+        monkeypatch.setattr(experiment, "get_available_resource", lambda *a, **kw: [])
         with pytest.raises(AssertionError, match="does not exist"):
-            iface.get_task_definition_cfg(("prog", "rul"))
+            experiment.get_task_definition_cfg(("prog", "rul"))
 
 
 # ============================================================================
-# EntryInterface — get_datasource_cfg
+# PicidExperiment — get_datasource_cfg
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestGetDatasourceCfg:
-    """Tests for EntryInterface.get_datasource_cfg."""
+    """Tests for PicidExperiment.get_datasource_cfg."""
 
     def test_str_delegates_to_load_resource(self, monkeypatch):
         """String datasource delegates to load_resource."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         mock_cfg = DictConfig({"_target_": "T"})
-        monkeypatch.setattr(iface, "load_resource", lambda v, rt: mock_cfg)
+        monkeypatch.setattr(experiment, "load_resource", lambda v, rt: mock_cfg)
 
-        result = iface.get_datasource_cfg("phme20")
+        result = experiment.get_datasource_cfg("phme20")
         assert result["_target_"] == "T"
 
     def test_dict_passthrough(self):
         """Dict datasource is returned as-is."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         d = {"_target_": "custom"}
-        result = iface.get_datasource_cfg(d)
+        result = experiment.get_datasource_cfg(d)
         assert result == d
 
     def test_tuple_loads_experiment(self, monkeypatch, tmp_path):
@@ -625,23 +669,23 @@ class TestGetDatasourceCfg:
         mock_config.config_path = tmp_path
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         monkeypatch.setattr(
-            iface,
+            experiment,
             "get_available_resource",
             lambda rtype, **kw: [("prog", "default", "mlp")],
         )
 
-        result = iface.get_datasource_cfg(
+        result = experiment.get_datasource_cfg(
             ("phme20", "default"), task="prog", model="mlp"
         )
         assert result["is_experiment"] is True
 
     def test_tuple_without_model_raises(self, monkeypatch):
         """Tuple without model argument raises AssertionError."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(AssertionError, match="model"):
-            iface.get_datasource_cfg(("source", "sub"), task="prog", model=None)
+            experiment.get_datasource_cfg(("source", "sub"), task="prog", model=None)
 
     def test_tuple_invalid_task_raises(self, monkeypatch, tmp_path):
         """Tuple with unavailable task raises AssertionError."""
@@ -649,31 +693,33 @@ class TestGetDatasourceCfg:
         mock_config.config_path = tmp_path
         monkeypatch.setattr("picid.interface.interface.project_config", mock_config)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         monkeypatch.setattr(
-            iface,
+            experiment,
             "get_available_resource",
             lambda rtype, **kw: [("other_task", "default", "mlp")],
         )
 
         with pytest.raises(AssertionError, match="does not have a default"):
-            iface.get_datasource_cfg(("source", "sub"), task="nonexist", model="mlp")
+            experiment.get_datasource_cfg(
+                ("source", "sub"), task="nonexist", model="mlp"
+            )
 
     def test_unsupported_type_raises(self):
         """Invalid type raises TypeError."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(TypeError, match="Invalid datasource type"):
-            iface.get_datasource_cfg(42)
+            experiment.get_datasource_cfg(42)
 
 
 # ============================================================================
-# EntryInterface — get_datasource
+# PicidExperiment — get_datasource
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestGetDatasource:
-    """Tests for EntryInterface.get_datasource."""
+    """Tests for PicidExperiment.get_datasource."""
 
     def test_loads_and_instantiates(self, monkeypatch):
         """Loads resource then instantiates it.
@@ -682,31 +728,31 @@ class TestGetDatasource:
 
         **Expected**: instantiate called with loaded config.
         """
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         mock_cfg = DictConfig({"_target_": "MyLoader"})
         mock_loader = MagicMock()
 
-        monkeypatch.setattr(iface, "load_resource", lambda v, rt: mock_cfg)
+        monkeypatch.setattr(experiment, "load_resource", lambda v, rt: mock_cfg)
         monkeypatch.setattr(
             "picid.interface.interface.hydra.utils.instantiate", lambda c: mock_loader
         )
 
-        result = iface.get_datasource("phme20")
+        result = experiment.get_datasource("phme20")
         assert result is mock_loader
 
 
 # ============================================================================
-# EntryInterface — process_datasource
+# PicidExperiment — process_datasource
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestProcessDatasource:
-    """Tests for EntryInterface.process_datasource."""
+    """Tests for PicidExperiment.process_datasource."""
 
     def test_creates_preprocessor_with_cache(self, monkeypatch):
         """cache=True uses project_config.cache_path."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         mock_pipeline_result = MagicMock()
         mock_preprocessor = MagicMock()
         mock_preprocessor.pipeline.return_value = mock_pipeline_result
@@ -719,12 +765,12 @@ class TestProcessDatasource:
             "picid.interface.interface.project_config.cache_path", "/cache"
         )
 
-        result = iface.process_datasource("ds", [], cache=True)
+        result = experiment.process_datasource("ds", [], cache=True)
         assert result is mock_pipeline_result
 
     def test_cache_false_passes_none(self, monkeypatch):
         """cache=False passes cache_path=None."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         captured = {}
 
         def mock_init(ds, tr, preprocessor_mode, cache_path):
@@ -737,12 +783,12 @@ class TestProcessDatasource:
             "picid.interface.interface.InterfacePreProcessor", mock_init
         )
 
-        iface.process_datasource("ds", [], cache=False)
+        experiment.process_datasource("ds", [], cache=False)
         assert captured["cache_path"] is None
 
 
 # ============================================================================
-# EntryInterface — get_available_datasources
+# PicidExperiment — get_available_datasources
 # ============================================================================
 
 
@@ -753,18 +799,18 @@ class TestGetAvailableDatasources:
     def test_delegates_to_get_available_resource(self, monkeypatch):
         """Delegates to get_available_resource('datasource')."""
         monkeypatch.setattr(
-            EntryInterface,
+            PicidExperiment,
             "get_available_resource",
             staticmethod(lambda rt, **kw: ["ds1", "ds2"]),
         )
-        EntryInterface.get_available_datasources.cache_clear()
-        result = EntryInterface.get_available_datasources()
+        PicidExperiment.get_available_datasources.cache_clear()
+        result = PicidExperiment.get_available_datasources()
         assert result == ["ds1", "ds2"]
-        EntryInterface.get_available_datasources.cache_clear()
+        PicidExperiment.get_available_datasources.cache_clear()
 
 
 # ============================================================================
-# EntryInterface — _compose_config_file
+# PicidExperiment — _compose_config_file
 # ============================================================================
 
 
@@ -801,8 +847,8 @@ class TestComposeConfigFile:
 
         **Expected**: hydra.compose called with overrides.
         """
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test_run",
             task_definition=None,
             model=None,
@@ -812,8 +858,8 @@ class TestComposeConfigFile:
 
     def test_overrides_none_becomes_empty_list(self, mock_env):
         """overrides=None is converted to empty list."""
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -826,8 +872,8 @@ class TestComposeConfigFile:
 
     def test_overrides_string_wrapped_in_list(self, mock_env):
         """String overrides are wrapped in a list."""
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -845,8 +891,8 @@ class TestComposeConfigFile:
         mock_ds = MagicMock(spec=ProcessedDatasource)
         mock_ds.task_mode = "regression"
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -866,12 +912,14 @@ class TestComposeConfigFile:
 
         mock_trainer = MagicMock(spec=CustomModelTrainer)
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         monkeypatch.setattr(
-            iface, "get_task_definition_cfg", lambda td: ({"task_type": "rul"}, "prog")
+            experiment,
+            "get_task_definition_cfg",
+            lambda td: ({"task_type": "rul"}, "prog"),
         )
 
-        iface._compose_config_file(
+        experiment._compose_config_file(
             run_name="test",
             task_definition=("prog", "rul"),
             model=mock_trainer,
@@ -881,9 +929,9 @@ class TestComposeConfigFile:
 
     def test_model_without_task_raises(self, mock_env):
         """Model without task_definition raises ValueError."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(ValueError, match="task_definition is none"):
-            iface._compose_config_file(
+            experiment._compose_config_file(
                 run_name="test",
                 task_definition=None,
                 model="mlp",
@@ -897,8 +945,8 @@ class TestComposeConfigFile:
             "early_stopping: true\n"
         )
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -913,8 +961,8 @@ class TestComposeConfigFile:
 
         mock_cb = MagicMock(spec=Callback)
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -930,8 +978,8 @@ class TestComposeConfigFile:
             "patience: 5\n"
         )
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -947,8 +995,8 @@ class TestComposeConfigFile:
         mock_tc = MagicMock(spec=TrainerConfig)
         mock_tc.model_dump.return_value = {"max_epochs": 50}
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -965,15 +1013,15 @@ class TestComposeConfigFile:
         )
 
         monkeypatch.setattr(
-            EntryInterface,
+            PicidExperiment,
             "get_available_resource",
             staticmethod(
                 lambda rt, **kw: ["default"] if kw.get("as_tuple") else ["default.yaml"]
             ),
         )
 
-        iface = EntryInterface()
-        iface._compose_config_file(
+        experiment = PicidExperiment()
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -984,15 +1032,19 @@ class TestComposeConfigFile:
 
     def test_datasource_experiment(self, mock_env, monkeypatch):
         """Datasource cfg with is_experiment=True uses experiment override."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         exp_cfg = DictConfig({"is_experiment": True, "data": "x"})
-        monkeypatch.setattr(iface, "get_datasource_cfg", lambda ds, **kw: exp_cfg)
+        monkeypatch.setattr(experiment, "get_datasource_cfg", lambda ds, **kw: exp_cfg)
         monkeypatch.setattr(
-            iface, "get_task_definition_cfg", lambda td: ({"task_type": "rul"}, "prog")
+            experiment,
+            "get_task_definition_cfg",
+            lambda td: ({"task_type": "rul"}, "prog"),
         )
-        monkeypatch.setattr(iface, "get_model_cfg", lambda m, task: ({"h": 64}, "mlp"))
+        monkeypatch.setattr(
+            experiment, "get_model_cfg", lambda m, task: ({"h": 64}, "mlp")
+        )
 
-        iface._compose_config_file(
+        experiment._compose_config_file(
             run_name="test",
             task_definition=("prog", "rul"),
             model="mlp",
@@ -1004,11 +1056,11 @@ class TestComposeConfigFile:
 
     def test_datasource_non_experiment(self, mock_env, monkeypatch):
         """Datasource cfg without is_experiment uses datasource override."""
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         ds_cfg = DictConfig({"_target_": "T"})
-        monkeypatch.setattr(iface, "get_datasource_cfg", lambda ds, **kw: ds_cfg)
+        monkeypatch.setattr(experiment, "get_datasource_cfg", lambda ds, **kw: ds_cfg)
 
-        iface._compose_config_file(
+        experiment._compose_config_file(
             run_name="test",
             task_definition=None,
             model=None,
@@ -1022,16 +1074,18 @@ class TestComposeConfigFile:
         """AbsEvalConfig evaluators use model_dump (line 793)."""
         from picid.interface.schemas.evaluators import DefaultEvaluatorConfig
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         eval_cfg = DefaultEvaluatorConfig()
         monkeypatch.setattr(
-            iface,
+            experiment,
             "get_task_definition_cfg",
             lambda td, **kw: ({"task_type": "rul"}, "prog_rul"),
         )
-        monkeypatch.setattr(iface, "get_model_cfg", lambda m, **kw: ({"h": 64}, "mlp"))
+        monkeypatch.setattr(
+            experiment, "get_model_cfg", lambda m, **kw: ({"h": 64}, "mlp")
+        )
 
-        iface._compose_config_file(
+        experiment._compose_config_file(
             run_name="test",
             task_definition=("prog", "rul"),
             model="mlp",
@@ -1042,13 +1096,13 @@ class TestComposeConfigFile:
 
 
 # ============================================================================
-# EntryInterface — train
+# PicidExperiment — train
 # ============================================================================
 
 
 @pytest.mark.unit
 class TestTrain:
-    """Tests for EntryInterface.train with mocked Hydra/Lightning."""
+    """Tests for PicidExperiment.train with mocked Hydra/Lightning."""
 
     @pytest.fixture
     def train_env(self, monkeypatch, tmp_path):
@@ -1109,7 +1163,7 @@ class TestTrain:
 
         # Mock _compose_config_file to return our pre-built cfg
         monkeypatch.setattr(
-            EntryInterface,
+            PicidExperiment,
             "_compose_config_file",
             lambda self, **kw: cfg,
         )
@@ -1192,8 +1246,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1222,8 +1276,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1254,8 +1308,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1292,8 +1346,8 @@ class TestTrain:
             lambda s, workers=True: seed_calls.append(s),
         )
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1343,8 +1397,8 @@ class TestTrain:
             lambda v: flash_calls.append(("math", v)),
         )
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1374,9 +1428,9 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(AssertionError, match="transforms must be a list"):
-            iface.train(
+            experiment.train(
                 run_name="test",
                 model=MagicMock(),
                 task_definition={"task_type": "rul"},
@@ -1401,9 +1455,9 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(AssertionError, match="Mismatch in features"):
-            iface.train(
+            experiment.train(
                 run_name="test",
                 model=MagicMock(),
                 task_definition={"task_type": "rul"},
@@ -1443,8 +1497,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1482,9 +1536,9 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(ValueError, match="inverse scaling"):
-            iface.train(
+            experiment.train(
                 run_name="test",
                 model=MagicMock(),
                 task_definition={"task_type": "rul"},
@@ -1523,8 +1577,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1557,9 +1611,9 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
+        experiment = PicidExperiment()
         with pytest.raises(ValueError, match="neither"):
-            iface.train(
+            experiment.train(
                 run_name="test",
                 model=MagicMock(),
                 task_definition={"task_type": "rul"},
@@ -1589,8 +1643,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1625,8 +1679,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1661,8 +1715,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1694,8 +1748,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1715,7 +1769,7 @@ class TestTrain:
             }
         )
         monkeypatch.setattr(
-            EntryInterface, "_compose_config_file", lambda self, **kw: cfg_with_cbs
+            PicidExperiment, "_compose_config_file", lambda self, **kw: cfg_with_cbs
         )
 
         mock_ds = MagicMock(spec=ProcessedDatasource)
@@ -1733,8 +1787,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1754,7 +1808,7 @@ class TestTrain:
             }
         )
         monkeypatch.setattr(
-            EntryInterface,
+            PicidExperiment,
             "_compose_config_file",
             lambda self, **kw: cfg_with_config_name,
         )
@@ -1774,8 +1828,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1815,8 +1869,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1840,7 +1894,7 @@ class TestTrain:
             }
         )
         monkeypatch.setattr(
-            EntryInterface, "_compose_config_file", lambda self, **kw: cfg_with_logger
+            PicidExperiment, "_compose_config_file", lambda self, **kw: cfg_with_logger
         )
 
         mock_ds = MagicMock(spec=ProcessedDatasource)
@@ -1858,8 +1912,8 @@ class TestTrain:
         }
         mock_ds.meta_data_dict = {}
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
@@ -1890,8 +1944,8 @@ class TestTrain:
 
         ckpt_callback = ModelCheckpointWithConfig(dirpath="/tmp", filename="best")
 
-        iface = EntryInterface()
-        iface.train(
+        experiment = PicidExperiment()
+        experiment.train(
             run_name="test",
             model=MagicMock(),
             task_definition={"task_type": "rul"},
