@@ -5,6 +5,7 @@ import sys
 import types
 from pathlib import Path
 
+import cloudpickle
 import numpy as np
 import pytest
 import torch
@@ -18,12 +19,14 @@ class _StubTabDPTRegressor:
     def __init__(self, **kwargs):
         self.inf_batch_size = kwargs.get("inf_batch_size", 128)
         self._fitted = False
+        self.prediction_calls = []
 
     def fit(self, X, y):
         self._fitted = True
         return self
 
-    def predict(self, X):
+    def predict(self, X, n_ensembles=8, context_size=2048, seed=None):
+        self.prediction_calls.append((seed, n_ensembles))
         n = len(X)
         return np.linspace(0.0, 1.0, n).reshape(n, 1)
 
@@ -71,10 +74,7 @@ def _restore_stubbed_modules():
 
 def test_tabdpt_wrapper_reports_canonical_module():
     FitPredictTabDPTWrapper = _cls()
-    assert (
-        FitPredictTabDPTWrapper.__module__
-        == "picid.model.estimators.tabdpt.wrapper"
-    )
+    assert FitPredictTabDPTWrapper.__module__ == "picid.model.estimators.tabdpt.wrapper"
 
 
 def test_invalid_task_type_is_rejected():
@@ -168,3 +168,169 @@ def test_load_model_missing_file_raises(tmp_path):
     )
     with pytest.raises(FileNotFoundError, match="Model file not found"):
         w.load_model("ghost")
+
+
+@pytest.mark.parametrize("seed", [0, 72, 88, None])
+def test_regression_forwards_prediction_seed_with_eight_members(seed):
+    wrapper = _cls()(device="cpu", task_type="regression", random_state=seed)
+    X = torch.ones(3, 2)
+    wrapper.fit(X, torch.zeros(3, 1))
+
+    wrapper.predict(X)
+
+    assert wrapper.backbone.prediction_calls == [(seed, 8)]
+
+
+@pytest.mark.parametrize("batched", [False, True])
+def test_repeated_and_batched_predictions_keep_the_same_seed(batched):
+    wrapper = _cls()(
+        device="cpu",
+        task_type="regression",
+        random_state=72,
+        yield_strategy=batched,
+        yield_batch_size=2,
+    )
+    X = torch.ones(5, 2)
+    wrapper.fit(X, torch.zeros(5, 1))
+
+    wrapper.predict(X)
+    wrapper.predict(X)
+
+    expected_calls = 6 if batched else 2
+    assert wrapper.backbone.prediction_calls == [(72, 8)] * expected_calls
+
+
+def test_configured_seed_does_not_change_classification_call():
+    wrapper = _cls()(device="cpu", task_type="classification", random_state=72)
+    X = torch.ones(3, 2)
+    wrapper.fit(X, torch.zeros(3, 1))
+
+    # The classifier double accepts no seed or ensemble arguments.
+    result = wrapper.predict(X)
+
+    torch.testing.assert_close(result, torch.tensor([[0.4, 0.6]] * 3))
+
+
+@pytest.mark.parametrize("saved_seed", [0, 72, None])
+def test_checkpoint_restores_prediction_seed_over_constructor_seed(
+    tmp_path, saved_seed
+):
+    Wrapper = _cls()
+    original = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=saved_seed,
+        model_cache_path=str(tmp_path),
+    )
+    X = torch.ones(3, 2)
+    original.fit(X, torch.zeros(3, 1))
+    original.serialize_model("seeded")
+    restored = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=101,
+        model_cache_path=str(tmp_path),
+    )
+
+    restored.load_model("seeded")
+    restored.predict(X)
+
+    assert restored.backbone.prediction_calls == [(saved_seed, 8)]
+    restored.serialize_model("resaved")
+    again = Wrapper(
+        device="cpu", task_type="regression", model_cache_path=str(tmp_path)
+    )
+    again.load_model("resaved")
+    again.predict(X)
+    assert again.backbone.prediction_calls[-1] == (saved_seed, 8)
+
+
+@pytest.mark.parametrize("configured_seed", [0, 101, None])
+def test_legacy_checkpoint_uses_configured_seed_after_loading_seeded_model(
+    tmp_path, configured_seed
+):
+    Wrapper = _cls()
+    original = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=72,
+        model_cache_path=str(tmp_path),
+    )
+    X = torch.ones(3, 2)
+    original.fit(X, torch.zeros(3, 1))
+    original.serialize_model("seeded")
+    with (tmp_path / "legacy.cloudpickle").open("wb") as handle:
+        cloudpickle.dump(original.backbone, handle)
+    restored = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=configured_seed,
+        model_cache_path=str(tmp_path),
+    )
+    restored.load_model("seeded")
+    restored.load_model("legacy")
+
+    restored.predict(X)
+
+    assert restored.backbone.prediction_calls == [(configured_seed, 8)]
+
+
+def test_refitting_loaded_model_restores_constructor_seed(tmp_path):
+    Wrapper = _cls()
+    original = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=72,
+        model_cache_path=str(tmp_path),
+    )
+    X = torch.ones(3, 2)
+    original.fit(X, torch.zeros(3, 1))
+    original.serialize_model("seeded")
+    restored = Wrapper(
+        device="cpu",
+        task_type="regression",
+        random_state=101,
+        model_cache_path=str(tmp_path),
+    )
+    restored.load_model("seeded")
+
+    restored.fit(X, torch.zeros(3, 1))
+    restored.predict(X)
+
+    assert restored.backbone.prediction_calls == [(101, 8)]
+
+
+def test_classification_checkpoint_remains_a_bare_estimator(tmp_path):
+    wrapper = _cls()(
+        device="cpu",
+        task_type="classification",
+        random_state=72,
+        model_cache_path=str(tmp_path),
+    )
+    X = torch.ones(3, 2)
+    wrapper.fit(X, torch.zeros(3, 1))
+    path = wrapper.serialize_model("classifier")
+
+    with open(path, "rb") as handle:
+        saved = cloudpickle.load(handle)
+
+    assert isinstance(saved, _StubTabDPTClassifier)
+
+
+def test_checkpoint_rejects_unknown_format_version(tmp_path):
+    wrapper = _cls()(
+        device="cpu", task_type="regression", model_cache_path=str(tmp_path)
+    )
+    with (tmp_path / "future.cloudpickle").open("wb") as handle:
+        cloudpickle.dump(
+            {
+                "format": "picid.tabdpt",
+                "version": 999,
+                "backbone": _StubTabDPTRegressor(),
+                "prediction_seed": 72,
+            },
+            handle,
+        )
+
+    with pytest.raises(ValueError, match="Unsupported TabDPT checkpoint version"):
+        wrapper.load_model("future")
