@@ -31,8 +31,11 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         Whether batched prediction is enabled.
     yield_batch_size : int, default=128
         Batch size for the batched prediction path.
+    random_state : int or None, default=None
+        Seed for the regression prediction ensemble. ``None`` retains unseeded
+        prediction. Classification does not use this setting.
     **kwargs : Any
-        Additional wrapper arguments forwarded to the backbone.
+        Additional wrapper metadata stored by the base adapter.
     """
 
     def __init__(
@@ -42,6 +45,7 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         model_cache_path: str = None,
         yield_strategy: bool = False,
         yield_batch_size: int = 128,
+        random_state: int | None = None,
         **kwargs,
     ):
         """
@@ -59,8 +63,11 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             Whether batched prediction is enabled.
         yield_batch_size : int, default=128
             Batch size used by the deferred backbone factory.
+        random_state : int or None, default=None
+            Regression ensemble seed, reused for each prediction call and batch.
+            ``None`` preserves the unseeded behavior. Classification is unchanged.
         **kwargs : Any
-            Additional wrapper arguments forwarded to the backbone.
+            Additional wrapper metadata stored by the base adapter.
         """
         self.regression_tasks = REGRESSION_TASKS
         self.classification_tasks = CLASSIFICATION_TASKS
@@ -72,6 +79,8 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             )
 
         self.task_type = task_type
+        self.random_state = random_state
+        self._prediction_seed = random_state
 
         device = "cuda" if (device == "gpu") or ("cuda" in device) else "cpu"
         logger.info(f"Using TabDPT on device: {device}, kwargs: {kwargs}")
@@ -97,6 +106,7 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             yield_strategy=yield_strategy,
             yield_batch_size=yield_batch_size,
             reinit_on_fit=True,
+            random_state=random_state,
             **kwargs,
         )
 
@@ -116,6 +126,7 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             self._reinit_backbone()
 
         self.backbone.fit(X.numpy(), y.numpy().ravel())
+        self._prediction_seed = self.random_state
 
     @override
     def _call_predict(self, X: torch.Tensor) -> torch.Tensor:
@@ -135,12 +146,18 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         if self.task_type in CLASSIFICATION_TASKS:
             return torch.Tensor(self.backbone.predict_proba(X.numpy()))
         else:
-            return torch.Tensor(self.backbone.predict(X.numpy()))
+            return torch.Tensor(
+                self.backbone.predict(
+                    X.numpy(), n_ensembles=8, seed=self._prediction_seed
+                )
+            )
 
     @override
     def serialize_model(self, task_id: str | None = None):
         """
-        Serialize the model to a file.
+        Serialize the model and its effective regression prediction seed.
+
+        Classification checkpoints retain the backbone-only format.
 
         Parameters
         ----------
@@ -162,14 +179,26 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
         model_path = str(model_dir / f"{task_id}.cloudpickle")
 
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+        checkpoint = self.backbone
+        if self.task_type in REGRESSION_TASKS:
+            checkpoint = {
+                "format": "picid.tabdpt",
+                "version": 1,
+                "backbone": self.backbone,
+                "prediction_seed": self._prediction_seed,
+            }
         with open(model_path, "wb") as f:
-            cloudpickle.dump(self.backbone, f)
+            cloudpickle.dump(checkpoint, f)
         return model_path
 
     @override
     def load_model(self, task_id: str | None = None):
         """
-        Load the model from a file.
+        Load the model and restore its regression prediction seed.
+
+        Legacy backbone-only checkpoints use the configured ``random_state``.
+        They do not contain the internal seeds used for historical predictions.
+        Fitting again uses the configured seed rather than the loaded seed.
 
         Parameters
         ----------
@@ -194,7 +223,21 @@ class FitPredictTabDPTWrapper(AbstractFitPredictWrapper):
             raise FileNotFoundError(f"Model file not found: {model_path}")
 
         with open(model_path, "rb") as f:
-            self.backbone = cloudpickle.load(f)
+            checkpoint = cloudpickle.load(f)
+        if isinstance(checkpoint, dict) and checkpoint.get("format") == "picid.tabdpt":
+            if checkpoint.get("version") != 1:
+                raise ValueError(
+                    f"Unsupported TabDPT checkpoint version: {checkpoint.get('version')}"
+                )
+            backbone = checkpoint["backbone"]
+            prediction_seed = checkpoint["prediction_seed"]
+        else:
+            backbone = checkpoint
+            prediction_seed = self.random_state
+        self.backbone = backbone
+        self._prediction_seed = prediction_seed
+        if self.task_type in REGRESSION_TASKS:
+            logger.info("Loaded TabDPT regression prediction seed: %s", prediction_seed)
         return model_path
 
     @property
